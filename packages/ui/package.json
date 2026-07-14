@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.4.1",
+  "version": "7.4.7",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -23,14 +23,17 @@
     "./icons/app": "./src/components/app-icons/types.ts",
     "./fonts/*": "./src/assets/fonts/*",
     "./audio/*": "./src/assets/audio/*",
-    "./v2/*": "./src/v2/*"
+    "./v2/*.css": "./src/v2/components/*.css",
+    "./v2/*": "./src/v2/components/*.tsx",
+    "./v2/styles/*": "./src/v2/styles/*"
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "test": "bun test src",
-    "test:ci": "mkdir -p .artifacts/unit && bun test src --dots --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
+    "test:ci": "mkdir -p .artifacts/unit && bun test src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "dev": "vite",
-    "generate:tailwind": "bun run script/tailwind.ts"
+    "generate:tailwind": "bun run script/tailwind.ts",
+    "generate:v2-oc2": "bun run script/build-oc2-v2-overrides.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "catalog:",
@@ -42,7 +45,8 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-icons-spritesheet": "3.0.1",
-    "vite-plugin-solid": "catalog:"
+    "vite-plugin-solid": "catalog:",
+    "@types/luxon": "catalog:"
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
@@ -71,7 +75,12 @@
     "strip-ansi": "7.1.2",
     "virtua": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "@opencode-ai/core": "workspace:*"
+    "@opencode-ai/core": "workspace:*",
+    "@shikijs/transformers": "3.9.2",
+    "@solid-primitives/bounds": "0.1.3",
+    "luxon": "catalog:",
+    "marked-katex-extension": "5.1.6",
+    "marked-shiki": "catalog:"
   },
   "peerDependencies": {}
 }

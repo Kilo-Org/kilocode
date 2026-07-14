@@ -850,7 +850,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                 </Show>
 
                 <Show when={nodes().length > 0}>
-                  <Virtualizer ref={setVirtualizer} data={nodes()} keepMounted={mounted()} overscan={4} itemSize={30}>
+                  <Virtualizer
+                    ref={setVirtualizer}
+                    data={nodes()}
+                    keepMounted={mounted()}
+                    bufferSize={120}
+                    itemSize={30}
+                  >
                     {
                       // eslint-disable-next-line complexity
                       (node) => {

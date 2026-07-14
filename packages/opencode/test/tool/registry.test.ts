@@ -4,12 +4,14 @@ import fs from "fs/promises"
 import { fileURLToPath, pathToFileURL } from "url"
 import { Effect, Exit, Layer, Result, Schema } from "effect" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
+import { Bus } from "@/bus" // kilocode_change - ToolRegistry retains the Kilo bus dependency
 import { ToolRegistry } from "@/tool/registry"
 import { Tool } from "@/tool/tool"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestConfig } from "../fixture/config"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Plugin } from "@/plugin"
 import { Question } from "@/question"
 import { Todo } from "@/session/todo"
@@ -22,22 +24,25 @@ import { Provider } from "@/provider/provider"
 import { Git } from "@/git"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "@/session/instruction"
-import { Bus } from "@/bus"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { FetchHttpClient } from "effect/unstable/http"
 import { Format } from "@/format"
-import { Ripgrep } from "@/file/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
 import * as Truncate from "@/tool/truncate"
 import { InstanceState } from "@/effect/instance-state"
 import { Reference } from "@/reference/reference"
 import { RepositoryCache } from "@/reference/repository-cache"
-import { ProviderID, ModelID } from "@/provider/schema"
+
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Command } from "@/command" // kilocode_change
+import { Auth } from "@/auth" // kilocode_change
 import * as SandboxNetwork from "@/kilocode/sandbox/network" // kilocode_change
 import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 
 const node = CrossSpawnSpawner.defaultLayer
 const configLayer = TestConfig.layer({
@@ -65,18 +70,20 @@ const registryLayer = (opts: RegistryLayerOptions = {}) =>
       Layer.provide(Reference.defaultLayer),
       Layer.provide(LSP.defaultLayer),
       Layer.provide(Instruction.defaultLayer),
-      Layer.provide(AppFileSystem.defaultLayer),
-      Layer.provide(Bus.layer),
+      Layer.provide(FSUtil.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
       Layer.provide(FetchHttpClient.layer),
       Layer.provide(Format.defaultLayer),
-      Layer.provide(node),
+      Layer.provide(Layer.mergeAll(node, Database.defaultLayer)),
       Layer.provide(Ripgrep.defaultLayer),
       Layer.provide(Truncate.defaultLayer),
     )
     .pipe(
       Layer.provide(RuntimeFlags.layer(opts.flags ?? {})),
       Layer.provide(Command.defaultLayer), // kilocode_change
+      Layer.provide(Auth.defaultLayer), // kilocode_change
       Layer.provide(MemoryService.layer), // kilocode_change
+      Layer.provide(Bus.layer), // kilocode_change - satisfy the Kilo ToolRegistry dependency
     )
 
 // Fake Plugin.Service that returns a single plugin whose `tool` map contains
@@ -139,8 +146,8 @@ describe("tool.registry", () => {
       const build = yield* agent.get("build")
       if (!build) return yield* Effect.die(new Error("build agent not found"))
       const tools = yield* registry.tools({
-        providerID: ProviderID.opencode,
-        modelID: ModelID.make("test"),
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
         agent: build,
       })
       const all = yield* registry.all()
@@ -198,8 +205,8 @@ describe("tool.registry", () => {
       const build = yield* agent.get("build")
       if (!build) throw new Error("build agent not found")
       const task = (yield* registry.tools({
-        providerID: ProviderID.opencode,
-        modelID: ModelID.make("test"),
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
         agent: build,
       })).find((tool) => tool.id === "task")
 
@@ -376,8 +383,8 @@ describe("tool.registry", () => {
 
       const agents = yield* Agent.Service
       const promptTools = yield* registry.tools({
-        providerID: ProviderID.opencode,
-        modelID: ModelID.make("test"),
+        providerID: ProviderV2.ID.opencode,
+        modelID: ModelV2.ID.make("test"),
         agent: yield* agents.defaultInfo(),
       })
       const promptTool = promptTools.find((tool) => tool.id === "sql")

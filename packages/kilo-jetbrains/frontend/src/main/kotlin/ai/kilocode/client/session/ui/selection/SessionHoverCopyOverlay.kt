@@ -6,6 +6,7 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.AWTEvent
 import java.awt.Component
+import java.awt.Container
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Toolkit
@@ -22,6 +23,7 @@ internal class SessionHoverCopyOverlay(
     private var target: SessionCopyTarget? = null
     private val copy = SessionCopyButton(fill = true) { target?.copyText() }
     private val button = copy.button
+    private var child: JComponent = button
 
     init {
         isVisible = false
@@ -55,6 +57,12 @@ internal class SessionHoverCopyOverlay(
         if (visible.isEmpty) return Rectangle()
         val size = child.preferredSize
         val gap = JBUI.scale(4)
+        if (item.copyToolbar != null) {
+            val pt = SwingUtilities.convertPoint(anchor, Point(visible.x, visible.y), pane)
+            val x = (pt.x + visible.width - size.width).coerceIn(0, (pane.width - size.width).coerceAtLeast(0))
+            val y = (pt.y + visible.height - size.height).coerceIn(0, (pane.height - size.height).coerceAtLeast(0))
+            return Rectangle(x, y, size.width, size.height)
+        }
         val pt = SwingUtilities.convertPoint(anchor, Point(visible.x + visible.width, visible.y), pane)
         val x = (pt.x - size.width - gap).coerceIn(0, (pane.width - size.width).coerceAtLeast(0))
         val y = (pt.y + gap).coerceIn(0, (pane.height - size.height).coerceAtLeast(0))
@@ -62,14 +70,15 @@ internal class SessionHoverCopyOverlay(
     }
 
     override fun doLayout() {
-        button.setBounds(0, 0, width, height)
+        child.setBounds(0, 0, width, height)
+        layout(child)
     }
 
-    override fun getPreferredSize() = button.preferredSize
+    override fun getPreferredSize() = child.preferredSize
 
-    override fun getMinimumSize() = button.minimumSize
+    override fun getMinimumSize() = child.minimumSize
 
-    override fun getMaximumSize() = button.maximumSize
+    override fun getMaximumSize() = child.maximumSize
 
     @RequiresEdt
     private fun sync(event: MouseEvent) {
@@ -88,6 +97,7 @@ internal class SessionHoverCopyOverlay(
     private fun show(item: SessionCopyTarget) {
         if (target === item && isVisible) return
         target = item
+        use(item.copyToolbar ?: button)
         isVisible = true
         parent?.doLayout()
         revalidate()
@@ -116,6 +126,7 @@ internal class SessionHoverCopyOverlay(
     @RequiresEdt
     private fun conceal() {
         copy.dismiss()
+        use(button)
         if (target == null && !isVisible) return
         target = null
         isVisible = false
@@ -123,7 +134,20 @@ internal class SessionHoverCopyOverlay(
         repaint()
     }
 
+    @RequiresEdt
+    private fun use(comp: JComponent) {
+        if (child === comp && comp.parent === this) return
+        removeAll()
+        child = comp
+        add(child)
+    }
+
     override fun dispose() {
         clear()
     }
+}
+
+private fun layout(comp: Component) {
+    comp.doLayout()
+    if (comp is Container) comp.components.forEach(::layout)
 }

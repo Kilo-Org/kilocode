@@ -10,7 +10,45 @@ Maintainers can use the Kilo `release-jetbrains` skill to drive this process fro
 
 JetBrains plugin builds and runtime downloads use the Kilo Core version pinned in `packages/kilo-jetbrains/package.json`, so verify that pin points at a published `v<version>` release before creating the release tag.
 
+`kilo.cli.pinned=false` in `packages/kilo-jetbrains/gradle.properties` is local development mode only. It generates the client from `packages/opencode/` and bundles a locally built CLI into the plugin; production Gradle builds and release scripts fail until the property is restored to `true`.
+
 The skill lives at `.kilo/skills/release-jetbrains/SKILL.md`. It does not move or recreate release tags, and merge permission is only required if the user explicitly asks the skill to merge the release PR automatically.
+
+## CLI Pin Review
+
+The JetBrains plugin has two independent versions:
+
+| Field | Meaning |
+|---|---|
+| `packages/kilo-jetbrains/package.json` `version` | The pinned Kilo CLI release used for OpenAPI generation and runtime downloads. |
+| `packages/kilo-jetbrains/gradle.properties` `kilo.jetbrains.version` | The JetBrains Marketplace plugin version. |
+
+The prepare workflow tags `origin/main`, so the CLI pin that matters is the one already merged to `main`. Before creating a release tag, run:
+
+```bash
+bun .kilo/skills/release-jetbrains/script/check-pin.ts
+```
+
+The script reports the CLI that `origin/main` will lock, the latest published stable CLI release, the CLI shipped by the latest `jetbrains/v*` tag, whether `kilo.cli.pinned=true`, and whether all runtime assets exist. Stop before tagging if the pin is behind the latest CLI and you want to test the newer CLI first.
+
+To test a different CLI pin locally:
+
+```bash
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest
+cd packages/kilo-jetbrains
+./gradlew typecheck
+./gradlew test
+```
+
+To land the tested pin on `main` before releasing:
+
+```bash
+bun .kilo/skills/release-jetbrains/script/set-pin.ts --latest --pr
+```
+
+Merge the generated pin PR first, then re-run `check-pin.ts` and dispatch prepare. Do not dispatch prepare from a local-only pin edit.
+
+Stable CLI releases also try to open this pin bump PR automatically after publishing. The PR is labeled `jetbrains-cli-pin-bump`. Release publishing does not fail if creating the PR fails; inspect the publish log for either the PR URL or the warning with manual follow-up instructions.
 
 ## Create Release Tag And PR
 

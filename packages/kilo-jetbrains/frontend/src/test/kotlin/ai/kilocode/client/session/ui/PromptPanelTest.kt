@@ -48,8 +48,14 @@ import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.HighlighterColors
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.actions.PasteAction
 import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
+import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
@@ -57,8 +63,10 @@ import com.intellij.openapi.fileTypes.PlainTextLanguage
 import com.intellij.openapi.keymap.KeymapUtil
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.EditorCustomization
 import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
@@ -76,10 +84,12 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.DefaultKeyboardFocusManager
+import java.awt.Font
 import java.awt.KeyboardFocusManager
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
 import java.awt.datatransfer.Transferable
+import java.awt.event.FocusEvent
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -87,6 +97,7 @@ import java.io.File
 import java.util.Base64
 import javax.imageio.ImageIO
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ImageIcon
 import javax.swing.ScrollPaneConstants
@@ -150,6 +161,48 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertFalse(hasFloatingToolbar(editor.component))
     }
 
+    fun `test prompt editor disables spellchecking`() {
+        var applied: EditorEx? = null
+        val provider = object : SpellCheckingEditorCustomizationProvider() {
+            override fun getDisabledCustomization(): EditorCustomization {
+                return EditorCustomization { ed -> applied = ed }
+            }
+        }
+        ApplicationManager.getApplication().replaceService(
+            SpellCheckingEditorCustomizationProvider::class.java,
+            provider,
+            testRootDisposable,
+        )
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+
+        assertSame(editor, applied)
+    }
+
+    fun `test prompt editor horizontal insets use dedicated prompt inset`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val ins = editor.scrollPane.viewportBorder.getBorderInsets(editor.scrollPane)
+        val pad = JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET)
+
+        assertEquals(pad, ins.left)
+        assertEquals(pad, ins.right)
+    }
+
+    fun `test prompt shell right padding matches bottom padding`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val shell = panel.shellForTest()
+        val ins = shell.border.getBorderInsets(shell)
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.left)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.bottom)
+        assertEquals(ins.bottom, ins.right)
+    }
+
     fun `test prompt focus outline follows editor focus`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 260, 400)
@@ -161,11 +214,17 @@ class PromptPanelTest : BasePlatformTestCase() {
         val focus = TestFocusManager()
         KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
         try {
-            assertTrue(JBUI.CurrentTheme.Focus.focusColor().rgb != paint(panel, panel.width / 2, 1).rgb)
+            assertEquals(SessionUiStyle.View.Prompt.separator().rgb, paint(panel, panel.width / 2, 0).rgb)
 
             focus.focus(editor.contentComponent)
+            editor.contentComponent.focusListeners.forEach {
+                it.focusGained(FocusEvent(editor.contentComponent, FocusEvent.FOCUS_GAINED))
+            }
 
+            assertTrue(SessionUiStyle.View.Prompt.separator().rgb != paint(panel, panel.width / 2, 0).rgb)
             assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width / 2, 1).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, 1, panel.height / 2).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
         } finally {
             KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
         }
@@ -180,6 +239,31 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(style.transcriptFont.name, panel.inputFont().name)
         assertEquals(style.transcriptFont.size, panel.inputFont().size)
         assertTrue(panel.preferredSize.height >= 26)
+    }
+
+    fun `test applyStyle refreshes prompt editor chrome colors`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val bg = Color(0x21, 0x32, 0x43)
+        val scheme = EditorColorsManager.getInstance().globalScheme.clone() as EditorColorsScheme
+        scheme.setAttributes(
+            HighlighterColors.TEXT,
+            TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
+        )
+        val style = SessionEditorStyle.create(scheme = scheme)
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        editor.scrollPane.background = Color.BLACK
+        editor.scrollPane.viewport.background = Color.BLACK
+        editor.contentComponent.background = Color.BLACK
+
+        panel.applyStyle(style)
+
+        assertEquals(bg, panel.defaultFocusedComponent.background)
+        assertEquals(bg, editor.backgroundColor)
+        assertEquals(bg, editor.scrollPane.background)
+        assertEquals(bg, editor.scrollPane.viewport.background)
+        assertEquals(bg, editor.contentComponent.background)
     }
 
     fun `test prompt editor grows when lines are added`() {
@@ -259,6 +343,10 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         val chrome = (panel.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
         assertTrue(editor.preferredSize.height <= root.height / 3 - chrome + 1)
+        assertEquals(
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            editor.getEditor(false)!!.scrollPane.verticalScrollBarPolicy,
+        )
     }
 
     fun `test attachment strip is included in session root cap`() {
@@ -277,16 +365,29 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(attachedEditor.preferredSize.height < plainEditor.preferredSize.height)
     }
 
-    fun `test prompt editor scroll policy keeps horizontal disabled`() {
+    fun `test prompt editor hides scrollbars until content overflows cap`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 180, 400)
 
-        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val editor = field.getEditor(false)!!
 
-        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
         assertTrue(editor.settings.isUseSoftWraps)
         assertFalse(editor.settings.isPaintSoftWraps)
+        assertFalse(editor.settings.isBlockCursor)
+
+        field.text = (1..40).joinToString("\n") { "line $it" }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
+
+        field.text = "short"
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
     }
 
     fun `test prompt editor highlights validated commands and mentions`() {
@@ -911,6 +1012,25 @@ class PromptPanelTest : BasePlatformTestCase() {
         panel.setBusy(true)
 
         assertEquals("Stop", panel.buttonForTest().toolTipText)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+        assertTrue(panel.isStopEnabled)
+    }
+
+    fun `test send icon matches scroll button theme colors`() {
+        assertTrue(resource("/icons/send.svg").contains("fill=\"#0066B8\""))
+        assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
+    }
+
+    fun `test busy disables send button`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setReady(true)
+        ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(panel.isSendEnabled)
+
+        panel.setBusy(true)
+
+        assertFalse(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
     }
 
@@ -945,18 +1065,21 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(icon, button.icon)
     }
 
-    fun `test auto approve and enhance buttons sit next to send button`() {
+    fun `test auto approve enhance separator and send buttons sit in order`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val auto = autoApproveButton(panel)
         val enhance = enhanceButton(panel)
         val send = panel.buttonForTest()
         val items = auto.parent.components.toList()
+        val sep = items[items.indexOf(enhance) + 2] as JComponent
 
         assertTrue(SwingUtilities.isDescendingFrom(auto, panel.shellForTest()))
         assertSame(auto.parent, enhance.parent)
         assertSame(auto.parent, send.parent)
         assertEquals(2, items.indexOf(enhance) - items.indexOf(auto))
-        assertEquals(2, items.indexOf(send) - items.indexOf(enhance))
+        assertEquals(4, items.indexOf(send) - items.indexOf(enhance))
+        assertEquals(JBUI.scale(1), sep.preferredSize.width)
+        assertNotNull(sep.border)
     }
 
     fun `test enhance button follows connection and busy state`() {
@@ -1274,6 +1397,11 @@ class PromptPanelTest : BasePlatformTestCase() {
             PasteAction.TRANSFERABLE_PROVIDER.name -> Producer { item }
             else -> null
         }
+    }
+
+    private fun resource(path: String): String {
+        val stream = PromptPanel::class.java.getResourceAsStream(path) ?: error("missing resource $path")
+        return stream.use { it.readBytes().decodeToString() }
     }
 
     private class FileListTransferable(private val files: List<File>) : Transferable {

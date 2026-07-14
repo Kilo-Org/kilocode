@@ -25,31 +25,31 @@ describe("provider attribution isolation", () => {
         const items = [
           provider("custom-llmgateway", {
             enabled: { via: "env", name: "CUSTOM_LLMGATEWAY_API_KEY" },
-            endpoint: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://api.llmgateway.io/v1" },
+            api: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://api.llmgateway.io/v1" },
           }),
           provider("custom-nvidia", {
-            endpoint: {
+            api: {
               type: "aisdk",
               package: "@ai-sdk/openai-compatible",
               url: "https://integrate.api.nvidia.com/v1",
             },
           }),
           provider("custom-openrouter", {
-            endpoint: { type: "aisdk", package: "@openrouter/ai-sdk-provider" },
+            api: { type: "aisdk", package: "@openrouter/ai-sdk-provider" },
           }),
           provider("custom-vercel", {
-            endpoint: { type: "aisdk", package: "@ai-sdk/vercel" },
+            api: { type: "aisdk", package: "@ai-sdk/vercel" },
           }),
           provider("custom-zenmux", {
-            endpoint: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://zenmux.ai/api/v1" },
+            api: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://zenmux.ai/api/v1" },
           }),
         ]
 
         for (const item of items) {
           catalog.provider.update(item.id, (draft) => {
             draft.enabled = item.enabled
-            draft.endpoint = item.endpoint
-            draft.options.headers.Existing = "value"
+            draft.api = item.api
+            draft.request.headers.Existing = "value"
           })
         }
         for (const id of ["gpt-5-chat-latest", "openai/gpt-5-chat"]) {
@@ -59,7 +59,7 @@ describe("provider attribution isolation", () => {
       })
 
       for (const id of ["custom-llmgateway", "custom-nvidia", "custom-openrouter", "custom-vercel", "custom-zenmux"]) {
-        expect((yield* catalog.provider.get(ProviderV2.ID.make(id))).options.headers).toEqual({ Existing: "value" })
+        expect((yield* catalog.provider.get(ProviderV2.ID.make(id))).request.headers).toEqual({ Existing: "value" })
       }
       for (const id of ["gpt-5-chat-latest", "openai/gpt-5-chat"]) {
         expect((yield* catalog.model.get(ProviderV2.ID.make("custom-openrouter"), ModelV2.ID.make(id))).enabled).toBe(

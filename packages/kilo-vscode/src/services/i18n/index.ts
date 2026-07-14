@@ -66,6 +66,13 @@ export function selectedLocale(vscode: typeof import("vscode")): string {
   return resolveLocale(lang || vscode.env.language)
 }
 
+export function getCommitMessageLanguage(vscode: typeof import("vscode")): string {
+  const cfg = vscode.workspace.getConfiguration("kilo-code.new")
+  const commitLang = cfg.get<string>("languageCommitMessage") ?? "sync"
+  if (commitLang === "sync") return selectedLocale(vscode)
+  return resolveLocale(commitLang)
+}
+
 export function translate(
   locale: string,
   key: keyof typeof enDict | string,

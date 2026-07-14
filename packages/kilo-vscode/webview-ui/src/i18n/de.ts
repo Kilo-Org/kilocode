@@ -142,7 +142,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} Nachrichten zurückgesetzt",
   "revert.banner.redo": "Wiederholen",
   "revert.banner.redo.all": "Alle wiederholen",
-  "revert.banner.hint": "Sende eine neue Nachricht, um dies dauerhaft zu machen",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Warten bis der Agent fertig ist",
   "command.session.compact": "Sitzung komprimieren",
   "command.session.compact.description": "Sitzung zusammenfassen, um die Kontextgröße zu reduzieren",
@@ -643,7 +643,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-Suche",
   "ui.permission.toolLabel.webSearch": "Websuche",
   "ui.permission.toolLabel.list": "Auflisten",
-  "ui.permission.toolLabel.externalDirectory": "Externes Verzeichnis lesen",
+  "ui.permission.toolLabel.externalDirectory": "Zugriff auf externen Ordner erlauben",
   "ui.permission.toolLabel.webFetch": "Web-Abruf",
   "ui.permission.toolLabel.task": "Aufgabe",
   "ui.permission.toolLabel.skill": "Fähigkeit",
@@ -1010,6 +1010,7 @@ export const dict = {
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Anzeigename",
   "provider.custom.models.reasoning.label": "Schlussfolgerung",
+  "provider.custom.models.modalities.image": "Bild",
   "provider.custom.models.variants.label": "Varianten",
   "provider.custom.models.variants.add": "Variante hinzufügen",
   "provider.custom.models.variants.remove": "Variante entfernen",
@@ -1452,6 +1453,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase-Suche",
   "settings.experimental.codebaseSearch.description":
     "KI-gestützte Suche in natürlicher Sprache über die gesamte Codebasis aktivieren",
+  "settings.experimental.imageGeneration.title": "Bildgenerierung",
+  "settings.experimental.imageGeneration.description": "KI-Bildgenerierung aktivieren",
+  "settings.experimental.imageGenerationModel.title": "Bildmodell",
+  "settings.experimental.imageGenerationModel.description": "Bildgenerierungsmodell",
+  "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":
     "Aktivieren Sie die Spracheingabe in Prompt-Feldern mit Ihrem Kilo-Konto über Kilo Gateway.",
@@ -1469,11 +1476,20 @@ export const dict = {
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Netzwerkzugriff einschränken",
   "settings.sandboxing.network.description":
-    "Blockiert den ausgehenden Netzwerkzugriff für vom Modell initiierte Befehle und HTTP-Tools. Lokale MCP-Server und Plugin-Hooks sind von dieser Einschränkung ausgenommen. Anbieter- und Modellinferenzdatenverkehr bleibt verfügbar.",
+    "Blockiert den direkten ausgehenden Zugriff durch vom Modell initiierte Befehle und HTTP-Tools. Lokale und entfernte MCP-Tools sind während der Einschränkung nicht verfügbar. Provider-Datenverkehr und vertrauenswürdige Plugin-Hooks bleiben von dieser Einschränkung ausgenommen.",
 
+  "settings.sandboxing.allowedHosts.title": "Zulässige Netzwerkziele",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-Host- und Portziele für Sandbox-HTTP- und HTTPS-Proxy-Datenverkehr. GitHub CLI und HTTPS Git benötigen üblicherweise github.com:443 und api.github.com:443. Änderungen gelten für neue Sitzungen.",
   "settings.sandboxing.writablePaths.title": "Zusätzliche schreibbare Pfade",
   "settings.sandboxing.writablePaths.description":
     "Zusätzliche Dateisystempfade, in die die Sandbox Schreibvorgänge erlaubt (z. B. /tmp, /var/log). Diese werden mit den Standard-Schreibpfaden zusammengeführt, wenn die Sandbox aktiv ist.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner aktivieren: aufgabenbewusstes Kürzen großer Ausgaben der Lese-, Such- und Shell-Werkzeuge, gesteuert durch eine vom Agenten bereitgestellte Fokusfrage",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
+  "settings.experimental.swePrunerModel.description":
+    "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",
@@ -1609,8 +1625,8 @@ export const dict = {
     "Keine benutzerdefinierten Befehle konfiguriert. Fügen Sie Befehle zu opencode.json hinzu, um sie hier zu sehen.",
   "settings.agentBehaviour.workflows.detail.description": "Beschreibung",
   "settings.agentBehaviour.workflows.detail.template": "Vorlage",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Shell-Befehle des Agenten in einer Sandbox auf Betriebssystemebene ausführen, die Schreibvorgänge auf die Projekt- und Kilo-Statusverzeichnisse beschränkt",
 
   "settings.autoApprove.description":
@@ -1711,6 +1727,11 @@ export const dict = {
     "System-prompt, der beim Generieren von commit messages an die KI gesendet wird. Dies ersetzt den Standard-prompt vollständig.",
   "settings.commitMessage.prompt.placeholder":
     "z. B. Generiere commit messages auf Spanisch nach dem conventional commits Format. Gib NUR die commit message zurück.",
+
+  "settings.commitMessage.language.sync": "Synchronisieren mit Benutzeroberflächensprache",
+  "settings.commitMessage.language.title": "Sprache",
+  "settings.commitMessage.language.description":
+    "Wählen Sie, welche Sprache für KI-generierte Commit-Nachrichten verwendet werden soll:",
 
   "settings.display.username.title": "Benutzername",
   "settings.display.username.description": "Benutzerdefinierter Benutzername in Gesprächen",
@@ -1885,4 +1906,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Branches werden geladen…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan ist bereit:",
+  "chat.search.placeholder": "Chat durchsuchen…",
+  "chat.search.toggle": "Chat durchsuchen",
+  "chat.search.matchCase": "Groß-/Kleinschreibung beachten",
+  "chat.search.matchWholeWord": "Ganzes Wort suchen",
+  "chat.search.useRegex": "Regulären Ausdruck verwenden",
+  "chat.search.previousMatch": "Vorheriger Treffer",
+  "chat.search.nextMatch": "Nächster Treffer",
+  "chat.search.close": "Suche schließen",
+  "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
+  "chat.search.noResults": "Keine Ergebnisse",
+  "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
 } satisfies Partial<Record<Keys, string>>

@@ -96,6 +96,7 @@ export class VscodeHost implements Host {
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
+      disableViewedRegistration: true,
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)

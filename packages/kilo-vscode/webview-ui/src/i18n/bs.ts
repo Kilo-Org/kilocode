@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} poruka poništeno",
   "revert.banner.redo": "Ponovi",
   "revert.banner.redo.all": "Ponovi Sve",
-  "revert.banner.hint": "Pošalji novu poruku da bi ovo postalo trajno",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
   "command.session.compact": "Sažmi sesiju",
   "command.session.compact.description": "Sažmi sesiju kako bi se smanjio kontekst",
@@ -634,7 +634,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep pretraga",
   "ui.permission.toolLabel.webSearch": "Web pretraga",
   "ui.permission.toolLabel.list": "Izlistaj",
-  "ui.permission.toolLabel.externalDirectory": "Čitaj vanjski direktorij",
+  "ui.permission.toolLabel.externalDirectory": "Omogući pristup vanjskom direktoriju",
   "ui.permission.toolLabel.webFetch": "Web dohvat",
   "ui.permission.toolLabel.task": "Zadatak",
   "ui.permission.toolLabel.skill": "Vještina",
@@ -999,6 +999,7 @@ export const dict = {
   "provider.custom.models.name.label": "Naziv",
   "provider.custom.models.name.placeholder": "Naziv za prikaz",
   "provider.custom.models.reasoning.label": "Zaključivanje",
+  "provider.custom.models.modalities.image": "Slika",
   "provider.custom.models.variants.label": "Varijante",
   "provider.custom.models.variants.add": "Dodaj varijantu",
   "provider.custom.models.variants.remove": "Ukloni varijantu",
@@ -1430,6 +1431,12 @@ export const dict = {
   "settings.experimental.batch.description": "Omogući batch obradu poziva alata",
   "settings.experimental.codebaseSearch.title": "Pretraga koda",
   "settings.experimental.codebaseSearch.description": "Omogući AI pretragu prirodnim jezikom kroz bazu koda",
+  "settings.experimental.imageGeneration.title": "Generisanje slika",
+  "settings.experimental.imageGeneration.description": "Omogući AI generisanje slika",
+  "settings.experimental.imageGenerationModel.title": "Model slike",
+  "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
+  "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
+
   "settings.experimental.speechToText.title": "Govor u tekst",
   "settings.experimental.speechToText.description":
     "Omogućite glasovni unos u poljima za promptove koristeći vaš Kilo račun preko Kilo Gateway.",
@@ -1445,11 +1452,20 @@ export const dict = {
   "settings.sandboxing.title": "Rad u izoliranom okruženju",
   "settings.sandboxing.network.title": "Ograniči pristup mreži",
   "settings.sandboxing.network.description":
-    "Blokiraj odlazni mrežni pristup za naredbe koje potiču od modela i HTTP alate. Lokalni MCP serveri i hookovi dodataka izvršavaju se izvan ovog ograničenja. Saobraćaj za inferenciju pružatelja i modela ostaje dostupan.",
+    "Blokira direktni odlazni pristup iz naredbi koje potiču od modela i HTTP alata. Lokalni i udaljeni MCP alati nisu dostupni dok je ograničenje aktivno. Saobraćaj provajdera i pouzdane zakačke dodataka ostaju izvan ovog ograničenja.",
 
+  "settings.sandboxing.allowedHosts.title": "Dozvoljena mrežna odredišta",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443. Promjene se primjenjuju na nove sesije.",
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Omogući SWE-Pruner: orezivanje velikih izlaza alata za čitanje i pretragu te shell alata koje uzima zadatak u obzir, vođeno fokusnim pitanjem koje pruža agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
+  "settings.experimental.swePrunerModel.description":
+    "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",
@@ -1582,8 +1598,8 @@ export const dict = {
     "Nema konfiguriranih prilagođenih komandi. Dodajte komande u opencode.json da ih vidite ovdje.",
   "settings.agentBehaviour.workflows.detail.description": "Opis",
   "settings.agentBehaviour.workflows.detail.template": "Predložak",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Pokrenite shell komande agenta unutar sandboxa na nivou operativnog sistema koji ograničava pisanje na direktorije stanja projekta i Kilo",
 
   "settings.autoApprove.description":
@@ -1685,6 +1701,10 @@ export const dict = {
     "Sistemski prompt koji se šalje AI-u prilikom generisanja commit messages. Ovo u potpunosti zamjenjuje podrazumijevani prompt.",
   "settings.commitMessage.prompt.placeholder":
     "npr. Generiši commit messages na španskom jeziku prateći conventional commits format. Vrati SAMO commit message.",
+
+  "settings.commitMessage.language.sync": "Sinkronizacija sa jezikom korisničkog sučelja",
+  "settings.commitMessage.language.title": "Jezik",
+  "settings.commitMessage.language.description": "Izaberite koji jezik koristiti za poruke koje generiše AI:",
 
   "settings.display.username.title": "Korisničko ime",
   "settings.display.username.description": "Prilagođeno korisničko ime u razgovorima",
@@ -1856,4 +1876,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan je spreman:",
+  "chat.search.placeholder": "Pretraži chat…",
+  "chat.search.toggle": "Pretraži chat",
+  "chat.search.matchCase": "Podudaranje velikih/malih slova",
+  "chat.search.matchWholeWord": "Podudaranje cijele riječi",
+  "chat.search.useRegex": "Koristi regularni izraz",
+  "chat.search.previousMatch": "Prethodno podudaranje",
+  "chat.search.nextMatch": "Sljedeće podudaranje",
+  "chat.search.close": "Zatvori pretragu",
+  "chat.search.invalidRegex": "Nevažeći regularni izraz",
+  "chat.search.noResults": "Nema rezultata",
+  "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
 }

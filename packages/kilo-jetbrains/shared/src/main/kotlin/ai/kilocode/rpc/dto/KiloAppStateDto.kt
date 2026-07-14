@@ -156,6 +156,7 @@ data class ProfileDto(
     val email: String,
     val name: String? = null,
     val organizations: List<ProfileOrganizationDto> = emptyList(),
+    val hasPersonalAccount: Boolean = true,
     val balance: ProfileBalanceDto? = null,
     val kiloPass: ProfileKiloPassDto? = null,
     val currentOrgId: String? = null,

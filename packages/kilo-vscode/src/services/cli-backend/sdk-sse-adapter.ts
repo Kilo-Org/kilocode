@@ -1,9 +1,33 @@
 import type { KiloClient, GlobalEvent } from "@kilocode/sdk/v2/client"
 
-export type SSEPayload = GlobalEvent["payload"]
+export type WirePayload = GlobalEvent["payload"]
+type Flat<T> = T extends {
+  type: "sync"
+  syncEvent: infer E extends { type: string; id: string; seq: number; aggregateID: string; data: unknown }
+}
+  ? { type: "sync"; name: E["type"]; id: E["id"]; seq: E["seq"]; aggregateID: E["aggregateID"]; data: E["data"] }
+  : never
+export type WireSyncPayload = Extract<WirePayload, { type: "sync" }>
+export type SyncPayload = Flat<WireSyncPayload>
+export type SSEPayload = Exclude<WirePayload, { type: "sync" }> | SyncPayload
 export type SSEEventHandler = (event: SSEPayload, directory?: string) => void
 export type SSEErrorHandler = (error: Error) => void
 export type SSEStateHandler = (state: "connecting" | "connected" | "disconnected") => void
+
+export function normalize(payload: WireSyncPayload): SyncPayload
+export function normalize(payload: WirePayload): SSEPayload
+export function normalize(payload: WirePayload): SSEPayload {
+  if (payload.type !== "sync") return payload
+  const event = payload.syncEvent
+  return {
+    type: "sync",
+    name: event.type,
+    id: event.id,
+    seq: event.seq,
+    aggregateID: event.aggregateID,
+    data: event.data,
+  } as SyncPayload
+}
 
 /**
  * SSE adapter that consumes the SDK's `client.global.event()` AsyncGenerator
@@ -180,7 +204,7 @@ export class SdkSSEAdapter {
             this.notifyState("connected")
           }
 
-          this.notifyEvent(event.payload, event.directory)
+          this.notifyEvent(normalize(event.payload), event.directory)
         }
 
         console.log(

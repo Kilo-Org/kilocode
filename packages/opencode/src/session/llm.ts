@@ -1,6 +1,8 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Provider } from "@/provider/provider"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
-import * as Log from "@opencode-ai/core/util/log"
+import { Log } from "@opencode-ai/core/util/log"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool } from "ai"
@@ -15,8 +17,8 @@ import type { MessageV2 } from "./message-v2"
 import { usable } from "./overflow" // kilocode_change
 import { Plugin } from "@/plugin"
 import { Permission } from "@/permission"
-import { PermissionID } from "@/permission/schema"
-import { Bus } from "@/bus"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventV2 } from "@opencode-ai/core/event"
 import { Wildcard } from "@/util/wildcard"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
@@ -25,6 +27,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { KiloSession } from "@/kilocode/session"
 import { KiloLLM } from "@/kilocode/session/llm"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
+import { KiloToolSchema } from "@/kilocode/session/tool-schema"
 import { SessionExport } from "@/kilocode/session-export"
 import { getActiveOrg } from "@/kilocode/session-export/eligibility"
 import { normalizeUsageForExport, observeFullStreamForExport } from "@/kilocode/session-export/llm"
@@ -39,12 +42,12 @@ const log = Log.create({ service: "llm" })
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 
 export type StreamInput = {
-  user: MessageV2.User
+  user: SessionV1.User
   sessionID: string
   parentSessionID?: string
   model: Provider.Model
   agent: Agent.Info
-  permission?: Permission.Ruleset
+  permission?: PermissionV1.Ruleset
   system: string[]
   messages: ModelMessage[]
   small?: boolean
@@ -75,6 +78,7 @@ const live: Layer.Layer<
   | Provider.Service
   | Plugin.Service
   | Permission.Service
+  | EventV2Bridge.Service
   | LLMClientService
   | RuntimeFlags.Service
 > = Layer.effect(
@@ -85,6 +89,7 @@ const live: Layer.Layer<
     const provider = yield* Provider.Service
     const plugin = yield* Plugin.Service
     const perm = yield* Permission.Service
+    const events = yield* EventV2Bridge.Service
     const llmClient = yield* LLMClient.Service
     const flags = yield* RuntimeFlags.Service
 
@@ -122,6 +127,7 @@ const live: Layer.Layer<
       })
 
       // kilocode_change start - compact at the configured threshold before contacting the provider
+      const tools = yield* Effect.promise(() => KiloToolSchema.sanitize(base.tools))
       const isOpenaiOauth = item.id === "openai" && info?.type === "oauth"
       const estimated: ModelMessage[] =
         isOpenaiOauth || isWorkflow
@@ -135,12 +141,11 @@ const live: Layer.Layer<
           : base.messages
       const preflight = input.preflight === true && KiloSessionOverflow.enabled({ cfg, model: input.model })
       const cap = KiloLLM.needsEstimate({ model: input.model, configured: base.params.maxOutputTokens })
-      const usage =
-        cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools: base.tools }) : undefined
+      const usage = cap || preflight ? KiloSessionOverflow.measure({ messages: estimated, tools }) : undefined
       const maxOutputTokens = KiloLLM.capOutputTokens({
         model: input.model,
         messages: estimated,
-        tools: base.tools,
+        tools,
         configured: base.params.maxOutputTokens,
         usage,
         reported: input.reportedContextTokens,
@@ -158,7 +163,7 @@ const live: Layer.Layer<
       ) {
         return yield* Effect.fail(new KiloSessionOverflow.PreflightError())
       }
-      const prepared = { ...base, params: { ...base.params, maxOutputTokens } }
+      const prepared = { ...base, tools, params: { ...base.params, maxOutputTokens } }
       // kilocode_change end
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
@@ -210,12 +215,18 @@ const live: Layer.Layer<
             return { approved: true }
           }
 
-          const id = PermissionID.ascending()
-          let unsub: (() => void) | undefined
+          const id = PermissionV1.ID.ascending()
+          let unsub: EventV2.Unsubscribe | undefined
           try {
-            unsub = Bus.subscribe(Permission.Event.Replied, (evt) => {
-              if (evt.properties.requestID === id) void evt.properties.reply
-            })
+            unsub = await bridge.promise(
+              events.listen((event) => {
+                if (event.type !== Permission.Event.Replied.type) return Effect.void
+                const data = event.data as EventV2.Data<typeof Permission.Event.Replied>
+                if (data.requestID !== id) return Effect.void
+                void data.reply
+                return Effect.void
+              }),
+            )
             const toolPatterns = approvalTools.map((t: { name: string; args: string }) => {
               try {
                 const parsed = JSON.parse(t.args) as Record<string, unknown>
@@ -243,7 +254,7 @@ const live: Layer.Layer<
           } catch {
             return { approved: false }
           } finally {
-            unsub?.()
+            if (unsub) await bridge.promise(unsub)
           }
         })
       }
@@ -340,6 +351,8 @@ const live: Layer.Layer<
       // LLMAISDK.toLLMEvents below normalizes fullStream parts for the processor.
       const result = streamText({
         // kilocode_change
+        // Copilot returns the authoritative billed amount only in provider-specific response fields.
+        includeRawChunks: input.model.providerID.includes("github-copilot"),
         onError(error) {
           l.error("stream error", {
             error,
@@ -451,7 +464,7 @@ const live: Layer.Layer<
   }),
 )
 
-export const layer = live.pipe(Layer.provide(Permission.defaultLayer))
+export const layer = live.pipe(Layer.provide(Permission.defaultLayer), Layer.provide(EventV2Bridge.defaultLayer))
 
 export const defaultLayer = Layer.suspend(() =>
   layer.pipe(

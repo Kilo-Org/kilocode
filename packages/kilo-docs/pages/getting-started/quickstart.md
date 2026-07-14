@@ -1,14 +1,14 @@
 ---
-title: "Quickstart"
+title: "Your First Task"
 description: "Get up and running with Kilo Code in minutes"
 ---
 
-# Quickstart
+# Your First Task
 
 After you [set up Kilo Code](/docs/getting-started/setup-authentication), follow the guide for your platform below.
 
 {% tabs %}
-{% tab label="VSCode" %}
+{% tab label="VS Code" %}
 
 ## Step by Step Guide
 
@@ -36,16 +36,9 @@ Kilo Code analyzes your request and proposes actions. By default, most tools are
 
 To change which actions require approval, open **Settings** (gear icon) and go to the **Auto-Approve** tab. You can set each tool to Allow, Ask, or Deny. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for details.
 
-### Step 5: Iterate
+### Step 5: Iterate and Review
 
-Kilo Code works iteratively. Continue giving feedback or follow-up instructions until your task is complete.
-
-### Key Differences from Legacy
-
-- **Settings** are managed via `kilo.jsonc` config files (the Settings webview reads and writes the same files)
-- **Permissions** use a granular per-tool system instead of broad approval categories
-- **Modes** are called "agents" and configured as `.md` files or via the `agent` config key
-- **Autocomplete** uses FIM (Fill-in-the-Middle) with Codestral
+Kilo Code works iteratively. Continue giving feedback or follow-up instructions until your task is complete. The assistant will propose file edits, run commands, and complete your request step by step.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -68,7 +61,7 @@ Run the `kilo` command to start the interactive TUI (terminal user interface):
 kilo
 ```
 
-If this is your first time, run `kilo auth login` first to authenticate (see [Setup & Authentication](/docs/getting-started/setup-authentication)).
+If this is your first time, run `kilo auth login` first to authenticate (see [Authentication](/docs/getting-started/setup-authentication)).
 
 ### Step 3: Type Your Task
 
@@ -86,9 +79,9 @@ Kilo analyzes your request and proposes actions. By default, most tools are auto
 
 To change permission defaults, configure the `permission` key in your `kilo.jsonc` config file. See [Auto-Approving Actions](/docs/getting-started/settings/auto-approving-actions) for details.
 
-### Step 5: Iterate
+### Step 5: Iterate and Review
 
-Kilo works iteratively. Continue giving feedback or follow-up instructions until your task is complete.
+Kilo works iteratively. Continue giving feedback or follow-up instructions until your task is complete. The assistant will propose file edits, run commands, and complete your request step by step.
 
 ### One-Shot Mode
 
@@ -107,19 +100,13 @@ kilo run --auto "fix the failing tests in test/auth.test.ts"
 {% /tab %}
 {% /tabs %}
 
-## Conclusion
+## What You Can Do Next
 
-You've completed your first task. Along the way you learned:
+Now that you've completed your first task, try these capabilities:
 
-- How to interact with Kilo Code using natural language
-- Why approval keeps you in control
-- How iteration lets the AI refine its work
-
-Ready for more? Here are some next steps:
-
-- **[Autocomplete](/docs/code-with-ai/features/autocomplete)** — Get inline code suggestions as you type
-- **[Agents](/docs/code-with-ai/agents/using-agents)** — Explore different agents for different tasks
-- **[Git commit generation](/docs/code-with-ai/features/git-commit-generation)** — Automatically generate commit messages
+- **[Autocomplete](/docs/code-with-ai/features/autocomplete)** — Get inline code suggestions as you type in your editor
+- **[Agents](/docs/code-with-ai/agents/using-agents)** — Switch between specialized agents for coding, architecture, debugging, and more
+- **[Git](/docs/code-with-ai/features/git-commit-generation)** — Auto-generate commit messages from your changes
 
 {% callout type="tip" %}
 **Accelerate development:** Check out multiple copies of your repository and run Kilo Code on all of them in parallel (using git to resolve any conflicts, same as with human devs). This can dramatically speed up development on large projects.

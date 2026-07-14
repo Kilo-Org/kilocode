@@ -29,6 +29,16 @@ describe("RemoteProtocol", () => {
     }
   })
 
+  test("heartbeat serializes sessions only", () => {
+    const msg = { type: "heartbeat", sessions: [{ id: "ses_1", status: "idle", title: "t" }] }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("focused")
+      expect(result.data).not.toHaveProperty("open")
+    }
+  })
+
   test("valid event parses", () => {
     const msg = {
       type: "event",

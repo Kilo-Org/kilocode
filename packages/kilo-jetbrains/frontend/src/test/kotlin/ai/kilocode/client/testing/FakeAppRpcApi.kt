@@ -33,6 +33,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var health = HealthDto(healthy = true, version = "1.0.0")
     var cliVersion = "1.0.0"
     var cliPlatform = "darwin-arm64"
+    var cliInfoGate: CompletableDeferred<Unit>? = null
+    var cliInfoError: Exception? = null
+    var cliVersionCalls = 0
+        private set
+    var cliPlatformCalls = 0
+        private set
     var models = ModelStateDto()
     val selections = mutableListOf<ModelSelectionUpdateDto>()
     val cleared = mutableListOf<String>()
@@ -71,11 +77,16 @@ class FakeAppRpcApi : KiloAppRpcApi {
 
     override suspend fun cliVersion(): String {
         assertNotEdt("cliVersion")
+        cliVersionCalls += 1
+        cliInfoGate?.await()
+        cliInfoError?.let { throw it }
         return cliVersion
     }
 
     override suspend fun cliPlatform(): String {
         assertNotEdt("cliPlatform")
+        cliPlatformCalls += 1
+        cliInfoError?.let { throw it }
         return cliPlatform
     }
 

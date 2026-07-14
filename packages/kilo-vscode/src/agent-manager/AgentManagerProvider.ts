@@ -27,6 +27,7 @@ import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
 import { forkSession } from "./fork-session"
+import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
 import { WorktreeImporter } from "./worktree-importer"
@@ -78,14 +79,18 @@ export class AgentManagerProvider implements Disposable {
   private cachedWorktreeStats: { type: "agentManager.worktreeStats"; stats: WorktreeStats[] } | undefined
   private cachedLocalStats: { type: "agentManager.localStats"; stats: LocalStats } | undefined
   private unsubTool: (() => void) | undefined
+  private unsubStatus: (() => void) | undefined
   private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
 
-  /** Session ID most recently loaded via a `loadMessages` message from the webview.
-   *  Updated synchronously — unlike the session provider's currentSession which depends on
-   *  an async `session.get` round-trip and can be stale during rapid tab switches. */
+  /** Session ID most recently loaded via `loadMessages`; updated synchronously. */
   private activeSessionId: string | undefined
+  private visiblePresence = new AgentManagerVisiblePresence(
+    (ids) => this.connectionService.registerVisible("agent-manager", ids),
+    () => this.panel?.visible ?? false,
+    (ids) => this.connectionService.registerAttached("agent-manager", ids),
+  )
   constructor(
     private readonly host: Host,
     private readonly connectionService: KiloConnectionService,
@@ -184,6 +189,19 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "kilocode.agent_manager.start",
       (event, directory) => this.onToolEvent(event, directory),
     )
+    this.unsubStatus = this.connectionService.onEventFiltered(
+      (event) => (event as { type?: string }).type === "session.status",
+      (event) => this.onSessionStatus(event),
+    )
+  }
+
+  private onSessionStatus(event: unknown): void {
+    const props = (event as { properties?: { sessionID?: string; status?: { type?: string } } }).properties
+    const sid = props?.sessionID
+    const type = props?.status?.type
+    if (!sid || !type) return
+    if (type === "idle") this.naming.idle(sid)
+    else this.naming.busy(sid)
   }
 
   private log(...args: unknown[]) {
@@ -243,6 +261,7 @@ export class AgentManagerProvider implements Disposable {
     this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
       this.statsPoller.setVisible(visible)
+      this.visiblePresence.flush()
     })
 
     ctx.sessions.onFollowupAdopted((session, directory) => {
@@ -262,8 +281,7 @@ export class AgentManagerProvider implements Disposable {
         this.prBridge.poller.stop()
         this.diffs.stop()
         this.activeSessionId = undefined
-        this.connectionService.unregisterFocused("agent-manager")
-        this.connectionService.registerOpen("agent-manager", [])
+        this.visiblePresence.clear()
         this.panel = undefined
         this.onVisibilityChange?.(false)
       }
@@ -484,13 +502,17 @@ export class AgentManagerProvider implements Disposable {
     }
 
     if (m.type === "requestTerminalContext") {
-      if (m.sessionID && !this.terminalManager.hasActiveTerminal()) this.terminalManager.showExisting(m.sessionID)
-      return msg
+      if (!m.sessionID || this.terminalManager.prepareContext(m.sessionID)) return msg
+      this.panel?.postMessage({
+        type: "terminalContextError",
+        requestId: m.requestId,
+        error: "No terminal is associated with this session",
+      })
+      return null
     }
 
     if (m.type === "loadMessages") {
       this.activeSessionId = m.sessionID
-      this.connectionService.registerFocused("agent-manager", m.sessionID)
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
       this.prBridge.poller.setActiveWorktreeId(this.state?.getSession(m.sessionID)?.worktreeId ?? undefined)
       return msg
@@ -498,7 +520,7 @@ export class AgentManagerProvider implements Disposable {
 
     if (m.type === "clearSession") {
       this.activeSessionId = undefined
-      this.connectionService.unregisterFocused("agent-manager")
+      this.visiblePresence.setDisplayed(null)
       void Promise.resolve().then(() => {
         if (!this.panel || !this.state) return
         for (const id of this.state.worktreeSessionIds()) {
@@ -516,8 +538,8 @@ export class AgentManagerProvider implements Disposable {
       return msg
     }
 
-    if (m.type === "agentManager.openSessions") {
-      this.connectionService.registerOpen("agent-manager", m.sessionIDs)
+    if (m.type === "agentManager.openSessions" || m.type === "agentManager.visibleSession") {
+      this.visiblePresence.handle(m)
       return null
     }
   }
@@ -1062,6 +1084,7 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
     this.run.remove(worktreeId)
+    this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
@@ -1095,6 +1118,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
       this.diffs.stop()
@@ -1453,10 +1477,6 @@ export class AgentManagerProvider implements Disposable {
     this.log(`Multi-version creation complete: ${created.length}/${versions} versions`)
     return null
   }
-
-  // ---------------------------------------------------------------------------
-  // Keybindings
-  // ---------------------------------------------------------------------------
 
   private sendKeybindings(): void {
     const keybindings = this.host.extensionKeybindings()
@@ -1959,9 +1979,9 @@ export class AgentManagerProvider implements Disposable {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
     this.unsubTool?.()
+    this.unsubStatus?.()
     this.unsubFont?.()
-    this.connectionService.unregisterFocused("agent-manager")
-    this.connectionService.registerOpen("agent-manager", [])
+    this.visiblePresence.clear()
     this.diffs.stop()
     this.naming.dispose()
     this.statsPoller.stop()

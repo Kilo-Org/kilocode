@@ -1,6 +1,5 @@
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
-import { SyncEvent } from "@/sync"
 import { Effect, Layer, Scope, Context } from "effect"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -20,20 +19,19 @@ export const layer = Layer.effect(
     const cfg = yield* Config.Service
     const session = yield* Session.Service
     const scope = yield* Scope.Scope
-    const sync = yield* SyncEvent.Service
     const flags = yield* RuntimeFlags.Service
 
     const share = Effect.fn("SessionShare.share")(function* (sessionID: SessionID) {
       const conf = yield* cfg.get()
       if (conf.share === "disabled") throw new Error("Sharing is disabled in configuration")
       const result = yield* KiloSession.shareSession(sessionID) // kilocode_change - use Kilo public share URLs
-      yield* sync.run(Session.Event.Updated, { sessionID, info: { share: { url: result.url } } })
+      yield* session.setShare({ sessionID, share: { url: result.url } })
       return result
     })
 
     const unshare = Effect.fn("SessionShare.unshare")(function* (sessionID: SessionID) {
       yield* KiloSession.unshareSession(sessionID) // kilocode_change - use Kilo public share URLs
-      yield* sync.run(Session.Event.Updated, { sessionID, info: { share: { url: null } } })
+      yield* session.setShare({ sessionID, share: undefined })
     })
 
     const create = Effect.fn("SessionShare.create")(function* (input?: Session.CreateInput) {
@@ -52,7 +50,6 @@ export const layer = Layer.effect(
 export const defaultLayer = layer.pipe(
   Layer.provide(Session.defaultLayer),
   Layer.provide(Config.defaultLayer),
-  Layer.provide(SyncEvent.defaultLayer),
   Layer.provide(RuntimeFlags.defaultLayer),
 )
 
