@@ -73,8 +73,7 @@ function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
   return {
     ...input,
     model: normalizeModel(input.model),
-    tools: { ...input.tools, interactive_terminal: false },
-    persistToolPermissions: false,
+    ephemeralTools: { interactive_terminal: false },
   }
 }
 
