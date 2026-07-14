@@ -214,11 +214,44 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).not.toContain("void this.terminalRouter.dispose()")
   })
 
-  it("clears remote session registrations when the panel closes", () => {
+  it("stops both Local and worktree agents when their session tabs close", () => {
+    const text = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = text.indexOf("const handleCloseTab =")
+    const end = text.indexOf("const handleTabMouseDown =", start)
+    const body = text.slice(start, end)
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(body).toContain("closedDrafts.add(sessionId)")
+    expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
+    expect(body).not.toContain('type: "agentManager.forgetSession"')
+    expect(getMethodBody("onCloseSession")).toContain("await this.panel?.sessions.abortSessions([sessionId])")
+    expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
+  })
+
+  it("stops open sessions and clears remote registrations when the panel closes", () => {
     const body = getMethodBody("attachPanel")
-    expect(body).toContain('this.connectionService.unregisterFocused("agent-manager")')
-    expect(body).toContain('this.connectionService.registerOpen("agent-manager", [])')
+    const abort = body.indexOf("ctx.sessions.abortSessions(ids)")
+    const dispose = body.indexOf("ctx.sessions.dispose()")
+    expect(abort).toBeGreaterThanOrEqual(0)
+    expect(dispose).toBeGreaterThan(abort)
+    expect(body).toContain("const ids = [...this.panelSessions]")
+    expect(body).toContain("if (this.activeSessionId) ids.push(this.activeSessionId)")
+    // Presence must be cleared via visiblePresence.clear() — a direct
+    // registerVisible("agent-manager", []) would leave a stale displayed id
+    // that re-registers on the next flush after the panel reopens.
+    expect(body).toContain("this.visiblePresence.clear()")
+    expect(body).not.toContain('this.connectionService.registerVisible("agent-manager"')
+    expect(body).not.toContain('this.connectionService.registerAttached("agent-manager"')
     expect(body).toContain("this.activeSessionId = undefined")
+    const messages = getMethodBody("onSessionMessage")
+    expect(messages).toContain("if (m.draftID) this.panelSessions.add(m.draftID)")
+    expect(messages).toContain("this.panel?.sessions.acknowledgeDraft(m.draftID, m.sessionId)")
+    expect(messages).toContain("for (const id of m.sessionIDs) this.panelSessions.add(id)")
+  })
+
+  it("does not treat extension shutdown as a user panel close", () => {
+    const body = getMethodBody("disposeAsync")
+    expect(body.indexOf("this.panel = undefined")).toBeLessThan(body.indexOf("panel?.dispose()"))
   })
 
   it("reports all open Agent Manager sessions for remote control", () => {

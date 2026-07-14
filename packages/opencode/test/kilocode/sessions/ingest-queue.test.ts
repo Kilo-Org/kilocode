@@ -373,7 +373,7 @@ describe("share ingest queue", () => {
     expect((statuses[0]!.data as { status: string }).status).toBe("idle")
   })
 
-  test("flush sends request with ?v=1 query parameter", async () => {
+  test("flush sends request with ?v=2 query parameter", async () => {
     const urls: string[] = []
     const sched = scheduler(() => clock.now)
 
@@ -397,6 +397,6 @@ describe("share ingest queue", () => {
     sched.run()
     await Bun.sleep(0)
     expect(urls.length).toBe(1)
-    expect(urls[0]).toBe("https://ingest.test/ingest?v=1")
+    expect(urls[0]).toBe("https://ingest.test/ingest?v=2")
   })
 })

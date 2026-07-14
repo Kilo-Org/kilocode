@@ -66,7 +66,7 @@ const put = Effect.fn("ReadDirectoryTest.put")(function* (p: string, content: st
 })
 
 describe("kilocode directory reads", () => {
-  it.live("includes top-level file contents for directory reads", () =>
+  it.live("lists directory entries without reading child contents", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
       yield* put(path.join(dir, "folder", "a.txt"), "alpha")
@@ -76,10 +76,10 @@ describe("kilocode directory reads", () => {
       const result = yield* exec(dir, { filePath: path.join(dir, "folder") })
 
       expect(result.output).toContain("a.txt")
-      expect(result.output).toContain('<file_content path="folder/a.txt">\nalpha\n</file_content>')
+      expect(result.output).not.toContain("alpha")
       expect(result.output).not.toContain('<file_content path="folder/nested/b.txt">')
       expect(result.output).not.toContain('<file_content path="folder/binary.bin">')
-      expect(result.metadata.loaded).toContain(path.join(dir, "folder", "a.txt"))
+      expect(result.metadata.loaded).toEqual([])
     }),
   )
 

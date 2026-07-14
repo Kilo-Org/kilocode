@@ -53,6 +53,7 @@ export namespace KilocodeBootstrap {
         )
         // kilocode_change start - session export bootstrap
         yield* Effect.gen(function* () {
+          if (!SessionExport.enabled) return
           const anon = yield* EffectBridge.fromPromise(() =>
             Identity.getMachineId().catch((err) => {
               log.warn("session export identity failed", { err })

@@ -10,6 +10,9 @@ import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
+import { KiloReference } from "@/kilocode/reference/contains" // kilocode_change
+import { KiloReadObject } from "@/kilocode/tool/read-object" // kilocode_change
+import { isInterrupted } from "@/kilocode/effect/cause" // kilocode_change
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
@@ -63,6 +66,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { Instance } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
+import { assertExternalDirectoryEffect } from "@/tool/external-directory" // kilocode_change
 import { SessionRunState } from "./run-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -71,6 +75,7 @@ import { SessionEvent } from "@opencode-ai/core/session/event"
 import { SessionMessage } from "@opencode-ai/core/session/message"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
+import * as KiloConfiguredReference from "@/kilocode/reference" // kilocode_change
 import { AgentAttachment, FileAttachment, Prompt, Source } from "@opencode-ai/core/session/prompt"
 import * as DateTime from "effect/DateTime"
 import { eq } from "drizzle-orm"
@@ -167,21 +172,56 @@ export const layer = Layer.effect(
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
       yield* Effect.logInfo("cancel", { "session.id": sessionID })
-      yield* KiloSessionPromptQueue.cancel(sessionID) // kilocode_change - drop queued follow-up loops on abort
-      KiloSessionPrompt.abortPlanFollowup(sessionID) // kilocode_change - abort pending plan-followup handover work
-      yield* state.cancel(sessionID)
+      yield* KiloSessionPrompt.cancelTree({ sessionID, sessions, cancel: state.cancel }) // kilocode_change - stop queued work and subagents
     })
+
+    // kilocode_change start - preserve configured reference mentions on the Core reference architecture
+    const resolveReferenceParts = Effect.fnUntraced(function* (template: string) {
+      const ctx = yield* InstanceState.context
+      const refs = KiloConfiguredReference.resolveAll({
+        references: (yield* config.get()).reference ?? {},
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+      }).filter((item) => item.kind !== "invalid")
+      const parts: Types.DeepMutable<PromptInput["parts"]> = []
+      const seen = new Set<string>()
+      for (const match of ConfigMarkdown.files(template)) {
+        const name = match[1]
+        if (!name) continue
+        const alias = name.split("/")[0]
+        if (!alias || seen.has(alias)) continue
+        const reference = refs.find((item) => item.name === alias)
+        if (!reference) continue
+        seen.add(alias)
+        const start = match.index ?? 0
+        parts.push({
+          type: "file",
+          url: pathToFileURL(reference.path).href,
+          filename: alias,
+          mime: "application/x-directory",
+          source: { type: "file", text: { value: match[0], start, end: start + match[0].length }, path: alias },
+        })
+      }
+      return parts
+    })
+    // kilocode_change end
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
       const ctx = yield* InstanceState.context
-      const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }]
+      const roots = yield* resolveReferenceParts(template) // kilocode_change
+      const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }, ...roots]
       const files = ConfigMarkdown.files(template)
       const seen = new Set<string>()
+      const aliases = new Set(roots.flatMap((part) => (part.type === "file" && part.filename ? [part.filename] : []))) // kilocode_change
       yield* Effect.forEach(
         files,
         Effect.fnUntraced(function* (match) {
           const name = match[1]
           if (!name) return
+          // kilocode_change start - configured references were already added above
+          const alias = name.split("/")[0]
+          if (alias && aliases.has(alias)) return
+          // kilocode_change end
           if (seen.has(name)) return
           seen.add(name)
 
@@ -668,6 +708,7 @@ export const layer = Layer.effect(
     ) {
       const exit = yield* provider.getModel(providerID, modelID).pipe(Effect.exit)
       if (Exit.isSuccess(exit)) return exit.value
+      if (isInterrupted(exit.cause)) return yield* Effect.interrupt // kilocode_change
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
         const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
@@ -722,6 +763,8 @@ export const layer = Layer.effect(
         .get()
         .pipe(Effect.orDie)
       const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
+      // kilocode_change start - retain the source session variant across Agent Manager's model-less fork handoff
+      const stored = !input.model && !ag.model ? model : undefined
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -729,14 +772,18 @@ export const layer = Layer.effect(
               .getModel(model.providerID, model.modelID)
               .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
-      const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      const variant =
+        input.variant ??
+        (stored && "variant" in stored && typeof stored.variant === "string" ? stored.variant : undefined) ??
+        (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      // kilocode_change end
 
       const info: SessionV1.User = {
         id: input.messageID ?? MessageID.ascending(),
         role: "user",
         sessionID: input.sessionID,
         time: { created: Date.now() },
-        tools: input.tools,
+        tools: { ...input.tools, ...input.ephemeralTools }, // kilocode_change - apply non-persistent remote tool restrictions
         agent: ag.name,
         model: {
           providerID: model.providerID,
@@ -779,6 +826,29 @@ export const layer = Layer.effect(
       const assign = (part: Draft<SessionV1.Part>): SessionV1.Part => ({
         ...part,
         id: part.id ? PartID.make(part.id) : PartID.ascending(),
+      })
+
+      const ctx = yield* InstanceState.context // kilocode_change - resolve V1 reference roots for attachment authorization
+      const references = KiloConfiguredReference.resolveAll({
+        references: (yield* config.get()).reference ?? {},
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+      }).filter((item) => item.kind !== "invalid")
+
+      const referenceContextFromFilePart = Effect.fnUntraced(function* (
+        part: Extract<PromptInput["parts"][number], { type: "file" }>,
+        filepath: string,
+      ) {
+        const name = part.filename?.replace(/#\d+(?:-\d*)?$/, "")
+        if (!name) return
+        const slash = name.indexOf("/")
+        if (slash === -1) return
+
+        const reference = references.find((item) => item.name === name.slice(0, slash))
+        if (!reference) return
+        if (!FSUtil.contains(reference.path, filepath)) return
+
+        return { root: reference.path } // kilocode_change - carry the Core reference root for authorization
       })
 
       // kilocode_change start
@@ -887,22 +957,43 @@ export const layer = Layer.effect(
             case "file:": {
               yield* Effect.logInfo("file", { mime: part.mime })
               const filepath = fileURLToPath(part.url)
+              // kilocode_change start
+              const reference = yield* referenceContextFromFilePart(part, filepath)
+              // kilocode_change end
               const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
 
               const { read } = yield* registry.named()
-              const execRead = (args: Parameters<typeof read.execute>[0], extra?: Tool.Context["extra"]) => {
-                const controller = new AbortController()
-                return read
-                  .execute(args, {
-                    sessionID: input.sessionID,
-                    abort: controller.signal,
-                    agent: input.agent!,
-                    messageID: info.id,
-                    extra: { bypassCwdCheck: true, ...extra },
-                    messages: [],
-                    metadata: () => Effect.void,
-                    ask: () => Effect.void,
+              // kilocode_change start - authorize prompt attachments like model-issued read calls
+              const controller = new AbortController()
+              const ask: Tool.Context["ask"] = (request) =>
+                Effect.gen(function* () {
+                  const session = yield* sessions.get(input.sessionID)
+                  yield* KiloSessionPrompt.askPermission({
+                    permission,
+                    agents,
+                    sessions,
+                    agent: ag,
+                    session,
+                    request: {
+                      ...request,
+                      sessionID: input.sessionID,
+                    },
                   })
+                }).pipe(Effect.orDie)
+              const ctx = (extra?: Tool.Context["extra"]): Tool.Context => ({
+                sessionID: input.sessionID,
+                abort: controller.signal,
+                agent: ag.name,
+                messageID: info.id,
+                extra: { ...extra, referenceRoot: reference?.root, includeInstructions: false, denyDirectory: true },
+                messages: [],
+                metadata: () => Effect.void,
+                ask,
+              })
+              // kilocode_change end
+              const execRead = (args: Parameters<typeof read.execute>[0], extra?: Tool.Context["extra"]) => {
+                return read
+                  .execute(args, ctx(extra)) // kilocode_change - enforce read and external_directory permissions
                   .pipe(Effect.onInterrupt(() => Effect.sync(() => controller.abort())))
               }
 
@@ -987,7 +1078,7 @@ export const layer = Layer.effect(
 
               if (mime === "application/x-directory") {
                 const args = { filePath: filepath }
-                const exit = yield* execRead(args, { includeDirectoryFiles: true }).pipe(Effect.exit) // kilocode_change inline folder files
+                const exit = yield* execRead(args).pipe(Effect.exit) // kilocode_change - list only; child bytes need separate reads
                 if (Exit.isFailure(exit)) {
                   const error = Cause.squash(exit.cause)
                   yield* Effect.logError("failed to read directory", { error, filepath })
@@ -1025,38 +1116,86 @@ export const layer = Layer.effect(
                 ]
               }
 
-              // kilocode_change start - reject oversized user image files before reading and base64 allocation
-              if (mime.startsWith("image/")) {
-                const limit = (yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES
-                const stat = yield* fsys.stat(filepath).pipe(Effect.catch(Effect.die))
-                const encoded = ((stat.size + 2n) / 3n) * 4n
-                if (encoded > BigInt(limit))
-                  return yield* Effect.die(
-                    new Image.SizeError({
-                      bytes: Number(encoded > BigInt(Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : encoded),
-                      max: limit,
-                      width: 0,
-                      height: 0,
-                      max_width: 0,
-                      max_height: 0,
-                    }),
-                  )
+              // kilocode_change start - authorize metadata, then reopen and verify before consuming bytes
+              const access = yield* Effect.gen(function* () {
+                const file = yield* KiloReadObject.file(filepath)
+                const instance = yield* InstanceState.context
+                const context = ctx()
+                const explicit = reference ? yield* KiloReference.path(fsys, reference.root, file.target) : false
+                const referenced =
+                  explicit ||
+                  (yield* KiloReference.contains({ fs: fsys, references, target: file.target }))
+                yield* assertExternalDirectoryEffect(context, file.target, { bypass: referenced, kind: "file" })
+                yield* context.ask({
+                  permission: "read",
+                  patterns: [...new Set([filepath, file.target].map((item) => path.relative(instance.worktree, item)))],
+                  always: ["*"],
+                  metadata: {},
+                })
+
+                return yield* KiloReadObject.use(file, (bound) =>
+                  Effect.gen(function* () {
+                    const limit = mime.startsWith("image/")
+                      ? ((yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES)
+                      : undefined
+                    const raw = limit === undefined ? undefined : Math.floor(limit / 4) * 3 + 1
+                    const bytes = yield* Effect.tryPromise({
+                      try: (signal) => bound.read(raw, AbortSignal.any([context.abort, signal])),
+                      catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                    })
+                    if (limit !== undefined) {
+                      const encoded = Math.ceil(bytes.byteLength / 3) * 4
+                      if (encoded > limit) {
+                        return yield* Effect.fail(
+                          new Image.SizeError({
+                            bytes: encoded,
+                            max: limit,
+                            width: 0,
+                            height: 0,
+                            max_width: 0,
+                            max_height: 0,
+                          }),
+                        )
+                      }
+                    }
+                    const file: MessageV2.FilePart = {
+                      id: part.id ? PartID.make(part.id) : PartID.ascending(),
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "file",
+                      url: `data:${mime};base64,${bytes.toString("base64")}`,
+                      mime,
+                      filename: part.filename!,
+                      source: part.source,
+                    }
+                    return mime.startsWith("image/") ? yield* image.normalize(file) : file
+                  }),
+                )
+              }).pipe(Effect.exit)
+              if (Exit.isFailure(access)) {
+                const error = Cause.squash(access.cause)
+                if (
+                  error instanceof Image.InvalidDataUrlError ||
+                  error instanceof Image.DecodeError ||
+                  error instanceof Image.SizeError
+                )
+                  return yield* Effect.die(error)
+                yield* Effect.logError("failed to read file", { error, filepath })
+                const message = error instanceof Error ? error.message : String(error)
+                yield* events.publish(Session.Event.Error, {
+                  sessionID: input.sessionID,
+                  error: new NamedError.Unknown({ message }).toObject(),
+                })
+                return [
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                  },
+                ]
               }
-              // kilocode_change end
-              const file: MessageV2.FilePart = {
-                id: part.id ? PartID.make(part.id) : PartID.ascending(),
-                messageID: info.id,
-                sessionID: input.sessionID,
-                type: "file",
-                url:
-                  `data:${mime};base64,` +
-                  Buffer.from(yield* fsys.readFile(filepath).pipe(Effect.catch(Effect.die))).toString("base64"),
-                mime,
-                filename: part.filename!,
-                source: part.source,
-              }
-              // kilocode_change start - apply image limits after resolving user file URLs
-              const attachment = mime.startsWith("image/") ? yield* image.normalize(file).pipe(Effect.orDie) : file
               // kilocode_change end
               return [
                 {
@@ -1066,7 +1205,7 @@ export const layer = Layer.effect(
                   synthetic: true,
                   text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
                 },
-                attachment,
+                access.value, // kilocode_change - retain the attachment read through the authorized object
               ]
             }
           }
@@ -1093,7 +1232,24 @@ export const layer = Layer.effect(
         return [{ ...part, messageID: info.id, sessionID: input.sessionID }]
       })
 
-      const resolvedParts = yield* Effect.forEach(input.parts, resolvePart, { concurrency: "unbounded" }).pipe(
+      // kilocode_change start - expand references from direct prompt text, not only command templates
+      const submittedParts: Types.DeepMutable<PromptInput["parts"]> = [...input.parts]
+      const attached = new Set(
+        input.parts.flatMap((part) =>
+          part.type === "file" && part.mime === "application/x-directory" ? [part.url] : [],
+        ),
+      )
+      for (const part of input.parts) {
+        if (part.type !== "text" || part.synthetic) continue
+        for (const reference of yield* resolveReferenceParts(part.text)) {
+          if (reference.type === "file" && attached.has(reference.url)) continue
+          if (reference.type === "file") attached.add(reference.url)
+          submittedParts.push(reference)
+        }
+      }
+      // kilocode_change end
+
+      const resolvedParts = yield* Effect.forEach(submittedParts, resolvePart, { concurrency: "unbounded" }).pipe(
         Effect.map((x) => x.flat().map(assign)),
       )
 
@@ -1220,7 +1376,7 @@ export const layer = Layer.effect(
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
         // kilocode_change end
-        const message = yield* createUserMessage(input)
+        const message = yield* KiloSessionPrompt.intake(input.sessionID, createUserMessage(input)) // kilocode_change
         yield* sessions.touch(input.sessionID)
 
         const permissions: PermissionV1.Rule[] = []
@@ -1806,14 +1962,17 @@ export const layer = Layer.effect(
         })
         yield* getModel(model.providerID, model.modelID, input.sessionID)
         const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
-        const user = yield* createUserMessage({
-          sessionID: input.sessionID,
-          messageID: input.messageID,
-          model,
-          agent: agent.name,
-          variant: input.variant,
-          parts: [{ type: "text", text }, ...(input.parts ?? [])],
-        })
+        const user = yield* KiloSessionPrompt.intake(
+          input.sessionID,
+          createUserMessage({
+            sessionID: input.sessionID,
+            messageID: input.messageID,
+            model,
+            agent: agent.name,
+            variant: input.variant,
+            parts: [{ type: "text", text }, ...(input.parts ?? [])],
+          }),
+        )
         yield* sessions.touch(input.sessionID)
         const ctx = yield* InstanceState.context
         const completed = Date.now()
@@ -2026,9 +2185,11 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
+  // kilocode_change start - keep internal ephemeral tool controls out of the public prompt schema
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
+  // kilocode_change end
   // kilocode_change start - managed product slow-snapshot policy
   snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",
@@ -2059,6 +2220,7 @@ type PartInputUnion =
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
+  ephemeralTools?: Record<string, boolean>
 }
 // kilocode_change end
 

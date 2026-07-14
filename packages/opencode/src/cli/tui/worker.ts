@@ -10,7 +10,9 @@ import { Heap } from "@/cli/heap"
 import { AppRuntime } from "@/effect/app-runtime"
 import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
+import { KiloLog } from "@/kilocode/log" // kilocode_change
 
+await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
 Heap.start()
 
 // Subscribe to global events and forward them via RPC

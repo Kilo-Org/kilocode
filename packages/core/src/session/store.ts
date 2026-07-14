@@ -1,6 +1,6 @@
 export * as SessionStore from "./store"
 
-import { eq } from "drizzle-orm"
+import { and, eq, isNotNull } from "drizzle-orm" // kilocode_change
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
 import { SessionHistory } from "./history"
@@ -45,7 +45,7 @@ export const layer = Layer.effect(
         const row = yield* db
           .select()
           .from(SessionMessageTable)
-          .where(eq(SessionMessageTable.id, messageID))
+          .where(and(eq(SessionMessageTable.id, messageID), isNotNull(SessionMessageTable.seq))) // kilocode_change
           .get()
           .pipe(Effect.orDie)
         return row

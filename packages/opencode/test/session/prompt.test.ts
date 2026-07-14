@@ -1377,7 +1377,7 @@ raceNoLLMServer.instance(
       }
     }),
   { config: cfg },
-  3_000,
+  10_000, // kilocode_change - cancellation tree cleanup can exceed 3s under macOS CI shard load
 )
 
 noLLMServer.instance(
@@ -2443,6 +2443,86 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+noLLMServer.instance(
+  "resolves configured reference mentions to one root directory attachment",
+  () =>
+    Effect.gen(function* () {
+      const { directory: dir } = yield* TestInstance
+      const docs = path.join(dir, "external-docs")
+      yield* ensureDir(path.join(docs, "guide"))
+      yield* ensureDir(path.join(dir, "docs"))
+      yield* writeText(path.join(docs, "README.md"), "reference readme")
+      yield* writeText(path.join(docs, "guide", "intro.md"), "reference intro")
+      yield* writeText(path.join(dir, "docs", "README.md"), "workspace readme")
+
+      const prompt = yield* SessionPrompt.Service
+      const parts = yield* prompt.resolvePromptParts(
+        "Use @docs and @docs/README.md and @docs/guide and @docs/missing.md and @docs/README.md and @build",
+      )
+      const files = parts.filter((part): part is SessionV1.FilePartInput => part.type === "file")
+      const agents = parts.filter((part): part is SessionV1.AgentPartInput => part.type === "agent")
+      const text = parts.find((part): part is SessionV1.TextPartInput => part.type === "text" && !part.synthetic)
+
+      expect(text?.text).toContain("@docs")
+      expect(files).toHaveLength(1)
+      expect(files[0]).toMatchObject({
+        filename: "docs",
+        mime: "application/x-directory",
+        source: { type: "file", path: "docs", text: { value: "@docs" } },
+      })
+      expect(fileURLToPath(files[0].url)).toBe(docs)
+      expect(agents.map((agent) => agent.name)).toEqual(["code"]) // kilocode_change
+    }),
+  {
+    config: {
+      ...cfg,
+      reference: {
+        docs: "./external-docs",
+      },
+    },
+  },
+)
+
+noLLMServer.instance(
+  "stores raw reference mentions alongside directory attachments",
+  () =>
+    Effect.gen(function* () {
+      const { directory: dir } = yield* TestInstance
+      const docs = path.join(dir, "external-docs")
+      yield* ensureDir(docs)
+
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({})
+      const message = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [{ type: "text", text: "Use @docs for context" }],
+      })
+
+      const stored = yield* MessageV2.get({ sessionID: session.id, messageID: message.info.id })
+      const synthetic = stored.parts.filter(
+        (part): part is SessionV1.TextPart => part.type === "text" && part.synthetic === true,
+      )
+      const files = stored.parts.filter((part): part is SessionV1.FilePart => part.type === "file")
+      const text = stored.parts.find((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic)
+
+      expect(text?.text).toBe("Use @docs for context")
+      expect(synthetic.some((part) => part.text.includes("Directory attachments cannot be expanded"))).toBe(true) // kilocode_change
+      expect(files).toHaveLength(0) // kilocode_change
+
+      yield* sessions.remove(session.id)
+    }),
+  {
+    config: {
+      ...cfg,
+      reference: {
+        docs: "./external-docs",
+      },
+    },
+  },
+)
+
 // Special characters in filenames
 
 noLLMServer.instance(
@@ -2548,6 +2628,41 @@ it.instance(
 )
 
 // Agent variant
+
+// kilocode_change start - Agent Manager records a model-less synthetic prompt after forking
+noLLMServer.instance(
+  "preserves the session variant through a model-less handoff",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({
+        model: {
+          id: ref.modelID,
+          providerID: ref.providerID,
+          variant: "high",
+        },
+      })
+
+      const handoff = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [{ type: "text", text: "fork handoff", synthetic: true }],
+      })
+      if (handoff.info.role !== "user") throw new Error("expected user message")
+
+      expect(handoff.info.model).toEqual({
+        providerID: ref.providerID,
+        modelID: ref.modelID,
+        variant: "high",
+      })
+
+      const saved = yield* sessions.get(session.id)
+      expect(saved.model?.variant).toBe("high")
+    }),
+  { config: cfg },
+)
+// kilocode_change end
 
 noLLMServer.instance(
   "applies agent variant only when using agent model",

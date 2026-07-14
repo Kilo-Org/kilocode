@@ -1502,11 +1502,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura de muestreo (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controla el grado de aleatoriedad de las respuestas de la IA (0–2). Los valores más bajos (p. ej., 0.2) producen resultados centrados y coherentes. Los valores más altos (p. ej., 1.0) producen respuestas más variadas y creativas. Déjalo vacío para usar el valor predeterminado del modelo.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parámetro de muestreo nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Umbral de muestreo nucleus (0–1). Limita las opciones de tokens al conjunto más pequeño cuya probabilidad acumulada alcanza P. Los valores más bajos hacen que el resultado sea más centrado; los más altos permiten mayor diversidad. Déjalo vacío para usar el valor predeterminado del modelo.",
   "settings.agentBehaviour.maxSteps.title": "Pasos máximos",
-  "settings.agentBehaviour.maxSteps.description": "Iteraciones máximas del agente",
+  "settings.agentBehaviour.maxSteps.description":
+    "Número máximo de pasos del agente. Al alcanzar el límite, se indica al agente que deje de usar herramientas y proporcione una respuesta final. Auméntalo para tareas complejas de varios pasos; redúcelo para mantener las respuestas más cortas y predecibles.",
   "settings.agentBehaviour.hidden.title": "Oculto",
   "settings.agentBehaviour.hidden.description": "Ocultar este agente del selector de modos en la entrada del chat",
   "settings.agentBehaviour.disable.title": "Desactivado",

@@ -33,6 +33,7 @@ import { Permission } from "@/permission"
 import { Global } from "@opencode-ai/core/global"
 // kilocode_change start - Kilo session behavior extensions
 import { BackgroundProcess } from "@/kilocode/background-process"
+import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { InteractiveTerminal } from "@/kilocode/interactive-terminal"
 import { KiloSession } from "@/kilocode/session"
 import { kiloSessionFork } from "@/kilocode/session/fork-command"
@@ -259,7 +260,10 @@ export const CreateInput = Schema.optional(
     metadata: Schema.optional(Metadata),
     permission: Schema.optional(PermissionV1.Ruleset),
     platform: Schema.optional(Schema.String), // kilocode_change - per-session platform override for telemetry attribution
+    // kilocode_change start - server-issued sandbox inheritance grant
     workspaceID: Schema.optional(WorkspaceV2.ID),
+    sandboxInheritanceToken: Schema.optional(Schema.String),
+    // kilocode_change end
   }),
 )
 export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInput>>
@@ -490,6 +494,7 @@ export type NotFound = NotFoundError
 
 export interface Interface {
   readonly list: (input?: ListInput) => Effect.Effect<Info[]>
+  // kilocode_change start - session create metadata and sandbox inheritance extensions
   readonly listGlobal: (input?: GlobalListInput) => Effect.Effect<GlobalInfo[]>
   readonly create: (input?: {
     parentID?: SessionID
@@ -500,7 +505,9 @@ export interface Interface {
     permission?: PermissionV1.Ruleset
     platform?: string // kilocode_change - per-session platform override for telemetry attribution
     workspaceID?: WorkspaceV2.ID
+    sandboxInheritanceToken?: string
   }) => Effect.Effect<Info>
+  // kilocode_change end
   readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info, NotFound>
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
   readonly get: (id: SessionID) => Effect.Effect<Info, NotFound>
@@ -569,6 +576,7 @@ export const layer: Layer.Layer<
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
 
+    // kilocode_change start - inherited sandbox policy source
     const createNext = Effect.fn("Session.createNext")(function* (input: {
       id?: SessionID
       title?: string
@@ -582,6 +590,7 @@ export const layer: Layer.Layer<
       permission?: PermissionV1.Ruleset
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
       sourceID?: SessionID // kilocode_change - inherited sandbox policy source
+      sourceDirectory?: string
       sandboxFallback?: SandboxPolicy.Snapshot // kilocode_change - confinement to seed when source state lives in another directory
     }) {
       const ctx = yield* InstanceState.context
@@ -607,6 +616,7 @@ export const layer: Layer.Layer<
         },
       }
       yield* Effect.logInfo("created", result)
+      // kilocode_change end
 
       // kilocode_change start - legacy sessions must satisfy the upstream project foreign key
       yield* db
@@ -627,7 +637,7 @@ export const layer: Layer.Layer<
       // kilocode_change start - initialize inherited state before session.created subscribers run
       KiloSession.register({ id: result.id, parentID: result.parentID, platform: input.platform })
       const source = input.sourceID ?? result.parentID
-      if (source) yield* SandboxPolicy.inherit(source, result.id, input.sandboxFallback)
+      if (source) yield* SandboxPolicy.inherit(source, result.id, input.sandboxFallback, input.sourceDirectory)
       // kilocode_change end
 
       yield* events.publish(SessionV1.Event.Created, { sessionID: result.id, info: result })
@@ -769,6 +779,7 @@ export const layer: Layer.Layer<
       } as SessionV1.Part
     })
 
+    // kilocode_change start - session create metadata and sandbox inheritance extensions
     const create = Effect.fn("Session.create")(function* (input?: {
       parentID?: SessionID
       title?: string
@@ -778,9 +789,14 @@ export const layer: Layer.Layer<
       permission?: PermissionV1.Ruleset
       platform?: string // kilocode_change - per-session platform override for telemetry attribution
       workspaceID?: WorkspaceV2.ID
+      sandboxInheritanceToken?: string
     }) {
       const ctx = yield* InstanceState.context
       const workspace = yield* InstanceState.workspaceID
+      const grant = SandboxInheritance.consume(input?.sandboxInheritanceToken)
+      if (input?.sandboxInheritanceToken && !grant) yield* Effect.die(new Error("Invalid sandbox inheritance token"))
+      // kilocode_change end
+      // kilocode_change start - propagate trusted sandbox inheritance grant
       const session = yield* createNext({
         parentID: input?.parentID,
         directory: ctx.directory,
@@ -791,8 +807,11 @@ export const layer: Layer.Layer<
         metadata: input?.metadata,
         permission: input?.permission,
         platform: input?.platform, // kilocode_change
+        sourceID: grant?.sessionID, // kilocode_change
+        sourceDirectory: grant?.directory, // kilocode_change
         workspaceID: input?.workspaceID ?? workspace,
       })
+      // kilocode_change end
       return session
     })
 
@@ -803,16 +822,35 @@ export const layer: Layer.Layer<
       // kilocode_change start - forks into another directory cannot read the source confinement from the new dir, so carry it over explicitly
       const sandboxFallback = yield* SandboxPolicy.peek(original.directory, input.sessionID)
       // kilocode_change end
+      // kilocode_change start - historical forks must use the model from retained context, not a later source-session selection
+      const msgs = yield* messages({ sessionID: input.sessionID })
+      const point = input.messageID
+      const message = point
+        ? msgs.findLast((msg) => msg.info.id < point && msg.info.role === "user")
+        : undefined
+      const model =
+        message?.info.role === "user"
+          ? {
+              id: message.info.model.modelID,
+              providerID: message.info.model.providerID,
+              variant: message.info.model.variant,
+            }
+          : point
+            ? undefined
+            : original.model
+              ? { ...original.model }
+              : undefined
+      // kilocode_change end
       const session = yield* createNext({
         directory: ctx.directory,
         path: sessionPath(ctx.worktree, ctx.directory),
         workspaceID: original.workspaceID,
         title,
         metadata: structuredClone(original.metadata),
+        model, // kilocode_change - preserve the model + variant active at the fork point
         sourceID: input.sessionID, // kilocode_change - forks preserve initialized confinement
         sandboxFallback, // kilocode_change - seed confinement from the source session's original directory
       })
-      const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()
 
       for (const msg of msgs) {

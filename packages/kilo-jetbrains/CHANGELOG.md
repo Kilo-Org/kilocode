@@ -24,6 +24,23 @@
 
 ## [Unreleased]
 
+## [7.0.5] - 2026-07-14
+
+### Added
+
+- Add an elapsed-time indicator to the session progress footer so long-running tasks show how long they have been active.
+- Support importing legacy JetBrains v5 data directly from raw storage when the previous consolidated migration file is unavailable.
+
+### Fixed
+
+- Restore the v5 migration wizard for users whose legacy provider, OAuth, MCP, mode, setting, or session data was not detected during upgrade.
+- Improve migration reliability by preserving checklist todos, importing legacy tool calls as assistant parts, validating raw session IDs, and reducing migration memory usage.
+- Polish session controls with more native prompt icons, progress footer spacing, auto-hiding prompt scrollbars, and improved rollback/redo scrolling.
+
+### Changed
+
+- Keep the JetBrains plugin pinned to Kilo Core 7.4.5 for this release.
+
 ## [7.0.4] - 2026-07-10
 
 ### Fixed

@@ -5,8 +5,8 @@
  * via thin integration points so the upstream diff stays minimal.
  */
 
-import { createEffect, on } from "solid-js"
-import { useKeyboard } from "@opentui/solid"
+import { createEffect, createMemo, on, onCleanup } from "solid-js"
+import { useKeyboard, useRenderer } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
 import * as Clipboard from "@tui/clipboard"
 import { useBindings } from "@tui/keymap"
@@ -78,37 +78,72 @@ export function useSessionEffects(deps: {
   sync: ReturnType<typeof useSync>
 }) {
   const pty = process.env.KILO_PTY_ID
-  const state = { prev: "" }
+  const viewerId = crypto.randomUUID()
+  const renderer = useRenderer()
+  const session = createMemo(() => (deps.route.data.type === "session" ? deps.route.data.sessionID : undefined))
+  let active = true
+  const meta = { prev: "" }
 
-  // Notify server which session the user is viewing
+  function send() {
+    const id = session()
+    const ids = id ? [id] : []
+    deps.sdk.client.session.viewed({ viewer: { id: viewerId, active }, attached: ids, visible: ids }).catch(() => {})
+  }
+
+  createEffect(() => send())
+
+  const onFocus = () => {
+    active = true
+    send()
+  }
+  const onBlur = () => {
+    active = false
+    send()
+  }
+  renderer.on("focus", onFocus)
+  renderer.on("blur", onBlur)
+
+  // The server prepends `server.connected` to every SSE (re)connect; a restarted
+  // backend has an empty viewer map, so resend the snapshot immediately instead
+  // of waiting for the 60s check-in.
+  const offConnected = deps.sdk.event.on("event", (event) => {
+    if (event.payload.type === "server.connected") send()
+  })
+
+  const timer = setInterval(send, 60_000)
+
   createEffect(() => {
-    const sessionID = deps.route.data.type === "session" ? deps.route.data.sessionID : undefined
-    deps.sdk.client.session.viewed({ focused: sessionID ? [sessionID] : [] }).catch(() => {})
-
+    const sessionID = session()
     if (!pty) return
-    const session = sessionID ? deps.sync.session.get(sessionID) : undefined
-    const key = [sessionID ?? "", session?.title ?? ""].join("\n")
-    if (key === state.prev) return
-    state.prev = key
-
+    const s = sessionID ? deps.sync.session.get(sessionID) : undefined
+    const key = [sessionID ?? "", s?.title ?? ""].join("\n")
+    if (key === meta.prev) return
+    meta.prev = key
     deps.sdk.client.pty
       .update({
         ptyID: pty,
         sessionID: sessionID ?? null,
-        ...(session?.title ? { title: session.title } : {}),
+        ...(s?.title ? { title: s.title } : {}),
       })
       .catch(() => {})
   })
 
-  // Evict per-session data from store when navigating away
   createEffect(
-    on(
-      () => (deps.route.data.type === "session" ? deps.route.data.sessionID : undefined),
-      (current, prev) => {
-        if (prev && prev !== current) deps.sync.session.evict(prev)
-      },
-    ),
+    on(session, (current, prev) => {
+      if (prev && prev !== current) deps.sync.session.evict(prev)
+    }),
   )
+
+  onCleanup(() => {
+    renderer.off("focus", onFocus)
+    renderer.off("blur", onBlur)
+    offConnected()
+    clearInterval(timer)
+    active = false
+    deps.sdk.client.session
+      .viewed({ viewer: { id: viewerId, active: false }, attached: [], visible: [] })
+      .catch(() => {})
+  })
 }
 
 // ---------------------------------------------------------------------------

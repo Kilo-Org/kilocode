@@ -13,6 +13,7 @@ import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "../../../src/session/schema"
+import { Session } from "../../../src/session/session"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
 
 function fakeConn() {
@@ -276,6 +277,69 @@ describe("RemoteSender", () => {
 
     // provide was still called
     await provideStarted
+  })
+
+  test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
+    const { conn } = fakeConn()
+    const calls: SessionPrompt.PromptInput[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async (input: any) => input.fn(),
+      prompt: prompts(calls),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_remote_tools",
+      command: "send_message",
+      data: {
+        sessionID: "ses_x",
+        parts: [{ type: "text", text: "hi" }],
+        tools: { bash: true },
+      },
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(calls[0]?.tools).toEqual({ bash: true })
+    expect(calls[0]?.ephemeralTools).toEqual({ interactive_terminal: false })
+  })
+
+  test("interrupt waits for session cancellation before responding", async () => {
+    const { conn, sent } = fakeConn()
+    let finishCancel: () => void
+    const cancelled: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async (input: any) => input.fn(),
+      cancel: async (sessionID) => {
+        cancelled.push(sessionID)
+        await new Promise<void>((resolve) => {
+          finishCancel = resolve
+        })
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_interrupt",
+      command: "interrupt",
+      sessionId: "ses_x",
+      data: {},
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(cancelled).toEqual(["ses_x"])
+    expect(sent).toEqual([])
+
+    finishCancel!()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(sent).toEqual([{ type: "response", id: "req_interrupt", result: {} }])
   })
 
   test("send_message with invalid data sends error response immediately", () => {
@@ -730,6 +794,7 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("anthropic/claude-sonnet-4-20250514") },
+        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -764,6 +829,7 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("gpt-5-mini") },
+        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -803,6 +869,7 @@ describe("RemoteSender", () => {
           providerID: ProviderV2.ID.make("custom:edge"),
           modelID: ModelV2.ID.make("deployment/model-v1"),
         },
+        ephemeralTools: { interactive_terminal: false },
         variant: "precise",
       },
     ])
@@ -898,6 +965,7 @@ describe("RemoteSender", () => {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
         model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("kilo/gpt-5-mini") },
+        ephemeralTools: { interactive_terminal: false },
       },
     ])
   })
@@ -1506,6 +1574,59 @@ describe("RemoteSender", () => {
         sessionID: "ses_target",
         permission: "file.write",
         patterns: ["src/**"],
+        metadata: {},
+        always: [],
+      },
+    })
+  })
+
+  test("child permission replay includes the subscribed root session", async () => {
+    const { conn, sent } = fakeConn()
+    const child = {
+      id: SessionID.make("ses_child"),
+      parentID: SessionID.make("ses_root"),
+      directory: "/workspace/child",
+    } as Session.Info
+    spyOn(Suggestion, "list").mockResolvedValue([])
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/workspace/root",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async (input: any) => input.fn(),
+      session: {
+        get: async (sessionID) =>
+          sessionID === child.id
+            ? child
+            : ({ id: sessionID, directory: "/workspace/root" } as Session.Info),
+        children: async (sessionID) => (sessionID === SessionID.make("ses_root") ? [child] : []),
+      },
+      question: questions(),
+      permission: permissions([
+        {
+          id: "permission_child",
+          sessionID: "ses_child",
+          permission: "external_directory",
+          patterns: ["/workspace/child/**"],
+          metadata: {},
+          always: [],
+        } as any,
+      ]),
+    })
+
+    sender.handle({ type: "subscribe", sessionId: "ses_root" })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sent).toContainEqual({
+      type: "event",
+      sessionId: "ses_child",
+      parentSessionId: "ses_root",
+      event: "permission.asked",
+      data: {
+        id: "permission_child",
+        sessionID: "ses_child",
+        permission: "external_directory",
+        patterns: ["/workspace/child/**"],
         metadata: {},
         always: [],
       },

@@ -75,9 +75,16 @@ export const PermissionResponsePayload = Schema.Struct({
   response: PermissionV1.Reply,
 })
 // kilocode_change start
+const PresenceSessionId = Schema.String.check(Schema.isStartsWith("ses"), Schema.isMaxLength(234)).pipe(
+  Schema.brand("SessionID"),
+)
 export const ViewedPayload = Schema.Struct({
-  focused: Schema.optional(Schema.Array(Schema.String)),
-  open: Schema.optional(Schema.Array(Schema.String)),
+  viewer: Schema.Struct({
+    id: Schema.String.check(Schema.isUUID()),
+    active: Schema.Boolean,
+  }),
+  attached: Schema.Array(PresenceSessionId).check(Schema.isMaxLength(1000)),
+  visible: Schema.Array(PresenceSessionId).check(Schema.isMaxLength(199)),
 })
 // kilocode_change end
 
@@ -454,6 +461,7 @@ export const SessionApi = HttpApi.make("session")
           query: WorkspaceRoutingQuery,
           payload: ViewedPayload,
           success: described(Schema.Boolean, "Viewed sessions updated"),
+          error: HttpApiError.BadRequest,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "session.viewed",

@@ -17,6 +17,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
+import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 // kilocode_change end
 
@@ -118,8 +119,12 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
       ? (permission: string, pattern: string, ...sets: Ruleset[]) =>
           ExternalDirectoryPermission.evaluate(permission, pattern, ...sets)
       : evaluate
-  const base = ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset))
-  const saved = evalFn(permission, pattern, ...overrides)
+  const base = AgentManagerPermission.harden(
+    permission,
+    pattern,
+    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset)),
+  ) // kilocode_change
+  const saved = AgentManagerPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides)) // kilocode_change
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
@@ -187,8 +192,23 @@ export const layer = Layer.effect(
       // kilocode_change end
       let needsAsk = false
 
-      // kilocode_change start — force "ask" for config file edits
+      // kilocode_change start - protect config access while honoring explicit global skill trust
       const isProtected = ConfigProtection.isRequest(request)
+      const skill = ConfigProtection.globalSkillPattern(request)
+      const trusted = skill
+        ? (() => {
+            const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
+            return rule.action === "allow" && rule.pattern === skill
+          })() ||
+          (yield* config.getGlobal().pipe(
+            Effect.map((global) => fromConfig(global.permission ?? {})),
+            Effect.map((rules) => {
+              const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, rules)
+              return rule.action === "allow" && rule.pattern === skill
+            }),
+            Effect.catch(() => Effect.succeed(false)),
+          ))
+        : false
       // kilocode_change end
 
       for (const pattern of request.patterns) {
@@ -204,8 +224,8 @@ export const layer = Layer.effect(
             ruleset: subset(request.permission, ruleset), // kilocode_change
           })
         }
-        // kilocode_change start — override "allow" to "ask" for config paths
-        if (rule.action === "allow" && !isProtected) continue
+        // kilocode_change start - override "allow" to "ask" for protected config paths
+        if (rule.action === "allow" && (!isProtected || trusted)) continue
         // kilocode_change end
         needsAsk = true
       }
@@ -224,15 +244,16 @@ export const layer = Layer.effect(
         sessionID: request.sessionID,
         permission: request.permission,
         patterns: request.patterns,
-        // kilocode_change start — inject disableAlways + configProtected metadata for config paths
+        // kilocode_change start - disable persistence for protected config paths outside one exact global skill
         metadata: {
           ...request.metadata,
-          ...(isProtected
+          ...(skill ? { rules: [skill] } : {}),
+          ...(isProtected && skill === undefined
             ? { [ConfigProtection.DISABLE_ALWAYS_KEY]: true, [ConfigProtection.CONFIG_PROTECTED_KEY]: true }
             : {}),
         },
         // kilocode_change end
-        always: request.always,
+        always: skill ? [skill] : request.always, // kilocode_change - persist only the exact global skill subtree
         tool: request.tool,
       }
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
@@ -284,8 +305,8 @@ export const layer = Layer.effect(
       yield* Deferred.succeed(existing.deferred, undefined)
       if (input.reply === "once") return
 
-      // kilocode_change start — downgrade "always" to "once" for config file edits
-      if (ConfigProtection.isRequest(existing.info)) return
+      // kilocode_change start - downgrade "always" to "once" for protected config paths
+      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
@@ -329,12 +350,12 @@ export const layer = Layer.effect(
       const existing = s.pending.get(input.requestID)
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
 
-      if (ConfigProtection.isRequest(existing.info)) return
+      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
 
-      const validRules = new Set([
-        ...((existing.info.metadata?.rules as string[] | undefined) ?? []),
-        ...existing.info.always,
-      ])
+      const skill = ConfigProtection.globalSkillPattern(existing.info)
+      const validRules = new Set(
+        skill ? [skill] : [...((existing.info.metadata?.rules as string[] | undefined) ?? []), ...existing.info.always],
+      )
       const permission = existing.info.permission
 
       const approvedSet = new Set(input.approvedAlways ?? [])

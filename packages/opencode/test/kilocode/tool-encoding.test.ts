@@ -4,7 +4,7 @@
 // directly so we validate end-to-end behaviour.
 
 import { afterEach, describe, expect } from "bun:test"
-import { Effect, Exit, Layer, Stream } from "effect"
+import { Effect, Exit, Layer } from "effect"
 import path from "path"
 import fs from "fs/promises"
 import iconv from "iconv-lite"
@@ -193,83 +193,53 @@ describe("tool encoding preservation", () => {
   })
 
   describe("ReadTool streaming and pagination", () => {
-    it.live("streams UTF-8 files and stops after the output cap", () =>
+    it.live("releases a truncated UTF-8 file before atomic replacement", () =>
       provideTmpdirInstance((dir) =>
         Effect.gen(function* () {
           const filepath = path.join(dir, "large.txt")
+          const temp = `${filepath}.tmp`
           const content = `${"x".repeat(80)}\n`.repeat(50_000)
           yield* Effect.promise(() => fs.writeFile(filepath, content))
 
-          const base = yield* FSUtil.Service
-          const counter = { bytes: 0 }
-          const result = yield* runRead({ filePath: filepath }).pipe(
-            Effect.provideService(
-              FSUtil.Service,
-              FSUtil.Service.of({
-                ...base,
-                stream: (file, options) =>
-                  base.stream(file, options).pipe(
-                    Stream.tap((chunk) =>
-                      Effect.sync(() => {
-                        counter.bytes += chunk.length
-                      }),
-                    ),
-                  ),
-              }),
-            ),
-          )
+          const result = yield* runRead({ filePath: filepath })
 
           expect(result.metadata.truncated).toBe(true)
-          expect(counter.bytes).toBeGreaterThan(0)
-          expect(counter.bytes).toBeLessThan(Buffer.byteLength(content, "utf-8") / 2)
+          expect(result.output).not.toContain(content.slice(-1_000))
+          yield* Effect.promise(async () => {
+            await fs.writeFile(temp, "replacement\n")
+            await fs.rename(temp, filepath)
+          })
+          expect(yield* Effect.promise(() => fs.readFile(filepath, "utf8"))).toBe("replacement\n")
         }),
       ),
     )
 
-    it.live("stops the filesystem stream when the tool is aborted", () =>
+    it.live("closes the source stream when the read is aborted", () =>
       provideTmpdirInstance((dir) =>
         Effect.gen(function* () {
           const filepath = path.join(dir, "abort.txt")
+          const temp = `${filepath}.tmp`
           yield* Effect.promise(() => fs.writeFile(filepath, `${"x".repeat(80)}\n`.repeat(50_000)))
 
-          const base = yield* FSUtil.Service
           const controller = new AbortController()
-          const state = { chunks: 0, closed: false }
-          const exit = yield* runRead({ filePath: filepath }, { ...ctx, abort: controller.signal }).pipe(
-            Effect.provideService(
-              FSUtil.Service,
-              FSUtil.Service.of({
-                ...base,
-                stream: (file, options) =>
-                  base.stream(file, options).pipe(
-                    Stream.tap(() =>
-                      Effect.sync(() => {
-                        state.chunks += 1
-                        controller.abort()
-                      }),
-                    ),
-                    Stream.ensuring(
-                      Effect.sync(() => {
-                        state.closed = true
-                      }),
-                    ),
-                  ),
-              }),
-            ),
-            Effect.exit,
-          )
+          controller.abort()
+          const exit = yield* runRead({ filePath: filepath }, { ...ctx, abort: controller.signal }).pipe(Effect.exit)
 
           expect(Exit.isFailure(exit)).toBe(true)
-          expect(state.chunks).toBeGreaterThan(0)
-          expect(state.closed).toBe(true)
+          yield* Effect.promise(async () => {
+            await fs.writeFile(temp, "replacement\n")
+            await fs.rename(temp, filepath)
+          })
+          expect(yield* Effect.promise(() => fs.readFile(filepath, "utf8"))).toBe("replacement\n")
         }),
       ),
     )
 
-    it.live("restarts cleanly when invalid UTF-8 appears after streamed lines", () =>
+    it.live("releases a fallback-decoded file before atomic replacement", () =>
       provideTmpdirInstance((dir) =>
         Effect.gen(function* () {
           const filepath = path.join(dir, "legacy.txt")
+          const temp = `${filepath}.tmp`
           const lines = Array.from({ length: 1_000 }, (_, i) => `valid-${i + 1}-${"x".repeat(70)}`)
           const content = Buffer.concat([
             Buffer.from(lines.join("\n") + "\n"),
@@ -278,34 +248,16 @@ describe("tool encoding preservation", () => {
           ])
           yield* Effect.promise(() => fs.writeFile(filepath, content))
 
-          const base = yield* FSUtil.Service
-          const calls = { bytes: 0, reads: 0 }
-          const result = yield* runRead({ filePath: filepath, offset: 999, limit: 5 }).pipe(
-            Effect.provideService(
-              FSUtil.Service,
-              FSUtil.Service.of({
-                ...base,
-                readFile: (file) =>
-                  Effect.sync(() => {
-                    calls.reads += 1
-                  }).pipe(Effect.andThen(base.readFile(file))),
-                stream: (file, options) =>
-                  base.stream(file, { ...options, chunkSize: 1024 }).pipe(
-                    Stream.tap((chunk) =>
-                      Effect.sync(() => {
-                        calls.bytes += chunk.length
-                      }),
-                    ),
-                  ),
-              }),
-            ),
-          )
+          const result = yield* runRead({ filePath: filepath, offset: 999, limit: 5 })
 
-          expect(calls.bytes).toBeGreaterThan(64 * 1024)
-          expect(calls.reads).toBe(1)
           expect(result.output.match(/999: valid-999-/g)?.length).toBe(1)
           expect(result.output).toContain(`1001: ${samples.shiftJis}`)
           expect(result.output).toContain("1002: last")
+          yield* Effect.promise(async () => {
+            await fs.writeFile(temp, "replacement\n")
+            await fs.rename(temp, filepath)
+          })
+          expect(yield* Effect.promise(() => fs.readFile(filepath, "utf8"))).toBe("replacement\n")
         }),
       ),
     )

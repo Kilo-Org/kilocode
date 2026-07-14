@@ -432,17 +432,21 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 </text>
                 <text fg={theme.text}>{current.title}</text>
               </box>
-              {/* kilocode_change start - explain config file edits always require approval */}
+              {/* kilocode_change start - explain protected Kilo configuration access */}
               <Show when={props.request.metadata?.[ConfigProtection.CONFIG_PROTECTED_KEY]}>
                 <box paddingLeft={4} flexShrink={0}>
-                  <text fg={theme.textMuted}>Config file edits always require approval</text>
+                  <text fg={theme.textMuted}>
+                    {props.request.permission === "edit"
+                      ? "Config file edits always require approval"
+                      : "Kilo configuration access always requires approval"}
+                  </text>
                 </box>
               </Show>
               {/* kilocode_change end */}
             </box>
           )
 
-          // kilocode_change start — hide "Always allow" for config file edits
+          // kilocode_change start - hide "Always allow" for protected Kilo configuration access
           const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
             ? { once: "Allow once", reject: "Reject" }
             : { once: "Allow once", always: "Allow always", reject: "Reject" }

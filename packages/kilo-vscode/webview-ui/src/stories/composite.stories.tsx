@@ -655,6 +655,25 @@ export const ToolCards: Story = {
   },
 }
 
+export const TimelineHighlightedTool: Story = {
+  name: "Task Timeline — highlighted tool",
+  render: () => {
+    const data = dataWith([readCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <div class="vscode-session-turn" data-row="assistant">
+          <div class="vscode-session-turn-assistant">
+            <AssistantMessage
+              message={baseAssistantMessage}
+              highlight={() => ({ msgId: ASST_MSG_ID, partId: readCompleted.id })}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
 export const TitleOnlyReasoning: Story = {
   name: "Reasoning - title only",
   render: () => {

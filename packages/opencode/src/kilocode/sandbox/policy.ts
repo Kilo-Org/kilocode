@@ -364,12 +364,14 @@ export const inherit = Effect.fn("SandboxPolicy.inherit")(function* (
   parentID: SessionID,
   sessionID: SessionID,
   fallback?: Omit<Snapshot, "version">,
+  sourceDirectory?: string,
 ) {
   const directory = yield* InstanceState.directory
+  const source = sourceDirectory ?? directory
   yield* locked(
     parentID,
     Effect.gen(function* () {
-      const stored = yield* read(directory, parentID)
+      const stored = yield* read(source, parentID)
       const parent: Snapshot | undefined = stored ?? (fallback && { ...fallback, version: 0 })
       if (!parent) return
       // Only persist the parent snapshot when it actually belongs to this directory. A fallback

@@ -24,6 +24,7 @@ export const AgentManagerMode = Schema.Literals(["worktree", "local"])
 export const AgentManagerStart = Schema.Struct({
   requestID: Schema.String,
   sessionID: SessionID,
+  sandboxInheritanceToken: Schema.optional(Schema.String),
   mode: AgentManagerMode,
   versions: Schema.optional(Schema.Boolean),
   tasks: Schema.Array(AgentManagerTask).check(Schema.isMinLength(1), Schema.isMaxLength(20)),

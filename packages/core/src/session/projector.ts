@@ -1,6 +1,6 @@
 export * as SessionProjector from "./projector"
 
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm" // kilocode_change
 import { DateTime, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
 import { EventV2 } from "../event"
@@ -139,7 +139,11 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
             .select()
             .from(SessionMessageTable)
             .where(
-              and(eq(SessionMessageTable.session_id, event.data.sessionID), eq(SessionMessageTable.type, "assistant")),
+              and(
+                eq(SessionMessageTable.session_id, event.data.sessionID),
+                eq(SessionMessageTable.type, "assistant"),
+                isNotNull(SessionMessageTable.seq), // kilocode_change
+              ),
             )
             .orderBy(desc(SessionMessageTable.seq))
             .limit(1)
@@ -160,6 +164,7 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
                 eq(SessionMessageTable.id, messageID),
                 eq(SessionMessageTable.session_id, event.data.sessionID),
                 eq(SessionMessageTable.type, "assistant"),
+                isNotNull(SessionMessageTable.seq), // kilocode_change
               ),
             )
             .get()
@@ -174,7 +179,13 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
           const rows = yield* db
             .select()
             .from(SessionMessageTable)
-            .where(and(eq(SessionMessageTable.session_id, event.data.sessionID), eq(SessionMessageTable.type, "shell")))
+            .where(
+              and(
+                eq(SessionMessageTable.session_id, event.data.sessionID),
+                eq(SessionMessageTable.type, "shell"),
+                isNotNull(SessionMessageTable.seq), // kilocode_change
+              ),
+            )
             .orderBy(desc(SessionMessageTable.seq))
             .all()
             .pipe(Effect.orDie)

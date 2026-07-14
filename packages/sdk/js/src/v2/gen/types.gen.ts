@@ -22,6 +22,8 @@ export type Event =
   | EventSuggestionAccepted
   | EventSuggestionDismissed
   | EventKilocodeAgentManagerStart
+  | EventKilocodeAgentManagerRequested
+  | EventKilocodeAgentManagerCancelled
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
   | EventLspClientDiagnostics
@@ -249,6 +251,32 @@ export type SuggestionRequest = {
     callID: string
   }
 }
+
+export type AgentManagerRequestId = string
+
+export type AgentManagerFilterState = "idle" | "busy" | "retry" | "offline" | "waiting"
+
+export type AgentManagerOverviewFilter = {
+  sectionIDs?: Array<string>
+  states?: Array<AgentManagerFilterState>
+}
+
+export type AgentManagerOverviewRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "overview"
+  filter?: AgentManagerOverviewFilter
+}
+
+export type AgentManagerPromptRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "prompt"
+  targetSessionID: string
+  prompt: string
+}
+
+export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest
 
 export type NotebookRequestId = string
 
@@ -1025,6 +1053,8 @@ export type GlobalEvent = {
     | EventSuggestionAccepted
     | EventSuggestionDismissed
     | EventKilocodeAgentManagerStart
+    | EventKilocodeAgentManagerRequested
+    | EventKilocodeAgentManagerCancelled
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
     | EventLspClientDiagnostics
@@ -3215,6 +3245,87 @@ export type NotebookFailure = {
   currentRevision?: string
 }
 
+export type AgentManagerActivity = "idle" | "busy" | "retry" | "offline"
+
+export type AgentManagerAttention = Array<"permission" | "question">
+
+export type AgentManagerSessionSummary = {
+  id: string
+  name: string
+  activity: AgentManagerActivity
+  attention?: AgentManagerAttention
+}
+
+export type AgentManagerGitSummary = {
+  additions: number
+  deletions: number
+  ahead: number
+  behind: number
+}
+
+export type AgentManagerPullRequestSummary = {
+  number: number
+  state: "open" | "draft" | "merged" | "closed"
+  checks: "success" | "failure" | "pending" | "none"
+  review?: "approved" | "changes_requested" | "pending"
+  unresolvedComments?: number
+}
+
+export type AgentManagerWorktreeSummary = {
+  id: string
+  name: string
+  branch: string
+  session?: AgentManagerSessionSummary
+  sessions?: Array<AgentManagerSessionSummary>
+  git?: AgentManagerGitSummary
+  pullRequest?: AgentManagerPullRequestSummary
+}
+
+export type AgentManagerSectionSummary = {
+  id: string
+  name: string
+  worktrees: Array<AgentManagerWorktreeSummary>
+}
+
+export type AgentManagerLocalSummary = {
+  branch?: string
+  sessions: Array<AgentManagerSessionSummary>
+  git?: AgentManagerGitSummary
+}
+
+export type AgentManagerOverview = {
+  sections: Array<AgentManagerSectionSummary>
+  ungrouped: Array<AgentManagerWorktreeSummary>
+  local?: AgentManagerLocalSummary
+}
+
+export type AgentManagerOverviewResult = {
+  operation: "overview"
+  overview: AgentManagerOverview
+}
+
+export type AgentManagerPromptResult = {
+  operation: "prompt"
+  sessionID: string
+  delivered: true
+}
+
+export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult
+
+export type AgentManagerFailure = {
+  code:
+    | "cancelled"
+    | "cross_workspace"
+    | "disconnected"
+    | "host_error"
+    | "stale_session"
+    | "timeout"
+    | "unavailable_session"
+    | "unknown_session"
+    | "workspace_unavailable"
+  message: string
+}
+
 export type AnacondaDesktopStatus =
   | {
       type: "unsupported-platform"
@@ -3537,6 +3648,7 @@ export type EventKilocodeAgentManagerStart = {
   properties: {
     requestID: string
     sessionID: string
+    sandboxInheritanceToken?: string
     mode: "worktree" | "local"
     versions?: boolean
     tasks: Array<{
@@ -3549,6 +3661,22 @@ export type EventKilocodeAgentManagerStart = {
       }
       variant?: string
     }>
+  }
+}
+
+export type EventKilocodeAgentManagerRequested = {
+  id: string
+  type: "kilocode.agent_manager.requested"
+  properties: AgentManagerRequest
+}
+
+export type EventKilocodeAgentManagerCancelled = {
+  id: string
+  type: "kilocode.agent_manager.cancelled"
+  properties: {
+    requestID: AgentManagerRequestId
+    sessionID: string
+    reason: "cancelled" | "disposed" | "timeout"
   }
 }
 
@@ -8925,6 +9053,7 @@ export type SessionCreateData = {
     permission?: PermissionRuleset
     platform?: string
     workspaceID?: string
+    sandboxInheritanceToken?: string
   }
   path?: never
   query?: {
@@ -9933,8 +10062,12 @@ export type PartUpdateResponse = PartUpdateResponses[keyof PartUpdateResponses]
 
 export type SessionViewedData = {
   body?: {
-    focused?: Array<string>
-    open?: Array<string>
+    viewer: {
+      id: string
+      active: boolean
+    }
+    attached: Array<string>
+    visible: Array<string>
   }
   path?: never
   query?: {
@@ -9946,9 +10079,9 @@ export type SessionViewedData = {
 
 export type SessionViewedErrors = {
   /**
-   * Bad request
+   * BadRequest | InvalidRequestError
    */
-  400: BadRequestError
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
 }
 
 export type SessionViewedError = SessionViewedErrors[keyof SessionViewedErrors]
@@ -12580,6 +12713,109 @@ export type KilocodeNotebookRejectResponses = {
 }
 
 export type KilocodeNotebookRejectResponse = KilocodeNotebookRejectResponses[keyof KilocodeNotebookRejectResponses]
+
+export type KilocodeAgentManagerListData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/agent-manager"
+}
+
+export type KilocodeAgentManagerListErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type KilocodeAgentManagerListError = KilocodeAgentManagerListErrors[keyof KilocodeAgentManagerListErrors]
+
+export type KilocodeAgentManagerListResponses = {
+  /**
+   * Pending Agent Manager host requests
+   */
+  200: Array<AgentManagerRequest>
+}
+
+export type KilocodeAgentManagerListResponse =
+  KilocodeAgentManagerListResponses[keyof KilocodeAgentManagerListResponses]
+
+export type KilocodeAgentManagerReplyData = {
+  body?: {
+    result: AgentManagerResult
+  }
+  path: {
+    requestID: AgentManagerRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/agent-manager/{requestID}/reply"
+}
+
+export type KilocodeAgentManagerReplyErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeAgentManagerReplyError = KilocodeAgentManagerReplyErrors[keyof KilocodeAgentManagerReplyErrors]
+
+export type KilocodeAgentManagerReplyResponses = {
+  /**
+   * Agent Manager reply accepted
+   */
+  200: boolean
+}
+
+export type KilocodeAgentManagerReplyResponse =
+  KilocodeAgentManagerReplyResponses[keyof KilocodeAgentManagerReplyResponses]
+
+export type KilocodeAgentManagerRejectData = {
+  body?: {
+    error: AgentManagerFailure
+  }
+  path: {
+    requestID: AgentManagerRequestId
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/kilocode/agent-manager/{requestID}/reject"
+}
+
+export type KilocodeAgentManagerRejectErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+  /**
+   * Not found
+   */
+  404: NotFoundError
+}
+
+export type KilocodeAgentManagerRejectError = KilocodeAgentManagerRejectErrors[keyof KilocodeAgentManagerRejectErrors]
+
+export type KilocodeAgentManagerRejectResponses = {
+  /**
+   * Agent Manager rejection accepted
+   */
+  200: boolean
+}
+
+export type KilocodeAgentManagerRejectResponse =
+  KilocodeAgentManagerRejectResponses[keyof KilocodeAgentManagerRejectResponses]
 
 export type KilocodeSessionModelUsageData = {
   body?: never

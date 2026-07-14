@@ -2,6 +2,7 @@ import { Image } from "@/image/image" // kilocode_change - classify user image v
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -62,6 +63,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
+    const viewers = yield* KiloViewers.Service // kilocode_change
     const scope = yield* Scope.Scope
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {
@@ -313,12 +315,12 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof PromptPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
-      // kilocode_change start - cast to bridge schema-readonly to PromptInput mutable; matches legacy Hono session.ts
       yield* promptSvc
         .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput)
         .pipe(
-          Effect.catchCause((cause) =>
-            Effect.gen(function* () {
+          Effect.catchCause((cause) => {
+            if (Cause.hasInterruptsOnly(cause)) return Effect.void // kilocode_change - Stop is not an error
+            return Effect.gen(function* () {
               yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
               const error = Cause.squash(cause)
               yield* events.publish(Session.Event.Error, {
@@ -327,11 +329,10 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
                   ? error.toObject()
                   : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
               })
-            }),
-          ),
+            })
+          }),
           Effect.forkIn(scope, { startImmediately: true }),
         )
-      // kilocode_change end
       return HttpApiSchema.NoContent.make()
     })
 
@@ -419,8 +420,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
 
     // kilocode_change start
     const viewed = Effect.fn("SessionHttpApi.viewed")(function* (ctx: { payload: typeof ViewedPayload.Type }) {
-      const { KiloSessions } = yield* Effect.promise(() => import("@/kilo-sessions/kilo-sessions"))
-      KiloSessions.setViewedSessions({ focused: ctx.payload.focused ?? [], open: ctx.payload.open ?? [] })
+      yield* viewers.update(ctx.payload)
       return true
     })
     // kilocode_change end

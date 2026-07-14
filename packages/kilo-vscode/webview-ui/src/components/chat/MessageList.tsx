@@ -63,6 +63,7 @@ import {
   type TranscriptHold,
   type TranscriptRow,
 } from "../../context/transcript-rows"
+import { onTimelineHighlight, type TimelineHighlight } from "../../utils/timeline/highlight"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
 import {
@@ -626,6 +627,11 @@ export const MessageList: Component<MessageListProps> = (props) => {
   window.addEventListener("scrollToMessage", onScrollToMessage)
   onCleanup(() => window.removeEventListener("scrollToMessage", onScrollToMessage))
 
+  // Highlights the part behind the currently hovered/focused timeline bar
+  // (dispatched by TaskTimeline) so the two stay visually correlated.
+  const [highlight, setHighlight] = createSignal<TimelineHighlight>()
+  onCleanup(onTimelineHighlight(setHighlight))
+
   const measurement = createMemo(() => {
     const id = session.currentSessionID()
     const token = layout()
@@ -819,6 +825,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         row={row}
                         index={index()}
                         onForkMessage={props.onForkMessage}
+                        highlight={highlight}
                         activeSearch={activeKey() === row.key}
                       />
                     )}
@@ -829,6 +836,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
                     <TranscriptRowView
                       row={lookup().get(key)!}
                       onForkMessage={props.onForkMessage}
+                      highlight={highlight}
                       activeSearch={activeKey() === key}
                     />
                   )}
