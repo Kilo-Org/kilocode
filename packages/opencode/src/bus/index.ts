@@ -1,3 +1,7 @@
+// kilocode_change - Kilo compatibility layer. Upstream deleted this Bus (Effect PubSub) service in v1.16.2
+// in favour of EventV2; Kilo keeps it ONLY for existing Kilo-owned callers (kilocode/* features) that rely on
+// its eager-callback subscription + fork-atomicity semantics. Do NOT add new shared/upstream-shaped consumers.
+// Full migration of Kilo callers onto core EventV2 is tracked as a dedicated follow-up.
 import { Effect, Exit, Fiber, Layer, PubSub, Scope, Context, Stream, Schema } from "effect" // kilocode_change
 import { EffectBridge } from "@/effect/bridge"
 import * as Log from "@opencode-ai/core/util/log"

@@ -10,7 +10,8 @@ import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
 import { Agent } from "../../src/agent/agent"
 import { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 const providers = {
   test: {
@@ -105,8 +106,8 @@ function message(
       time: { created },
       agent: "build",
       model: {
-        providerID: ProviderID.make(provider),
-        modelID: ModelID.make(model),
+        providerID: ProviderV2.ID.make(provider),
+        modelID: ModelV2.ID.make(model),
         ...(variant ? { variant } : {}),
       },
     },

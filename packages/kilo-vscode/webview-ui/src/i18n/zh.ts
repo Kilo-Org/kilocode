@@ -1439,11 +1439,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "自定义提示词",
   "settings.agentBehaviour.prompt.description": "此智能体的附加系统提示词",
   "settings.agentBehaviour.temperature.title": "温度",
-  "settings.agentBehaviour.temperature.description": "采样温度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "控制 AI 响应的随机程度（0–2）。较低的值（例如 0.2）会产生更专注、更一致的输出。较高的值（例如 1.0）会产生更多样、更有创意的响应。留空则使用模型默认值。",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核采样参数（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "核采样阈值（0–1）。将候选词元限制为累计概率达到 P 的最小集合。较低的值使输出更专注；较高的值允许更多样性。留空则使用模型默认值。",
   "settings.agentBehaviour.maxSteps.title": "最大步数",
-  "settings.agentBehaviour.maxSteps.description": "最大智能体迭代次数",
+  "settings.agentBehaviour.maxSteps.description":
+    "智能体的最大步骤数。达到上限后，智能体会收到指示，停止使用工具并给出最终响应。对于复杂的多步骤任务可提高此值；降低此值可使响应更短且更可预测。",
   "settings.agentBehaviour.hidden.title": "隐藏",
   "settings.agentBehaviour.hidden.description": "在聊天输入的模式切换器中隐藏此智能体",
   "settings.agentBehaviour.disable.title": "已禁用",
@@ -1790,4 +1793,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "正在加载分支…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "计划已准备就绪：",
+  "chat.search.placeholder": "搜索聊天…",
+  "chat.search.toggle": "搜索聊天",
+  "chat.search.matchCase": "区分大小写",
+  "chat.search.matchWholeWord": "全字匹配",
+  "chat.search.useRegex": "使用正则表达式",
+  "chat.search.previousMatch": "上一个匹配项",
+  "chat.search.nextMatch": "下一个匹配项",
+  "chat.search.close": "关闭搜索",
+  "chat.search.invalidRegex": "正则表达式无效",
+  "chat.search.noResults": "无结果",
+  "chat.search.searchingHistory": "正在搜索更早的消息…",
 } satisfies Partial<Record<Keys, string>>

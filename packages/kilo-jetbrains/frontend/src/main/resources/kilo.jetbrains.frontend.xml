@@ -121,6 +121,9 @@
         <action id="Kilo.OpenGlobalConfig"
                 class="ai.kilocode.client.actions.OpenGlobalConfigAction"/>
 
+        <action id="Kilo.ForceMigration"
+                class="ai.kilocode.client.actions.ForceMigrationAction"/>
+
         <group id="Kilo.CliGroup" text="Core" popup="true">
             <reference ref="Kilo.Restart"/>
             <reference ref="Kilo.Reinstall"/>
@@ -131,6 +134,8 @@
         <group id="Kilo.OpenConfigGroup" text="Config Files" popup="true">
             <reference ref="Kilo.OpenLocalConfig"/>
             <reference ref="Kilo.OpenGlobalConfig"/>
+            <separator/>
+            <reference ref="Kilo.ForceMigration"/>
         </group>
 
         <group id="Kilo.SettingsGroup">

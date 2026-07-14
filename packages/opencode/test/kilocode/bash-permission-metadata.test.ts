@@ -10,7 +10,7 @@ import type { Permission } from "../../src/permission"
 import { Agent } from "../../src/agent/agent"
 import { Truncate } from "../../src/tool/truncate"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Plugin } from "../../src/plugin"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
@@ -18,7 +18,7 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 const runtime = ManagedRuntime.make(
   Layer.mergeAll(
     CrossSpawnSpawner.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     Plugin.defaultLayer,
     Truncate.defaultLayer,
     Agent.defaultLayer,

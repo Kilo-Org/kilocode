@@ -12,6 +12,7 @@ import { Session } from "../../../src/session/session"
 import { Authorization } from "../../../src/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "../../../src/server/routes/instance/httpapi/middleware/instance-context"
 import { schemaErrorLayer } from "../../../src/server/routes/instance/httpapi/middleware/schema-error"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import {
   WorkspaceRouteContext,
   WorkspaceRoutingMiddleware,
@@ -51,6 +52,7 @@ const layer = HttpRouter.serve(
       store,
       cache,
       session,
+      EventV2Bridge.defaultLayer,
     ]),
   ),
   { disableListenLog: true, disableLogger: true },

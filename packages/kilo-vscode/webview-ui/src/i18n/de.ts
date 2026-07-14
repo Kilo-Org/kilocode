@@ -1514,11 +1514,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Benutzerdefinierter Prompt",
   "settings.agentBehaviour.prompt.description": "Zusätzlicher System-Prompt für diesen Agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
-  "settings.agentBehaviour.temperature.description": "Sampling-Temperatur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Steuert, wie zufällig KI-Antworten ausfallen (0–2). Niedrigere Werte (z. B. 0.2) erzeugen fokussierte, konsistente Ergebnisse. Höhere Werte (z. B. 1.0) erzeugen abwechslungsreichere, kreativere Antworten. Leer lassen, um den Standardwert des Modells zu verwenden.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-Sampling-Parameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Schwellenwert für Nucleus-Sampling (0–1). Beschränkt die Token-Auswahl auf die kleinste Menge, deren kumulierte Wahrscheinlichkeit P erreicht. Niedrigere Werte machen die Ausgabe fokussierter; höhere Werte ermöglichen mehr Vielfalt. Leer lassen, um den Standardwert des Modells zu verwenden.",
   "settings.agentBehaviour.maxSteps.title": "Max. Schritte",
-  "settings.agentBehaviour.maxSteps.description": "Maximale Agent-Iterationen",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximale Anzahl von Agentenschritten. Beim Erreichen des Limits wird der Agent angewiesen, keine Werkzeuge mehr zu verwenden und eine abschließende Antwort zu geben. Für komplexe mehrstufige Aufgaben erhöhen; für kürzere und besser vorhersehbare Antworten verringern.",
   "settings.agentBehaviour.hidden.title": "Versteckt",
   "settings.agentBehaviour.hidden.description": "Diesen Agent im Modus-Umschalter der Chat-Eingabe ausblenden",
   "settings.agentBehaviour.disable.title": "Deaktiviert",
@@ -1906,4 +1909,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Branches werden geladen…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan ist bereit:",
+  "chat.search.placeholder": "Chat durchsuchen…",
+  "chat.search.toggle": "Chat durchsuchen",
+  "chat.search.matchCase": "Groß-/Kleinschreibung beachten",
+  "chat.search.matchWholeWord": "Ganzes Wort suchen",
+  "chat.search.useRegex": "Regulären Ausdruck verwenden",
+  "chat.search.previousMatch": "Vorheriger Treffer",
+  "chat.search.nextMatch": "Nächster Treffer",
+  "chat.search.close": "Suche schließen",
+  "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
+  "chat.search.noResults": "Keine Ergebnisse",
+  "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
 } satisfies Partial<Record<Keys, string>>

@@ -1479,11 +1479,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
   "settings.agentBehaviour.prompt.description": "このエージェントの追加システムプロンプト",
   "settings.agentBehaviour.temperature.title": "温度",
-  "settings.agentBehaviour.temperature.description": "サンプリング温度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "AI の応答のランダム性を制御します（0–2）。低い値（例: 0.2）では、焦点の定まった一貫性のある出力になります。高い値（例: 1.0）では、より多様で創造的な応答になります。モデルのデフォルト値を使用する場合は空欄にしてください。",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "核サンプリングのしきい値です（0–1）。累積確率が P に達する最小のトークン集合に選択肢を制限します。低い値では出力がより集中的になり、高い値では多様性が増します。モデルのデフォルト値を使用する場合は空欄にしてください。",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
-  "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.maxSteps.description":
+    "エージェントの最大ステップ数です。上限に達すると、エージェントはツールの使用を停止して最終応答を返すよう指示されます。複雑な複数ステップのタスクでは増やし、応答を短く予測しやすくするには減らしてください。",
   "settings.agentBehaviour.hidden.title": "非表示",
   "settings.agentBehaviour.hidden.description": "チャット入力のモード切り替えからこのエージェントを非表示にする",
   "settings.agentBehaviour.disable.title": "無効",
@@ -1861,4 +1864,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "プランの準備ができました:",
+  "chat.search.placeholder": "チャットを検索…",
+  "chat.search.toggle": "チャットを検索",
+  "chat.search.matchCase": "大文字と小文字を区別する",
+  "chat.search.matchWholeWord": "単語単位で検索する",
+  "chat.search.useRegex": "正規表現を使用する",
+  "chat.search.previousMatch": "前の一致",
+  "chat.search.nextMatch": "次の一致",
+  "chat.search.close": "検索を閉じる",
+  "chat.search.invalidRegex": "正規表現が無効です",
+  "chat.search.noResults": "見つかりませんでした",
+  "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

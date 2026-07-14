@@ -1482,11 +1482,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",
-  "settings.agentBehaviour.temperature.description": "Örnekleme sıcaklığı (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Yapay zekâ yanıtlarının ne kadar rastgele olacağını kontrol eder (0–2). Daha düşük değerler (ör. 0.2) odaklı ve tutarlı çıktılar üretir. Daha yüksek değerler (ör. 1.0) daha çeşitli ve yaratıcı yanıtlar üretir. Modelin varsayılan değerini kullanmak için boş bırakın.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Çekirdek örnekleme parametresi (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Çekirdek örnekleme eşiği (0–1). Token seçeneklerini, kümülatif olasılığı P’ye ulaşan en küçük kümeyle sınırlar. Daha düşük değerler çıktıyı daha odaklı hâle getirir; daha yüksek değerler daha fazla çeşitliliğe izin verir. Modelin varsayılan değerini kullanmak için boş bırakın.",
   "settings.agentBehaviour.maxSteps.title": "Maksimum Adım",
-  "settings.agentBehaviour.maxSteps.description": "Maksimum ajanlık yinelemesi",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maksimum ajan adımı sayısıdır. Sınıra ulaşıldığında ajana araçları kullanmayı bırakması ve son bir yanıt vermesi talimatı verilir. Karmaşık ve çok adımlı görevler için artırın; yanıtları daha kısa ve öngörülebilir tutmak için azaltın.",
   "settings.agentBehaviour.hidden.title": "Gizli",
   "settings.agentBehaviour.hidden.description": "Bu ajanı sohbet girişindeki mod değiştiriciden gizle",
   "settings.agentBehaviour.disable.title": "Devre dışı",
@@ -1890,4 +1893,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan hazır:",
+  "chat.search.placeholder": "Sohbette ara…",
+  "chat.search.toggle": "Sohbette ara",
+  "chat.search.matchCase": "Büyük/küçük harf eşleştir",
+  "chat.search.matchWholeWord": "Tam sözcük eşleştir",
+  "chat.search.useRegex": "Normal ifade kullan",
+  "chat.search.previousMatch": "Önceki eşleşme",
+  "chat.search.nextMatch": "Sonraki eşleşme",
+  "chat.search.close": "Aramayı kapat",
+  "chat.search.invalidRegex": "Geçersiz normal ifade",
+  "chat.search.noResults": "Sonuç yok",
+  "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
 }

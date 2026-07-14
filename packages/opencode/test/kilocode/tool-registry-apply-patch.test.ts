@@ -3,7 +3,8 @@ import { Effect, Layer } from "effect"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Agent } from "../../src/agent/agent"
 import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { ToolRegistry } from "../../src/tool/registry"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -43,8 +44,8 @@ describe("apply_patch model selection", () => {
           const agent = yield* agents.get("build")
           const registry = yield* ToolRegistry.Service
           const tools = yield* registry.tools({
-            providerID: ProviderID.make("kilo"),
-            modelID: ModelID.make("routed-model"),
+            providerID: ProviderV2.ID.make("kilo"),
+            modelID: ModelV2.ID.make("routed-model"),
             family: "gpt-codex",
             agent,
           })

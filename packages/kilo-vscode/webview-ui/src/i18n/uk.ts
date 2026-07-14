@@ -1480,11 +1480,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Власний запит",
   "settings.agentBehaviour.prompt.description": "Додатковий системний запит для цього агента",
   "settings.agentBehaviour.temperature.title": "Температура",
-  "settings.agentBehaviour.temperature.description": "Температура вибірки (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Керує ступенем випадковості відповідей ШІ (0–2). Нижчі значення (наприклад, 0.2) дають більш зосереджений і послідовний результат. Вищі значення (наприклад, 1.0) дають різноманітніші й творчіші відповіді. Залиште поле порожнім, щоб використовувати типове значення моделі.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Параметр nucleus sampling (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Поріг nucleus sampling (0–1). Обмежує вибір токенів найменшим набором, сукупна ймовірність якого досягає P. Нижчі значення роблять результат більш зосередженим, а вищі допускають більше різноманіття. Залиште поле порожнім, щоб використовувати типове значення моделі.",
   "settings.agentBehaviour.maxSteps.title": "Максимальна кількість кроків",
-  "settings.agentBehaviour.maxSteps.description": "Максимальна кількість ітерацій агента",
+  "settings.agentBehaviour.maxSteps.description":
+    "Максимальна кількість кроків агента. Після досягнення ліміту агент отримує вказівку припинити використовувати інструменти й надати остаточну відповідь. Збільште для складних багатоетапних завдань; зменште, щоб відповіді були коротшими й передбачуванішими.",
   "settings.agentBehaviour.hidden.title": "Прихований",
   "settings.agentBehaviour.hidden.description": "Приховати цього агента з перемикача режимів у полі введення чату",
   "settings.agentBehaviour.disable.title": "Вимкнений",
@@ -1887,4 +1890,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "План готовий:",
+  "chat.search.placeholder": "Пошук у чаті…",
+  "chat.search.toggle": "Пошук у чаті",
+  "chat.search.matchCase": "Враховувати регістр",
+  "chat.search.matchWholeWord": "Слово цілком",
+  "chat.search.useRegex": "Використовувати регулярний вираз",
+  "chat.search.previousMatch": "Попередній збіг",
+  "chat.search.nextMatch": "Наступний збіг",
+  "chat.search.close": "Закрити пошук",
+  "chat.search.invalidRegex": "Недійсний регулярний вираз",
+  "chat.search.noResults": "Немає результатів",
+  "chat.search.searchingHistory": "Пошук у попередніх повідомленнях…",
 }

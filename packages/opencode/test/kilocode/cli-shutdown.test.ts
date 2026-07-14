@@ -36,6 +36,12 @@ mock.module("@kilocode/kilo-gateway", () => ({
   async migrateLegacyKiloAuth() {},
 }))
 
+mock.module("@/effect/app-runtime", () => ({
+  AppRuntime: {
+    async runPromise() {},
+  },
+}))
+
 mock.module("@/config/config", () => ({
   Config: { Service: { use: () => ({ experimental: {} }) } },
 }))

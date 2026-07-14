@@ -12,13 +12,16 @@ export function is(filepath: string) {
   return ext === ".xlsx" || ext === ".ods"
 }
 
-export async function open(filepath: string) {
+export function limit() {
+  return MAX_SIZE + 1
+}
+
+export async function open(filepath: string, input: Buffer) {
   const ods = path.extname(filepath).toLowerCase() === ".ods"
-  const file = Bun.file(filepath)
-  if (file.size > MAX_SIZE) {
+  if (input.byteLength > MAX_SIZE) {
     throw new Error(`Cannot read spreadsheet file: ${filepath} exceeds the ${MAX_SIZE_LABEL} size limit`)
   }
-  const bytes = new Uint8Array(await file.arrayBuffer())
+  const bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength)
   if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
     throw new Error(`Cannot read spreadsheet file: ${filepath} is not a valid spreadsheet`)
   }

@@ -9,6 +9,9 @@ import {
   getMentionRemovalRange,
   isCursorAtMentionEnd,
   findMentionRange,
+  FILE_PICKER_RESULT,
+  TERMINAL_RESULT,
+  GIT_CHANGES_RESULT,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -53,32 +56,42 @@ describe("buildMentionResults", () => {
 
   it("includes terminal for matching prefix", () => {
     const result = buildMentionResults("term", ["src/terminal.ts"])
-    expect(result.map((item) => item.type)).toEqual(["terminal", "file"])
+    expect(result.map((item) => item.type)).toEqual(["terminal", "file", "file-picker"])
   })
 
   it("includes git changes for matching prefix", () => {
     const result = buildMentionResults("git", ["src/git.ts"])
-    expect(result.map((item) => item.type)).toEqual(["git-changes", "file"])
+    expect(result.map((item) => item.type)).toEqual(["git-changes", "file", "file-picker"])
   })
 
   it("omits special mentions for unrelated query", () => {
     const result = buildMentionResults("src", ["src/index.ts"])
-    expect(result.map((item) => item.type)).toEqual(["file"])
+    expect(result.map((item) => item.type)).toEqual(["file", "file-picker"])
   })
 
   it("omits git changes when git is unavailable", () => {
     const result = buildMentionResults("git", ["src/git.ts"], false)
-    expect(result.map((item) => item.type)).toEqual(["file"])
+    expect(result.map((item) => item.type)).toEqual(["file", "file-picker"])
   })
 
   it("includes folder results", () => {
     const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
-    expect(result).toEqual([{ type: "folder", value: "src" }])
+    expect(result).toEqual([{ type: "folder", value: "src" }, FILE_PICKER_RESULT])
   })
 
   it("preserves opened file result type", () => {
     const result = buildMentionResults("src", [{ path: "src/index.ts", type: "opened-file" }])
-    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }])
+    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }, FILE_PICKER_RESULT])
+  })
+
+  it("always includes file picker result at the end of the list", () => {
+    const result = buildMentionResults("", ["src/index.ts"])
+    expect(result).toEqual([
+      TERMINAL_RESULT,
+      GIT_CHANGES_RESULT,
+      { type: "file", value: "src/index.ts" },
+      FILE_PICKER_RESULT,
+    ])
   })
 })
 
@@ -87,8 +100,14 @@ describe("filterMentionResults", () => {
     const result = filterMentionResults("gi", [
       { type: "file", value: "README.md" },
       { type: "file", value: "src/git.ts" },
+      FILE_PICKER_RESULT,
     ])
-    expect(result).toEqual([{ type: "file", value: "src/git.ts" }])
+    expect(result).toEqual([{ type: "file", value: "src/git.ts" }, FILE_PICKER_RESULT])
+  })
+
+  it("always preserves file picker result regardless of query", () => {
+    const result = filterMentionResults("zz", [FILE_PICKER_RESULT])
+    expect(result).toEqual([FILE_PICKER_RESULT])
   })
 })
 
@@ -230,11 +249,50 @@ describe("buildFileAttachments", () => {
     expect(result[0]!.url).toContain("foo.ts")
   })
 
-  it("handles absolute paths directly", () => {
+  it("attaches an absolute path that lives inside the workspace", () => {
+    const paths = new Set(["/workspace/src/file.ts"])
+    const result = buildFileAttachments("@/workspace/src/file.ts", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).toContain("/workspace/src/file.ts")
+  })
+
+  it("does not attach an absolute Unix path outside the workspace", () => {
     const paths = new Set(["/abs/path/file.ts"])
     const result = buildFileAttachments("@/abs/path/file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach an absolute Windows path outside the workspace", () => {
+    const paths = new Set(["C:/Users/file.ts"])
+    const result = buildFileAttachments("@C:/Users/file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach a UNC path outside the workspace", () => {
+    const paths = new Set(["\\\\server\\share\\file.ts"])
+    const result = buildFileAttachments("@\\\\server\\share\\file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach an absolute path that escapes the workspace via ../ segments", () => {
+    const paths = new Set(["/workspace/../../etc/passwd"])
+    const result = buildFileAttachments("@/workspace/../../etc/passwd", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach a relative-looking mention that escapes the workspace via ../ segments", () => {
+    // Simulates a path seeded from raw text (e.g. seedFromText) rather than the
+    // file picker or file search, which never produce a leading "../".
+    const paths = new Set(["../../etc/passwd"])
+    const result = buildFileAttachments("@../../etc/passwd", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("attaches a relative mention with ../ segments that still resolves inside the workspace", () => {
+    const paths = new Set(["sub/../foo.ts"])
+    const result = buildFileAttachments("@sub/../foo.ts", paths, "/workspace")
     expect(result).toHaveLength(1)
-    expect(result[0]!.url).toContain("/abs/path/file.ts")
+    expect(result[0]!.url).toContain("/workspace/foo.ts")
   })
 
   it("normalizes Windows backslashes in workspaceDir", () => {

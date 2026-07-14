@@ -1518,11 +1518,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
   "settings.agentBehaviour.prompt.description": "Prompt système supplémentaire pour cet agent",
   "settings.agentBehaviour.temperature.title": "Température",
-  "settings.agentBehaviour.temperature.description": "Température d'échantillonnage (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Contrôle le degré d’aléa des réponses de l’IA (0–2). Les valeurs plus faibles (par ex. 0.2) produisent des résultats ciblés et cohérents. Les valeurs plus élevées (par ex. 1.0) produisent des réponses plus variées et créatives. Laissez ce champ vide pour utiliser la valeur par défaut du modèle.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Seuil d’échantillonnage nucleus (0–1). Limite le choix des jetons au plus petit ensemble dont la probabilité cumulée atteint P. Les valeurs plus faibles rendent le résultat plus ciblé ; les valeurs plus élevées permettent davantage de diversité. Laissez ce champ vide pour utiliser la valeur par défaut du modèle.",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
-  "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.maxSteps.description":
+    "Nombre maximal d’étapes de l’agent. Lorsque la limite est atteinte, l’agent reçoit pour instruction de cesser d’utiliser les outils et de fournir une réponse finale. Augmentez cette valeur pour les tâches complexes à plusieurs étapes ; réduisez-la pour obtenir des réponses plus courtes et plus prévisibles.",
   "settings.agentBehaviour.hidden.title": "Masqué",
   "settings.agentBehaviour.hidden.description": "Masquer cet agent du sélecteur de mode dans la saisie du chat",
   "settings.agentBehaviour.disable.title": "Désactivé",
@@ -1916,4 +1919,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Chargement des branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Le plan est prêt :",
+  "chat.search.placeholder": "Rechercher dans la conversation…",
+  "chat.search.toggle": "Rechercher dans la conversation",
+  "chat.search.matchCase": "Respecter la casse",
+  "chat.search.matchWholeWord": "Mot entier",
+  "chat.search.useRegex": "Utiliser une expression régulière",
+  "chat.search.previousMatch": "Résultat précédent",
+  "chat.search.nextMatch": "Résultat suivant",
+  "chat.search.close": "Fermer la recherche",
+  "chat.search.invalidRegex": "Expression régulière non valide",
+  "chat.search.noResults": "Aucun résultat",
+  "chat.search.searchingHistory": "Recherche dans les messages précédents…",
 }
