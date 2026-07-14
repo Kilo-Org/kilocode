@@ -1,5 +1,6 @@
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
+import { Bus } from "@/bus"
 import { TuiEvent } from "@/cli/cmd/tui/event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
@@ -438,14 +439,9 @@ export namespace PlanFollowup {
         const next = await PlanFollowupRuntime.session((svc) => svc.create({}))
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        const [{ AppRuntime }, { EventV2Bridge }] = await Promise.all([
-          import("@/effect/app-runtime"),
-          import("@/event-v2-bridge"),
-        ])
+        const { AppRuntime } = await import("@/effect/app-runtime")
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
-        await AppRuntime.runPromise(
-          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })),
-        )
+        await Bus.publish(Instance.current, TuiEvent.SessionSelect, { sessionID: next.id })
 
         const idle = () =>
           AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
