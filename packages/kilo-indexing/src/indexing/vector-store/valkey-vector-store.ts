@@ -49,58 +49,78 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   async initialize(): Promise<boolean> {
-    await this.ensureConnected()
-
-    const info = await this.getIndexInfo()
-
-    if (info === null) {
-      await this.createIndex()
-      return true
-    }
-
-    const existingDimension = this.parseDimensionFromInfo(info)
-    if (existingDimension !== this.vectorSize) {
-      log.warn("Index dimension mismatch, recreating", {
-        collection: this.collectionName,
-        existingDimension,
-        expectedDimension: this.vectorSize,
+    try {
+      await this.ensureConnected()
+    } catch (error) {
+      log.error("Failed to connect to Valkey", {
+        url: this.valkeyUrl,
+        error: error instanceof Error ? error.message : String(error),
       })
-      await this.dropIndex()
-      await this.createIndex()
-      return true
+      throw error
     }
 
-    const numDocs = this.parseNumDocsFromInfo(info)
-    if (numDocs === 0) {
+    try {
+      const info = await this.getIndexInfo()
+
+      if (info === null) {
+        await this.createIndex()
+        return true
+      }
+
+      const existingDimension = this.parseDimensionFromInfo(info)
+      if (existingDimension !== this.vectorSize) {
+        log.warn("Index dimension mismatch, recreating", {
+          collection: this.collectionName,
+          existingDimension,
+          expectedDimension: this.vectorSize,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
+      const numDocs = this.parseNumDocsFromInfo(info)
+      if (numDocs === 0) {
+        return false
+      }
+
+      const storedProfile = await this.getStoredProfile()
+      if (!storedProfile) {
+        log.info("No stored embedding profile found, recreating index", {
+          collection: this.collectionName,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
+      if (
+        storedProfile.provider !== this.profile.provider ||
+        storedProfile.modelId !== this.profile.modelId ||
+        storedProfile.dimension !== this.profile.dimension
+      ) {
+        log.info("Embedding profile mismatch, recreating index", {
+          collection: this.collectionName,
+          stored: storedProfile,
+          current: this.profile,
+        })
+        await this.dropIndex()
+        await this.createIndex()
+        return true
+      }
+
       return false
+    } catch (error) {
+      // Re-throw already-enriched connection errors from ensureConnected()
+      if (error instanceof Error && error.message.includes("Valkey at " + this.valkeyUrl)) {
+        throw error
+      }
+      const msg = error instanceof Error ? error.message : String(error)
+      log.error("Failed to initialize Valkey index", { collection: this.collectionName, error: msg })
+      throw new Error(
+        `Failed to initialize Valkey index "${this.collectionName}" at ${this.valkeyUrl}: ${msg}`,
+      )
     }
-
-    const storedProfile = await this.getStoredProfile()
-    if (!storedProfile) {
-      log.info("No stored embedding profile found, recreating index", {
-        collection: this.collectionName,
-      })
-      await this.dropIndex()
-      await this.createIndex()
-      return true
-    }
-
-    if (
-      storedProfile.provider !== this.profile.provider ||
-      storedProfile.modelId !== this.profile.modelId ||
-      storedProfile.dimension !== this.profile.dimension
-    ) {
-      log.info("Embedding profile mismatch, recreating index", {
-        collection: this.collectionName,
-        stored: storedProfile,
-        current: this.profile,
-      })
-      await this.dropIndex()
-      await this.createIndex()
-      return true
-    }
-
-    return false
   }
 
   private parseDimensionFromInfo(info: Record<string, any>): number {
@@ -529,7 +549,7 @@ export class ValkeyVectorStore implements IVectorStore {
       return this.client
     } catch (error) {
       this.client = null
-      throw error
+      throw this.enrichConnectionError(error)
     } finally {
       this.connectingPromise = null
     }
@@ -552,7 +572,11 @@ export class ValkeyVectorStore implements IVectorStore {
 
   async dispose(): Promise<void> {
     if (this.connectingPromise) {
-      try { await this.connectingPromise } catch (err) { log.debug("dispose: ignored connection error", { err }) }
+      try {
+        await this.connectingPromise
+      } catch (err) {
+        log.debug("dispose: ignored connection error", { err })
+      }
     }
     if (this.client) {
       this.client.close()
@@ -565,6 +589,43 @@ export class ValkeyVectorStore implements IVectorStore {
     if (error instanceof ClosingError) {
       this.client = null
     }
+  }
+
+  private enrichConnectionError(error: unknown): Error {
+    const raw = error instanceof Error ? error.message : String(error)
+    const lower = raw.toLowerCase()
+
+    if (lower.includes("wrongpass") || lower.includes("invalid username-password")) {
+      return new Error(
+        `Authentication failed for Valkey at ${this.valkeyUrl}: invalid password. Check your Valkey password configuration.`,
+      )
+    }
+
+    if (lower.includes("noauth") || lower.includes("must be called with the client already authenticated")) {
+      return new Error(
+        `Authentication required for Valkey at ${this.valkeyUrl}: the server requires a password but none was provided.`,
+      )
+    }
+
+    if (lower.includes("connection refused") || lower.includes("econnrefused")) {
+      return new Error(
+        `Connection refused for Valkey at ${this.valkeyUrl}. Ensure the Valkey server is running and accessible.`,
+      )
+    }
+
+    if (lower.includes("timeout") || lower.includes("etimedout")) {
+      return new Error(
+        `Connection timed out for Valkey at ${this.valkeyUrl}. Ensure the server is reachable and not overloaded.`,
+      )
+    }
+
+    if (lower.includes("getaddrinfo") || lower.includes("enotfound")) {
+      return new Error(
+        `Cannot resolve host for Valkey at ${this.valkeyUrl}. Check that the hostname is correct.`,
+      )
+    }
+
+    return new Error(`Connection to Valkey at ${this.valkeyUrl} failed: ${raw}`)
   }
 
   async getIndexInfo(): Promise<Record<string, any> | null> {
