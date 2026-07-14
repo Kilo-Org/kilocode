@@ -74,6 +74,7 @@ function normalizePrompt(input: RemotePromptInput): SessionPrompt.PromptInput {
     ...input,
     model: normalizeModel(input.model),
     tools: { ...input.tools, interactive_terminal: false },
+    persistToolPermissions: false,
   }
 }
 

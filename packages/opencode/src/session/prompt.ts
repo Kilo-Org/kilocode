@@ -1310,7 +1310,7 @@ export const layer = Layer.effect(
         for (const [t, enabled] of Object.entries(input.tools ?? {})) {
           permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
         }
-        if (permissions.length > 0) {
+        if (permissions.length > 0 && input.persistToolPermissions !== false) {
           // kilocode_change start - preserve inherited task restrictions while refreshing prompt tool toggles
           const merged = KiloSessionPrompt.mergeToolPermissions({
             existing: session.permission ?? [],
@@ -2095,6 +2095,9 @@ export const PromptInput = Schema.Struct({
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)).annotate({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
+  }),
+  persistToolPermissions: Schema.optional(Schema.Boolean).annotate({
+    description: "@internal Persist deprecated tool toggles to the session. Defaults to true.",
   }),
   format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
