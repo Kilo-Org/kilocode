@@ -1,6 +1,7 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import path from "path"
+import { symlink } from "node:fs/promises"
 import { Effect, FileSystem, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { NodeFileSystem } from "@effect/platform-node"
@@ -274,6 +275,53 @@ describe("path-scoped instruction rules", () => {
             else process.env.KILO_DISABLE_PROJECT_CONFIG = value
           }),
       )
+    }),
+  )
+
+  it.live("follows only project rule symlinks that remain inside the worktree", () =>
+    Effect.gen(function* () {
+      const outside = yield* tmpWithFiles({ "outside.md": "# Outside Rule" })
+      const home = yield* tmpdirScoped()
+      const dir = yield* tmpWithFiles({
+        ".claude/rules/.keep": "",
+        "shared/inside.md": "# Inside Rule",
+        "src/file.ts": "export const value = 1",
+      })
+      yield* Effect.promise(() =>
+        Promise.all([
+          symlink(
+            path.join(dir, "shared"),
+            path.join(dir, ".claude", "rules", "inside"),
+            process.platform === "win32" ? "junction" : "dir",
+          ),
+          symlink(
+            outside,
+            path.join(dir, ".claude", "rules", "outside"),
+            process.platform === "win32" ? "junction" : "dir",
+          ),
+        ]),
+      )
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        const rules = (yield* svc.system()).join("\n")
+        expect(rules).toContain("# Inside Rule")
+        expect(rules).not.toContain("# Outside Rule")
+      }).pipe(provideInstance(dir), provideInstruction({ home, config: home }))
+    }),
+  )
+
+  it.live("follows symlinked global Claude rule directories", () =>
+    Effect.gen(function* () {
+      const shared = yield* tmpWithFiles({ "shared.md": "# Shared Rule" })
+      const home = yield* tmpWithFiles({ ".claude/rules/.keep": "" })
+      const link = path.join(home, ".claude", "rules", "shared")
+      yield* Effect.promise(() => symlink(shared, link, process.platform === "win32" ? "junction" : "dir"))
+
+      const rules = yield* Effect.promise(() =>
+        KilocodeInstruction.claude({ home, directory: home, worktree: home, project: false }),
+      )
+      expect(rules.global).toContain(path.join(link, "shared.md"))
     }),
   )
 })
