@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, ne, or } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, isNotNull, ne, or } from "drizzle-orm" // kilocode_change
 import { Effect, Schema } from "effect"
 import { Database } from "../database/database"
 import { MessageDecodeError } from "./error"
@@ -11,14 +11,22 @@ type DatabaseService = Database.Interface["db"]
 const decode = Schema.decodeUnknownEffect(SessionMessage.Message)
 
 const latestCompaction = Effect.fnUntraced(function* (db: DatabaseService, sessionID: SessionSchema.ID) {
-  return yield* db
+  const row = yield* db
     .select({ seq: SessionMessageTable.seq })
     .from(SessionMessageTable)
-    .where(and(eq(SessionMessageTable.session_id, sessionID), eq(SessionMessageTable.type, "compaction")))
+    .where(
+      and(
+        eq(SessionMessageTable.session_id, sessionID),
+        eq(SessionMessageTable.type, "compaction"),
+        isNotNull(SessionMessageTable.seq), // kilocode_change
+      ),
+    )
     .orderBy(desc(SessionMessageTable.seq))
     .limit(1)
     .get()
     .pipe(Effect.orDie)
+  if (!row || row.seq === null) return
+  return { seq: row.seq }
 })
 
 const messageRows = Effect.fnUntraced(function* (
@@ -33,6 +41,7 @@ const messageRows = Effect.fnUntraced(function* (
     .where(
       and(
         eq(SessionMessageTable.session_id, sessionID),
+        isNotNull(SessionMessageTable.seq), // kilocode_change
         compaction
           ? or(
               gte(SessionMessageTable.seq, compaction.seq),

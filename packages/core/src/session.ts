@@ -2,7 +2,7 @@ export * as SessionV2 from "./session"
 export * from "./session/schema"
 
 import { Cause, Effect, Layer, Schema, Context, Stream } from "effect"
-import { and, asc, desc, eq, gt, like, lt, or, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, gt, isNotNull, like, lt, or, type SQL } from "drizzle-orm" // kilocode_change
 import { ProjectV2 } from "./project"
 import { WorkspaceV2 } from "./workspace"
 import { ModelV2 } from "./model"
@@ -304,20 +304,25 @@ export const layer = Layer.effect(
               .select({ seq: SessionMessageTable.seq })
               .from(SessionMessageTable)
               .where(
-                and(eq(SessionMessageTable.session_id, input.sessionID), eq(SessionMessageTable.id, input.cursor.id)),
+                and(
+                  eq(SessionMessageTable.session_id, input.sessionID),
+                  eq(SessionMessageTable.id, input.cursor.id),
+                  isNotNull(SessionMessageTable.seq), // kilocode_change
+                ),
               )
               .get()
               .pipe(Effect.orDie)
           : undefined
-        if (input.cursor && !anchor) return []
-        const boundary = anchor
+        const seq = anchor?.seq
+        if (input.cursor && seq == null) return []
+        const boundary = seq != null
           ? order === "asc"
-            ? gt(SessionMessageTable.seq, anchor.seq)
-            : lt(SessionMessageTable.seq, anchor.seq)
+            ? gt(SessionMessageTable.seq, seq)
+            : lt(SessionMessageTable.seq, seq)
           : undefined
         const where = boundary
-          ? and(eq(SessionMessageTable.session_id, input.sessionID), boundary)
-          : eq(SessionMessageTable.session_id, input.sessionID)
+          ? and(eq(SessionMessageTable.session_id, input.sessionID), isNotNull(SessionMessageTable.seq), boundary)
+          : and(eq(SessionMessageTable.session_id, input.sessionID), isNotNull(SessionMessageTable.seq)) // kilocode_change
         const query = db
           .select()
           .from(SessionMessageTable)
