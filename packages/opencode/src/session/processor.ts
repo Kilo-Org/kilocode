@@ -106,6 +106,7 @@ interface ProcessorContext extends Input {
   reasoningMap: Record<string, SessionV1.ReasoningPart>
   // kilocode_change start
   stepStart: number
+  stepStartAt: number
   step: { reasoning: boolean; text: boolean; tool: boolean }
   // kilocode_change end
   v2AssistantMessageID: SessionMessage.ID | undefined
@@ -161,6 +162,7 @@ export const layer = Layer.effect(
         // kilocode_change start
         telemetry: input.telemetry,
         stepStart: 0,
+        stepStartAt: 0,
         step: { reasoning: false, text: false, tool: false },
         // kilocode_change end
         v2AssistantMessageID: undefined,
@@ -793,6 +795,7 @@ export const layer = Layer.effect(
           case "step-start":
             // kilocode_change start
             ctx.stepStart = performance.now()
+            ctx.stepStartAt = Date.now()
             ctx.step = { reasoning: false, text: false, tool: false }
             if (!ctx.snapshot)
               ctx.snapshot = yield* snapshot.track({
@@ -813,6 +816,9 @@ export const layer = Layer.effect(
               sessionID: ctx.sessionID,
               snapshot: ctx.snapshot,
               type: "step-start",
+              // kilocode_change start - authoritative step timing for the activity timeline
+              time: { start: ctx.stepStartAt || Date.now() },
+              // kilocode_change end
             })
             return
 
@@ -877,6 +883,12 @@ export const layer = Layer.effect(
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
+              // kilocode_change start - authoritative step timing for the activity timeline
+              time: {
+                start: ctx.stepStartAt || Date.now(),
+                end: Date.now(),
+              },
+              // kilocode_change end
               ...(model ? { model } : {}), // kilocode_change
               tokens: usage.tokens,
               cost: usage.cost,

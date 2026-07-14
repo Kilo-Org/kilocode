@@ -180,6 +180,73 @@
   }
 }
 
+.task-timeline-divider {
+  position: absolute;
+  bottom: 0;
+  box-sizing: border-box;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--vscode-foreground) 25%, transparent);
+  pointer-events: none;
+}
+
+.task-timeline-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.task-timeline-detail-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: var(--vscode-font-size, 13px);
+}
+
+.task-timeline-detail-grid dt {
+  color: var(--vscode-descriptionForeground);
+}
+
+.task-timeline-detail-grid dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-timeline-detail-tokens {
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--vscode-descriptionForeground);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-timeline-detail-part {
+  border-top: 1px solid var(--vscode-panel-border, transparent);
+  padding-top: 12px;
+}
+
+.task-timeline-detail-part h4 {
+  margin: 0 0 8px;
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: 600;
+}
+
+.task-timeline-detail-meta {
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--vscode-font-size, 13px);
+}
+
+.task-timeline-detail-pre {
+  margin: 8px 0 0;
+  max-height: 200px;
+  overflow: auto;
+  padding: 8px;
+  border-radius: 4px;
+  background: var(--vscode-editor-background);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ============================================
    Context Progress Bar
    ============================================ */

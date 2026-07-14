@@ -4,17 +4,19 @@
  * Pointer and keyboard interaction use the same pure bar geometry.
  */
 
-import { Component, For, Show, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
+import { Component, For, Show, Switch, Match, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
 import { Portal } from "solid-js/web"
 import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+import { Dialog } from "@kilocode/kilo-ui/dialog"
+import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useSession } from "../../context/session"
 import { visibleParts } from "../../context/session-queue"
 import { color, label } from "../../utils/timeline/colors"
 import { geometry, hit, navigate } from "../../utils/timeline/geometry"
 import { dispatchTimelineHighlight, same, type TimelineHighlight } from "../../utils/timeline/highlight"
-import { sizes, pinned, MAX_HEIGHT } from "../../utils/timeline/sizes"
+import { sizes, pinned, MAX_HEIGHT, DIVIDER_W } from "../../utils/timeline/sizes"
 import { isRenderable } from "../../utils/transcript-parts"
-import type { Part, Message } from "../../types/messages"
+import type { Part, Message, StepStartPart, StepFinishPart, ToolPart, TextPart, ReasoningPart } from "../../types/messages"
 
 export interface TimelineBar {
   bg: string
@@ -24,6 +26,95 @@ export interface TimelineBar {
   idx: number
   msgId: string
   partId: string
+  type?: string
+  divider?: boolean
+}
+
+// ── Steps (for the detail dialog) ────────────────────────────────────
+
+export interface TimelineStep {
+  index: number
+  start?: StepStartPart
+  finish?: StepFinishPart
+  parts: Part[]
+}
+
+function buildSteps(messages: Message[], parts: Record<string, Part[]>): TimelineStep[] {
+  const steps: TimelineStep[] = []
+  let current: TimelineStep | undefined
+
+  for (const msg of messages) {
+    if (msg.role === "user") continue
+    const ps = parts[msg.id]
+    if (!ps) continue
+    for (const p of ps) {
+      if (p.type === "step-start") {
+        if (current) steps.push(current)
+        current = { index: steps.length, start: p, parts: [] }
+      } else if (p.type === "step-finish") {
+        if (!current) current = { index: steps.length, parts: [] }
+        current.finish = p
+      } else {
+        if (!current) current = { index: steps.length, parts: [] }
+        current.parts.push(p)
+      }
+    }
+  }
+  if (current) steps.push(current)
+  return steps
+}
+
+function stepForPart(steps: TimelineStep[], partId: string): TimelineStep | undefined {
+  return steps.find(
+    (s) => s.parts.some((p) => p.id === partId) || s.finish?.id === partId || s.start?.id === partId,
+  )
+}
+
+// Insert a divider after every step-finish bar; its height matches the tallest bar.
+function withDividers(bars: TimelineBar[]): TimelineBar[] {
+  const tallest = bars.reduce((max, b) => Math.max(max, b.height), 0)
+  const out: TimelineBar[] = []
+  for (const bar of bars) {
+    out.push(bar)
+    if (bar.type === "step-finish") {
+      out.push({
+        bg: "",
+        tip: "",
+        width: DIVIDER_W,
+        height: tallest,
+        idx: -1,
+        msgId: "",
+        partId: "",
+        type: "divider",
+        divider: true,
+      })
+    }
+  }
+  return out
+}
+
+// ── Formatting ───────────────────────────────────────────────────────
+
+function fmtTime(ms?: number): string {
+  if (ms == null) return "—"
+  return new Date(ms).toLocaleTimeString()
+}
+
+function fmtDuration(ms?: number): string {
+  if (ms == null || ms < 0) return "—"
+  const s = Math.round(ms / 1000)
+  if (s < 60) return `${s}s`
+  const m = Math.floor(s / 60)
+  return `${m}m ${s % 60}s`
+}
+
+function fmtCost(c?: number): string {
+  if (c == null) return "—"
+  return `$${c.toFixed(4)}`
+}
+
+function truncate(text: string, max = 400): string {
+  return text.length > max ? `${text.slice(0, max)}…` : text
 }
 
 function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBar[] {
@@ -48,6 +139,7 @@ function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBa
     idx: i,
     msgId: item.msg.id,
     partId: item.part.id,
+    type: item.part.type,
   }))
 }
 
@@ -83,18 +175,22 @@ export const TaskTimeline: Component = () => {
   }
 
   const bars = createMemo(() => collect(messages(), allParts()))
-  const layout = createMemo(() => geometry(bars(), MAX_HEIGHT))
+  const steps = createMemo(() => buildSteps(messages(), allParts()))
+  const geoBars = createMemo(() => withDividers(bars()))
+  const layout = createMemo(() => geometry(geoBars(), MAX_HEIGHT))
+  const items = () => layout().items
+  const dialog = useDialog()
   const busy = () => session.status() === "busy"
   const selected = () => {
     const idx = active()
-    if (idx >= 0 && idx < bars().length) return idx
-    return bars().length - 1
+    if (idx >= 0 && idx < items().length) return idx
+    return items().length - 1
   }
   const aria = () => {
     const idx = selected()
     const bar = bars()[idx]
     if (!bar) return "No activity"
-    return `Bar ${idx + 1} of ${bars().length}: ${bar.tip}`
+    return `Bar ${idx + 1} of ${items().length}: ${bar.tip}`
   }
   const value = () => Math.max(0, selected() + 1)
 
@@ -106,7 +202,7 @@ export const TaskTimeline: Component = () => {
   }
   createEffect(
     on(
-      () => bars().length,
+      () => items().length,
       (len) => {
         if (active() >= len) setActive(len - 1)
         if (len > prev && ref && follow && frame === undefined) {
@@ -185,12 +281,20 @@ export const TaskTimeline: Component = () => {
     ref.style.userSelect = "none"
   }
 
+  const openStep = (partId: string) => {
+    const step = stepForPart(steps(), partId)
+    if (!step) return
+    const part = step.parts.find((p) => p.id === partId)
+    dialog.show(() => <StepDetailsDialog step={step} part={part} />)
+  }
+
   const select = (idx: number) => {
     const bar = bars()[idx]
-    if (!bar) return
+    if (!bar || bar.divider) return
     setActive(idx)
     window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: bar.msgId, partId: bar.partId } }))
     showTip(idx)
+    openStep(bar.partId)
   }
 
   const onPointerMove = (e: PointerEvent) => {
@@ -232,7 +336,7 @@ export const TaskTimeline: Component = () => {
     }
     if (!ref || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return
     e.preventDefault()
-    const idx = navigate(selected(), bars().length, e.key)
+    const idx = navigate(selected(), items().length, e.key)
     setActive(idx)
     const item = layout().items[idx]
     if (!item) return
@@ -274,13 +378,13 @@ export const TaskTimeline: Component = () => {
         <div
           ref={ref}
           class="task-timeline"
-          data-timeline-count={bars().length}
+          data-timeline-count={items().length}
           role="slider"
           tabIndex={0}
           aria-label="Session activity timeline"
           aria-keyshortcuts="ArrowLeft ArrowRight Home End Enter Space"
-          aria-valuemin={bars().length > 0 ? 1 : 0}
-          aria-valuemax={bars().length}
+          aria-valuemin={items().length > 0 ? 1 : 0}
+          aria-valuemax={items().length}
           aria-valuenow={value()}
           aria-valuetext={aria()}
           style={{ height: `${MAX_HEIGHT}px` }}
@@ -303,8 +407,17 @@ export const TaskTimeline: Component = () => {
             >
               <For each={layout().paths}>{(path) => <path d={path.d} fill={path.bg} />}</For>
             </svg>
+            <For each={layout().dividers}>
+              {(d) => (
+                <div
+                  class="task-timeline-divider"
+                  aria-hidden="true"
+                  style={{ left: `${d.x}px`, width: `${d.width}px`, height: `${d.height}px` }}
+                />
+              )}
+            </For>
             <Show when={hover() >= 0}>{overlay(hover())}</Show>
-            <Show when={busy() && bars().length > 0}>{overlay(bars().length - 1, true)}</Show>
+            <Show when={busy() && items().length > 0}>{overlay(items().length - 1, true)}</Show>
           </div>
         </div>
       </div>
@@ -323,5 +436,108 @@ export const TaskTimeline: Component = () => {
         )}
       </Show>
     </>
+  )
+}
+
+function partTitle(part: Part): string {
+  switch (part.type) {
+    case "tool":
+      return part.tool
+    case "text":
+      return "Text"
+    case "reasoning":
+      return "Reasoning"
+    case "step-start":
+      return "Step start"
+    case "step-finish":
+      return "Step finish"
+    default:
+      return part.type
+  }
+}
+
+function toolDetail(tp: ToolPart) {
+  const st = tp.state
+  if (st.status === "completed") {
+    return (
+      <>
+        <div class="task-timeline-detail-meta">status: completed</div>
+        <pre class="task-timeline-detail-pre">{truncate(JSON.stringify(st.input ?? {}, null, 2))}</pre>
+        <pre class="task-timeline-detail-pre">{truncate(st.output)}</pre>
+      </>
+    )
+  }
+  if (st.status === "error") {
+    return (
+      <>
+        <div class="task-timeline-detail-meta">status: error</div>
+        <pre class="task-timeline-detail-pre">{truncate(JSON.stringify(st.input ?? {}, null, 2))}</pre>
+        <pre class="task-timeline-detail-pre">{truncate(st.error)}</pre>
+      </>
+    )
+  }
+  return <div class="task-timeline-detail-meta">status: {st.status}</div>
+}
+
+function StepPartDetails(props: { part?: Part }) {
+  const part = () => props.part
+  return (
+    <Show when={part()}>
+      {(p) => (
+        <div class="task-timeline-detail-part">
+          <h4>{partTitle(p())}</h4>
+          <Switch>
+            <Match when={p().type === "tool"}>{toolDetail(p() as ToolPart)}</Match>
+            <Match when={p().type === "text"}>
+              <pre class="task-timeline-detail-pre">{truncate((p() as TextPart).text)}</pre>
+            </Match>
+            <Match when={p().type === "reasoning"}>
+              <pre class="task-timeline-detail-pre">{truncate((p() as ReasoningPart).text)}</pre>
+            </Match>
+            <Match when={p().type === "step-finish"}>
+              <div class="task-timeline-detail-meta">Step finished</div>
+            </Match>
+            <Match when={p().type === "step-start"}>
+              <div class="task-timeline-detail-meta">Step started</div>
+            </Match>
+          </Switch>
+        </div>
+      )}
+    </Show>
+  )
+}
+
+function StepDetailsDialog(props: { step: TimelineStep; part?: Part }) {
+  const s = props.step
+  const start = s.start?.time?.start ?? s.finish?.time?.start
+  const end = s.finish?.time?.end
+  const duration = start != null && end != null ? end - start : undefined
+  const tokens = () => s.finish?.tokens
+  const title = `Step ${s.index + 1}${s.finish?.model?.modelID ? ` · ${s.finish.model.modelID}` : ""}`
+  return (
+    <Dialog title={title}>
+      <div class="task-timeline-detail">
+        <dl class="task-timeline-detail-grid">
+          <dt>Started</dt>
+          <dd>{fmtTime(start)}</dd>
+          <dt>Finished</dt>
+          <dd>{fmtTime(end)}</dd>
+          <dt>Duration</dt>
+          <dd>{fmtDuration(duration)}</dd>
+          <dt>Total cost</dt>
+          <dd>{fmtCost(s.finish?.cost)}</dd>
+        </dl>
+        <Show when={tokens()}>
+          {(tok) => (
+            <div class="task-timeline-detail-tokens">
+              tokens · in {tok().input} / out {tok().output}
+              {tok().reasoning ? ` / reasoning ${tok().reasoning}` : ""}
+              {tok().cache ? ` · cache ${tok().cache.read}/${tok().cache.write}` : ""}
+            </div>
+          )}
+        </Show>
+        <StepPartDetails part={props.part} />
+      </div>
+    </Dialog>
   )
 }
