@@ -57,6 +57,7 @@ import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ModelLimitDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.log.KiloLog
 import com.intellij.ide.BrowserUtil
@@ -127,6 +128,8 @@ class SessionUi(
     private var pending = false
     private var loaded: Boolean? = null
     private var revertPrompt: String? = null
+    private var pendingRollback: String? = null
+    private var pendingRedo: String? = null
     private val flushMs =
         Registry.intValue("kilo.session.flushMs", EVENT_FLUSH_MS.toInt())
             .takeIf { it > 0 }
@@ -362,8 +365,8 @@ class SessionUi(
             repo = workspace.directory,
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = ::revert,
-            cancelRevert = controller::cancelRevert,
-            banner = RevertBanner(controller.model, controller::redo, controller::redoAll, controller::cancelRevert, focus),
+            cancelRevert = ::cancelRevert,
+            banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
@@ -537,7 +540,7 @@ class SessionUi(
 
                 is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
-                is SessionModelEvent.RevertChanged -> syncPromptRevert()
+                is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
 
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
@@ -688,8 +691,45 @@ class SessionUi(
 
     @RequiresEdt
     private fun revert(id: String) {
-        scroll.followBottom(true)
+        pendingRollback = id
+        pendingRedo = null
         controller.revert(id)
+    }
+
+    @RequiresEdt
+    private fun redo() {
+        pendingRedo = controller.model.revert()?.messageID
+        pendingRollback = null
+        controller.redo()
+    }
+
+    @RequiresEdt
+    private fun cancelRevert() {
+        pendingRollback = null
+        pendingRedo = null
+        controller.cancelRevert()
+    }
+
+    @RequiresEdt
+    private fun onRevertChanged(revert: SessionRevertDto?) {
+        syncPromptRevert()
+        val rollback = pendingRollback
+        if (rollback != null) {
+            if (revert?.messageID == rollback) {
+                pendingRollback = null
+                scroll.followBottom(true)
+                return
+            }
+            pendingRollback = null
+        }
+        val redo = pendingRedo
+        if (redo == null) return
+        if (!controller.model.isRevertedMessage(redo)) {
+            pendingRedo = null
+            scroll.scrollMessageBottom(redo)
+            return
+        }
+        if (revert != null) pendingRedo = null
     }
 
     @RequiresEdt
@@ -811,6 +851,10 @@ class SessionUi(
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
         if (state is SessionState.Reverting) overlay.clear()
+        if (state is SessionState.Error) {
+            pendingRollback = null
+            pendingRedo = null
+        }
         prompt.setBusy(state.isBusy())
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
