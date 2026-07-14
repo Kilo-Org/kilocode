@@ -1732,3 +1732,350 @@ describe("RemoteSender", () => {
     expect(sent).toHaveLength(0)
   })
 })
+
+// kilocode_change start - remote slash command discovery and execution
+describe("RemoteSender slash commands", () => {
+  // Wraps a Connection to expose a promise that resolves when a response with the
+  // given id is sent. Keeps new tests deterministic without setTimeout polling.
+  // Wrappers chain so multiple pending responses can be awaited on the same
+  // connection; the original fakeConn.send still records each emission once.
+  function expectResponse(conn: RemoteWS.Connection, _sent: any[], id: string) {
+    const resolvers = Promise.withResolvers<any>()
+    const previous = conn.send.bind(conn)
+    const spy = (message: any) => {
+      if (message?.type === "response" && message.id === id) resolvers.resolve(message)
+      previous(message)
+    }
+    conn.send = spy as any
+    return {
+      promise: resolvers.promise,
+      restore: () => {
+        conn.send = previous
+      },
+    }
+  }
+
+  test("list_commands validates v1 and returns the bounded catalog from the target session directory", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const state = { directory: "" }
+    const first = expectResponse(conn, sent, "req_commands_first")
+    const second = expectResponse(conn, sent, "req_commands_second")
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        state.directory = input.directory
+        const result = await input.fn()
+        state.directory = ""
+        return result
+      },
+      commands: {
+        list: async () => ({
+          protocolVersion: 1 as const,
+          commands: [{ name: state.directory.endsWith("first") ? "first" : "second", hints: [] }],
+        }),
+        execute: async () => {},
+      },
+      catalog: {
+        get: async (sessionID) =>
+          ({
+            id: sessionID,
+            directory: sessionID === SessionID.make("ses_first") ? "/workspace/first" : "/workspace/second",
+          }) as any,
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_commands_first",
+      command: "list_commands",
+      sessionId: "ses_first",
+      data: { protocolVersion: 1 },
+    })
+    await first.promise
+    sender.handle({
+      type: "command",
+      id: "req_commands_second",
+      command: "list_commands",
+      sessionId: "ses_second",
+      data: { protocolVersion: 1 },
+    })
+    await second.promise
+
+    first.restore()
+    second.restore()
+
+    expect(dirs).toEqual(["/workspace/first", "/workspace/second"])
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_commands_first",
+        result: { protocolVersion: 1, commands: [{ name: "first", hints: [] }] },
+      },
+      {
+        type: "response",
+        id: "req_commands_second",
+        result: { protocolVersion: 1, commands: [{ name: "second", hints: [] }] },
+      },
+    ])
+  })
+
+  test("list_commands rejects unsupported protocol versions and missing session IDs before ACK", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      commands: {
+        list: async () => ({ protocolVersion: 1 as const, commands: [] }),
+        execute: async () => {},
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_commands_v2",
+      command: "list_commands",
+      sessionId: "ses_x",
+      data: { protocolVersion: 2 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_commands_no_session",
+      command: "list_commands",
+      data: { protocolVersion: 1 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_commands_invalid_session",
+      command: "list_commands",
+      sessionId: "not-a-session-id",
+      data: { protocolVersion: 1 },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_commands_v2", error: "invalid list_commands request" },
+      { type: "response", id: "req_commands_no_session", error: "invalid list_commands request" },
+      { type: "response", id: "req_commands_invalid_session", error: "invalid list_commands request" },
+    ])
+  })
+
+  test("send_command validates protocol, session, and catalog membership before ACK", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: unknown[] = []
+    const started = Promise.withResolvers<void>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      commands: {
+        list: async () => ({ protocolVersion: 1 as const, commands: [{ name: "review", hints: [] }] }),
+        execute: async (input) => {
+          calls.push(input)
+          started.resolve()
+          await new Promise(() => {})
+        },
+      },
+      catalog: {
+        get: async () => ({ id: SessionID.make("ses_commands"), directory: "/workspace/project-a" }) as any,
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    // Pre-ACK: invalid protocol
+    sender.handle({
+      type: "command",
+      id: "req_bad_version",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: { protocolVersion: 2, command: "review", arguments: "main" },
+    })
+    // Pre-ACK: missing session id
+    sender.handle({
+      type: "command",
+      id: "req_no_session",
+      command: "send_command",
+      data: { protocolVersion: 1, command: "review", arguments: "main" },
+    })
+
+    // Wait for the async catalog preflight that rejects the unknown command and ACKs the valid one.
+    const unknownResponse = expectResponse(conn, sent, "req_unknown")
+    const ackResponse = expectResponse(conn, sent, "req_send_command")
+
+    // Pre-ACK: command not in catalog
+    sender.handle({
+      type: "command",
+      id: "req_unknown",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: { protocolVersion: 1, command: "missing", arguments: "main" },
+    })
+    // Valid path: ACK first
+    sender.handle({
+      type: "command",
+      id: "req_send_command",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: {
+        protocolVersion: 1,
+        command: "review",
+        arguments: "  main  ",
+        messageID: "msg_remote",
+      },
+    })
+
+    expect(sent.slice(0, 2)).toEqual([
+      { type: "response", id: "req_bad_version", error: "invalid send_command request" },
+      { type: "response", id: "req_no_session", error: "invalid send_command request" },
+    ])
+
+    await unknownResponse.promise
+    unknownResponse.restore()
+    await ackResponse.promise
+    ackResponse.restore()
+
+    expect(sent.find((m: any) => m.id === "req_unknown")).toEqual({
+      type: "response",
+      id: "req_unknown",
+      error: "unknown slash command",
+    })
+    expect(sent.find((m: any) => m.id === "req_send_command")).toEqual({
+      type: "response",
+      id: "req_send_command",
+      result: {},
+    })
+
+    await started.promise
+    expect(calls).toEqual([
+      {
+        sessionID: SessionID.make("ses_commands"),
+        protocolVersion: 1,
+        command: "review",
+        arguments: "  main  ",
+        messageID: "msg_remote",
+        catalog: { protocolVersion: 1, commands: [{ name: "review", hints: [] }] },
+      },
+    ])
+  })
+
+  test("send_command returns a sanitized error without ACK when the session is missing", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      commands: {
+        list: async () => ({ protocolVersion: 1 as const, commands: [{ name: "review", hints: [] }] }),
+        execute: async () => {
+          throw new Error("must not execute")
+        },
+      },
+      catalog: {
+        get: async () => {
+          throw new Error("private lookup detail with secret")
+        },
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_missing_command")
+    sender.handle({
+      type: "command",
+      id: "req_missing_command",
+      command: "send_command",
+      sessionId: "ses_missing",
+      data: { protocolVersion: 1, command: "review", arguments: "main" },
+    })
+
+    await response.promise
+    response.restore()
+
+    expect(dirs).toEqual([])
+    expect(sent).toEqual([{ type: "response", id: "req_missing_command", error: "failed to send command" }])
+    expect(JSON.stringify(sent)).not.toContain("private lookup detail with secret")
+  })
+
+  test("send_command logs only the error class after ACK and does not leak arguments or tokens", async () => {
+    class CredentialLeakError extends Error {
+      override name = "CredentialLeakError"
+    }
+    const { conn, sent } = fakeConn()
+    const logEntries: unknown[][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: {
+        ...nolog,
+        error: (...args: unknown[]) => logEntries.push(args),
+      },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      commands: {
+        list: async () => ({ protocolVersion: 1 as const, commands: [{ name: "review", hints: [] }] }),
+        execute: async () => {
+          throw new CredentialLeakError("credential=must-not-leak")
+        },
+      },
+      catalog: {
+        get: async () => ({ id: SessionID.make("ses_commands"), directory: "/workspace/project-a" }) as any,
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    const ack = expectResponse(conn, sent, "req_failed_command")
+    sender.handle({
+      type: "command",
+      id: "req_failed_command",
+      command: "send_command",
+      sessionId: "ses_commands",
+      data: {
+        protocolVersion: 1,
+        command: "review",
+        arguments: "secret=token-must-not-leak",
+        model: { providerID: "custom/edge", modelID: "deployment/model" },
+      },
+    })
+
+    await ack.promise
+    // The post-ACK throw is logged via the same adapter; give the microtask a
+    // chance to drain so the log entry is captured before assertions.
+    await Promise.resolve()
+    ack.restore()
+
+    expect(sent).toEqual([{ type: "response", id: "req_failed_command", result: {} }])
+    expect(logEntries).toHaveLength(1)
+    expect(logEntries[0]?.[0]).toBe("send command failed after ACK")
+    expect(logEntries[0]?.[1]).toEqual({
+      id: "req_failed_command",
+      operation: "send_command",
+      error: "CredentialLeakError",
+    })
+    const flattened = JSON.stringify(logEntries)
+    expect(flattened).not.toContain("token-must-not-leak")
+    expect(flattened).not.toContain("credential=must-not-leak")
+    expect(flattened).not.toContain("secret=")
+  })
+})
+// kilocode_change end
