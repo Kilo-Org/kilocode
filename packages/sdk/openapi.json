@@ -6143,6 +6143,9 @@
                   "workspaceID": {
                     "type": "string",
                     "pattern": "^wrk"
+                  },
+                  "sandboxInheritanceToken": {
+                    "type": "string"
                   }
                 },
                 "additionalProperties": false
@@ -32397,6 +32400,9 @@
               "sessionID": {
                 "type": "string",
                 "pattern": "^ses"
+              },
+              "sandboxInheritanceToken": {
+                "type": "string"
               },
               "mode": {
                 "type": "string",

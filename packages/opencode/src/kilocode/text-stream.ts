@@ -28,14 +28,38 @@ function decode(decoder: TextDecoder, bytes?: Uint8Array) {
   }
 }
 
-async function* chunks(fs: FileSystem, filepath: string) {
+function utf8(fs: FileSystem, filepath: string, signal?: AbortSignal) {
+  signal?.throwIfAborted()
+  const iterator = Stream.toAsyncIterable(fs.stream(filepath))[Symbol.asyncIterator]()
   const decoder = new TextDecoder("utf-8", { fatal: true })
-  for await (const bytes of Stream.toAsyncIterable(fs.stream(filepath))) {
-    const text = decode(decoder, bytes)
-    if (text) yield text
-  }
-  const tail = decode(decoder)
-  if (tail) yield tail
+  const out = new Readable({
+    read() {
+      void (async () => {
+        while (true) {
+          const next = await iterator.next()
+          if (next.done) {
+            const tail = decode(decoder)
+            if (tail) this.push(tail)
+            this.push(null)
+            return
+          }
+          const text = decode(decoder, next.value)
+          if (!text) continue
+          this.push(text)
+          return
+        }
+      })().catch((err) => this.destroy(err instanceof Error ? err : new Error(String(err))))
+    },
+    destroy(err, callback) {
+      Promise.resolve(iterator.return?.()).then(
+        () => callback(err),
+        (cause) => callback(cause instanceof Error ? cause : new Error(String(cause))),
+      )
+    },
+  })
+  const closed = new Promise<void>((resolve) => out.once("close", resolve))
+
+  return { stream: abortable(out, signal), closed }
 }
 
 export function abortable(stream: Readable, signal?: AbortSignal) {
@@ -44,7 +68,7 @@ export function abortable(stream: Readable, signal?: AbortSignal) {
 
 /** UTF-8 text stream backed by the injected filesystem service. */
 export function openUtf8(fs: FileSystem, filepath: string, signal?: AbortSignal): Readable {
-  return abortable(Readable.from(chunks(fs, filepath)), signal)
+  return utf8(fs, filepath, signal).stream
 }
 
 export function safeSlice(text: string, end: number) {
@@ -69,10 +93,14 @@ export async function withFallback<T>(
   fn: (input: Readable) => Promise<T>,
   signal?: AbortSignal,
 ): Promise<T> {
+  const input = utf8(fs, filepath, signal)
   try {
-    return await fn(openUtf8(fs, filepath, signal))
+    return await fn(input.stream)
   } catch (err) {
     if (!(err instanceof InvalidUtf8Error)) throw err
+  } finally {
+    input.stream.destroy()
+    await input.closed
   }
   return fn(await openDecoded(fs, filepath, signal))
 }

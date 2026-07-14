@@ -9,13 +9,12 @@ import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
 import { handleSection } from "./section-handler"
-import { chooseBaseBranch, normalizeBaseBranch } from "./base-branch"
+import { normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
 import { PRStatusBridge } from "./pr-status-bridge"
 import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
 import { BranchNamingController } from "./branch-naming"
-import { classifyWorktreeError } from "./git-import"
 import { SetupScriptService } from "./SetupScriptService"
 import { SetupScriptRunner } from "./SetupScriptRunner"
 import { copyEnvFiles } from "./env-copy"
@@ -31,12 +30,18 @@ import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
 import { WorktreeDiffController } from "./worktree-diff-controller"
 import { WorktreeImporter } from "./worktree-importer"
+import {
+  createWorktreeOnDisk,
+  type CreateWorktreeOnDiskOptions,
+  type CreateWorktreeOnDiskResult,
+} from "./worktree-create"
 import { recordPromotionHandoff } from "./promotion-handoff"
 import { restoreWorktrees } from "./state-recovery"
 import { createLocalDiff, diffSummary as localDiffSummary } from "./local-diff"
 import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { stopSessionProcesses } from "../kilo-provider/background-process"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
+import { pruneSubagents } from "./prune-subagents"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
@@ -322,12 +327,10 @@ export class AgentManagerProvider implements Disposable {
     }
 
     for (const wt of state.getWorktrees()) {
-      for (const s of state.getSessions(wt.id)) {
-        this.panel?.sessions.setSessionDirectory(s.id, wt.path)
-        this.panel?.sessions.trackSession(s.id)
-      }
+      for (const s of state.getSessions(wt.id)) this.panel?.sessions.setSessionDirectory(s.id, wt.path)
     }
-    for (const s of state.getSessions()) if (!s.worktreeId) this.panel?.sessions.trackSession(s.id)
+    await pruneSubagents(state, this.panel?.sessions, (message) => this.log(message))
+    for (const s of state.getSessions()) this.panel?.sessions.trackSession(s.id)
     this.pushState()
 
     // Refresh sessions so worktree sessions appear in the list
@@ -738,107 +741,19 @@ export class AgentManagerProvider implements Disposable {
   // Shared helpers
   // ---------------------------------------------------------------------------
 
-  /** Resolve the effective base branch using the configured default, explicit override, and existence check. */
-  private async resolveBaseBranch(
-    manager: WorktreeManager,
-    state: WorktreeStateManager,
-    explicit?: string,
-  ): Promise<string | undefined> {
-    const configured = state.getDefaultBaseBranch()
-    if (!configured && !explicit) return undefined
-
-    const configuredExists = configured ? await manager.branchExists(configured) : false
-    const result = chooseBaseBranch({ explicit, configured, configuredExists })
-
-    if (result.stale) {
-      this.clearStaleDefaultBaseBranch(state, result.stale)
-    }
-    return result.branch
-  }
-
-  /** Reset a stale default base branch and notify the webview. */
-  private clearStaleDefaultBaseBranch(state: WorktreeStateManager, stale: string): void {
-    this.log(`Default base branch "${stale}" no longer exists, clearing`)
-    state.setDefaultBaseBranch(undefined)
-    this.pushState()
-  }
-
   /** Create a git worktree on disk and register it in state. Returns null on failure. */
-  private async createWorktreeOnDisk(opts?: {
-    groupId?: string
-    baseBranch?: string
-    branchName?: string
-    existingBranch?: string
-    name?: string
-    label?: string
-  }): Promise<{
-    worktree: ReturnType<WorktreeStateManager["addWorktree"]>
-    result: CreateWorktreeResult
-  } | null> {
-    const manager = this.getWorktreeManager()
-    const state = this.getStateManager()
-    if (!manager || !state) {
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: "Open a folder that contains a git repository to use worktrees",
-        errorCode: "not_git_repo",
-      })
-      return null
-    }
-
-    this.postToWebview({ type: "agentManager.worktreeSetup", status: "creating", message: "Creating git worktree..." })
-
-    // Resolve effective base branch using configured default
-    const effectiveBase = opts?.existingBranch
-      ? undefined
-      : await this.resolveBaseBranch(manager, state, opts?.baseBranch)
-
-    let result: CreateWorktreeResult
-    try {
-      result = await manager.createWorktree({
-        prompt: opts?.name || "kilo",
-        baseBranch: effectiveBase ?? opts?.baseBranch,
-        branchName: opts?.branchName,
-        existingBranch: opts?.existingBranch,
-      })
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: msg,
-        errorCode: classifyWorktreeError(msg),
-      })
-      this.host.capture("Agent Manager Session Error", {
-        source: PLATFORM,
-        error: msg,
-        context: "createWorktree",
-      })
-      return null
-    }
-
-    const worktree = state.addWorktree({
-      branch: result.branch,
-      path: result.path,
-      parentBranch: result.parentBranch,
-      remote: result.remote,
-      groupId: opts?.groupId,
-      label: opts?.label,
-      branchOwned: !opts?.existingBranch,
-    })
-
-    // Push state immediately so the sidebar shows the new worktree with a loading indicator
-    this.pushState()
-    this.postToWebview({
-      type: "agentManager.worktreeSetup",
-      status: "creating",
-      message: "Setting up worktree...",
-      branch: result.branch,
-      worktreeId: worktree.id,
-    })
-
-    return { worktree, result }
+  private async createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null> {
+    return createWorktreeOnDisk(
+      {
+        getWorktreeManager: () => this.getWorktreeManager(),
+        getStateManager: () => this.getStateManager(),
+        postToWebview: (message) => this.postToWebview(message),
+        capture: (event, properties) => this.host.capture(event, properties),
+        pushState: () => this.pushState(),
+        log: (...args) => this.log(...args),
+      },
+      opts,
+    )
   }
 
   /** Create a CLI session in a worktree directory. Returns null on failure. */
@@ -846,6 +761,7 @@ export class AgentManagerProvider implements Disposable {
     worktreePath: string,
     branch: string,
     worktreeId?: string,
+    source?: { sandboxInheritanceToken?: string },
   ): Promise<Session | null> {
     let client: KiloClient
     try {
@@ -879,7 +795,16 @@ export class AgentManagerProvider implements Disposable {
       const { data: session } = await startSession(
         client,
         worktreePath,
-        () => client.session.create({ directory: worktreePath, platform: PLATFORM, metadata }, { throwOnError: true }),
+        () =>
+          client.session.create(
+            {
+              directory: worktreePath,
+              platform: PLATFORM,
+              metadata,
+              ...(source?.sandboxInheritanceToken ? { sandboxInheritanceToken: source.sandboxInheritanceToken } : {}),
+            },
+            { throwOnError: true },
+          ),
         (...args) => this.log(...args),
       )
       return session
@@ -986,7 +911,9 @@ export class AgentManagerProvider implements Disposable {
     const properties = (event as { properties?: unknown }).properties
     const req = parseToolRequest(properties)
     if (!req) return
-    if (directory) req.directory = directory
+    if (directory) {
+      req.directory = directory
+    }
     void this.startToolRequest(req)
   }
 
@@ -1013,7 +940,7 @@ export class AgentManagerProvider implements Disposable {
           this.pushState()
         },
         setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
-        createSessionInWorktree: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
+        createSessionInWorktree: (dir, branch, id, source) => this.createSessionInWorktree(dir, branch, id, source),
         sessionMetadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
         registerWorktreeSession: (sid, dir) => this.registerWorktreeSession(sid, dir),
         notifyReady: (sid, result, wid) => this.notifyWorktreeReady(sid, result, wid),
