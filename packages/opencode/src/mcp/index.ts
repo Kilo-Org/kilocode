@@ -647,7 +647,8 @@ export const layer = Layer.effect(
         return yield* Effect.forEach(
           Object.entries(s.clients).filter(([name]) => s.status[name]?.status === "connected"),
           ([clientName, client]) =>
-            McpCatalog.fetch(
+            McpCatalog.collect(
+              // kilocode_change - distinguish collection from direct network fetch
               clientName,
               client,
               (c) => listFn(c, requestTimeout(s, clientName, cfg.mcp?.[clientName], cfg.experimental?.mcp_timeout)),

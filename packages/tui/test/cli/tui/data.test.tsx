@@ -2,8 +2,8 @@
 import { expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import type { Event, GlobalEvent } from "@kilocode/sdk/v2"
-import { onMount } from "solid-js"
-import { ProjectProvider } from "../../../src/context/project"
+import { createSignal, onMount, Show, type ParentProps } from "solid-js" // kilocode_change
+import { ProjectProvider, useProject } from "../../../src/context/project" // kilocode_change
 import { SDKProvider } from "../../../src/context/sdk"
 import { DataProvider, useData } from "../../../src/context/data"
 import { createEventSource, createFetch, directory, json } from "../../fixture/tui-sdk"
@@ -24,6 +24,18 @@ function global(payload: Event): GlobalEvent {
 function emitEvent(events: ReturnType<typeof createEventSource>, payload: Event) {
   events.emit(global(payload))
 }
+
+// kilocode_change start - initialize Kilo's project filter before mounting V2 event consumers
+function Ready(props: ParentProps) {
+  const project = useProject()
+  const [ready, setReady] = createSignal(false)
+  onMount(async () => {
+    await project.sync()
+    setReady(true)
+  })
+  return <Show when={ready()}>{props.children}</Show>
+}
+// kilocode_change end
 
 test("refreshes resources into reactive getters", async () => {
   const location = {
@@ -67,9 +79,11 @@ test("refreshes resources into reactive getters", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -128,9 +142,11 @@ test("refreshes connectors after connector updates", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -176,9 +192,11 @@ test("refreshes references after updates", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -214,9 +232,11 @@ test("settles pending tools when a live failure arrives", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -343,9 +363,11 @@ test("renders admitted prompts only after promotion", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -407,9 +429,11 @@ test("renders a promoted prompt when admission was missed", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>
@@ -455,9 +479,11 @@ test("projects live context updates with their message ID", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <Probe />
-          </DataProvider>
+          <Ready>
+            <DataProvider>
+              <Probe />
+            </DataProvider>
+          </Ready>
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>

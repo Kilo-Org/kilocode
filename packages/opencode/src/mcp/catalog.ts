@@ -66,7 +66,7 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
   })
 }
 
-export function fetch<T extends { name: string }>(
+export function collect<T extends { name: string }>( // kilocode_change - distinguish collection from direct network fetch
   clientName: string,
   client: Client,
   list: (client: Client) => Promise<T[]>,

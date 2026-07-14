@@ -1942,6 +1942,17 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={display() === "grep"}>
           <Grep {...toolprops} />
         </Match>
+        {/* kilocode_change start - preserve Kilo tool-specific status rendering */}
+        <Match when={display() === "background_process"}>
+          <BackgroundProcess {...toolprops} />
+        </Match>
+        <Match when={display() === "interactive_terminal"}>
+          <InteractiveTerminal {...toolprops} />
+        </Match>
+        <Match when={display() === "semantic_search"}>
+          <SemanticSearch {...toolprops} />
+        </Match>
+        {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -2021,6 +2032,112 @@ function GenericTool(props: ToolProps) {
     </Show>
   )
 }
+
+// kilocode_change start - Kilo tool-specific status rendering
+function BackgroundProcess(props: ToolProps) {
+  const sync = useSync()
+  const paths = usePathFormatter()
+  const running = createMemo(() => props.part.state.status === "running")
+  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
+  const action = createMemo(() => stringValue(props.input.action) ?? "start")
+  const desc = createMemo(
+    () => stringValue(props.input.description) || cmd() || stringValue(props.input.id) || "background process",
+  )
+  const dir = createMemo(() => {
+    const raw = stringValue(props.input.workdir)
+    if (!raw || raw === ".") return
+    const base = sync.path.directory
+    if (!base) return paths.format(raw)
+    const abs = path.resolve(base, raw)
+    if (abs === base) return
+    return paths.format(abs)
+  })
+  const status = createMemo(() => {
+    const value = stringValue(props.metadata.status)
+    if (value) return value
+    const count = numberValue(props.metadata.count)
+    if (count !== undefined) return `${count} running`
+  })
+  const title = createMemo(() => {
+    if (action() === "list") return "List background processes"
+    if (action() === "logs") return `View background logs: ${desc()}`
+    if (action() === "status") return `Check background process: ${desc()}`
+    if (action() === "stop") return `Stop background process: ${desc()}`
+    if (action() === "restart") return `Restart background process: ${desc()}`
+    return `Start background process: ${desc()}`
+  })
+
+  return (
+    <InlineTool
+      icon="$"
+      pending="Preparing background process..."
+      complete={desc()}
+      spinner={running()}
+      part={props.part}
+    >
+      {title()}
+      <Show when={dir()}> in {dir()}</Show>
+      <Show when={cmd()}> · $ {cmd()}</Show>
+      <Show when={status()}> ({status()})</Show>
+    </InlineTool>
+  )
+}
+
+function InteractiveTerminal(props: ToolProps) {
+  const sync = useSync()
+  const paths = usePathFormatter()
+  const running = createMemo(() => props.part.state.status === "running")
+  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
+  const desc = createMemo(() => stringValue(props.input.description) || cmd() || "interactive command")
+  const dir = createMemo(() => {
+    const raw = stringValue(props.input.workdir)
+    if (!raw || raw === ".") return
+    const base = sync.path.directory
+    if (!base) return paths.format(raw)
+    const abs = path.resolve(base, raw)
+    if (abs === base) return
+    return paths.format(abs)
+  })
+  const status = createMemo(() => {
+    if (props.metadata.closedBy === "user") return "closed by user"
+    if (props.metadata.closedBy === "abort") return "cancelled"
+    if (props.metadata.closedBy !== "exit") return
+    const code = numberValue(props.metadata.exitCode)
+    return code === undefined ? "completed" : `exit ${code}`
+  })
+
+  return (
+    <InlineTool
+      icon="$"
+      pending="Opening interactive terminal..."
+      complete={desc()}
+      spinner={running()}
+      part={props.part}
+    >
+      Interactive terminal: {desc()}
+      <Show when={dir()}> in {dir()}</Show>
+      <Show when={cmd()}> · $ {cmd()}</Show>
+      <Show when={status()}> ({status()})</Show>
+    </InlineTool>
+  )
+}
+
+function SemanticSearch(props: ToolProps) {
+  const paths = usePathFormatter()
+  const query = createMemo(() => stringValue(props.input.query))
+  const target = createMemo(() => stringValue(props.input.path))
+  const count = createMemo(() => (Array.isArray(props.metadata.results) ? props.metadata.results.length : 0))
+
+  return (
+    <InlineTool icon="✱" pending="Searching codebase..." complete={query()} part={props.part}>
+      Codebase Search "{query()}" <Show when={target()}>in {paths.format(target()!)} </Show>
+      <Show when={count() > 0}>
+        ({count()} {count() === 1 ? "result" : "results"})
+      </Show>
+    </InlineTool>
+  )
+}
+// kilocode_change end
 
 function InlineTool(props: {
   icon: string
@@ -2808,6 +2925,11 @@ const toolDisplays = new Set([
   "todowrite",
   "question",
   "skill",
+  // kilocode_change start - retain dedicated Kilo tool renderers
+  "background_process",
+  "interactive_terminal",
+  "semantic_search",
+  // kilocode_change end
 ])
 
 export function toolDisplay(tool: string) {
