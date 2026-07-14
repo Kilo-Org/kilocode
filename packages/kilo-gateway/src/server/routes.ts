@@ -19,6 +19,7 @@ import {
 } from "../cloud-sessions.js"
 import { createEditHandler } from "./edit.js"
 import { createFimHandler } from "./fim.js"
+import type { ResolveConfiguredFimProvider } from "./fim.js"
 import {
   GatewayError,
   UnauthorizedError,
@@ -50,6 +51,7 @@ interface KiloRoutesDeps extends ImportDeps {
   ModelCache: ModelCache
   z: Z
   Instances: { disposeAllInstances(): Promise<void> }
+  resolveConfiguredFimProvider?: ResolveConfiguredFimProvider
 }
 
 /**
@@ -95,6 +97,7 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
     Identifier,
     ModelCache,
     Instances,
+    resolveConfiguredFimProvider,
   } = deps
 
   const Organization = z.object({
@@ -348,9 +351,10 @@ export function createKiloRoutes(deps: KiloRoutesDeps) {
           model: z.string().optional(),
           maxTokens: z.number().optional(),
           temperature: z.number().optional(),
+          sessionId: z.string().optional(),
         }),
       ),
-      createFimHandler(Auth),
+      createFimHandler(Auth, resolveConfiguredFimProvider),
     )
     .post(
       "/edit",

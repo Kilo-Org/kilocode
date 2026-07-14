@@ -30,3 +30,21 @@ describe("Next Edit FIM models", () => {
     }
   })
 })
+
+describe("configured autocomplete models", () => {
+  test("preserves arbitrary configured provider and model IDs", async () => {
+    const { getAutocompleteModel } = await import("../src/autocomplete")
+    const model = getAutocompleteModel("lmstudio", "qwen2.5-coder-1.5b")
+
+    expect(model).toMatchObject({
+      id: "lmstudio/qwen2.5-coder-1.5b",
+      providerID: "lmstudio",
+      modelID: "qwen2.5-coder-1.5b",
+      requestModel: "qwen2.5-coder-1.5b",
+      configuredProvider: true,
+      temperature: 0,
+      maxTokens: 64,
+    })
+    expect(model.directProvider).toBeUndefined()
+  })
+})

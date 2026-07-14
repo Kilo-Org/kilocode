@@ -1,5 +1,5 @@
-export type AutocompleteProviderID = "kilo" | "mistral" | "inception"
-export type DirectAutocompleteProviderID = Exclude<AutocompleteProviderID, "kilo">
+export type AutocompleteProviderID = string
+export type DirectAutocompleteProviderID = "mistral" | "inception"
 
 interface AutocompleteModelBase {
   /** Stable combined value for internal comparisons. */
@@ -18,6 +18,10 @@ interface AutocompleteModelBase {
   readonly directProvider?: DirectAutocompleteProviderID
   /** Request temperature. */
   readonly temperature: number
+  /** Maximum number of completion tokens requested from the provider. */
+  readonly maxTokens?: number
+  /** Uses the configured provider's OpenAI-compatible completions endpoint. */
+  readonly configuredProvider?: boolean
 }
 
 export type AutocompleteModelDef = AutocompleteModelBase &
@@ -136,6 +140,20 @@ export function getAutocompleteModel(provider?: string, model?: string): Autocom
   for (const m of models) {
     if (m.providerID === pid && m.modelID === mid) return m
   }
+  if (provider?.trim() && model?.trim()) {
+    return {
+      id: `${provider}/${model}`,
+      modelID: model,
+      label: model,
+      providerID: provider,
+      provider,
+      requestModel: model,
+      directProvider: undefined,
+      temperature: 0,
+      maxTokens: 64,
+      configuredProvider: provider !== "kilo",
+    }
+  }
   return DEFAULT_AUTOCOMPLETE_MODEL
 }
 
@@ -143,16 +161,17 @@ export function getAutocompleteModelById(id: string): AutocompleteModelDef {
   for (const m of models) {
     if (m.id === id) return m
   }
+  const separator = id.indexOf("/")
+  if (separator > 0 && separator < id.length - 1) {
+    return getAutocompleteModel(id.slice(0, separator), id.slice(separator + 1))
+  }
   return DEFAULT_AUTOCOMPLETE_MODEL
 }
 
 export function validAutocompleteProvider(value: unknown) {
-  if (typeof value !== "string") return false
-  return models.some((m) => m.providerID === value)
+  return typeof value === "string" && value.trim().length > 0
 }
 
 export function validAutocompleteModel(value: unknown) {
-  if (typeof value !== "string") return false
-  const resolved = aliases[value] ?? value
-  return models.some((m) => m.modelID === resolved)
+  return typeof value === "string" && value.trim().length > 0
 }

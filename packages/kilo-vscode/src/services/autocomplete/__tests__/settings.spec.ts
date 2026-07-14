@@ -76,11 +76,18 @@ describe("autocomplete settings", () => {
     expect(validAutocompleteSetting("model", undefined)).toBe(true)
   })
 
-  it("rejects unsupported autocomplete updates", async () => {
+  it("accepts arbitrary connected provider and model IDs", async () => {
     const { validAutocompleteSetting } = await import("../settings")
 
-    expect(validAutocompleteSetting("model", "other/model")).toBe(false)
-    expect(validAutocompleteSetting("provider", "openrouter")).toBe(false)
+    expect(validAutocompleteSetting("model", "qwen2.5-coder-1.5b")).toBe(true)
+    expect(validAutocompleteSetting("provider", "lmstudio")).toBe(true)
+  })
+
+  it("rejects blank provider and model IDs", async () => {
+    const { validAutocompleteSetting } = await import("../settings")
+
+    expect(validAutocompleteSetting("model", "  ")).toBe(false)
+    expect(validAutocompleteSetting("provider", "")).toBe(false)
   })
 
   it("rejects non-boolean toggle updates", async () => {

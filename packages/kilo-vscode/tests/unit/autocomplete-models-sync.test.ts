@@ -1,22 +1,26 @@
 import { describe, it, expect } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { AUTOCOMPLETE_MODELS } from "../../src/shared/autocomplete-models"
 
-describe("autocomplete model enum ↔ AUTOCOMPLETE_MODELS sync", () => {
+describe("autocomplete provider and model settings", () => {
   const pkg = JSON.parse(readFileSync(join(__dirname, "../../package.json"), "utf8"))
-  const prop = pkg.contributes.configuration.properties["kilo-code.new.autocomplete.model"]
+  const props = pkg.contributes.configuration.properties
+  const model = props["kilo-code.new.autocomplete.model"]
+  const provider = props["kilo-code.new.autocomplete.provider"]
 
-  it("package.json enum matches AUTOCOMPLETE_MODELS model IDs", () => {
-    const ids = AUTOCOMPLETE_MODELS.map((m) => m.modelID)
-    expect(prop.enum).toEqual(ids)
+  it("accepts IDs from the normal configured-provider registry", () => {
+    expect(provider.type).toBe("string")
+    expect(model.type).toBe("string")
+    expect(provider.enum).toBeUndefined()
+    expect(model.enum).toBeUndefined()
   })
 
-  it("package.json enumDescriptions has one entry per model", () => {
-    expect(prop.enumDescriptions).toHaveLength(AUTOCOMPLETE_MODELS.length)
+  it("documents the FIM compatibility requirement", () => {
+    expect(model.description).toContain("fill-in-the-middle")
   })
 
-  it("package.json does not declare a default (VS Code strips user overrides that equal the schema default)", () => {
-    expect(prop.default).toBeUndefined()
+  it("does not declare defaults that would strip matching user overrides", () => {
+    expect(provider.default).toBeUndefined()
+    expect(model.default).toBeUndefined()
   })
 })

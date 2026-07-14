@@ -107,9 +107,17 @@ export class ChatTextAreaAutocomplete {
     let response = ""
 
     try {
-      await generateFim(this.connection, entry.id, prefix, suffix, (chunk) => {
-        response += chunk
-      })
+      await generateFim(
+        this.connection,
+        entry.id,
+        prefix,
+        suffix,
+        (chunk) => {
+          response += chunk
+        },
+        undefined,
+        `${vscode.env.machineId}\0${this.dir || "chat-textarea"}`,
+      )
 
       const latencyMs = Date.now() - startTime
 
