@@ -13,11 +13,29 @@ Custom rules allow you to create text-based instructions that all AI models will
 
 ## Rule Format
 
-Custom rules can be written in plain text, but Markdown format is recommended for better structure and comprehension by the AI models. The structured nature of Markdown helps the models parse and understand your rules more effectively.
+Custom rules can be written in plain text, but Markdown format is recommended for better structure and comprehension by the AI models. Local Markdown rules referenced by the `instructions` setting can use optional `paths` frontmatter to load only when matching files are read. This does not apply to `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, or URL instruction sources.
 
 - Use Markdown headers (`#`, `##`, etc.) to define rule categories
 - Use lists (`-`, `*`) to enumerate specific items or constraints
 - Use code blocks (` `) to include code examples when needed
+
+### Path-Scoped Rules
+
+Use `paths` to scope a local Markdown rule to worktree-relative file globs. Kilo excludes scoped rules from the startup context and loads them when the Read tool opens a matching file.
+
+```markdown
+---
+paths:
+  - "src/api/**/*.ts"
+  - "tests/**/*.test.ts"
+---
+
+# API Rules
+
+Validate inputs and return the standard error shape.
+```
+
+`paths` accepts one string or a list of strings. When Claude Code Compatibility is enabled, Kilo also discovers Markdown rules under `.claude/rules/` and applies their `paths` frontmatter the same way.
 
 ## Rule Types
 
