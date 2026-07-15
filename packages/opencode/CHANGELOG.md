@@ -1,5 +1,47 @@
 # @kilocode/cli
 
+## 7.4.8
+
+### Minor Changes
+
+- [#12159](https://github.com/Kilo-Org/kilocode/pull/12159) [`1083bb8`](https://github.com/Kilo-Org/kilocode/commit/1083bb82b65e986dfbc7092647b6ee2650951265) - Report active CLI and VS Code app and session presence.
+
+### Patch Changes
+
+- [#12160](https://github.com/Kilo-Org/kilocode/pull/12160) [`ba6e5b9`](https://github.com/Kilo-Org/kilocode/commit/ba6e5b9dfcddb6b5752e1c06951098213a2ceabe) - Allow persistent approval for shell access to a specific global skill directory while keeping other Kilo configuration protected.
+
+- [#12097](https://github.com/Kilo-Org/kilocode/pull/12097) [`22d6edb`](https://github.com/Kilo-Org/kilocode/commit/22d6edbe59a82f87362e8a49e739f8d4a4802f90) - Release project file handles immediately after reads on Windows so editors and tools can replace existing files without restarting Kilo.
+
+- [#12175](https://github.com/Kilo-Org/kilocode/pull/12175) [`bd08c13`](https://github.com/Kilo-Org/kilocode/commit/bd08c1341289c5d30facad6bcfed4b02cd33262d) - Preserve the selected model reasoning variant when forking a session.
+
+- [#12128](https://github.com/Kilo-Org/kilocode/pull/12128) [`ad2cc71`](https://github.com/Kilo-Org/kilocode/commit/ad2cc712d084e2540d4846f561b2cfe39ee9ee15) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Surface an invalid Kilo `indexing.model` configuration as an indexing Error status instead of silently falling back to the default model.
+
+- [#11783](https://github.com/Kilo-Org/kilocode/pull/11783) [`6a3e5f3`](https://github.com/Kilo-Org/kilocode/commit/6a3e5f39011e4b1a63ab5d0ae0dbf8195ea29d4c) - Inherit sandbox state when a sandboxed agent starts new Agent Manager sessions.
+
+- [#12203](https://github.com/Kilo-Org/kilocode/pull/12203) [`750b622`](https://github.com/Kilo-Org/kilocode/commit/750b622f487b17d5b5344cace403e80fa3374935) - Keep Agent Manager sessions running when concurrent branch-name generation times out during model refresh.
+
+- [#12174](https://github.com/Kilo-Org/kilocode/pull/12174) [`3ba4c33`](https://github.com/Kilo-Org/kilocode/commit/3ba4c33544451076bd5ecb3b698e74ede0434c82) - Inspect managed Agent Manager sessions and send a targeted prompt to an idle existing session from the native Agent Manager tool. Require a separate explicit approval before prompting another managed session.
+
+- [#12156](https://github.com/Kilo-Org/kilocode/pull/12156) [`6f11e35`](https://github.com/Kilo-Org/kilocode/commit/6f11e3576488e06e99337c81abb29f5e8aa8908c) - Preserve gateway and provider errors when chunked compaction fails instead of reporting every failure as a context overflow.
+
+- [#12205](https://github.com/Kilo-Org/kilocode/pull/12205) [`2045190`](https://github.com/Kilo-Org/kilocode/commit/204519025ae5f00abe41afdec4c935113002874c) - Temporarily disable free-model session and Git workspace data export.
+
+- [#12158](https://github.com/Kilo-Org/kilocode/pull/12158) [`3b1e07c`](https://github.com/Kilo-Org/kilocode/commit/3b1e07cc0033bdb37e762ed6e0f85dab4214780d) - Enforce read and ignore permissions when file mentions add content to a prompt.
+
+- [#12207](https://github.com/Kilo-Org/kilocode/pull/12207) [`c49560a`](https://github.com/Kilo-Org/kilocode/commit/c49560af0f94459015d3fa4e1efa23ad9b291955) - Keep shared session databases writable by released Kilo clients after newer schema migrations run.
+
+- [#11424](https://github.com/Kilo-Org/kilocode/pull/11424) [`3a4438e`](https://github.com/Kilo-Org/kilocode/commit/3a4438e748f80a23bd33eb4aa824d3dffb3d588a) - Stop active Agent Manager sessions and their subagents when a session tab or the Agent Manager tab closes.
+
+- Updated dependencies [[`6a3e5f3`](https://github.com/Kilo-Org/kilocode/commit/6a3e5f39011e4b1a63ab5d0ae0dbf8195ea29d4c), [`227c65d`](https://github.com/Kilo-Org/kilocode/commit/227c65d1004fc1f48e71335cc574a2e6986c4893), [`3ba4c33`](https://github.com/Kilo-Org/kilocode/commit/3ba4c33544451076bd5ecb3b698e74ede0434c82)]:
+  - @kilocode/sdk@7.4.8
+  - @kilocode/kilo-indexing@7.4.8
+  - @kilocode/plugin@7.4.8
+  - @opencode-ai/ui@7.4.8
+  - @kilocode/kilo-gateway@7.4.8
+  - @kilocode/plugin-atomic-chat@7.4.8
+  - @opencode-ai/server@7.4.2
+  - @kilocode/kilo-telemetry@7.4.8
+
 ## 7.4.7
 
 ## 7.4.6
