@@ -13,7 +13,6 @@ import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import javax.swing.JComponent
 
 /**
@@ -36,7 +35,7 @@ class TurnView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
-) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), Disposable, SessionEditorStyleTarget, SessionView {
+) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
 

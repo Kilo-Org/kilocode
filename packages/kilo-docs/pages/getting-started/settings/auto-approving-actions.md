@@ -45,7 +45,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `glob` | File pattern matching / searching by name |
 | `grep` | Searching file contents by regex |
 | `task` | Launching sub-agents |
-| `agent_manager` | Starting Agent Manager local or worktree sessions |
+| `agent_manager` | Starting Agent Manager sessions, inspecting managed sessions, and prompting an existing managed session |
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |
 | `todoread` / `todowrite` | Reading and updating the todo list |
@@ -66,7 +66,7 @@ Use the shield button in the prompt controls to toggle runtime auto-approve for 
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
-For the `agent_manager` tool, runtime approvals use the requested mode as the pattern: `worktree` or `local`.
+For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, or `prompt`. Prompting an existing managed session always requires an explicit `prompt` approval the first time, even when a broad Agent Manager allow rule already exists.
 
 ## MCP Tool Permissions
 

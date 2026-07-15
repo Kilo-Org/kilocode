@@ -57,7 +57,7 @@ class MessageView(
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
 ) : ai.kilocode.client.session.ui.SessionLayoutPanel(
-    JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+    SessionUiStyle.SessionLayout.GAP,
 ), Disposable, SessionEditorStyleTarget, SessionView {
 
     val role: String get() = msg.info.role

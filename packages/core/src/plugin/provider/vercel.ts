@@ -8,12 +8,12 @@ export const VercelPlugin = PluginV2.define({
     return {
       "catalog.transform": Effect.fn(function* (evt) {
         for (const item of evt.provider.list()) {
-          if (item.provider.endpoint.type !== "aisdk") continue
-          if (item.provider.endpoint.package !== "@ai-sdk/vercel") continue
+          if (item.provider.api.type !== "aisdk") continue
+          if (item.provider.api.package !== "@ai-sdk/vercel") continue
           if (item.provider.id !== ProviderV2.ID.make("vercel")) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
-            provider.options.headers["http-referer"] = "https://kilo.ai/" // kilocode_change
-            provider.options.headers["x-title"] = "Kilo Code" // kilocode_change
+            provider.request.headers["http-referer"] = "https://kilo.ai/" // kilocode_change
+            provider.request.headers["x-title"] = "Kilo Code" // kilocode_change
           })
         }
       }),

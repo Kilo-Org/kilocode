@@ -1490,11 +1490,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prilagođeni prompt",
   "settings.agentBehaviour.prompt.description": "Dodatni sistemski prompt za ovog agenta",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura uzorkovanja (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Kontroliše koliko su AI odgovori nasumični (0–2). Niže vrijednosti (npr. 0.2) daju fokusirane i dosljedne rezultate. Više vrijednosti (npr. 1.0) daju raznovrsnije i kreativnije odgovore. Ostavite prazno da biste koristili zadanu vrijednost modela.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus parametar uzorkovanja (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Prag nucleus uzorkovanja (0–1). Ograničava izbor tokena na najmanji skup čija kumulativna vjerovatnoća dostiže P. Niže vrijednosti čine rezultat fokusiranijim; više vrijednosti omogućavaju veću raznolikost. Ostavite prazno da biste koristili zadanu vrijednost modela.",
   "settings.agentBehaviour.maxSteps.title": "Maks. koraci",
-  "settings.agentBehaviour.maxSteps.description": "Maksimalne iteracije agenta",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maksimalan broj koraka agenta. Kada se dostigne ograničenje, agent dobija uputu da prestane koristiti alate i da završni odgovor. Povećajte za složene zadatke u više koraka; smanjite da bi odgovori bili kraći i predvidljiviji.",
   "settings.agentBehaviour.hidden.title": "Skriveno",
   "settings.agentBehaviour.hidden.description": "Sakrij ovog agenta iz prebacivača modova u unosu chata",
   "settings.agentBehaviour.disable.title": "Onemogućeno",

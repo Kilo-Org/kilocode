@@ -56,41 +56,41 @@ describe("buildMentionResults", () => {
 
   it("includes terminal for matching prefix", () => {
     const result = buildMentionResults("term", ["src/terminal.ts"])
-    expect(result.map((item) => item.type)).toEqual(["terminal", "file-picker", "file"])
+    expect(result.map((item) => item.type)).toEqual(["terminal", "file", "file-picker"])
   })
 
   it("includes git changes for matching prefix", () => {
     const result = buildMentionResults("git", ["src/git.ts"])
-    expect(result.map((item) => item.type)).toEqual(["git-changes", "file-picker", "file"])
+    expect(result.map((item) => item.type)).toEqual(["git-changes", "file", "file-picker"])
   })
 
   it("omits special mentions for unrelated query", () => {
     const result = buildMentionResults("src", ["src/index.ts"])
-    expect(result.map((item) => item.type)).toEqual(["file-picker", "file"])
+    expect(result.map((item) => item.type)).toEqual(["file", "file-picker"])
   })
 
   it("omits git changes when git is unavailable", () => {
     const result = buildMentionResults("git", ["src/git.ts"], false)
-    expect(result.map((item) => item.type)).toEqual(["file-picker", "file"])
+    expect(result.map((item) => item.type)).toEqual(["file", "file-picker"])
   })
 
   it("includes folder results", () => {
     const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
-    expect(result).toEqual([FILE_PICKER_RESULT, { type: "folder", value: "src" }])
+    expect(result).toEqual([{ type: "folder", value: "src" }, FILE_PICKER_RESULT])
   })
 
   it("preserves opened file result type", () => {
     const result = buildMentionResults("src", [{ path: "src/index.ts", type: "opened-file" }])
-    expect(result).toEqual([FILE_PICKER_RESULT, { type: "opened-file", value: "src/index.ts" }])
+    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }, FILE_PICKER_RESULT])
   })
 
-  it("always includes file picker result, placed after terminal/git-changes and before file results", () => {
+  it("always includes file picker result at the end of the list", () => {
     const result = buildMentionResults("", ["src/index.ts"])
     expect(result).toEqual([
       TERMINAL_RESULT,
       GIT_CHANGES_RESULT,
-      FILE_PICKER_RESULT,
       { type: "file", value: "src/index.ts" },
+      FILE_PICKER_RESULT,
     ])
   })
 })

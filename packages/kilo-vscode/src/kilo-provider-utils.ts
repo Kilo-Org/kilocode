@@ -1,16 +1,5 @@
-import type {
-  Session,
-  Agent,
-  Event,
-  ProviderListResponse,
-  SyncEventMessageUpdated,
-  SyncEventMessageRemoved,
-  SyncEventMessagePartUpdated,
-  SyncEventMessagePartRemoved,
-  SyncEventSessionCreated,
-  SyncEventSessionUpdated,
-  SyncEventSessionDeleted,
-} from "@kilocode/sdk/v2/client"
+import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import type { SyncPayload } from "./services/cli-backend/sdk-sse-adapter"
 import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
@@ -18,6 +7,14 @@ import type { PartRemove } from "./shared/stream-messages"
 import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
+
+type SyncEventMessageUpdated = Extract<SyncPayload, { name: "message.updated.1" }>
+type SyncEventMessageRemoved = Extract<SyncPayload, { name: "message.removed.1" }>
+type SyncEventMessagePartUpdated = Extract<SyncPayload, { name: "message.part.updated.1" }>
+type SyncEventMessagePartRemoved = Extract<SyncPayload, { name: "message.part.removed.1" }>
+type SyncEventSessionCreated = Extract<SyncPayload, { name: "session.created.1" }>
+type SyncEventSessionUpdated = Extract<SyncPayload, { name: "session.updated.1" }>
+type SyncEventSessionDeleted = Extract<SyncPayload, { name: "session.deleted.1" }>
 
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]

@@ -2,32 +2,23 @@ export * as ConfigCommand from "./command"
 
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
-import { Cause, Exit, Schema, SchemaIssue } from "effect"
+import { Cause, Exit, Schema } from "effect"
+import { SchemaIssue } from "effect" // kilocode_change - preserve Effect issue details in Kilo warnings
 import { Glob } from "@opencode-ai/core/util/glob"
+import { ConfigCommandV1 } from "@opencode-ai/core/v1/config/command"
 import { configEntryNameFromPath } from "./entry-name"
 import * as ConfigMarkdown from "./markdown"
-import { ConfigModelID } from "./model-id"
 // kilocode_change start
-import { Bus } from "@/bus"
-import { NamedError } from "@opencode-ai/core/util/error"
+import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { KilocodeConfig } from "@/kilocode/config/config"
+import { report } from "@/kilocode/config/report"
 import type { Warning } from "./config"
 import type { ConfigVariable } from "./variable"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
 
-export const Info = Schema.Struct({
-  template: Schema.String,
-  description: Schema.optional(Schema.String),
-  agent: Schema.optional(Schema.String),
-  model: Schema.optional(ConfigModelID),
-  subtask: Schema.optional(Schema.Boolean),
-})
-
-export type Info = Schema.Schema.Type<typeof Info>
-
-const decodeInfo = Schema.decodeUnknownExit(Info)
+const decodeInfo = Schema.decodeUnknownExit(ConfigCommandV1.Info)
 
 // kilocode_change start
 export async function load(
@@ -38,7 +29,7 @@ export async function load(
   sourceScope?: ConfigVariable.FileScope,
 ) {
   // kilocode_change end
-  const result: Record<string, Info> = {}
+  const result: Record<string, ConfigCommandV1.Info> = {}
   for (const item of await Glob.scan("{command,commands}/**/*.md", {
     cwd: dir,
     absolute: true,
@@ -48,7 +39,7 @@ export async function load(
     // kilocode_change start
     const md = await ConfigMarkdown.parse(item, { trusted, fileScope, sourceScope }).catch(async (err) => {
       // kilocode_change end
-      const message = ConfigMarkdown.FrontmatterError.isInstance(err)
+      const message = FrontmatterError.isInstance(err)
         ? err.data.message
         : `Failed to parse command ${item}`
       // kilocode_change start
@@ -56,10 +47,7 @@ export async function load(
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
-        if (ctx) {
-          const { Session } = await import("@/session/session")
-          await Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-        }
+        if (ctx) await report(ctx, message)
       } catch (error) {
         log.warn("could not publish session error", { message, err: error })
       }

@@ -1,11 +1,12 @@
 import { Effect, Layer, Context, Schema } from "effect"
-import { Bus } from "@/bus"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Snapshot } from "@/snapshot"
-import { Storage } from "@/storage/storage"
-import * as Session from "./session"
-import { MessageV2 } from "./message-v2"
+import { Session } from "./session"
 import { SessionID, MessageID } from "./schema"
 import { appendSessionDiffs, readSessionDiffBase } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
+import { Storage } from "@/storage/storage" // kilocode_change
+import { Config } from "@/config/config"
 
 function unquoteGitPath(input: string) {
   if (!input.startsWith('"')) return input
@@ -66,7 +67,7 @@ function unquoteGitPath(input: string) {
 export interface Interface {
   readonly summarize: (input: { sessionID: SessionID; messageID: MessageID }) => Effect.Effect<void>
   readonly diff: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Snapshot.FileDiff[]>
-  readonly computeDiff: (input: { messages: MessageV2.WithParts[] }) => Effect.Effect<Snapshot.FileDiff[]>
+  readonly computeDiff: (input: { messages: SessionV1.WithParts[] }) => Effect.Effect<Snapshot.FileDiff[]>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionSummary") {}
@@ -76,10 +77,11 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const sessions = yield* Session.Service
     const snapshot = yield* Snapshot.Service
-    const storage = yield* Storage.Service
-    const bus = yield* Bus.Service
+    const events = yield* EventV2Bridge.Service
+    const config = yield* Config.Service
+    const storage = yield* Storage.Service // kilocode_change
 
-    const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: MessageV2.WithParts[] }) {
+    const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: SessionV1.WithParts[] }) {
       let from: string | undefined
       let to: string | undefined
       for (const item of input.messages) {
@@ -105,6 +107,7 @@ export const layer = Layer.effect(
     }) {
       const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
       if (!all.length) return
+      if ((yield* config.get()).snapshot === false) return // kilocode_change - respect snapshot config toggle
 
       // kilocode_change start - preserve imported cumulative diffs when summarizing cloud-forked sessions
       const base = yield* readSessionDiffBase(storage, input.sessionID)
@@ -131,8 +134,8 @@ export const layer = Layer.effect(
           files: diffs.length,
         },
       })
-      yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
-      yield* bus.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
+      yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore) // kilocode_change
+      yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
 
       if (!target || target.info.role !== "user") return
       const msgDiffs = base.length > 0 ? local : yield* computeDiff({ messages }) // kilocode_change
@@ -141,26 +144,34 @@ export const layer = Layer.effect(
     })
 
     const diff = Effect.fn("SessionSummary.diff")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
-      const diffs = yield* storage
-        .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
-        .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
-      const next = diffs.map((item) => {
+      // kilocode_change start - retain cumulative diffs for legacy TUI and VS Code consumers
+      if (!input.messageID) {
+        const diffs = yield* storage
+          .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
+          .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
+        const next = diffs.map((item) => {
+          const file = item.file === undefined ? undefined : unquoteGitPath(item.file)
+          const oversized = item.patch !== undefined && Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
+          if (file === item.file && !oversized) return item
+          return { ...item, ...(file === undefined ? {} : { file }), ...(oversized ? { patch: "" } : {}) }
+        })
+        if (next.some((item, index) => item !== diffs[index])) {
+          yield* storage.write(["session_diff", input.sessionID], next).pipe(Effect.ignore)
+        }
+        return next
+      }
+      // kilocode_change end
+      const message = (yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).find(
+        (item) => item.info.id === input.messageID,
+      )
+      if (!message || message.info.role !== "user") return []
+      const diffs = message.info.summary?.diffs ?? []
+      return diffs.map((item) => {
         if (item.file === undefined) return item
         const file = unquoteGitPath(item.file)
-
-        // kilocode_change start — scrub oversized diffs from stored session_diff
-        const oversized = item.patch !== undefined && Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
-        if (file === item.file && !oversized) return item
-        return {
-          ...item,
-          file,
-          patch: oversized ? "" : item.patch,
-        }
-        // kilocode_change end
+        if (file === item.file) return item
+        return { ...item, file }
       })
-      const changed = next.some((item, i) => item.file !== diffs[i]?.file)
-      if (changed) yield* storage.write(["session_diff", input.sessionID], next).pipe(Effect.ignore)
-      return next
     })
 
     return Service.of({ summarize, diff, computeDiff })
@@ -171,8 +182,9 @@ export const defaultLayer = Layer.suspend(() =>
   layer.pipe(
     Layer.provide(Session.defaultLayer),
     Layer.provide(Snapshot.defaultLayer),
-    Layer.provide(Storage.defaultLayer),
-    Layer.provide(Bus.layer),
+    Layer.provide(EventV2Bridge.defaultLayer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Storage.defaultLayer), // kilocode_change
   ),
 )
 

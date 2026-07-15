@@ -57,6 +57,12 @@ function isNotFound(err: unknown) {
   return false
 }
 
+function sameSet(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false
+  for (const id of a) if (!b.has(id)) return false
+  return true
+}
+
 // Poll /global/health every 10 seconds.
 // This provides a second detection channel for server death independent of the SSE heartbeat.
 const HEALTH_POLL_INTERVAL_MS = 10_000
@@ -111,10 +117,14 @@ export class KiloConnectionService {
    */
   private readonly messageSessionIdsByMessageId: Map<string, string> = new Map()
 
-  /** Provider key → single focused session ID. */
-  private readonly focused: Map<string, string> = new Map()
-  /** Provider key → all open (background) session IDs. */
-  private readonly opened: Map<string, string[]> = new Map()
+  private readonly viewerId = crypto.randomUUID()
+  private active = true
+  private windowStateDisposable: vscode.Disposable | null = null
+  private checkinTimer: ReturnType<typeof setInterval> | null = null
+  /** Provider key → attached (retained for remote control) session IDs. */
+  private readonly attached: Map<string, Set<string>> = new Map()
+  /** Provider key → visibly rendered session IDs. */
+  private readonly visible: Map<string, Set<string>> = new Map()
   private debounceTimer: ReturnType<typeof setTimeout> | null = null
   private viewedSending = false
   private viewedDirty = false
@@ -129,6 +139,11 @@ export class KiloConnectionService {
       } satisfies Pick<vscode.Memento, "get" | "update">)
     this.sandboxPreference = new SandboxPreference(state)
     this.serverManager = new ServerManager(context, (code) => this.handleServerExit(code))
+    this.active = vscode.window.state.focused
+    this.windowStateDisposable = vscode.window.onDidChangeWindowState((ws) => {
+      this.active = ws.focused
+      this.flushViewed()
+    })
   }
 
   /**
@@ -293,14 +308,15 @@ export class KiloConnectionService {
     for (const [mid, sid] of this.messageSessionIdsByMessageId) {
       if (sid === sessionId) this.messageSessionIdsByMessageId.delete(mid)
     }
-    for (const [key, sid] of this.focused) {
-      if (sid === sessionId) this.focused.delete(key)
+    for (const [key, ids] of this.attached) {
+      if (!ids.has(sessionId)) continue
+      ids.delete(sessionId)
+      if (ids.size === 0) this.attached.delete(key)
     }
-    for (const [key, ids] of this.opened) {
-      if (!ids.includes(sessionId)) continue
-      const next = ids.filter((id) => id !== sessionId)
-      if (next.length === 0) this.opened.delete(key)
-      else this.opened.set(key, next)
+    for (const [key, ids] of this.visible) {
+      if (!ids.has(sessionId)) continue
+      ids.delete(sessionId)
+      if (ids.size === 0) this.visible.delete(key)
     }
     this.flushViewed()
   }
@@ -584,38 +600,49 @@ export class KiloConnectionService {
   }
 
   /**
-   * Register the session a provider is actively viewing (focused).
-   * After any change the aggregated set is sent to the server (debounced).
+   * Register the sessions a provider retains for remote control (attached).
+   * Sent to the server (debounced) regardless of remote-control enablement.
    */
-  registerFocused(key: string, sessionID: string): void {
-    if (this.focused.get(key) === sessionID) return
-    this.focused.set(key, sessionID)
+  registerAttached(key: string, ids: string[]): void {
+    const next = new Set(ids)
+    const prev = this.attached.get(key)
+    if (prev && sameSet(prev, next)) return
+    this.attached.set(key, next)
     this.flushViewed()
   }
 
   /**
-   * Unregister a provider's focused session (e.g. on dispose, hidden, or clearSession).
+   * Unregister a provider's attached sessions (e.g. on dispose or clear).
    */
-  unregisterFocused(key: string): void {
-    if (!this.focused.has(key)) return
-    this.focused.delete(key)
+  unregisterAttached(key: string): void {
+    if (!this.attached.has(key)) return
+    this.attached.delete(key)
     this.flushViewed()
   }
 
   /**
-   * Register the open (background tab) session IDs for a provider.
-   * Sessions that appear in both focused and open are reported as focused only.
+   * Register the sessions a provider visibly renders (visible).
+   * Visible sessions are also reported as attached.
    */
-  registerOpen(key: string, ids: string[]): void {
-    const prev = this.opened.get(key)
-    if (prev && prev.length === ids.length && prev.every((v, i) => v === ids[i])) return
-    this.opened.set(key, ids)
+  registerVisible(key: string, ids: string[]): void {
+    const next = new Set(ids)
+    const prev = this.visible.get(key)
+    if (prev && sameSet(prev, next)) return
+    this.visible.set(key, next)
     this.flushViewed()
   }
 
-  /** Debounced: send the aggregated focused + open session IDs to the server. */
+  /**
+   * Unregister a provider's visible sessions (e.g. on hide, clear, or dispose).
+   */
+  unregisterVisible(key: string): void {
+    if (!this.visible.has(key)) return
+    this.visible.delete(key)
+    this.flushViewed()
+  }
+
+  /** Debounced: send the aggregated attached + visible snapshot to the server. Works even when remote control is disabled. */
   flushViewed(): void {
-    if (!this.isRemoteEnabled()) return
     if (this.debounceTimer) clearTimeout(this.debounceTimer)
     this.debounceTimer = setTimeout(() => {
       this.debounceTimer = null
@@ -624,28 +651,21 @@ export class KiloConnectionService {
   }
 
   private sendViewed(): void {
-    if (!this.isRemoteEnabled()) {
-      this.viewedDirty = false
-      return
-    }
     if (this.viewedSending) {
       this.viewedDirty = true
       return
     }
     if (!this.client) return
 
-    const focus = new Set(this.focused.values())
-    const open = new Set<string>()
-    for (const ids of this.opened.values()) {
-      for (const id of ids) {
-        if (!focus.has(id)) open.add(id)
-      }
-    }
+    const visible = new Set<string>()
+    for (const ids of this.visible.values()) for (const id of ids) visible.add(id)
+    const attached = new Set<string>(visible)
+    for (const ids of this.attached.values()) for (const id of ids) attached.add(id)
 
     this.viewedSending = true
     this.viewedDirty = false
     void this.client.session
-      .viewed({ focused: [...focus], open: [...open] })
+      .viewed({ viewer: { id: this.viewerId, active: this.active }, attached: [...attached], visible: [...visible] })
       .catch((err) => console.warn("[Kilo New] ConnectionService: viewed flush failed:", err))
       .finally(() => {
         this.viewedSending = false
@@ -674,12 +694,23 @@ export class KiloConnectionService {
     this.permissionDirectories.clear()
     this.questionDirectories.clear()
     this.questionRevision += 1
-    this.focused.clear()
-    this.opened.clear()
+    if (this.client?.session?.viewed) {
+      void this.client.session
+        .viewed({ viewer: { id: this.viewerId, active: false }, attached: [], visible: [] })
+        .catch(() => {})
+    }
+    this.attached.clear()
+    this.visible.clear()
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
+    if (this.checkinTimer) {
+      clearInterval(this.checkinTimer)
+      this.checkinTimer = null
+    }
+    this.windowStateDisposable?.dispose()
+    this.windowStateDisposable = null
     this.viewedDirty = false
     this.unsubRemote?.()
     this.unsubRemote = null
@@ -747,6 +778,7 @@ export class KiloConnectionService {
 
   private resetConnection(): void {
     this.stopHealthPoll()
+    this.stopCheckin()
     const sse = this.sseClient
     this.sseClient = null
     sse?.disconnect()
@@ -837,6 +869,7 @@ export class KiloConnectionService {
         resolveConnected?.()
         resolveConnected = null
         rejectConnected = null
+        this.flushViewed()
         return
       }
 
@@ -851,8 +884,22 @@ export class KiloConnectionService {
 
     await connectedPromise
 
+    this.startCheckin()
     // Start the independent health poll once we are confirmed connected.
     this.startHealthPoll(config.baseUrl, config.password)
+  }
+
+  private startCheckin(): void {
+    this.stopCheckin()
+    this.checkinTimer = setInterval(() => this.flushViewed(), 60_000)
+    this.checkinTimer.unref?.()
+  }
+
+  private stopCheckin(): void {
+    if (this.checkinTimer) {
+      clearInterval(this.checkinTimer)
+      this.checkinTimer = null
+    }
   }
 
   private handlePermissionEvent(event: SSEPayload, directory?: string): void {
