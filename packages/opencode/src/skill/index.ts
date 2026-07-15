@@ -276,6 +276,7 @@ const discoverSkills = Effect.fnUntraced(function* (
       trusted,
       root: trusted ? undefined : (origin?.root ?? projectRoot),
       projectRoot,
+      sourceRoot: trusted ? undefined : dir,
     })
     // kilocode_change end
   }
