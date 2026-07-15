@@ -11,7 +11,7 @@ import { ProjectV2 } from "@opencode-ai/core/project"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 
 export namespace RecallSearch {
-  const PAGE_SIZE = 1_024
+  const BATCH = 128
   const MAX_QUERY = 256
   const MAX_TERMS = 12
   const MAX_SNIPPETS = 3
@@ -51,14 +51,23 @@ export namespace RecallSearch {
     OR (json_extract(p.data, '$.type') = 'tool'
       AND json_extract(p.data, '$.state.status') = 'error')`
 
-  const searchSql = (ids: PartID[], sessionID: SessionID | "", messageID: MessageID | "") => sql`
+  const searchSql = (
+    ids: SessionID[],
+    rowid: number,
+    partID: string,
+    sessionID: SessionID | "",
+    messageID: MessageID | "",
+  ) => sql`
     SELECT ${sql.raw(FIELDS_SQL)}
-    FROM json_each(${JSON.stringify(ids)}) AS ids
-    CROSS JOIN part AS p
-    CROSS JOIN message AS m
-    WHERE p.id = ids.value
-      AND m.id = p.message_id
+    FROM part AS p INDEXED BY part_session_idx
+    JOIN message AS m ON m.id = p.message_id
       AND m.session_id = p.session_id
+    WHERE p.session_id IN (${sql.join(
+      ids.map((id) => sql`${id}`),
+      sql`,`,
+    )})
+      AND p.rowid <= ${rowid}
+      AND p.id <= ${partID}
       AND NOT (
         m.session_id = ${sessionID} AND (
           (json_extract(m.data, '$.role') = 'user' AND m.id >= ${messageID})
@@ -67,12 +76,15 @@ export namespace RecallSearch {
       )
       AND (${sql.raw(FILTER_SQL)})`
 
-  const pageSql = (sessionID: SessionID, cursor: number, rowid: number, partID: string) => sql`
-    SELECT p.rowid AS rowid, p.id AS partID
+  const countSql = (ids: SessionID[], rowid: number, partID: string) => sql`
+    SELECT count(*) AS parts
     FROM part AS p INDEXED BY part_session_idx
-    WHERE p.session_id = ${sessionID} AND p.rowid > ${cursor} AND p.rowid <= ${rowid} AND p.id <= ${partID}
-    ORDER BY p.rowid
-    LIMIT ${PAGE_SIZE}`
+    WHERE p.session_id IN (${sql.join(
+      ids.map((id) => sql`${id}`),
+      sql`,`,
+    )})
+      AND p.rowid <= ${rowid}
+      AND p.id <= ${partID}`
 
   export type Source = "user" | "assistant" | "reference" | "error"
 
@@ -116,9 +128,8 @@ export namespace RecallSearch {
     text: string
   }
 
-  type PageRow = {
-    rowid: number
-    partID: PartID
+  type CountRow = {
+    parts: number
   }
 
   export const search = Effect.fn("RecallSearch.search")(function* (input: {
@@ -210,32 +221,17 @@ export namespace RecallSearch {
       )
     }
 
-    for (let index = 0; index < ids.length; index++) {
+    for (let index = 0; index < ids.length; index += BATCH) {
       yield* abort(input.signal)
-      const sessionID = ids[index]
-      let cursor = 0
-      while (cursor < rowid) {
-        const rows = yield* db.all<PageRow>(pageSql(sessionID, cursor, rowid, partID)).pipe(Effect.orDie)
-        if (rows.length === 0) break
-        cursor = rows.at(-1)!.rowid
-        const found = yield* db
-          .all<Row>(
-            searchSql(
-              rows.map((entry) => entry.partID),
-              excludeSessionID,
-              excludeFromMessageID,
-            ),
-          )
-          .pipe(Effect.orDie)
-        for (const row of found) {
-          consume(row)
-        }
-        parts += rows.length
-        if (rows.length < PAGE_SIZE) break
-        yield* pause
-        yield* abort(input.signal)
+      const batch = ids.slice(index, index + BATCH)
+      const count = yield* db.get<CountRow>(countSql(batch, rowid, partID)).pipe(Effect.orDie)
+      const found = yield* db
+        .all<Row>(searchSql(batch, rowid, partID, excludeSessionID, excludeFromMessageID))
+        .pipe(Effect.orDie)
+      for (const row of found) {
+        consume(row)
       }
-      if (index % 16 !== 15) continue
+      parts += count?.parts ?? 0
       yield* pause
       yield* abort(input.signal)
     }

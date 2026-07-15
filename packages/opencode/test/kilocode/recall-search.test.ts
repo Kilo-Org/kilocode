@@ -247,7 +247,7 @@ it.instance(
 )
 
 it.instance(
-  "searches every page while respecting worktree scope",
+  "searches every batch while respecting worktree scope",
   () =>
     Effect.gen(function* () {
       yield* seedProject
@@ -261,9 +261,9 @@ it.instance(
       for (let index = 0; index < 300; index++) {
         yield* add(broad.id, "user", { type: "text", text: `page ${index}` })
       }
-      for (let index = 0; index < 70; index++) {
+      for (let index = 0; index < 140; index++) {
         const session = yield* sessions.create({ title: `Batch ${index}` })
-        if (index === 69) yield* add(session.id, "user", { type: "text", text: "last-session-needle" })
+        if (index === 139) yield* add(session.id, "user", { type: "text", text: "last-session-needle" })
       }
 
       const outside = yield* sessions.create({ title: "Outside" })
@@ -279,7 +279,7 @@ it.instance(
       expect((yield* run("archived-child-needle")).results.map((item) => item.id)).toEqual([child.id])
       const result = yield* run("last-session-needle")
       expect(result.results).toHaveLength(1)
-      expect(result.sessions).toBe(73)
+      expect(result.sessions).toBe(143)
       expect(result.parts).toBe(302)
     }),
   { git: true },
