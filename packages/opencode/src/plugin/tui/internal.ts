@@ -4,12 +4,15 @@ import { withKiloTuiPlugins } from "@/kilocode/plugins/internal" // kilocode_cha
 
 export type InternalTuiPlugin = BuiltinTuiPlugin
 
-export function internalTuiPlugins(flags: Pick<RuntimeFlags.Info, "experimentalEventSystem">): InternalTuiPlugin[] {
-  // kilocode_change start - register Kilo plugins before upstream builtins
+// kilocode_change start
+export function internalTuiPlugins(
+  flags: Pick<RuntimeFlags.Info, "experimentalEventSystem" | "experimentalSessionSwitcher">,
+): InternalTuiPlugin[] {
   return withKiloTuiPlugins(
     createBuiltinPlugins({
       experimentalEventSystem: flags.experimentalEventSystem,
     }),
+    flags,
   )
   // kilocode_change end
 }

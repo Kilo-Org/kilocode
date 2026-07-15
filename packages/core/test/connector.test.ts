@@ -358,6 +358,7 @@ describe("Connector", () => {
     }).pipe(Effect.provide(connectionLayer(created)))
   })
 
+  // kilocode_change start
   it.effect("fails auto OAuth when credential persistence fails", () => {
     const failed = Connector.locationLayer.pipe(
       Layer.provide(EventV2.defaultLayer),
@@ -396,7 +397,6 @@ describe("Connector", () => {
     }).pipe(Effect.provide(failed))
   })
 
-  // kilocode_change start - verify atomic OAuth persistence and cancellation
   it.effect("fails code OAuth when credential persistence fails", () => {
     const failed = Connector.locationLayer.pipe(
       Layer.provide(EventV2.defaultLayer),
@@ -504,7 +504,6 @@ describe("Connector", () => {
     }),
   )
 
-  // kilocode_change start - cancellation must not delete a completing OAuth attempt
   it.effect("keeps a code OAuth attempt while its callback is completing", () => {
     const created: Array<{
       connectorID: Connector.ID
@@ -549,7 +548,43 @@ describe("Connector", () => {
       expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toMatchObject({ status: "complete" })
     }).pipe(Effect.provide(connectionLayer(created)))
   })
-  // kilocode_change end
+
+  it.effect("fails and releases code OAuth attempts when the callback times out", () =>
+    Effect.gen(function* () {
+      const started = yield* Deferred.make<void>()
+      const state = { closed: false }
+      const connectors = yield* Connector.Service
+      const connectorID = Connector.ID.make("openai")
+      const methodID = Connector.MethodID.make("chatgpt")
+      yield* connectors.update((editor) =>
+        editor.method.update({
+          connectorID,
+          method: new Connector.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+          authorize: () =>
+            Effect.addFinalizer(() => Effect.sync(() => (state.closed = true))).pipe(
+              Effect.as({
+                mode: "code" as const,
+                url: "https://example.com/authorize",
+                instructions: "Paste the code",
+                callback: () => Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
+              }),
+            ),
+        }),
+      )
+
+      const attempt = yield* connectors.connect.oauth.begin({ connectorID, methodID, inputs: {} })
+      const fiber = yield* connectors.connect.oauth
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.exit, Effect.forkScoped)
+      yield* Deferred.await(started)
+      yield* TestClock.adjust(Duration.seconds(30))
+      const exit = yield* Fiber.join(fiber)
+      expect(Exit.isFailure(exit)).toBe(true)
+      yield* Effect.yieldNow
+      expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toMatchObject({ status: "failed" })
+      expect(state.closed).toBe(true)
+    }).pipe(Effect.provide(layer)),
+  )
 
   it.effect("fails and releases OAuth attempts when credential persistence times out", () =>
     Effect.gen(function* () {

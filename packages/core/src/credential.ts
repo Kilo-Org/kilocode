@@ -1,7 +1,9 @@
 export * as Credential from "./credential"
 
-import { and, asc, desc, eq, ne } from "drizzle-orm" // kilocode_change
+// kilocode_change start
+import { and, asc, desc, eq, ne } from "drizzle-orm"
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect"
+// kilocode_change end
 import { Database } from "./database/database"
 import { ConnectorSchema } from "./connector/schema"
 import { EventV2 } from "./event"
@@ -248,8 +250,10 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     const events = yield* EventV2.Service
-    const fs = Option.getOrUndefined(yield* Effect.serviceOption(FSUtil.Service)) // kilocode_change
-    const global = Option.getOrUndefined(yield* Effect.serviceOption(Global.Service)) // kilocode_change
+    // kilocode_change start
+    const fs = Option.getOrUndefined(yield* Effect.serviceOption(FSUtil.Service))
+    const global = Option.getOrUndefined(yield* Effect.serviceOption(Global.Service))
+    // kilocode_change end
     const decodeValue = Schema.decodeUnknownSync(Value)
     const info = (row: typeof CredentialTable.$inferSelect) =>
       new Info({
@@ -324,9 +328,7 @@ export const layer = Layer.effect(
     const isolated = content !== undefined
     const local = new Map([...injected.values()].map((credential) => [credential.id, credential]))
     const selected = new Map([...injected].map(([connectorID, credential]) => [connectorID, credential.id]))
-    // kilocode_change end
 
-    // kilocode_change start - dual-write the active Core credential for released auth.json readers.
     const lock = Semaphore.makeUnsafe(1)
     const writeLegacy = (connectorID: ConnectorSchema.ID) =>
       lock.withPermit(
@@ -530,8 +532,8 @@ export const layer = Layer.effect(
           )
           return
         }
+        const row = yield* db.select().from(CredentialTable).where(eq(CredentialTable.id, id)).get().pipe(Effect.orDie)
         // kilocode_change end
-        const row = yield* db.select().from(CredentialTable).where(eq(CredentialTable.id, id)).get().pipe(Effect.orDie) // kilocode_change
         yield* db
           .update(CredentialTable)
           .set({ label: updates.label, value: updates.value })
@@ -604,8 +606,10 @@ export const layer = Layer.effect(
 export const defaultLayer = layer.pipe(
   Layer.provide(Database.defaultLayer),
   Layer.provide(EventV2.defaultLayer),
-  Layer.provide(FSUtil.defaultLayer), // kilocode_change
-  Layer.provide(Global.defaultLayer), // kilocode_change
+  // kilocode_change start
+  Layer.provide(FSUtil.defaultLayer),
+  Layer.provide(Global.defaultLayer),
+  // kilocode_change end
   Layer.provideMerge(
     legacyImportLayer.pipe(
       Layer.provide(Database.defaultLayer),

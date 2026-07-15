@@ -20,8 +20,10 @@ import type { DeepMutable } from "../schema"
 type DatabaseService = Database.Interface["db"]
 
 const decodeMessage = Schema.decodeUnknownSync(SessionMessage.Message)
+// kilocode_change start
 const encodeMessage = (message: SessionMessage.Message) =>
-  StoredMessage.encode(Schema.encodeSync(SessionMessage.Message)(message)) as (typeof SessionMessage.Message)["Encoded"] // kilocode_change
+  StoredMessage.encode(Schema.encodeSync(SessionMessage.Message)(message)) as (typeof SessionMessage.Message)["Encoded"]
+// kilocode_change end
 
 class PromptAlreadyProjected extends Error {}
 export class SessionAlreadyProjected extends Error {}
@@ -141,11 +143,13 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
             .select()
             .from(SessionMessageTable)
             .where(
+              // kilocode_change start
               and(
                 eq(SessionMessageTable.session_id, event.data.sessionID),
                 eq(SessionMessageTable.type, "assistant"),
-                isNotNull(SessionMessageTable.seq), // kilocode_change
+                isNotNull(SessionMessageTable.seq),
               ),
+              // kilocode_change end
             )
             .orderBy(desc(SessionMessageTable.seq))
             .limit(1)
@@ -181,13 +185,15 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
           const rows = yield* db
             .select()
             .from(SessionMessageTable)
+            // kilocode_change start
             .where(
               and(
                 eq(SessionMessageTable.session_id, event.data.sessionID),
                 eq(SessionMessageTable.type, "shell"),
-                isNotNull(SessionMessageTable.seq), // kilocode_change
+                isNotNull(SessionMessageTable.seq),
               ),
             )
+            // kilocode_change end
             .orderBy(desc(SessionMessageTable.seq))
             .all()
             .pipe(Effect.orDie)

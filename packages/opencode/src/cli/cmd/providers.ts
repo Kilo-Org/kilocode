@@ -17,6 +17,7 @@ import { Process } from "@/util/process"
 import { errorMessage } from "@/util/error"
 import { text } from "node:stream/consumers"
 import { Effect, Option } from "effect"
+import { remove as removeAuth } from "@/kilocode/auth/remove" // kilocode_change
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -306,7 +307,7 @@ export const ProvidersLoginCommand = effectCmd({
   builder: (yargs: Argv) =>
     yargs
       .positional("url", {
-        describe: "kilo auth provider", // kilocode_change
+        describe: "kilo auth provider",
         type: "string",
       })
       .option("provider", {
@@ -386,9 +387,11 @@ export const ProvidersLoginCommand = effectCmd({
       existingProviders: providers,
       disabled,
       enabled,
+      // kilocode_change start
       providerNames: Object.fromEntries(
         Object.entries(config.provider ?? {}).flatMap(([id, p]) => (p ? [[id, p.name]] : [])),
-      ), // kilocode_change
+      ),
+      // kilocode_change end
     })
     const options = [
       ...pipe(
@@ -402,8 +405,10 @@ export const ProvidersLoginCommand = effectCmd({
           label: x.name,
           value: x.id,
           hint: {
-            kilo: "recommended", // kilocode_change
-            openai: "ChatGPT login or API key", // kilocode_change
+            // kilocode_change start
+            kilo: "recommended",
+            openai: "ChatGPT login or API key",
+            // kilocode_change end
           }[x.id],
         })),
       ),
@@ -552,7 +557,7 @@ export const ProvidersLogoutCommand = effectCmd({
           }),
         )
     if (!provider) return yield* fail(`Unknown configured provider "${args.provider}"`)
-    yield* Effect.orDie(authSvc.remove(provider))
+    yield* removeAuth(provider) // kilocode_change
     yield* Prompt.outro("Logout successful")
   }),
 })

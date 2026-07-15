@@ -174,8 +174,7 @@ export const layer = Layer.effect(
     const locationIsGlobal = path.resolve(location.directory) === path.resolve(global.config)
     // Read configuration once when this location opens. Later calls reuse these
     // values until the location is reopened.
-    // kilocode_change - keep Core V2 config discovery aligned with Kilo's isolated/project-disabled mode.
-    const discovered = locationIsGlobal || Flag.KILO_DISABLE_PROJECT_CONFIG
+    const discovered = locationIsGlobal || Flag.KILO_DISABLE_PROJECT_CONFIG // kilocode_change
       ? []
       : yield* fs
           .up({

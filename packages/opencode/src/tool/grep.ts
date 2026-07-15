@@ -69,11 +69,12 @@ export const GrepTool = Tool.define(
             limit: 100,
             signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
-          const matches = result.items // kilocode_change - retain bounded-search metadata from Core ripgrep
-          if (matches.length === 0) return empty // kilocode_change
+          // kilocode_change start
+          const matches = result.items
+          if (matches.length === 0) return empty
+          // kilocode_change end
 
-          const rows = matches.map((item) => ({
-            // kilocode_change
+          const rows = matches.map((item) => ({ // kilocode_change
             path: path.resolve(cwd, item.entry.path),
             line: item.line,
             text: item.text,

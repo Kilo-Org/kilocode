@@ -14,6 +14,9 @@ import SidebarUsage from "@/kilocode/plugins/sidebar-usage"
 import Sandbox from "@/kilocode/plugins/sandbox"
 import Remote from "@/kilocode/plugins/remote"
 import Reload from "@/kilocode/plugins/reload"
+import SessionSwitcher from "@/kilocode/plugins/session-switcher"
+import SessionV2Debug from "@/kilocode/plugins/session-v2-debug"
+import type { RuntimeFlags } from "@/effect/runtime-flags"
 
 const plugins = [
   HomeNews,
@@ -33,6 +36,14 @@ const plugins = [
   Reload,
 ] satisfies BuiltinTuiPlugin[]
 
-export function withKiloTuiPlugins(builtins: BuiltinTuiPlugin[]) {
-  return [...plugins, ...builtins]
+export function withKiloTuiPlugins(
+  builtins: BuiltinTuiPlugin[],
+  flags: Pick<RuntimeFlags.Info, "experimentalEventSystem" | "experimentalSessionSwitcher">,
+) {
+  return [
+    ...plugins,
+    ...(flags.experimentalEventSystem ? [SessionV2Debug] : []),
+    ...(flags.experimentalSessionSwitcher ? [SessionSwitcher] : []),
+    ...builtins,
+  ]
 }

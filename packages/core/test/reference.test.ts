@@ -11,11 +11,12 @@ import { it } from "./lib/effect"
 const cache = Layer.mock(RepositoryCache.Service, {
   ensure: () => Effect.die("unexpected Git materialization"),
 })
-// kilocode_change - keep reference state tests independent from the persistent event store.
+// kilocode_change start
 const events = Layer.mock(EventV2.Service)({
   publish: (definition, data) =>
     Effect.succeed({ id: EventV2.ID.make("evt_reference_test"), type: definition.type, data }),
 })
+// kilocode_change end
 
 describe("Reference", () => {
   it.effect("registers normalized sources for the owning scope", () =>
@@ -41,7 +42,7 @@ describe("Reference", () => {
     }).pipe(
       Effect.provide(Reference.layer),
       Effect.provide(cache),
-      Effect.provide(events),
+      Effect.provide(events), // kilocode_change
       Effect.provide(Global.defaultLayer),
     ),
   )
@@ -65,7 +66,7 @@ describe("Reference", () => {
       Effect.scoped,
       Effect.provide(Reference.layer),
       Effect.provide(cache),
-      Effect.provide(events),
+      Effect.provide(events), // kilocode_change
       Effect.provide(Global.defaultLayer),
     ),
   )
@@ -94,12 +95,12 @@ describe("Reference", () => {
       Effect.scoped,
       Effect.provide(Reference.layer),
       Effect.provide(cache),
+      // kilocode_change start
       Effect.provide(events),
       Effect.provide(Global.defaultLayer),
     ),
   )
 
-  // kilocode_change - Kilo config reconciliation must clear stale sources without owning a scoped transform.
   it.effect("replaces sources without a scoped transform", () =>
     Effect.gen(function* () {
       const references = yield* Reference.Service
@@ -107,9 +108,11 @@ describe("Reference", () => {
       const stale = new Reference.LocalSource({ type: "local", path: AbsolutePath.make("/stale") })
       const current = new Reference.LocalSource({ type: "local", path: AbsolutePath.make("/current") })
       yield* update((editor) => editor.add("stale", stale))
+  // kilocode_change end
 
-      yield* references.replace([["current", current]])
+      yield* references.replace([["current", current]]) // kilocode_change
 
+      // kilocode_change start
       expect(yield* references.list()).toEqual([
         new Reference.Info({ name: "current", path: AbsolutePath.make("/current"), source: current }),
       ])
@@ -118,6 +121,7 @@ describe("Reference", () => {
       Effect.provide(Reference.layer),
       Effect.provide(cache),
       Effect.provide(events),
+      // kilocode_change end
       Effect.provide(Global.defaultLayer),
     ),
   )

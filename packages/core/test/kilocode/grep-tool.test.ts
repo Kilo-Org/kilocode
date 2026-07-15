@@ -36,7 +36,7 @@ const references = (items: Reference.Info[] = []) =>
     Reference.Service,
     Reference.Service.of({
       transform: () => Effect.die("unused"),
-      replace: () => Effect.die("unused"), // kilocode_change
+      replace: () => Effect.die("unused"),
       list: () => Effect.succeed(items),
     }),
   )

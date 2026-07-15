@@ -54,10 +54,8 @@ export const ToolFileContent = Schema.Struct({
 export type ToolFileContent = typeof ToolFileContent.Type
 
 /** Ordered, provider-independent content shown to models and UIs after a tool succeeds. */
-// kilocode_change start - keep the public schema canonical while storage accepts released shapes
 export const ToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
 export type ToolContent = Schema.Schema.Type<typeof ToolContent>
-// kilocode_change end
 
 // kilocode_change start - decode persisted V2 tool file shapes and legacy media results
 const LegacyToolFileContent = Schema.Struct({
@@ -78,7 +76,6 @@ const LegacyToolMediaContent = Schema.Struct({
 })
 const ToolContentInput = Schema.Union([ToolContent, LegacyToolFileContent, LegacyToolMediaContent])
 
-// kilocode_change start - released readers require source-wrapped stored files
 const stored = (item: ToolContent): typeof ToolContentInput.Type => {
   if (item.type === "text") return item
   const data = /^data:[^;,]+;base64,(.*)$/s.exec(item.uri)?.[1]
@@ -89,7 +86,6 @@ const stored = (item: ToolContent): typeof ToolContentInput.Type => {
       : ({ type: "file", uri: item.uri } as const)
   return { type: "file", source, mime: item.mime, name: item.name }
 }
-// kilocode_change end
 
 export const StoredToolContent = ToolContentInput.pipe(
   Schema.decodeTo(ToolContent, {
@@ -111,12 +107,10 @@ export const StoredToolContent = ToolContentInput.pipe(
             : item.source.uri
       return { type: "file" as const, uri, mime: item.mime, name: item.name }
     }),
-    encode: SchemaGetter.transform(stored), // kilocode_change - released readers require the source-wrapped file shape
+    encode: SchemaGetter.transform(stored),
   }),
 )
-// kilocode_change end
 
-// kilocode_change start - avoid circular inference rejected by Kilo's newer tsgo
 const toolResultValueSchema = Schema.Union([
   Schema.Struct({ type: Schema.Literal("json"), value: Schema.Unknown }),
   Schema.Struct({ type: Schema.Literal("text"), value: Schema.Unknown }),
@@ -131,14 +125,16 @@ const isToolResultValue = (value: unknown): value is ToolResultValue =>
   (value.type === "text" || value.type === "json" || value.type === "error" || value.type === "content") &&
   "value" in value
 
+// kilocode_change start
 export const ToolResultValue = Object.assign(toolResultValueSchema, {
   is: isToolResultValue,
   make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue => {
     if (isToolResultValue(value)) return value
     if (type === "content") return { type, value: Array.isArray(value) ? value : [] }
     return { type, value }
+// kilocode_change end
   },
-})
+}) // kilocode_change
 
 export interface ToolOutput {
   readonly structured: unknown
