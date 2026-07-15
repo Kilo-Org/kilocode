@@ -45,10 +45,32 @@ Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support i
 
 ### Local OpenAI-compatible setup
 
-Start a FIM-capable model in an OpenAI-compatible server, then add its normal provider configuration to `~/.config/kilo/kilo.jsonc`. For example, an LM Studio server commonly listens on port `1234`:
+Use these steps with LM Studio, llama.cpp, Ollama, OMLX, or another server that implements OpenAI-compatible text completions with a `suffix` field.
 
-```json
+1. Start the server and load a FIM-capable model. This example uses an LM Studio-compatible base URL at `http://127.0.0.1:1234/v1` and the model ID `qwen2.5-coder-1.5b`. Replace both values with those reported by your server.
+2. Verify the endpoint before configuring Kilo Code:
+
+```bash
+curl --no-buffer --silent --show-error \
+  http://127.0.0.1:1234/v1/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "qwen2.5-coder-1.5b",
+    "prompt": "function add(a, b) {\n  return ",
+    "suffix": "\n}\n",
+    "max_tokens": 32,
+    "temperature": 0,
+    "stream": true
+  }'
+```
+
+The streamed `choices[0].text` values should contain an insertion such as `a + b` without repeating the prefix or suffix. If the server requires authentication, add `-H "Authorization: Bearer $API_KEY"`.
+
+3. Add the server as a normal provider in `~/.config/kilo/kilo.jsonc`:
+
+```jsonc
 {
+  "$schema": "https://app.kilo.ai/config.json",
   "provider": {
     "lmstudio": {
       "npm": "@ai-sdk/openai-compatible",
@@ -58,7 +80,11 @@ Start a FIM-capable model in an OpenAI-compatible server, then add its normal pr
       },
       "models": {
         "qwen2.5-coder-1.5b": {
-          "name": "Qwen2.5 Coder 1.5B"
+          "name": "Qwen2.5 Coder 1.5B",
+          "limit": {
+            "context": 32768,
+            "output": 256
+          }
         }
       }
     }
@@ -66,7 +92,12 @@ Start a FIM-capable model in an OpenAI-compatible server, then add its normal pr
 }
 ```
 
-The same configuration works with a llama.cpp server at a base URL such as `http://127.0.0.1:8080/v1`, Ollama at `http://127.0.0.1:11434/v1`, or another OpenAI-compatible endpoint. Select the provider and model under **Settings → Models → Autocomplete model**. Loopback servers do not require an API key. For a remote server, configure the provider API key and use an HTTPS `baseURL`.
+For a remote endpoint, add `"apiKey": "{env:MY_PROVIDER_API_KEY}"` under `options` and use an HTTPS `baseURL`. Keep credentials in the global config shown above; project-level configuration cannot resolve `{env:...}` references.
+
+4. Reload Kilo Code, open **Settings → Models → Autocomplete model**, and select **Qwen2.5 Coder 1.5B** under **LM Studio**.
+5. Open a source file, place the cursor after `return ` in the example above, and request a suggestion. Automatic suggestions appear as you type. To test manually, enable `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` and press `Cmd+L` on macOS or `Ctrl+L` on Windows/Linux. Press `Tab` to accept the ghost text.
+
+The same configuration shape works with a llama.cpp server at a base URL such as `http://127.0.0.1:8080/v1`, Ollama at `http://127.0.0.1:11434/v1`, or another OpenAI-compatible endpoint. Endpoint support varies by server and version, so run the `curl` check with the actual base URL and model ID first. Loopback servers do not require an API key.
 
 {% callout type="warning" %}
 OpenAI compatibility alone is not enough: the endpoint must support text completions with the `suffix` field, and the selected model must be trained for FIM. Validate this with the server's `/v1/completions` endpoint before enabling automatic suggestions.
