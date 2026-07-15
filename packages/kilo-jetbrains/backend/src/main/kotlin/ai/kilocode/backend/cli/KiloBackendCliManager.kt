@@ -609,10 +609,9 @@ internal fun buildKiloCliEnv(
 private fun ideEnv(log: KiloLog): Map<String, String> = buildMap {
     runCatching {
         val info = ApplicationInfo.getInstance()
-        val name = info.fullApplicationName
-        val build = info.build.asString()
-        put("KILO_EDITOR_NAME", name)
-        put("KILOCODE_EDITOR_NAME", "$name $build")
+        val app = info.fullApplicationName
+        put("KILO_EDITOR_NAME", app)
+        put("KILOCODE_EDITOR_NAME", editorAttribution(info))
     }.onFailure { log.info("Could not read ApplicationInfo: ${it.message}") }
 
     runCatching {
@@ -624,6 +623,8 @@ private fun ideEnv(log: KiloLog): Map<String, String> = buildMap {
         put("KILO_MACHINE_ID", machineId())
     }.onFailure { log.info("Could not read machine ID: ${it.message}") }
 }
+
+internal fun editorAttribution(info: ApplicationInfo): String = "${info.versionName} ${info.shortVersion}"
 
 private fun machineId(): String {
     val file = File(PathManager.getSystemPath(), "kilo/machine-id")

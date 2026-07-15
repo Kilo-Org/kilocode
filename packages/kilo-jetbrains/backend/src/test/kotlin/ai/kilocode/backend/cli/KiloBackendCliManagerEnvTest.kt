@@ -1,5 +1,8 @@
 package ai.kilocode.backend.cli
 
+import com.intellij.openapi.application.ApplicationInfo
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.util.BuildNumber
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -8,6 +11,8 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import java.io.File
 import java.nio.file.Files
+import java.time.ZonedDateTime
+import java.util.Calendar
 
 class KiloBackendCliManagerEnvTest {
 
@@ -43,6 +48,34 @@ class KiloBackendCliManagerEnvTest {
         assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE"])
         assertEquals("jetbrains-plugin", env["KILOCODE_FEATURE"])
         assertEquals("pwd123", env["KILO_SERVER_PASSWORD"])
+    }
+
+    @Test
+    fun `editor attribution uses product short version without build`() {
+        val info = object : ApplicationInfo() {
+            override fun getBuildDate(): Calendar = Calendar.getInstance()
+            override fun getBuildTime(): ZonedDateTime = ZonedDateTime.now()
+            override fun getBuild(): BuildNumber = BuildNumber.fromString("IU-241.15989.150")!!
+            override fun getApiVersion(): String = "241"
+            override fun getMajorVersion(): String = "2024"
+            override fun getMinorVersion(): String = "1.4"
+            override fun getMicroVersion(): String = "4"
+            override fun getPatchVersion(): String = ""
+            override fun getVersionName(): String = "IntelliJ IDEA"
+            override fun getCompanyName(): String = "JetBrains s.r.o."
+            override fun getShortCompanyName(): String = "JetBrains"
+            override fun getCompanyURL(): String = "https://www.jetbrains.com"
+            override fun getFullVersion(): String = "2024.1.4"
+            override fun getStrictVersion(): String = "2024.1.4"
+            override fun getFullApplicationName(): String = "IntelliJ IDEA 2024.1.4"
+            override fun isEssentialPlugin(id: String): Boolean = false
+            override fun isEssentialPlugin(id: PluginId): Boolean = false
+        }
+
+        val name = editorAttribution(info)
+
+        assertEquals("IntelliJ IDEA 2024.1", name)
+        assertFalse(name.contains(info.build.asString()))
     }
 
     @Test
