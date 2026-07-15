@@ -1263,7 +1263,8 @@ export const dict = {
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofuldførelse",
   "settings.autocomplete.model.title": "Autocomplete-model",
-  "settings.autocomplete.model.description": "Vælg den model, der bruges til inline kodefuldførelse",
+  "settings.autocomplete.model.description":
+    "Vælg en fill-in-the-middle-model (FIM). Modeller kun til chat understøttes ikke.",
   "settings.notifications.title": "Notifikationer",
   "settings.context.title": "Kontekst",
 

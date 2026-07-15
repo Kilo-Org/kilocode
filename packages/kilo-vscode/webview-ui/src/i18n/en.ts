@@ -1362,7 +1362,8 @@ export const dict = {
   "common.choose": "Choose…",
 
   "settings.autocomplete.model.title": "Autocomplete model",
-  "settings.autocomplete.model.description": "Select the model used for inline code completions",
+  "settings.autocomplete.model.description":
+    "Select a fill-in-the-middle (FIM) model. Chat-only models are not supported.",
   "settings.autocomplete.autoTrigger.title": "Enable automatic inline completions",
   "settings.autocomplete.autoTrigger.description": "Automatically show inline completion suggestions as you type",
   "settings.autocomplete.smartKeybinding.title": "Enable smart inline task keybinding",

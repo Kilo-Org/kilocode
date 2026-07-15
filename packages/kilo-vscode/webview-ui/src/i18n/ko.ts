@@ -1215,7 +1215,8 @@ export const dict = {
   "settings.display.title": "디스플레이",
   "settings.autocomplete.title": "자동 완성",
   "settings.autocomplete.model.title": "자동 완성 모델",
-  "settings.autocomplete.model.description": "인라인 코드 완성에 사용되는 모델 선택",
+  "settings.autocomplete.model.description":
+    "FIM(fill-in-the-middle) 모델을 선택하세요. 채팅 전용 모델은 지원되지 않습니다.",
   "settings.notifications.title": "알림",
   "settings.context.title": "컨텍스트",
 

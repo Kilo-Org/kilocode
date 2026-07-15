@@ -1195,7 +1195,7 @@ export const dict = {
   "settings.display.title": "顯示",
   "settings.autocomplete.title": "自動完成",
   "settings.autocomplete.model.title": "自動補全模型",
-  "settings.autocomplete.model.description": "選擇用於內聯程式碼補全的模型",
+  "settings.autocomplete.model.description": "選擇支援中間填充（FIM）的模型。不支援僅限聊天的模型。",
   "settings.notifications.title": "通知",
   "settings.context.title": "上下文",
 

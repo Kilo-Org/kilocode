@@ -1277,7 +1277,8 @@ export const dict = {
   "settings.display.title": "Pantalla",
   "settings.autocomplete.title": "Autocompletado",
   "settings.autocomplete.model.title": "Modelo de autocompletado",
-  "settings.autocomplete.model.description": "Selecciona el modelo utilizado para el autocompletado de código en línea",
+  "settings.autocomplete.model.description":
+    "Selecciona un modelo de relleno intermedio (FIM). Los modelos solo de chat no son compatibles.",
   "settings.notifications.title": "Notificaciones",
   "settings.context.title": "Contexto",
 

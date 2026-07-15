@@ -1218,7 +1218,8 @@ export const dict = {
   "settings.display.title": "Відображення",
   "settings.autocomplete.title": "Автодоповнення",
   "settings.autocomplete.model.title": "Модель автодоповнення",
-  "settings.autocomplete.model.description": "Виберіть модель для вбудованого (inline) автодоповнення коду",
+  "settings.autocomplete.model.description":
+    "Виберіть модель із підтримкою fill-in-the-middle (FIM). Моделі лише для чату не підтримуються.",
   "settings.notifications.title": "Сповіщення",
   "settings.context.title": "Контекст",
   "settings.indexing.title": "Індексування",

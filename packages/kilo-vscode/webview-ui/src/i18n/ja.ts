@@ -1258,7 +1258,8 @@ export const dict = {
   "settings.display.title": "表示",
   "settings.autocomplete.title": "オートコンプリート",
   "settings.autocomplete.model.title": "オートコンプリートモデル",
-  "settings.autocomplete.model.description": "インラインでのコード補完に使用するモデルを選択します",
+  "settings.autocomplete.model.description":
+    "フィルインザミドル（FIM）対応モデルを選択します。チャット専用モデルはサポートされていません。",
   "settings.notifications.title": "通知",
   "settings.context.title": "コンテキスト",
 

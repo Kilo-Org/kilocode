@@ -1269,7 +1269,8 @@ export const dict = {
   "settings.display.title": "Отображение",
   "settings.autocomplete.title": "Автодополнение",
   "settings.autocomplete.model.title": "Модель автодополнения",
-  "settings.autocomplete.model.description": "Выберите модель для встроенного (inline) автодополнения кода",
+  "settings.autocomplete.model.description":
+    "Выберите модель с поддержкой fill-in-the-middle (FIM). Модели только для чата не поддерживаются.",
   "settings.notifications.title": "Уведомления",
   "settings.context.title": "Контекст",
 

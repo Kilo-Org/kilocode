@@ -1251,7 +1251,7 @@ export const dict = {
   "settings.display.title": "การแสดงผล",
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
   "settings.autocomplete.model.title": "โมเดล Autocomplete",
-  "settings.autocomplete.model.description": "เลือกโมเดลที่ใช้สำหรับการเติมโค้ดแบบอินไลน์ (inline completions)",
+  "settings.autocomplete.model.description": "เลือกโมเดลแบบเติมส่วนกลาง (FIM) ไม่รองรับโมเดลที่ใช้สำหรับแชทเท่านั้น",
   "settings.notifications.title": "การแจ้งเตือน",
   "settings.context.title": "บริบท",
 

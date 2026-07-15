@@ -1223,7 +1223,8 @@ export const dict = {
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",
   "settings.autocomplete.model.title": "Autocomplete-model",
-  "settings.autocomplete.model.description": "Selecteer het model dat wordt gebruikt voor inline code-aanvullingen",
+  "settings.autocomplete.model.description":
+    "Selecteer een fill-in-the-middle (FIM)-model. Modellen die alleen chat ondersteunen, worden niet ondersteund.",
   "settings.notifications.title": "Meldingen",
   "settings.context.title": "Context",
   "settings.indexing.title": "Indexering",

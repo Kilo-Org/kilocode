@@ -1284,7 +1284,8 @@ export const dict = {
   "settings.display.title": "Anzeige",
   "settings.autocomplete.title": "Autovervollständigung",
   "settings.autocomplete.model.title": "Autocomplete-Modell",
-  "settings.autocomplete.model.description": "Wählen Sie das Modell für Inline-Code-Vervollständigungen",
+  "settings.autocomplete.model.description":
+    "Wählen Sie ein Fill-in-the-Middle-Modell (FIM). Reine Chat-Modelle werden nicht unterstützt.",
   "settings.notifications.title": "Benachrichtigungen",
   "settings.context.title": "Kontext",
 

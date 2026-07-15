@@ -1176,7 +1176,8 @@ export const dict = {
   "common.add": "Aggiungi",
   "common.choose": "Scegli...",
   "settings.autocomplete.model.title": "Modello autocompletamento",
-  "settings.autocomplete.model.description": "Seleziona il modello usato per i completamenti inline del codice",
+  "settings.autocomplete.model.description":
+    "Seleziona un modello fill-in-the-middle (FIM). I modelli solo chat non sono supportati.",
   "settings.autocomplete.autoTrigger.title": "Abilita completamenti inline automatici",
   "settings.autocomplete.autoTrigger.description":
     "Mostra automaticamente suggerimenti di completamento inline mentre scrivi",
