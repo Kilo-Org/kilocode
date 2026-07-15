@@ -32,7 +32,7 @@ Prompt content.
     )
 
     const warnings: ConfigAgent.Warning[] = []
-    const result = await ConfigAgent.load(dir, warnings)
+    const result = await ConfigAgent.load(dir, warnings, true)
 
     expect(Object.keys(result)).toHaveLength(0)
     expect(warnings.length).toBeGreaterThanOrEqual(1)
@@ -58,7 +58,7 @@ Prompt content.
     )
 
     const warnings: ConfigAgent.Warning[] = []
-    const result = await ConfigAgent.load(dir, warnings)
+    const result = await ConfigAgent.load(dir, warnings, true)
 
     expect(Object.keys(result)).toHaveLength(0)
     const warning = warnings.find((w) => w.path.includes("dupe.md"))
