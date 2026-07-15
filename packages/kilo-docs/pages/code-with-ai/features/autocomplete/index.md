@@ -45,42 +45,54 @@ Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support i
 
 ### Local OpenAI-compatible setup
 
-Use these steps with LM Studio, llama.cpp, Ollama, OMLX, or another server that implements OpenAI-compatible text completions with a `suffix` field.
+Ollama documents the complete API contract that autocomplete needs: `/v1/completions`, streaming, and the `suffix` field. Its `qwen2.5-coder:1.5b-base` template also maps the prompt and suffix to the model's FIM tokens.
 
-1. Start the server and load a FIM-capable model. This example uses an LM Studio-compatible base URL at `http://127.0.0.1:1234/v1` and the model ID `qwen2.5-coder-1.5b`. Replace both values with those reported by your server.
-2. Verify the endpoint before configuring Kilo Code:
+1. Install [Ollama](https://ollama.com/download), pull the FIM base model, and start the server if it is not already running:
 
 ```bash
-curl --no-buffer --silent --show-error \
-  http://127.0.0.1:1234/v1/completions \
+ollama pull qwen2.5-coder:1.5b-base
+ollama serve
+```
+
+2. Confirm the exact model ID reported by the server:
+
+```bash
+curl --silent --show-error http://127.0.0.1:11434/v1/models
+```
+
+3. Verify non-streaming FIM before configuring Kilo Code:
+
+```bash
+curl --silent --show-error \
+  http://127.0.0.1:11434/v1/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "qwen2.5-coder-1.5b",
+    "model": "qwen2.5-coder:1.5b-base",
     "prompt": "function add(a, b) {\n  return ",
     "suffix": "\n}\n",
     "max_tokens": 32,
     "temperature": 0,
-    "stream": true
+    "stream": false
   }'
 ```
 
-The streamed `choices[0].text` values should contain an insertion such as `a + b` without repeating the prefix or suffix. If the server requires authentication, add `-H "Authorization: Bearer $API_KEY"`.
+The `choices[0].text` value should contain an insertion such as `a + b` without repeating the prefix or suffix. Repeat the request with `"stream": true` to verify the streaming path Kilo Code uses.
 
-3. Add the server as a normal provider in `~/.config/kilo/kilo.jsonc`:
+4. Add Ollama as a normal provider in `~/.config/kilo/kilo.jsonc`:
 
 ```jsonc
 {
   "$schema": "https://app.kilo.ai/config.json",
   "provider": {
-    "lmstudio": {
+    "ollama": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "LM Studio",
+      "name": "Ollama",
       "options": {
-        "baseURL": "http://127.0.0.1:1234/v1"
+        "baseURL": "http://127.0.0.1:11434/v1"
       },
       "models": {
-        "qwen2.5-coder-1.5b": {
-          "name": "Qwen2.5 Coder 1.5B",
+        "qwen2.5-coder:1.5b-base": {
+          "name": "Qwen2.5 Coder 1.5B Base",
           "limit": {
             "context": 32768,
             "output": 256
@@ -92,12 +104,16 @@ The streamed `choices[0].text` values should contain an insertion such as `a + b
 }
 ```
 
-For a remote endpoint, add `"apiKey": "{env:MY_PROVIDER_API_KEY}"` under `options` and use an HTTPS `baseURL`. Keep credentials in the global config shown above; project-level configuration cannot resolve `{env:...}` references.
+5. Run **Developer: Reload Window** in VS Code. Open **Kilo Code Settings → Models → Autocomplete model**, then select **Qwen2.5 Coder 1.5B Base** under **Ollama**. The selector shows every connected-provider model; appearing in the list does not prove that a model supports FIM.
+6. Disable other inline-completion extensions such as GitHub Copilot for this test. Open a source file, place the cursor after `return ` in the example above, and request a suggestion. Automatic suggestions appear as you type. To test manually, enable `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` and press `Cmd+L` on macOS or `Ctrl+L` on Windows/Linux. Press `Tab` to accept the ghost text.
 
-4. Reload Kilo Code, open **Settings → Models → Autocomplete model**, and select **Qwen2.5 Coder 1.5B** under **LM Studio**.
-5. Open a source file, place the cursor after `return ` in the example above, and request a suggestion. Automatic suggestions appear as you type. To test manually, enable `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` and press `Cmd+L` on macOS or `Ctrl+L` on Windows/Linux. Press `Tab` to accept the ghost text.
+### Other local servers
 
-The same configuration shape works with a llama.cpp server at a base URL such as `http://127.0.0.1:8080/v1`, Ollama at `http://127.0.0.1:11434/v1`, or another OpenAI-compatible endpoint. Endpoint support varies by server and version, so run the `curl` check with the actual base URL and model ID first. Loopback servers do not require an API key.
+- **OMLX:** Use its OpenAI-compatible base URL and the exact ID from `/v1/models`; local validation covered `mlx-community/Qwen2.5-Coder-1.5B-4bit` and `mlx-community/Qwen2.5-Coder-3B-4bit`.
+- **LM Studio:** It exposes `/v1/completions`, but `suffix` support depends on the loaded model and server version. Copy the exact ID from `http://127.0.0.1:1234/v1/models` and run the FIM request above before adding the provider.
+- **llama.cpp:** Its documented code-infill API is `/infill` with `input_prefix` and `input_suffix`, which this OpenAI-compatible transport does not call directly. Use a version or adapter that maps `POST /v1/completions` with `prompt` and `suffix`, and verify it with the request above.
+
+Loopback servers do not require an API key. For a remote endpoint, use HTTPS and add `"apiKey": "{env:MY_PROVIDER_API_KEY}"` under `options`. The environment variable must be visible to the VS Code process. Alternatively, save the key through **Kilo Code Settings → Providers → Custom provider**. Keep credentials in global configuration; project-level configuration cannot resolve `{env:...}` references.
 
 {% callout type="warning" %}
 OpenAI compatibility alone is not enough: the endpoint must support text completions with the `suffix` field, and the selected model must be trained for FIM. Validate this with the server's `/v1/completions` endpoint before enabling automatic suggestions.
