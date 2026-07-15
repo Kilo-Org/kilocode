@@ -49,7 +49,13 @@ import {
   type SandboxDefaultState,
   type SandboxState,
 } from "./prompt-input-utils"
-import type { ExtensionMessage, ReviewComment, SendMessageFailedMessage, TextPart } from "../../types/messages"
+import type {
+  ExtensionMessage,
+  FileAttachment,
+  ReviewComment,
+  SendMessageFailedMessage,
+  TextPart,
+} from "../../types/messages"
 import { formatReviewCommentsMarkdown } from "../../utils/review-comment-markdown"
 import {
   createdDraftKey,
@@ -84,6 +90,17 @@ function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]
     map.set(item.id, item)
   }
   return [...map.values()]
+}
+
+function toImages(files: FileAttachment[] | undefined) {
+  return (files ?? [])
+    .filter((f) => f.mime.startsWith("image/") && f.url.startsWith("data:"))
+    .map((f) => ({
+      id: crypto.randomUUID(),
+      filename: f.filename ?? "image",
+      mime: f.mime,
+      dataUrl: f.url,
+    }))
 }
 
 function finishPending(id: string | undefined): boolean {
@@ -509,14 +526,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           : undefined
     if (!target) return
     const comments = failed.review?.comments ?? []
-    const images = (failed.files ?? [])
-      .filter((file) => file.mime.startsWith("image/") && file.url.startsWith("data:"))
-      .map((file) => ({
-        id: crypto.randomUUID(),
-        filename: file.filename ?? "image",
-        mime: file.mime,
-        dataUrl: file.url,
-      }))
+    const images = toImages(failed.files)
     if (target !== draftKey()) {
       saveDraft(target, draft, comments, images, scrollDrafts.get(target) ?? 0)
       return
@@ -628,8 +638,11 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (handleSandboxMessage(message)) return
 
     if (message.type === "setChatBoxMessage") {
+      const imgs = toImages(message.files)
       setText(message.text)
       mention.seedFromText(message.text)
+      imageAttach.replace(imgs)
+      saveDraft(draftKey(), message.text, reviewComments(), imgs)
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()

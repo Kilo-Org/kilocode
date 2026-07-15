@@ -32,6 +32,8 @@ import type {
   Message,
   Part,
   PartDelta,
+  TextPart,
+  FilePart,
   SessionStatus,
   SessionStatusInfo,
   SessionCloseReason,
@@ -2775,13 +2777,21 @@ export const SessionProvider: ParentComponent = (props) => {
     clearClose(id)
     // Restore the reverted user message's prompt text into the input.
     // Dispatch as a window message so PromptInput picks it up via onMessage.
-    const parts = store.parts[messageID]
-    if (parts) {
+    const parts = getParts(messageID)
+    if (parts.length > 0) {
       const text = parts
-        .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
-        .map((p) => (p as { text: string }).text ?? "")
+        .filter((p): p is TextPart => p.type === "text" && !p.synthetic)
+        .map((p) => p.text)
         .join("")
-      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
+      const files = parts
+        .filter((p): p is FilePart => p.type === "file" && p.mime.startsWith("image/") && p.url.startsWith("data:"))
+        .map((p) => ({
+          mime: p.mime,
+          url: p.url,
+          filename: p.filename,
+          source: p.source,
+        }))
+      if (text || files.length > 0) window.postMessage({ type: "setChatBoxMessage", text, files }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
@@ -2790,7 +2800,7 @@ export const SessionProvider: ParentComponent = (props) => {
     const id = currentSessionID()
     if (!id) return
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
-    window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
+    window.postMessage({ type: "setChatBoxMessage", text: "", files: [] }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
