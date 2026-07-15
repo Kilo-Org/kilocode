@@ -37,7 +37,42 @@ const Label = z
 
 const Directory = z.string().min(1, { message: "directory must not be empty" })
 
-const CliVersion = z.string().min(1).max(32)
+// `cliVersion` is display metadata, not a protocol identity. Long feature/dev
+// build strings can exceed the cloud contract's 32-char cap, so we sanitize,
+// truncate, and fall back to a safe non-empty value instead of rejecting the
+// runtime. The 32-char cap remains the single source of truth.
+function sanitizeCliVersion(value: string): string {
+  const cleaned = value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+  const truncated = stripSurrogateBoundaries(cleaned.slice(0, 32)).trim()
+  return truncated.length > 0 ? truncated : "unknown"
+}
+
+function stripSurrogateBoundaries(value: string): string {
+  let start = 0
+  let end = value.length
+  if (value.charCodeAt(0) >= 0xdc00 && value.charCodeAt(0) <= 0xdfff) {
+    start = 1
+  }
+  const lastIndex = end - 1
+  const last = value.charCodeAt(lastIndex)
+  if (last >= 0xd800 && last <= 0xdbff) {
+    end = lastIndex
+  } else if (last >= 0xdc00 && last <= 0xdfff) {
+    const prev = value.charCodeAt(lastIndex - 1)
+    if (prev < 0xd800 || prev > 0xdbff) {
+      end = lastIndex
+    }
+  }
+  return value.slice(start, end)
+}
+
+const CliVersion = z
+  .string()
+  .min(1, { message: "cliVersion must not be empty" })
+  .transform(sanitizeCliVersion)
 
 const RUNTIME_CAPABILITIES = ["catalog.v1", "create-and-run.v1"] as const
 export type LocalRuntimeCapability = (typeof RUNTIME_CAPABILITIES)[number]

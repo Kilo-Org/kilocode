@@ -138,6 +138,77 @@ describe("RemoteRuntime", () => {
   })
 })
 
+describe("RemoteRuntime.cliVersion", () => {
+  test("preserves a short release version exactly", () => {
+    const runtime = RemoteRuntime.create({
+      runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+      connectionId: "conn-1",
+      cliVersion: "7.4.8",
+      directory: "/tmp/proj",
+      displayName: "Laptop",
+    })
+
+    expect(runtime.presence().cliVersion).toBe("7.4.8")
+  })
+
+  test("truncates a long feature version to 32 characters without throwing", () => {
+    const longVersion = "0.0.0-feature-mobile-local-cloud-agent-cli-202607152334"
+    const runtime = RemoteRuntime.create({
+      runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+      connectionId: "conn-1",
+      cliVersion: longVersion,
+      directory: "/tmp/proj",
+      displayName: "Laptop",
+    })
+
+    const cliVersion = runtime.presence().cliVersion
+    expect(cliVersion.length).toBeLessThanOrEqual(32)
+    expect(cliVersion).toBe("0.0.0-feature-mobile-local-cloud")
+    expect(JSON.stringify(runtime.presence())).not.toContain(longVersion)
+  })
+
+  test("truncates a surrogate-pair version without leaving a lone surrogate", () => {
+    const ascii = "x".repeat(31)
+    const runtime = RemoteRuntime.create({
+      runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+      connectionId: "conn-1",
+      cliVersion: `${ascii}\u{1F600}`,
+      directory: "/tmp/proj",
+      displayName: "Laptop",
+    })
+
+    const cliVersion = runtime.presence().cliVersion
+    expect(cliVersion.length).toBeLessThanOrEqual(32)
+    expect(cliVersion).toBe(ascii)
+    expect(/[\uD800-\uDBFF]$/.test(cliVersion)).toBe(false)
+    expect(/^[\uDC00-\uDFFF]/.test(cliVersion)).toBe(false)
+  })
+
+  test("sanitizes control characters and collapses whitespace", () => {
+    const runtime = RemoteRuntime.create({
+      runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+      connectionId: "conn-1",
+      cliVersion: "  7.4.8\n\t\u0000\x07  ",
+      directory: "/tmp/proj",
+      displayName: "Laptop",
+    })
+
+    expect(runtime.presence().cliVersion).toBe("7.4.8")
+  })
+
+  test("falls back to 'unknown' when the version is empty after sanitization", () => {
+    const runtime = RemoteRuntime.create({
+      runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+      connectionId: "conn-1",
+      cliVersion: "   \n\t   ",
+      directory: "/tmp/proj",
+      displayName: "Laptop",
+    })
+
+    expect(runtime.presence().cliVersion).toBe("unknown")
+  })
+})
+
 // kilocode_change start - sessionless runtime catalog (Slice 2)
 function agentFixture(over: Partial<{
   name: string
