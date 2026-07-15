@@ -403,8 +403,8 @@ export const layer = Layer.effect(
 
       const taskAgent = yield* agents.get(task.agent)
       if (!taskAgent) {
-        const message = yield* agentNotFoundMessage(task.agent)
-        const error = new NamedError.Unknown({ message })
+        const message = yield* agentNotFoundMessage(task.agent) // kilocode_change
+        const error = new NamedError.Unknown({ message }) // kilocode_change
         yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
         throw error
       }
@@ -572,8 +572,8 @@ export const layer = Layer.effect(
             }
             const agent = yield* agents.get(input.agent)
             if (!agent) {
-              const message = yield* agentNotFoundMessage(input.agent)
-              const error = new NamedError.Unknown({ message })
+              const message = yield* agentNotFoundMessage(input.agent) // kilocode_change
+              const error = new NamedError.Unknown({ message }) // kilocode_change
               yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
@@ -1665,8 +1665,8 @@ export const layer = Layer.effect(
 
         const agent = yield* agents.get(lastUser.agent)
         if (!agent) {
-          const message = yield* agentNotFoundMessage(lastUser.agent)
-          const error = new NamedError.Unknown({ message })
+          const message = yield* agentNotFoundMessage(lastUser.agent) // kilocode_change
+          const error = new NamedError.Unknown({ message }) // kilocode_change
           yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
           throw error
         }
