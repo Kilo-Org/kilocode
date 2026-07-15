@@ -48,12 +48,26 @@ export class ValkeyVectorStore implements IVectorStore {
     this.metadataKey = `${this.collectionName}:__metadata__`
   }
 
+  /**
+   * Returns the Valkey URL with userinfo (credentials) stripped for safe logging.
+   */
+  private redactedUrl(): string {
+    try {
+      const parsed = new URL(this.valkeyUrl)
+      parsed.username = ""
+      parsed.password = ""
+      return parsed.toString().replace(/\/$/, "")
+    } catch {
+      return "<invalid-url>"
+    }
+  }
+
   async initialize(): Promise<boolean> {
     try {
       await this.ensureConnected()
     } catch (error) {
       log.error("Failed to connect to Valkey", {
-        url: this.valkeyUrl,
+        url: this.redactedUrl(),
         error: error instanceof Error ? error.message : String(error),
       })
       throw error
@@ -112,13 +126,13 @@ export class ValkeyVectorStore implements IVectorStore {
       return false
     } catch (error) {
       // Re-throw already-enriched connection errors from ensureConnected()
-      if (error instanceof Error && error.message.includes("Valkey at " + this.valkeyUrl)) {
+      if (error instanceof Error && error.message.includes("Valkey at ")) {
         throw error
       }
       const msg = error instanceof Error ? error.message : String(error)
       log.error("Failed to initialize Valkey index", { collection: this.collectionName, error: msg })
       throw new Error(
-        `Failed to initialize Valkey index "${this.collectionName}" at ${this.valkeyUrl}: ${msg}`,
+        `Failed to initialize Valkey index "${this.collectionName}" at ${this.redactedUrl()}: ${msg}`,
       )
     }
   }
@@ -147,6 +161,12 @@ export class ValkeyVectorStore implements IVectorStore {
     const numDocs = info.num_docs
     if (typeof numDocs === "number") {
       return numDocs
+    }
+    if (typeof numDocs === "string") {
+      const parsed = Number(numDocs)
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
     }
     return 0
   }
@@ -361,32 +381,31 @@ export class ValkeyVectorStore implements IVectorStore {
         const sanitizedPath = this.sanitizeTagValue(filePath)
         const query = `@filePath:{${sanitizedPath}}`
 
-        const [, documents] = await GlideFt.search(client, this.collectionName, query, {
-          limit: { offset: 0, count: SEARCH_LIMIT },
-          nocontent: true,
-        })
-
-        if (!documents || documents.length === 0) {
-          continue
-        }
-
-        if (documents.length === SEARCH_LIMIT) {
-          log.warn("deletePointsByMultipleFilePaths hit search limit, some points may not be deleted", {
-            collection: this.collectionName,
-            filePath,
-            limit: SEARCH_LIMIT,
+        // Paginate: re-query from offset 0 until fewer than SEARCH_LIMIT remain,
+        // ensuring files with more than 10,000 chunks are fully cleaned up.
+        let found = 0
+        do {
+          const [, documents] = await GlideFt.search(client, this.collectionName, query, {
+            limit: { offset: 0, count: SEARCH_LIMIT },
+            nocontent: true,
           })
-        }
 
-        for (const doc of documents) {
-          keysToDelete.push(String(doc.key))
-        }
+          if (!documents || documents.length === 0) {
+            break
+          }
 
-        // Delete in batches to avoid unbounded accumulation
-        if (keysToDelete.length >= DELETE_BATCH_SIZE) {
-          await client.del(keysToDelete)
-          keysToDelete.length = 0
-        }
+          found = documents.length
+
+          for (const doc of documents) {
+            keysToDelete.push(String(doc.key))
+          }
+
+          // Delete in batches to avoid unbounded accumulation
+          while (keysToDelete.length >= DELETE_BATCH_SIZE) {
+            const batch = keysToDelete.splice(0, DELETE_BATCH_SIZE)
+            await client.del(batch)
+          }
+        } while (found >= SEARCH_LIMIT)
       }
 
       if (keysToDelete.length > 0) {
@@ -529,6 +548,38 @@ export class ValkeyVectorStore implements IVectorStore {
   }
 
   /**
+   * Opens an existing complete store without mutating it.
+   * Validates that the index exists, dimension matches, profile matches,
+   * and indexing is marked complete.
+   */
+  async openExisting(): Promise<void> {
+    const info = await this.getIndexInfo()
+    if (!info) throw new Error("Baseline Valkey index does not exist")
+
+    const dimension = this.parseDimensionFromInfo(info)
+    if (dimension !== this.vectorSize) throw new Error("Baseline Valkey vector dimension does not match the worktree")
+
+    const storedProfile = await this.getStoredProfile()
+    if (
+      !storedProfile ||
+      storedProfile.provider !== this.profile.provider ||
+      storedProfile.modelId !== this.profile.modelId ||
+      storedProfile.dimension !== this.profile.dimension
+    ) {
+      throw new Error("Baseline Valkey embedding profile does not match the worktree")
+    }
+
+    const metadata = await this.getMetadata()
+    if (!metadata || metadata[KEY.complete] !== "true") {
+      throw new Error("Baseline Valkey index is not complete")
+    }
+  }
+
+  async close(): Promise<void> {
+    await this.dispose()
+  }
+
+  /**
    * Creates or returns the GlideClient singleton.
    * GLIDE multiplexes over a single connection and reconnects automatically.
    * Uses a connection promise as a mutex to prevent concurrent callers from
@@ -594,38 +645,39 @@ export class ValkeyVectorStore implements IVectorStore {
   private enrichConnectionError(error: unknown): Error {
     const raw = error instanceof Error ? error.message : String(error)
     const lower = raw.toLowerCase()
+    const url = this.redactedUrl()
 
     if (lower.includes("wrongpass") || lower.includes("invalid username-password")) {
       return new Error(
-        `Authentication failed for Valkey at ${this.valkeyUrl}: invalid password. Check your Valkey password configuration.`,
+        `Authentication failed for Valkey at ${url}: invalid password. Check your Valkey password configuration.`,
       )
     }
 
     if (lower.includes("noauth") || lower.includes("must be called with the client already authenticated")) {
       return new Error(
-        `Authentication required for Valkey at ${this.valkeyUrl}: the server requires a password but none was provided.`,
+        `Authentication required for Valkey at ${url}: the server requires a password but none was provided.`,
       )
     }
 
     if (lower.includes("connection refused") || lower.includes("econnrefused")) {
       return new Error(
-        `Connection refused for Valkey at ${this.valkeyUrl}. Ensure the Valkey server is running and accessible.`,
+        `Connection refused for Valkey at ${url}. Ensure the Valkey server is running and accessible.`,
       )
     }
 
     if (lower.includes("timeout") || lower.includes("etimedout")) {
       return new Error(
-        `Connection timed out for Valkey at ${this.valkeyUrl}. Ensure the server is reachable and not overloaded.`,
+        `Connection timed out for Valkey at ${url}. Ensure the server is reachable and not overloaded.`,
       )
     }
 
     if (lower.includes("getaddrinfo") || lower.includes("enotfound")) {
       return new Error(
-        `Cannot resolve host for Valkey at ${this.valkeyUrl}. Check that the hostname is correct.`,
+        `Cannot resolve host for Valkey at ${url}. Check that the hostname is correct.`,
       )
     }
 
-    return new Error(`Connection to Valkey at ${this.valkeyUrl} failed: ${raw}`)
+    return new Error(`Connection to Valkey at ${url} failed: ${raw}`)
   }
 
   async getIndexInfo(): Promise<Record<string, any> | null> {
