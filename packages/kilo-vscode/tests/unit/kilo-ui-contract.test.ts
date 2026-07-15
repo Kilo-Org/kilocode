@@ -30,6 +30,7 @@ const ASSISTANT_MESSAGE_FILE = path.join(
   MONOREPO_ROOT,
   "packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx",
 )
+const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
 
 function check(code: string): { ok: boolean; output: string } {
@@ -308,9 +309,10 @@ describe("HighlightedText @mention regex fallback and click handler (source)", (
 
 describe("AssistantMessage visible row contract (source)", () => {
   const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+  const parts = fs.readFileSync(TRANSCRIPT_PARTS_FILE, "utf-8")
 
   it("filters suppressed tools that have no visible renderer", () => {
-    expect(src).toContain('state.status === "completed" && !!ToolRegistry.render(tool)')
+    expect(parts).toContain('part.state.status === "completed" && !!ToolRegistry.render(part.tool)')
   })
 
   it("filters pending questions until their dock request exists", () => {
@@ -319,8 +321,8 @@ describe("AssistantMessage visible row contract (source)", () => {
   })
 
   it("filters completed synthetic text and redaction-only reasoning", () => {
-    expect(src).toContain('part.type === "text" && part.synthetic && props.message.time.completed')
-    expect(src).toContain('.text?.replace("[REDACTED]", "").trim()')
+    expect(parts).toContain("part.synthetic && message?.time.completed")
+    expect(parts).toContain('.text?.replace("[REDACTED]", "").trim()')
   })
 
   it("uses the plan exit card only when plan metadata is renderable", () => {

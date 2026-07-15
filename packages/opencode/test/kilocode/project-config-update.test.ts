@@ -5,7 +5,7 @@ import fs from "fs/promises"
 import path from "path"
 import { Effect, Layer, Option } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Config } from "../../src/config/config"
 import { Auth } from "../../src/auth"
@@ -45,7 +45,7 @@ const unexpectedHttp = HttpClient.make((request) =>
 const layer = Config.layer.pipe(
   Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(emptyAuth),
   Layer.provide(emptyAccount),

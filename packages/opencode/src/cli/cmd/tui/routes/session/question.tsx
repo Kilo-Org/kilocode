@@ -13,10 +13,7 @@ const QUESTION_MODE = "question"
 
 // kilocode_change start
 export function QuestionPrompt(props: {
-  request: QuestionRequest
-  nonBlocking?: boolean
-  inputFocused?: () => boolean
-}) {
+  request: QuestionRequest; nonBlocking?: boolean; inputFocused?: () => boolean; directory?: string }) {
   // kilocode_change end
   const sdk = useSDK()
   const { theme } = useTheme()
@@ -55,6 +52,7 @@ export function QuestionPrompt(props: {
     const answers = questions().map((_, i) => store.answers[i] ?? [])
     void sdk.client.question.reply({
       requestID: props.request.id,
+      directory: props.directory,
       answers,
     })
   }
@@ -62,6 +60,7 @@ export function QuestionPrompt(props: {
   function reject() {
     void sdk.client.question.reject({
       requestID: props.request.id,
+      directory: props.directory,
     })
   }
 
@@ -77,6 +76,7 @@ export function QuestionPrompt(props: {
     if (single()) {
       void sdk.client.question.reply({
         requestID: props.request.id,
+        directory: props.directory,
         answers: [[answer]],
       })
       return

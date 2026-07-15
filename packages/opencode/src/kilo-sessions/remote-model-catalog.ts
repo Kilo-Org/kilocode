@@ -1,5 +1,6 @@
 import type { ProviderListResponse } from "@kilocode/sdk/v2/client"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "@/provider/provider"
 import z from "zod"
 
@@ -119,8 +120,8 @@ export namespace RemoteModelCatalog {
     if (!validIdentity(source.id)) return undefined
 
     return {
-      id: ModelID.make(source.id),
-      providerID: ProviderID.make(providerID),
+      id: ModelV2.ID.make(source.id),
+      providerID: ProviderV2.ID.make(providerID),
       api: { id: source.id, url: "", npm: "" },
       name: source.name.slice(0, MAX_NAME_LENGTH),
       capabilities: {
@@ -187,7 +188,7 @@ export namespace RemoteModelCatalog {
     )
     if (models.length === 0) return undefined
     return {
-      id: ProviderID.make(source.id),
+      id: ProviderV2.ID.make(source.id),
       name: source.name.slice(0, MAX_NAME_LENGTH),
       source: source.source ?? "custom",
       env: [],

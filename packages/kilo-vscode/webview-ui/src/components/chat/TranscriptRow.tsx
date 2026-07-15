@@ -4,6 +4,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart, SnapshotFileDiff } from "@kilocode/sdk/v2"
 import type { TranscriptRow } from "../../context/transcript-rows"
+import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
@@ -17,6 +18,8 @@ interface TranscriptRowViewProps {
   row: TranscriptRow
   index?: number
   onForkMessage?: (sessionId: string, messageId: string) => void
+  /** Part behind the currently hovered/focused task-timeline bar, if any. */
+  highlight?: () => TimelineHighlight | undefined
   activeSearch?: boolean
 }
 
@@ -78,6 +81,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
               showAssistantCopyPartID={row().copy}
+              highlight={props.highlight}
               feedback={{
                 enabled: feedback.telemetryEnabled(),
                 rating: feedback.getRating(row().message.id),

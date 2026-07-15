@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm"
 import { GlobalBus } from "@/bus/global"
 import { Bus as ProjectBus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
-import { EventSequenceTable, EventTable } from "./event.sql"
+import { EventSequenceTable, EventTable } from "@opencode-ai/core/event/sql" // kilocode_change - upstream moved the event tables to core
 import { EventID } from "./schema"
 import { Context, Effect, Layer, Schema as EffectSchema } from "effect"
 import type { DeepMutable } from "@opencode-ai/core/schema"
@@ -232,11 +232,11 @@ export function reset() {
 export function init(input: { projectors: Array<[Definition, ProjectorFunc]>; convertEvent?: ConvertEvent }) {
   projectors = new Map(input.projectors.map(([def, func]) => [versionedType(def.type, def.version), func]))
   for (let entry of EventV2.registry.values()) {
-    if (!entry.version || !entry.aggregate) continue
+    if (!entry.sync) continue // kilocode_change - EventV2 stores legacy sync metadata under sync
     register({
       type: entry.type,
-      version: entry.version,
-      aggregate: entry.aggregate,
+      version: entry.sync.version, // kilocode_change
+      aggregate: entry.sync.aggregate, // kilocode_change
       properties: entry.data,
       schema: entry.data,
       wire: true, // kilocode_change
@@ -344,7 +344,7 @@ function process<Def extends Definition>(
         .run()
       tx.insert(EventTable)
         .values({
-          id: event.id,
+          id: EventV2.ID.make(event.id), // kilocode_change - core event table uses the branded EventV2 ID
           seq: event.seq,
           aggregate_id: event.aggregateID,
           type: versionedType(def.type, def.version),
@@ -421,15 +421,16 @@ export function effectPayloads() {
       .values()
       .filter(
         (definition) =>
-          definition.version !== undefined && !registry.has(versionedType(definition.type, definition.version)),
+          definition.sync !== undefined && // kilocode_change
+          !registry.has(versionedType(definition.type, definition.sync.version)), // kilocode_change
       )
       .map((definition) =>
         EffectSchema.Struct({
           type: EffectSchema.Literal("sync"),
-          name: EffectSchema.Literal(versionedType(definition.type, definition.version!)),
+          name: EffectSchema.Literal(versionedType(definition.type, definition.sync!.version)), // kilocode_change
           id: EffectSchema.String,
           seq: EffectSchema.Finite,
-          aggregateID: EffectSchema.Literal(definition.aggregate!),
+          aggregateID: EffectSchema.Literal(definition.sync!.aggregate), // kilocode_change
           data: definition.data,
         }).annotate({ identifier: `SyncEvent.${definition.type}` }),
       )

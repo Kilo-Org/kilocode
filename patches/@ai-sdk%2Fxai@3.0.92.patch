@@ -1,0 +1,76 @@
+diff --git a/dist/index.js b/dist/index.js
+index d3f06f9b9a..3311218e86 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1110,6 +1110,14 @@ async function convertToXaiResponsesInput({
+                   type: "input_file",
+                   file_url: block.data.toString()
+                 });
++              } else if (block.mediaType === "application/pdf") {
++                contentParts.push({
++                  type: "input_file",
++                  ...typeof block.data === "string" && block.data.startsWith("file-") ? { file_id: block.data } : {
++                    filename: block.filename ?? "file",
++                    file_data: `data:application/pdf;base64,${(0, import_provider_utils5.convertToBase64)(block.data)}`
++                  }
++                });
+               } else {
+                 throw new import_provider4.UnsupportedFunctionalityError({
+                   functionality: `file part media type ${block.mediaType} as inline data (xAI Responses requires a URL or a Files API reference for non-image files)`
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 30eb543419..d03210aa98 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1113,6 +1113,14 @@ async function convertToXaiResponsesInput({
+                   type: "input_file",
+                   file_url: block.data.toString()
+                 });
++              } else if (block.mediaType === "application/pdf") {
++                contentParts.push({
++                  type: "input_file",
++                  ...typeof block.data === "string" && block.data.startsWith("file-") ? { file_id: block.data } : {
++                    filename: block.filename ?? "file",
++                    file_data: `data:application/pdf;base64,${convertToBase642(block.data)}`
++                  }
++                });
+               } else {
+                 throw new UnsupportedFunctionalityError3({
+                   functionality: `file part media type ${block.mediaType} as inline data (xAI Responses requires a URL or a Files API reference for non-image files)`
+diff --git a/src/responses/convert-to-xai-responses-input.ts b/src/responses/convert-to-xai-responses-input.ts
+index 9a3712990c..b018a9b95e 100644
+--- a/src/responses/convert-to-xai-responses-input.ts
++++ b/src/responses/convert-to-xai-responses-input.ts
+@@ -64,6 +64,17 @@ export async function convertToXaiResponsesInput({
+                   type: 'input_file',
+                   file_url: block.data.toString(),
+                 });
++              } else if (block.mediaType === 'application/pdf') {
++                contentParts.push({
++                  type: 'input_file',
++                  ...(typeof block.data === 'string' &&
++                  block.data.startsWith('file-')
++                    ? { file_id: block.data }
++                    : {
++                        filename: block.filename ?? 'file',
++                        file_data: `data:application/pdf;base64,${convertToBase64(block.data)}`,
++                      }),
++                });
+               } else {
+                 throw new UnsupportedFunctionalityError({
+                   functionality: `file part media type ${block.mediaType} as inline data (xAI Responses requires a URL or a Files API reference for non-image files)`,
+diff --git a/src/responses/xai-responses-api.ts b/src/responses/xai-responses-api.ts
+index 185f1d4fb2..00195468a8 100644
+--- a/src/responses/xai-responses-api.ts
++++ b/src/responses/xai-responses-api.ts
+@@ -27,4 +27,10 @@ export type XaiResponsesSystemMessage = {
+ export type XaiResponsesUserMessageContentPart =
+   | { type: 'input_text'; text: string }
+   | { type: 'input_image'; image_url: string }
+-  | { type: 'input_file'; file_url: string };
++  | {
++      type: 'input_file';
++      file_url?: string;
++      file_id?: string;
++      file_data?: string;
++      filename?: string;
++    };

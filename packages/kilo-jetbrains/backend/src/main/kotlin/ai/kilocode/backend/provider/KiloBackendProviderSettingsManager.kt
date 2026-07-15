@@ -2,6 +2,7 @@ package ai.kilocode.backend.provider
 
 import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.app.LoadError
+import ai.kilocode.backend.cli.KiloBackendHttpClients
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.rpc.KiloWorkspaceDtoMapper
 import ai.kilocode.log.KiloLog
@@ -21,12 +22,10 @@ import ai.kilocode.rpc.dto.ProviderSettingsDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
-import java.util.concurrent.TimeUnit
 
 internal class KiloBackendProviderSettingsManager(
     private val app: KiloBackendAppService,
@@ -34,11 +33,7 @@ internal class KiloBackendProviderSettingsManager(
     companion object {
         private val LOG = KiloLog.create(KiloBackendProviderSettingsManager::class.java)
         private val JSON = "application/json".toMediaType()
-        private val FETCH = OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .callTimeout(15, TimeUnit.SECONDS)
-            .build()
+        private val FETCH by lazy { KiloBackendHttpClients.modelFetch() }
         private const val CALL_TIMEOUT_SECONDS = 15L
         private const val OAUTH_CALL_TIMEOUT_SECONDS = 60L
     }
@@ -253,10 +248,8 @@ internal class KiloBackendProviderSettingsManager(
     private suspend fun request(request: Request, timeoutSeconds: Long = CALL_TIMEOUT_SECONDS): String {
         val start = System.currentTimeMillis()
         LOG.debug { "provider settings http: start ${request.method} ${request.url.encodedPath}" }
-        val http = app.http?.newBuilder()
-            ?.callTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            ?.readTimeout(timeoutSeconds, TimeUnit.SECONDS)
-            ?.build() ?: throw IllegalStateException("Kilo HTTP client is unavailable")
+        val http = app.http?.let { KiloBackendHttpClients.bounded(it, timeoutSeconds) }
+            ?: throw IllegalStateException("Kilo HTTP client is unavailable")
         return withContext(Dispatchers.IO) {
             try {
                 http.newCall(request.newBuilder().header("Accept", "application/json").build()).execute().use { response ->

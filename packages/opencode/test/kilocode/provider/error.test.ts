@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { APICallError } from "ai"
 import { MessageV2 } from "@/session/message-v2"
-import { ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 const googleAuthError =
   "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project."
@@ -48,7 +48,7 @@ describe("provider stream errors", () => {
         param: null,
       },
     }
-    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderID.make("openai") })
+    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderV2.ID.make("openai") })
 
     expect(result).toStrictEqual({
       name: "APIError",
@@ -69,7 +69,7 @@ describe("provider stream errors", () => {
         message: "Try again in 30 seconds.",
       },
     }
-    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderID.make("openai") })
+    const result = MessageV2.fromError({ message: JSON.stringify(body) }, { providerID: ProviderV2.ID.make("openai") })
 
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
     if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
@@ -81,7 +81,7 @@ describe("provider stream errors", () => {
 describe("Google Gemini authentication errors", () => {
   test("explains how to troubleshoot the rejected API key", () => {
     const error = apiError(googleAuthError, "ACCESS_TOKEN_TYPE_UNSUPPORTED")
-    const result = MessageV2.fromError(error, { providerID: ProviderID.google })
+    const result = MessageV2.fromError(error, { providerID: ProviderV2.ID.make("google") })
 
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
     if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
@@ -95,7 +95,7 @@ describe("Google Gemini authentication errors", () => {
 
   test("preserves other Google authentication errors", () => {
     const error = apiError("API key not valid. Please pass a valid API key.")
-    const result = MessageV2.fromError(error, { providerID: ProviderID.google })
+    const result = MessageV2.fromError(error, { providerID: ProviderV2.ID.make("google") })
 
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
     if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
@@ -104,7 +104,7 @@ describe("Google Gemini authentication errors", () => {
 
   test("does not rewrite Google Vertex errors", () => {
     const error = apiError()
-    const result = MessageV2.fromError(error, { providerID: ProviderID.googleVertex })
+    const result = MessageV2.fromError(error, { providerID: ProviderV2.ID.make("google-vertex") })
 
     expect(MessageV2.APIError.isInstance(result)).toBe(true)
     if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")

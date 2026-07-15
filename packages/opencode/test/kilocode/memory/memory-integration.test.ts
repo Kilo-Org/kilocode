@@ -16,7 +16,7 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryEvents } from "../../../src/kilocode/memory/events"
 import type { Provider } from "../../../src/provider/provider"
 import type { InstanceContext } from "../../../src/project/instance-context"
-import { ProjectID } from "../../../src/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { SessionID } from "../../../src/session/schema"
 import { provideTestInstance, tmpdir } from "../../fixture/fixture"
 
@@ -48,7 +48,7 @@ function ctx(dir: string): InstanceContext {
     directory: dir,
     worktree: dir,
     project: {
-      id: ProjectID.make("project"),
+      id: ProjectV2.ID.make("project"),
       worktree: dir,
       vcs: "git",
       time: { created: 0, updated: 0 },

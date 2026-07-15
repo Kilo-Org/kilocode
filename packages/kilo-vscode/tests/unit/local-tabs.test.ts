@@ -14,6 +14,7 @@ import {
   restoreTabs,
   restoreTrackedTabs,
   showTabStrip,
+  trackedSessionInventory,
   type LocalTabState,
 } from "../../webview-ui/src/utils/local-tabs"
 import { reorderTabs } from "../../webview-ui/src/utils/tab-order"
@@ -43,6 +44,21 @@ const reorder = (items: { id: string }[], order: string[]) => {
   return result
 }
 const inventory = (local: string[], external: string[] = []) => ({ local, external: new Set(external) })
+const tracked = () =>
+  trackedSessionInventory(
+    [
+      { id: "local", worktreeId: null },
+      { id: "worktree", worktreeId: "wt-1" },
+      { id: "sparse", worktreeId: null },
+      { id: "child", worktreeId: "wt-1" },
+    ],
+    [
+      { id: "local", parentID: null },
+      { id: "worktree", parentID: null },
+      { id: "sparse" },
+      { id: "child", parentID: "root" },
+    ],
+  )
 
 describe("local session tabs", () => {
   it("hides the tab strip when only one tab remains", () => {
@@ -167,6 +183,16 @@ describe("shared close selection", () => {
 })
 
 describe("tracked tab restore", () => {
+  it("restores only sessions with known root ancestry", () => {
+    expect(restoreTrackedTabs(tracked(), [], undefined, trackedPending, identity)).toEqual(["local"])
+  })
+
+  it("evicts sparse and child sessions from restored tabs", () => {
+    expect(restoreTrackedTabs(tracked(), ["local", "sparse", "child"], undefined, trackedPending, identity)).toEqual([
+      "local",
+    ])
+  })
+
   it("restores durable local sessions when the current list has no real tabs", () => {
     expect(restoreTrackedTabs(inventory(["s1", "s2"]), [], undefined, trackedPending, identity)).toEqual(["s1", "s2"])
   })
@@ -202,6 +228,27 @@ describe("tracked tab restore", () => {
 })
 
 describe("tracked tab reconcile", () => {
+  it("evicts sparse sessions without forgetting them", () => {
+    const data = trackedSessionInventory(
+      [
+        { id: "local", worktreeId: null },
+        { id: "sparse", worktreeId: null },
+      ],
+      [{ id: "local", parentID: null }, { id: "sparse" }],
+    )
+    expect(reconcileTrackedTabs(["local", "sparse"], ["local"], data, trackedPending)).toEqual({
+      ids: ["local"],
+      forget: [],
+    })
+  })
+
+  it("forgets explicit child sessions even when they only exist in managed state", () => {
+    expect(reconcileTrackedTabs(["local"], ["local"], tracked(), trackedPending)).toEqual({
+      ids: ["local"],
+      forget: ["child"],
+    })
+  })
+
   it("preserves durable local sessions before loaded sessions include them", () => {
     expect(reconcileTrackedTabs(["s1", "s2"], [], inventory(["s1", "s2"]), trackedPending)).toBeUndefined()
   })

@@ -71,6 +71,7 @@ import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -97,6 +98,7 @@ import java.io.File
 import java.util.Base64
 import javax.imageio.ImageIO
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ImageIcon
 import javax.swing.ScrollPaneConstants
@@ -192,6 +194,16 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(pad, ins.right)
     }
 
+    fun `test prompt shell right padding matches bottom padding`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val shell = panel.shellForTest()
+        val ins = shell.border.getBorderInsets(shell)
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.left)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.bottom)
+        assertEquals(ins.bottom, ins.right)
+    }
+
     fun `test prompt focus outline follows editor focus`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 260, 400)
@@ -266,7 +278,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(editor.preferredSize.height > min)
     }
 
-    fun `test prompt editor keeps three line minimum`() {
+    fun `test prompt editor keeps compact empty minimum`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
 
@@ -276,6 +288,53 @@ class PromptPanelTest : BasePlatformTestCase() {
             JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
 
         assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt ignores narrow placeholder preferred height`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val view = editor.getEditor(false)!!
+        val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt minimum ignores user scale factor`() {
+        // The empty-prompt minimum is line height (ide scale) plus scaled chrome. Under a
+        // raised user scale factor it must equal that computed minimum, not a doubled value.
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+            val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+            val editor = panel.defaultFocusedComponent as EditorTextField
+
+            realize(panel, 400, 400)
+            UIUtil.dispatchAllInvocationEvents()
+            val view = editor.getEditor(false)!!
+            val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+                JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+            assertEquals(min, editor.preferredSize.height)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
+
+    fun `test empty prompt panel stays compact at narrow width`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 900)
+        UIUtil.dispatchAllInvocationEvents()
+        val chrome = (panel.shellForTest().preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = panel.insets
+
+        assertEquals(editor.preferredSize.height + chrome + ins.top + ins.bottom, panel.preferredSize.height)
+        assertTrue(panel.preferredSize.height < 180)
     }
 
     fun `test prompt editor grows when single line wraps`() {
@@ -332,6 +391,10 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         val chrome = (panel.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
         assertTrue(editor.preferredSize.height <= root.height / 3 - chrome + 1)
+        assertEquals(
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            editor.getEditor(false)!!.scrollPane.verticalScrollBarPolicy,
+        )
     }
 
     fun `test attachment strip is included in session root cap`() {
@@ -350,17 +413,29 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(attachedEditor.preferredSize.height < plainEditor.preferredSize.height)
     }
 
-    fun `test prompt editor hides scrollbars and keeps soft wraps`() {
+    fun `test prompt editor hides scrollbars until content overflows cap`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 180, 400)
 
-        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val editor = field.getEditor(false)!!
 
         assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
         assertTrue(editor.settings.isUseSoftWraps)
         assertFalse(editor.settings.isPaintSoftWraps)
         assertFalse(editor.settings.isBlockCursor)
+
+        field.text = (1..40).joinToString("\n") { "line $it" }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
+
+        field.text = "short"
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
     }
 
     fun `test prompt editor highlights validated commands and mentions`() {
@@ -985,7 +1060,13 @@ class PromptPanelTest : BasePlatformTestCase() {
         panel.setBusy(true)
 
         assertEquals("Stop", panel.buttonForTest().toolTipText)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
         assertTrue(panel.isStopEnabled)
+    }
+
+    fun `test send icon matches scroll button theme colors`() {
+        assertTrue(resource("/icons/send.svg").contains("fill=\"#0066B8\""))
+        assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
     }
 
     fun `test busy disables send button`() {
@@ -1032,18 +1113,21 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(icon, button.icon)
     }
 
-    fun `test auto approve and enhance buttons sit next to send button`() {
+    fun `test auto approve enhance separator and send buttons sit in order`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val auto = autoApproveButton(panel)
         val enhance = enhanceButton(panel)
         val send = panel.buttonForTest()
         val items = auto.parent.components.toList()
+        val sep = items[items.indexOf(enhance) + 2] as JComponent
 
         assertTrue(SwingUtilities.isDescendingFrom(auto, panel.shellForTest()))
         assertSame(auto.parent, enhance.parent)
         assertSame(auto.parent, send.parent)
         assertEquals(2, items.indexOf(enhance) - items.indexOf(auto))
-        assertEquals(2, items.indexOf(send) - items.indexOf(enhance))
+        assertEquals(4, items.indexOf(send) - items.indexOf(enhance))
+        assertEquals(JBUI.scale(1), sep.preferredSize.width)
+        assertNotNull(sep.border)
     }
 
     fun `test enhance button follows connection and busy state`() {
@@ -1361,6 +1445,11 @@ class PromptPanelTest : BasePlatformTestCase() {
             PasteAction.TRANSFERABLE_PROVIDER.name -> Producer { item }
             else -> null
         }
+    }
+
+    private fun resource(path: String): String {
+        val stream = PromptPanel::class.java.getResourceAsStream(path) ?: error("missing resource $path")
+        return stream.use { it.readBytes().decodeToString() }
     }
 
     private class FileListTransferable(private val files: List<File>) : Transferable {
