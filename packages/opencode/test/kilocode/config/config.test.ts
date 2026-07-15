@@ -4,7 +4,7 @@ import { Effect, Layer, Option, Schema } from "effect"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Npm } from "@opencode-ai/core/npm"
@@ -43,7 +43,7 @@ const unexpectedHttp = HttpClient.make((request) =>
 const layer = Config.layer.pipe(
   Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(emptyAuth),
   Layer.provide(emptyAccount),
@@ -109,6 +109,45 @@ describe("markdown substitutions", () => {
 
     expect(md.content).toContain("file content")
     expect(md.content).toContain("env content")
+  })
+})
+
+describe("global config updates", () => {
+  test("preserves concurrent permission updates", async () => {
+    await using globalTmp = await tmpdir()
+    await using tmp = await tmpdir()
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          await Effect.runPromise(
+            Config.Service.use((svc) =>
+              Effect.all(
+                Array.from({ length: 10 }, (_, index) =>
+                  svc.updateGlobal(
+                    { permission: { external_directory: { [`/skills/${index}/*`]: "allow" } } },
+                    { dispose: false },
+                  ),
+                ),
+                { concurrency: "unbounded" },
+              ),
+            ).pipe(Effect.scoped, Effect.provide(layer)),
+          )
+
+          const config = await Bun.file(path.join(globalTmp.path, "kilo.jsonc")).json()
+          expect(Object.keys(config.permission.external_directory)).toHaveLength(10)
+        },
+      })
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
   })
 })
 

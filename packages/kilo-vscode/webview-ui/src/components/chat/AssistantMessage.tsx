@@ -25,16 +25,15 @@ import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useMemory } from "../../context/memory"
 import { useServer } from "../../context/server"
-import { snapshotProgress } from "../../context/session-utils"
 import { planDisplayPath } from "../../utils/plan-path"
+import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
 import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
+import { color as timelineColor } from "../../utils/timeline/colors"
+import type { Part as TimelinePart } from "../../types/messages"
+import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 
-// Tools that the upstream message-part renderer suppresses (returns null for).
-// We render these ourselves via ToolRegistry when they complete,
-// so the user can see what the AI set up.
-export const UPSTREAM_SUPPRESSED_TOOLS = new Set(["todowrite", "todoread"])
 const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
 
 function editOpen(part: SDKPart, open: boolean) {
@@ -87,24 +86,6 @@ function PlanExitCard(props: { part: ToolPart }) {
   )
 }
 
-function isRenderable(part: SDKPart): boolean {
-  if (part.type === "tool") {
-    const tool = (part as SDKPart & { tool: string }).tool
-    const state = (part as SDKPart & { state: { status: string } }).state
-    if (UPSTREAM_SUPPRESSED_TOOLS.has(tool)) {
-      // Show completed todo parts only when kilo-ui provides a visible renderer.
-      return state.status === "completed" && !!ToolRegistry.render(tool)
-    }
-    // Always render question tool parts — active ones get the inline QuestionDock
-    return true
-  }
-  if (part.type === "text") return !snapshotProgress(part) && !!(part as SDKPart & { text: string }).text?.trim()
-  if (part.type === "reasoning") {
-    return !!(part as SDKPart & { text: string }).text?.replace("[REDACTED]", "").trim()
-  }
-  return !!PART_MAPPING[part.type]
-}
-
 /**
  * Match a tool part to an active request (question or suggestion) by tool name
  * and callID/messageID. Returns the matched request or undefined.
@@ -125,6 +106,8 @@ interface AssistantMessageProps {
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
+  /** Part behind the currently hovered/focused task-timeline bar, if any. */
+  highlight?: () => TimelineHighlight | undefined
 }
 
 type ToolStateProps = {
@@ -198,8 +181,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
     const stored = props.parts ?? data.store.part?.[props.message.id]
     if (!stored) return []
     return (stored as SDKPart[]).filter((part) => {
-      if (!isRenderable(part)) return false
-      if (part.type === "text" && part.synthetic && props.message.time.completed) return false
+      if (!isRenderable(part, props.message)) return false
       if (part.type !== "tool" || part.tool !== "question") return true
       if (part.state.status !== "pending" && part.state.status !== "running") return true
       return !!matchToolRequest(part, "question", session.questions())
@@ -280,6 +262,13 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return part as unknown as ToolPart
           })
 
+          // Lights up when this part is behind the hovered/focused task-timeline
+          // bar, using that bar's own color so the two stay easy to correlate.
+          const highlighted = createMemo(() => {
+            const h = props.highlight?.()
+            return h?.msgId === props.message.id && h?.partId === part.id
+          })
+
           return (
             <Show
               when={
@@ -291,7 +280,14 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                 PART_MAPPING[part.type]
               }
             >
-              <div data-component="tool-part-wrapper" data-part-type={part.type}>
+              <div
+                data-component="tool-part-wrapper"
+                data-part-type={part.type}
+                data-timeline-highlight={highlighted() ? "" : undefined}
+                style={
+                  highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined
+                }
+              >
                 <Show
                   when={activeQuestion()}
                   fallback={

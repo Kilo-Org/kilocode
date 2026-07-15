@@ -1,27 +1,22 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { SessionEvent } from "@opencode-ai/core/session-event"
-import { DateTime, Effect, Layer, Schema } from "effect"
-import { Bus } from "../../src/bus"
-import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { Database as CoreDatabase } from "@opencode-ai/core/database/database"
+import { EventV2 } from "@opencode-ai/core/event"
+import { EventTable } from "@opencode-ai/core/event/sql"
+import { SessionEvent } from "@opencode-ai/core/session/event"
+import { SessionMessageID } from "@opencode-ai/core/session/message-id"
+import { DateTime, Deferred, Effect, Layer, Schema } from "effect"
+import { GlobalBus } from "../../src/bus/global"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as EventWire from "../../src/kilocode/event-wire"
 import { SessionID } from "../../src/session/schema"
-import { Database, eq } from "../../src/storage/db"
-import { SyncEvent } from "../../src/sync"
-import { EventTable } from "../../src/sync/event.sql"
+import { eq } from "drizzle-orm"
 import { resetDatabase } from "../fixture/db"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { awaitWithTimeout, testEffect } from "../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(
-    SyncEvent.layer.pipe(
-      Layer.provide(RuntimeFlags.layer({ experimentalWorkspaces: true })),
-      Layer.provideMerge(Bus.layer),
-    ),
-    CrossSpawnSpawner.defaultLayer,
-  ),
+  Layer.mergeAll(EventV2Bridge.defaultLayer, CoreDatabase.defaultLayer, CrossSpawnSpawner.defaultLayer),
 )
 
 afterEach(resetDatabase)
@@ -46,63 +41,90 @@ describe("SyncEvent encoding", () => {
   })
 
   it.live(
-    "publishes encoded session data on the legacy bus",
+    "publishes encoded session data on the legacy global bus",
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
-        const bus = yield* Bus.Service
-        const sync = yield* SyncEvent.Service
-        const def = EventV2Bridge.toSyncDefinition(SessionEvent.Text.Delta)
+        const events = yield* EventV2Bridge.Service
         const sessionID = SessionID.make("ses_event_bus")
-        const events = new Array<{ type: string; properties: unknown }>()
-        const received = Promise.withResolvers<void>()
-        const dispose = yield* bus.subscribeAllCallback((event) => {
-          if (event.type !== def.type) return
-          events.push(event)
-          received.resolve()
-        })
+        const received = yield* Deferred.make<{ properties: unknown }>()
+        const listener = (event: { payload: { type?: string; properties?: unknown } }) => {
+          if (event.payload.type !== SessionEvent.Text.Ended.type) return
+          Deferred.doneUnsafe(received, Effect.succeed({ properties: event.payload.properties }))
+        }
+        GlobalBus.on("event", listener)
 
         try {
-          yield* sync.run(def, { sessionID, timestamp: DateTime.makeUnsafe(1_234), delta: "hello" })
-          yield* awaitWithTimeout(
-            Effect.promise(() => received.promise),
+          yield* events.publish(SessionEvent.Text.Ended, {
+            sessionID,
+            timestamp: DateTime.makeUnsafe(1_234),
+            assistantMessageID: SessionMessageID.ID.create(),
+            textID: "text_event_bus",
+            text: "hello",
+          })
+          const event = yield* awaitWithTimeout(
+            Deferred.await(received),
             "legacy bus did not receive the session event",
           )
-          expect((events[0]?.properties as { timestamp?: unknown }).timestamp).toBe(1_234)
+          expect((event.properties as { timestamp?: unknown }).timestamp).toBe(1_234)
         } finally {
-          dispose()
+          GlobalBus.off("event", listener)
         }
       }),
     ),
   )
 
   it.live(
-    "persists encoded session data and decodes it during replay",
+    "persists encoded session data and decodes it during EventV2 replay",
     provideTmpdirInstance(() =>
       Effect.gen(function* () {
-        const sync = yield* SyncEvent.Service
-        const def = EventV2Bridge.toSyncDefinition(SessionEvent.Text.Delta)
+        const events = yield* EventV2Bridge.Service
+        const { db } = yield* CoreDatabase.Service
         const sessionID = SessionID.make("ses_event_replay")
         const timestamp = DateTime.makeUnsafe(1_234)
 
-        yield* sync.run(def, { sessionID, timestamp, delta: "hello" }, { publish: false })
-        const row = Database.use((db) =>
-          db.select().from(EventTable).where(eq(EventTable.aggregate_id, sessionID)).get(),
-        )
+        yield* events.publish(SessionEvent.Text.Ended, {
+          sessionID,
+          timestamp,
+          assistantMessageID: SessionMessageID.ID.create(),
+          textID: "text_event_replay",
+          text: "hello",
+        })
+        const row = yield* db
+          .select()
+          .from(EventTable)
+          .where(eq(EventTable.aggregate_id, sessionID))
+          .get()
+          .pipe(Effect.orDie)
         if (!row) throw new Error("missing persisted event")
         expect((row.data as { timestamp?: unknown }).timestamp).toBe(1_234)
 
-        yield* sync.remove(sessionID)
-        yield* sync.replay({
-          id: row.id,
-          type: row.type,
-          seq: row.seq,
-          aggregateID: row.aggregate_id,
-          data: { ...row.data, timestamp: "1970-01-01T00:00:01.234Z" },
+        yield* events.remove(sessionID)
+        const received = yield* Deferred.make<typeof SessionEvent.Text.Ended.data.Type>()
+        const unsubscribe = yield* events.listen((event) => {
+          if (event.id === row.id)
+            Deferred.doneUnsafe(received, Effect.succeed(event.data as typeof SessionEvent.Text.Ended.data.Type))
+          return Effect.void
         })
-
-        const replayed = Database.use((db) =>
-          db.select().from(EventTable).where(eq(EventTable.aggregate_id, sessionID)).get(),
+        yield* Effect.addFinalizer(() => unsubscribe)
+        yield* events.replay(
+          {
+            id: EventV2.ID.make(row.id),
+            type: row.type,
+            seq: row.seq,
+            aggregateID: row.aggregate_id,
+            data: row.data,
+          },
+          { publish: true },
         )
+
+        const data = yield* awaitWithTimeout(Deferred.await(received), "replayed EventV2 event was not observed")
+        expect(DateTime.toEpochMillis(data.timestamp)).toBe(1_234)
+        const replayed = yield* db
+          .select()
+          .from(EventTable)
+          .where(eq(EventTable.aggregate_id, sessionID))
+          .get()
+          .pipe(Effect.orDie)
         expect((replayed?.data as { timestamp?: unknown }).timestamp).toBe(1_234)
       }),
     ),

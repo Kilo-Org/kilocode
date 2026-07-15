@@ -9,7 +9,7 @@ import { SessionID, MessageID } from "../../src/session/schema"
 import { assertExternalDirectory } from "../../src/tool/external-directory"
 import type { Tool } from "../../src/tool/tool"
 import { Filesystem } from "../../src/util/filesystem"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { tmpdir } from "../fixture/fixture"
 
 const base: Omit<Tool.Context, "ask"> = {
@@ -23,7 +23,7 @@ const base: Omit<Tool.Context, "ask"> = {
 }
 
 const glob = (p: string) =>
-  process.platform === "win32" ? AppFileSystem.normalizePathPattern(p) : p.replaceAll("\\", "/")
+  process.platform === "win32" ? FSUtil.normalizePathPattern(p) : p.replaceAll("\\", "/")
 
 const asks = () => {
   const items: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
@@ -87,11 +87,11 @@ describe("kilocode external directory boundaries", () => {
 
   test("contains helpers keep dot-prefixed child names internal", () => {
     expect(Filesystem.contains("/project", "/project/..cache/file")).toBe(true)
-    expect(AppFileSystem.contains("/a/b", "/a/b/..cache/file")).toBe(true)
+    expect(FSUtil.contains("/a/b", "/a/b/..cache/file")).toBe(true)
   })
 
-  test("AppFileSystem.contains rejects cross-drive paths on Windows", () => {
+  test("FSUtil.contains rejects cross-drive paths on Windows", () => {
     if (process.platform !== "win32") return
-    expect(AppFileSystem.contains("C:\\repo", "D:\\outside\\file.txt")).toBe(false)
+    expect(FSUtil.contains("C:\\repo", "D:\\outside\\file.txt")).toBe(false)
   })
 })

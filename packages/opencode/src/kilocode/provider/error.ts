@@ -1,11 +1,11 @@
 import type { APICallError } from "ai"
-import { ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 const AUTH_ERROR =
   "Request had invalid authentication credentials. Expected OAuth 2 access token, login cookie or other valid authentication credential. See https://developers.google.com/identity/sign-in/web/devconsole-project."
 
-export function hint(provider: ProviderID, error: APICallError) {
-  if (provider !== ProviderID.google) return
+export function hint(provider: ProviderV2.ID, error: APICallError) {
+  if (provider !== ProviderV2.ID.make("google")) return
   if (error.statusCode !== 401) return
   if (error.message !== AUTH_ERROR) return
 

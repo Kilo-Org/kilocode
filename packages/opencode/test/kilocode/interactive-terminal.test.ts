@@ -13,7 +13,7 @@ import { Shell } from "@/shell/shell"
 import { Truncate } from "@/tool/truncate"
 import type { Tool } from "@/tool/tool"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { describe, expect } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import path from "path"
@@ -22,7 +22,7 @@ import { it, testEffect } from "../lib/effect"
 
 const toolLayer = Layer.mergeAll(
   CrossSpawnSpawner.defaultLayer,
-  AppFileSystem.defaultLayer,
+  FSUtil.defaultLayer,
   Plugin.defaultLayer,
   Truncate.defaultLayer,
   Config.defaultLayer,
@@ -163,7 +163,7 @@ describe("InteractiveTerminal", () => {
       const ext = requests.find((item) => item.permission === "external_directory")
       const bash = requests.find((item) => item.permission === "bash")
       const want =
-        process.platform === "win32" ? AppFileSystem.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
+        process.platform === "win32" ? FSUtil.normalizePathPattern(path.join(tmp, "*")) : path.join(tmp, "*")
       expect(ext?.patterns).toContain(want)
       expect(bash?.patterns).toContain(`cat ${quote(file)}`)
     }),

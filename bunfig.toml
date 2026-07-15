@@ -2,7 +2,7 @@
 exact = true
 # Keep Kilo's longer supply-chain quarantine while allowing packages that must track coordinated releases.
 minimumReleaseAge = 410520 # seconds (~4.75 days / ~114 hours)
-minimumReleaseAgeExcludes = ["mermaid", "@mermaid-js/parser", "@opentui/core", "@opentui/core-darwin-arm64", "@opentui/core-darwin-x64", "@opentui/core-linux-arm64", "@opentui/core-linux-x64", "@opentui/core-win32-arm64", "@opentui/core-win32-x64", "@opentui/keymap", "@opentui/solid"]
+minimumReleaseAgeExcludes = ["mermaid", "@mermaid-js/parser", "@ai-sdk/amazon-bedrock", "@opentui/core", "@opentui/core-darwin-arm64", "@opentui/core-darwin-x64", "@opentui/core-linux-arm64", "@opentui/core-linux-arm64-musl", "@opentui/core-linux-x64", "@opentui/core-linux-x64-musl", "@opentui/core-win32-arm64", "@opentui/core-win32-x64", "@opentui/keymap", "@opentui/solid"]
 
 [test]
 root = "./do-not-run-tests-from-root"

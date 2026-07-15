@@ -1467,11 +1467,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
   "settings.agentBehaviour.prompt.description": "พรอมต์ระบบเพิ่มเติมสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.temperature.title": "อุณหภูมิ",
-  "settings.agentBehaviour.temperature.description": "อุณหภูมิการสุ่มตัวอย่าง (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "ควบคุมระดับความสุ่มของคำตอบจาก AI (0–2) ค่าที่ต่ำกว่า (เช่น 0.2) จะให้ผลลัพธ์ที่ตรงประเด็นและสม่ำเสมอ ส่วนค่าที่สูงกว่า (เช่น 1.0) จะให้คำตอบที่หลากหลายและสร้างสรรค์มากขึ้น เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นของโมเดล",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "พารามิเตอร์ nucleus sampling (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "เกณฑ์การสุ่มแบบ nucleus (0–1) จำกัดตัวเลือกโทเค็นไว้ที่ชุดที่เล็กที่สุดซึ่งมีความน่าจะเป็นสะสมถึง P ค่าที่ต่ำกว่าจะทำให้ผลลัพธ์ตรงประเด็นมากขึ้น ส่วนค่าที่สูงกว่าจะเพิ่มความหลากหลาย เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นของโมเดล",
   "settings.agentBehaviour.maxSteps.title": "ขั้นตอนสูงสุด",
-  "settings.agentBehaviour.maxSteps.description": "จำนวนรอบเอเจนต์สูงสุด",
+  "settings.agentBehaviour.maxSteps.description":
+    "จำนวนขั้นตอนสูงสุดของเอเจนต์ เมื่อถึงขีดจำกัด เอเจนต์จะได้รับคำสั่งให้หยุดใช้เครื่องมือและให้คำตอบสุดท้าย เพิ่มค่านี้สำหรับงานหลายขั้นตอนที่ซับซ้อน หรือลดค่าเพื่อให้คำตอบสั้นลงและคาดเดาได้มากขึ้น",
   "settings.agentBehaviour.hidden.title": "ซ่อน",
   "settings.agentBehaviour.hidden.description": "ซ่อนเอเจนต์นี้จากตัวสลับโหมดในช่องป้อนแชท",
   "settings.agentBehaviour.disable.title": "ปิดใช้งาน",

@@ -94,7 +94,14 @@ import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
 import { createTabFocus } from "../src/utils/tab-navigation"
-import { nextSelectionAfterDelete, adjacentHint, filterUnassignedSessions, LOCAL } from "./navigate"
+import {
+  canOpenRootSession,
+  isKnownRootSession,
+  nextSelectionAfterDelete,
+  adjacentHint,
+  filterUnassignedSessions,
+  LOCAL,
+} from "./navigate"
 import {
   addPendingTab as addLocalPendingTab,
   nextTabAfterClose,
@@ -102,6 +109,7 @@ import {
   reconcileTrackedTabs,
   replacePendingTab,
   restoreTrackedTabs,
+  trackedSessionInventory,
 } from "../src/utils/local-tabs"
 import {
   deletePendingDraft,
@@ -111,7 +119,7 @@ import {
 } from "../src/utils/draft-store"
 import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
-import { reportRemoteSessions } from "./remote-sessions"
+import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -245,10 +253,6 @@ const AgentManagerContent: Component = () => {
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
-  const inventory = (items: ManagedSessionState[]) => ({
-    local: items.filter((item) => !item.worktreeId).map((item) => item.id),
-    external: new Set(items.filter((item) => item.worktreeId).map((item) => item.id)),
-  })
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(true)
   const sidebar = createSidebarCollapse(vscode)
@@ -295,8 +299,8 @@ const AgentManagerContent: Component = () => {
   const [applySelectedFiles, setApplySelectedFiles] = createSignal<string[]>([])
   const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
 
-  // Pending local tab counter for generating unique IDs
   const PENDING_PREFIX = "pending:"
+  const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
 
   // Per-sidebar-context terminal state. `terms.activeId` holds the id
@@ -615,8 +619,7 @@ const AgentManagerContent: Component = () => {
     const next = addLocalPendingTab({ ids: localSessionIDs(), active: activePendingId() }, id)
     setLocalSessionIDs(next.ids)
     appendToTabOrder(LOCAL, id)
-    // Deactivate any focused terminal so the new pending session is
-    // actually visible — visibleTabId prioritises terms.activeId().
+    // Deactivate any focused terminal so the new pending session is visible.
     terms.setActiveId(undefined)
     setActivePendingId(id)
     session.clearCurrentSession()
@@ -666,8 +669,8 @@ const AgentManagerContent: Component = () => {
     if (all.length === 0) return // sessions not loaded yet
     const next = reconcileTrackedTabs(
       localSessionIDs(),
-      all.map((s) => s.id),
-      inventory(managedSessions()),
+      all.filter(isKnownRootSession).map((s) => s.id),
+      trackedSessionInventory(managedSessions(), all),
       isPending,
     )
     if (!next) return
@@ -722,7 +725,7 @@ const AgentManagerContent: Component = () => {
     const now = new Date().toISOString()
     for (const id of ids) {
       const real = lookup.get(id)
-      if (real) {
+      if (real && isKnownRootSession(real)) {
         result.push(real)
       } else if (isPending(id)) {
         result.push({ id, title: t("agentManager.session.newSession"), createdAt: now, updatedAt: now })
@@ -741,7 +744,7 @@ const AgentManagerContent: Component = () => {
     return applyTabOrder(
       session
         .sessions()
-        .filter((s) => ids.has(s.id))
+        .filter((s) => isKnownRootSession(s) && ids.has(s.id))
         .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
       worktreeTabOrder()[worktreeId],
     )
@@ -766,6 +769,21 @@ const AgentManagerContent: Component = () => {
     if (sel === LOCAL) return localSessionIDs().length === 0
     if (sel) return activeWorktreeSessions().length === 0 && managedSessions().every((ms) => ms.worktreeId !== sel)
     return false
+  })
+
+  const overlay = createMemo((): SetupState | null => {
+    const state = setup()
+    const sel = selection()
+    if (state.active && (!state.worktreeId || sel === state.worktreeId)) return state
+    if (typeof sel !== "string" || sel === LOCAL) return null
+    const busy = busyWorktrees().get(sel)
+    if (busy?.reason !== "setting-up") return null
+    const tree = worktrees().find((item) => item.id === sel)
+    return {
+      active: true,
+      message: busy.message ?? "",
+      branch: busy.branch ?? tree?.branch,
+    }
   })
 
   createEffect(() => {
@@ -796,7 +814,13 @@ const AgentManagerContent: Component = () => {
     if (reviewActive()) return REVIEW_TAB_ID
     return session.currentSessionID() ?? activePendingId()
   })
-
+  const visibleSession = createMemo(() =>
+    visible(
+      session.currentSessionID(),
+      !!terms.activeId() || reviewActive() || history() || !!overlay() || contextEmpty(),
+    ),
+  )
+  reportVisibleSession(vscode, visibleSession)
   const worktreeLabel = (wt: WorktreeState): string => {
     if (wt.label) return wt.label
     return firstOrderedTitle(sessionsForWorktree(wt.id), worktreeTabOrder()[wt.id], wt.branch)
@@ -969,14 +993,9 @@ const AgentManagerContent: Component = () => {
     const remembered = tabMemory()[worktreeId]
     if (terms.hasRemembered(worktreeId, remembered)) return termHandlers.activate(remembered!)
     terms.setActiveId(undefined)
-    // Try rich session list first, fall back to managed session IDs when
-    // session.sessions() hasn't been populated yet for this worktree.
     const rich = sessionsForWorktree(worktreeId)
-    const managed = managedSessions().filter((ms) => ms.worktreeId === worktreeId)
-    const target = remembered
-      ? (rich.find((s) => s.id === remembered) ?? managed.find((ms) => ms.id === remembered))
-      : undefined
-    const fallback = target ?? rich[0] ?? managed[0]
+    const target = remembered ? rich.find((s) => s.id === remembered) : undefined
+    const fallback = target ?? rich[0]
     if (fallback) session.selectSession(fallback.id)
     else session.setCurrentSessionID(undefined)
     setReviewActive(remembered === REVIEW_TAB_ID && reviewOpenByContext()[worktreeId] === true)
@@ -984,7 +1003,7 @@ const AgentManagerContent: Component = () => {
 
   const addSessionToCurrentWorktree = (sid: string) => {
     const sel = selection()
-    if (!sel || sel === LOCAL) return false
+    if (!sel || sel === LOCAL || !canOpenRootSession(sid, session.sessions())) return false
     const current = managedSessions().find((entry) => entry.id === sid)
     if (current?.worktreeId) return focusManagedSession(current.worktreeId, sid)
     saveTabMemory()
@@ -1169,8 +1188,10 @@ const AgentManagerContent: Component = () => {
     const unsubCreate = vscode.onMessage((msg) => {
       if (msg.type !== "sessionCreated") return
       const created = msg as SessionCreatedMessage
+      if (!isKnownRootSession(created.session)) return
       if (!created.draftID && createdSessions.delete(created.session.id)) return
       if (created.draftID) createdSessions.add(created.session.id)
+      if (created.draftID && closedDrafts.delete(created.draftID)) return
       if (created.draftID && promotePendingDraftDiscard(created.draftID, created.session.id)) return
       const pending = created.draftID && localSessionIDs().includes(created.draftID) ? created.draftID : undefined
       if (!pending && localSessionIDs().includes(created.session.id)) return
@@ -1180,7 +1201,11 @@ const AgentManagerContent: Component = () => {
       if (!pending) saveTabMemory()
       placeLocal(created.session.id, pending, active)
       if (!pending) setSelection(LOCAL)
-      vscode.postMessage({ type: "agentManager.persistSession", sessionId: created.session.id })
+      vscode.postMessage({
+        type: "agentManager.persistSession",
+        sessionId: created.session.id,
+        draftID: created.draftID,
+      })
       if (focus) session.selectSession(created.session.id)
     })
 
@@ -1320,7 +1345,7 @@ const AgentManagerContent: Component = () => {
         }
         // Restore local session IDs from persisted state (sessions with no worktreeId)
         const restored = restoreTrackedTabs(
-          inventory(state.sessions),
+          trackedSessionInventory(state.sessions, session.sessions()),
           localSessionIDs(),
           state.tabOrder?.[LOCAL],
           isPending,
@@ -1914,6 +1939,7 @@ const AgentManagerContent: Component = () => {
   }
 
   const openLocally = (sid: string) => {
+    if (!canOpenRootSession(sid, session.sessions())) return
     saveTabMemory()
     expandSidebar()
     const pending = activePendingId()
@@ -1964,14 +1990,13 @@ const AgentManagerContent: Component = () => {
     }
     if (pending || localSet().has(sessionId)) {
       setLocalSessionIDs((prev) => prev.filter((id) => id !== sessionId))
-      if (!pending) vscode.postMessage({ type: "agentManager.forgetSession", sessionId })
-    } else {
-      vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     }
     if (pending) {
+      closedDrafts.add(sessionId)
       if (session.isSubmitting(sessionId) || isPendingSend(sessionId)) discardPendingDraft(sessionId)
       queueMicrotask(() => deletePendingDraft(sessionId))
     }
+    vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     tabFocus.restore()
   }
 
@@ -2914,54 +2939,29 @@ const AgentManagerContent: Component = () => {
           </div>
         </Show>
 
-        {(() => {
-          // Show setup overlay: either the transient ready/error state for the selected worktree,
-          // or if the selected worktree is still being set up (from busyWorktrees map)
-          const overlayState = (): SetupState | null => {
-            const s = setup()
-            const sel = selection()
-            // Transient ready/error overlay for the selected worktree (or worktree-less setup)
-            if (s.active && (!s.worktreeId || sel === s.worktreeId)) return s
-            // Persistent setup-in-progress for the currently selected worktree
-            if (typeof sel === "string" && sel !== LOCAL) {
-              const busy = busyWorktrees().get(sel)
-              if (busy?.reason === "setting-up") {
-                const wt = worktrees().find((w) => w.id === sel)
-                return {
-                  active: true,
-                  message: busy.message ?? "",
-                  branch: busy.branch ?? wt?.branch,
-                } satisfies SetupState
-              }
-            }
-            return null
-          }
-          return (
-            <Show when={overlayState()}>
-              {(state) => (
-                <div class="am-setup-overlay">
-                  <div class="am-setup-card">
-                    <Icon name="branch" size="large" />
-                    <div class="am-setup-title">
-                      {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
-                    </div>
-                    <Show when={state().branch}>
-                      <div class="am-setup-branch">{state().branch}</div>
-                    </Show>
-                    <div class="am-setup-status">
-                      <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
-                        <Spinner class="am-setup-spinner" />
-                      </Show>
-                      <span>
-                        {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
-                      </span>
-                    </div>
-                  </div>
+        <Show when={overlay()}>
+          {(state) => (
+            <div class="am-setup-overlay">
+              <div class="am-setup-card">
+                <Icon name="branch" size="large" />
+                <div class="am-setup-title">
+                  {state().error ? t("agentManager.setup.failed") : t("agentManager.setup.settingUp")}
                 </div>
-              )}
-            </Show>
-          )
-        })()}
+                <Show when={state().branch}>
+                  <div class="am-setup-branch">{state().branch}</div>
+                </Show>
+                <div class="am-setup-status">
+                  <Show when={!state().error} fallback={<Icon name="circle-x" size="small" />}>
+                    <Spinner class="am-setup-spinner" />
+                  </Show>
+                  <span>
+                    {state().errorCode ? t(`agentManager.setup.error.${state().errorCode}`) : state().message}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </Show>
         <Show when={history()}>
           <HistoryView
             onSelectSession={(id) => {

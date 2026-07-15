@@ -606,7 +606,7 @@ export interface SidebarForkSessionRequest {
   messageId?: string
 }
 
-// Close (remove) a session from its worktree
+// Stop and remove a Local or worktree session from Agent Manager
 export interface CloseSessionRequest {
   type: "agentManager.closeSession"
   sessionId: string
@@ -616,6 +616,7 @@ export interface CloseSessionRequest {
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
   sessionId: string
+  draftID?: string
 }
 
 /** Remove a non-worktree session from agent-manager.json. */
@@ -978,6 +979,11 @@ export interface AgentManagerOpenSessionsMessage {
 export interface SidebarOpenSessionsMessage {
   type: "sidebar.openSessions"
   sessionIDs: string[]
+}
+
+export interface AgentManagerVisibleSessionMessage {
+  type: "agentManager.visibleSession"
+  sessionID: string | null
 }
 
 export interface RequestAutoApproveStateMessage {
@@ -1366,6 +1372,7 @@ export type WebviewMessage =
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
   | SidebarOpenSessionsMessage
+  | AgentManagerVisibleSessionMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage

@@ -563,33 +563,6 @@ object LegacyMigrationConverters {
     }
 
     // ---------------------------------------------------------------------------
-    // Language mapping
-    // ---------------------------------------------------------------------------
-
-    private val LEGACY_LOCALE_MAP = mapOf(
-        "en" to "en", "de" to "de", "es" to "es", "fr" to "fr",
-        "ja" to "ja", "ko" to "ko", "pl" to "pl", "ru" to "ru",
-        "ar" to "ar", "th" to "th", "da" to "da", "no" to "no",
-        "bs" to "bs",
-        "zh-CN" to "zh", "zh-TW" to "zht", "pt-BR" to "br",
-    )
-
-    data class LanguageConversion(
-        val mapped: String?,
-        val status: MigrationItemStatus,
-        val message: String?,
-    )
-
-    fun convertLanguage(language: String): LanguageConversion {
-        val mapped = LEGACY_LOCALE_MAP[language]
-        return if (mapped != null) {
-            LanguageConversion(mapped, MigrationItemStatus.success, null)
-        } else {
-            LanguageConversion(null, MigrationItemStatus.warning, "Language \"$language\" is not supported in the new version")
-        }
-    }
-
-    // ---------------------------------------------------------------------------
     // Native mode defaults comparison
     // ---------------------------------------------------------------------------
 

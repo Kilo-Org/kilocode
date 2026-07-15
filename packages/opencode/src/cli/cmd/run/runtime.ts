@@ -7,20 +7,21 @@
 //   runInteractiveLocalMode -- used for local in-process mode (no server)
 //
 // Both delegate to runInteractiveRuntime, which:
-//   1. resolves keybinds, diff style, model info, and session history,
+//   1. resolves TUI config, model info, and session history,
 //   2. creates the split-footer lifecycle (renderer + RunFooter),
 //   3. starts the stream transport (SDK event subscription), lazily for fresh
 //      local sessions,
 //   4. runs the prompt queue until the footer closes.
 import { createKiloClient } from "@kilocode/sdk/v2"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { MessageID } from "@/session/schema"
 import { createRunDemo } from "./demo"
-import { resolveDiffStyle, resolveFooterKeybinds, resolveModelInfo, resolveSessionInfo } from "./runtime.boot"
+import { resolveModelInfo, resolveRunTuiConfig, resolveSessionInfo } from "./runtime.boot"
 import { createRuntimeLifecycle } from "./runtime.lifecycle"
 import { recordRunSpanError, setRunSpanAttributes, withRunSpan } from "./otel"
 import { trace } from "./trace"
 import { cycleVariant, formatModelLabel, resolveSavedVariant, resolveVariant, saveVariant } from "./variant.shared"
-import type { RunInput, RunPrompt, RunProvider } from "./types"
+import type { LocalReplayAnchor, LocalReplayRow, RunInput, RunPrompt, RunProvider, StreamCommit } from "./types"
 
 /** @internal Exported for testing */
 export { pickVariant, resolveVariant } from "./variant.shared"
@@ -51,6 +52,7 @@ type RunRuntimeInput = {
   files: RunInput["files"]
   initialInput?: string
   thinking: boolean
+  backgroundSubagents: boolean
   replay?: boolean
   replayLimit?: number
   demo?: RunInput["demo"]
@@ -69,6 +71,7 @@ type RunLocalInput = {
   files: RunInput["files"]
   initialInput?: string
   thinking: boolean
+  backgroundSubagents: boolean
   replay?: boolean
   replayLimit?: number
   demo?: RunInput["demo"]
@@ -114,6 +117,7 @@ type RuntimeState = {
   activeVariant: string | undefined
   sessionID: string
   history: RunPrompt[]
+  localRows: LocalReplayRow[]
   sessionTitle?: string
   agent: string | undefined
   switching?: Promise<void>
@@ -138,6 +142,9 @@ function variantsFor(providers: RunProvider[], model: RunInput["model"]) {
 
   return Object.keys(providers.find((item) => item.id === model.providerID)?.models?.[model.modelID]?.variants ?? {})
 }
+
+const RESIZE_DELAY = 250
+const LOCAL_REPLAY_ROW_LIMIT = 100
 
 async function resolveExitTitle(
   ctx: BootContext,
@@ -173,8 +180,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
     async (span) => {
       const start = performance.now()
       const log = trace()
-      const keybindTask = resolveFooterKeybinds()
-      const diffTask = resolveDiffStyle()
+      const tuiConfigTask = resolveRunTuiConfig()
       const ctx = await input.boot()
       const modelTask = resolveModelInfo(ctx.sdk, ctx.directory, ctx.model)
       const sessionTask =
@@ -186,12 +192,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
               variant: undefined,
             })
       const savedTask = resolveSavedVariant(ctx.model)
-      const [keybinds, diffStyle, session, savedVariant] = await Promise.all([
-        keybindTask,
-        diffTask,
-        sessionTask,
-        savedTask,
-      ])
+      const [tuiConfig, session, savedVariant] = await Promise.all([tuiConfigTask, sessionTask, savedTask])
       const state: RuntimeState = {
         shown: !session.first,
         aborting: false,
@@ -202,6 +203,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
         activeVariant: resolveVariant(ctx.variant, session.variant, savedVariant, []),
         sessionID: ctx.sessionID,
         history: [...session.history],
+        localRows: [],
         sessionTitle: ctx.sessionTitle,
         agent: ctx.agent,
       }
@@ -252,8 +254,8 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
         agent: state.agent,
         model: state.model,
         variant: state.activeVariant,
-        keybinds,
-        diffStyle,
+        tuiConfig,
+        backgroundSubagents: input.backgroundSubagents,
         onPermissionReply: async (next) => {
           if (state.demo?.permission(next)) {
             return
@@ -390,6 +392,10 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
               state.aborting = false
             })
         },
+        onBackground: () => {
+          if (!hasSession(input, state)) return
+          void ctx.sdk.experimental.session.background({ sessionID: state.sessionID }).catch(() => {})
+        },
         onSubagentSelect: (sessionID) => {
           state.selectSubagent?.(sessionID)
           log?.write("subagent.select", {
@@ -398,6 +404,9 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
         },
       })
       const footer = shell.footer
+      const rememberLocal = (commit: StreamCommit, after?: LocalReplayAnchor) => {
+        state.localRows = [...state.localRows, { commit, after }].slice(-LOCAL_REPLAY_ROW_LIMIT)
+      }
 
       const loadCatalog = async (): Promise<void> => {
         if (footer.isClosed) {
@@ -534,6 +543,39 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
         return next
       }
 
+      let resizeTimer: ReturnType<typeof setTimeout> | undefined
+      const offResize = shell.onResize(() => {
+        if (resizeTimer) {
+          clearTimeout(resizeTimer)
+        }
+
+        resizeTimer = setTimeout(() => {
+          resizeTimer = undefined
+          if (footer.isClosed) {
+            return
+          }
+
+          shell.refreshTheme()
+          if (!input.replay || !state.stream) {
+            return
+          }
+
+          void state.stream
+            .then((item) =>
+              item.handle.replayOnResize({
+                localRows: () => state.localRows,
+                reset: () =>
+                  shell.resetForReplay({
+                    sessionTitle: state.sessionTitle,
+                    sessionID: state.sessionID,
+                    history: state.history,
+                  }),
+              }),
+            )
+            .catch(() => {})
+        }, RESIZE_DELAY)
+      })
+
       const runQueue = async () => {
         let includeFiles = true
         if (state.demo) {
@@ -549,6 +591,15 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
           onSend: (prompt) => {
             state.shown = true
             state.history.push(prompt)
+            if (prompt.mode !== "shell") {
+              rememberLocal({
+                kind: "user",
+                text: prompt.text,
+                phase: "start",
+                source: "system",
+                messageID: prompt.messageID,
+              })
+            }
           },
           onNewSession: createSession
             ? async () => {
@@ -569,6 +620,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
                   state.sessionTitle = created.sessionTitle
                   state.agent = created.agent ?? state.agent
                   state.history = []
+                  state.localRows = []
                   includeFiles = true
                   state.demo = input.demo
                     ? createRunDemo({
@@ -622,12 +674,15 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
                       status: "failed to start new session",
                     },
                   })
-                  footer.append({
+                  const commit = {
                     kind: "error",
                     text: error instanceof Error ? error.message : String(error),
                     phase: "start",
                     source: "system",
-                  })
+                    messageID: MessageID.ascending(),
+                  } as const
+                  rememberLocal(commit)
+                  footer.append(commit)
                 }
               }
             : undefined,
@@ -638,6 +693,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
 
             await state.switching?.catch(() => {})
 
+            let outputAnchor: LocalReplayAnchor | undefined
             return withRunSpan(
               "RunInteractive.turn",
               {
@@ -668,8 +724,16 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
                     prompt,
                     files: input.files,
                     includeFiles,
+                    onVisibleOutput: (anchor) => {
+                      outputAnchor = anchor
+                    },
                     signal,
                   })
+                  if (prompt.messageID) {
+                    state.localRows = state.localRows.filter(
+                      (row) => row.commit.kind !== "user" || row.commit.messageID !== prompt.messageID,
+                    )
+                  }
                   includeFiles = false
                 } catch (error) {
                   if (signal.aborted || footer.isClosed) {
@@ -680,7 +744,15 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
                   const text =
                     (await state.stream?.then((item) => item.mod).catch(() => undefined))?.formatUnknownError(error) ??
                     (error instanceof Error ? error.message : String(error))
-                  footer.append({ kind: "error", text, phase: "start", source: "system" })
+                  const commit = {
+                    kind: "error",
+                    text,
+                    phase: "start",
+                    source: "system",
+                    messageID: prompt.messageID,
+                  } as const
+                  rememberLocal(commit, outputAnchor)
+                  footer.append(commit)
                 }
               },
             )
@@ -707,6 +779,10 @@ async function runInteractiveRuntime(input: RunRuntimeInput): Promise<void> {
         try {
           await runQueue()
         } finally {
+          if (resizeTimer) {
+            clearTimeout(resizeTimer)
+          }
+          offResize()
           await state.stream?.then((item) => item.handle.close()).catch(() => {})
         }
       } finally {
@@ -745,6 +821,7 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
         files: input.files,
         initialInput: input.initialInput,
         thinking: input.thinking,
+        backgroundSubagents: input.backgroundSubagents,
         replay: input.replay,
         replayLimit: input.replayLimit,
         demo: input.demo,
@@ -799,6 +876,7 @@ export async function runInteractiveMode(input: RunInput & { createSession?: Cre
         files: input.files,
         initialInput: input.initialInput,
         thinking: input.thinking,
+        backgroundSubagents: input.backgroundSubagents,
         replay: input.replay,
         replayLimit: input.replayLimit,
         demo: input.demo,

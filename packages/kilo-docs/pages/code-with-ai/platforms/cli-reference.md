@@ -186,7 +186,7 @@ Options:
       --port                          port for the local server (defaults to random port if no value provided)  [number]
       --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
       --thinking                      show thinking blocks  [boolean]
-      --replay                        replay visible session history on interactive resume  [boolean] [default: false]
+      --replay                        replay interactive session history on resume and after resize (use --no-replay to disable)  [boolean] [default: true]
       --replay-limit                  cap visible interactive replay to the newest N messages  [number]
   -i, --interactive                   run in direct interactive split-footer mode  [boolean] [default: false]
       --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
@@ -344,7 +344,6 @@ file system debugging utilities
 
 Commands:
   kilo debug file read <path>     read file contents as JSON
-  kilo debug file status          show file status information
   kilo debug file list <path>     list files in a directory
   kilo debug file search <query>  search files by query
   kilo debug file tree [dir]      show directory tree
@@ -361,16 +360,6 @@ read file contents as JSON
 
 Positionals:
   path  File path to read  [string]
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-### kilo debug file status
-
-```
-show file status information
 
 Options:
   --help     Show help  [boolean]
@@ -1004,7 +993,6 @@ database tools
 Commands:
   kilo db [query]     open an interactive sqlite3 shell or run a query  [default]
   kilo db path        print the database path
-  kilo db migrate     migrate JSON data to SQLite (merges with existing data)
 
 Positionals:
   query  SQL query to execute  [string]
@@ -1019,16 +1007,6 @@ Options:
 
 ```
 print the database path
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-### kilo db migrate
-
-```
-migrate JSON data to SQLite (merges with existing data)
 
 Options:
   --help     Show help  [boolean]

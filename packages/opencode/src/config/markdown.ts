@@ -1,7 +1,6 @@
-import { NamedError } from "@opencode-ai/core/util/error"
 import matter from "gray-matter"
-import { Schema } from "effect"
 import { Filesystem } from "@/util/filesystem"
+import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { KilocodeMarkdown } from "../kilocode/config/markdown" // kilocode_change
 
 export const FILE_REGEX = /(?<![\w`])@(\.?[^\s`,.]*(?:\.[^\s`,.]+)*)/g
@@ -98,13 +97,6 @@ export async function parse(filePath: string, options: KilocodeMarkdown.Options)
   // kilocode_change end
 }
 
-// kilocode_change start - export structured frontmatter parse errors
-export const FrontmatterError = NamedError.create("ConfigFrontmatterError", {
-  path: Schema.String,
-  message: Schema.String,
-})
-// kilocode_change end
-
 // kilocode_change start - export helpers as namespace object
 export const ConfigMarkdown = {
   FILE_REGEX,
@@ -113,6 +105,5 @@ export const ConfigMarkdown = {
   shell,
   fallbackSanitization,
   parse,
-  FrontmatterError,
 }
 // kilocode_change end

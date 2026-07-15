@@ -1471,11 +1471,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "사용자 정의 프롬프트",
   "settings.agentBehaviour.prompt.description": "이 에이전트의 추가 시스템 프롬프트",
   "settings.agentBehaviour.temperature.title": "온도",
-  "settings.agentBehaviour.temperature.description": "샘플링 온도 (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "AI 응답의 무작위성을 조절합니다(0–2). 낮은 값(예: 0.2)은 집중되고 일관된 출력을 생성합니다. 높은 값(예: 1.0)은 더 다양하고 창의적인 응답을 생성합니다. 모델 기본값을 사용하려면 비워 두세요.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "핵 샘플링 매개변수 (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "핵 샘플링 임계값입니다(0–1). 누적 확률이 P에 도달하는 가장 작은 토큰 집합으로 선택지를 제한합니다. 낮은 값은 출력을 더 집중되게 하고, 높은 값은 더 많은 다양성을 허용합니다. 모델 기본값을 사용하려면 비워 두세요.",
   "settings.agentBehaviour.maxSteps.title": "최대 단계",
-  "settings.agentBehaviour.maxSteps.description": "최대 에이전트 반복 횟수",
+  "settings.agentBehaviour.maxSteps.description":
+    "에이전트의 최대 단계 수입니다. 한도에 도달하면 에이전트는 도구 사용을 중단하고 최종 응답을 제공하라는 지시를 받습니다. 복잡한 다단계 작업에는 값을 높이고, 응답을 더 짧고 예측 가능하게 유지하려면 낮추세요.",
   "settings.agentBehaviour.hidden.title": "숨김",
   "settings.agentBehaviour.hidden.description": "채팅 입력의 모드 전환기에서 이 에이전트를 숨기기",
   "settings.agentBehaviour.disable.title": "비활성화됨",

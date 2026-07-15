@@ -3,12 +3,13 @@ import { pathToFileURL } from "url"
 import { Effect, Layer, Context, Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 import type { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Global } from "@opencode-ai/core/global"
 import { Permission } from "@/permission"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Config } from "@/config/config"
+import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { ConfigMarkdown } from "@/config/markdown"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -108,7 +109,7 @@ export interface Interface {
 }
 
 // kilocode_change start
-const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.Interface) {
+const add = Effect.fnUntraced(function* (state: State, match: Match, events: EventV2Bridge.Service["Service"]) {
   const source = match.sourceRoot ?? match.root
   // kilocode_change end
   const md = yield* Effect.tryPromise({
@@ -124,11 +125,11 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, bus: Bus.In
   }).pipe(
     Effect.catch(
       Effect.fnUntraced(function* (err) {
-        const message = ConfigMarkdown.FrontmatterError.isInstance(err)
+        const message = FrontmatterError.isInstance(err)
           ? err.data.message
           : `Failed to parse skill ${match.path}` // kilocode_change
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
-        yield* bus.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+        yield* events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
         log.error("failed to load skill", { skill: match.path, err }) // kilocode_change
         return undefined
       }),
@@ -196,7 +197,7 @@ const scan = Effect.fnUntraced(function* (
 const discoverSkills = Effect.fnUntraced(function* (
   config: Config.Interface,
   discovery: Discovery.Interface,
-  fsys: AppFileSystem.Interface,
+  fsys: FSUtil.Interface,
   global: Global.Interface,
   disableExternalSkills: boolean,
   disableClaudeCodeSkills: boolean,
@@ -284,7 +285,11 @@ const discoverSkills = Effect.fnUntraced(function* (
   }
 })
 
-const loadSkills = Effect.fnUntraced(function* (state: State, discovered: DiscoveryState, bus: Bus.Interface) {
+const loadSkills = Effect.fnUntraced(function* (
+  state: State,
+  discovered: DiscoveryState,
+  events: EventV2Bridge.Service["Service"],
+) {
   // kilocode_change start - seed built-in skills before discovery so user skills can override
   for (const skill of BUILTIN_SKILLS) {
     state.skills[skill.name] = {
@@ -296,7 +301,7 @@ const loadSkills = Effect.fnUntraced(function* (state: State, discovered: Discov
   }
   // kilocode_change end
 
-  for (const match of discovered.matches) yield* add(state, match, bus) // kilocode_change
+  for (const match of discovered.matches) yield* add(state, match, events) // kilocode_change
 
   log.info("init", { count: Object.keys(state.skills).length })
 })
@@ -308,8 +313,8 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const discovery = yield* Discovery.Service
     const config = yield* Config.Service
-    const bus = yield* Bus.Service
-    const fsys = yield* AppFileSystem.Service
+    const events = yield* EventV2Bridge.Service
+    const fsys = yield* FSUtil.Service
     const global = yield* Global.Service
     const flags = yield* RuntimeFlags.Service
     const git = yield* Git.Service // kilocode_change
@@ -330,7 +335,7 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
-        yield* loadSkills(s, yield* InstanceState.get(discovered), bus)
+        yield* loadSkills(s, yield* InstanceState.get(discovered), events)
         return s
       }),
     )
@@ -367,12 +372,14 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
+// kilocode_change start - preserve the concrete layer type across Kilo's Agent/Skill cycle
+export const defaultLayer: Layer.Layer<Service> = layer.pipe(
+  // kilocode_change end
   Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(Discovery.defaultLayer),
   Layer.provide(Config.defaultLayer),
-  Layer.provide(Bus.layer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(EventV2Bridge.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Global.layer),
   Layer.provide(RuntimeFlags.defaultLayer),
 )

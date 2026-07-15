@@ -1,14 +1,11 @@
 import { Plugin } from "../plugin"
 import { Format } from "../format"
 import { LSP } from "@/lsp/lsp"
-import { File } from "../file"
 import { Snapshot } from "../snapshot"
 import * as Project from "./project"
 import * as Vcs from "./vcs"
-import { Bus } from "../bus"
 import { InstanceState } from "@/effect/instance-state"
-import { FileWatcher } from "@/file/watcher"
-// kilocode_change start
+// kilocode_change start - ShareNext init is handled by KilocodeBootstrap; upstream dropped File/FileWatcher bootstrap init
 import { KilocodeBootstrap } from "@/kilocode/bootstrap"
 // import { ShareNext } from "@/share/share-next"
 // kilocode_change end
@@ -27,8 +24,6 @@ export const layer = Layer.effect(
     // InstanceStore imports only the lightweight tag from bootstrap-service.ts,
     // so it can depend on bootstrap without importing this implementation graph.
     const config = yield* Config.Service
-    const file = yield* File.Service
-    const fileWatcher = yield* FileWatcher.Service
     const format = yield* Format.Service
     const lsp = yield* LSP.Service
     const plugin = yield* Plugin.Service
@@ -52,7 +47,7 @@ export const layer = Layer.effect(
       // Each service self-manages its own slow work via Effect.forkScoped against
       // its per-instance state scope. We just await materialization here.
       yield* Effect.forEach(
-        [reference, lsp, format, file, fileWatcher, vcs, snapshot, project], // kilocode_change - shareNext removed, handled by KilocodeBootstrap
+        [reference, lsp, format, vcs, snapshot, project], // kilocode_change - shareNext handled by KilocodeBootstrap; file/fileWatcher removed (upstream dropped their bootstrap init)
         (s) => s.init().pipe(Effect.catchCause((cause) => Effect.logWarning("init failed", { cause }))),
         { concurrency: "unbounded", discard: true },
       ).pipe(Effect.withSpan("InstanceBootstrap.init"))
@@ -64,10 +59,7 @@ export const layer = Layer.effect(
 
 export const defaultLayer: Layer.Layer<Service> = layer.pipe(
   Layer.provide([
-    Bus.layer,
     Config.defaultLayer,
-    File.defaultLayer,
-    FileWatcher.defaultLayer,
     Format.defaultLayer,
     LSP.defaultLayer,
     Plugin.defaultLayer,
