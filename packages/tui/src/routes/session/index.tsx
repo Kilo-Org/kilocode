@@ -267,7 +267,9 @@ export function Session() {
   const terminal = createMemo(() => terminals()[0])
   const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
   const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
-  const question = createMemo(() => blockingQuestions()[0] ?? nonBlockingQuestions()[0])
+  const question = createMemo(
+    () => blockingQuestions()[0] ?? (network().length === 0 ? nonBlockingQuestions()[0] : undefined),
+  )
   const blockingSuggestions = createMemo(() => suggestions().filter((s) => s.blocking !== false))
   // non-blocking ones render inline at the tool-part slot via `SuggestBar`.
   const blockingSuggestion = createMemo(() => blockingSuggestions()[0])
@@ -1420,20 +1422,36 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                <Show when={permissions().length > 0}>
+                {/* kilocode_change start - arbitrate Kilo terminal, question, suggestion, and network input */}
+                <Show when={!terminal() && permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
                   />
                 </Show>
-                <Show when={permissions().length === 0 && questions().length > 0}>
-                  <QuestionPrompt
-                    request={questions()[0]}
-                    directory={sync.session.get(questions()[0].sessionID)?.directory}
-                  />
+                <Show when={terminal()} keyed>
+                  {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}
+                </Show>
+                <Show when={!terminal() && permissions().length === 0 ? question() : undefined} keyed>
+                  {(request) => (
+                    <QuestionPrompt
+                      request={request}
+                      nonBlocking={request.blocking === false}
+                      inputFocused={() => prompt?.focused ?? false}
+                      directory={sync.session.get(request.sessionID)?.directory}
+                    />
+                  )}
+                </Show>
+                <Show when={!terminal() && permissions().length === 0 && !question()}>
+                  <Show when={blockingSuggestion()} keyed>
+                    {(request) => <SuggestPrompt request={request} />}
+                  </Show>
                 </Show>
                 <Show when={session()?.parentID}>
                   <SubagentFooter />
+                </Show>
+                <Show when={networkVisible()}>
+                  <NetworkPrompt request={network()[0]} />
                 </Show>
                 <Show when={visible()}>
                   <pluginRuntime.Slot
@@ -1453,6 +1471,7 @@ export function Session() {
                         toBottom()
                       }}
                       sessionID={route.sessionID}
+                      directory={session()?.directory}
                       right={<pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                     />
                   </pluginRuntime.Slot>
@@ -2596,7 +2615,7 @@ function Task(props: ToolProps) {
         const title = state.status === "running" || state.status === "completed" ? state.title : undefined
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
       } else content.push(`↳ ${formatSubagentToolcalls(tools().length)}`)
-    }
+    } else if (isRunning()) content.push(`↳ Starting...`) // kilocode_change
 
     if (!isRunning() && props.part.state.status === "completed") {
       content.push(`↳ ${formatCompletedSubagentDetail(tools().length, Locale.duration(duration()))}`)
@@ -2659,32 +2678,46 @@ function Edit(props: ToolProps) {
   const ft = createMemo(() => filetype(stringValue(props.input.filePath)))
 
   const diffContent = createMemo(() => stringValue(props.metadata.diff) ?? "")
+  const hunks = createMemo(() => splitDiffHunks(diffContent())) // kilocode_change
 
   return (
     <Switch>
       <Match when={stringValue(props.metadata.diff) !== undefined}>
         <BlockTool title={"← Edit " + pathFormatter.format(stringValue(props.input.filePath))} part={props.part}>
-          <box paddingLeft={1}>
-            <diff
-              diff={diffContent()}
-              view={view()}
-              filetype={ft()}
-              syntaxStyle={syntax()}
-              showLineNumbers={true}
-              width="100%"
-              wrapMode={ctx.diffWrapMode()}
-              fg={theme.text}
-              addedBg={theme.diffAddedBg}
-              removedBg={theme.diffRemovedBg}
-              contextBg={theme.diffContextBg}
-              addedSignColor={theme.diffHighlightAdded}
-              removedSignColor={theme.diffHighlightRemoved}
-              lineNumberFg={theme.diffLineNumber}
-              lineNumberBg={theme.diffContextBg}
-              addedLineNumberBg={theme.diffAddedLineNumberBg}
-              removedLineNumberBg={theme.diffRemovedLineNumberBg}
-            />
+          {/* kilocode_change start - preserve separated multi-hunk edit rendering */}
+          <box paddingLeft={1} flexDirection="column">
+            <For each={hunks()}>
+              {(hunk, i) => (
+                <>
+                  <Show when={i() > 0}>
+                    <text fg={theme.textMuted} alignSelf="center" height={2}>
+                      ...
+                    </text>
+                  </Show>
+                  <diff
+                    diff={hunk}
+                    view={view()}
+                    filetype={ft()}
+                    syntaxStyle={syntax()}
+                    showLineNumbers={true}
+                    width="100%"
+                    wrapMode={ctx.diffWrapMode()}
+                    fg={theme.text}
+                    addedBg={theme.diffAddedBg}
+                    removedBg={theme.diffRemovedBg}
+                    contextBg={theme.diffContextBg}
+                    addedSignColor={theme.diffHighlightAdded}
+                    removedSignColor={theme.diffHighlightRemoved}
+                    lineNumberFg={theme.diffLineNumber}
+                    lineNumberBg={theme.diffContextBg}
+                    addedLineNumberBg={theme.diffAddedLineNumberBg}
+                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
+                  />
+                </>
+              )}
+            </For>
           </box>
+          {/* kilocode_change end */}
           <Diagnostics diagnostics={props.metadata.diagnostics} filePath={stringValue(props.input.filePath) ?? ""} />
         </BlockTool>
       </Match>
@@ -2817,8 +2850,14 @@ function Question(props: ToolProps) {
   const { theme } = useTheme()
   const questions = createMemo(() => parseQuestions(props.input.questions))
   const answers = createMemo(() => parseQuestionAnswers(props.metadata.answers))
-  const dismissed = createMemo(() => props.metadata.dismissed === true) // kilocode_change
   const count = createMemo(() => questions().length)
+  // kilocode_change start - preserve dismissed content and the compact expandable summary
+  const dismissed = createMemo(
+    () =>
+      props.metadata.dismissed === true ||
+      (props.part.state.status === "error" && String(props.part.state.error ?? "").includes("dismissed")),
+  )
+  const [expanded, setExpanded] = createSignal(false)
 
   function format(answer?: ReadonlyArray<string>) {
     if (dismissed()) return "Dismissed"
@@ -2832,23 +2871,37 @@ function Question(props: ToolProps) {
     if ((answers()?.length ?? 0) > 0) return `${count()} answered`
     return `${count()} question${count() !== 1 ? "s" : ""}`
   })
-  // kilocode_change end
 
   return (
     <Switch>
-      <Match when={answers()}>
-        <BlockTool title="# Questions" part={props.part}>
-          <box gap={1}>
-            <For each={questions()}>
-              {(q, i) => (
-                <box flexDirection="column">
-                  <text fg={theme.textMuted}>{q.question}</text>
-                  <text fg={theme.text}>{format(answers()?.[i()])}</text>
-                </box>
-              )}
-            </For>
-          </box>
-        </BlockTool>
+      <Match when={count() > 0}>
+        <Show
+          when={expanded()}
+          fallback={
+            <InlineTool
+              icon="→"
+              complete={count()}
+              pending="Asking questions..."
+              part={props.part}
+              onClick={() => setExpanded(true)}
+            >
+              {subtitle()}
+            </InlineTool>
+          }
+        >
+          <BlockTool title={title()} part={props.part} onClick={() => setExpanded(false)}>
+            <box gap={1}>
+              <For each={questions()}>
+                {(q, i) => (
+                  <box flexDirection="column">
+                    <text fg={theme.textMuted}>{q.question}</text>
+                    <text fg={theme.text}>{format(answers()?.[i()])}</text>
+                  </box>
+                )}
+              </For>
+            </box>
+          </BlockTool>
+        </Show>
       </Match>
       {/* kilocode_change end */}
       <Match when={true}>

@@ -30,8 +30,11 @@ import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
 import { KiloCli } from "@/kilocode/cli/setup" // kilocode_change
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
 
 const args = hideBin(process.argv)
+const metadata = ensureProcessMetadata("main") // kilocode_change - correlate logs across the CLI and TUI worker
 
 if (await KiloCli.runner()) process.exit() // kilocode_change - run persistent process guardians before CLI bootstrap
 
@@ -79,6 +82,14 @@ let cli = yargs(args) // kilocode_change
     process.env.OPENCODE = "1"
     process.env.KILO_PID = String(process.pid)
     await KiloCli.bootstrap() // kilocode_change - env tagging, telemetry init, legacy JSON-to-SQLite migration, and auth migration
+    // kilocode_change start - retain Kilo process/run correlation metadata in startup logs
+    Log.Default.info("opencode", {
+      version: InstallationVersion,
+      command: args[0] ?? "", // avoid persisting prompts, passwords, tokens, headers, or environment values
+      process_role: metadata.processRole,
+      run_id: metadata.runID,
+    })
+    // kilocode_change end
   })
   .usage("")
   .completion("completion", "generate shell completion script")

@@ -19,10 +19,11 @@ import type {
   SessionV2Info,
   SkillV2Info,
 } from "@kilocode/sdk/v2"
-import { createStore, produce } from "solid-js/store"
+import { createStore, produce, reconcile } from "solid-js/store" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { useSDK } from "./sdk"
 import { createSignal, onMount } from "solid-js"
+import { hydrate } from "../kilocode/hydration" // kilocode_change
 
 type LocationData = {
   agent?: AgentV2Info[]
@@ -73,6 +74,8 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
 
     const event = useEvent()
     const sdk = useSDK()
+    // kilocode_change - serialize message hydration per session
+    const syncing = new Map<string, Promise<void>>()
     const [defaultLocation, setDefaultLocation] = createSignal<LocationRef>({
       directory: sdk.directory ?? process.cwd(),
     })
@@ -121,7 +124,14 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       },
     }
 
-    event.subscribe((event, metadata) => {
+    const apply = (
+      event: Event,
+      metadata: {
+        directory: string
+        workspace: string | undefined
+      },
+    ) => {
+      // kilocode_change
       switch (event.type) {
         case "session.next.agent.switched":
           message.update(event.properties.sessionID, (draft) => {
@@ -432,7 +442,13 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
           void result.location.connector.refresh({ directory: metadata.directory, workspaceID: metadata.workspace })
           break
       }
+    }
+
+    // kilocode_change start - project live V2 session events into the hydrated message store
+    event.subscribe((event, metadata) => {
+      apply(event, metadata)
     })
+    // kilocode_change end
 
     const result = {
       session: {
@@ -448,8 +464,19 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
             return store.session.message[sessionID]
           },
           async refresh(sessionID: string) {
-            const result = await sdk.client.v2.session.messages({ sessionID }, { throwOnError: true })
-            setStore("session", "message", sessionID, result.data.data)
+            // kilocode_change start - reconcile the snapshot without losing live updates received while it was loading
+            const current = syncing.get(sessionID)
+            if (current) return current
+            const next = (async () => {
+              const before = JSON.parse(JSON.stringify(store.session.message[sessionID] ?? [])) as SessionMessage[]
+              const result = await sdk.client.v2.session.messages({ sessionID }, { throwOnError: true })
+              const snapshot = result.data.data
+              const live = JSON.parse(JSON.stringify(store.session.message[sessionID] ?? [])) as SessionMessage[]
+              setStore("session", "message", sessionID, reconcile(hydrate(before, snapshot, live)))
+            })().finally(() => syncing.delete(sessionID))
+            syncing.set(sessionID, next)
+            return next
+            // kilocode_change end
           },
         },
         permission: {

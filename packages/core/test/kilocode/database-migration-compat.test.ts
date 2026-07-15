@@ -48,9 +48,7 @@ describe("database migration compatibility", () => {
         yield* db.run(
           sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('message', 'ses_session', 'user', 1, 1, '{}')`,
         )
-        yield* db.run(
-          sql`UPDATE session_message SET data = '{"text":"updated"}' WHERE id = 'message'`,
-        )
+        yield* db.run(sql`UPDATE session_message SET data = '{"text":"updated"}' WHERE id = 'message'`)
 
         expect(yield* db.get(sql`SELECT id, seq, data FROM session_message WHERE id = 'message'`)).toEqual({
           id: "message",
@@ -60,9 +58,59 @@ describe("database migration compatibility", () => {
         yield* db.run(
           sql`INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('msg_sequenced', 'ses_session', 'user', 1, 2, 2, '{"text":"current","files":[],"agents":[],"time":{"created":2}}')`,
         )
+        const legacy = JSON.stringify({
+          agent: "code",
+          model: { id: "model", providerID: "provider" },
+          content: [
+            {
+              type: "tool",
+              id: "tool",
+              name: "read",
+              state: {
+                status: "completed",
+                input: {},
+                content: [{ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" }],
+                structured: {
+                  nested: {
+                    status: "completed",
+                    content: [{ type: "media", mediaType: "text/plain", data: "unchanged" }],
+                  },
+                },
+              },
+              time: { created: 3, completed: 3 },
+            },
+          ],
+          time: { created: 3, completed: 3 },
+        })
+        yield* db.run(
+          sql`INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('msg_legacy_tool', 'ses_session', 'assistant', 2, 3, 3, ${legacy})`,
+        )
         const session = SessionV2.ID.make("ses_session")
-        expect((yield* SessionHistory.load(db, session)).map((item) => String(item.id))).toEqual(["msg_sequenced"])
-        expect((yield* SessionHistory.entriesForRunner(db, session, 0)).map((item) => item.seq)).toEqual([1])
+        const history = yield* SessionHistory.load(db, session)
+        expect(history.map((item) => String(item.id))).toEqual(["msg_sequenced", "msg_legacy_tool"])
+        expect(history[1]).toMatchObject({
+          content: [
+            {
+              state: {
+                content: [
+                  {
+                    type: "file",
+                    uri: "data:image/png;base64,AAAA",
+                    mime: "image/png",
+                    name: "image.png",
+                  },
+                ],
+                structured: {
+                  nested: {
+                    status: "completed",
+                    content: [{ type: "media", mediaType: "text/plain", data: "unchanged" }],
+                  },
+                },
+              },
+            },
+          ],
+        })
+        expect((yield* SessionHistory.entriesForRunner(db, session, 0)).map((item) => item.seq)).toEqual([1, 2])
 
         expect(yield* db.get(sql`SELECT id FROM session WHERE id = 'ses_session'`)).toEqual({ id: "ses_session" })
         expect(yield* db.get(sql`SELECT id FROM message WHERE id = 'legacy-message'`)).toEqual({ id: "legacy-message" })

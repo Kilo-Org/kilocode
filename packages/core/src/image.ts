@@ -17,6 +17,20 @@ export class DecodeError extends Schema.TaggedErrorClass<DecodeError>()("Image.D
   }
 }
 
+// kilocode_change start - report images rejected before native decode allocation
+export class PixelLimitError extends Schema.TaggedErrorClass<PixelLimitError>()("Image.PixelLimitError", {
+  resource: Schema.String,
+  width: Schema.Number,
+  height: Schema.Number,
+  maxDimension: Schema.Number,
+  maxPixels: Schema.Number,
+}) {
+  override get message() {
+    return `Image ${this.resource} is ${this.width}x${this.height}, exceeding the safe decode limit of ${this.maxDimension}px per side/${this.maxPixels} pixels`
+  }
+}
+// kilocode_change end
+
 export class SizeError extends Schema.TaggedErrorClass<SizeError>()("Image.SizeError", {
   resource: Schema.String,
   width: Schema.Number,
@@ -37,7 +51,7 @@ export interface Interface {
     content: FileSystem.Content & { readonly encoding: "base64" },
   ) => Effect.Effect<
     FileSystem.Content & { readonly encoding: "base64" },
-    ResizerUnavailableError | DecodeError | SizeError
+    ResizerUnavailableError | DecodeError | SizeError | PixelLimitError // kilocode_change
   >
 }
 

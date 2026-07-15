@@ -108,6 +108,7 @@ export const layer = Layer.effect(
     const config = yield* Config.Service
     const plugin = yield* Plugin.Service
     const agents = yield* Agent.Service
+    const skill = yield* Skill.Service // kilocode_change - keep the available skill summary in model-facing tool context
     const truncate = yield* Truncate.Service
     const flags = yield* RuntimeFlags.Service
 
@@ -317,6 +318,20 @@ export const layer = Layer.effect(
       return ["Available agent types and the tools they have access to:", description].join("\n")
     })
 
+    // kilocode_change start - retain the concise skill inventory added to the skill tool description
+    const describeSkill = Effect.fn("ToolRegistry.describeSkill")(function* (agent: Agent.Info) {
+      const list = yield* skill.available(agent)
+      if (list.length === 0) return "No skills are currently available."
+      return [
+        "Load a specialized skill that provides domain-specific instructions and workflows.",
+        "",
+        "When a task matches one of the available skills below, load its full instructions with this tool.",
+        "",
+        Skill.fmt(list, { verbose: false }),
+      ].join("\n")
+    })
+    // kilocode_change end
+
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
@@ -348,7 +363,11 @@ export const layer = Layer.effect(
           // kilocode_change start
           const result = {
             id: tool.id,
-            description: [output.description, tool.id === TaskTool.id ? yield* describeTask(input.agent) : undefined]
+            description: [
+              output.description,
+              tool.id === TaskTool.id ? yield* describeTask(input.agent) : undefined,
+              tool.id === SkillTool.id ? yield* describeSkill(input.agent) : undefined,
+            ]
               .filter(Boolean)
               .join("\n"),
             parameters: output.parameters,

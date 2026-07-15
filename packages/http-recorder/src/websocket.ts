@@ -1,4 +1,4 @@
-import { Effect, Option, Ref, Scope, Semaphore, Stream, SynchronizedRef } from "effect"
+import { Deferred, Effect, Option, Ref, Scope, Semaphore, Stream } from "effect"
 import type { Headers } from "effect/unstable/http"
 import * as CassetteService from "./cassette.js"
 import { canonicalizeJson, decodeJson, safeText } from "./matching.js"
@@ -65,7 +65,8 @@ export const makeWebSocketExecutor = <E>(
   options: WebSocketRecordReplayOptions<E>,
 ): Effect.Effect<WebSocketExecutor<E>, never, Scope.Scope> =>
   Effect.gen(function* () {
-    const mode = options.mode ?? (yield* resolveAutoMode(options.cassette, options.name))
+    const mode =
+      !options.mode || options.mode === "auto" ? yield* resolveAutoMode(options.cassette, options.name) : options.mode
     const redactor = options.redactor ?? make()
     const openSnapshot = (request: WebSocketRequest) => {
       const snapshot = redactor.request({
@@ -149,24 +150,62 @@ export const makeWebSocketExecutor = <E>(
               }),
             )
             .pipe(Effect.orDie)
-          const client = claimed.interaction.events.filter((event) => event.direction === "client")
-          const server = claimed.interaction.events.filter((event) => event.direction === "server")
-          const position = yield* SynchronizedRef.make(0)
+          // kilocode_change start - preserve causal client/server transcript order during replay
+          const progress = yield* Ref.make({ position: 0, changed: yield* Deferred.make<void>() })
+          const lock = yield* Semaphore.make(1)
           return {
             sendText: (message) =>
-              SynchronizedRef.updateEffect(position, (index) =>
-                assertClientEvent(message, client[index], index, options.compareClientMessagesAsJson === true).pipe(
-                  Effect.as(index + 1),
-                ),
+              lock.withPermit(
+                Effect.gen(function* () {
+                  const current = yield* Ref.get(progress)
+                  yield* assertClientEvent(
+                    message,
+                    claimed.interaction.events[current.position],
+                    current.position,
+                    options.compareClientMessagesAsJson === true,
+                  )
+                  yield* Ref.set(progress, {
+                    position: current.position + 1,
+                    changed: yield* Deferred.make<void>(),
+                  })
+                  yield* Deferred.succeed(current.changed, undefined)
+                }),
               ),
-            messages: Stream.fromIterable(server).pipe(Stream.map(decodeEvent)),
+            messages: Stream.fromIterable(claimed.interaction.events.map((event, index) => ({ event, index }))).pipe(
+              Stream.mapEffect(({ event, index }) =>
+                Effect.gen(function* () {
+                  const current = yield* Ref.get(progress)
+                  if (event.direction === "client") {
+                    if (current.position > index) return Option.none<ReturnType<typeof decodeEvent>>()
+                    if (current.position < index)
+                      return yield* Effect.die(
+                        new Error(`WebSocket replay position: expected ${index}, received ${current.position}`),
+                      )
+                    yield* Deferred.await(current.changed)
+                    return Option.none<ReturnType<typeof decodeEvent>>()
+                  }
+                  if (current.position !== index)
+                    return yield* Effect.die(
+                      new Error(`WebSocket replay position: expected ${index}, received ${current.position}`),
+                    )
+                  yield* Ref.set(progress, {
+                    position: index + 1,
+                    changed: yield* Deferred.make<void>(),
+                  })
+                  return Option.some(decodeEvent(event))
+                }),
+              ),
+              Stream.filter(Option.isSome),
+              Stream.map((event) => event.value),
+            ),
             close: Effect.gen(function* () {
-              const used = yield* SynchronizedRef.get(position)
-              if (used !== client.length)
+              const used = (yield* Ref.get(progress)).position
+              if (used !== claimed.interaction.events.length)
                 return yield* Effect.die(
-                  new Error(`WebSocket client frame count: expected ${client.length}, received ${used}`),
+                  new Error(`WebSocket event count: expected ${claimed.interaction.events.length}, received ${used}`),
                 )
             }),
+            // kilocode_change end
           }
         }),
     }

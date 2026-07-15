@@ -13,6 +13,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { EventV2 } from "@opencode-ai/core/event"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/kilocode/instance"
+import * as KiloInstance from "../../src/kilocode/instance"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -23,7 +24,7 @@ import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
 import path from "path"
 import fs from "fs/promises"
-import { provideTestInstance, tmpdir } from "../fixture/fixture"
+import { provideTestInstance, tmpdir, withTestInstance } from "../fixture/fixture"
 
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
@@ -101,6 +102,14 @@ const savedKey = `${saved.providerID}/${saved.modelID}`
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
   await fs.rm(statePath, { force: true }).catch(() => {})
+  const provide = spyOn(KiloInstance, "provide").mockImplementation((input) =>
+    withTestInstance({ directory: input.directory, fn: input.fn }),
+  )
+  using _provide = {
+    [Symbol.dispose]() {
+      provide.mockRestore()
+    },
+  }
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {

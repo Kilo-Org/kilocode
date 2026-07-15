@@ -83,6 +83,7 @@ import { SessionTable } from "@opencode-ai/core/session/sql"
 import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -161,6 +162,7 @@ export const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
+    const cache = Option.getOrUndefined(yield* Effect.serviceOption(RepositoryCache.Service)) // kilocode_change
     const { db } = database
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
       return {
@@ -176,10 +178,11 @@ export const layer = Layer.effect(
     })
 
     // kilocode_change start - preserve configured reference mentions on the Core reference architecture
-    const resolveReferenceParts = Effect.fnUntraced(function* (template: string) {
+    const resolveReferenceParts = Effect.fnUntraced(function* (template: string, skip = new Set<string>()) {
       const ctx = yield* InstanceState.context
+      const cfg = yield* config.get()
       const refs = KiloConfiguredReference.resolveAll({
-        references: (yield* config.get()).reference ?? {},
+        references: cfg.references ?? cfg.reference ?? {},
         directory: ctx.directory,
         worktree: ctx.worktree,
       }).filter((item) => item.kind !== "invalid")
@@ -193,10 +196,13 @@ export const layer = Layer.effect(
         const reference = refs.find((item) => item.name === alias)
         if (!reference) continue
         seen.add(alias)
+        const url = pathToFileURL(reference.path).href
+        if (skip.has(url)) continue
+        if (reference.kind === "git" && cache) yield* KiloConfiguredReference.ensure(cache, reference) // kilocode_change
         const start = match.index ?? 0
         parts.push({
           type: "file",
-          url: pathToFileURL(reference.path).href,
+          url,
           filename: alias,
           mime: "application/x-directory",
           source: { type: "file", text: { value: match[0], start, end: start + match[0].length }, path: alias },
@@ -212,7 +218,9 @@ export const layer = Layer.effect(
       const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }, ...roots]
       const files = ConfigMarkdown.files(template)
       const seen = new Set<string>()
-      const aliases = new Set(roots.flatMap((part) => (part.type === "file" && part.filename ? [part.filename] : []))) // kilocode_change
+      const configured = new Set(
+        roots.flatMap((part) => (part.type === "file" && part.filename ? [part.filename] : [])),
+      ) // kilocode_change
       yield* Effect.forEach(
         files,
         Effect.fnUntraced(function* (match) {
@@ -220,7 +228,7 @@ export const layer = Layer.effect(
           if (!name) return
           // kilocode_change start - configured references were already added above
           const alias = name.split("/")[0]
-          if (alias && aliases.has(alias)) return
+          if (alias && configured.has(alias)) return
           // kilocode_change end
           if (seen.has(name)) return
           seen.add(name)
@@ -1123,8 +1131,7 @@ export const layer = Layer.effect(
                 const context = ctx()
                 const explicit = reference ? yield* KiloReference.path(fsys, reference.root, file.target) : false
                 const referenced =
-                  explicit ||
-                  (yield* KiloReference.contains({ fs: fsys, references, target: file.target }))
+                  explicit || (yield* KiloReference.contains({ fs: fsys, references, target: file.target }))
                 yield* assertExternalDirectoryEffect(context, file.target, { bypass: referenced, kind: "file" })
                 yield* context.ask({
                   permission: "read",
@@ -1241,9 +1248,11 @@ export const layer = Layer.effect(
       )
       for (const part of input.parts) {
         if (part.type !== "text" || part.synthetic) continue
-        for (const reference of yield* resolveReferenceParts(part.text)) {
+        for (const reference of yield* resolveReferenceParts(part.text, attached)) {
           if (reference.type === "file" && attached.has(reference.url)) continue
-          if (reference.type === "file") attached.add(reference.url)
+          if (reference.type === "file") {
+            attached.add(reference.url)
+          }
           submittedParts.push(reference)
         }
       }
@@ -2146,6 +2155,7 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() =>
       Layer.provide(LSP.defaultLayer),
       Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(Truncate.defaultLayer),
+      Layer.provide(RepositoryCache.defaultLayer), // kilocode_change
     )
     .pipe(
       Layer.provide(Provider.defaultLayer),
@@ -2307,6 +2317,8 @@ const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g
 
+const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, []) // kilocode_change
+
 export const node = LayerNode.make(layer, [
   SessionStatus.node,
   Session.node,
@@ -2335,6 +2347,7 @@ export const node = LayerNode.make(layer, [
   RuntimeFlags.node,
   Database.node,
   Question.node, // kilocode_change
+  repositoryCacheNode, // kilocode_change
 ])
 
 export * as SessionPrompt from "./prompt"

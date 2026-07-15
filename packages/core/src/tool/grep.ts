@@ -5,6 +5,8 @@ import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { FileSystem } from "../filesystem"
 import { FSUtil } from "../fs-util"
+import { Global } from "../global" // kilocode_change
+import * as SearchTarget from "../kilocode/search-target" // kilocode_change
 import { Location } from "../location"
 import { PermissionV2 } from "../permission"
 import { Ripgrep } from "../ripgrep"
@@ -52,6 +54,7 @@ export const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const fs = yield* FSUtil.Service
+    const global = yield* Global.Service // kilocode_change
     const ripgrep = yield* Ripgrep.Service
     const location = yield* Location.Service
     const permission = yield* PermissionV2.Service
@@ -90,15 +93,27 @@ export const layer = Layer.effectDiscard(
                 agent: context.agent,
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
-              const target = path.resolve(location.directory, input.path ?? ".")
-              const info = yield* fs.stat(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
+              // kilocode_change start - enforce the active Location despite RelativePath being a nominal brand
+              const requested = path.resolve(location.directory, input.path ?? ".")
+              const absolute = path.isAbsolute(input.path ?? "")
+              if (!FSUtil.contains(location.directory, requested) && !absolute)
+                return yield* Effect.fail(new Error("Path escapes the active Location"))
+              const root = yield* SearchTarget.inspect(fs, location.directory)
+              const target = yield* SearchTarget.inspect(fs, requested)
+              const contained = root.type === "directory" && FSUtil.contains(root.path, target.path)
+              const retained = absolute && !contained && (yield* SearchTarget.managed(fs, global.data, target))
+              if (root.type !== "directory" || (!contained && !retained))
+                return yield* Effect.fail(new Error("Path escapes the active Location"))
+              // kilocode_change end
+              const cwd = target.type === "directory" ? target.path : path.dirname(target.path) // kilocode_change
               return yield* ripgrep
                 .grep({
-                  cwd: info?.type === "Directory" ? target : path.dirname(target),
+                  cwd, // kilocode_change
                   pattern: input.pattern,
-                  file: info?.type === "File" ? path.basename(target) : undefined,
+                  file: target.type === "file" ? path.basename(target.path) : undefined, // kilocode_change
                   include: input.include,
                   limit: input.limit ?? Number.MAX_SAFE_INTEGER,
+                  validate: SearchTarget.validate(fs, target), // kilocode_change - reject post-approval replacement
                 })
                 .pipe(
                   Effect.map((result) =>
@@ -111,10 +126,7 @@ export const layer = Layer.effectDiscard(
                             path: RelativePath.make(
                               path.relative(
                                 location.directory,
-                                path.resolve(
-                                  info?.type === "Directory" ? target : path.dirname(target),
-                                  match.entry.path,
-                                ),
+                                path.resolve(cwd, match.entry.path), // kilocode_change
                               ),
                             ),
                           }),

@@ -6,6 +6,7 @@ import {
   LLMEvent,
   LLMRequest,
   LLMResponse,
+  StoredToolContent, // kilocode_change
   ToolChoice,
   ToolContent,
   ToolOutput,
@@ -250,6 +251,35 @@ describe("LLMClient tools", () => {
         type: "file",
         uri: "file:///tmp/image.png",
         mime: "image/png",
+      })
+    }),
+  )
+
+  it.effect("decodes persisted legacy tool media and file content", () =>
+    Effect.sync(() => {
+      // kilocode_change start - storage accepts released shapes while public content remains canonical
+      const decode = Schema.decodeUnknownSync(StoredToolContent)
+      const current = Schema.decodeUnknownSync(ToolContent)
+      expect(() => current({ type: "media", mediaType: "image/png", data: "AAAA" })).toThrow()
+      // kilocode_change end
+      expect(decode({ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" })).toEqual({
+        type: "file",
+        uri: "data:image/png;base64,AAAA",
+        mime: "image/png",
+        name: "image.png",
+      })
+      expect(
+        decode({
+          type: "file",
+          source: { type: "url", url: "https://example.test/image.png" },
+          mime: "image/png",
+          name: "image.png",
+        }),
+      ).toEqual({
+        type: "file",
+        uri: "https://example.test/image.png",
+        mime: "image/png",
+        name: "image.png",
       })
     }),
   )

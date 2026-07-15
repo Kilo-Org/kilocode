@@ -58,7 +58,6 @@ function buildAuthorizeUrl(state: string): string {
   return `${DO_AUTHORIZE_URL}?${params.toString()}`
 }
 
-// kilocode_change start - Kilo branding for the DigitalOcean OAuth callback page
 const HTML_CALLBACK = `<!doctype html>
 <html>
   <head>
@@ -117,7 +116,6 @@ const HTML_CALLBACK = `<!doctype html>
     </script>
   </body>
 </html>`
-// kilocode_change end
 
 async function startOAuthServer(): Promise<void> {
   if (oauthServer) return
@@ -343,7 +341,7 @@ export async function DigitalOceanAuthPlugin(input: PluginInput): Promise<Hooks>
             return {
               url,
               instructions:
-                "Sign in to DigitalOcean in your browser. Kilo will use your DigitalOcean API token directly for inference and load your Inference Routers. Re-run /connect to refresh routers later.", // kilocode_change
+                "Sign in to DigitalOcean in your browser. Kilo will use your DigitalOcean API token directly for inference and load your Inference Routers. Re-run /connect to refresh routers later.",
               method: "auto" as const,
               async callback() {
                 try {

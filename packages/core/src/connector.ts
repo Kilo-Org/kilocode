@@ -236,11 +236,13 @@ enableMapSet()
 const attemptLifetime = Duration.toMillis(Duration.minutes(10))
 const terminalRetention = Duration.toMillis(Duration.minutes(1))
 const scrubInterval = Duration.seconds(30)
+const settlementTimeout = Duration.seconds(30) // kilocode_change - bound retained OAuth attempt secrets
 
 type AttemptTime = { created: number; expires: number }
 type PendingAttempt = {
   status: "pending"
   completing: boolean
+  settling: boolean // kilocode_change - cancellation and expiry cannot overtake credential persistence
   authorization: OAuthAuthorization
   connectorID: ID
   methodID: MethodID
@@ -317,27 +319,55 @@ export const locationLayer = Layer.effect(
       return error instanceof Error ? error.message : String(error)
     }
 
-    const settle = Effect.fnUntraced(function* (attemptID: AttemptID, exit: Exit.Exit<Credential.Value, unknown>) {
-      const now = yield* Clock.currentTimeMillis
-      const result = yield* SynchronizedRef.modify(attempts, (current) => {
-        const attempt = current.get(attemptID)
-        if (!attempt || attempt.status !== "pending") return [undefined, current]
-        const terminal: TerminalAttempt = Exit.isSuccess(exit)
-          ? { status: "complete", time: attempt.time, removeAt: now + terminalRetention }
-          : { status: "failed", message: message(exit.cause), time: attempt.time, removeAt: now + terminalRetention }
-        return [attempt, new Map(current).set(attemptID, terminal)]
-      })
-      if (!result) return
-      if (Exit.isSuccess(exit)) {
-        yield* credentials.create({
-          connectorID: result.connectorID,
-          methodID: result.methodID,
-          label: result.label,
-          value: exit.value,
-        })
-      }
-      yield* close(result.scope)
+    // kilocode_change start - persist before exposing completion and make settlement atomic with cancellation
+    const settle = Effect.fnUntraced(function* (
+      attemptID: AttemptID,
+      exit: Exit.Exit<Credential.Value, AuthorizationError>,
+    ) {
+      return yield* Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const pending = yield* SynchronizedRef.modify(attempts, (current) => {
+            const attempt = current.get(attemptID)
+            if (!attempt || attempt.status !== "pending" || attempt.settling) return [undefined, current]
+            return [attempt, new Map(current).set(attemptID, { ...attempt, settling: true })]
+          })
+          if (!pending) return
+          const settled = Exit.isSuccess(exit)
+            ? yield* restore(
+                credentials
+                  .create({
+                    connectorID: pending.connectorID,
+                    methodID: pending.methodID,
+                    label: pending.label,
+                    value: exit.value,
+                  })
+                  .pipe(
+                    Effect.timeout(settlementTimeout),
+                    Effect.mapError((cause) => new AuthorizationError({ cause })),
+                  ),
+              ).pipe(Effect.asVoid, Effect.exit)
+            : Exit.failCause(exit.cause)
+          const now = yield* Clock.currentTimeMillis
+          const result = yield* SynchronizedRef.modify(attempts, (current) => {
+            const attempt = current.get(attemptID)
+            if (!attempt || attempt.status !== "pending") return [undefined, current]
+            const terminal: TerminalAttempt = Exit.isSuccess(settled)
+              ? { status: "complete", time: attempt.time, removeAt: now + terminalRetention }
+              : {
+                  status: "failed",
+                  message: message(settled.cause),
+                  time: attempt.time,
+                  removeAt: now + terminalRetention,
+                }
+            return [attempt, new Map(current).set(attemptID, terminal)]
+          })
+          if (!result) return settled
+          yield* close(result.scope)
+          return settled
+        }),
+      )
     })
+    // kilocode_change end
 
     const scrub = Effect.fnUntraced(function* () {
       const now = yield* Clock.currentTimeMillis
@@ -345,7 +375,8 @@ export const locationLayer = Layer.effect(
         const next = new Map(current)
         const scopes: Scope.Closeable[] = []
         for (const [id, attempt] of current) {
-          if (attempt.status === "pending" && attempt.time.expires <= now) {
+          // kilocode_change - settlement owns attempts once persistence starts
+          if (attempt.status === "pending" && !attempt.settling && attempt.time.expires <= now) {
             scopes.push(attempt.scope)
             next.set(id, { status: "expired", time: attempt.time, removeAt: now + terminalRetention })
             continue
@@ -423,6 +454,7 @@ export const locationLayer = Layer.effect(
               new Map(current).set(id, {
                 status: "pending",
                 completing: authorization.mode === "auto",
+                settling: false, // kilocode_change
                 authorization,
                 connectorID: input.connectorID,
                 methodID: input.methodID,
@@ -432,11 +464,13 @@ export const locationLayer = Layer.effect(
               }),
             )
             if (authorization.mode === "auto") {
-              yield* authorization.callback.pipe(
+              // kilocode_change start - settle persistence atomically with cancellation
+              yield* authorize(authorization.callback).pipe(
                 Effect.exit,
                 Effect.flatMap((exit) => settle(id, exit)),
                 Effect.forkIn(attemptScope, { startImmediately: true }),
               )
+              // kilocode_change end
             }
             return new Attempt({
               attemptID: id,
@@ -472,13 +506,16 @@ export const locationLayer = Layer.effect(
                 ? attempt.authorization.callback
                 : attempt.authorization.callback(input.code as string)
             const exit = yield* authorize(callback).pipe(Effect.exit)
-            yield* settle(input.attemptID, exit)
-            if (Exit.isFailure(exit)) return yield* exit
+            // kilocode_change start - propagate persistence failure after atomic settlement
+            const settled = yield* settle(input.attemptID, exit)
+            if (settled && Exit.isFailure(settled)) return yield* settled
+            // kilocode_change end
           }),
           cancel: Effect.fn("Connector.connect.oauth.cancel")(function* (attemptID) {
             const attempt = yield* SynchronizedRef.modify(attempts, (current) => {
               const match = current.get(attemptID)
-              if (!match || match.status !== "pending") return [undefined, current]
+              // kilocode_change - once persistence starts, settlement owns the attempt
+              if (!match || match.status !== "pending" || match.settling) return [undefined, current]
               const next = new Map(current)
               next.delete(attemptID)
               return [match, next]

@@ -332,6 +332,7 @@ export const layer = Layer.effect(
       const finalArgs = ensureDockerRm(cmd, args) // kilocode_change
       const baseDir = yield* InstanceState.directory
       const cwd = mcp.cwd ? path.resolve(baseDir, mcp.cwd) : baseDir
+      const bridge = yield* EffectBridge.make() // kilocode_change - drain child stderr without writing over the TUI
       const transport = new StdioClientTransport({
         stderr: "pipe",
         command: cmd,
@@ -343,6 +344,11 @@ export const layer = Layer.effect(
           ...mcp.environment,
         },
       })
+      // kilocode_change start - a piped stderr stream must be consumed or verbose MCP servers can block
+      transport.stderr?.on("data", (chunk: Buffer) => {
+        bridge.fork(Effect.logInfo("mcp stderr", { key, output: chunk.toString() }))
+      })
+      // kilocode_change end
 
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       return yield* connectTransport(transport, connectTimeout).pipe(

@@ -33,13 +33,13 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.Font
 import java.awt.Point
 import java.awt.event.MouseAdapter
@@ -189,17 +189,20 @@ class ToolBody private constructor(
 
     private fun size() {
         val view = scroll.viewport.view as? JComponent ?: return
+        // height/width are already scaled px (from editor lineHeight and font metrics),
+        // so assign with plain Dimension. Wrapping in JBUI.size/JBDimension would scale
+        // again by the user scale factor and double-scale under IDE zoom.
         val height = height(view)
         val width = width(view)
-        view.preferredSize = JBUI.size(width, height)
-        view.minimumSize = JBUI.size(0, height)
-        view.maximumSize = JBDimension(Int.MAX_VALUE, height)
+        view.preferredSize = Dimension(width, height)
+        view.minimumSize = Dimension(0, height)
+        view.maximumSize = Dimension(Int.MAX_VALUE, height)
         val inset = scroll.viewportBorder?.getBorderInsets(scroll) ?: JBUI.emptyInsets()
         val pane = height + scroll.insets.top + scroll.insets.bottom + inset.top + inset.bottom +
             scroll.horizontalScrollBar.preferredSize.height
-        scroll.preferredSize = JBUI.size(0, pane)
-        scroll.minimumSize = JBUI.size(0, pane)
-        scroll.maximumSize = JBDimension(Int.MAX_VALUE, pane)
+        scroll.preferredSize = Dimension(0, pane)
+        scroll.minimumSize = Dimension(0, pane)
+        scroll.maximumSize = Dimension(Int.MAX_VALUE, pane)
     }
 
     private fun width(view: JComponent): Int {
@@ -356,14 +359,14 @@ internal fun toolParts(
     }
     val slot = JPanel(CardLayout()).apply {
         isOpaque = false
-        minimumSize = JBUI.size(0, minimumSize.height)
+        minimumSize = Dimension(0, minimumSize.height)
         add(sub, SUB_CARD)
         add(link, LINK_CARD)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
-        minimumSize = JBUI.size(0, minimumSize.height)
+        minimumSize = Dimension(0, minimumSize.height)
     }
     val controls = Stack.horizontal()
     val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
@@ -393,7 +396,7 @@ internal fun searchParts(count: Int): ToolParts {
     val link = clip(JBLabel()).apply { isVisible = false }
     val slot = JPanel(CardLayout()).apply {
         isOpaque = false
-        minimumSize = JBUI.size(0, minimumSize.height)
+        minimumSize = Dimension(0, minimumSize.height)
         add(sub, SUB_CARD)
         add(link, LINK_CARD)
     }
@@ -402,7 +405,7 @@ internal fun searchParts(count: Int): ToolParts {
     val target = stack.align(HAlign.TRACK, VAlign.CENTER)
     val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
-        minimumSize = JBUI.size(0, minimumSize.height)
+        minimumSize = Dimension(0, minimumSize.height)
         add(title, BorderLayout.WEST)
         add(target, BorderLayout.CENTER)
     }
@@ -472,7 +475,7 @@ internal fun setLinkText(parts: ToolParts, text: String): Boolean {
 }
 
 private fun clip(label: JBLabel): JBLabel = label.apply {
-    minimumSize = JBUI.size(0, minimumSize.height)
+    minimumSize = Dimension(0, minimumSize.height)
 }
 
 private fun html(text: String): String {

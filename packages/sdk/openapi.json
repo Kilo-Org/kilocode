@@ -22448,6 +22448,14 @@
             "required": false,
             "style": "deepObject",
             "explode": true
+          },
+          {
+            "name": "path",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
           }
         ],
         "security": [],

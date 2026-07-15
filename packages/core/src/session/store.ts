@@ -9,6 +9,7 @@ import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
 import { SessionMessageTable, SessionTable } from "./sql"
 import { fromRow } from "./info"
+import { normalize } from "../kilocode/session-message" // kilocode_change
 
 export interface Interface {
   readonly get: (sessionID: SessionSchema.ID) => Effect.Effect<SessionSchema.Info | undefined>
@@ -51,7 +52,7 @@ export const layer = Layer.effect(
         return row
           ? {
               sessionID: SessionSchema.ID.make(row.session_id),
-              message: yield* decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(Effect.orDie),
+              message: yield* decodeMessage(normalize({ ...row.data, id: row.id, type: row.type })).pipe(Effect.orDie), // kilocode_change - normalize legacy tool content at the database boundary
             }
           : undefined
       }),

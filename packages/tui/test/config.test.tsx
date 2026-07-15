@@ -49,7 +49,7 @@ test("resolves host-neutral defaults", () => {
     notifications: true,
     sound: true,
     volume: 0.4,
-    sound_pack: "opencode.default",
+    sound_pack: "kilo.default", // kilocode_change
     sounds: {},
   })
   expect(config.leader_timeout).toBe(LeaderTimeoutDefault)

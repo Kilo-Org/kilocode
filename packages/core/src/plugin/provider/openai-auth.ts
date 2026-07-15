@@ -46,6 +46,12 @@ export const browser = {
           response.writeHead(404).end("Not found")
           return
         }
+        // kilocode_change start - unrelated localhost requests must not terminate the active OAuth attempt
+        if (url.searchParams.get("state") !== state) {
+          response.writeHead(400, { "Content-Type": "text/html" }).end(errorPage("Invalid OAuth state"))
+          return
+        }
+        // kilocode_change end
         const error = url.searchParams.get("error_description") ?? url.searchParams.get("error")
         const value = url.searchParams.get("code")
         if (error) {
@@ -53,8 +59,8 @@ export const browser = {
           response.writeHead(400, { "Content-Type": "text/html" }).end(errorPage(error))
           return
         }
-        if (!value || url.searchParams.get("state") !== state) {
-          const message = value ? "Invalid OAuth state" : "Missing authorization code"
+        if (!value) {
+          const message = "Missing authorization code"
           Effect.runFork(Deferred.fail(code, new Error(message)))
           response.writeHead(400, { "Content-Type": "text/html" }).end(errorPage(message))
           return

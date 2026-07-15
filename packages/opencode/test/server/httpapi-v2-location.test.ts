@@ -48,6 +48,18 @@ afterEach(async () => {
 })
 
 describe("v2 location HttpApi", () => {
+  // kilocode_change start - malformed Kilo location headers are client errors
+  test("rejects malformed encoded directory headers", async () => {
+    const response = await request("/api/location", "%E0%A4%A")
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      _tag: "InvalidRequestError",
+      field: "x-kilo-directory",
+    })
+  })
+  // kilocode_change end
+
   test("returns command and skill snapshots with resolved locations", async () => {
     await using tmp = await tmpdir({ git: true })
 

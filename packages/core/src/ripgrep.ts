@@ -5,6 +5,7 @@ import { ChildProcess } from "effect/unstable/process"
 import path from "path"
 import { Entry, Match } from "./filesystem/schema"
 import { FSUtil } from "./fs-util"
+import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
 import { AppProcess, collectStream, waitForAbort } from "./process"
 import { NonNegativeInt, PositiveInt, RelativePath } from "./schema"
 import { RipgrepBinary } from "./ripgrep/binary"
@@ -66,6 +67,7 @@ export interface GlobInput {
   readonly hidden?: boolean
   readonly follow?: boolean
   readonly signal?: AbortSignal
+  readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
 }
 
 export interface GrepInput {
@@ -75,6 +77,7 @@ export interface GrepInput {
   readonly include?: string
   readonly limit: number
   readonly signal?: AbortSignal
+  readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
 }
 
 export interface Interface {
@@ -104,12 +107,21 @@ export const layer = Layer.effect(
       readonly parse: (line: string) => Effect.Effect<A | undefined, Error>
       readonly pattern?: string
       readonly onItem?: (item: A) => Effect.Effect<void>
+      readonly validate?: Effect.Effect<void, unknown> // kilocode_change - spawn-bound target validation
     }) => {
       const program = Effect.scoped(
         Effect.gen(function* () {
+          const filepath = yield* binary.filepath
+          // kilocode_change start - validate approved targets after all spawn preparation
+          const command = ChildProcess.make(filepath, input.args, {
+            cwd: input.cwd,
+            extendEnv: true,
+            stdin: "ignore",
+          })
           const handle = yield* process.spawn(
-            ChildProcess.make(yield* binary.filepath, input.args, { cwd: input.cwd, extendEnv: true, stdin: "ignore" }),
+            input.validate ? SpawnValidation.attach(command, input.validate) : command,
           )
+          // kilocode_change end
           const stderrFiber = yield* collectStream(handle.stderr, ERROR_BYTES).pipe(
             Effect.map((output) => output.buffer.toString("utf8")),
             Effect.forkScoped,

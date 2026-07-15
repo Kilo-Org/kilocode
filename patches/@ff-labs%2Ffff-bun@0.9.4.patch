@@ -4,7 +4,7 @@ index 3454256..6dca25a 100644
 +++ b/src/download.ts
 @@ -7,7 +7,7 @@
   */
- 
+
 +declare const FFF_LIBC: "gnu" | "musl";
  import { existsSync } from "node:fs";
 -import { createRequire } from "node:module";
@@ -26,6 +26,6 @@ index 3454256..6dca25a 100644
 +    const binaryPath = require(
 +      `@ff-labs/fff-bin-${process.platform === "linux" ? `linux-${process.arch}-${typeof FFF_LIBC === "string" ? FFF_LIBC : getNpmPackageName().endsWith("musl") ? "musl" : "gnu"}` : `${process.platform}-${process.arch}`}/${process.platform === "win32" ? "fff_c.dll" : process.platform === "darwin" ? "libfff_c.dylib" : "libfff_c.so"}`,
 +    );
- 
+
      if (existsSync(binaryPath)) {
        return binaryPath;

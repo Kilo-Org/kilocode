@@ -5,6 +5,7 @@ import { MessageDecodeError } from "./error"
 import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
 import { SessionContextEpochTable, SessionMessageTable } from "./sql"
+import { normalize } from "../kilocode/session-message" // kilocode_change
 
 type DatabaseService = Database.Interface["db"]
 
@@ -61,8 +62,9 @@ const messageRows = Effect.fnUntraced(function* (
   return rows
 })
 
+// kilocode_change - normalize released storage shapes only at the assistant tool-state boundary
 const decodeMessageRow = (row: typeof SessionMessageTable.$inferSelect) =>
-  decode({ ...row.data, id: row.id, type: row.type }).pipe(
+  decode(normalize({ ...row.data, id: row.id, type: row.type })).pipe(
     Effect.mapError(
       () =>
         new MessageDecodeError({

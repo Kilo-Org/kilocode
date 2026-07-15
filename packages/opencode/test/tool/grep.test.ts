@@ -174,6 +174,27 @@ describe("tool.grep", () => {
     }),
   )
 
+  // kilocode_change start - exact-file searches must not widen to siblings
+  it.instance("returns no matches for a missing exact file", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      yield* Effect.promise(() => Bun.write(path.join(test.directory, "sibling.txt"), "needle"))
+      const info = yield* GrepTool
+      const grep = yield* info.init()
+      const result = yield* grep.execute(
+        {
+          pattern: "needle",
+          path: path.join(test.directory, "missing.txt"),
+        },
+        ctx,
+      )
+
+      expect(result.metadata.matches).toBe(0)
+      expect(result.output).toBe("No files found")
+    }),
+  )
+  // kilocode_change end
+
   it.instance("does not ask for external_directory when alias path is allowed", () =>
     Effect.gen(function* () {
       if (process.platform === "win32") return

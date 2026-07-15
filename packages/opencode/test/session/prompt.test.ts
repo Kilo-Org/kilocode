@@ -1146,6 +1146,7 @@ it.instance(
           if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
         }),
         "timed out waiting for running task metadata",
+        "10 seconds", // kilocode_change - allow loaded Darwin runners to persist the tool transition
       )
 
       if (tool.state.status !== "running") return
@@ -1156,7 +1157,7 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  10_000,
+  20_000, // kilocode_change
 )
 
 // kilocode_change start - child task failures stay tool errors so the parent can recover
@@ -2443,6 +2444,7 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+// kilocode_change start - expand configured Kilo references once per prompt
 noLLMServer.instance(
   "resolves configured reference mentions to one root directory attachment",
   () =>
@@ -2476,12 +2478,59 @@ noLLMServer.instance(
   {
     config: {
       ...cfg,
-      reference: {
+      references: {
         docs: "./external-docs",
       },
     },
   },
 )
+// kilocode_change end
+
+// kilocode_change start - deduplicate configured Kilo references by source identity
+noLLMServer.instance(
+  "does not let an unrelated directory attachment shadow a configured reference",
+  () =>
+    Effect.gen(function* () {
+      const { directory: dir } = yield* TestInstance
+      const docs = path.join(dir, "external-docs")
+      const unrelated = path.join(dir, "unrelated")
+      yield* ensureDir(docs)
+      yield* ensureDir(unrelated)
+
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({})
+      const message = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [
+          { type: "text", text: "Use @docs for context" },
+          {
+            type: "file",
+            mime: "application/x-directory",
+            filename: "docs",
+            url: pathToFileURL(unrelated).href,
+          },
+        ],
+      })
+      const text = message.parts
+        .flatMap((part) => (part.type === "text" && part.synthetic ? [part.text] : []))
+        .join("\n")
+
+      expect(text).toContain(docs)
+      expect(text).toContain(unrelated)
+      yield* sessions.remove(session.id)
+    }),
+  {
+    config: {
+      ...cfg,
+      references: {
+        docs: "./external-docs",
+      },
+    },
+  },
+)
+// kilocode_change end
 
 noLLMServer.instance(
   "stores raw reference mentions alongside directory attachments",

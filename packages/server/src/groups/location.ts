@@ -6,6 +6,7 @@ import { WorkspaceV2 } from "@opencode-ai/core/workspace"
 import { Effect, Layer, Schema } from "effect"
 import { HttpServerRequest } from "effect/unstable/http"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiMiddleware, OpenApi } from "effect/unstable/httpapi"
+import { InvalidRequestError } from "../errors" // kilocode_change
 
 export const LocationQuery = Schema.Struct({
   location: Schema.optional(
@@ -52,7 +53,7 @@ export class LocationMiddleware extends HttpApiMiddleware.Service<
   {
     provides: LocationServices
   }
->()("@opencode/HttpApiLocation") {}
+>()("@opencode/HttpApiLocation", { error: InvalidRequestError }) {} // kilocode_change - surface malformed headers as 400s
 
 export const LocationGroup = HttpApiGroup.make("server.location")
   .add(
@@ -71,15 +72,23 @@ export const LocationGroup = HttpApiGroup.make("server.location")
   )
   .middleware(LocationMiddleware)
 
-function ref(request: HttpServerRequest.HttpServerRequest): Location.Ref {
+function ref(request: HttpServerRequest.HttpServerRequest) {
   const query = new URL(request.url, "http://localhost").searchParams
   const workspaceID = query.get("location[workspace]") || request.headers["x-kilo-workspace"]
-  return Location.Ref.make({
-    directory: AbsolutePath.make(
-      query.get("location[directory]") || request.headers["x-kilo-directory"] || process.cwd(),
+  const header = request.headers["x-kilo-directory"]
+  // kilocode_change start - decode the SDK header without turning malformed client input into a defect
+  return Effect.try({
+    try: () => query.get("location[directory]") || (header ? decodeURIComponent(header) : process.cwd()),
+    catch: () => new InvalidRequestError({ message: "Invalid encoded directory header", field: "x-kilo-directory" }),
+  }).pipe(
+    Effect.map((directory) =>
+      Location.Ref.make({
+        directory: AbsolutePath.make(directory), // kilocode_change
+        workspaceID: workspaceID ? WorkspaceV2.ID.make(workspaceID) : undefined,
+      }),
     ),
-    workspaceID: workspaceID ? WorkspaceV2.ID.make(workspaceID) : undefined,
-  })
+  )
+  // kilocode_change end
 }
 
 export const layer = Layer.effect(
@@ -89,7 +98,8 @@ export const layer = Layer.effect(
     return LocationMiddleware.of((effect) =>
       Effect.gen(function* () {
         const request = yield* HttpServerRequest.HttpServerRequest
-        return yield* effect.pipe(Effect.provide(locations.get(ref(request))))
+        const location = yield* ref(request) // kilocode_change - reject malformed encoded directory headers as 400s
+        return yield* effect.pipe(Effect.provide(locations.get(location)))
       }),
     )
   }),

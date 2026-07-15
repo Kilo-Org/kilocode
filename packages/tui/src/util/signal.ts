@@ -1,6 +1,5 @@
 import { createEffect, createSignal, on, onCleanup, type Accessor } from "solid-js"
 
-// kilocode_change start - port anomalyco/opencode#31748 for Node build conditions
 export function createDebouncedSignal<T>(value: T, ms: number): [Accessor<T>, (value: T) => void] {
   const [get, set] = createSignal(value)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -16,7 +15,6 @@ export function createDebouncedSignal<T>(value: T, ms: number): [Accessor<T>, (v
   })
   return [get, debounced]
 }
-// kilocode_change end
 
 export function createFadeIn(show: Accessor<boolean>, enabled: Accessor<boolean>) {
   const [alpha, setAlpha] = createSignal(show() ? 1 : 0)
