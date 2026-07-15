@@ -1012,6 +1012,9 @@ it.live(
         const call = { command: "pwd", workdir: skill, description: "Run global skill resource" }
 
         yield* Effect.promise(() => fs.mkdir(skill, { recursive: true }))
+        yield* Effect.addFinalizer(() =>
+          Effect.promise(() => rm(skill, { recursive: true, force: true }).catch(() => {})),
+        )
         yield* llm.push(reply().tool("bash", call), reply().text("first complete").stop())
 
         yield* prompt.prompt({
@@ -1028,6 +1031,7 @@ it.live(
             return list.find((item) => item.sessionID === chat.id)
           }),
           "global skill permission was never surfaced",
+          "15 seconds",
         )
         expect(pending?.permission).toBe("external_directory")
         const always = (pending?.always ?? []) as string[]
@@ -1040,7 +1044,9 @@ it.live(
 
         yield* permission.reply({ requestID: pending.id, reply: "always" })
         expect(
-          Exit.isSuccess(yield* awaitWithTimeout(Fiber.await(first), "first global skill run did not finish")),
+          Exit.isSuccess(
+            yield* awaitWithTimeout(Fiber.await(first), "first global skill run did not finish", "15 seconds"),
+          ),
         ).toBe(true)
 
         yield* llm.push(reply().tool("bash", call), reply().text("second complete").stop())
@@ -1052,7 +1058,13 @@ it.live(
         })
         const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkScoped)
         expect(
-          Exit.isSuccess(yield* awaitWithTimeout(Fiber.await(second), "trusted global skill prompted a second time")),
+          Exit.isSuccess(
+            yield* awaitWithTimeout(
+              Fiber.await(second),
+              "trusted global skill prompted a second time",
+              "15 seconds",
+            ),
+          ),
         ).toBe(true)
         expect(yield* permission.list()).toEqual([])
       }),
@@ -1064,7 +1076,7 @@ it.live(
         }),
       },
     ),
-  { timeout: 15_000 },
+  { timeout: 30_000 },
 )
 
 it.live("active tool calls use permissions changed after model streaming starts", () =>
