@@ -15,10 +15,40 @@ export namespace RemoteProtocol {
 
   // --- CLI → DO (Outbound) ---
 
+  // Local runtime presence. Defined here so the CLI and the relay share one
+  // shape. `runtimeId` is a per-process UUID; `connectionId` is opaque relay
+  // routing metadata. The relay rejects heartbeats whose `connectionId` does
+  // not match the authenticated socket.
+  export const RuntimeCapability = z.enum(["catalog.v1", "create-and-run.v1"])
+  export type RuntimeCapability = z.infer<typeof RuntimeCapability>
+
+  export const RuntimePresence = z
+    .object({
+      runtimeId: z.string().uuid(),
+      connectionId: z.string().min(1).max(128),
+      protocolVersion: z.literal(1),
+      cliVersion: z.string().min(1).max(32),
+      displayName: z.string().min(1).max(80),
+      projectName: z.string().min(1).max(80),
+      capabilities: z
+        .array(RuntimeCapability)
+        .max(2)
+        .refine(values => new Set(values).size === values.length, {
+          message: "runtime capabilities must be unique",
+        }),
+    })
+    .strict()
+  export type RuntimePresence = z.infer<typeof RuntimePresence>
+
   export const Heartbeat = z.object({
     type: z.literal("heartbeat"),
     sessions: z.array(SessionInfo),
     protocolVersion: z.string().optional(), // lets relay detect CLI capabilities without probing commands
+    // Optional sequence number used for acknowledged heartbeats. Legacy CLIs
+    // omit it; the relay treats an unsequenced heartbeat as fire-and-forget.
+    sequence: z.number().int().nonnegative().optional(),
+    // Optional runtime presence. Legacy CLIs omit it and remain compatible.
+    runtime: RuntimePresence.optional(),
   })
   export type Heartbeat = z.infer<typeof Heartbeat>
 
@@ -74,6 +104,10 @@ export namespace RemoteProtocol {
 
   export const HeartbeatAck = z.object({
     type: z.literal("heartbeat_ack"),
+    // Optional echo of the heartbeat's `sequence`. Present only on
+    // acknowledged heartbeats; a missing sequence here means the legacy
+    // fire-and-forget path resolved the sender.
+    sequence: z.number().int().nonnegative().optional(),
   })
   export type HeartbeatAck = z.infer<typeof HeartbeatAck>
 

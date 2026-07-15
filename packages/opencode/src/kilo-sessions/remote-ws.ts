@@ -29,11 +29,23 @@ export namespace RemoteWS {
     readonly connectionId: string
     send(msg: RemoteProtocol.Outbound): void
     heartbeat(): Promise<void>
+    /**
+     * Send a heartbeat with a sequence number and resolve only after the relay
+     * echoes a matching `heartbeat_ack`. Rejects on disconnect, replacement,
+     * or timeout. Use this for create-session announcement and any state the
+     * caller needs to know was durably observed by the relay; use the
+     * fire-and-forget `heartbeat()` for liveness.
+     */
+    heartbeatAcknowledged(): Promise<void>
     close(): void
     readonly connected: boolean
   }
 
   type Timer = ReturnType<typeof setTimeout>
+
+  // Shorter than the relay's stale-heartbeat threshold (30s) so a hung
+  // acknowledged heartbeat rejects before the relay evicts the connection.
+  const ACK_TIMEOUT_MS = 10_000
 
   export function connect(options: Options): Connection {
     const interval = options.heartbeat ?? 10_000
@@ -47,6 +59,15 @@ export namespace RemoteWS {
     const buffer: string[] = []
     let beating: Promise<void> | undefined
     let queued = false
+    // Per-process monotonic sequence for acknowledged heartbeats. Starts at 0
+    // and only increments on acknowledged sends, so the first call uses 1.
+    let sequence = 0
+    // Outstanding acknowledged heartbeats waiting for a matching ack from the
+    // relay. Keyed by sequence. Rejected on disconnect, replacement, or timeout.
+    const pendingAcks = new Map<
+      number,
+      { resolve: () => void; reject: (err: Error) => void; timer: Timer }
+    >()
 
     function heartbeat(): Promise<void> {
       queued = true
@@ -157,6 +178,17 @@ export namespace RemoteWS {
           options.log.warn("remote-ws message parse failed", { error: parsed.error })
           return
         }
+        // Resolve any pending acknowledged heartbeat whose sequence matches
+        // the relay's echo. An unsequenced ack (legacy fire-and-forget) does
+        // not satisfy an outstanding acknowledged send.
+        if (parsed.data.type === "heartbeat_ack" && typeof parsed.data.sequence === "number") {
+          const pending = pendingAcks.get(parsed.data.sequence)
+          if (pending) {
+            clearTimeout(pending.timer)
+            pendingAcks.delete(parsed.data.sequence)
+            pending.resolve()
+          }
+        }
         options.onMessage?.(parsed.data)
       }
 
@@ -166,6 +198,9 @@ export namespace RemoteWS {
         ws = undefined
         stopHeartbeat()
         stopWatchdog()
+        // Any outstanding acknowledged heartbeat is stranded — the relay
+        // will not echo an ack on a different socket instance.
+        rejectAllPendingAcks(new Error("remote connection closed before ack"))
         if (closed) return
         if (event.code === 4401 || event.code === 4403 || event.code === 4409) {
           options.log.warn("remote-ws closed permanently", {
@@ -207,7 +242,56 @@ export namespace RemoteWS {
       stopHeartbeat()
       stopWatchdog()
       if (timer) clearTimeout(timer)
+      rejectAllPendingAcks(new Error("remote connection closed"))
       if (ws) ws.close()
+    }
+
+    function rejectAllPendingAcks(err: Error): void {
+      for (const [seq, pending] of pendingAcks) {
+        clearTimeout(pending.timer)
+        pendingAcks.delete(seq)
+        pending.reject(err)
+      }
+    }
+
+    function heartbeatAcknowledged(): Promise<void> {
+      const seq = ++sequence
+      return new Promise((resolve, reject) => {
+        if (closed) {
+          reject(new Error("remote connection closed"))
+          return
+        }
+        const timer = setTimeout(() => {
+          pendingAcks.delete(seq)
+          reject(new Error(`heartbeat ack timeout (sequence=${seq})`))
+        }, ACK_TIMEOUT_MS)
+        pendingAcks.set(seq, { resolve, reject, timer })
+        // Snapshot the current sessions and send a sequenced heartbeat.
+        // The relay echoes the sequence on its ack; the onmessage handler
+        // resolves this promise when the match arrives.
+        void withContext(async () => {
+          try {
+            const sessions = await options.getSessions()
+            if (closed) {
+              const pending = pendingAcks.get(seq)
+              if (pending) {
+                clearTimeout(pending.timer)
+                pendingAcks.delete(seq)
+                pending.reject(new Error("remote connection closed"))
+              }
+              return
+            }
+            send({ type: "heartbeat", protocolVersion: InstallationVersion, sequence: seq, ...sessions })
+          } catch (err) {
+            const pending = pendingAcks.get(seq)
+            if (pending) {
+              clearTimeout(pending.timer)
+              pendingAcks.delete(seq)
+              pending.reject(err instanceof Error ? err : new Error(String(err)))
+            }
+          }
+        })
+      })
     }
 
     void open()
@@ -218,6 +302,7 @@ export namespace RemoteWS {
       },
       send,
       heartbeat,
+      heartbeatAcknowledged,
       close,
       get connected() {
         return ws?.readyState === WebSocket.OPEN

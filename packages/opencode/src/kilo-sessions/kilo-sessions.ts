@@ -1,6 +1,7 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global" // kilocode_change - unified channel for legacy Bus + EventV2Bridge emissions
+import os from "node:os"
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { KiloSession } from "@/kilocode/session"
@@ -24,10 +25,12 @@ import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
+import { RemoteRuntime } from "@/kilo-sessions/remote-runtime"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Question } from "@/question"
 import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
@@ -425,8 +428,24 @@ export namespace KiloSessions {
         .replace(/^http:\/\//, "ws://")
 
       // Capture directory so the heartbeat timer can re-enter the Instance context
-      // (setInterval runs outside AsyncLocalStorage scope)
+      // (setInterval runs outside AsyncLocalStorage scope). The directory is
+      // fixed for the lifetime of this `kilo remote` process — it is captured
+      // once here and never re-read, even if the OS process later changes cwd.
       const directory = Instance.directory
+      // kilocode_change - compose a first-class local runtime for mobile. The
+      // runtimeId is generated once per `kilo remote` process and survives
+      // WebSocket reconnects within that process. A process restart creates
+      // a new runtimeId. The displayName is derived from the OS hostname;
+      // a future `kilo remote --name` flag will override it. The projectName
+      // is the basename of the launch directory — the absolute path never
+      // crosses the cloud seam.
+      const runtime = RemoteRuntime.create({
+        runtimeId: crypto.randomUUID(),
+        connectionId: "pending",
+        cliVersion: InstallationVersion,
+        directory,
+        displayName: deriveRuntimeDisplayName(),
+      })
       const getSessions = async () => {
         const [gitUrl, gitBranch] = await Promise.all([
           getGitUrl().catch(() => undefined),
@@ -460,7 +479,7 @@ export namespace KiloSessions {
           ),
         )
         const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
-        return { sessions }
+        return { sessions, runtime: runtime.presence() }
       }
 
       const conn = RemoteWS.connect({
@@ -470,6 +489,11 @@ export namespace KiloSessions {
         getSessions,
         log,
         onOpen: () => {
+          // kilocode_change - bind the transport's stable connectionId to the
+          // runtime. RemoteWS.connectionId is set once when connect() is called
+          // and remains stable for the lifetime of the Connection object,
+          // including across internal WebSocket reconnects.
+          runtime.setConnectionId(conn.connectionId)
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: true })
         },
         onDisconnect: () => {
@@ -849,5 +873,16 @@ export namespace KiloSessions {
   function isUuid(value: string | undefined): value is Uuid {
     if (!value) return false
     return Uuid.safeParse(value).success
+  }
+
+  /**
+   * Derive a safe runtime display label from the OS hostname. Falls back to
+   * "Kilo runtime" when the hostname is empty. The label is sanitized by
+   * `RemoteRuntime` (control chars stripped, whitespace collapsed, 80-char cap).
+   * A future `kilo remote --name` flag will override this default.
+   */
+  function deriveRuntimeDisplayName(): string {
+    const hostname = os.hostname().trim()
+    return hostname.length > 0 ? hostname : "Kilo runtime"
   }
 }
