@@ -409,6 +409,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.cycleAgentMode",
         "title": "Cycle Agent Mode",
         "category": "Kilo Code"
