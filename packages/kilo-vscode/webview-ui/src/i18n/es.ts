@@ -1279,6 +1279,9 @@ export const dict = {
   "settings.autocomplete.model.title": "Modelo de autocompletado",
   "settings.autocomplete.model.description":
     "Selecciona un modelo de relleno intermedio (FIM). Los modelos solo de chat no son compatibles.",
+  "settings.autocomplete.model.customWarning.title": "Modelo de autocompletado no verificado",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code no ha probado este modelo para autocompletado. Debe admitir relleno intermedio (FIM) a través del endpoint de completions del proveedor. Si las sugerencias aparecen como prosa o Markdown con vallas de código, el modelo está respondiendo como chat. Cambia a un modelo compatible con FIM.",
   "settings.notifications.title": "Notificaciones",
   "settings.context.title": "Contexto",
 

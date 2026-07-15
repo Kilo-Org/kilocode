@@ -1252,6 +1252,9 @@ export const dict = {
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
   "settings.autocomplete.model.title": "โมเดล Autocomplete",
   "settings.autocomplete.model.description": "เลือกโมเดลแบบเติมส่วนกลาง (FIM) ไม่รองรับโมเดลที่ใช้สำหรับแชทเท่านั้น",
+  "settings.autocomplete.model.customWarning.title": "โมเดล Autocomplete ที่ยังไม่ได้ตรวจสอบ",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code ยังไม่ได้ทดสอบโมเดลนี้สำหรับการเติมข้อความอัตโนมัติ โมเดลต้องรองรับการเติมส่วนกลาง (FIM) ผ่าน completions endpoint ของผู้ให้บริการ หากคำแนะนำแสดงเป็นข้อความร้อยแก้วหรือ Markdown ที่มีรั้วโค้ด แสดงว่าโมเดลตอบแบบแชท ให้เปลี่ยนไปใช้โมเดลที่รองรับ FIM",
   "settings.notifications.title": "การแจ้งเตือน",
   "settings.context.title": "บริบท",
 

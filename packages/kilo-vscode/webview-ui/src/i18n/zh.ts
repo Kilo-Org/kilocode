@@ -1232,6 +1232,9 @@ export const dict = {
   "settings.autocomplete.title": "自动补全",
   "settings.autocomplete.model.title": "自动补全模型",
   "settings.autocomplete.model.description": "选择支持中间填充（FIM）的模型。不支持仅限聊天的模型。",
+  "settings.autocomplete.model.customWarning.title": "未验证的自动补全模型",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code 尚未针对自动补全测试此模型。该模型必须通过提供商的 completions 端点支持中间填充（FIM）。如果建议显示为散文或带代码围栏的 Markdown，说明模型正在以聊天方式回复。请切换到支持 FIM 的模型。",
   "settings.notifications.title": "通知",
   "settings.context.title": "上下文",
 

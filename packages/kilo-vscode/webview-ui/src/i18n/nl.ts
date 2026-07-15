@@ -1225,6 +1225,9 @@ export const dict = {
   "settings.autocomplete.model.title": "Autocomplete-model",
   "settings.autocomplete.model.description":
     "Selecteer een fill-in-the-middle (FIM)-model. Modellen die alleen chat ondersteunen, worden niet ondersteund.",
+  "settings.autocomplete.model.customWarning.title": "Niet-geverifieerd autocomplete-model",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code heeft dit model niet getest voor automatisch aanvullen. Het moet fill-in-the-middle (FIM) ondersteunen via het completions-endpoint van de provider. Als suggesties verschijnen als proza of omheinde Markdown, antwoordt het model als chat. Schakel over naar een model met FIM-ondersteuning.",
   "settings.notifications.title": "Meldingen",
   "settings.context.title": "Context",
   "settings.indexing.title": "Indexering",

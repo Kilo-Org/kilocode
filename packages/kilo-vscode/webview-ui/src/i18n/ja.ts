@@ -1260,6 +1260,9 @@ export const dict = {
   "settings.autocomplete.model.title": "オートコンプリートモデル",
   "settings.autocomplete.model.description":
     "フィルインザミドル（FIM）対応モデルを選択します。チャット専用モデルはサポートされていません。",
+  "settings.autocomplete.model.customWarning.title": "未検証のオートコンプリートモデル",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code はこのモデルをオートコンプリート用に検証していません。プロバイダーの completions エンドポイント経由でフィルインザミドル（FIM）に対応している必要があります。候補が散文やコードフェンス付き Markdown として表示される場合、モデルはチャットとして応答しています。FIM 対応モデルに切り替えてください。",
   "settings.notifications.title": "通知",
   "settings.context.title": "コンテキスト",
 

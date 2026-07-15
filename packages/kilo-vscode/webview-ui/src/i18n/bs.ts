@@ -1272,6 +1272,9 @@ export const dict = {
   "settings.autocomplete.model.title": "Model za automatsko dovršavanje",
   "settings.autocomplete.model.description":
     "Odaberite model za popunjavanje u sredini (FIM). Modeli samo za chat nisu podržani.",
+  "settings.autocomplete.model.customWarning.title": "Neprovjereni model za automatsko dovršavanje",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code nije testirao ovaj model za automatsko dovršavanje. Model mora podržavati popunjavanje u sredini (FIM) putem completions endpointa providera. Ako se prijedlozi prikazuju kao proza ili Markdown u ogradama koda, model odgovara kao chat. Prebacite se na model koji podržava FIM.",
   "settings.notifications.title": "Obavještenja",
   "settings.context.title": "Kontekst",
 
