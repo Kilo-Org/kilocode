@@ -33,6 +33,7 @@ import type { WorkspaceAdapter } from "@/control-plane/types"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstallationChannel } from "@opencode-ai/core/installation/version"
+import { KilocodePluginConfig } from "@/kilocode/plugin/config" // kilocode_change
 
 type State = {
   hooks: Hooks[]
@@ -247,7 +248,7 @@ export const layer = Layer.effect(
         // Notify plugins of current config
         for (const hook of hooks) {
           yield* Effect.tryPromise({
-            try: () => Promise.resolve((hook as any).config?.(cfg)),
+            try: () => KilocodePluginConfig.apply(cfg, () => Promise.resolve((hook as any).config?.(cfg))), // kilocode_change
             catch: errorMessage,
           }).pipe(
             Effect.tapError((error) => Effect.logError("plugin config hook failed", { error })),
