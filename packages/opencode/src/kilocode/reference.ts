@@ -4,6 +4,8 @@ import { Global } from "@opencode-ai/core/global"
 import { parseRepositoryReference, repositoryCachePath, type RemoteReference } from "@/util/repository"
 import { Effect } from "effect"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache"
+import { Reference } from "@opencode-ai/core/reference"
+import { AbsolutePath } from "@opencode-ai/core/schema"
 import { isInterrupted } from "@/kilocode/effect/cause"
 
 export type Resolved =
@@ -108,3 +110,41 @@ export function ensure(cache: RepositoryCache.Interface, item: Extract<Resolved,
     }),
   )
 }
+
+// Keep Core V2 tools on the same effective Kilo config used by stable tools. Core's standalone
+// scanner cannot see account/managed config or KILO_CONFIG_CONTENT, so replace its provisional
+// references after both config systems finish booting.
+export const sync = Effect.fn("KiloReference.sync")(function* (input: {
+  references: ConfigReference.Info
+  directory: string
+  worktree: string
+}) {
+  const service = yield* Reference.Service
+  const entries = resolveAll(input)
+  if (entries.length === 0 && (yield* service.list()).length === 0) return
+  const sources = entries.flatMap<readonly [string, Reference.Source]>((item) => {
+    if (item.kind === "invalid") return []
+    if (item.kind === "local") {
+      return [
+        [
+          item.name,
+          new Reference.LocalSource({
+            type: "local",
+            path: AbsolutePath.make(item.path),
+          }),
+        ] as const,
+      ]
+    }
+    return [
+      [
+        item.name,
+        new Reference.GitSource({
+          type: "git",
+          repository: item.repository,
+          branch: item.branch,
+        }),
+      ] as const,
+    ]
+  })
+  yield* service.replace(sources)
+})

@@ -4,16 +4,9 @@ Record real Effect HTTP and WebSocket traffic once, then replay it from determin
 
 Use it for provider integrations, retries, polling, multi-step flows, and any test where hand-written HTTP mocks hide too much of the real request shape.
 
-> Public beta. The API depends on Effect 4 beta and may change with Effect's unstable transport modules.
+> Private workspace package. Its API depends on Effect 4 beta and may change with Effect's unstable transport modules.
 
-## Install
-
-```sh
-bun add effect@4.0.0-beta.74
-bun add -d @opencode-ai/http-recorder@beta @effect/vitest vitest
-```
-
-The package supports Node.js 22+ and Bun. It is not intended for browsers, workers, or Deno.
+The package is available only inside this monorepo. It supports Node.js 22+ and Bun and is not intended for browsers, workers, or Deno.
 
 Effect `4.0.0-beta.74` has a known declaration error (`SchemaErrorTypeId` is missing). Until that upstream declaration is fixed, TypeScript consumers need:
 

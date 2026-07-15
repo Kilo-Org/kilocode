@@ -1,5 +1,6 @@
 export * as FileSystemSearch from "./search"
 
+import os from "os" // kilocode_change
 import path from "path"
 import { Context, Effect, Layer, Scope } from "effect"
 import { Fff } from "#fff"
@@ -10,6 +11,7 @@ import { Location } from "../location"
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
 import { Flag } from "../flag/flag"
+import * as SearchTarget from "../kilocode/search-target" // kilocode_change
 
 export interface Interface {
   readonly find: (input: FileSystem.FindInput) => Effect.Effect<FileSystem.Entry[]>
@@ -26,6 +28,18 @@ export const ripgrepLayer = Layer.effect(
     const location = yield* Location.Service
     const ripgrep = yield* Ripgrep.Service
     const scope = yield* Scope.Scope
+    // kilocode_change start - confine every search to the canonical active Location.
+    const inspect = Effect.fnUntraced(function* (input?: string) {
+      const root = yield* SearchTarget.inspect(fs, location.directory).pipe(Effect.orDie)
+      const requested = path.resolve(location.directory, input ?? ".")
+      if (!FSUtil.contains(location.directory, requested))
+        return yield* Effect.die(new Error("Path escapes the location"))
+      const target = yield* SearchTarget.inspect(fs, requested).pipe(Effect.orDie)
+      if (root.type !== "directory" || !FSUtil.contains(root.path, target.path))
+        return yield* Effect.die(new Error("Path escapes the location"))
+      return target
+    })
+    // kilocode_change end
     const state = {
       files: [] as string[],
       directories: [] as string[],
@@ -48,18 +62,19 @@ export const ripgrepLayer = Layer.effect(
     return Service.of({
       glob: (input) =>
         Effect.gen(function* () {
-          const target = path.resolve(location.directory, input.path ?? ".")
-          const info = yield* fs.stat(target).pipe(Effect.orDie)
-          const cwd = info.type === "File" ? path.dirname(target) : target
+          const target = yield* inspect(input.path) // kilocode_change
+          const cwd = target.type === "file" ? path.dirname(target.path) : target.path // kilocode_change
           return yield* ripgrep
             .glob({
               cwd,
               pattern: input.pattern,
               limit: input.limit ?? Number.MAX_SAFE_INTEGER,
+              validate: SearchTarget.validate(fs, target), // kilocode_change
             })
             .pipe(
               Effect.map((result) =>
-                result.map(
+                result.items.map(
+                  // kilocode_change
                   (entry) =>
                     new FileSystem.Entry({
                       ...entry,
@@ -72,20 +87,21 @@ export const ripgrepLayer = Layer.effect(
         }),
       grep: (input) =>
         Effect.gen(function* () {
-          const target = path.resolve(location.directory, input.path ?? ".")
-          const info = yield* fs.stat(target).pipe(Effect.orDie)
-          const cwd = info.type === "File" ? path.dirname(target) : target
+          const target = yield* inspect(input.path) // kilocode_change
+          const cwd = target.type === "file" ? path.dirname(target.path) : target.path // kilocode_change
           return yield* ripgrep
             .grep({
               cwd,
               pattern: input.pattern,
-              file: info.type === "File" ? path.basename(target) : undefined,
+              file: target.type === "file" ? path.basename(target.path) : undefined, // kilocode_change
               include: input.include,
               limit: input.limit ?? Number.MAX_SAFE_INTEGER,
+              validate: SearchTarget.validate(fs, target), // kilocode_change
             })
             .pipe(
               Effect.map((result) =>
-                result.map(
+                result.items.map(
+                  // kilocode_change
                   (match) =>
                     new FileSystem.Match({
                       ...match,
@@ -101,6 +117,7 @@ export const ripgrepLayer = Layer.effect(
         }),
       find: (input) =>
         Effect.gen(function* () {
+          // kilocode_change
           const items =
             input.type === "file"
               ? state.files
@@ -127,13 +144,34 @@ export const fffLayer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const location = yield* Location.Service
+    const fs = yield* FSUtil.Service // kilocode_change
+    // kilocode_change start - FFF is an index, not a security boundary; constrain its scan and filter canonical results.
+    const inspect = Effect.fnUntraced(function* (input?: string) {
+      const root = yield* SearchTarget.inspect(fs, location.directory).pipe(Effect.orDie)
+      const requested = path.resolve(location.directory, input ?? ".")
+      if (!FSUtil.contains(location.directory, requested))
+        return yield* Effect.die(new Error("Path escapes the location"))
+      const target = yield* SearchTarget.inspect(fs, requested).pipe(Effect.orDie)
+      if (root.type !== "directory" || !FSUtil.contains(root.path, target.path))
+        return yield* Effect.die(new Error("Path escapes the location"))
+      return { root, target }
+    })
+    const safe = Effect.fnUntraced(function* (root: SearchTarget.Target, relative: string) {
+      const absolute = path.resolve(location.directory, relative)
+      if (!FSUtil.contains(location.directory, absolute)) return false
+      const real = yield* fs.realPath(absolute).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      return real !== undefined && FSUtil.contains(root.path, real)
+    })
+    // kilocode_change end
     const result = yield* Effect.try({
       try: () =>
         Fff.create({
           basePath: location.directory,
           aiMode: true,
-          enableFsRootScanning: true,
-          enableHomeDirScanning: true,
+          // kilocode_change start - permit broad scanning only when the Location is that exact boundary.
+          enableFsRootScanning: location.directory === path.parse(location.directory).root,
+          enableHomeDirScanning: location.directory === os.homedir(),
+          // kilocode_change end
         }),
       catch: (cause) => cause,
     }).pipe(Effect.orDie)
@@ -141,14 +179,21 @@ export const fffLayer = Layer.effect(
     yield* Effect.addFinalizer(() => Effect.sync(() => result.value.destroy()).pipe(Effect.ignore))
     return Service.of({
       glob: (input) =>
-        Effect.sync(() => {
+        Effect.gen(function* () {
+          const { root, target } = yield* inspect(input.path) // kilocode_change
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
-          const found = result.value.glob(prefix ? `${prefix}/${input.pattern}` : input.pattern, {
-            pageIndex: 0,
-            pageSize: input.limit,
-          })
+          const found = yield* Effect.sync(() =>
+            // kilocode_change
+            result.value.glob(prefix ? `${prefix}/${input.pattern}` : input.pattern, {
+              pageIndex: 0,
+              pageSize: input.limit,
+            }),
+          )
           if (!found.ok) throw found.error
-          return found.value.items.map((item) => {
+          yield* SearchTarget.validate(fs, target).pipe(Effect.orDie) // kilocode_change
+          const items = yield* Effect.filter(found.value.items, (item) => safe(root, item.relativePath)) // kilocode_change
+          return items.map((item) => {
+            // kilocode_change
             const absolute = path.resolve(location.directory, item.relativePath)
             return new FileSystem.Entry({
               path: RelativePath.make(item.relativePath.replaceAll("\\", "/")),
@@ -158,16 +203,24 @@ export const fffLayer = Layer.effect(
           })
         }),
       grep: (input) =>
-        Effect.sync(() => {
+        Effect.gen(function* () {
+          // kilocode_change
+          const { root, target } = yield* inspect(input.path) // kilocode_change
           const prefix = input.path?.replaceAll("\\", "/").replace(/\/$/, "")
-          const found = result.value.grep(
-            [prefix ? `${prefix}/**` : undefined, input.include, input.pattern]
-              .filter((value) => value !== undefined)
-              .join(" "),
-            { mode: "regex", pageSize: input.limit, timeBudgetMs: 1_500 },
+          const found = yield* Effect.sync(() =>
+            // kilocode_change
+            result.value.grep(
+              [prefix ? `${prefix}/**` : undefined, input.include, input.pattern]
+                .filter((value) => value !== undefined)
+                .join(" "),
+              { mode: "regex", pageSize: input.limit, timeBudgetMs: 1_500 },
+            ),
           )
           if (!found.ok) throw found.error
-          return found.value.items.map((match) => {
+          yield* SearchTarget.validate(fs, target).pipe(Effect.orDie) // kilocode_change
+          const items = yield* Effect.filter(found.value.items, (item) => safe(root, item.relativePath)) // kilocode_change
+          return items.map((match) => {
+            // kilocode_change
             const bytes = Buffer.from(match.lineContent)
             return new FileSystem.Match({
               entry: new FileSystem.Entry({

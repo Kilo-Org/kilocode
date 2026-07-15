@@ -97,7 +97,8 @@ describe("Credential", () => {
   )
 
   // kilocode_change end
-  it.live("imports supported legacy auth.json credentials once", () =>
+  // kilocode_change - released auth.json remains authoritative when reconciling on startup
+  it.live("reconciles supported legacy auth.json credentials on startup", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -160,15 +161,110 @@ describe("Credential", () => {
             }),
           )
 
+          // kilocode_change start - update the selected row when a released client changes auth.json.
+          const selected = yield* Effect.gen(function* () {
+            return yield* (yield* Credential.Service).create({
+              connectorID: Connector.ID.make("azure"),
+              methodID: Connector.MethodID.make("api-key"),
+              label: "Selected",
+              value: new Credential.Key({ type: "key", key: "selected" }),
+            })
+          }).pipe(Effect.provide(credentials), Effect.scoped)
+
+          yield* Effect.promise(() =>
+            Bun.write(
+              path.join(tmp.path, "auth.json"),
+              JSON.stringify({ azure: { type: "api", key: "updated", metadata: { resourceName: "resource" } } }),
+            ),
+          )
           yield* importer.pipe(Layer.build, Effect.scoped)
           const after = yield* Effect.gen(function* () {
-            return yield* (yield* Credential.Service).all()
+            const service = yield* Credential.Service
+            return {
+              all: yield* service.all(),
+              active: yield* service.active(Connector.ID.make("azure")),
+            }
           }).pipe(Effect.provide(credentials), Effect.scoped)
-          expect(after).toHaveLength(2)
+          expect(after.all).toHaveLength(3)
+          expect(after.active).toMatchObject({
+            id: selected.id,
+            value: { type: "key", key: "updated" },
+          })
+          expect(
+            after.all.find((item) => item.connectorID === Connector.ID.make("azure") && item.id !== selected.id)?.value,
+          ).toMatchObject({ type: "key", key: "key" })
+          // kilocode_change end
         }),
       ),
     ),
   )
+
+  // kilocode_change start - retain downgrade-readable credential state
+  it.live("dual-writes active credentials for released auth.json readers", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) => {
+        const database = Database.layerFromPath(path.join(tmp.path, "credential.db")).pipe(Layer.fresh)
+        const global = Global.layerWith({ data: tmp.path })
+        const credentials = Credential.layer.pipe(
+          Layer.provide(database),
+          Layer.provide(EventV2.defaultLayer),
+          Layer.provide(FSUtil.defaultLayer),
+          Layer.provide(global),
+        )
+        return Effect.gen(function* () {
+          const service = yield* Credential.Service
+          const connectorID = Connector.ID.make("legacy-reader")
+          const created = yield* service.create({
+            connectorID,
+            methodID: Connector.MethodID.make("api-key"),
+            value: new Credential.Key({ type: "key", key: "first" }),
+          })
+          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
+            "legacy-reader": { type: "api", key: "first" },
+          })
+
+          yield* service.update(created.id, { value: new Credential.Key({ type: "key", key: "second" }) })
+          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
+            "legacy-reader": { type: "api", key: "second" },
+          })
+
+          yield* service.remove(created.id)
+          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).not.toHaveProperty(
+            "legacy-reader",
+          )
+
+          const file = path.join(tmp.path, "auth.json")
+          yield* Effect.promise(() => Bun.write(file, "{"))
+          yield* service.create({
+            connectorID: Connector.ID.make("malformed-reader"),
+            methodID: Connector.MethodID.make("api-key"),
+            value: new Credential.Key({ type: "key", key: "safe" }),
+          })
+          expect(yield* Effect.promise(() => Bun.file(file).text())).toBe("{")
+
+          yield* Effect.promise(() => Bun.write(file, "{}"))
+          yield* Effect.all(
+            ["first-reader", "second-reader"].map((name) =>
+              service.create({
+                connectorID: Connector.ID.make(name),
+                methodID: Connector.MethodID.make("api-key"),
+                value: new Credential.Key({ type: "key", key: name }),
+              }),
+            ),
+            { concurrency: "unbounded" },
+          )
+          expect(yield* Effect.promise(() => Bun.file(file).json())).toMatchObject({
+            "first-reader": { type: "api", key: "first-reader" },
+            "second-reader": { type: "api", key: "second-reader" },
+          })
+        }).pipe(Effect.provide(credentials), Effect.scoped)
+      }),
+    ),
+  )
+  // kilocode_change end
 
   it.live("emits credential lifecycle events", () =>
     Effect.acquireRelease(

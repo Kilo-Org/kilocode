@@ -68,13 +68,16 @@ export const GlobTool = Tool.define(
           })
 
           const limit = 100
-          const files = yield* ripgrep.glob({
+          // kilocode_change start - retain bounded-search metadata from Core ripgrep.
+          const result = yield* ripgrep.glob({
             cwd: search,
             pattern: absolute?.pattern ?? params.pattern, // kilocode_change - absolute patterns are split into cwd + relative glob
             limit,
             signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
-          const truncated = files.length === limit
+          const files = result.items
+          const truncated = result.truncated
+          // kilocode_change end
 
           const output = []
           if (files.length === 0) output.push("No files found")
@@ -86,6 +89,7 @@ export const GlobTool = Tool.define(
                 `(Results are truncated: showing first ${limit} results. Consider using a more specific path or pattern.)`,
               )
             }
+            if (result.partial) output.push("", "(Some discovered files could not be read.)") // kilocode_change
           }
 
           return {

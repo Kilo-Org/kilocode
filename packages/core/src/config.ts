@@ -4,6 +4,7 @@ import path from "path"
 import { type ParseError, parse } from "jsonc-parser"
 import { Context, Effect, Layer, Option, Schema } from "effect"
 import { FSUtil } from "./fs-util"
+import { Flag } from "./flag/flag" // kilocode_change
 import { Global } from "./global"
 import { Location } from "./location"
 import { PermissionSchema } from "./permission/schema"
@@ -173,7 +174,8 @@ export const layer = Layer.effect(
     const locationIsGlobal = path.resolve(location.directory) === path.resolve(global.config)
     // Read configuration once when this location opens. Later calls reuse these
     // values until the location is reopened.
-    const discovered = locationIsGlobal
+    // kilocode_change - keep Core V2 config discovery aligned with Kilo's isolated/project-disabled mode.
+    const discovered = locationIsGlobal || Flag.KILO_DISABLE_PROJECT_CONFIG
       ? []
       : yield* fs
           .up({

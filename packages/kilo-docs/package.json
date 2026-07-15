@@ -8,6 +8,7 @@
     "lint": "bun run --cwd ../.. lint packages/kilo-docs",
     "start": "next start",
     "test": "vitest run",
+    "test:ci": "mkdir -p .artifacts/unit && vitest run --reporter=junit --outputFile=.artifacts/unit/junit.xml",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -323,12 +323,15 @@ export const locationLayer = Layer.effect(
     const settle = Effect.fnUntraced(function* (
       attemptID: AttemptID,
       exit: Exit.Exit<Credential.Value, AuthorizationError>,
+      owned = false, // kilocode_change - completion may pre-claim settlement before awaiting its callback
     ) {
       return yield* Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const pending = yield* SynchronizedRef.modify(attempts, (current) => {
             const attempt = current.get(attemptID)
-            if (!attempt || attempt.status !== "pending" || attempt.settling) return [undefined, current]
+            if (!attempt || attempt.status !== "pending") return [undefined, current] // kilocode_change
+            if (owned) return attempt.settling ? [attempt, current] : [undefined, current] // kilocode_change
+            if (attempt.settling) return [undefined, current] // kilocode_change
             return [attempt, new Map(current).set(attemptID, { ...attempt, settling: true })]
           })
           if (!pending) return
@@ -493,7 +496,8 @@ export const locationLayer = Layer.effect(
               const match = current.get(input.attemptID)
               if (!match || match.status !== "pending" || match.completing) return [match, current]
               if (match.authorization.mode === "code" && input.code === undefined) return [match, current]
-              return [match, new Map(current).set(input.attemptID, { ...match, completing: true })]
+              // kilocode_change - claim the attempt before awaiting the callback so cancel cannot delete it.
+              return [match, new Map(current).set(input.attemptID, { ...match, completing: true, settling: true })]
             })
             if (!attempt) return yield* Effect.die(`OAuth attempt not found: ${input.attemptID}`)
             if (attempt.status !== "pending") return
@@ -505,10 +509,18 @@ export const locationLayer = Layer.effect(
               attempt.authorization.mode === "auto"
                 ? attempt.authorization.callback
                 : attempt.authorization.callback(input.code as string)
-            const exit = yield* authorize(callback).pipe(Effect.exit)
-            // kilocode_change start - propagate persistence failure after atomic settlement
-            const settled = yield* settle(input.attemptID, exit)
-            if (settled && Exit.isFailure(settled)) return yield* settled
+            // kilocode_change start - an interrupted or timed-out callback still settles and releases its attempt.
+            return yield* Effect.uninterruptibleMask((restore) =>
+              Effect.gen(function* () {
+                const exit = yield* restore(authorize(callback)).pipe(
+                  Effect.timeout(settlementTimeout),
+                  Effect.mapError((cause) => new AuthorizationError({ cause })),
+                  Effect.exit,
+                )
+                const settled = yield* settle(input.attemptID, exit, true)
+                if (settled && Exit.isFailure(settled)) return yield* settled
+              }),
+            )
             // kilocode_change end
           }),
           cancel: Effect.fn("Connector.connect.oauth.cancel")(function* (attemptID) {

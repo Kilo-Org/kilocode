@@ -416,13 +416,14 @@ export const layer = Layer.effect(
           Effect.gen(function* () {
             const session = yield* store.get(sessionID)
             if (!session) return yield* execution.interrupt(sessionID)
-            const event = yield* events.publish(SessionEvent.InterruptRequested, {
+            // kilocode_change start - keep interrupt operational while preserving released durable event compatibility.
+            const seq = yield* SessionInput.latestSeq(db, sessionID)
+            yield* events.publish(SessionEvent.InterruptRequested, {
               sessionID,
               timestamp: yield* DateTime.now,
             })
-            if (event.seq === undefined)
-              return yield* Effect.die("Interrupt request event is missing aggregate sequence")
-            yield* execution.interrupt(sessionID, event.seq)
+            yield* execution.interrupt(sessionID, seq)
+            // kilocode_change end
           }),
         ),
       ),

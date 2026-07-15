@@ -11,6 +11,11 @@ import { it } from "./lib/effect"
 const cache = Layer.mock(RepositoryCache.Service, {
   ensure: () => Effect.die("unexpected Git materialization"),
 })
+// kilocode_change - keep reference state tests independent from the persistent event store.
+const events = Layer.mock(EventV2.Service)({
+  publish: (definition, data) =>
+    Effect.succeed({ id: EventV2.ID.make("evt_reference_test"), type: definition.type, data }),
+})
 
 describe("Reference", () => {
   it.effect("registers normalized sources for the owning scope", () =>
@@ -36,7 +41,7 @@ describe("Reference", () => {
     }).pipe(
       Effect.provide(Reference.layer),
       Effect.provide(cache),
-      Effect.provide(EventV2.defaultLayer),
+      Effect.provide(events),
       Effect.provide(Global.defaultLayer),
     ),
   )
@@ -60,7 +65,7 @@ describe("Reference", () => {
       Effect.scoped,
       Effect.provide(Reference.layer),
       Effect.provide(cache),
-      Effect.provide(EventV2.defaultLayer),
+      Effect.provide(events),
       Effect.provide(Global.defaultLayer),
     ),
   )
@@ -89,7 +94,30 @@ describe("Reference", () => {
       Effect.scoped,
       Effect.provide(Reference.layer),
       Effect.provide(cache),
-      Effect.provide(EventV2.defaultLayer),
+      Effect.provide(events),
+      Effect.provide(Global.defaultLayer),
+    ),
+  )
+
+  // kilocode_change - Kilo config reconciliation must clear stale sources without owning a scoped transform.
+  it.effect("replaces sources without a scoped transform", () =>
+    Effect.gen(function* () {
+      const references = yield* Reference.Service
+      const update = yield* references.transform()
+      const stale = new Reference.LocalSource({ type: "local", path: AbsolutePath.make("/stale") })
+      const current = new Reference.LocalSource({ type: "local", path: AbsolutePath.make("/current") })
+      yield* update((editor) => editor.add("stale", stale))
+
+      yield* references.replace([["current", current]])
+
+      expect(yield* references.list()).toEqual([
+        new Reference.Info({ name: "current", path: AbsolutePath.make("/current"), source: current }),
+      ])
+    }).pipe(
+      Effect.scoped,
+      Effect.provide(Reference.layer),
+      Effect.provide(cache),
+      Effect.provide(events),
       Effect.provide(Global.defaultLayer),
     ),
   )

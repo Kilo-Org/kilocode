@@ -504,6 +504,53 @@ describe("Connector", () => {
     }),
   )
 
+  // kilocode_change start - cancellation must not delete a completing OAuth attempt
+  it.effect("keeps a code OAuth attempt while its callback is completing", () => {
+    const created: Array<{
+      connectorID: Connector.ID
+      methodID: Connector.MethodID
+      label?: string
+      value: Credential.Value
+    }> = []
+    return Effect.gen(function* () {
+      const started = yield* Deferred.make<void>()
+      const release = yield* Deferred.make<void>()
+      const connectors = yield* Connector.Service
+      const connectorID = Connector.ID.make("openai")
+      const methodID = Connector.MethodID.make("chatgpt")
+      yield* connectors.update((editor) =>
+        editor.method.update({
+          connectorID,
+          method: new Connector.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+          authorize: () =>
+            Effect.succeed({
+              mode: "code" as const,
+              url: "https://example.com/authorize",
+              instructions: "Paste the code",
+              callback: () =>
+                Deferred.succeed(started, undefined).pipe(
+                  Effect.andThen(Deferred.await(release)),
+                  Effect.as(new Credential.OAuth({ type: "oauth", access: "access", refresh: "refresh", expires: 1 })),
+                ),
+            }),
+        }),
+      )
+
+      const attempt = yield* connectors.connect.oauth.begin({ connectorID, methodID, inputs: {} })
+      const fiber = yield* connectors.connect.oauth
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.forkScoped)
+      yield* Deferred.await(started)
+      yield* connectors.connect.oauth.cancel(attempt.attemptID)
+      yield* Deferred.succeed(release, undefined)
+      yield* Fiber.join(fiber)
+
+      expect(created).toHaveLength(1)
+      expect(yield* connectors.connect.oauth.status(attempt.attemptID)).toMatchObject({ status: "complete" })
+    }).pipe(Effect.provide(connectionLayer(created)))
+  })
+  // kilocode_change end
+
   it.effect("fails and releases OAuth attempts when credential persistence times out", () =>
     Effect.gen(function* () {
       const started = yield* Deferred.make<void>()

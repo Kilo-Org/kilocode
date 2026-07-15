@@ -78,6 +78,19 @@ const LegacyToolMediaContent = Schema.Struct({
 })
 const ToolContentInput = Schema.Union([ToolContent, LegacyToolFileContent, LegacyToolMediaContent])
 
+// kilocode_change start - released readers require source-wrapped stored files
+const stored = (item: ToolContent): typeof ToolContentInput.Type => {
+  if (item.type === "text") return item
+  const data = /^data:[^;,]+;base64,(.*)$/s.exec(item.uri)?.[1]
+  const source = data
+    ? ({ type: "data", data } as const)
+    : URL.canParse(item.uri) && ["http:", "https:"].includes(new URL(item.uri).protocol)
+      ? ({ type: "url", url: item.uri } as const)
+      : ({ type: "file", uri: item.uri } as const)
+  return { type: "file", source, mime: item.mime, name: item.name }
+}
+// kilocode_change end
+
 export const StoredToolContent = ToolContentInput.pipe(
   Schema.decodeTo(ToolContent, {
     decode: SchemaGetter.transform((item) => {
@@ -98,7 +111,7 @@ export const StoredToolContent = ToolContentInput.pipe(
             : item.source.uri
       return { type: "file" as const, uri, mime: item.mime, name: item.name }
     }),
-    encode: SchemaGetter.passthrough({ strict: false }),
+    encode: SchemaGetter.transform(stored), // kilocode_change - released readers require the source-wrapped file shape
   }),
 )
 // kilocode_change end
