@@ -2489,3 +2489,219 @@ describe("RemoteSender slash commands", () => {
   })
 })
 // kilocode_change end
+
+// kilocode_change start - sessionless runtime catalog routing (Slice 2)
+describe("RemoteSender get_catalog", () => {
+  function makeRuntime(over: {
+    catalog?: (request: { protocolVersion: 1 }) => Promise<any>
+  } = {}) {
+    return {
+      runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+      setConnectionId: () => {},
+      presence: () => ({} as any),
+      catalog: over.catalog ?? (async () => ({ protocolVersion: 1, models: {}, agents: [], defaultAgent: "build" })),
+    }
+  }
+
+  // Wait for the async dispatch. Mirrors the list_models tests so the
+  // assertions don't race the dispatchQuick microtask.
+  function flush() {
+    return new Promise<void>((resolve) => setTimeout(resolve, 0))
+  }
+
+  test("returns the runtime catalog for a sessionless v1 request", async () => {
+    const { conn, sent } = fakeConn()
+    const catalogCalls: { protocolVersion: 1 }[] = []
+    const runtime = makeRuntime({
+      catalog: async (request: { protocolVersion: 1 }) => {
+        catalogCalls.push(request)
+        return {
+          protocolVersion: 1,
+          models: {
+            all: [
+              {
+                id: "kilo",
+                name: "Kilo",
+                source: "env",
+                env: [],
+                options: {},
+                models: {},
+              },
+            ],
+            default: { kilo: "model" },
+            connected: ["kilo"],
+            failed: [],
+            protocolVersion: 1,
+            truncated: false,
+          },
+          agents: [{ slug: "build", name: "Build", description: "primary" }],
+          defaultAgent: "build",
+        }
+      },
+    })
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      runtime: runtime as any,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_catalog",
+      command: "get_catalog",
+      data: { protocolVersion: 1 },
+    })
+    await flush()
+
+    // The runtime owns fixed-directory scoping; the sender must not add a
+    // redundant provide wrapper. The request is forwarded verbatim to the
+    // captured runtime instance.
+    expect(catalogCalls).toEqual([{ protocolVersion: 1 }])
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_catalog",
+        result: {
+          protocolVersion: 1,
+          models: {
+            all: [
+              {
+                id: "kilo",
+                name: "Kilo",
+                source: "env",
+                env: [],
+                options: {},
+                models: {},
+              },
+            ],
+            default: { kilo: "model" },
+            connected: ["kilo"],
+            failed: [],
+            protocolVersion: 1,
+            truncated: false,
+          },
+          agents: [{ slug: "build", name: "Build", description: "primary" }],
+          defaultAgent: "build",
+        },
+      },
+    ])
+  })
+
+  test("rejects get_catalog when a sessionId is provided", () => {
+    const { conn, sent } = fakeConn()
+    const runtime = makeRuntime()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      runtime: runtime as any,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_catalog_with_session",
+      command: "get_catalog",
+      sessionId: "ses_unwanted",
+      data: { protocolVersion: 1 },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_catalog_with_session", error: "invalid get_catalog command" },
+    ])
+  })
+
+  test("rejects unsupported protocol versions and extra fields", () => {
+    const { conn, sent } = fakeConn()
+    const runtime = makeRuntime()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      runtime: runtime as any,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_v2",
+      command: "get_catalog",
+      data: { protocolVersion: 2 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_extra",
+      command: "get_catalog",
+      data: { protocolVersion: 1, extra: true },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_missing",
+      command: "get_catalog",
+      data: {},
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_v2", error: "invalid get_catalog command" },
+      { type: "response", id: "req_extra", error: "invalid get_catalog command" },
+      { type: "response", id: "req_missing", error: "invalid get_catalog command" },
+    ])
+  })
+
+  test("returns a sanitized error when the runtime catalog throws", async () => {
+    const { conn, sent } = fakeConn()
+    const logEntries: unknown[][] = []
+    const runtime = makeRuntime({
+      catalog: async () => {
+        throw new Error("private relay detail token=MUST_NOT_LEAK and path=/workspace/private")
+      },
+    })
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: { ...nolog, error: (...args: unknown[]) => logEntries.push(args) },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      runtime: runtime as any,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_catalog_fail",
+      command: "get_catalog",
+      data: { protocolVersion: 1 },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_catalog_fail", error: "failed to load runtime catalog" },
+    ])
+    expect(JSON.stringify(sent)).not.toContain("MUST_NOT_LEAK")
+    expect(JSON.stringify(sent)).not.toContain("/workspace/private")
+    expect(JSON.stringify(logEntries)).not.toContain("MUST_NOT_LEAK")
+  })
+
+  test("list_models route is unchanged and still requires a session", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_models_no_session",
+      command: "list_models",
+      data: { protocolVersion: 1 },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_models_no_session", error: "invalid list_models command" },
+    ])
+  })
+})
+// kilocode_change end

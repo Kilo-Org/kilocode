@@ -1,6 +1,7 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { RemoteRuntime } from "@/kilo-sessions/remote-runtime"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
 import { Session } from "@/session/session"
@@ -139,6 +140,9 @@ export namespace RemoteSender {
       readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
     }
     commands?: RemoteCommand.Interface
+    // kilocode_change start - injectable runtime for sessionless get_catalog
+    runtime?: RemoteRuntime.Interface
+    // kilocode_change end
   }
 
   export type Sender = {
@@ -238,6 +242,11 @@ export namespace RemoteSender {
     // kilocode_change end
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
+    // kilocode_change end
+    // kilocode_change start - sessionless runtime catalog. The runtime is
+    // captured from KiloSessions.enableRemote; we never construct a second
+    // Instance or socket here.
+    const runtime = options.runtime
     // kilocode_change end
 
     const sub =
@@ -418,6 +427,39 @@ export namespace RemoteSender {
     }
 
     function dispatch(msg: RemoteProtocol.Command) {
+      // kilocode_change start - sessionless runtime catalog. Reject any
+      // sessionId, require the exact v1 request, and route through the
+      // captured launch-directory runtime. No heartbeat is involved.
+      if (msg.command === "get_catalog") {
+        if (msg.sessionId) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid get_catalog command" })
+          return
+        }
+        if (!runtime) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid get_catalog command" })
+          return
+        }
+        const parsed = RemoteRuntime.CatalogRequest.safeParse(msg.data)
+        if (!parsed.success) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid get_catalog command" })
+          return
+        }
+        void (async () => {
+          try {
+            const result = await runtime.catalog(parsed.data, {
+              error: (m, meta) => options.log.error(m, meta as never),
+            })
+            options.conn.send({ type: "response", id: msg.id, result })
+          } catch {
+            // The runtime already logs only the error class. Reject with the
+            // sanitized wire string so the cloud relay never observes paths,
+            // tokens, or raw provider errors.
+            options.conn.send({ type: "response", id: msg.id, error: "failed to load runtime catalog" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
       // kilocode_change start - slash command discovery and execution
       if (msg.command === "list_commands") {
         const parsed = RemoteCommand.ListRequest.safeParse(msg.data)

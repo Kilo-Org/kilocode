@@ -3,6 +3,7 @@ import { BusEvent } from "@/bus/bus-event"
 import { GlobalBus } from "@/bus/global" // kilocode_change - unified channel for legacy Bus + EventV2Bridge emissions
 import os from "node:os"
 import { Provider } from "@/provider/provider"
+import { Agent } from "@/agent/agent"
 import { Session } from "@/session/session"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
@@ -439,12 +440,48 @@ export namespace KiloSessions {
       // a future `kilo remote --name` flag will override it. The projectName
       // is the basename of the launch directory — the absolute path never
       // crosses the cloud seam.
+      // kilocode_change start - catalog source runs Provider/Agent service
+      // discovery under the captured launch directory. The cloud never receives
+      // the absolute path or any provider credentials, and a usable default
+      // agent must be present.
+      const catalog: RemoteRuntime.CatalogSource = {
+        listProviders: async () => {
+          const { AppRuntime } = await import("@/effect/app-runtime")
+          return provide({
+            directory,
+            fn: () => AppRuntime.runPromise(Provider.Service.use((svc) => svc.list())),
+          })
+        },
+        defaultModel: async () => {
+          const { AppRuntime } = await import("@/effect/app-runtime")
+          return provide({
+            directory,
+            fn: () => AppRuntime.runPromise(Provider.Service.use((svc) => svc.defaultModel())),
+          })
+        },
+        listAgents: async () => {
+          const { AppRuntime } = await import("@/effect/app-runtime")
+          return provide({
+            directory,
+            fn: () => AppRuntime.runPromise(Agent.Service.use((svc) => svc.list())),
+          })
+        },
+        defaultAgent: async () => {
+          const { AppRuntime } = await import("@/effect/app-runtime")
+          return provide({
+            directory,
+            fn: () => AppRuntime.runPromise(Agent.Service.use((svc) => svc.defaultAgent())),
+          })
+        },
+      }
+      // kilocode_change end
       const runtime = RemoteRuntime.create({
         runtimeId: crypto.randomUUID(),
         connectionId: "pending",
         cliVersion: InstallationVersion,
         directory,
         displayName: deriveRuntimeDisplayName(),
+        catalog,
       })
       const getSessions = async () => {
         const [gitUrl, gitBranch] = await Promise.all([
@@ -511,6 +548,7 @@ export namespace KiloSessions {
         conn,
         directory: Instance.directory,
         log,
+        runtime,
       })
 
       if (seq !== remoteSeq) {

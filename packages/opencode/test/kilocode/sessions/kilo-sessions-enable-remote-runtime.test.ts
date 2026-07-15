@@ -6,6 +6,8 @@ import { provide } from "../../../src/kilocode/instance"
 import { Bus } from "../../../src/bus"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
+import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
+import type { RemoteRuntime } from "../../../src/kilo-sessions/remote-runtime"
 
 type HeartbeatPayload = {
   sessions: Array<{ id: string; status: string; title: string }>
@@ -23,14 +25,21 @@ type HeartbeatPayload = {
 type GetSessionsFn = () => Promise<HeartbeatPayload>
 
 let capturedGetSessions: GetSessionsFn | undefined
+let capturedRuntime: RemoteRuntime.Interface | undefined
+let capturedSender: RemoteSender.Sender | undefined
+const sentMessages: unknown[] = []
 
-// Save the real connect at module load time and restore it after each test.
-// This avoids relying on mock.restore() which can leak across test files
+// Save the real implementations at module load time and restore them after each
+// test. This avoids relying on mock.restore() which can leak across test files
 // in the same Bun worker.
 const realConnect = RemoteWS.connect
+const realRemoteSenderCreate = RemoteSender.create
 
 beforeEach(() => {
   capturedGetSessions = undefined
+  capturedRuntime = undefined
+  capturedSender = undefined
+  sentMessages.length = 0
   process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
   process.env["KILO_API_KEY"] = "tok"
   delete process.env["KILO_SESSION_INGEST_URL"]
@@ -47,9 +56,11 @@ beforeEach(() => {
   // Install the mock directly on the namespace.
   ;(RemoteWS as unknown as { connect: typeof realConnect }).connect = ((options: never) => {
     capturedGetSessions = (options as { getSessions: GetSessionsFn }).getSessions
-    return {
+    const conn = {
       connectionId: "mock-conn",
-      send: () => {},
+      send: (msg: unknown) => {
+        sentMessages.push(msg)
+      },
       heartbeat: () => Promise.resolve(),
       heartbeatAcknowledged: () => Promise.resolve(),
       close: () => {},
@@ -57,22 +68,40 @@ beforeEach(() => {
         return true
       },
     }
+    return conn
   }) as unknown as typeof realConnect
+
+  spyOn(RemoteSender, "create").mockImplementation((options: any) => {
+    capturedRuntime = options.runtime as RemoteRuntime.Interface
+    const sender = realRemoteSenderCreate(options)
+    capturedSender = sender
+    return sender
+  })
 })
 
 afterEach(() => {
-  // Always restore the real connect so subsequent test files see the
-  // un-mocked implementation.
+  // Always restore the real implementations so subsequent test files see the
+  // un-mocked implementations.
   ;(RemoteWS as unknown as { connect: typeof realConnect }).connect = realConnect
+  ;(RemoteSender as unknown as { create: typeof realRemoteSenderCreate }).create = realRemoteSenderCreate
 })
 
-async function runInIsolatedContext(fn: () => Promise<void>): Promise<void> {
+async function until(predicate: () => boolean, timeout = 1000) {
+  const start = Date.now()
+  while (!predicate()) {
+    if (Date.now() - start > timeout) throw new Error("condition never became true")
+    await Bun.sleep(10)
+  }
+}
+
+async function runInIsolatedContext<T>(fn: (tmpPath: string) => Promise<T>): Promise<T> {
   await using tmp = await tmpdir({ git: true })
+  let result: T | undefined
   await provide({
     directory: tmp.path,
     fn: async () => {
       try {
-        await fn()
+        result = await fn(tmp.path)
       } finally {
         try {
           KiloSessions.disableRemote()
@@ -82,6 +111,7 @@ async function runInIsolatedContext(fn: () => Promise<void>): Promise<void> {
       }
     },
   })
+  return result as T
 }
 
 describe("KiloSessions.enableRemote — runtime presence wiring", () => {
@@ -143,5 +173,44 @@ describe("KiloSessions.enableRemote — runtime presence wiring", () => {
     expect(serialized).not.toContain(tmpPath!)
     expect(payload!.runtime!.projectName).not.toMatch(/[/\\]/)
     expect(payload!.runtime!.displayName).not.toMatch(/[/\\]/)
+  })
+
+  test("enableRemote wires the same runtime instance to the sender for sessionless get_catalog", async () => {
+    await runInIsolatedContext(async (tmpPath) => {
+      await KiloSessions.enableRemote()
+
+      expect(capturedRuntime).toBeDefined()
+      expect(capturedRuntime!.directory).toBe(tmpPath)
+      expect(capturedSender).toBeDefined()
+
+      // The catalog is computed in the captured launch directory using the
+      // real Provider and Agent services; no session is created.
+      const catalog = await capturedRuntime!.catalog({ protocolVersion: 1 })
+      expect(catalog.protocolVersion).toBe(1)
+      expect(catalog.agents.length).toBeGreaterThan(0)
+      expect(catalog.defaultAgent).toBeTruthy()
+
+      // get_catalog flows through the same runtime instance and does not
+      // require a sessionId.
+      capturedSender!.handle({
+        type: "command",
+        id: "req_catalog",
+        command: "get_catalog",
+        data: { protocolVersion: 1 },
+      })
+      await until(
+        () => sentMessages.some((msg: any) => msg.type === "response" && msg.id === "req_catalog"),
+        1000,
+      )
+
+      const response = sentMessages.find(
+        (msg: any) => msg.type === "response" && msg.id === "req_catalog",
+      )
+      expect(response).toBeDefined()
+      expect((response as any).error).toBeUndefined()
+      expect((response as any).result.protocolVersion).toBe(1)
+      expect((response as any).result.agents).toEqual(catalog.agents)
+      expect((response as any).result.defaultAgent).toBe(catalog.defaultAgent)
+    })
   })
 })

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test"
+import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteRuntime } from "@/kilo-sessions/remote-runtime"
 
 describe("RemoteRuntime", () => {
@@ -136,3 +137,294 @@ describe("RemoteRuntime", () => {
     ).toThrow()
   })
 })
+
+// kilocode_change start - sessionless runtime catalog (Slice 2)
+function agentFixture(over: Partial<{
+  name: string
+  description: string
+  mode: "subagent" | "primary" | "all"
+  hidden: boolean
+  model: { providerID: string; modelID: string }
+  variant: string
+}> = {}) {
+  return {
+    name: over.name ?? "build",
+    description: over.description,
+    mode: over.mode ?? "primary",
+    hidden: over.hidden ?? false,
+    model: over.model,
+    variant: over.variant,
+  }
+}
+
+function providerFixture(providerID: string, modelID: string) {
+  return {
+    [providerID]: {
+      id: providerID,
+      name: providerID,
+      source: "env" as const,
+      env: ["MUST_NOT_LEAK"],
+      key: "MUST_NOT_LEAK",
+      options: { apiKey: "MUST_NOT_LEAK" },
+      models: {
+        [modelID]: {
+          id: modelID,
+          providerID,
+          name: modelID,
+          capabilities: {
+            temperature: true,
+            attachment: true,
+            reasoning: false,
+            toolcall: true,
+            input: { text: true, audio: false, image: true, video: false, pdf: true },
+            output: { text: true, audio: false, image: false, video: false, pdf: false },
+            interleaved: false,
+          },
+          cost: { input: 1, output: 2, cache: { read: 3, write: 4 } },
+          limit: { context: 100_000, output: 4_096 },
+          status: "active" as const,
+          options: { apiKey: "MUST_NOT_LEAK" },
+          headers: { authorization: "MUST_NOT_LEAK" },
+          release_date: "2026-01-01",
+          variants: { precise: { apiKey: "MUST_NOT_LEAK" } },
+        },
+      },
+    },
+  }
+}
+
+function makeRuntime(
+  overrides: {
+    directory?: string
+    catalog?: RemoteRuntime.CatalogSource
+  } = {},
+) {
+  return RemoteRuntime.create({
+    runtimeId: "8db3de9a-350f-4fad-a539-8e0da3bbcf5e",
+    connectionId: "conn-1",
+    cliVersion: "7.4.7",
+    directory: overrides.directory ?? "/tmp/proj",
+    displayName: "Laptop",
+    catalog: overrides.catalog,
+  })
+}
+
+describe("RemoteRuntime.catalog", () => {
+  test("returns the strict catalog without needing a session id", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "anthropic/claude-sonnet-4"),
+        defaultModel: async () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4" }),
+        listAgents: async () => [
+          agentFixture({ name: "build", description: "The default agent. Executes tools based on configured permissions." }),
+        ],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    const catalog = await runtime.catalog({ protocolVersion: 1 })
+
+    expect(catalog.protocolVersion).toBe(1)
+    expect(catalog.defaultAgent).toBe("build")
+    expect(catalog.agents).toEqual([
+      {
+        slug: "build",
+        name: "Build",
+        description: "The default agent. Executes tools based on configured permissions.",
+      },
+    ])
+    expect(catalog.models.protocolVersion).toBe(1)
+    expect(catalog.models.all).toHaveLength(1)
+    expect(catalog.models.all[0]?.id).toBe("kilo")
+    // Credentials and options must be stripped exactly the way the existing
+    // RemoteModelCatalog builder does it.
+    expect(catalog.models.all[0]?.env).toEqual([])
+    expect(catalog.models.all[0]?.options).toEqual({})
+    expect(JSON.stringify(catalog)).not.toContain("MUST_NOT_LEAK")
+  })
+
+  test("omits hidden agents and subagents, keeps primary and all agents", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "model"),
+        defaultModel: async () => undefined,
+        listAgents: async () => [
+          agentFixture({ name: "build", description: "primary" }),
+          agentFixture({ name: "plan", description: "primary" }),
+          agentFixture({ name: "general", description: "all-mode" }),
+          agentFixture({ name: "explore", description: "should be hidden", hidden: true }),
+          agentFixture({ name: "scout", description: "subagent", mode: "subagent" }),
+        ],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    const catalog = await runtime.catalog({ protocolVersion: 1 })
+
+    const slugs = catalog.agents.map((a) => a.slug)
+    expect(slugs).toEqual(["build", "plan", "general"])
+  })
+
+  test("bounds agent fields to the strict wire schema and renames the build agent", async () => {
+    const longDescription = "x".repeat(2_000)
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "model"),
+        defaultModel: async () => undefined,
+        listAgents: async () => [
+          agentFixture({
+            name: "build",
+            description: longDescription,
+            model: { providerID: "kilo", modelID: "anthropic/claude-sonnet-4" },
+            variant: "precise",
+          }),
+        ],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    const catalog = await runtime.catalog({ protocolVersion: 1 })
+
+    expect(catalog.agents).toHaveLength(1)
+    const agent = catalog.agents[0]!
+    expect(agent.slug).toBe("build")
+    expect(agent.name).toBe("Build")
+    expect(agent.description?.length).toBeLessThanOrEqual(500)
+    expect(agent.model).toEqual({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4" })
+    expect(agent.variant).toBe("precise")
+  })
+
+  test("rejects when the configured default agent is not in the visible agent list", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "model"),
+        defaultModel: async () => undefined,
+        listAgents: async () => [agentFixture({ name: "plan", description: "primary" })],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    await expect(runtime.catalog({ protocolVersion: 1 })).rejects.toThrow("failed to load runtime catalog")
+  })
+
+  test("sanitizes provider failures to 'failed to load runtime catalog' without leaking path or token", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => {
+          throw new Error("/workspace/private/api-key=MUST_NOT_LEAK and stack must not leak")
+        },
+        defaultModel: async () => undefined,
+        listAgents: async () => [agentFixture({ name: "build" })],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    let caught: unknown
+    try {
+      await runtime.catalog({ protocolVersion: 1 })
+    } catch (err) {
+      caught = err
+    }
+    expect(caught).toBeInstanceOf(Error)
+    expect((caught as Error).message).toBe("failed to load runtime catalog")
+    expect(JSON.stringify(caught)).not.toContain("/workspace/private")
+    expect(JSON.stringify(caught)).not.toContain("MUST_NOT_LEAK")
+  })
+
+  test("sanitizes agent failures to the same generic error", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "model"),
+        defaultModel: async () => undefined,
+        listAgents: async () => {
+          throw new Error("agent lookup leaked token=abc")
+        },
+        defaultAgent: async () => "build",
+      },
+    })
+
+    await expect(runtime.catalog({ protocolVersion: 1 })).rejects.toThrow("failed to load runtime catalog")
+  })
+
+  test("logs only the error class and the operation, never the provider message", async () => {
+    const logs: unknown[][] = []
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => {
+          throw new Error("private credential detail")
+        },
+        defaultModel: async () => undefined,
+        listAgents: async () => [agentFixture({ name: "build" })],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    await expect(
+      runtime.catalog({ protocolVersion: 1 }, {
+        error: (...args: unknown[]) => logs.push(args),
+      }),
+    ).rejects.toThrow("failed to load runtime catalog")
+
+    expect(logs).toHaveLength(1)
+    expect(logs[0]?.[0]).toBe("runtime catalog failed")
+    expect(logs[0]?.[1]).toEqual({ operation: "catalog", error: "Error" })
+    const flattened = JSON.stringify(logs)
+    expect(flattened).not.toContain("private credential detail")
+  })
+
+  test("rejects an unsupported protocol version strictly", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "model"),
+        defaultModel: async () => undefined,
+        listAgents: async () => [agentFixture({ name: "build" })],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    await expect(
+      // cast to silence the strict request type for the negative case
+      runtime.catalog({ protocolVersion: 2 } as never),
+    ).rejects.toThrow("failed to load runtime catalog")
+  })
+
+  test("uses RemoteModelCatalogV1 as the model shape and never inlines raw credentials", async () => {
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "anthropic/claude-sonnet-4"),
+        defaultModel: async () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4" }),
+        listAgents: async () => [agentFixture({ name: "build" })],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    const catalog = await runtime.catalog({ protocolVersion: 1 })
+    // The model field is the strict v1 catalog shape.
+    expect(catalog.models).toMatchObject({ protocolVersion: 1 })
+    const first = catalog.models.all[0]!
+    expect(first.env).toEqual([])
+    expect(first.options).toEqual({})
+    expect(first.models["anthropic/claude-sonnet-4"]?.options).toEqual({})
+    expect(first.models["anthropic/claude-sonnet-4"]?.headers).toEqual({})
+    expect(first.models["anthropic/claude-sonnet-4"]?.variants).toEqual({ precise: {} })
+  })
+
+  test("uses the providers and defaultModel the catalog source provides", async () => {
+    // Confirms the runtime does not silently fall back to a session-scoped
+    // provider list. The catalog source returns a specific provider and
+    // default; the runtime must surface them verbatim (subject to
+    // RemoteModelCatalog's normal sanitization).
+    const runtime = makeRuntime({
+      catalog: {
+        listProviders: async () => providerFixture("kilo", "model"),
+        defaultModel: async () => ({ providerID: "kilo", modelID: "model" }),
+        listAgents: async () => [agentFixture({ name: "build" })],
+        defaultAgent: async () => "build",
+      },
+    })
+
+    const catalog = await runtime.catalog({ protocolVersion: 1 })
+    expect(catalog.models.defaultModel).toEqual({ providerID: "kilo", modelID: "model" })
+  })
+})
+// kilocode_change end
