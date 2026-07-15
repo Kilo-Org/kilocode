@@ -68,6 +68,13 @@ export interface FileMention {
   seedFromText: (text: string) => void
   /** Insert a file-picker result at the stored cursor position. Ignored unless requestId matches the pending request. */
   insertFilePickerResult: (path: string, requestId: string) => void
+  /**
+   * Seed known paths from a set of already-confirmed exact paths (e.g. a
+   * reverted message's file attachments), then prune against `text`. Prefer
+   * this over seedFromText when exact paths are available, since seedFromText
+   * cannot correctly rediscover paths containing spaces from raw text alone.
+   */
+  seedFromParts: (paths: string[], text: string) => void
 }
 
 export function useFileMention(
@@ -430,6 +437,19 @@ export function useFileMention(
     state.onSelect?.()
   }
 
+  // Seed known paths from a set of already-confirmed exact paths (e.g. the
+  // file attachments of a message being restored after a revert), then prune
+  // mentionedPaths against the current text. Unlike seedFromText, this does
+  // not re-derive candidate paths from the text via regex: that regex cannot
+  // distinguish a complete mention from a truncated prefix when the real
+  // path contains a space (e.g. it would discover only "dir/my" from
+  // "@dir/my report.txt", which then passes syncMentionedPaths' boundary
+  // check too, since a real space genuinely follows "my" in the full name).
+  const seedFromParts = (paths: string[], text: string) => {
+    for (const p of paths) knownPaths.add(p)
+    syncMentionedPaths(text)
+  }
+
   return {
     mentionedPaths,
     mentionResults,
@@ -447,5 +467,6 @@ export function useFileMention(
     snapSelection,
     seedFromText,
     insertFilePickerResult,
+    seedFromParts,
   }
 }

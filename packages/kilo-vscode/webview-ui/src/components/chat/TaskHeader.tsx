@@ -8,7 +8,7 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -110,6 +110,36 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   }
   window.addEventListener("message", handler)
   onCleanup(() => window.removeEventListener("message", handler))
+
+  // "Kilo Code: Toggle Chat Search" (Command Palette) toggles the search
+  // bar from here rather than TranscriptSearch.tsx itself: that component
+  // only mounts once search.active() is already true (it's behind a
+  // <Show>), so it can never be what turns search on in the first place —
+  // and it also wouldn't exist anymore to react to a request to close it.
+  // TaskHeader is mounted the whole time there's an active chat, so it's
+  // the right place to react to the external toggle request.
+  const toggleSearch = () => (search.active() ? search.closeSearch() : search.setActive(true))
+  window.addEventListener("focusTranscriptSearch", toggleSearch)
+  onCleanup(() => window.removeEventListener("focusTranscriptSearch", toggleSearch))
+
+  // Whenever search closes via an explicit user action — the header toggle
+  // button, the command palette toggle above, the search bar's own "X", or
+  // Escape — send focus back to the chat input rather than leaving it
+  // stranded on whatever control was just clicked/removed. Watches
+  // `closeSignal` rather than `active()` transitions so that MessageList
+  // silently resetting the widget on a session/tab change (which also
+  // flips `active()` false) can't trigger this same aggressive restore and
+  // steal focus back from the tab strip's own focus handling. `defer: true`
+  // skips the initial run so mounting doesn't immediately steal focus.
+  createEffect(
+    on(
+      () => search.closeSignal(),
+      () => {
+        window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+      },
+      { defer: true },
+    ),
+  )
 
   const toggle = () => {
     const next = !expanded()
@@ -238,7 +268,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 variant="ghost"
                 class="task-header-search-toggle"
                 data-active={search.active() ? "" : undefined}
-                onClick={() => search.setActive(!search.active())}
+                onClick={toggleSearch}
                 aria-label={language.t("chat.search.toggle")}
                 aria-pressed={search.active()}
               />

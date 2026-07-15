@@ -1,5 +1,13 @@
 # kilo-code
 
+## 7.4.9
+
+### Patch Changes
+
+- [#12194](https://github.com/Kilo-Org/kilocode/pull/12194) [`46fe0a9`](https://github.com/Kilo-Org/kilocode/commit/46fe0a91d91ec42931a3af78e409334f05de91ea) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Toggle chat search from the Command Palette, jump focus back to the chat input when it closes, and auto-expand the collapsed tool call or reasoning block containing the current search match.
+
+- [#11977](https://github.com/Kilo-Org/kilocode/pull/11977) [`a76dc77`](https://github.com/Kilo-Org/kilocode/commit/a76dc773805d6cdb67e66a0533b39f44487bf742) Thanks [@sylwester-liljegren](https://github.com/sylwester-liljegren)! - Fix file @mentions for filenames containing spaces or non-ASCII characters. Such mentions now stay fully highlighted in the sent message and are read correctly instead of failing with "File not found".
+
 ## 7.4.8
 
 ### Minor Changes
