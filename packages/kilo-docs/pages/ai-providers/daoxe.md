@@ -39,7 +39,7 @@ The provider credentials are stored in Kilo's `auth.json` store.
 2. Or from the shell:
 
 ```bash
-kilo auth daoxe
+kilo auth login --provider daoxe
 ```
 
 Then pick a model from the model picker, or set a default model using the `provider-id/model-id` format:
@@ -80,7 +80,7 @@ For standalone cURL, Node.js, Python, Postman, and Claude Code examples, see the
 
 ## Troubleshooting
 
-- **Invalid API key:** Create a new key in your DaoXE dashboard, then reconnect with `/connect` / `kilo auth daoxe`, or update `DAOXE_API_KEY` if you use manual configuration.
+- **Invalid API key:** Create a new key in your DaoXE dashboard, then reconnect with `/connect` / `kilo auth login --provider daoxe`, or update `DAOXE_API_KEY` if you use manual configuration.
 - **Model not found:** Copy an exact model ID available to your account. Do not rely on a static model list.
 - **Provider not visible:** Refresh Kilo Code's provider catalog, then check **Show more providers**.
 - **Connection rejected:** Confirm that you are using the service from an available region.
