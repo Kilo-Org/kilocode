@@ -451,27 +451,29 @@ const IndexingTab: Component = () => {
         <Show
           when={vectorStore() === "qdrant"}
           fallback={
-            <SettingsRow
-              title={language.t("settings.indexing.lancedbDirectory.title")}
-              description={description(language.t("settings.indexing.lancedbDirectory.description"), [
-                ["lancedb", "directory"],
-              ])}
-              tag={() => tag(scope(), [["lancedb", "directory"]])}
-              last
-            >
-              <TextField
-                value={storeValue("lancedb", "directory")}
-                placeholder={language.t("settings.indexing.lancedbDirectory.placeholder")}
-                onInput={(e: InputEvent) => {
-                  const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.lancedb.directory`]: target.value }))
-                }}
-                onBlur={(e: FocusEvent) => {
-                  const target = e.currentTarget as HTMLInputElement
-                  saveStoreField("lancedb", "directory", target.value)
-                }}
-              />
-            </SettingsRow>
+            <Show when={vectorStore() === "lancedb"}>
+              <SettingsRow
+                title={language.t("settings.indexing.lancedbDirectory.title")}
+                description={description(language.t("settings.indexing.lancedbDirectory.description"), [
+                  ["lancedb", "directory"],
+                ])}
+                tag={() => tag(scope(), [["lancedb", "directory"]])}
+                last
+              >
+                <TextField
+                  value={storeValue("lancedb", "directory")}
+                  placeholder={language.t("settings.indexing.lancedbDirectory.placeholder")}
+                  onInput={(e: InputEvent) => {
+                    const target = e.currentTarget as HTMLInputElement
+                    setStoreDrafts((prev) => ({ ...prev, [`${scope()}.lancedb.directory`]: target.value }))
+                  }}
+                  onBlur={(e: FocusEvent) => {
+                    const target = e.currentTarget as HTMLInputElement
+                    saveStoreField("lancedb", "directory", target.value)
+                  }}
+                />
+              </SettingsRow>
+            </Show>
           }
         >
           <>
