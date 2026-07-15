@@ -2,9 +2,16 @@ import { createContext, useContext, createSignal, type Accessor, type ParentComp
 
 export interface SearchMatch {
   key: string
-  messageId: string
   /** Index (0-based) of this occurrence among all matches within the same row. */
   occurrence: number
+  /** id of the part (tool call/reasoning block/text) this occurrence falls
+   * within, if it could be attributed to one — lets navigation force a
+   * collapsed part open instead of just scrolling to the row. */
+  partId?: string
+  /** For a multi-file apply_patch part, the specific file path this
+   * occurrence falls within — lets navigation open just that file's nested
+   * accordion instead of every file in the patch. */
+  partFile?: string
 }
 
 interface TranscriptSearchContextValue {
@@ -18,6 +25,16 @@ interface TranscriptSearchContextValue {
   setRegex: (value: boolean) => void
   active: Accessor<boolean>
   setActive: (value: boolean) => void
+  /** Bumped only when search closes via an explicit user action (the header
+   * toggle button, the Command Palette toggle, or the search bar's own "X"/
+   * Escape) — never when `setActive(false)` is called to silently reset the
+   * widget because the current session changed. TaskHeader watches this
+   * instead of `active()` transitions so a session/tab switch can't trigger
+   * the same aggressive focus-restore sequence as a real close. */
+  closeSignal: Accessor<number>
+  /** Closes search and bumps `closeSignal` — use this for explicit
+   * user-initiated closes; use `setActive(false)` for a silent reset. */
+  closeSearch: () => void
   index: Accessor<number>
   setIndex: (value: number) => void
   count: Accessor<number>
@@ -48,6 +65,11 @@ export const TranscriptSearchProvider: ParentComponent = (props) => {
   const [wholeWord, setWholeWord] = createSignal(false)
   const [regex, setRegex] = createSignal(false)
   const [active, setActive] = createSignal(false)
+  const [closeSignal, setCloseSignal] = createSignal(0)
+  const closeSearch = () => {
+    setActive(false)
+    setCloseSignal((n) => n + 1)
+  }
   const [index, setIndex] = createSignal(0)
   const [count, setCount] = createSignal(0)
   const [jump, setJump] = createSignal(0)
@@ -67,6 +89,8 @@ export const TranscriptSearchProvider: ParentComponent = (props) => {
         setRegex,
         active,
         setActive,
+        closeSignal,
+        closeSearch,
         index,
         setIndex,
         count,
