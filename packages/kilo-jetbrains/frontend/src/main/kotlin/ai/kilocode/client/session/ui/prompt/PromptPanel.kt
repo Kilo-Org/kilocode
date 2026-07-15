@@ -63,7 +63,6 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -78,6 +77,7 @@ import java.awt.BasicStroke
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -243,7 +243,7 @@ class PromptPanel(
         addActionListener { enhance() }
     }
     private val separator = object : JComponent() {
-        override fun getPreferredSize() = JBUI.size(1, JBUI.scale(16))
+        override fun getPreferredSize() = JBUI.size(1, 16)
         override fun getMinimumSize() = preferredSize
         override fun getMaximumSize() = preferredSize
     }.apply {
@@ -313,6 +313,12 @@ class PromptPanel(
         syncBorder()
     }
 
+    override fun getPreferredSize(): Dimension = promptSize(super.getPreferredSize())
+
+    override fun getMinimumSize(): Dimension = promptSize(super.getMinimumSize())
+
+    override fun getMaximumSize(): Dimension = Dimension(super.getMaximumSize().width, preferredSize.height)
+
     private fun syncFocus(value: Boolean) {
         if (focused == value) {
             repaint()
@@ -333,6 +339,12 @@ class PromptPanel(
             },
             JBUI.Borders.empty(),
         )
+    }
+
+    private fun promptSize(size: Dimension): Dimension {
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = insets
+        return Dimension(size.width, editor.preferredSize.height + chrome + ins.top + ins.bottom)
     }
 
     override fun paintChildren(g: Graphics) {
@@ -916,17 +928,19 @@ class PromptPanel(
         val view = editor.getEditor(false)
         val line = view?.lineHeight ?: editor.getFontMetrics(editor.font).height
         val min = line * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
-        val content = editor.preferredSize.height
+        val content = if (editor.text.isBlank()) min else editor.preferredSize.height
         val sessionCap = rootCap(min)
         val height = minOf(content, sessionCap ?: content).coerceAtLeast(min)
         syncEditorScroll(view, content > height)
+        // height is already scaled px (from the editor lineHeight); assign with plain
+        // Dimension so IDE zoom does not scale it a second time via the user scale factor.
         if (before == height && lower == height) {
-            editor.preferredSize = JBDimension(0, height)
-            editor.minimumSize = JBDimension(0, height)
+            editor.preferredSize = Dimension(0, height)
+            editor.minimumSize = Dimension(0, height)
             return
         }
-        editor.preferredSize = JBDimension(0, height)
-        editor.minimumSize = JBDimension(0, height)
+        editor.preferredSize = Dimension(0, height)
+        editor.minimumSize = Dimension(0, height)
         revalidate()
         repaint()
     }

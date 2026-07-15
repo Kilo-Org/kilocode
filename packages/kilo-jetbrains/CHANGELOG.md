@@ -24,6 +24,13 @@
 
 ## [Unreleased]
 
+## [7.0.6] - 2026-07-14
+
+### Fixed
+
+- Honor the IDE's certificate and proxy settings for outbound HTTPS requests.
+- Scale the session UI correctly with IDE zoom, fixing double-scaled heights and extra empty space in the transcript and prompt composer.
+
 ## [7.0.5] - 2026-07-14
 
 ### Added

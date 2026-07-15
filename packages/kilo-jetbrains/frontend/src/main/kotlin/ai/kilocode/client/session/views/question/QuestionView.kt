@@ -29,7 +29,6 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBRadioButton
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
@@ -576,8 +575,10 @@ class QuestionView(
         val cap = rootCap(min)
         val height = minOf(content, cap ?: content).coerceAtLeast(min)
         syncEditorScroll(editor, content > height)
-        ed.preferredSize = JBDimension(0, height)
-        ed.minimumSize = JBDimension(0, height)
+        // height is already scaled px (from the editor lineHeight); assign with plain
+        // Dimension so IDE zoom does not scale it again via the user scale factor.
+        ed.preferredSize = Dimension(0, height)
+        ed.minimumSize = Dimension(0, height)
     }
 
     @RequiresEdt
