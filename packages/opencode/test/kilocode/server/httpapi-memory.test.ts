@@ -107,6 +107,10 @@ describe("HttpApi memory", () => {
     expect(rec(configured.state).autoConsolidate).toBe(false)
     expect(rec(configured.state).verbose).toBe(true)
 
+    const updated = await json("GET", MemoryPaths.status)
+    expect(rec(updated.state).autoConsolidate).toBe(false)
+    expect(rec(updated.state).verbose).toBe(true)
+
     const remembered = await json("POST", MemoryPaths.remember, {
       key: "httpapi_memory",
       text: "Use the memory HTTP API test as a stable project fact.",

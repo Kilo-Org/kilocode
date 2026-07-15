@@ -84,6 +84,7 @@ export async function runMemoryCommand(input: {
   client: KiloClient
   workspace?: string
   directory?: string
+  sessionID?: string
   toast: Toast
   renderer?: CliRenderer
   show(): void
@@ -108,10 +109,10 @@ export async function runMemoryCommand(input: {
     }
     const name = "Memory"
     if (parsed.operation === "enable") {
-      const result = read(await input.client.memory.enable(route(input)))
+      read(await input.client.memory.enable(route(input)))
       input.toast.show({
         variant: "success",
-        message: `${name} enabled (${tokens(result.index.tokens)}). Files: ${result.root}. Edit sources, then run /memory rebuild. Auto-save sends best-effort-redacted turn context to your configured model provider; disable with /memory auto off.`,
+        message: `${name} enabled`,
       })
       return true
     }
@@ -164,18 +165,36 @@ export async function runMemoryCommand(input: {
     }
     // Wording mirrors the server memory event messages so chat-intent and command saves read the same.
     if (parsed.operation === "remember") {
-      const result = read(await input.client.memory.remember({ ...route(input), text: parsed.text }))
+      const result = read(
+        await input.client.memory.remember({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          text: parsed.text,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Memory saved · ${changeCount(result.operationCount)}` })
       return true
     }
     if (parsed.operation === "correct") {
-      const result = read(await input.client.memory.correct({ ...route(input), text: parsed.text }))
+      const result = read(
+        await input.client.memory.correct({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          text: parsed.text,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Correction saved · ${changeCount(result.operationCount)}` })
       return true
     }
 
     if (parsed.operation === "forget") {
-      const result = read(await input.client.memory.forget({ ...route(input), query: parsed.query }))
+      const result = read(
+        await input.client.memory.forget({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          query: parsed.query,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Memory updated · ${result.removed.toLocaleString()} removed` })
     }
     return true

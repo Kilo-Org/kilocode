@@ -1041,6 +1041,7 @@ export function Prompt(props: PromptProps) {
       client: sdk.client,
       workspace: project.workspace.current(),
       directory: props.directory,
+      sessionID: props.sessionID,
       toast,
       dialog,
       renderer,
