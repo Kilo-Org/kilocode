@@ -6,7 +6,7 @@ sidebar_label: DaoXE
 
 # Using DaoXE With Kilo Code
 
-[DaoXE](https://daoxe.com) is a multi-model API gateway available in Kilo Code through the OpenAI-compatible provider catalog. Kilo Code uses the `daoxe` provider ID and reads your API key from `DAOXE_API_KEY`.
+[DaoXE](https://daoxe.com) is a multi-model API gateway you can use in Kilo Code to reach multiple models through one API key and base URL — useful when you want a single OpenAI-compatible endpoint instead of wiring each vendor separately. Kilo Code uses the `daoxe` provider ID and reads your API key from `DAOXE_API_KEY`.
 
 {% callout type="warning" %}
 DaoXE is not available in mainland China. Requests from mainland China may be blocked or rejected.
@@ -28,30 +28,21 @@ DaoXE is not available in mainland China. Requests from mainland China may be bl
 3. Enter your DaoXE API key.
 4. Select a model that is available to your DaoXE account.
 
-The extension stores provider credentials in Kilo's `auth.json` store. The CLI tab below shows the separate `kilo.json` provider configuration.
+The provider credentials are stored in Kilo's `auth.json` store.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-Set your API key in the environment:
+**Recommended:** connect interactively so the API key is stored in Kilo's `auth.json` store (same credential store as VS Code).
+
+1. In the TUI, run `/connect` and choose **DaoXE**, then paste your API key.
+2. Or from the shell:
 
 ```bash
-export DAOXE_API_KEY="your-api-key"
+kilo auth daoxe
 ```
 
-Configure the provider in `~/.config/kilo/kilo.json` or `./kilo.json`:
-
-```jsonc
-{
-  "provider": {
-    "daoxe": {
-      "env": ["DAOXE_API_KEY"],
-    },
-  },
-}
-```
-
-Set your default model using the `provider-id/model-id` format:
+Then pick a model from the model picker, or set a default model using the `provider-id/model-id` format:
 
 ```jsonc
 {
@@ -60,6 +51,23 @@ Set your default model using the `provider-id/model-id` format:
 ```
 
 Replace `your-account-model-id` with an exact model ID available to your account.
+
+**Manual configuration (optional):** set the key in the environment and declare the provider in `~/.config/kilo/kilo.json` or `./kilo.json` without writing the secret into the project file:
+
+```bash
+export DAOXE_API_KEY="your-api-key"
+```
+
+```jsonc
+{
+  "provider": {
+    "daoxe": {
+      "env": ["DAOXE_API_KEY"],
+    },
+  },
+  "model": "daoxe/your-account-model-id",
+}
+```
 
 {% /tab %}
 {% /tabs %}
@@ -72,7 +80,7 @@ For standalone cURL, Node.js, Python, Postman, and Claude Code examples, see the
 
 ## Troubleshooting
 
-- **Invalid API key:** Create a new key in your DaoXE dashboard and update `DAOXE_API_KEY`.
+- **Invalid API key:** Create a new key in your DaoXE dashboard, then reconnect with `/connect` / `kilo auth daoxe`, or update `DAOXE_API_KEY` if you use manual configuration.
 - **Model not found:** Copy an exact model ID available to your account. Do not rely on a static model list.
 - **Provider not visible:** Refresh Kilo Code's provider catalog, then check **Show more providers**.
 - **Connection rejected:** Confirm that you are using the service from an available region.
