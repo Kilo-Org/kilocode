@@ -12,6 +12,8 @@ import { AbsolutePath } from "@opencode-ai/core/schema"
 
 export namespace RecallSearch {
   const BATCH = 128
+  const PAGE_SIZE = 1_024
+  const SCAN_SIZE = 16_384
   const MAX_QUERY = 256
   const MAX_TERMS = 12
   const MAX_SNIPPETS = 3
@@ -20,6 +22,7 @@ export namespace RecallSearch {
   const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" })
 
   const FIELDS_SQL = `
+    p.rowid AS rowid,
     p.id AS partID,
     p.session_id AS sessionID,
     CASE
@@ -51,40 +54,63 @@ export namespace RecallSearch {
     OR (json_extract(p.data, '$.type') = 'tool'
       AND json_extract(p.data, '$.state.status') = 'error')`
 
-  const searchSql = (
+  const pageSql = (
     ids: SessionID[],
+    cursor: { sessionID: SessionID | ""; rowid: number },
     rowid: number,
     partID: string,
     sessionID: SessionID | "",
     messageID: MessageID | "",
   ) => sql`
-    SELECT ${sql.raw(FIELDS_SQL)}
-    FROM part AS p INDEXED BY part_session_idx
-    JOIN message AS m ON m.id = p.message_id
-      AND m.session_id = p.session_id
-    WHERE p.session_id IN (${sql.join(
-      ids.map((id) => sql`${id}`),
-      sql`,`,
-    )})
-      AND p.rowid <= ${rowid}
-      AND p.id <= ${partID}
-      AND NOT (
-        m.session_id = ${sessionID} AND (
-          (json_extract(m.data, '$.role') = 'user' AND m.id >= ${messageID})
-          OR (json_extract(m.data, '$.role') = 'assistant' AND json_extract(m.data, '$.parentID') >= ${messageID})
+    WITH page AS (
+      SELECT p.rowid, p.id, p.message_id, p.session_id, p.data
+      FROM part AS p INDEXED BY part_session_idx
+      WHERE p.session_id IN (${sql.join(
+        ids.map((id) => sql`${id}`),
+        sql`,`,
+      )})
+        AND (p.session_id > ${cursor.sessionID} OR (p.session_id = ${cursor.sessionID} AND p.rowid > ${cursor.rowid}))
+        AND p.rowid <= ${rowid}
+        AND p.id <= ${partID}
+      ORDER BY p.session_id, p.rowid
+      LIMIT ${SCAN_SIZE}
+    ), found AS (
+      SELECT ${sql.raw(FIELDS_SQL)}
+      FROM page AS p
+      JOIN message AS m ON m.id = p.message_id
+        AND m.session_id = p.session_id
+      WHERE NOT (
+          m.session_id = ${sessionID} AND (
+            (json_extract(m.data, '$.role') = 'user' AND m.id >= ${messageID})
+            OR (json_extract(m.data, '$.role') = 'assistant' AND json_extract(m.data, '$.parentID') >= ${messageID})
+          )
         )
-      )
-      AND (${sql.raw(FILTER_SQL)})`
-
-  const countSql = (ids: SessionID[], rowid: number, partID: string) => sql`
-    SELECT count(*) AS parts
-    FROM part AS p INDEXED BY part_session_idx
-    WHERE p.session_id IN (${sql.join(
-      ids.map((id) => sql`${id}`),
-      sql`,`,
-    )})
-      AND p.rowid <= ${rowid}
-      AND p.id <= ${partID}`
+        AND (${sql.raw(FILTER_SQL)})
+      ORDER BY p.session_id, p.rowid
+      LIMIT ${PAGE_SIZE}
+    ), next AS (
+      SELECT
+        CASE WHEN (SELECT count(*) FROM found) = ${PAGE_SIZE}
+          THEN (SELECT sessionID FROM found ORDER BY sessionID DESC, rowid DESC LIMIT 1)
+          ELSE (SELECT session_id FROM page ORDER BY session_id DESC, rowid DESC LIMIT 1)
+        END AS sessionID,
+        CASE WHEN (SELECT count(*) FROM found) = ${PAGE_SIZE}
+          THEN (SELECT rowid FROM found ORDER BY sessionID DESC, rowid DESC LIMIT 1)
+          ELSE (SELECT rowid FROM page ORDER BY session_id DESC, rowid DESC LIMIT 1)
+        END AS rowid
+    ), meta AS (
+      SELECT next.sessionID, next.rowid, count(*) AS parts
+      FROM next
+      JOIN page AS p ON p.session_id < next.sessionID OR (p.session_id = next.sessionID AND p.rowid <= next.rowid)
+      WHERE next.sessionID IS NOT NULL
+      GROUP BY next.sessionID, next.rowid
+    )
+    SELECT rowid, partID, sessionID, source, text, 0 AS meta, 0 AS parts
+    FROM found
+    UNION ALL
+    SELECT rowid, NULL AS partID, sessionID, NULL AS source, NULL AS text, 1 AS meta, parts
+    FROM meta
+    ORDER BY meta, sessionID, rowid`
 
   export type Source = "user" | "assistant" | "reference" | "error"
 
@@ -128,7 +154,13 @@ export namespace RecallSearch {
     text: string
   }
 
-  type CountRow = {
+  type PageRow = {
+    rowid: number
+    partID: PartID | null
+    sessionID: SessionID
+    source: Source | null
+    text: string | null
+    meta: number
     parts: number
   }
 
@@ -224,16 +256,22 @@ export namespace RecallSearch {
     for (let index = 0; index < ids.length; index += BATCH) {
       yield* abort(input.signal)
       const batch = ids.slice(index, index + BATCH)
-      const count = yield* db.get<CountRow>(countSql(batch, rowid, partID)).pipe(Effect.orDie)
-      const found = yield* db
-        .all<Row>(searchSql(batch, rowid, partID, excludeSessionID, excludeFromMessageID))
-        .pipe(Effect.orDie)
-      for (const row of found) {
-        consume(row)
+      let cursor = { sessionID: "" as SessionID | "", rowid: 0 }
+      while (cursor.rowid <= rowid) {
+        const found = yield* db
+          .all<PageRow>(pageSql(batch, cursor, rowid, partID, excludeSessionID, excludeFromMessageID))
+          .pipe(Effect.orDie)
+        if (found.length === 0) break
+        const last = found.at(-1)!
+        cursor = { sessionID: last.sessionID, rowid: last.rowid }
+        parts += last.parts
+        for (const row of found) {
+          if (row.meta || !row.partID || !row.source) continue
+          consume({ partID: row.partID, sessionID: row.sessionID, source: row.source, text: row.text ?? "" })
+        }
+        yield* pause
+        yield* abort(input.signal)
       }
-      parts += count?.parts ?? 0
-      yield* pause
-      yield* abort(input.signal)
     }
     yield* pause
     yield* abort(input.signal)

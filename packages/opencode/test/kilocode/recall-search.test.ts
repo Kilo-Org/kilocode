@@ -247,7 +247,7 @@ it.instance(
 )
 
 it.instance(
-  "searches every batch while respecting worktree scope",
+  "searches every page and batch while respecting worktree scope",
   () =>
     Effect.gen(function* () {
       yield* seedProject
@@ -258,8 +258,9 @@ it.instance(
       yield* add(child.id, "user", { type: "text", text: "archived-child-needle" })
 
       const broad = yield* sessions.create({ title: "Broad" })
-      for (let index = 0; index < 300; index++) {
-        yield* add(broad.id, "user", { type: "text", text: `page ${index}` })
+      for (let index = 0; index < 1_100; index++) {
+        const text = index === 1_099 ? "page-boundary-needle" : `page ${index}`
+        yield* add(broad.id, "user", { type: "text", text })
       }
       for (let index = 0; index < 140; index++) {
         const session = yield* sessions.create({ title: `Batch ${index}` })
@@ -277,10 +278,11 @@ it.instance(
         .pipe(Effect.orDie)
 
       expect((yield* run("archived-child-needle")).results.map((item) => item.id)).toEqual([child.id])
+      expect((yield* run("page-boundary-needle")).results.map((item) => item.id)).toEqual([broad.id])
       const result = yield* run("last-session-needle")
       expect(result.results).toHaveLength(1)
       expect(result.sessions).toBe(143)
-      expect(result.parts).toBe(302)
+      expect(result.parts).toBe(1_102)
     }),
   { git: true },
 )
@@ -298,7 +300,7 @@ it.instance(
         type: "text",
         text: `terminal ${"x".repeat(20_000)} terminal needle ${"y".repeat(20_000)}`,
       })
-      for (let index = 0; index < 300; index++) {
+      for (let index = 0; index < 1_100; index++) {
         yield* add(session.id, "user", { type: "text", text: `noise ${index}` })
       }
 
