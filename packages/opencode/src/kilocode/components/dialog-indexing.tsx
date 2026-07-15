@@ -420,21 +420,31 @@ async function showValkeySettings(
   }
 
   const password = await DialogPrompt.show(dialog, "Valkey — Password", {
-    value: currentSettings.password ?? "",
-    placeholder: "Optional password",
+    value: "",
+    placeholder: currentSettings.password ? "••• (press enter to keep)" : "Optional password",
   })
   if (password === null) {
     dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)
     return
   }
 
+  // Only persist password if the user explicitly typed a new one.
+  // An empty submission preserves the existing project-local value (if any)
+  // without copying an inherited global password into the project config.
+  const trimmed = password.trim()
+  const valkey: NonNullable<IndexingConfig["valkey"]> = {
+    url: url.trim() || undefined,
+  }
+  if (trimmed) {
+    valkey.password = trimmed
+  } else if (raw.valkey?.password !== undefined) {
+    valkey.password = raw.valkey.password
+  }
+
   const updated: IndexingConfig = {
     ...raw,
     vectorStore: "valkey",
-    valkey: {
-      url: url.trim() || undefined,
-      password: password.trim() || undefined,
-    },
+    valkey,
   }
   await saveScopedIndexing(sdk, sync, scope, raw, updated, toast)
   dialog.replace(() => <DialogIndexing useSDK={useSDK} scope={scope} />)

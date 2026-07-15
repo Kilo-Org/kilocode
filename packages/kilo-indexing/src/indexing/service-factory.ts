@@ -15,8 +15,7 @@ import { OpenRouterEmbedder } from "./embedders/openrouter"
 import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
-import { ValkeyVectorStore } from "./vector-store/valkey-vector-store"
-import { CodeParser, DirectoryScanner, FileWatcher } from "./processors"
+import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
 import type { AvailableEmbedders, ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
 import type { CacheManager } from "./cache-manager"
@@ -221,8 +220,11 @@ export class CodeIndexServiceFactory {
         model: profile.modelId,
         vectorSize: profile.dimension,
       })
+      // Lazy import: @valkey/valkey-glide ships native binaries only for Darwin/Linux.
+      // Importing eagerly would break indexing on Windows even when Valkey is not selected.
+      const { ValkeyVectorStore } = require("./vector-store/valkey-vector-store") as typeof import("./vector-store/valkey-vector-store")
       return new ValkeyVectorStore(
-        this.workspacePath,
+        workspacePath,
         config.valkeyUrl,
         profile.dimension,
         config.valkeyPassword,
@@ -311,7 +313,7 @@ export class CodeIndexServiceFactory {
 
     const embedder = this.createEmbedder()
     const vectorStore = this.createVectorStore()
-    const parser = new CodeParser(config.fileExtensions)
+    const parser = codeParser
     const scanner = this.createDirectoryScanner(embedder, vectorStore, parser, ignoreInstance)
     const fileWatcher = this.createFileWatcher(embedder, vectorStore, cacheManager, ignoreInstance, parser)
 
