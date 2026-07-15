@@ -19,10 +19,6 @@
       "outputs": [],
       "passThroughEnv": ["*"]
     },
-    "test:ci": {
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
-    },
     "@kilocode/cli#test:ci": {
       "dependsOn": ["^build"],
       "env": ["KILO_TEST_PROFILE", "KILO_TEST_SHARD"],
@@ -57,11 +53,6 @@
     "@opencode-ai/ui#test": {
       "dependsOn": ["^build"],
       "outputs": []
-    },
-    "@opencode-ai/ui#test:ci": {
-      "dependsOn": ["^build"],
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
     }
   }
 }
