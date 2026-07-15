@@ -139,4 +139,21 @@ export const dict = {
   "ui.message.feedback.helpful": "C'était utile",
   "ui.message.feedback.notHelpful": "Ce n'était pas utile",
   "ui.message.feedback.clearRating": "Effacer la notation",
+
+  // Timeline step details
+  "timeline.menu.goToPart": "Aller à la partie",
+  "timeline.menu.stepDetails": "Détails de l'étape",
+  "timeline.step.label": "Étape {{step}}",
+  "timeline.step.inProgress": "en cours",
+  "timeline.details.title": "Détails - {{step}}",
+  "timeline.details.agent": "Agent",
+  "timeline.details.provider": "Fournisseur",
+  "timeline.details.model": "Modèle",
+  "timeline.details.started": "Début",
+  "timeline.details.finished": "Fin",
+  "timeline.details.duration": "Durée",
+  "timeline.details.totalCost": "Coût total",
+  "timeline.details.tokens": "Jetons",
+  "timeline.details.tokens.summary": "Entrée {{input}} · Sortie {{output}} · Raisonnement {{reasoning}}",
+  "timeline.details.tokens.cacheSummary": "Cache R {{read}} · W {{write}} · Taux de réussite {{rate}}",
 }
