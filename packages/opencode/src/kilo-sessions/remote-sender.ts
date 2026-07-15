@@ -1,6 +1,7 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { RemoteRun } from "@/kilo-sessions/remote-run"
 import { RemoteRuntime } from "@/kilo-sessions/remote-runtime"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
@@ -42,14 +43,6 @@ const SuggestionData = z.object({
   requestID: z.string(),
   index: z.number().int().nonnegative(),
 })
-
-// kilocode_change start - create_session: strict v1 request, no other fields accepted
-const CreateSessionRequest = z
-  .object({
-    protocolVersion: z.literal(1),
-  })
-  .strict()
-// kilocode_change end
 
 const decodeSessionID = Schema.decodeUnknownOption(SessionID)
 
@@ -120,18 +113,12 @@ export namespace RemoteSender {
     session?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly children: (sessionID: SessionID) => Promise<Session.Info[]>
-      // kilocode_change start - injectable create hook for create_session.
-      // create_session only ever calls `create({})` for a root session, so the
-      // test hook is typed as the loose `() => Promise<Session.Info>` shape.
-      // Production falls back to Session.Service.create with `{}`.
-      readonly create?: (input?: Record<string, never>) => Promise<Session.Info>
-      // kilocode_change end
     }
-    // kilocode_change start - duplicate-safe attach hook used by create_session.
-    // Production wires this to KiloSessions.attachRemoteSession so the attached
-    // set is mutated exactly once and the relay heartbeat fires only when the
-    // set actually changes.
-    attachSession?: (sessionID: SessionID) => Promise<void>
+    // kilocode_change start - sessionless create_and_run deep module. Wired in
+    // KiloSessions.enableRemote from the same captured launch-directory
+    // runtime + attachedState. When omitted, the command is rejected so the
+    // relay never calls a half-wired sender.
+    run?: RemoteRun.Interface
     // kilocode_change end
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
@@ -224,29 +211,15 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Session.Service.use((svc) => svc.children(sessionID)))
       },
     }
-    // kilocode_change start - session create + duplicate-safe attach used by create_session
-    const sessionCreate =
-      session.create ??
-      (async (input?: Record<string, never>) => {
-        const { AppRuntime } = await import("@/effect/app-runtime")
-        return AppRuntime.runPromise(
-          Session.Service.use((svc) => svc.create(input as Parameters<typeof svc.create>[0])),
-        )
-      })
-    const attachSession =
-      options.attachSession ??
-      (async (id: SessionID) => {
-        const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-        await KiloSessions.attachRemoteSession(id)
-      })
-    // kilocode_change end
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
     // kilocode_change end
-    // kilocode_change start - sessionless runtime catalog. The runtime is
-    // captured from KiloSessions.enableRemote; we never construct a second
-    // Instance or socket here.
+    // kilocode_change start - sessionless runtime + run deep module. The runtime
+    // is captured from KiloSessions.enableRemote; the run deep module is wired
+    // from the same captured launch-directory runtime + attachedState. We never
+    // construct a second Instance or socket here.
     const runtime = options.runtime
+    const run = options.run
     // kilocode_change end
 
     const sub =
@@ -543,42 +516,54 @@ export namespace RemoteSender {
         })()
         return
       }
-      if (msg.command === "create_session") {
-        // kilocode_change start - remote /new creation: root session, attached + heartbeat before response
-        const parsed = CreateSessionRequest.safeParse(msg.data)
-        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
-        if (!parsed.success || Option.isNone(current)) {
+      if (msg.command === "create_and_run") {
+        // kilocode_change start - sessionless create_and_run: strict v1
+        // request, no sessionId allowed, no current-session directory lookup.
+        // The deep module validates the request against the live catalog
+        // and creates the session in the fixed launch-directory Instance.
+        // All wire errors use a stable `{code,message}` shape so the cloud
+        // relay can branch on `code` deterministically.
+        const invalid = (reason: string) =>
           options.conn.send({
             type: "response",
             id: msg.id,
-            error: "invalid create_session command",
+            error: { code: "INVALID_REQUEST", message: reason },
           })
-          return
-        }
-        const run = options.provide ?? provide
+        if (msg.sessionId) return invalid("invalid create_and_run request")
+        if (!run) return invalid("invalid create_and_run request")
+        // Defer the deep-module call. Any throw is sanitized to a stable
+        // command error so the cloud relay can branch on `error.code`.
         void (async () => {
+          let result
           try {
-            const result = await run({
-              directory: (await session.get(current.value)).directory,
-              fn: async () => {
-                const created = await sessionCreate({})
-                // attachSession is the duplicate-safe seam: it mutates the
-                // attached set exactly once and fires conn.heartbeat() only
-                // when the set actually changes, so the relay learns about
-                // the new session before we respond.
-                await attachSession(created.id)
-                return created
-              },
-            })
+            result = await run.createAndRun(msg.data)
+          } catch (error) {
+            options.log.error("create_and_run failed", { id: msg.id, error: errorName(error) })
             options.conn.send({
               type: "response",
               id: msg.id,
-              result: { protocolVersion: 1, sessionID: result.id },
+              error: { code: "INTERNAL", message: "failed to run create_and_run" },
             })
-          } catch (error) {
-            options.log.error("create session failed", { id: msg.id, error: errorName(error) })
-            options.conn.send({ type: "response", id: msg.id, error: "failed to create session" })
+            return
           }
+          // Strip the internal `ok` discriminator before sending. The cloud
+          // shared contract is a discriminated union on `promptStarted` and
+          // does not include an `ok` field on the wire.
+          if (result.ok) {
+            const { ok: _ok, ...wire } = result
+            void _ok
+            options.conn.send({ type: "response", id: msg.id, result: wire })
+            return
+          }
+          // All Err results (INVALID_REQUEST / CATALOG_CHANGED / CREATE_FAILED /
+          // ANNOUNCE_FAILED) become command errors with a stable `code` so
+          // the cloud can branch deterministically. PROMPT_START_FAILED is
+          // the partial-success case above (`ok:true, promptStarted:false`).
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: { code: result.error.code, message: result.error.message },
+          })
         })()
         return
       }

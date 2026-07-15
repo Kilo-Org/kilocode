@@ -29,6 +29,7 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteRuntime } from "@/kilo-sessions/remote-runtime"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { AttachedState } from "@/kilo-sessions/attached-state"
+import { createRemoteRunLive } from "@/kilo-sessions/remote-run-live"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -221,11 +222,10 @@ export namespace KiloSessions {
   // update cannot drop a pending id and a heartbeat failure cannot delete a
   // presence-owned id. The heartbeat closure throws when no remote connection
   // is available so `announce` cannot silently mark a session as attached;
-  // create_session's catch block turns that into the sanitized failure
+  // the create_and_run catch block turns that into the sanitized failure
   // response and the user retries manually.
   const attachedState = AttachedState.create({
-    heartbeat: () =>
-      remote ? remote.conn.heartbeat() : Promise.reject(new Error("attachRemoteSession: no remote connection")),
+    heartbeat: () => (remote ? remote.conn.heartbeat() : Promise.reject(new Error("no remote connection"))),
     log: attachedLog,
   })
   // kilocode_change end
@@ -544,11 +544,22 @@ export namespace KiloSessions {
         onClose: () => disableRemote(),
       })
 
+      const run = createRemoteRunLive({
+        runtime,
+        attachedState,
+        directory,
+        log: {
+          error: (msg: string, meta?: unknown) => log.error(msg, meta as Record<string, unknown>),
+          warn: (msg: string, meta?: unknown) => log.warn(msg, meta as Record<string, unknown>),
+        },
+      })
+
       const sender = RemoteSender.create({
         conn,
         directory: Instance.directory,
         log,
         runtime,
+        run,
       })
 
       if (seq !== remoteSeq) {
@@ -604,16 +615,6 @@ export namespace KiloSessions {
     // announcement is not dropped by a presence clear+rebuild.
     attachedState.setPresence(ids)
   }
-
-  // kilocode_change start - duplicate-safe single-session attach used by the
-  // remote create_session command. Delegates to the two-set state so the
-  // announcement is preserved across a concurrent presence replacement and a
-  // heartbeat failure rolls back only the entry this call added (a
-  // presence-owned id is never reachable here because the factory guards it).
-  export async function attachRemoteSession(id: string) {
-    await attachedState.announce(id)
-  }
-  // kilocode_change end
 
   export async function create(sessionId: string) {
     const result = await bootstrap(sessionId)

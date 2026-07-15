@@ -2077,416 +2077,6 @@ describe("RemoteSender slash commands", () => {
     expect(flattened).not.toContain("credential=must-not-leak")
     expect(flattened).not.toContain("secret=")
   })
-
-  test("create_session creates a root session in the current directory and responds in order", async () => {
-    const { conn, sent } = fakeConn()
-    const dirs: string[] = []
-    const createCalls: { input: unknown; calls: number } = { input: undefined, calls: 0 }
-    const attachCalls: string[] = []
-    const order: string[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => {
-        dirs.push(input.directory)
-        return input.fn()
-      },
-      session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
-        children: async () => [],
-        create: async (input) => {
-          createCalls.calls += 1
-          createCalls.input = input
-          order.push("create")
-          return { id: SessionID.make("ses_new"), directory: "/workspace/project-a", parentID: undefined } as any
-        },
-      },
-      attachSession: async (id) => {
-        attachCalls.push(id)
-        order.push("attach")
-        // The production attachSession is responsible for the heartbeat; the
-        // mock follows the same contract so the ordering assertion below
-        // exercises the real shape of: create -> attach -> heartbeat -> response.
-        await (conn as any).heartbeat()
-      },
-    })
-    ;(conn as any).heartbeat = async () => {
-      order.push("heartbeat")
-    }
-
-    const response = expectResponse(conn, sent, "req_create")
-    sender.handle({
-      type: "command",
-      id: "req_create",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await response.promise
-    response.restore()
-
-    expect(dirs).toEqual(["/workspace/project-a"])
-    expect(createCalls.calls).toBe(1)
-    expect(createCalls.input).toEqual({})
-    expect(attachCalls).toEqual(["ses_new"])
-    expect(order).toEqual(["create", "attach", "heartbeat"])
-    expect(sent).toEqual([
-      { type: "response", id: "req_create", result: { protocolVersion: 1, sessionID: "ses_new" } },
-    ])
-  })
-
-  test("create_session rejects unsupported protocol versions and missing or invalid session IDs", async () => {
-    const { conn, sent } = fakeConn()
-    const createCalls: unknown[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/test",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      session: {
-        get: async () => {
-          throw new Error("must not look up session for invalid request")
-        },
-        children: async () => [],
-        create: async (input) => {
-          createCalls.push(input)
-          return { id: SessionID.make("ses_unused") } as any
-        },
-      },
-      attachSession: async () => {
-        throw new Error("must not attach for invalid request")
-      },
-    })
-    ;(conn as any).heartbeat = async () => {
-      throw new Error("must not heartbeat for invalid request")
-    }
-
-    sender.handle({
-      type: "command",
-      id: "req_v2",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 2 },
-    })
-    sender.handle({
-      type: "command",
-      id: "req_no_session",
-      command: "create_session",
-      data: { protocolVersion: 1 },
-    })
-    sender.handle({
-      type: "command",
-      id: "req_bad_session",
-      command: "create_session",
-      sessionId: "not-a-session-id",
-      data: { protocolVersion: 1 },
-    })
-    sender.handle({
-      type: "command",
-      id: "req_extra_field",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1, extra: true },
-    })
-
-    expect(sent).toEqual([
-      { type: "response", id: "req_v2", error: "invalid create_session command" },
-      { type: "response", id: "req_no_session", error: "invalid create_session command" },
-      { type: "response", id: "req_bad_session", error: "invalid create_session command" },
-      { type: "response", id: "req_extra_field", error: "invalid create_session command" },
-    ])
-    expect(createCalls).toHaveLength(0)
-  })
-
-  test("create_session returns a sanitized error and never reports success when creation throws", async () => {
-    const { conn, sent } = fakeConn()
-    const logEntries: unknown[][] = []
-    const attachCalls: string[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: { ...nolog, error: (...args: unknown[]) => logEntries.push(args) },
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
-      session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
-        children: async () => [],
-        create: async () => {
-          throw new Error("private failure detail: token=must-not-leak")
-        },
-      },
-      attachSession: async (id) => {
-        attachCalls.push(id)
-      },
-    })
-    ;(conn as any).heartbeat = async () => {}
-
-    const response = expectResponse(conn, sent, "req_create_failed")
-    sender.handle({
-      type: "command",
-      id: "req_create_failed",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await response.promise
-    response.restore()
-
-    expect(sent).toEqual([{ type: "response", id: "req_create_failed", error: "failed to create session" }])
-    expect(attachCalls).toEqual([])
-    expect(logEntries).toHaveLength(1)
-    expect(logEntries[0]?.[0]).toBe("create session failed")
-    expect(logEntries[0]?.[1]).toEqual({ id: "req_create_failed", error: "Error" })
-    const flattened = JSON.stringify(logEntries)
-    expect(flattened).not.toContain("must-not-leak")
-    expect(flattened).not.toContain("token=")
-  })
-
-  test("create_session returns a sanitized error and never reports success when heartbeat throws", async () => {
-    const { conn, sent } = fakeConn()
-    const logEntries: unknown[][] = []
-    const attachCalls: string[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: { ...nolog, error: (...args: unknown[]) => logEntries.push(args) },
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
-      session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
-        children: async () => [],
-        create: async () =>
-          ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" } as any),
-      },
-      attachSession: async (id) => {
-        // The production contract puts the heartbeat inside attachSession so
-        // a duplicate-safe set mutation can skip the network round trip.
-        attachCalls.push(id)
-        await (conn as any).heartbeat()
-      },
-    })
-    ;(conn as any).heartbeat = async () => {
-      throw new Error("private relay detail: credential=must-not-leak")
-    }
-
-    const response = expectResponse(conn, sent, "req_heartbeat_failed")
-    sender.handle({
-      type: "command",
-      id: "req_heartbeat_failed",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await response.promise
-    response.restore()
-
-    expect(sent).toEqual([{ type: "response", id: "req_heartbeat_failed", error: "failed to create session" }])
-    expect(attachCalls).toEqual(["ses_new"])
-    expect(logEntries).toHaveLength(1)
-    expect(logEntries[0]?.[0]).toBe("create session failed")
-    const flattened = JSON.stringify(logEntries)
-    expect(flattened).not.toContain("must-not-leak")
-    expect(flattened).not.toContain("credential=")
-  })
-
-  test("create_session runs in the current session's directory", async () => {
-    const { conn, sent } = fakeConn()
-    const dirs: string[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => {
-        dirs.push(input.directory)
-        return input.fn()
-      },
-      session: {
-        get: async (sessionID) => {
-          if (sessionID === SessionID.make("ses_alpha")) return { id: sessionID, directory: "/workspace/alpha" } as any
-          if (sessionID === SessionID.make("ses_beta")) return { id: sessionID, directory: "/workspace/beta" } as any
-          throw new Error("unknown session")
-        },
-        children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_new") } as any),
-      },
-      attachSession: async () => {},
-    })
-    ;(conn as any).heartbeat = async () => {}
-
-    const first = expectResponse(conn, sent, "req_create_alpha")
-    sender.handle({
-      type: "command",
-      id: "req_create_alpha",
-      command: "create_session",
-      sessionId: "ses_alpha",
-      data: { protocolVersion: 1 },
-    })
-    await first.promise
-    first.restore()
-
-    const second = expectResponse(conn, sent, "req_create_beta")
-    sender.handle({
-      type: "command",
-      id: "req_create_beta",
-      command: "create_session",
-      sessionId: "ses_beta",
-      data: { protocolVersion: 1 },
-    })
-    await second.promise
-    second.restore()
-
-    expect(dirs).toEqual(["/workspace/alpha", "/workspace/beta"])
-  })
-
-  test("create_session dispatches attach and heartbeat for each call", async () => {
-    const { conn, sent } = fakeConn()
-    const attachCalls: string[] = []
-    let heartbeatCalls = 0
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
-      session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
-        children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_same") } as any),
-      },
-      attachSession: async (id) => {
-        attachCalls.push(id)
-        await (conn as any).heartbeat()
-      },
-    })
-    ;(conn as any).heartbeat = async () => {
-      heartbeatCalls += 1
-    }
-
-    const first = expectResponse(conn, sent, "req_create_same_first")
-    sender.handle({
-      type: "command",
-      id: "req_create_same_first",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await first.promise
-    first.restore()
-
-    const second = expectResponse(conn, sent, "req_create_same_second")
-    sender.handle({
-      type: "command",
-      id: "req_create_same_second",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await second.promise
-    second.restore()
-
-    // Each request is a separate create_session call, so the production
-    // attachSession is invoked twice. The de-duplication of the attached set
-    // itself is the responsibility of the attachSession hook (see the
-    // duplicate-safe test below).
-    expect(attachCalls).toEqual(["ses_same", "ses_same"])
-    expect(heartbeatCalls).toBe(2)
-  })
-
-  test("create_session does not call heartbeat when the new session is already attached", async () => {
-    const { conn, sent } = fakeConn()
-    let heartbeatCalls = 0
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
-      session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
-        children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_existing") } as any),
-      },
-      attachSession: async () => {
-        // Simulate a duplicate-safe attach: nothing to do, no heartbeat needed.
-      },
-    })
-    ;(conn as any).heartbeat = async () => {
-      heartbeatCalls += 1
-    }
-
-    const response = expectResponse(conn, sent, "req_create_existing")
-    sender.handle({
-      type: "command",
-      id: "req_create_existing",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await response.promise
-    response.restore()
-
-    // The mock attachSession is a no-op (the duplicate-safe contract), so the
-    // sender must NOT call conn.heartbeat() on its own.
-    expect(heartbeatCalls).toBe(0)
-    expect(sent).toEqual([
-      { type: "response", id: "req_create_existing", result: { protocolVersion: 1, sessionID: "ses_existing" } },
-    ])
-  })
-
-  test("create_session returns a sanitized error and never reports success when current session.get throws", async () => {
-    const { conn, sent } = fakeConn()
-    const logEntries: unknown[][] = []
-    const createCalls: unknown[] = []
-    const attachCalls: string[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: { ...nolog, error: (...args: unknown[]) => logEntries.push(args) },
-      subscribe: fakeBus().subscribe,
-      session: {
-        get: async () => {
-          throw new Error("private lookup failure: token=must-not-leak and path=/workspace/private")
-        },
-        children: async () => [],
-        create: async (input) => {
-          createCalls.push(input)
-          return { id: SessionID.make("ses_unused") } as any
-        },
-      },
-      attachSession: async (id) => {
-        attachCalls.push(id)
-      },
-    })
-    ;(conn as any).heartbeat = async () => {}
-
-    const response = expectResponse(conn, sent, "req_create_get_failed")
-    sender.handle({
-      type: "command",
-      id: "req_create_get_failed",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await response.promise
-    response.restore()
-
-    expect(sent).toEqual([{ type: "response", id: "req_create_get_failed", error: "failed to create session" }])
-    expect(createCalls).toEqual([])
-    expect(attachCalls).toEqual([])
-    expect(logEntries).toHaveLength(1)
-    expect(logEntries[0]?.[0]).toBe("create session failed")
-    // Only the error class is logged — no message, no path, no token.
-    expect(logEntries[0]?.[1]).toEqual({ id: "req_create_get_failed", error: "Error" })
-    const flattened = JSON.stringify(logEntries)
-    expect(flattened).not.toContain("must-not-leak")
-    expect(flattened).not.toContain("token=")
-    expect(flattened).not.toContain("/workspace/private")
-    // The request payload itself must never reach the log.
-    expect(flattened).not.toContain("ses_current")
-  })
 })
 // kilocode_change end
 
@@ -2702,6 +2292,352 @@ describe("RemoteSender get_catalog", () => {
     expect(sent).toEqual([
       { type: "response", id: "req_models_no_session", error: "invalid list_models command" },
     ])
+  })
+})
+// kilocode_change end
+
+// kilocode_change start - sessionless create_and_run command routing (Slice 3A)
+describe("RemoteSender create_and_run", () => {
+  function flush() {
+    return new Promise<void>((resolve) => setTimeout(resolve, 0))
+  }
+
+  function makeRun(overrides: {
+    createAndRun?: (data: unknown) => Promise<any>
+  } = {}) {
+    // Default stub parses the request shape and returns INVALID_REQUEST
+    // for malformed input, mirroring the real deep module's behavior.
+    // Individual tests override `createAndRun` for specific result shapes.
+    const defaultCreateAndRun = async (data: unknown) => {
+      const d = data as Record<string, unknown> | null | undefined
+      const valid =
+        d !== null &&
+        typeof d === "object" &&
+        d["protocolVersion"] === 1 &&
+        typeof d["requestId"] === "string" &&
+        d["requestId"].length === 36 &&
+        typeof d["prompt"] === "string" &&
+        (d["prompt"] as string).trim().length > 0 &&
+        (d["prompt"] as string).length <= 32_768 &&
+        d["model"] !== null &&
+        typeof d["model"] === "object" &&
+        d["agent"] !== null &&
+        typeof d["agent"] === "string"
+      if (!valid) {
+        return {
+          ok: false,
+          protocolVersion: 1,
+          error: { code: "INVALID_REQUEST", message: "invalid create_and_run request" },
+        }
+      }
+      return { ok: true, protocolVersion: 1, sessionId: "ses_test", promptStarted: true }
+    }
+    return {
+      createAndRun: overrides.createAndRun ?? defaultCreateAndRun,
+      reset: () => {},
+    }
+  }
+
+  test("rejects create_and_run when sessionId is provided", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun(),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_with_session",
+      command: "create_and_run",
+      sessionId: "ses_unwanted",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_with_session", error: { code: "INVALID_REQUEST", message: "invalid create_and_run request" } },
+    ])
+  })
+
+  test("rejects create_and_run when run is not wired", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      // run not provided
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_no_run",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_no_run", error: { code: "INVALID_REQUEST", message: "invalid create_and_run request" } },
+    ])
+  })
+
+  test("returns INVALID_REQUEST for malformed request data", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun(),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_malformed",
+      command: "create_and_run",
+      data: { protocolVersion: 2, requestId: "not-a-uuid", prompt: "", model: {}, agent: "" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_malformed", error: { code: "INVALID_REQUEST", message: "invalid create_and_run request" } },
+    ])
+  })
+
+  test("returns INTERNAL error when run.createAndRun throws", async () => {
+    const { conn, sent } = fakeConn()
+    const logEntries: unknown[][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: { ...nolog, error: (...args: unknown[]) => logEntries.push(args) },
+      subscribe: fakeBus().subscribe,
+      run: makeRun({
+        createAndRun: async () => {
+          throw new Error("private detail: apiKey=MUST_NOT_LEAK path=/workspace/private")
+        },
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_throws",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_throws", error: { code: "INTERNAL", message: "failed to run create_and_run" } },
+    ])
+    expect(logEntries).toHaveLength(1)
+    expect(logEntries[0]?.[0]).toBe("create_and_run failed")
+    // Only the error class is logged — no message, no path, no token.
+    expect(logEntries[0]?.[1]).toEqual({ id: "req_create_throws", error: "Error" })
+    const flattened = JSON.stringify(logEntries)
+    expect(flattened).not.toContain("MUST_NOT_LEAK")
+    expect(flattened).not.toContain("/workspace/private")
+  })
+
+  test("returns CATALOG_CHANGED error for stale catalog selection", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun({
+        createAndRun: async () => ({
+          ok: false,
+          protocolVersion: 1,
+          error: { code: "CATALOG_CHANGED", message: "model not found in runtime catalog" },
+        }),
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_catalog_changed",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "ghost", modelID: "ghost/model" }, agent: "build" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_catalog_changed", error: { code: "CATALOG_CHANGED", message: "model not found in runtime catalog" } },
+    ])
+  })
+
+  test("returns CREATE_FAILED error for session creation failure", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun({
+        createAndRun: async () => ({
+          ok: false,
+          protocolVersion: 1,
+          error: { code: "CREATE_FAILED", message: "failed to create session" },
+        }),
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_failed",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_failed", error: { code: "CREATE_FAILED", message: "failed to create session" } },
+    ])
+  })
+
+  test("returns ANNOUNCE_FAILED error for announcement failure", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun({
+        createAndRun: async () => ({
+          ok: false,
+          protocolVersion: 1,
+          error: { code: "ANNOUNCE_FAILED", message: "failed to announce session" },
+        }),
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_announce_failed",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_announce_failed", error: { code: "ANNOUNCE_FAILED", message: "failed to announce session" } },
+    ])
+  })
+
+  test("returns success result without internal ok field", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun({
+        createAndRun: async () => ({
+          ok: true,
+          protocolVersion: 1,
+          sessionId: "ses_new",
+          promptStarted: true,
+        }),
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_success",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_create_success",
+        result: {
+          protocolVersion: 1,
+          sessionId: "ses_new",
+          promptStarted: true,
+        },
+      },
+    ])
+    // The internal `ok` field must not leak to the wire.
+    expect(sent[0]?.result).not.toHaveProperty("ok")
+  })
+
+  test("returns PROMPT_START_FAILED partial result without internal ok field", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun({
+        createAndRun: async () => ({
+          ok: true,
+          protocolVersion: 1,
+          sessionId: "ses_partial",
+          promptStarted: false,
+          error: { code: "PROMPT_START_FAILED", message: "The session was created, but the first prompt did not start." },
+        }),
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_create_partial",
+      command: "create_and_run",
+      data: { protocolVersion: 1, requestId: "00000000-0000-4000-8000-000000000001", prompt: "hi", model: { providerID: "kilo", modelID: "model" }, agent: "build" },
+    })
+    await flush()
+
+    expect(sent).toEqual([
+      {
+        type: "response",
+        id: "req_create_partial",
+        result: {
+          protocolVersion: 1,
+          sessionId: "ses_partial",
+          promptStarted: false,
+          error: { code: "PROMPT_START_FAILED", message: "The session was created, but the first prompt did not start." },
+        },
+      },
+    ])
+    // The internal `ok` field must not leak to the wire.
+    expect(sent[0]?.result).not.toHaveProperty("ok")
+  })
+
+  test("get_catalog and list_models routes are unchanged", () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      run: makeRun(),
+    })
+
+    // get_catalog still requires no sessionId
+    sender.handle({
+      type: "command",
+      id: "req_catalog_with_session",
+      command: "get_catalog",
+      sessionId: "ses_unwanted",
+      data: { protocolVersion: 1 },
+    })
+    expect(sent[0]).toEqual({ type: "response", id: "req_catalog_with_session", error: "invalid get_catalog command" })
+
+    // list_models still requires sessionId
+    sender.handle({
+      type: "command",
+      id: "req_models_no_session",
+      command: "list_models",
+      data: { protocolVersion: 1 },
+    })
+    expect(sent[1]).toEqual({ type: "response", id: "req_models_no_session", error: "invalid list_models command" })
   })
 })
 // kilocode_change end
