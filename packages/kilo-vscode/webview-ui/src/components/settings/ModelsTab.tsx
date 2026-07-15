@@ -1,5 +1,5 @@
 import { Component, For, Show, createMemo } from "solid-js"
-import { Card } from "@kilocode/kilo-ui/card"
+import { Card, CardDescription, CardTitle } from "@kilocode/kilo-ui/card"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -14,7 +14,7 @@ import SettingsRow from "./SettingsRow"
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
 import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
-import { getAutocompleteSelection } from "./autocomplete-model-selector"
+import { getAutocompleteSelection, isCustomAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
   const { config, settings, updateConfig, updateSetting } = useConfig()
@@ -30,6 +30,9 @@ const ModelsTab: Component = () => {
     const v = settings()["autocomplete.model"]
     return typeof v === "string" ? v : undefined
   }
+  const autocompleteIsCustom = createMemo(() =>
+    isCustomAutocompleteSelection(autocompleteProvider(), autocompleteModel()),
+  )
 
   function handleModelSelect(configKey: "model" | "small_model") {
     return (providerID: string, modelID: string) => {
@@ -175,6 +178,17 @@ const ModelsTab: Component = () => {
             description={language.t("settings.autocomplete.model.description")}
           />
         </SettingsRow>
+        <Show when={autocompleteIsCustom()}>
+          <Card
+            variant="warning"
+            role="alert"
+            data-slot="autocomplete-custom-model-warning"
+            style={{ "margin-bottom": "8px" }}
+          >
+            <CardTitle variant="warning">{language.t("settings.autocomplete.model.customWarning.title")}</CardTitle>
+            <CardDescription>{language.t("settings.autocomplete.model.customWarning.description")}</CardDescription>
+          </Card>
+        </Show>
         <SettingsRow
           title={language.t("settings.models.speechToTextModel.title")}
           description={

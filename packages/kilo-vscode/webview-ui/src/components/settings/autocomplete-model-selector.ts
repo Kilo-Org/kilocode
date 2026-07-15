@@ -10,3 +10,13 @@ export function getAutocompleteSelection(provider?: string, modelID?: string) {
   const model = getAutocompleteModel(provider, modelID)
   return { providerID: model.providerID, modelID: model.modelID }
 }
+
+/**
+ * True when the selection resolves to a configured-provider (BYOK) model
+ * rather than a curated entry. Curated models are known to support FIM;
+ * custom models are unverified, so the settings UI shows a warning.
+ */
+export function isCustomAutocompleteSelection(provider?: string, modelID?: string) {
+  if (!provider || !modelID) return false
+  return getAutocompleteModel(provider, modelID).configuredProvider === true
+}
