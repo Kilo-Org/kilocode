@@ -119,6 +119,11 @@ Loopback servers do not require an API key. For a remote endpoint, use HTTPS and
 OpenAI compatibility alone is not enough: the endpoint must support text completions with the `suffix` field, and the selected model must be trained for FIM. Validate this with the server's `/v1/completions` endpoint before enabling automatic suggestions.
 {% /callout %}
 
+### Models that do not work
+
+- **Qwen3-Coder-Next (instruct):** Hosted endpoints accept `POST /v1/completions` with `prompt` and `suffix` but ignore the suffix and route through the chat template, so responses are conversational prose instead of insertable code. The model only emits FIM content through chat completions with explicit `<|fim_prefix|>`/`<|fim_suffix|>`/`<|fim_middle|>` markers, and even then wraps it in Markdown code fences, which this transport does not send or strip. Common self-hosted servers do not bridge the gap either: vLLM rejects `suffix` and OMLX has no `suffix` field on `/v1/completions`. Only the separate Base checkpoint behind a server that maps `prompt`+`suffix` into Qwen FIM tokens (for example SGLang with `--completion-template qwen_coder`) fits this transport.
+- Chat-tuned models in general: if a model's `/v1/completions` output starts with prose like "Here's the corrected version", it is answering as a chat model and will not produce usable inline completions.
+
 ## Status Bar
 
 The extension displays an **autocomplete status indicator** in the VS Code status bar, including:
