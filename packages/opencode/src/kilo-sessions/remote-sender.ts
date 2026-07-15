@@ -124,6 +124,11 @@ export namespace RemoteSender {
       // test hook is typed as the loose `() => Promise<Session.Info>` shape.
       // Production falls back to Session.Service.create with `{}`.
       readonly create?: (input?: Record<string, never>) => Promise<Session.Info>
+      // kilocode_change - injectable remove hook used to roll back an orphan
+      // root session when attachSession fails after creation. The default
+      // delegates to Session.Service.remove and only swallows its own errors
+      // so the original attach failure is what reaches the caller.
+      readonly remove?: (sessionID: SessionID) => Promise<void>
       // kilocode_change end
     }
     // kilocode_change start - duplicate-safe attach hook used by create_session.
@@ -220,6 +225,18 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Session.Service.use((svc) => svc.children(sessionID)))
       },
     }
+    // kilocode_change start - orphan rollback for create_session: when
+    // sessionCreate succeeds but attachSession fails, the newly-created root
+    // session would otherwise stay in the DB with no relay awareness. The
+    // default remove() delegates to Session.Service.remove and swallows its
+    // own errors so the caller still observes the original attach failure.
+    const sessionRemove =
+      session.remove ??
+      (async (id: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(Session.Service.use((svc) => svc.remove(id)))
+      })
+    // kilocode_change end
     // kilocode_change start - session create + duplicate-safe attach used by create_session
     const sessionCreate =
       session.create ??
@@ -524,7 +541,23 @@ export namespace RemoteSender {
                 // attached set exactly once and fires conn.heartbeat() only
                 // when the set actually changes, so the relay learns about
                 // the new session before we respond.
-                await attachSession(created.id)
+                try {
+                  await attachSession(created.id)
+                } catch (attachError) {
+                  // Roll back the newly-created root session so the DB does
+                  // not keep an orphan the relay never learned about. Swallow
+                  // the cleanup error here — the original attach failure is
+                  // what the caller must see, so we re-throw it below.
+                  try {
+                    await sessionRemove(created.id)
+                  } catch (cleanupError) {
+                    options.log.error("create session cleanup failed", {
+                      id: msg.id,
+                      error: errorName(cleanupError),
+                    })
+                  }
+                  throw attachError
+                }
                 return created
               },
             })

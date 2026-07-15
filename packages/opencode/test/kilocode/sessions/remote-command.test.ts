@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
 import type { Info as SessionInfo } from "../../../src/session/session"
-import { SessionID } from "../../../src/session/schema"
+import { MessageV2 } from "../../../src/session/message-v2"
+import { MessageID, SessionID } from "../../../src/session/schema"
 
 describe("RemoteCommand", () => {
   test("validates list command protocol requests", () => {
@@ -449,24 +450,42 @@ describe("RemoteCommand", () => {
       id: SessionID.make("ses_remote"),
       // No session.agent and no session.model
     } as unknown as SessionInfo
-    const retained = [
-      // older assistant turn retained (must be ignored)
-      {
-        info: { id: "msg_old", role: "assistant", sessionID: SessionID.make("ses_remote") },
-        parts: [],
-      },
-      // the latest retained user message supplies agent + model
+    // Typed retained-message fixture: every field the production
+    // session.messages() / compaction.create() path reads is present and
+    // matches MessageV2.WithParts. The Assistant entry exists only to
+    // exercise the findLast(user) path; the latest User entry is the one
+    // that must supply agent + model.
+    const sid = SessionID.make("ses_remote")
+    const retained: MessageV2.WithParts[] = [
       {
         info: {
-          id: "msg_user",
-          role: "user",
-          sessionID: SessionID.make("ses_remote"),
+          id: MessageID.make("msg_old"),
+          role: "assistant",
+          sessionID: sid,
+          time: { created: 0 },
+          parentID: MessageID.make("msg_root"),
+          providerID: "user-provider" as never,
+          modelID: "user-model" as never,
+          mode: "primary",
           agent: "user-agent",
-          model: { providerID: "user-provider", modelID: "user-model" },
+          path: { cwd: "/", root: "/" },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
         },
         parts: [],
       },
-    ] as any
+      {
+        info: {
+          id: MessageID.make("msg_user"),
+          role: "user",
+          sessionID: sid,
+          time: { created: 1 },
+          agent: "user-agent",
+          model: { providerID: "user-provider" as never, modelID: "user-model" as never },
+        },
+        parts: [],
+      },
+    ]
     const remote = RemoteCommand.create({
       list: async () => [],
       command: async () => {
@@ -564,5 +583,89 @@ describe("RemoteCommand", () => {
         arguments: "",
       },
     ])
+  })
+
+  // execute() is the last line of defense: even if a caller bypasses the
+  // dispatcher's preflight, a command absent from the supplied bounded
+  // catalog must never reach services.command().
+  test("execute rejects commands absent from the supplied catalog before invoking services.command()", async () => {
+    const calls: unknown[] = []
+    const remote = RemoteCommand.create({
+      list: async () => [],
+      command: async (input) => {
+        calls.push(input)
+      },
+      session: {
+        get: async () => {
+          throw new Error("unexpected session lookup")
+        },
+        messages: async () => {
+          throw new Error("unexpected message lookup")
+        },
+      },
+      agent: { default: async () => "default-agent" },
+      provider: { default: async () => ({ providerID: "default-provider", modelID: "default-model" }) },
+      revert: { cleanup: async () => {} },
+      compaction: { create: async () => {} },
+      prompt: { loop: async () => {} },
+    })
+
+    const catalog: RemoteCommand.Response = {
+      protocolVersion: 1,
+      commands: [{ name: "review", hints: [] }],
+    }
+
+    await expect(
+      remote.execute({
+        sessionID: SessionID.make("ses_remote"),
+        protocolVersion: 1,
+        command: "missing",
+        arguments: "",
+        catalog,
+      }),
+    ).rejects.toThrow("unknown slash command: missing")
+    expect(calls).toEqual([])
+  })
+
+  // Even when the catalog advertises "compact" (the synthesized built-in),
+  // a name not in the catalog must still be rejected.
+  test("execute rejects arbitrary names even when the catalog advertises built-in compact", async () => {
+    const calls: unknown[] = []
+    const remote = RemoteCommand.create({
+      list: async () => [],
+      command: async (input) => {
+        calls.push(input)
+      },
+      session: {
+        get: async () => {
+          throw new Error("unexpected session lookup")
+        },
+        messages: async () => {
+          throw new Error("unexpected message lookup")
+        },
+      },
+      agent: { default: async () => "default-agent" },
+      provider: { default: async () => ({ providerID: "default-provider", modelID: "default-model" }) },
+      revert: { cleanup: async () => {} },
+      compaction: { create: async () => {} },
+      prompt: { loop: async () => {} },
+    })
+
+    // Catalog seeded with just the built-in compact (no registered "compact"
+    // with source=="command"|"mcp"), so the shadow check would fall back to
+    // the built-in path for "compact". The interesting case is a different
+    // unknown name — it must be rejected regardless.
+    const catalog = RemoteCommand.build([])
+
+    await expect(
+      remote.execute({
+        sessionID: SessionID.make("ses_remote"),
+        protocolVersion: 1,
+        command: "rm",
+        arguments: "",
+        catalog,
+      }),
+    ).rejects.toThrow("unknown slash command: rm")
+    expect(calls).toEqual([])
   })
 })

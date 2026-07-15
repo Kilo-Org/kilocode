@@ -160,6 +160,17 @@ export namespace RemoteCommand {
     return {
       list: async () => build(await services.list()),
       execute: async (input) => {
+        // kilocode_change - enforce membership in the supplied bounded
+        // remote-safe catalog. The dispatcher's preflight also gates
+        // membership before the ACK, but execute() is the last line of
+        // defense: a caller (or a future caller) that bypasses the
+        // dispatcher must still not reach services.command() for a name
+        // the mobile client was never offered. Reject with a specific
+        // error so the failure is distinguishable from runtime faults.
+        const catalogNames = new Set(input.catalog.commands.map((item) => item.name))
+        if (!catalogNames.has(input.command)) {
+          throw new Error(`unknown slash command: ${input.command}`)
+        }
         // A registered command named `compact` shadows the built-in whenever it
         // appears in the preflight catalog. The built-in "compact" sentinel
         // carries no `source`, so checking for source=="command"|"mcp" rules it

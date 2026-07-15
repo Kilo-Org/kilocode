@@ -428,7 +428,10 @@ describe("RemoteSender", () => {
               },
             },
           }) as any,
-        default: async () => ({ providerID: ProviderV2.ID.make("custom"), modelID: ModelV2.ID.make("deployment/model") }),
+        default: async () => ({
+          providerID: ProviderV2.ID.make("custom"),
+          modelID: ModelV2.ID.make("deployment/model"),
+        }),
       },
     })
 
@@ -793,7 +796,10 @@ describe("RemoteSender", () => {
       {
         sessionID: SessionID.make("ses_x"),
         parts: [{ type: "text", text: "hello" }],
-        model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("anthropic/claude-sonnet-4-20250514") },
+        model: {
+          providerID: ProviderV2.ID.make("kilo"),
+          modelID: ModelV2.ID.make("anthropic/claude-sonnet-4-20250514"),
+        },
         ephemeralTools: { interactive_terminal: false },
       },
     ])
@@ -1596,9 +1602,7 @@ describe("RemoteSender", () => {
       provide: async (input: any) => input.fn(),
       session: {
         get: async (sessionID) =>
-          sessionID === child.id
-            ? child
-            : ({ id: sessionID, directory: "/workspace/root" } as Session.Info),
+          sessionID === child.id ? child : ({ id: sessionID, directory: "/workspace/root" } as Session.Info),
         children: async (sessionID) => (sessionID === SessionID.make("ses_root") ? [child] : []),
       },
       question: questions(),
@@ -1740,13 +1744,13 @@ describe("RemoteSender slash commands", () => {
   // Wrappers chain so multiple pending responses can be awaited on the same
   // connection; the original fakeConn.send still records each emission once.
   function expectResponse(conn: RemoteWS.Connection, _sent: any[], id: string) {
-    const resolvers = Promise.withResolvers<any>()
+    const resolvers = Promise.withResolvers<RemoteProtocol.Outbound>()
     const previous = conn.send.bind(conn)
-    const spy = (message: any) => {
+    const spy = (message: RemoteProtocol.Outbound) => {
       if (message?.type === "response" && message.id === id) resolvers.resolve(message)
       previous(message)
     }
-    conn.send = spy as any
+    conn.send = spy
     return {
       promise: resolvers.promise,
       restore: () => {
@@ -2094,7 +2098,7 @@ describe("RemoteSender slash commands", () => {
         return input.fn()
       },
       session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
         create: async (input) => {
           createCalls.calls += 1
@@ -2132,9 +2136,7 @@ describe("RemoteSender slash commands", () => {
     expect(createCalls.input).toEqual({})
     expect(attachCalls).toEqual(["ses_new"])
     expect(order).toEqual(["create", "attach", "heartbeat"])
-    expect(sent).toEqual([
-      { type: "response", id: "req_create", result: { protocolVersion: 1, sessionID: "ses_new" } },
-    ])
+    expect(sent).toEqual([{ type: "response", id: "req_create", result: { protocolVersion: 1, sessionID: "ses_new" } }])
   })
 
   test("create_session rejects unsupported protocol versions and missing or invalid session IDs", async () => {
@@ -2211,7 +2213,7 @@ describe("RemoteSender slash commands", () => {
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
       session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
         create: async () => {
           throw new Error("private failure detail: token=must-not-leak")
@@ -2248,6 +2250,7 @@ describe("RemoteSender slash commands", () => {
     const { conn, sent } = fakeConn()
     const logEntries: unknown[][] = []
     const attachCalls: string[] = []
+    const removeCalls: string[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2255,10 +2258,12 @@ describe("RemoteSender slash commands", () => {
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
       session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
-        create: async () =>
-          ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" } as any),
+        create: async () => ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" }) as any,
+        remove: async (id) => {
+          removeCalls.push(id)
+        },
       },
       attachSession: async (id) => {
         // The production contract puts the heartbeat inside attachSession so
@@ -2284,11 +2289,136 @@ describe("RemoteSender slash commands", () => {
 
     expect(sent).toEqual([{ type: "response", id: "req_heartbeat_failed", error: "failed to create session" }])
     expect(attachCalls).toEqual(["ses_new"])
+    // The orphan rollback must have been attempted for the created session.
+    expect(removeCalls).toEqual(["ses_new"])
     expect(logEntries).toHaveLength(1)
     expect(logEntries[0]?.[0]).toBe("create session failed")
     const flattened = JSON.stringify(logEntries)
     expect(flattened).not.toContain("must-not-leak")
     expect(flattened).not.toContain("credential=")
+  })
+
+  test("create_session rolls back the created session when attachSession fails", async () => {
+    const { conn, sent } = fakeConn()
+    const removeCalls: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" }) as any,
+        remove: async (id) => {
+          removeCalls.push(id)
+        },
+      },
+      attachSession: async () => {
+        throw new Error("attach failed: credential=must-not-leak")
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_attach_failed")
+    sender.handle({
+      type: "command",
+      id: "req_attach_failed",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    // The created session was rolled back and the caller sees the generic
+    // sanitized failure — never a partial success.
+    expect(removeCalls).toEqual(["ses_new"])
+    expect(sent).toEqual([{ type: "response", id: "req_attach_failed", error: "failed to create session" }])
+  })
+
+  test("create_session preserves the original attach error when the rollback itself fails", async () => {
+    const { conn, sent } = fakeConn()
+    const logEntries: unknown[][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: { ...nolog, error: (...args: unknown[]) => logEntries.push(args) },
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" }) as any,
+        remove: async () => {
+          throw new Error("cleanup secondary failure")
+        },
+      },
+      attachSession: async () => {
+        throw new Error("primary attach failure: credential=must-not-leak")
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_attach_then_cleanup_fail")
+    sender.handle({
+      type: "command",
+      id: "req_attach_then_cleanup_fail",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    // The caller sees the sanitized primary failure, not the cleanup error.
+    expect(sent).toEqual([{ type: "response", id: "req_attach_then_cleanup_fail", error: "failed to create session" }])
+    // The cleanup failure is logged for observability but does not leak the
+    // primary attach error message to the response or to the cleanup log.
+    const cleanupLog = logEntries.find((entry) => entry[0] === "create session cleanup failed")
+    expect(cleanupLog).toBeDefined()
+    const flattened = JSON.stringify(logEntries)
+    expect(flattened).not.toContain("must-not-leak")
+    expect(flattened).not.toContain("credential=")
+  })
+
+  test("create_session does not remove the created session when attach succeeds", async () => {
+    const { conn, sent } = fakeConn()
+    const removeCalls: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      session: {
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" }) as any,
+        remove: async (id) => {
+          removeCalls.push(id)
+        },
+      },
+      attachSession: async () => {
+        await (conn as any).heartbeat()
+      },
+    })
+    ;(conn as any).heartbeat = async () => {}
+
+    const response = expectResponse(conn, sent, "req_create_success")
+    sender.handle({
+      type: "command",
+      id: "req_create_success",
+      command: "create_session",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    expect(removeCalls).toEqual([])
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_success", result: { protocolVersion: 1, sessionID: "ses_new" } },
+    ])
   })
 
   test("create_session runs in the current session's directory", async () => {
@@ -2310,7 +2440,7 @@ describe("RemoteSender slash commands", () => {
           throw new Error("unknown session")
         },
         children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_new") } as any),
+        create: async () => ({ id: SessionID.make("ses_new") }) as any,
       },
       attachSession: async () => {},
     })
@@ -2352,9 +2482,9 @@ describe("RemoteSender slash commands", () => {
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
       session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_same") } as any),
+        create: async () => ({ id: SessionID.make("ses_same") }) as any,
       },
       attachSession: async (id) => {
         attachCalls.push(id)
@@ -2405,9 +2535,9 @@ describe("RemoteSender slash commands", () => {
       subscribe: fakeBus().subscribe,
       provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
       session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" } as any),
+        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_existing") } as any),
+        create: async () => ({ id: SessionID.make("ses_existing") }) as any,
       },
       attachSession: async () => {
         // Simulate a duplicate-safe attach: nothing to do, no heartbeat needed.
