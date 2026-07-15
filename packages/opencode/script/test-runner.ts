@@ -9,6 +9,7 @@ import path from "path"
 import fs from "fs/promises"
 import { TestProfile } from "./kilocode/test-profile"
 import { TestShard } from "./kilocode/test-shard"
+import { remove } from "../test/kilocode/cleanup"
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
@@ -227,9 +228,10 @@ async function run(file: string): Promise<Result> {
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
     proc.exited,
-  ])
-
-  clearTimeout(timer)
+  ]).finally(async () => {
+    clearTimeout(timer)
+    await cleanup(proc.pid)
+  })
 
   return {
     file,
@@ -479,6 +481,13 @@ async function merge() {
   ].join("\n")
 
   await Bun.write(path.join(dir, "junit.xml"), body)
+}
+
+async function cleanup(pid: number) {
+  const dir = path.join(os.tmpdir(), `opencode-test-data-${pid}`)
+  await remove(dir).catch((err) => {
+    console.error(`cleanup failed for ${dir}:`, err)
+  })
 }
 
 // Grab everything between the outer <testsuites ...> and </testsuites> of a
