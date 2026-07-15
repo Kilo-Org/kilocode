@@ -106,6 +106,13 @@ interface AssistantMessageProps {
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
+  /** id of the part containing the current chat-search match, if any — forces
+   * that part's collapsed tool/reasoning content open so the user can see
+   * the highlighted match without manually expanding it first. */
+  forceOpenPartID?: string
+  /** For a multi-file apply_patch match, the specific file within that part —
+   * lets that one nested item open instead of every file in the patch. */
+  forceOpenFile?: string
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
 }
@@ -119,7 +126,7 @@ type ToolStateProps = {
 
 type MemoryItem = MemoryMarkerMeta.Decoded
 
-function TodoToolCard(props: { part: ToolPart }) {
+function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   return (
@@ -135,6 +142,7 @@ function TodoToolCard(props: { part: ToolPart }) {
           output={state()?.output}
           status={state()?.status}
           defaultOpen
+          forceOpen={props.forceOpen}
           reveal={false}
         />
       )}
@@ -142,7 +150,7 @@ function TodoToolCard(props: { part: ToolPart }) {
   )
 }
 
-function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
+function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   return (
@@ -159,6 +167,7 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
           output={state()?.output}
           status={state()?.status}
           defaultOpen={props.defaultOpen}
+          forceOpen={props.forceOpen}
           animate
           reveal={state()?.status === "pending" || state()?.status === "running"}
         />
@@ -261,6 +270,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             if (!planExitInfo(part)) return
             return part as unknown as ToolPart
           })
+          const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
 
           // Lights up when this part is behind the hovered/focused task-timeline
           // bar, using that bar's own color so the two stay easy to correlate.
@@ -283,6 +293,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               <div
                 data-component="tool-part-wrapper"
                 data-part-type={part.type}
+                data-part-id={part.id}
                 data-timeline-highlight={highlighted() ? "" : undefined}
                 style={
                   highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined
@@ -308,6 +319,8 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
                                       defaultOpen={editOpen(part, edit())}
+                                      forceOpen={forceOpen()}
+                                      forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       animate={
@@ -318,11 +331,17 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                     />
                                   }
                                 >
-                                  <TodoToolCard part={part as unknown as ToolPart} />
+                                  <TodoToolCard part={part as unknown as ToolPart} forceOpen={forceOpen()} />
                                 </Show>
                               }
                             >
-                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
+                              {(tool) => (
+                                <BashToolCard
+                                  part={tool() as unknown as ToolPart}
+                                  defaultOpen={open()}
+                                  forceOpen={forceOpen()}
+                                />
+                              )}
                             </Show>
                           }
                         >

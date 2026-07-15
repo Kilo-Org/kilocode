@@ -4,7 +4,7 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { For, Show, createMemo, createEffect } from "solid-js"
+import { For, Show, createMemo, createEffect, onCleanup } from "solid-js"
 import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -13,9 +13,11 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
 import {
+  clearActiveQuestionTab,
   pickOutcome,
   resolveOptimisticQuestionAgent,
   resolveSelectedQuestionMode,
+  setActiveQuestionTab,
   toggleAnswer,
   tr,
 } from "./question-dock-utils"
@@ -51,6 +53,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       }
     }
   })
+
+  // Chat search indexes only the mounted page's options, and there's no
+  // other signal exposing which page that is — publish it here so search
+  // stays in sync as the user navigates instead of always assuming page 0.
+  createEffect(() => setActiveQuestionTab(props.request.id, store.tab))
+  onCleanup(() => clearActiveQuestionTab(props.request.id))
 
   const question = createMemo(() => questions()[store.tab])
   const confirm = createMemo(() => !single() && store.tab === questions().length)
