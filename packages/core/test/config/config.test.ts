@@ -162,6 +162,43 @@ describe("Config", () => {
     ),
   )
 
+  it.live("skips project configuration when project discovery is disabled", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const project = path.join(tmp.path, "project")
+          const global = path.join(tmp.path, "global")
+          yield* Effect.promise(async () => {
+            await Promise.all([fs.mkdir(project, { recursive: true }), fs.mkdir(global, { recursive: true })])
+            await Promise.all([
+              fs.writeFile(path.join(project, "kilo.json"), JSON.stringify({ model: "project/model" })),
+              fs.writeFile(path.join(global, "kilo.json"), JSON.stringify({ model: "global/model" })),
+            ])
+          })
+
+          const prior = process.env.KILO_DISABLE_PROJECT_CONFIG
+          process.env.KILO_DISABLE_PROJECT_CONFIG = "1"
+          yield* Effect.addFinalizer(() =>
+            Effect.sync(() => {
+              if (prior === undefined) delete process.env.KILO_DISABLE_PROJECT_CONFIG
+              else process.env.KILO_DISABLE_PROJECT_CONFIG = prior
+            }),
+          )
+
+          return yield* Effect.gen(function* () {
+            const config = yield* Config.Service
+            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
+
+            expect(documents.map((document) => document.info.model)).toEqual(["global/model"])
+          }).pipe(Effect.provide(testLayer(project, global, project)))
+        }),
+      ),
+    ),
+  )
+
   it.live("loads JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),

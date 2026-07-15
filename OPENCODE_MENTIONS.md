@@ -1,28 +1,19 @@
-# OpenCode Mention Audit: PR #12204, Second Pass
+# OpenCode Mention Audit: PR #12204, Third Pass
 
-Reviewed PR HEAD `2d92d8dae2cb2d9efc4961b020dabb11ff5564aa` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Reviewed PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
 
-## Finding
+## Result
 
-### Medium: README advertises a private package as a public OpenCode beta
+No actionable OpenCode branding or ownership leak remains.
 
-`packages/http-recorder/package.json:8` now correctly marks `@opencode-ai/http-recorder` private, but `packages/http-recorder/README.md:7-13` describes a public beta and tells external users to install `@opencode-ai/http-recorder@beta`.
+## Verified Fix
 
-This contradicts package metadata and newly exposes the OpenCode-scoped identity in user-facing installation instructions. If the package remains private, restore internal-package framing and remove the beta installation instructions. If Kilo intends to publish it, make the ownership and package identity explicit.
+The HTTP recorder README now identifies `@opencode-ai/http-recorder` as a private workspace package, removes the public-beta claim and external `@beta` installation instructions, and states that it is available only inside the monorepo. This agrees with `private: true` and Kilo repository metadata.
 
-No other actionable user-facing OpenCode mention introduced or restored by this PR was found.
+## Audit Coverage
 
-## Resolved Since First Pass
+Re-scanned changed runtime and TUI strings, URLs, package metadata, Markdown, internal specifications, CLI documentation and help snapshots, OpenAPI, generated SDK output, source links, and theme assets.
 
-- Public publication is disabled by restoring `private: true` and removing `publishConfig.access`.
-- Repository, homepage, and issue metadata point to Kilo rather than `anomalyco/opencode`.
-- The latest forbidden-string check passes at the audited SHA: `8332 file(s) checked, no forbidden strings found`.
+Remaining OpenCode references are internal compatibility identities, private package names, provider/config identifiers, upstream-oriented design documents, content-preserving moves, third-party URLs, or required attribution.
 
-## Notable Non-Findings
-
-- No user-facing OpenCode addition was found in generated SDK/OpenAPI output, CLI help snapshots, or Kilo CLI documentation.
-- Theme URLs are content-preserving renames from the previous TUI location.
-- OpenCode tips remain disabled; active tips come from Kilo's plugin.
-- Internal `@opencode-ai/*` imports, provider IDs, compatibility filenames, service tags, and upstream copyright attribution are not branding leaks.
-
-The forbidden-string checker intentionally covers exact legacy strings and does not flag the README package instruction. This was a static diff and CI-log audit; no package was packed or published.
+The exact-head forbidden-string workflow passes with `8332 file(s) checked, no forbidden strings found`, and `git diff --check` is clean. This was a read-only static diff and CI audit.

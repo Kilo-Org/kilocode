@@ -1,37 +1,31 @@
-# PR #12204 Kilo Test-Coverage Audit: Second Pass
+# PR #12204 Kilo Test-Coverage Audit: Third Pass
 
-Reviewed PR HEAD `2d92d8dae2cb2d9efc4961b020dabb11ff5564aa` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Reviewed PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
 
-## Finding
+## Findings
 
-### High: CI executes none of the extracted TUI package tests
+### Medium: mixed-version projector storage lacks a raw-row assertion
 
-The fallback at `.github/workflows/test.yml:139` is intended to run packages with `test` but no `test:ci`, including `@opencode-ai/tui`. Turbo logs show that the command selects seven packages but executes zero tasks and exits successfully:
+`packages/core/src/session/projector.ts` now encodes projected messages for downgraded readers. Existing compatibility tests validate the helper and normalize rows before projector assertions, but no test inspects the raw `SessionMessageTable` row written by the projector or decodes it with the released schema.
 
-```text
-WARNING  No tasks were executed as part of this run.
-Tasks: 0 successful, 0 total
-```
+Add projector-level raw compaction and tool-content assertions so removal of the encoder cannot leave tests green while breaking older readers.
 
-The JUnit artifacts contain no TUI or LLM report. No other workflow runs `@opencode-ai/tui`.
+### Medium: effective reference and MCP profile integration remain partially tested
 
-This leaves the restored hydration-race suite and all other extracted TUI tests unenforced despite green required checks. Add a generic Turbo `test` task, separate package invocations, or `test:ci` scripts, and fail CI when zero intended tests run.
+No test executes `KiloReference.sync()` through the Agent call site, validates direct endpoint/startup ordering, or preserves `hidden` and `description`. MCP subprocess tests do not set `KILO_CONFIG_DIR` or assert the default path remains untouched.
 
-## Resolved Since First Pass
+These gaps directly cover the remaining config/pipeline finding and a newly fixed profile-routing branch.
 
-- The macOS profile selects the replacement HTTP reference test and validates independently before the profiled suite. Current macOS tests pass.
-- Six restored hydration tests cover live events during snapshot fetch, duplicate replay, partial snapshots, stale cache replacement, and order/metadata preservation. Source coverage is restored, but CI enforcement remains blocked by the finding above.
-- Both direct-mode skill-picker tests are active and pass.
-- Repeated logger initialization and timestamped-log cleanup have focused passing Kilo tests.
-- Reference materialization and refresh use a real local Git remote and pass in Core CI.
-- JUnit production, publication, and upload are restored for packages with `test:ci`; all seven platform unit jobs upload reports.
+### Low: new boundary branches lack focused coverage
 
-## Skip Audit And Additional Coverage
+- FFF broad scanning at exact filesystem-root and home locations has no direct test.
+- The code-OAuth callback timeout is not exercised; the existing timeout test stalls credential persistence after callback completion.
+- Active-credential switch dual-writing is not asserted in `auth.json`.
 
-No new Kilo-owned skip was introduced by the remediation. Existing OpenTUI/keymap and platform-gated skips are unchanged. New Kilo-owned Core suites cover event-storage compatibility, grep behavior, image sizing, filesystem reads, search targets, and spawn validation, and these execute through Core `test:ci`.
+## Resolved Coverage
 
-## CI And Limitations
+The former zero-task package gap is fixed. Exact-head logs report `Running test:ci in 24 packages` and `15 successful, 15 total`. JUnit artifacts include Core, LLM, and TUI; restored hydration tests execute rather than skip.
 
-All required checks at the audited SHA pass, including Linux, macOS, Windows, HttpApi, JetBrains, VS Code, typechecks, and visual regression. The green result does not invalidate the finding because Turbo explicitly reports zero fallback-package tasks.
+All earlier coverage findings remain resolved: Darwin profile validation, direct skill-picker tests, logger initialization, real-Git reference refresh, JUnit publication, and package CI. The latest changed tests add no skip or todo.
 
-This was a read-only source, CI-log, and JUnit-artifact audit. No local tests were run against the target tree because the shared worktree contains unrelated staged changes.
+All required exact-head checks pass across Linux, macOS, Windows, HttpApi, JetBrains, VS Code, typechecks, and visual regression. This was a read-only source, CI-log, and artifact audit.

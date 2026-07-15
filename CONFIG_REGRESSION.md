@@ -1,32 +1,28 @@
-# Config Regression Review: PR #12204, Second Pass
+# Config Regression Review: PR #12204, Third Pass
 
-Audited PR HEAD `2d92d8dae2cb2d9efc4961b020dabb11ff5564aa` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Audited PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
 
-## Findings
+## Finding
 
-### High: local references now resolve relative to the config directory
+### Medium: V2 references do not reliably represent effective Kilo config
 
-Before this PR, TUI reference paths were resolved relative to the worktree. The V2 reference plugin uses `dirname(document.path)` in `packages/core/src/config/plugin/reference.ts`, so `./docs` declared in `.kilo/kilo.json` now resolves to `.kilo/docs` rather than `<repo>/docs`. The same regression applies to `.kilocode`.
+`KiloReference.sync()` now copies stable merged references into Core state, covering explicit, inline, profile, account, managed, linked-worktree, disabled-project, and precedence semantics. However, synchronization only runs while stable Agents initialize.
 
-Preserve Kilo's workspace-relative semantics or explicitly migrate them, with endpoint tests for references declared in both Kilo config directories.
+The reference endpoint directly lists Core state without invoking or awaiting sync. In the TUI, agent and reference requests begin concurrently, so provisional Core results can race effective synchronization. Direct API clients can always receive provisional results if Agent loading has not occurred.
 
-### High: V2 reference discovery does not represent effective Kilo config
+Synchronization also drops `description` and `hidden`, which can expose hidden aliases and remove reference guidance.
 
-The repaired V2 scanner now recognizes `kilo.json`, `.kilo`, and `.kilocode` and ignores `.opencode`, but it remains independent from Kilo's stable effective loader. It omits or misorders sources including `KILO_CONFIG`, `KILO_CONFIG_CONTENT`, managed and account config, home-level Kilo directories, linked-worktree primary config, `KILO_DISABLE_PROJECT_CONFIG`, and `KILO_CONFIG_DIR` precedence.
+Move reconciliation into reference initialization or the endpoint, await it before listing, and preserve all metadata. Add direct endpoint and TUI startup-order tests using effective-only Kilo config.
 
-References can therefore disappear from TUI autocomplete, project references can appear while project config is disabled, and project aliases can override explicit-profile aliases contrary to stable-loader precedence. Build V2 references from the stable effective config or add full parity coverage for sources, disable flags, linked worktrees, and precedence.
+## Verified Fixes
 
-### Medium: non-interactive `mcp add` ignores `KILO_CONFIG_DIR`
+- Relative local references again resolve from the worktree root, with the active directory used for non-project locations.
+- Interactive-global and non-interactive `mcp add` target `KILO_CONFIG_DIR` when configured.
+- Core discovery ignores `.opencode`, recognizes `.kilo` and `.kilocode`, and gives `.kilo` the intended precedence.
+- Stable config, skill, TUI config, and theme discovery remain Kilo-only.
 
-`packages/opencode/src/cli/cmd/mcp.ts:523` writes via static `Global.Path.config`, not the active profile directory. With `KILO_CONFIG_DIR`, the command can report success after writing an ineffective default config. Resolve the target from the active global service and add a profile-path subprocess test.
+## Test Gaps
 
-## Resolved Since First Pass
+No test currently exercises `KiloReference.sync()` through its Agent call site, direct endpoint ordering, or `hidden`/`description` retention. MCP subprocess tests still cover only the default global path, not `KILO_CONFIG_DIR`.
 
-- V2 ordinary filesystem discovery no longer reads `.opencode` and now orders `.kilo` over `.kilocode`.
-- MCP subprocess tests now assert `~/.config/kilo/kilo.json` instead of the obsolete OpenCode path.
-
-## Notable Non-Findings
-
-The stable CLI loader still does not read `.opencode` directories. Compatible `opencode.json/jsonc` filenames remain limited to accepted Kilo roots. TUI config and theme discovery remain Kilo-only, and `.opencode` detection is migration notification logic rather than fallback loading.
-
-This was a read-only Git-object audit. Target tests were inspected but not executed locally; current required CI passes.
+This was a read-only Git-object audit; exact-head required CI passes.

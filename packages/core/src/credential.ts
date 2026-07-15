@@ -1,7 +1,7 @@
 export * as Credential from "./credential"
 
-import { and, asc, eq, ne } from "drizzle-orm"
-import { Context, Effect, Layer, Option, Schema } from "effect"
+import { and, asc, desc, eq, ne } from "drizzle-orm" // kilocode_change
+import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect"
 import { Database } from "./database/database"
 import { ConnectorSchema } from "./connector/schema"
 import { EventV2 } from "./event"
@@ -173,7 +173,6 @@ export const legacyImportLayer = Layer.effectDiscard(
     }
     // kilocode_change end
     const name = "credential.auth-json"
-    if (yield* db.select().from(DataMigrationTable).where(eq(DataMigrationTable.name, name)).get()) return
     const raw = yield* fs.readJson(path.join(global.data, "auth.json")).pipe(Effect.option)
     if (Option.isNone(raw) || typeof raw.value !== "object" || raw.value === null || Array.isArray(raw.value)) return
     const decode = Schema.decodeUnknownOption(LegacyValue)
@@ -208,14 +207,26 @@ export const legacyImportLayer = Layer.effectDiscard(
     yield* db.transaction((tx) =>
       Effect.gen(function* () {
         for (const item of values) {
-          if (
+          // kilocode_change start - reconcile on every startup so a released client can update auth.json after import.
+          const current = yield* tx
+            .select()
+            .from(CredentialTable)
+            .where(eq(CredentialTable.connector_id, item.connectorID))
+            .orderBy(desc(CredentialTable.active), asc(CredentialTable.time_created))
+            .get()
+          yield* tx
+            .update(CredentialTable)
+            .set({ active: false })
+            .where(eq(CredentialTable.connector_id, item.connectorID))
+            .run()
+          if (current) {
             yield* tx
-              .select({ id: CredentialTable.id })
-              .from(CredentialTable)
-              .where(eq(CredentialTable.connector_id, item.connectorID))
-              .get()
-          )
+              .update(CredentialTable)
+              .set({ method_id: item.methodID, value: item.value, active: true })
+              .where(eq(CredentialTable.id, current.id))
+              .run()
             continue
+          }
           yield* tx.insert(CredentialTable).values({
             id: item.id,
             connector_id: item.connectorID,
@@ -224,6 +235,7 @@ export const legacyImportLayer = Layer.effectDiscard(
             value: item.value,
             active: true,
           })
+          // kilocode_change end
         }
         yield* tx.insert(DataMigrationTable).values({ name, time_completed: Date.now() }).onConflictDoNothing().run()
       }),
@@ -236,6 +248,8 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     const events = yield* EventV2.Service
+    const fs = Option.getOrUndefined(yield* Effect.serviceOption(FSUtil.Service)) // kilocode_change
+    const global = Option.getOrUndefined(yield* Effect.serviceOption(Global.Service)) // kilocode_change
     const decodeValue = Schema.decodeUnknownSync(Value)
     const info = (row: typeof CredentialTable.$inferSelect) =>
       new Info({
@@ -312,6 +326,53 @@ export const layer = Layer.effect(
     const selected = new Map([...injected].map(([connectorID, credential]) => [connectorID, credential.id]))
     // kilocode_change end
 
+    // kilocode_change start - dual-write the active Core credential for released auth.json readers.
+    const lock = Semaphore.makeUnsafe(1)
+    const writeLegacy = (connectorID: ConnectorSchema.ID) =>
+      lock.withPermit(
+        Effect.gen(function* () {
+          if (!fs || !global || isolated) return
+          const file = path.join(global.data, "auth.json")
+          const raw = yield* fs.readJson(file).pipe(
+            Effect.catchReason("PlatformError", "NotFound", () => Effect.succeed({})),
+            Effect.catch((cause) =>
+              Effect.logWarning("failed to read legacy auth.json; preserving existing file", { cause }).pipe(
+                Effect.as(undefined),
+              ),
+            ),
+          )
+          if (raw === undefined) return
+          const data: Record<string, unknown> =
+            typeof raw === "object" && raw !== null && !Array.isArray(raw)
+              ? { ...(raw as Record<string, unknown>) }
+              : {}
+          const row = yield* db
+            .select()
+            .from(CredentialTable)
+            .where(and(eq(CredentialTable.connector_id, connectorID), eq(CredentialTable.active, true)))
+            .get()
+            .pipe(Effect.orDie)
+          delete data[connectorID + "/"]
+          if (!row) delete data[connectorID]
+          else {
+            const value = decodeValue(row.value)
+            data[connectorID] =
+              value.type === "key"
+                ? { type: "api", key: value.key, metadata: value.metadata }
+                : {
+                    type: "oauth",
+                    refresh: value.refresh,
+                    access: value.access,
+                    expires: value.expires,
+                    accountId: value.metadata?.accountID,
+                    enterpriseUrl: value.metadata?.enterpriseURL,
+                  }
+          }
+          yield* fs.writeJson(file, data, 0o600).pipe(Effect.orDie)
+        }),
+      )
+    // kilocode_change end
+
     const activate = Effect.fn("Credential.activate")(function* (id: ID) {
       // kilocode_change start - isolated credential state remains process-local
       if (isolated) {
@@ -345,6 +406,7 @@ export const layer = Layer.effect(
         )
         .pipe(Effect.orDie)
       if (switched) yield* events.publish(Event.Switched, switched)
+      if (switched) yield* writeLegacy(switched.connectorID) // kilocode_change
     })
 
     return Service.of({
@@ -449,6 +511,7 @@ export const layer = Layer.effect(
           .pipe(Effect.orDie)
         yield* events.publish(Event.Added, { credential })
         yield* events.publish(Event.Switched, { connectorID: credential.connectorID, from, to: credential.id })
+        yield* writeLegacy(credential.connectorID) // kilocode_change
         return credential
       }),
       update: Effect.fn("Credential.update")(function* (id, updates) {
@@ -468,12 +531,14 @@ export const layer = Layer.effect(
           return
         }
         // kilocode_change end
+        const row = yield* db.select().from(CredentialTable).where(eq(CredentialTable.id, id)).get().pipe(Effect.orDie) // kilocode_change
         yield* db
           .update(CredentialTable)
           .set({ label: updates.label, value: updates.value })
           .where(eq(CredentialTable.id, id))
           .run()
           .pipe(Effect.orDie)
+        if (row?.active) yield* writeLegacy(row.connector_id) // kilocode_change
       }),
       remove: Effect.fn("Credential.remove")(function* (id) {
         // kilocode_change start - isolated removals and fallback selection remain process-local
@@ -529,6 +594,7 @@ export const layer = Layer.effect(
         if (!removed) return
         yield* events.publish(Event.Removed, { credential: removed.credential })
         if (removed.switched) yield* events.publish(Event.Switched, removed.switched)
+        yield* writeLegacy(removed.credential.connectorID) // kilocode_change
       }),
       activate,
     })
@@ -538,6 +604,8 @@ export const layer = Layer.effect(
 export const defaultLayer = layer.pipe(
   Layer.provide(Database.defaultLayer),
   Layer.provide(EventV2.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer), // kilocode_change
+  Layer.provide(Global.defaultLayer), // kilocode_change
   Layer.provideMerge(
     legacyImportLayer.pipe(
       Layer.provide(Database.defaultLayer),

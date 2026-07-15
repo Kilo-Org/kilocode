@@ -1,34 +1,37 @@
-# Broken Kilo Pipeline Chains: PR #12204, Second Pass
+# Broken Kilo Pipeline Chains: PR #12204, Third Pass
 
-Audited PR HEAD `2d92d8dae2cb2d9efc4961b020dabb11ff5564aa` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Audited PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
 
-## Finding
+## Findings
 
-### Medium: OAuth completion can race cancellation or expiry before persistence
+### Medium: legacy provider logout leaves the Core credential active
 
-`packages/core/src/connector.ts:492-508` marks an OAuth attempt `completing` and awaits the authorization callback without setting `settling`. During that await, cancellation and expiry check only `settling`, so either can remove or expire the attempt.
+The new bridge dual-writes Core credential changes into `auth.json`, but legacy removal is not synchronized back:
 
-When the callback returns, `settle()` finds no pending attempt and returns `undefined` before `Credential.create`. `complete()` treats that as success, and `packages/server/src/handlers/connector.ts:79-91` returns HTTP 204 even though no credential was persisted.
+- `packages/opencode/src/auth/index.ts:84-89` removes only the legacy entry.
+- CLI provider logout and the legacy server DELETE route use this path and report success.
+- Core credentials remain durable in SQLite and continue feeding `Credential.activeAll()` and the V2 catalog.
+- Startup reconciliation imports entries present in `auth.json` but never removes a Core row whose legacy entry disappeared.
 
-The new concurrency test delays `Credential.create`, after settlement already owns the attempt, so it does not cover cancellation while the callback itself is pending.
+A provider can therefore remain authenticated through Core/V2 immediately after successful logout and across restart. Route legacy removal through Core credential removal/deactivation or implement explicit bidirectional deletion ownership. Test CLI and HTTP logout followed by immediate and restarted V2 lookup.
 
-Atomically claim completion before invoking the callback, reject cancellation and expiry for claimed attempts, and treat missing settlement as failure. Add code- and auto-mode tests that delay the callback and race both cancellation and expiry.
+### Medium: effective reference synchronization races and drops metadata
+
+`KiloReference.sync()` is called only during stable Agent initialization. The reference endpoint directly lists Core's provisional state, and TUI agent/reference refreshes start concurrently, so a direct client or startup race can observe provisional references.
+
+The synchronization also reconstructs reference sources without `description` or `hidden`. Hidden aliases can become visible in autocomplete, and described references disappear from model guidance.
+
+Move effective-config reconciliation into reference initialization or the endpoint, await it before listing, and preserve all source metadata. Add direct API and startup-order coverage using effective-only configuration.
+
+## Resolved Since Second Pass
+
+The OAuth completion race is fixed: code completion claims settlement before awaiting the callback, cancellation and expiry cannot remove the claimed attempt, and failures no longer produce a false HTTP 204. A focused cancellation race test covers the original window.
+
+The package-test, README, relative reference root, and profile-aware MCP write fixes also remain connected.
 
 ## Owner Decisions
 
-- The `KILO_EXPERIMENTAL_SESSION_SWITCHER` preview feature remains deleted. Confirm this was intentional consolidation onto the standard session dialog; otherwise restore its flag-to-preview chain.
-- `KILO_EXPERIMENTAL_EVENT_SYSTEM` still flows into an unused `experimentalEventSystem` TUI registry option. Remove the dead option if the V2 debug route was intentionally retired, or restore the conditional plugin.
+- The experimental session-switcher preview remains deleted; confirm intentional retirement.
+- `experimentalEventSystem` still reaches an unused TUI registry option; remove the dead option or restore the debug plugin.
 
-## Resolved Since First Pass
-
-- Anonymous Kilo and OpenCode providers no longer mark the TUI connected without authentication or a non-zero-cost model; focused tests cover the predicate.
-- Dismissed-question metadata again controls compact expandable presentation.
-- Edit metadata again reaches the multi-hunk renderer, with focused splitter tests.
-- Running subagents again render `Starting...` before their first tool event.
-- TUI prompt arbitration and three-way hydration merging are restored, with focused hydration coverage in source.
-
-## Notable Non-Findings
-
-Kilo TUI plugin ordering, event routing, reactive config, terminal presence/title updates, Kilo tool renderers, isolated credentials, and plan-mode subagent mutation ceilings remain connected.
-
-This was a read-only source audit. The OAuth race was independently traced from connector state through the HTTP handler; no live OAuth flow or interactive TUI was run.
+All exact-head required checks pass. This was a read-only source audit; the two findings were independently traced end to end but not reproduced in a live process.

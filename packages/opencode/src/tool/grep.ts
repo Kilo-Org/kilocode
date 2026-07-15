@@ -69,21 +69,23 @@ export const GrepTool = Tool.define(
             limit: 100,
             signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
-          if (result.length === 0) return empty
+          const matches = result.items // kilocode_change - retain bounded-search metadata from Core ripgrep
+          if (matches.length === 0) return empty // kilocode_change
 
-          const rows = result.map((item) => ({
+          const rows = matches.map((item) => ({
+            // kilocode_change
             path: path.resolve(cwd, item.entry.path),
             line: item.line,
             text: item.text,
           }))
 
           const limit = 100
-          const truncated = rows.length === limit
+          const truncated = result.truncated // kilocode_change
           const final = rows
           if (final.length === 0) return empty
 
           const total = rows.length
-          const hasMore = truncated || result.length === limit
+          const hasMore = truncated // kilocode_change
           const output = [`Found ${total} matches${hasMore ? " (more matches available)" : ""}`]
 
           let current = ""
@@ -100,6 +102,7 @@ export const GrepTool = Tool.define(
             output.push("")
             output.push("(Results truncated. Consider using a more specific path or pattern.)")
           }
+          if (result.partial) output.push("", "(Some paths were inaccessible.)") // kilocode_change
 
           return {
             title: params.pattern,

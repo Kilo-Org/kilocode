@@ -104,15 +104,7 @@ const eventCount = (type: string) =>
       ),
   )
 
-const interruptEvent = Database.Service.use(({ db }) =>
-  db
-    .select()
-    .from(EventTable)
-    .where(eq(EventTable.type, "session.next.interrupt.requested.1"))
-    .get()
-    .pipe(Effect.orDie),
-)
-
+// kilocode_change - no durable interrupt lookup: released database readers cannot decode that event type.
 describe("SessionV2.prompt", () => {
   it.effect("delegates execution continuation through SessionExecution", () =>
     Effect.gen(function* () {
@@ -137,8 +129,8 @@ describe("SessionV2.prompt", () => {
       expect(interruptCalls).toEqual([sessionID])
       expect(interruptSeqs).toHaveLength(1)
       expect(typeof interruptSeqs[0]).toBe("number")
-      expect(yield* eventCount("session.next.interrupt.requested.1")).toBe(1)
-      expect(yield* interruptEvent).toMatchObject({ aggregate_id: sessionID, seq: interruptSeqs[0] })
+      expect(interruptSeqs[0]).toBe(-1) // kilocode_change - ephemeral interrupts do not advance durable storage
+      expect(yield* eventCount("session.next.interrupt.requested.1")).toBe(0) // kilocode_change
       expect(yield* session.messages({ sessionID })).toEqual([])
     }),
   )

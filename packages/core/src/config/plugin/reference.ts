@@ -22,7 +22,9 @@ export const Plugin = {
     for (const doc of (yield* config.entries()).filter(
       (entry): entry is Config.Document => entry.type === "document",
     )) {
-      const directory = doc.path ? path.dirname(doc.path) : location.directory
+      // kilocode_change - Kilo local references are worktree-relative, falling back to the active directory outside a project.
+      const root = path.parse(location.project.directory).root
+      const directory = location.project.directory === root ? location.directory : location.project.directory
       for (const [name, entry] of Object.entries(doc.info.references ?? {})) {
         if (!validAlias(name)) continue
         entries.set(

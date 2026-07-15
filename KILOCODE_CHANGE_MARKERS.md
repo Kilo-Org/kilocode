@@ -1,36 +1,58 @@
-# `kilocode_change` Audit: PR #12204, Second Pass
+# `kilocode_change` Audit: PR #12204, Third Pass
 
-Audited PR HEAD `2d92d8dae2cb2d9efc4961b020dabb11ff5564aa` against current merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Audited immutable PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`, including the latest 51-file compatibility fix.
 
-## Result
+## Findings
 
-No current marker-removal, marker-move, marker-balance, or definite semantic Kilo-loss finding remains.
+### High: shared Kilo changes have incomplete marker coverage
 
-All 997 changed files were included in the audit: 186 added, 554 modified, 61 deleted, and 196 renamed. Marker text changed in 134 paths. No merge-introduced marker imbalance remains; the only unequal files are the same three already unequal at the base:
+A standalone marker comment covers only its physical line; it does not annotate the following expression, object, callback, or test. Confirmed incomplete coverage remains in:
 
-- `packages/opencode/src/provider/provider.ts`
-- `packages/opencode/src/session/message-v2.ts`
-- `packages/opencode/src/tool/read.ts`
+- `packages/core/src/config.ts:177-178`
+- `packages/core/src/config/plugin/reference.ts:25-27`
+- `packages/core/src/connector.ts:499-500`
+- `packages/core/src/credential.ts:3-4`
+- `packages/core/src/filesystem/search.ts:76`, `:103`, and the Kilo wrappers at `:182-222`
+- `packages/core/src/session/projector.ts:23-24`
+- `packages/core/src/tool/glob.ts:24-29`
+- `packages/core/src/tool/grep.ts:27-35`
+- `packages/core/test/config/config.test.ts:165-200`
+- `packages/core/test/credential.test.ts:100-101`
+- `packages/core/test/reference.test.ts:14-18`, `:44`, `:68`, `:97`, and `:102-123`
+- `packages/core/test/session-projector.test.ts:269-271`
+- `packages/opencode/src/tool/grep.ts:75-80`
 
-## Resolved Since First Pass
+Use trailing inline markers for single-line changes and balanced blocks for multi-line expressions and tests.
 
-- TUI prompt arbitration again handles terminals, permissions, blocking and non-blocking questions, suggestions, network waits, and the normal prompt in `packages/tui/src/routes/session/index.tsx`.
-- Dismissed-question rendering and the surrounding marker block are restored and balanced.
-- CLI and serve subprocesses now preload the OpenTUI JSX runtime; current Linux, macOS, and Windows jobs pass.
-- Main and worker process metadata again propagate `KILO_RUN_ID` and `KILO_PROCESS_ROLE`.
-- The Darwin profile now selects `server/httpapi-reference.test.ts` instead of the deleted reference directory.
-- OpenRouter reasoning variants now match the merged tests while preserving Kilo Gateway behavior.
+### Medium: five nested marker blocks are malformed under the checker
 
-## Notable Non-Findings
+The checker tracks block state with a boolean, not nesting depth. An inner `end` therefore closes the outer block and leaves subsequent outer content uncovered.
 
-- All 15 Kilo internal TUI plugins remain registered before upstream built-ins.
-- Kilo branding, themes, terminal-title behavior, daemon attach, cloud-session import, authenticated worker transport, config warnings, workspace synchronization, exit epilogue behavior, and reactive slot fallback survived extraction.
-- Dedicated `background_process`, `interactive_terminal`, and `semantic_search` renderers remain present.
-- Deleted account, reference, and search marker blocks track subsystem replacement; replacement Kilo-owned modules have active call sites and focused tests.
-- `git diff --check` is clean.
+Nested blocks remain in:
 
-## Verification And Limitations
+- `.github/workflows/test.yml:139-144`
+- `packages/core/src/tool/glob.ts:122-130`
+- `packages/core/test/connector.test.ts:507-552`
+- `packages/llm/src/schema/messages.ts:81-92`
+- `packages/opencode/src/agent/agent.ts:122-128`
 
-Revision-aware inventories, marker-specific diffs, rename/deletion tracing, balance checks, first-pass finding comparisons, and current CI logs were reviewed. All required checks at the audited SHA pass.
+The workflow had malformed nesting at the base, but this PR adds another nested Darwin pair. Remove redundant inner delimiters or split the outer blocks.
 
-The annotation checker still intentionally prints `Skipping shared upstream annotation check — upstream merge detected`, so its green status is not evidence of marker completeness. This was a read-only Git-object and CI audit; no interactive TUI run was performed.
+### Low: new markers were added in Kilo-owned paths
+
+The latest fixes add unnecessary markers in checker-exempt Kilo-owned paths:
+
+- `packages/core/src/kilocode/session-message.ts:13`, `:32`, and `:40`
+- `packages/core/test/kilocode/grep-tool.test.ts:39`
+
+`packages/tui/src/component/kilo-logo.tsx:1` is also PR-introduced and unnecessary because `packages/tui` is Kilo-owned. Remove these comments without changing surrounding code.
+
+## Resolved Functional Items
+
+All functional first- and second-pass marker findings remain resolved: TUI arbitration and dismissed questions, OpenTUI preload wiring, process metadata, Darwin test selection, and OpenRouter variants.
+
+## Evidence And Limitations
+
+The PR changes 1,007 files; marker text changes in 161 paths. No new raw start/end count imbalance exists, and `git diff --check` is clean. The annotation check is not authoritative because upstream merges skip it and its scopes omit `packages/core`, `packages/llm`, and `packages/tui`.
+
+This was a read-only immutable-object audit. No interactive runtime validation was performed.

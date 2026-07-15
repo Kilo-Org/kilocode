@@ -19,6 +19,7 @@ import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { SessionInput } from "@opencode-ai/core/session/input"
 import { SessionStore } from "@opencode-ai/core/session/store"
 import { SessionInputTable, SessionMessageTable, SessionTable } from "@opencode-ai/core/session/sql"
+import * as StoredMessage from "@opencode-ai/core/kilocode/session-message" // kilocode_change
 import { testEffect } from "./lib/effect"
 
 const database = Database.layerFromPath(":memory:")
@@ -265,7 +266,9 @@ describe("SessionProjector", () => {
         .all()
         .pipe(Effect.orDie)
       const messages = rows.map((row) =>
-        Schema.decodeUnknownSync(SessionMessage.Message)({ ...row.data, id: row.id, type: row.type }),
+        Schema.decodeUnknownSync(SessionMessage.Message)(
+          StoredMessage.normalize({ ...row.data, id: row.id, type: row.type }), // kilocode_change
+        ),
       )
 
       expect(messages.map((message) => message.type)).toEqual([

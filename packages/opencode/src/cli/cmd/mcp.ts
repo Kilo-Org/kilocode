@@ -22,6 +22,7 @@ import { Filesystem } from "@/util/filesystem"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Effect } from "effect"
+import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 
 function getAuthStatusIcon(status: MCP.AuthStatus): string {
   switch (status) {
@@ -479,6 +480,7 @@ export const McpAddCommand = effectCmd({
     const maybeCtx = yield* InstanceRef
     if (!maybeCtx) return yield* Effect.die("InstanceRef not provided")
     const ctx = maybeCtx
+    const global = Flag.KILO_CONFIG_DIR ?? Global.Path.config // kilocode_change - honor the active Kilo config profile
     yield* Effect.promise(async () => {
       const command = args["--"] ?? []
       if (!args.name && (args.url || args.env?.length || args.header?.length || command.length)) {
@@ -520,7 +522,7 @@ export const McpAddCommand = effectCmd({
               ...(Object.keys(environment).length ? { environment } : {}),
             }
 
-        const configPath = await resolveConfigPath(Global.Path.config, true)
+        const configPath = await resolveConfigPath(global, true) // kilocode_change
         await addMcpToConfig(args.name, mcpConfig, configPath)
         prompts.log.success(`MCP server "${args.name}" added to ${configPath}`)
         return
@@ -534,7 +536,7 @@ export const McpAddCommand = effectCmd({
       // Resolve config paths eagerly for hints
       const [projectConfigPath, globalConfigPath] = await Promise.all([
         resolveConfigPath(ctx.worktree),
-        resolveConfigPath(Global.Path.config, true),
+        resolveConfigPath(global, true), // kilocode_change
       ])
 
       // Determine scope

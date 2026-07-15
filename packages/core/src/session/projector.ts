@@ -10,6 +10,7 @@ import { SessionV1 } from "../v1/session"
 import { WorkspaceTable } from "../control-plane/workspace.sql"
 import { SessionMessage } from "./message"
 import { SessionMessageUpdater } from "./message-updater"
+import * as StoredMessage from "../kilocode/session-message" // kilocode_change
 import { SessionInput } from "./input"
 import { WorkspaceV2 } from "../workspace"
 import { SessionContextEpoch } from "./context-epoch"
@@ -19,7 +20,8 @@ import type { DeepMutable } from "../schema"
 type DatabaseService = Database.Interface["db"]
 
 const decodeMessage = Schema.decodeUnknownSync(SessionMessage.Message)
-const encodeMessage = Schema.encodeSync(SessionMessage.Message)
+const encodeMessage = (message: SessionMessage.Message) =>
+  StoredMessage.encode(Schema.encodeSync(SessionMessage.Message)(message)) as (typeof SessionMessage.Message)["Encoded"] // kilocode_change
 
 class PromptAlreadyProjected extends Error {}
 export class SessionAlreadyProjected extends Error {}
@@ -113,7 +115,7 @@ function applyUsage(
 function run(db: DatabaseService, event: SessionEvent.Event) {
   return Effect.gen(function* () {
     const decodeRow = (row: typeof SessionMessageTable.$inferSelect) =>
-      decodeMessage({ ...row.data, id: row.id, type: row.type })
+      decodeMessage(StoredMessage.normalize({ ...row.data, id: row.id, type: row.type })) // kilocode_change
     const updateMessage = (message: SessionMessage.Message) => {
       if (event.seq === undefined) return Effect.die("Synchronized Session event is missing aggregate sequence")
       const encoded = encodeMessage(message)
@@ -447,7 +449,7 @@ export const layer = Layer.effectDiscard(
     yield* events.project(SessionEvent.Reasoning.Ended, (event) => run(db, event))
     // yield* events.project(SessionEvent.Retried, (event) => run(db, event))
     yield* events.project(SessionEvent.Compaction.Ended, (event) => {
-      if (event.version === 1) return Effect.void
+      if (event.data.messageID === undefined || event.data.reason === undefined) return Effect.void // kilocode_change
       const seq = event.seq
       if (seq === undefined) return Effect.die("Synchronized Session event is missing aggregate sequence")
       return Effect.gen(function* () {

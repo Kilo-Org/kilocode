@@ -70,4 +70,27 @@ describe("FileSystem", () => {
       }).pipe(provide(directory)),
     ),
   )
+
+  // kilocode_change start - canonical containment must reject in-worktree links to outside paths
+  it.live("rejects symlink escapes for reads, lists, and searches", () =>
+    withTmp((directory) =>
+      withTmp((outside) =>
+        Effect.gen(function* () {
+          yield* Effect.promise(async () => {
+            await fs.writeFile(path.join(outside, "secret.txt"), "secret")
+            await fs.symlink(outside, path.join(directory, "escape"), process.platform === "win32" ? "junction" : "dir")
+          })
+          const service = yield* FileSystem.Service
+          const exits = yield* Effect.all([
+            service.read({ path: RelativePath.make("escape/secret.txt") }).pipe(Effect.exit),
+            service.list({ path: RelativePath.make("escape") }).pipe(Effect.exit),
+            service.glob({ pattern: "**/*", path: RelativePath.make("escape") }).pipe(Effect.exit),
+            service.grep({ pattern: "secret", path: RelativePath.make("escape") }).pipe(Effect.exit),
+          ])
+          expect(exits.every((exit) => exit._tag === "Failure")).toBe(true)
+        }).pipe(provide(directory)),
+      ),
+    ),
+  )
+  // kilocode_change end
 })

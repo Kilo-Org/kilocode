@@ -621,6 +621,7 @@ export const layer = Layer.effect(
               reason: input.auto ? "auto" : "manual",
               text: summary ?? "",
               recent,
+              include: recent, // kilocode_change - released Core V2 readers recognize this field
             })
         }
         // kilocode_change start - export self-contained compaction capture

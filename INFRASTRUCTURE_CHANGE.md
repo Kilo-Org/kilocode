@@ -1,42 +1,30 @@
-# Infrastructure Review: PR #12204, Second Pass
+# Infrastructure Review: PR #12204, Third Pass
 
-Reviewed PR HEAD `2d92d8dae2cb2d9efc4961b020dabb11ff5564aa` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Reviewed PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
 
 ## Findings
 
-### High: fallback package test command executes zero tasks
+### Low: dormant supply-chain quarantine exceptions remain
 
-`.github/workflows/test.yml:139` invokes `bun turbo test` for seven packages that expose `test` but not `test:ci`. `turbo.json` has package-specific `test` tasks but no generic `test` task, so Turbo selects the packages and exits successfully without running anything.
+`bunfig.toml` exempts `@ff-labs/fff-node`, `app-builder-lib`, `dmg-builder`, `electron-builder`, and `electron-publish` from the release-age quarantine, but none appears in a workspace manifest or `bun.lock` at this head. Remove dormant exceptions or document their install path.
 
-Current Linux and Windows logs report:
+### Low: CODEOWNERS rules cannot enforce approval
 
-```text
-Running test in 7 packages
-WARNING  No tasks were executed as part of this run.
-Tasks: 0 successful, 0 total
-```
+`.github/CODEOWNERS` assigns absent `packages/app/` and `packages/desktop/` paths to users with read-only repository permission. These rules do not weaken a currently shipped path, but they cannot enforce approval and should be aligned with Kilo ownership.
 
-The skipped packages include `@opencode-ai/tui` and `@opencode-ai/llm`, both substantially changed by this merge, plus five Kilo packages. Add a generic Turbo task, add `test:ci` scripts, or invoke each package script directly. CI should fail when an intended invocation executes zero tasks.
+## Resolved Since Second Pass
 
-### Low: supply-chain quarantine exceptions remain broad
+The zero-task CI issue is fixed:
 
-`bunfig.toml` adds release-age exceptions for native binaries and Electron release tooling. Several Electron entries and `@ff-labs/fff-node` have no direct workspace manifest reference at this head. Confirm each exception is required and remove inherited or temporary entries.
+- The generic fallback command was removed.
+- The seven previously uncovered packages now expose JUnit-producing `test:ci` scripts.
+- Turbo defines the generic `test:ci` task and output.
+- Exact-head Linux, macOS, and Windows logs report `Running test:ci in 24 packages` and `15 successful, 15 total` without zero-task warnings.
 
-### Low: CODEOWNERS imports non-enforcing upstream ownership
+All prior infrastructure findings remain resolved, including TUI startup, JUnit publication, Darwin profile validation, JetBrains pinning, `dev:local`, the `fff-bun@0.9.4` patch, and HTTP recorder privacy.
 
-`.github/CODEOWNERS` assigns absent `packages/app/` and `packages/desktop/` paths to users with read-only repository permission. This is not an immediate shipped-path regression, but the rules cannot enforce approval and should be aligned with Kilo ownership policy.
+## CI And Limitations
 
-## Resolved Since First Pass
+All required exact-head checks pass, including the full platform unit matrix, HttpApi, JetBrains, typechecks, docs, visual regression, source links, policy checks, and CodeQL analyses. No workflow was added or removed, and no new Docker, Nix, deployment, dependency-bot, or template change was found.
 
-- JUnit-producing `test:ci` scripts and workflow invocation are restored for packages that expose them; all seven platform unit artifacts are uploaded.
-- The extracted TUI no longer breaks CLI or server startup.
-- The JetBrains runtime CLI pin is restored to `7.4.5`.
-- Root `dev:local` is restored.
-- The `fff-bun` patch now targets installed version `0.9.4`, and its whitespace errors are fixed.
-- HTTP recorder is private and its package metadata points to Kilo.
-
-## Notable Non-Findings
-
-All required checks at the audited SHA pass. No workflow was added or removed, and no Docker, Nix, deployment, dependency-bot, issue-template, or PR-template file changed. SDK/OpenAPI files changed with their server contracts and pass typecheck, source-link, and HttpApi checks.
-
-This was a read-only object and CI-log audit. No release build, SDK regeneration, or package publication dry run was performed.
+This was a read-only object and CI-log audit; no release build or publication dry run was performed.

@@ -51,6 +51,7 @@ type Editor = {
 
 export interface Interface {
   readonly transform: State.Interface<Data, Editor>["transform"]
+  readonly replace: (sources: readonly (readonly [string, Source])[]) => Effect.Effect<void> // kilocode_change
   readonly list: () => Effect.Effect<Info[]>
 }
 
@@ -128,6 +129,15 @@ export const layer = Layer.effect(
 
     return Service.of({
       transform: state.transform,
+      // kilocode_change start - reconcile Kilo's effective config without a request-scoped transform slot.
+      replace: (sources) =>
+        state.mutate((editor) =>
+          Effect.sync(() => {
+            for (const [name] of editor.list()) editor.remove(name)
+            for (const [name, source] of sources) editor.add(name, source)
+          }),
+        ),
+      // kilocode_change end
       list: Effect.fn("Reference.list")(function* () {
         return Array.from(materialized.values())
       }),
