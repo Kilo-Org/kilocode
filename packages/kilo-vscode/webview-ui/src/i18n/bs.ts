@@ -1298,7 +1298,8 @@ export const dict = {
   "settings.display.title": "Prikaz",
   "settings.autocomplete.title": "Automatsko dovršavanje",
   "settings.autocomplete.model.title": "Model za automatsko dovršavanje",
-  "settings.autocomplete.model.description": "Odaberite model koji se koristi za inline dovršavanje koda",
+  "settings.autocomplete.model.description":
+    "Odaberite model za popunjavanje u sredini (FIM). Modeli samo za chat nisu podržani.",
   "settings.notifications.title": "Obavještenja",
   "settings.context.title": "Kontekst",
 
