@@ -164,6 +164,6 @@
     "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.4.8",
+  "version": "7.4.9",
   "peerDependencies": {}
 }
