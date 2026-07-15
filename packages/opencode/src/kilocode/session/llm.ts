@@ -7,6 +7,7 @@ import { KiloSessionOverflow } from "./overflow"
 
 const SAFETY = 2048
 const MIN_OUTPUT = 1024
+const DEFAULT_CHUNK_IDLE_MS = 60_000
 
 export namespace KiloLLM {
   // Stream failures and interruptions propagate while text deltas are collected.
@@ -27,7 +28,7 @@ export namespace KiloLLM {
         ? input.options["chunkTimeout"]
         : typeof input.fallback?.["chunkTimeout"] === "number"
           ? input.fallback["chunkTimeout"]
-          : undefined
+          : DEFAULT_CHUNK_IDLE_MS
     if (!value) return {}
     input.log?.debug("chunk idle timeout configured", { chunkTimeout: value })
     return { timeout: { chunkMs: value } }

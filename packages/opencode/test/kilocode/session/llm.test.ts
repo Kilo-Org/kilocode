@@ -31,8 +31,8 @@ describe("kilocode.session.llm.timeout", () => {
     expect(result).toEqual({ timeout: { chunkMs: 30_000 } })
   })
 
-  test("omits the timeout when it is not configured", () => {
-    expect(KiloLLM.timeout({ options: {} })).toEqual({})
+  test("defaults the chunk idle timeout to 60_000 ms when no override is configured", () => {
+    expect(KiloLLM.timeout({ options: {} })).toEqual({ timeout: { chunkMs: 60_000 } })
   })
 })
 
