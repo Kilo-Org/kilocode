@@ -29,11 +29,16 @@ const request: QuestionRequest = {
     },
   ],
 }
+const [active, setActive] = createSignal<QuestionRequest | undefined>(request)
+const calls: Array<{ id: string; answers: string[][] }> = []
 const session = {
   questionErrors: () => new Set<string>(),
   selectedAgent: () => "code",
   selectAgent: () => {},
-  replyToQuestion: () => {},
+  replyToQuestion: (id: string, answers: string[][]) => {
+    calls.push({ id, answers })
+    setActive(undefined)
+  },
   rejectQuestion: () => {},
   closeQuestion: () => {},
 }
@@ -43,8 +48,8 @@ const language = {
   userOverride: () => "",
   t: (key: string) => key,
 }
-const [active, setActive] = createSignal<QuestionRequest | undefined>(request)
 const root = document.createElement("div")
+document.body.append(root)
 const dispose = render(
   () => (
     <SessionContext.Provider value={session as never}>
@@ -56,5 +61,14 @@ const dispose = render(
   root,
 )
 
-setActive(undefined)
+const option = root.querySelector<HTMLButtonElement>('[data-slot="question-option"]')
+const submit = root.querySelector<HTMLButtonElement>('[data-slot="question-footer-actions"] button')
+if (!option || !submit) throw new Error("Question controls did not render")
+option.click()
+if (submit.disabled) throw new Error("Submit did not enable after selecting an answer")
+submit.click()
+if (calls.length !== 1 || calls[0]?.id !== request.id || calls[0]?.answers[0]?.[0] !== "Yes") {
+  throw new Error(`Unexpected question reply: ${JSON.stringify(calls)}`)
+}
+if (root.querySelector('[data-component="question-dock"]')) throw new Error("Question dock did not unmount")
 dispose()
