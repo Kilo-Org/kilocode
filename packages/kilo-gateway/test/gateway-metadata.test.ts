@@ -8,8 +8,9 @@ const meta = {
     canonicalSlug: "anthropic/claude-opus-4.8",
     finalProvider: "anthropic",
     modelAttempts: [
-      { canonicalSlug: "anthropic/claude-fable-5", success: false },
+      { canonicalSlug: "anthropic/claude-sonnet-4.5", success: true },
       { canonicalSlug: "anthropic/claude-opus-4.8", success: true },
+      { canonicalSlug: "anthropic/claude-fable-5", success: false },
     ],
   },
   cost: "0",
