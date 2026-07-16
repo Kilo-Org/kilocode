@@ -76,7 +76,7 @@ describe("AgentManagerProvider closeSession", () => {
     expect(events).toEqual(["abort", "processes", "remove"])
     expect(removed).toEqual(["s1"])
     expect(cleared).toEqual(["s1"])
-    expect(messages).toEqual([{ type: "agentManager.sessionClosed", sessionId: "s1" }])
+    expect(messages).toEqual([])
     expect(manager.panelSessions.has("s1")).toBe(false)
   })
 

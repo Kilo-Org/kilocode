@@ -197,6 +197,7 @@ export class AgentManagerProvider implements Disposable {
       managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
       close: async (id) => {
         await this.onCloseSession(id)
+        this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id })
       },
       log: (...args) => this.log(...args),
     })
@@ -1236,7 +1237,6 @@ export class AgentManagerProvider implements Disposable {
     state?.removeSession(sessionId)
     this.panel?.sessions.clearSessionDirectory(sessionId)
     if (state) this.pushState()
-    this.postToWebview({ type: "agentManager.sessionClosed", sessionId })
     this.log(`Closed session ${sessionId}`)
     return null
   }
