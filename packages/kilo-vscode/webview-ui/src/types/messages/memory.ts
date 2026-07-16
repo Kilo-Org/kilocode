@@ -50,6 +50,8 @@ export interface MemoryEventDetail {
   duplicateOf?: string
   tokens?: number
   operationCount?: number
+  added?: number
+  removed?: number
   skippedCount?: number
   sources?: string[]
   files?: string[]
