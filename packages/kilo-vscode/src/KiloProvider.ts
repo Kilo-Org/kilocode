@@ -48,6 +48,7 @@ import {
   SessionStreamScheduler,
   buildSettingPath,
   type SessionRefreshContext,
+  shouldClearRevertForMessage,
 } from "./kilo-provider-utils"
 import { GitOps } from "./agent-manager/GitOps"
 import { GitStatsPoller, type LocalStats } from "./agent-manager/GitStatsPoller"
@@ -3936,6 +3937,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const value = info.role === "assistant" ? info.cost : undefined
       const cost = this.updateMessageCost(event.properties.sessionID, info.id, info.role, value)
       if (cost !== undefined) this.requestCostAlert(event.properties.sessionID, cost)
+    }
+    // Resubmit clears revert on the backend, but that never reaches the webview,
+    // so the stale revert marker keeps hiding the new message. Clear it here.
+    if (this.currentSession && event.type === "message.updated" && shouldClearRevertForMessage(sessionID, this.currentSession)) {
+      this.setCurrentSession({ ...this.currentSession, revert: undefined })
+      this.postMessage({ type: "sessionUpdated", session: { id: sessionID, revert: null } })
     }
     if (event.type === "message.removed") {
       this.removeMessageCost(event.properties.messageID)

@@ -19,6 +19,17 @@ import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
 
+/**
+ * When a new message is created for the current session but the client still
+ * holds a stale `revert` marker, the revert boundary hides the new message.
+ * The backend clears revert on resubmit, but that update never reaches the
+ * webview (sync `session.updated` events map to null / are dropped), so we
+ * must clear it client-side when the first post-revert message arrives.
+ */
+export function shouldClearRevertForMessage(sessionID: string | undefined, session: Session | undefined): boolean {
+  return session != null && session.id === sessionID && session.revert != null
+}
+
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
 
