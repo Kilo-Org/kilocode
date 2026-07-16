@@ -183,9 +183,13 @@ export namespace SessionPrompt {
 
   export const prompt = fn(PromptInput, async (input) => {
     const session = await Session.get(input.sessionID)
-    await SessionRevert.cleanup(session)
-
-    const message = await createUserMessage(input)
+    // kilocode_change start - finish cleanup without removing an id reused by the new prompt
+    const kept = await SessionRevert.cleanup(session, input.messageID)
+    const message = await createUserMessage(input).catch(async (err) => {
+      if (kept) await Session.removeMessage({ sessionID: input.sessionID, messageID: kept })
+      throw err
+    })
+    // kilocode_change end
     await Session.touch(input.sessionID)
 
     // this is backwards compatibility for allowing `tools` to be specified when

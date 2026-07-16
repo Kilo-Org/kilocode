@@ -88,8 +88,10 @@ export namespace SessionRevert {
     return Session.clearRevert(input.sessionID)
   }
 
-  export async function cleanup(session: Session.Info) {
+  export async function cleanup(session: Session.Info, retain?: string) {
+    // kilocode_change start - retain a resubmitted id so its removal event cannot race its recreation
     if (!session.revert) return
+    // kilocode_change end
     const sessionID = session.id
     const msgs = await Session.messages({ sessionID })
     const messageID = session.revert.messageID
@@ -112,8 +114,21 @@ export namespace SessionRevert {
       }
       remove.push(msg)
     }
+    const kept = remove.some((msg) => msg.info.id === retain) // kilocode_change
     for (const msg of remove) {
       Database.use((db) => db.delete(MessageTable).where(eq(MessageTable.id, msg.info.id)).run())
+      // kilocode_change start - clear stale parts without removing a replacement that reuses this id
+      if (msg.info.id === retain) {
+        for (const part of msg.parts) {
+          await Bus.publish(MessageV2.Event.PartRemoved, {
+            sessionID: sessionID,
+            messageID: msg.info.id,
+            partID: part.id,
+          })
+        }
+        continue
+      }
+      // kilocode_change end
       await Bus.publish(MessageV2.Event.Removed, { sessionID: sessionID, messageID: msg.info.id })
     }
     if (session.revert.partID && target) {
@@ -134,5 +149,6 @@ export namespace SessionRevert {
       }
     }
     await Session.clearRevert(sessionID)
+    return kept ? retain : undefined // kilocode_change
   }
 }
