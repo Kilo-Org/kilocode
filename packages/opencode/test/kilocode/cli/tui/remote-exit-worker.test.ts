@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { RemoteExit } from "../../../../src/kilo-sessions/remote-exit"
-import { RemoteExitRpc } from "../../../../src/cli/cmd/tui/remote-exit-rpc"
-import { createWorkerRemoteExit } from "../../../../src/cli/cmd/tui/remote-exit-worker"
+import { RemoteExitRpc } from "../../../../src/kilocode/cli/cmd/tui/remote-exit-rpc"
+import { createWorkerRemoteExit } from "../../../../src/kilocode/cli/cmd/tui/remote-exit-worker"
 
 describe("worker remote exit lifecycle", () => {
   test("registers only after tuiReady and emits RPC instead of invoking parent state", async () => {

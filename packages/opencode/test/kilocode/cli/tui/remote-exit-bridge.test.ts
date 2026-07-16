@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { createExit } from "../../../../src/cli/cmd/tui/context/exit"
-import { RemoteExitRpc } from "../../../../src/cli/cmd/tui/remote-exit-rpc"
-import { createParentRemoteExitBridge } from "../../../../src/cli/cmd/tui/remote-exit-bridge"
+import { RemoteExitRpc } from "../../../../src/kilocode/cli/cmd/tui/remote-exit-rpc"
+import { createParentRemoteExitBridge } from "../../../../src/kilocode/cli/cmd/tui/remote-exit-bridge"
 import { Rpc } from "../../../../src/util/rpc"
 
 describe("parent remote exit RPC bridge", () => {

@@ -1,5 +1,5 @@
 import type { Exit } from "@/cli/cmd/tui/context/exit"
-import { RemoteExitRpc } from "@/cli/cmd/tui/remote-exit-rpc"
+import { RemoteExitRpc } from "@/kilocode/cli/cmd/tui/remote-exit-rpc"
 import { withTimeout } from "@/util/timeout"
 
 export type RemoteExitBridgeClient = {

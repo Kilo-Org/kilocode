@@ -24,7 +24,7 @@ import {
   sanitizedProcessEnv,
 } from "@opencode-ai/core/util/opencode-process"
 import { validateSession } from "./validate-session"
-import { createParentRemoteExitBridge, type RemoteExitBridgeClient } from "./remote-exit-bridge" // kilocode_change
+import { createParentRemoteExitBridge, type RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change
 import type { Exit } from "./context/exit" // kilocode_change
 
 declare global {
