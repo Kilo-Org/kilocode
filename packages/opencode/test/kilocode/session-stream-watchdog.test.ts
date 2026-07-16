@@ -260,12 +260,12 @@ const exists = (file: string) =>
 // The production bash tool runs every command through a *login* shell
 // (`bash -l -c ...`, see src/shell/shell.ts) so `~/.bashrc` and shell
 // aliases behave the same as an interactive terminal. Git for Windows'
-// login-shell startup rescans the full Windows `PATH` and is well known to
-// take several seconds on CI hardware — well beyond what a Unix login shell
-// costs — before it even reaches the `touch` in `bashGate`. Give the marker
-// file these tests poll for a generous margin there. Matches the existing
-// platform-aware timeout doubling in test/kilocode/background-process.test.ts.
-const waitForFile = (file: string, label: string, duration = process.platform === "win32" ? 30_000 : 5_000) =>
+// login-shell startup rescans the full Windows `PATH`, which is slower
+// than the Unix shells used elsewhere in this file. Give the marker file
+// these tests poll for a little extra headroom there, on top of the tests
+// A/C `config.shell: "bash"` override that makes the bash tool actually
+// use git-bash instead of cmd.exe on Windows (see those config comments).
+const waitForFile = (file: string, label: string, duration = process.platform === "win32" ? 15_000 : 5_000) =>
   pollWithTimeout(
     Effect.gen(function* () {
       const ok = yield* exists(file)
@@ -374,11 +374,18 @@ describe("session stream watchdog integration", () => {
             assertNotInterrupted(msg.parts)
           }
         }),
-        { git: true, config: (url) => ({ ...providerCfg(url), permission: { bash: "allow" } }) },
+        {
+          git: true,
+          // kilocode_change: without an explicit `shell`, the bash tool's
+          // `defaultShell()` falls back to cmd.exe on Windows (see
+          // packages/core/src/tool/bash.ts), which cannot run bashGate's
+          // POSIX syntax (`touch`, `[ -f ... ]`, `while ... done`). That
+          // made `touch` fail immediately and silently, so the readiness
+          // marker never appeared regardless of how long the test waited.
+          config: (url) => ({ ...providerCfg(url), shell: "bash", permission: { bash: "allow" } }),
+        },
       ),
-    // kilocode_change: extended on Windows to cover the slow login-shell
-    // startup described on waitForFile above.
-    { timeout: process.platform === "win32" ? 90_000 : 30_000 },
+    { timeout: 30_000 },
   )
 
   it.live(
@@ -529,8 +536,12 @@ describe("session stream watchdog integration", () => {
         }),
         {
           git: true,
+          // kilocode_change: see the matching comment on test A — without
+          // this, the nested child's bash tool falls back to cmd.exe on
+          // Windows and the readiness marker never appears.
           config: (url) => ({
             ...providerCfg(url),
+            shell: "bash",
             permission: { bash: "allow", task: "allow" },
             agent: {
               child: {
@@ -542,7 +553,6 @@ describe("session stream watchdog integration", () => {
           }),
         },
       ),
-    // kilocode_change: extended on Windows, see the matching comment on test A.
-    { timeout: process.platform === "win32" ? 90_000 : 30_000 },
+    { timeout: 30_000 },
   )
 })
