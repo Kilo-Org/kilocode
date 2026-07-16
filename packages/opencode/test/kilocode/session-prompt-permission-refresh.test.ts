@@ -1012,9 +1012,6 @@ it.live(
         const call = { command: "pwd", workdir: skill, description: "Run global skill resource" }
 
         yield* Effect.promise(() => fs.mkdir(skill, { recursive: true }))
-        yield* Effect.addFinalizer(() =>
-          Effect.promise(() => rm(skill, { recursive: true, force: true }).catch(() => {})),
-        )
         yield* llm.push(reply().tool("bash", call), reply().text("first complete").stop())
 
         yield* prompt.prompt({
@@ -1031,7 +1028,6 @@ it.live(
             return list.find((item) => item.sessionID === chat.id)
           }),
           "global skill permission was never surfaced",
-          "15 seconds",
         )
         expect(pending?.permission).toBe("external_directory")
         const always = (pending?.always ?? []) as string[]
