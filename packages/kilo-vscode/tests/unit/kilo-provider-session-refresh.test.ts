@@ -346,7 +346,10 @@ describe("KiloProvider revert clearing on resubmit", () => {
 
     internal.handleEvent({
       type: "message.updated",
-      properties: { sessionID: "sess-1", info: { id: "msg-2", sessionID: "sess-1", role: "user", time: { created: 3 } } },
+      properties: {
+        sessionID: "sess-1",
+        info: { id: "msg-2", sessionID: "sess-1", role: "user", time: { created: 3 } },
+      },
     } as never)
 
     expect(internal.currentSession?.revert).toBeUndefined()
@@ -361,9 +364,30 @@ describe("KiloProvider revert clearing on resubmit", () => {
 
     internal.handleEvent({
       type: "message.updated",
-      properties: { sessionID: "sess-1", info: { id: "msg-2", sessionID: "sess-1", role: "user", time: { created: 3 } } },
+      properties: {
+        sessionID: "sess-1",
+        info: { id: "msg-2", sessionID: "sess-1", role: "user", time: { created: 3 } },
+      },
     } as never)
 
+    expect(sent).not.toContainEqual(
+      expect.objectContaining({ type: "sessionUpdated", session: { id: "sess-1", revert: null } }),
+    )
+  })
+
+  it("does not clear the revert marker when the boundary message is updated (cleanup/compaction)", () => {
+    const { internal, sent } = setup()
+    internal.currentSession = makeRevertedSession({ messageID: "msg-1" })
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: {
+        sessionID: "sess-1",
+        info: { id: "msg-1", sessionID: "sess-1", role: "user", time: { created: 3 } },
+      },
+    } as never)
+
+    expect(internal.currentSession?.revert).toBeDefined()
     expect(sent).not.toContainEqual(
       expect.objectContaining({ type: "sessionUpdated", session: { id: "sess-1", revert: null } }),
     )

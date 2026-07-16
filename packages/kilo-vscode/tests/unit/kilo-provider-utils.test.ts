@@ -928,26 +928,41 @@ describe("getConfigErrorDetails", () => {
 })
 
 describe("shouldClearRevertForMessage", () => {
-  it("returns true when the current session has a revert marker matching the event session", () => {
+  it("returns true when a message after the revert boundary arrives for the reverted session", () => {
     const session = makeSession({ revert: { messageID: "msg-1" } })
-    expect(shouldClearRevertForMessage("sess-1", session)).toBe(true)
+    expect(shouldClearRevertForMessage("sess-1", session, "msg-2")).toBe(true)
   })
 
   it("returns false when there is no current session", () => {
-    expect(shouldClearRevertForMessage("sess-1", undefined)).toBe(false)
+    expect(shouldClearRevertForMessage("sess-1", undefined, "msg-2")).toBe(false)
   })
 
   it("returns false when the current session has no revert marker", () => {
-    expect(shouldClearRevertForMessage("sess-1", makeSession())).toBe(false)
+    expect(shouldClearRevertForMessage("sess-1", makeSession(), "msg-2")).toBe(false)
   })
 
   it("returns false when the event session id differs from the current session", () => {
     const session = makeSession({ revert: { messageID: "msg-1" } })
-    expect(shouldClearRevertForMessage("other-session", session)).toBe(false)
+    expect(shouldClearRevertForMessage("other-session", session, "msg-2")).toBe(false)
   })
 
   it("returns false when the event session id is undefined", () => {
     const session = makeSession({ revert: { messageID: "msg-1" } })
-    expect(shouldClearRevertForMessage(undefined, session)).toBe(false)
+    expect(shouldClearRevertForMessage(undefined, session, "msg-2")).toBe(false)
+  })
+
+  it("returns false when the incoming message is the revert boundary message", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" } })
+    expect(shouldClearRevertForMessage("sess-1", session, "msg-1")).toBe(false)
+  })
+
+  it("returns false when the incoming message is older than the revert boundary", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" } })
+    expect(shouldClearRevertForMessage("sess-1", session, "msg-0")).toBe(false)
+  })
+
+  it("returns false when the incoming message id is missing", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" } })
+    expect(shouldClearRevertForMessage("sess-1", session, undefined)).toBe(false)
   })
 })
