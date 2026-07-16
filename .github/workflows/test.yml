@@ -142,16 +142,20 @@ jobs:
             turbo-${{ runner.os }}-
           # kilocode_change end
 
-      # kilocode_change start
+      # kilocode_change start - test non-CLI packages separately from sharded CLI tests
       - name: Run non-CLI unit tests
         if: matrix.settings.run && matrix.settings.packages
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
+      # kilocode_change end
 
+      # kilocode_change start - ensure the Darwin profile cannot suppress its own validation
       - name: Validate Darwin CLI test profile
         if: matrix.settings.run && matrix.settings.os == 'macos'
         working-directory: packages/opencode
         run: bun test test/kilocode/test-profile.test.ts
+      # kilocode_change end
 
+      # kilocode_change start - run Kilo CLI tests through platform-specific shards
       - name: Run CLI unit tests
         if: matrix.settings.run
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
