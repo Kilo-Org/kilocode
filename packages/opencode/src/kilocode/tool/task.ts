@@ -94,7 +94,7 @@ export namespace KiloTask {
 
   type Model = { providerID: ProviderV2.ID; modelID: ModelV2.ID }
   type Saved = Model & { variant?: string }
-  type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
+  type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean; callSite?: boolean }
 
   function key(model: Model) {
     return `${model.providerID}/${model.modelID}`
@@ -136,12 +136,16 @@ export namespace KiloTask {
     config: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
     parent: Model
     variant?: string
+    callModel?: string
+    callVariant?: string
     provider: Provider.Interface
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
+    const call = parse(input.callModel)
     const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
     const choices: Array<Choice | undefined> = [
+      call ? { model: call, variant: input.callVariant, callSite: true } : undefined,
       state
         ? {
             model: { providerID: state.providerID, modelID: state.modelID },
@@ -157,10 +161,10 @@ export namespace KiloTask {
       if (!choice) continue
       if (choice.direct) {
         const value = override(choice.model)
-        if (!value) return { model: choice.model, variant: choice.variant }
+        if (!value) return { model: choice.model, variant: input.callVariant ?? choice.variant }
         const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID)
         const variant = full.variants?.[value] ? value : choice.variant
-        return { model: choice.model, variant }
+        return { model: choice.model, variant: input.callVariant ?? variant }
       }
       const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
         Effect.catchTag("ProviderModelNotFoundError", (err) =>
@@ -175,21 +179,26 @@ export namespace KiloTask {
         ),
       )
       if (!full) continue
+      if (choice.callSite) {
+        const value = override(choice.model)
+        const variant = value && full.variants?.[value] ? value : undefined
+        return { model: choice.model, variant: input.callVariant ?? variant }
+      }
       const fallback = choice.variant && full.variants?.[choice.variant] ? choice.variant : undefined
       const value = override(choice.model)
       const variant = value && full.variants?.[value] ? value : fallback
       return {
         model: choice.sticky && variant ? { ...choice.model, variant } : choice.model,
-        variant,
+        variant: input.callVariant ?? variant,
       }
     }
 
     const value = override(input.parent)
-    if (!value) return { model: input.parent, variant: input.variant }
+    if (!value) return { model: input.parent, variant: input.callVariant ?? input.variant }
     const full = yield* input.provider
       .getModel(input.parent.providerID, input.parent.modelID)
       .pipe(Effect.catchTag("ProviderModelNotFoundError", () => Effect.succeed(undefined)))
     const variant = full?.variants?.[value] ? value : input.variant
-    return { model: input.parent, variant }
+    return { model: input.parent, variant: input.callVariant ?? variant }
   })
 }
