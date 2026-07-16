@@ -259,51 +259,6 @@
   font-size: var(--kilo-font-size-13);
 }
 
-.task-timeline-detail-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: var(--vscode-descriptionForeground);
-  border: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 80%, transparent);
-  font-size: var(--kilo-font-size-12);
-  white-space: nowrap;
-}
-
-.task-timeline-detail-meta {
-  color: var(--vscode-descriptionForeground);
-  font-size: var(--kilo-font-size-13);
-}
-
-.task-timeline-detail-value {
-  color: var(--vscode-foreground);
-  font-weight: 600;
-  margin-left: 6px;
-}
-
-.task-timeline-detail-block {
-  margin-top: 10px;
-}
-
-.task-timeline-detail-label {
-  color: var(--vscode-descriptionForeground);
-  font-size: var(--kilo-font-size-12);
-  margin-bottom: 4px;
-}
-
-.task-timeline-detail-pre {
-  margin: 0;
-  max-height: 220px;
-  overflow: auto;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 80%, transparent);
-  background: color-mix(in srgb, var(--vscode-editor-background) 84%, transparent);
-  font-family: var(--vscode-editor-font-family, monospace);
-  font-size: var(--kilo-font-size-12);
-  line-height: 1.45;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 /* ============================================
    Context Progress Bar
    ============================================ */

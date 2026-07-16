@@ -16,23 +16,12 @@ import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
 import { visibleParts } from "../../context/session-queue"
 import { color, label } from "../../utils/timeline/colors"
+import { resolveMenuIndex, withDividers, type TimelineBar } from "../../utils/timeline/dividers"
 import { geometry, hit, navigate } from "../../utils/timeline/geometry"
 import { dispatchTimelineHighlight, same, type TimelineHighlight } from "../../utils/timeline/highlight"
-import { sizes, pinned, MAX_HEIGHT, DIVIDER_W, DIVIDER_SLOT_W } from "../../utils/timeline/sizes"
+import { sizes, pinned, MAX_HEIGHT, DIVIDER_W } from "../../utils/timeline/sizes"
 import { isRenderable } from "../../utils/transcript-parts"
 import type { Part, Message, StepStartPart, StepFinishPart } from "../../types/messages"
-
-export interface TimelineBar {
-  bg: string
-  tip: string
-  width: number
-  height: number
-  idx: number
-  msgId: string
-  partId: string
-  type?: string
-  divider?: boolean
-}
 
 // ── Steps (for the detail dialog) ────────────────────────────────────
 
@@ -86,31 +75,6 @@ function buildSteps(messages: Message[], parts: Record<string, Part[]>): Timelin
 
 function stepForPart(steps: TimelineStep[], partId: string): TimelineStep | undefined {
   return steps.find((s) => s.parts.some((p) => p.id === partId) || s.finish?.id === partId || s.start?.id === partId)
-}
-
-// Insert a divider after each finished step; keep the trailing divider only while running.
-function withDividers(bars: TimelineBar[], ends: string[], tail: boolean): TimelineBar[] {
-  const tallest = bars.reduce((max, b) => Math.max(max, b.height), 0)
-  const marks = new Set(ends)
-  const last = ends.length > 0 ? ends[ends.length - 1] : undefined
-  const out: TimelineBar[] = []
-  for (const bar of bars) {
-    out.push(bar)
-    if (!marks.has(bar.partId)) continue
-    if (bar.partId === last && !tail) continue
-    out.push({
-      bg: "",
-      tip: "",
-      width: DIVIDER_SLOT_W,
-      height: tallest,
-      idx: -1,
-      msgId: "",
-      partId: "",
-      type: "divider",
-      divider: true,
-    })
-  }
-  return out
 }
 
 // ── Formatting ───────────────────────────────────────────────────────
@@ -322,11 +286,7 @@ export const TaskTimeline: Component = () => {
   }
 
   const menuIndex = (clientX: number) => {
-    const idx = pointIndex(clientX)
-    if (idx >= 0) return idx
-    const sel = selected()
-    if (sel >= 0 && sel < items().length) return sel
-    return items().length - 1
+    return resolveMenuIndex(pointIndex(clientX), selected(), items().length)
   }
 
   const onPointerDown = (e: PointerEvent) => {
@@ -394,6 +354,14 @@ export const TaskTimeline: Component = () => {
     )
   }
 
+  const openMenuForIndex = (idx: number) => {
+    if (!ref) return
+    const item = layout().items[idx]
+    if (!item) return
+    const rect = ref.getBoundingClientRect()
+    openMenuAt(idx, rect.left + item.x - ref.scrollLeft + item.width / 2, rect.top + MAX_HEIGHT / 2)
+  }
+
   const menuBar = () => {
     const idx = menu()
     if (idx < 0) return undefined
@@ -445,6 +413,11 @@ export const TaskTimeline: Component = () => {
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if ((e.key === "Enter" && e.shiftKey) || e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey)) {
+      e.preventDefault()
+      openMenuForIndex(selected())
+      return
+    }
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
       select(selected())
@@ -500,7 +473,7 @@ export const TaskTimeline: Component = () => {
               role="slider"
               tabIndex={0}
               aria-label="Session activity timeline"
-              aria-keyshortcuts="ArrowLeft ArrowRight Home End Enter Space"
+              aria-keyshortcuts="ArrowLeft ArrowRight Home End Enter Space Shift+Enter Shift+F10 ContextMenu"
               aria-valuemin={items().length > 0 ? 1 : 0}
               aria-valuemax={items().length}
               aria-valuenow={value()}

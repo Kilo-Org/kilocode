@@ -823,6 +823,7 @@ export const layer = Layer.effect(
             return
 
           case "step-finish": {
+            const ended = Date.now() // kilocode_change - capture step end before snapshot/reconcile work
             // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
               sessionID: ctx.sessionID,
@@ -882,11 +883,11 @@ export const layer = Layer.effect(
               snapshot: completedSnapshot,
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
-              type: "step-finish",
+              type: "step-finish", // kilocode_change
               // kilocode_change start - authoritative step timing for the activity timeline
               time: {
-                start: ctx.stepStartAt || Date.now(),
-                end: Date.now(),
+                start: ctx.stepStartAt || ended,
+                end: ended,
               },
               // kilocode_change end
               ...(model ? { model } : {}), // kilocode_change

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
+import { resolveMenuIndex, withDividers, type TimelineBar } from "../../webview-ui/src/utils/timeline/dividers"
 
 /**
  * Regression guard for timeline tooltip mount cost.
@@ -47,27 +48,30 @@ describe("TaskTimeline delegated tooltip contract", () => {
     expect(src).toMatch(/item\.tool\?\.callID === call && item\.tool\?\.messageID === m\.id/)
   })
 
-  it("renders slim dividers and hides the trailing one while idle", () => {
-    expect(src).toMatch(/function withDividers\(bars: TimelineBar\[], ends: string\[], tail: boolean\)/)
-    expect(src).toMatch(/if \(bar\.partId === last && !tail\) continue/)
-    expect(src).toMatch(/withDividers\(bars\(\), ends\(\), busy\(\)\)/)
-    expect(src).toMatch(/if \(p\.type === "step-start" \|\| p\.type === "step-finish"\) continue/)
-    expect(src).toMatch(/left: `\$\{d\.x \+ \(d\.width - DIVIDER_W\) \/ 2\}px`/)
+  it("inserts dividers at step-end anchors and hides the trailing one while idle", () => {
+    const bars: TimelineBar[] = [
+      { bg: "#1", tip: "a", width: 12, height: 8, idx: 0, msgId: "m", partId: "a" },
+      { bg: "#2", tip: "b", width: 12, height: 20, idx: 1, msgId: "m", partId: "b" },
+      { bg: "#3", tip: "c", width: 12, height: 10, idx: 2, msgId: "m", partId: "c" },
+    ]
+
+    const idle = withDividers(bars, ["b", "c"], false)
+    expect(idle.map((bar) => bar.partId)).toEqual(["a", "b", "", "c"])
+    expect(idle[2]).toMatchObject({ divider: true, width: 12, height: 20 })
+
+    const busy = withDividers(bars, ["b", "c"], true)
+    expect(busy.map((bar) => bar.partId)).toEqual(["a", "b", "", "c", ""])
   })
 
-  it("opens a context menu on right-clicked bars", () => {
-    expect(src).toMatch(/const onContextMenu = \(e: MouseEvent\) =>/)
-    expect(src).toMatch(/const openMenuAt = \(idx: number, x: number, y: number\) =>/)
-    expect(src).toMatch(/new MouseEvent\("contextmenu"/)
-    expect(src).toMatch(/const idx = menuIndex\(e\.clientX\)/)
-    expect(src).toMatch(/class="task-timeline"[\s\S]*onContextMenu=\{onContextMenu\}/)
-    expect(src).toMatch(/<ContextMenu.ItemLabel>\{t\("timeline\.menu\.goToPart"\)\}<\/ContextMenu.ItemLabel>/)
-    expect(src).toMatch(/<ContextMenu.ItemLabel>\{t\("timeline\.menu\.stepDetails"\)\}<\/ContextMenu.ItemLabel>/)
+  it("resolves menu target from hit test with selected and last-item fallback", () => {
+    expect(resolveMenuIndex(2, 0, 4)).toBe(2)
+    expect(resolveMenuIndex(-1, 1, 4)).toBe(1)
+    expect(resolveMenuIndex(-1, 10, 4)).toBe(3)
+    expect(resolveMenuIndex(-1, -1, 0)).toBe(-1)
   })
 
   it("keeps selected bars highlighted after click and keyboard activation", () => {
     expect(src).toMatch(/const jump = \(idx: number\) => \{[\s\S]*showTip\(idx\)/)
-    expect(src).toMatch(/openMenuAt\(idx, e\.clientX, e\.clientY\)/)
     expect(src).toMatch(/const select = \(idx: number\) => \{\s*jump\(idx\)/)
     expect(src).toMatch(/select\(selected\(\)\)/)
   })

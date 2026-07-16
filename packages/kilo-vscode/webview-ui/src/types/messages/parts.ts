@@ -61,12 +61,10 @@ export interface ReasoningPart extends BasePart {
 export interface StepStartPart extends BasePart {
   type: "step-start"
   snapshot?: string
-  // kilocode_change start - authoritative step timing for the activity timeline
   time?: {
     start: number
     end?: number
   }
-  // kilocode_change end
 }
 
 export interface StepFinishPart extends BasePart {
@@ -83,12 +81,10 @@ export interface StepFinishPart extends BasePart {
     reasoning?: number
     cache?: { read: number; write: number }
   }
-  // kilocode_change start - authoritative step timing for the activity timeline
   time?: {
     start: number
     end: number
   }
-  // kilocode_change end
 }
 
 export interface CompactionPart extends BasePart {
