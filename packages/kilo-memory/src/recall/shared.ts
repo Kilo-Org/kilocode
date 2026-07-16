@@ -1,9 +1,10 @@
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemoryFiles } from "../storage/store"
 import { MemoryMarkdown } from "../storage/markdown"
 import { MemorySchema } from "../schema"
 import { MemoryText } from "../text"
 import { MemoryTopics } from "./topics"
+import { MemoryRedact } from "../capture/redact"
 
 export namespace MemoryShared {
   export type TypedItem = {
@@ -35,8 +36,8 @@ export namespace MemoryShared {
     return { key, text }
   }
 
-  export function terms(input: string) {
-    return MemoryTopics.words(input)
+  export function terms(input: string, opts?: MemoryTopics.WordOptions) {
+    return MemoryTopics.words(input, opts)
   }
 
   export function source(input: { file: MemorySchema.Source; text: string }): SourceItem[] {
@@ -104,7 +105,7 @@ export namespace MemoryShared {
           }
         : {
             action: item.action,
-            query: brief(item.query, 120),
+            query: brief(MemoryRedact.text(item.query), 120),
           },
     )
   }

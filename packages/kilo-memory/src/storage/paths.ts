@@ -30,8 +30,7 @@ export namespace MemoryPaths {
   }
 
   export type Host = {
-    home: string
-    config: string
+    data: string
   }
 
   function base(ctx: Ctx) {
@@ -99,14 +98,8 @@ export namespace MemoryPaths {
     }
   }
 
-  function global(input: Host) {
-    const dir = path.resolve(input.config)
-    if (path.basename(dir) === ".kilo") return dir
-    return path.join(input.home, ".kilo")
-  }
-
   export function root(input: { ctx: Ctx } & Host) {
-    return path.join(global(input), "memory", identity(input).folder)
+    return path.join(input.data, "memory", identity(input).folder)
   }
 
   export function files(root: string): Files {

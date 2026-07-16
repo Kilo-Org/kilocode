@@ -1,4 +1,4 @@
-import { ConfigPlugin } from "@/config/plugin"
+import { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { TuiKeybind } from "./keybind"
 import { Schema } from "effect"
 import { isRecord } from "@/util/record"
@@ -75,7 +75,7 @@ export const TuiInfo = Schema.Struct({
   $schema: Schema.optional(Schema.String),
   theme: Schema.optional(Schema.String),
   keybinds: Schema.optional(TuiKeybind.KeybindOverrides),
-  plugin: Schema.optional(Schema.Array(ConfigPlugin.Spec)),
+  plugin: Schema.optional(Schema.Array(ConfigPluginV1.Spec)),
   plugin_enabled: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   leader_timeout: Schema.optional(KeymapLeaderTimeout),
   attention: Schema.optional(Attention),
@@ -87,4 +87,9 @@ export const TuiInfo = Schema.Struct({
   scroll_acceleration: Schema.optional(ScrollAcceleration),
   diff_style: Schema.optional(DiffStyle),
   mouse: Schema.optional(Schema.Boolean).annotate({ description: "Enable or disable mouse capture (default: true)" }),
+  // kilocode_change start - vim modal editing toggle
+  vim: Schema.optional(Schema.Boolean).annotate({
+    description: "Enable vim modal editing in the prompt input (default: false)",
+  }),
+  // kilocode_change end
 })

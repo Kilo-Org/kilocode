@@ -117,6 +117,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/status` | - | View status |
 | `/themes` | - | Switch theme |
 | `/help` | - | Show help |
+| `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
@@ -338,6 +339,10 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 Project-level configuration takes precedence over global settings.
 
+{% callout type="warning" %}
+**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+{% /callout %}
+
 ### Key Configuration Options
 
 ```json
@@ -463,6 +468,10 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
   }
 }
 ```
+
+{% callout type="warning" title="Only works in trusted config" %}
+`{env:VAR}` (and `{file:...}`) references are resolved **only** in trusted config: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** use `{env:VAR}` — the reference is ignored and a warning is logged. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` simply by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected.
+{% /callout %}
 
 For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 

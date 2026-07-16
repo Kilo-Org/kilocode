@@ -5,7 +5,7 @@ import { Plugin } from "@/plugin"
 import { Shell } from "@/shell/shell"
 import { ShellPermission } from "@/tool/shell"
 import { Tool } from "@/tool/tool"
-import type { AppFileSystem } from "@opencode-ai/core/filesystem"
+import type { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Schema } from "effect"
 import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import path from "path"
@@ -36,7 +36,7 @@ type Meta = {
 export const InteractiveTerminalTool = Tool.define<
   typeof Params,
   Meta,
-  Config.Service | Plugin.Service | AppFileSystem.Service | ChildProcessSpawner,
+  Config.Service | Plugin.Service | FSUtil.Service | ChildProcessSpawner,
   "interactive_terminal"
 >(
   "interactive_terminal",

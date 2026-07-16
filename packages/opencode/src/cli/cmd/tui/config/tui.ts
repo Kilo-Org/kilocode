@@ -11,7 +11,7 @@ import { KeymapLeaderTimeoutDefault, resolveAttentionSoundPaths, TuiInfo } from 
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { isRecord } from "@/util/record"
 import { Global } from "@opencode-ai/core/global"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CurrentWorkingDirectory } from "./cwd"
 import { ConfigPlugin } from "@/config/plugin"
 import { TuiKeybind } from "./keybind"
@@ -99,7 +99,7 @@ function dropUnknownKeybinds(input: Record<string, unknown>, configFilepath: str
 }
 
 const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: string }) {
-  const afs = yield* AppFileSystem.Service
+  const afs = yield* FSUtil.Service
   let appliedOrder = 0
 
   const resolvePlugins = (config: Info, configFilepath: string): Effect.Effect<Info> =>
@@ -112,11 +112,20 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       return config
     })
 
-  const load = (text: string, configFilepath: string): Effect.Effect<Info> =>
+  // kilocode_change start - trusted gates {env:}; fileScope confines untrusted {file:} reads
+  const load = (
+    text: string,
+    configFilepath: string,
+    trusted: boolean,
+    fileScope?: ConfigVariable.FileScope,
+  ): Effect.Effect<Info> =>
+    // kilocode_change end
     Effect.gen(function* () {
+      // kilocode_change start - only trusted tui config resolves {env:}; untrusted {file:} confined to fileScope
       const expanded = yield* Effect.promise(() =>
-        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty" }),
+        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty", trusted, fileScope }),
       )
+      // kilocode_change end
       const data = ConfigParse.jsonc(expanded, configFilepath)
       if (!isRecord(data)) return {} as Info
       // Flatten a nested "tui" key so users who wrote `{ "tui": { ... } }` inside tui.json
@@ -149,7 +158,9 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       ),
     )
 
-  const loadFile = (filepath: string): Effect.Effect<Info> =>
+  // kilocode_change start - trusted + fileScope threaded to load
+  const loadFile = (filepath: string, trusted: boolean, fileScope?: ConfigVariable.FileScope): Effect.Effect<Info> =>
+    // kilocode_change end
     Effect.gen(function* () {
       // Silent-swallow non-NotFound read errors (perms, EISDIR, IO) → log + skip.
       // Matches how parse/schema/plugin failures in load() are handled — every
@@ -169,12 +180,14 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       )
       if (!text) return {} as Info
       log.info("loading tui config", { path: filepath })
-      return yield* load(text, filepath)
+      return yield* load(text, filepath, trusted, fileScope) // kilocode_change
     })
 
-  const mergeFile = (acc: Acc, file: string) =>
+  // kilocode_change start - trusted + fileScope threaded to loadFile
+  const mergeFile = (acc: Acc, file: string, trusted: boolean, fileScope?: ConfigVariable.FileScope) =>
+    // kilocode_change end
     Effect.gen(function* () {
-      const data = yield* loadFile(file)
+      const data = yield* loadFile(file, trusted, fileScope) // kilocode_change
       if (Object.keys(data).length) {
         appliedOrder += 1
         log.info("applying tui config", { path: file, order: appliedOrder })
@@ -207,19 +220,19 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   // 1. Global tui config (lowest precedence).
   for (const file of ConfigPaths.fileInDirectory(Global.Path.config, "tui")) {
-    yield* mergeFile(acc, file)
+    yield* mergeFile(acc, file, true) // kilocode_change - global config is trusted
   }
 
   // 2. Explicit KILO_TUI_CONFIG override, if set.
   if (Flag.KILO_TUI_CONFIG) {
     const configFile = Flag.KILO_TUI_CONFIG
-    yield* mergeFile(acc, configFile)
+    yield* mergeFile(acc, configFile, true) // kilocode_change - explicit env-provided path is trusted
     log.debug("loaded custom tui config", { path: configFile })
   }
 
   // 3. Project tui files, applied root-first so the closest file wins.
   for (const file of projectFiles) {
-    yield* mergeFile(acc, file)
+    yield* mergeFile(acc, file, false, { root: ctx.directory, source: file }) // kilocode_change - untrusted, {file:} confined to project
   }
 
   // kilocode_change start - load tui.json from supported Kilo config directories
@@ -232,9 +245,13 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
   // kilocode_change end
 
   for (const dir of dirs) {
+    // kilocode_change start - trust global (home/KILO_CONFIG_DIR) dirs like config.ts; in-repo .kilo/.kilocode stay untrusted
+    const trusted = pluginScope(dir, ctx) === "global"
+    const fileScope = trusted ? undefined : { root: ctx.directory, source: dir }
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
-      yield* mergeFile(acc, file)
+      yield* mergeFile(acc, file, trusted, fileScope)
     }
+    // kilocode_change end
   }
 
   const keybinds = { ...acc.result.keybinds }
@@ -310,7 +327,7 @@ export const layer = Layer.effect(
   }).pipe(Effect.withSpan("TuiConfig.layer")),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Npm.defaultLayer), Layer.provide(AppFileSystem.defaultLayer))
+export const defaultLayer = layer.pipe(Layer.provide(Npm.defaultLayer), Layer.provide(FSUtil.defaultLayer))
 
 const { runPromise } = makeRuntime(Service, defaultLayer)
 

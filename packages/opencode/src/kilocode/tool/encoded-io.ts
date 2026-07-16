@@ -1,7 +1,7 @@
 import { dirname } from "node:path"
 import { Effect } from "effect"
 import { batchMutations, enabled, ensureDirectory } from "@kilocode/sandbox"
-import type { AppFileSystem } from "@opencode-ai/core/filesystem"
+import type { FSUtil } from "@opencode-ai/core/fs-util"
 import * as Encoding from "../encoding"
 import * as Bom from "@/util/bom"
 
@@ -12,7 +12,7 @@ import * as Bom from "@/util/bom"
 
 const wrap = (cause: unknown) => (cause instanceof Error ? cause : new Error(String(cause)))
 
-export const read = (fs: AppFileSystem.Interface, path: string) =>
+export const read = (fs: FSUtil.Interface, path: string) =>
   Effect.gen(function* () {
     const bytes = yield* fs.readFile(path).pipe(Effect.mapError(wrap))
     const data = Buffer.from(bytes)
@@ -20,7 +20,7 @@ export const read = (fs: AppFileSystem.Interface, path: string) =>
     return { text: Encoding.decode(data, encoding), encoding }
   })
 
-export const write = (fs: AppFileSystem.Interface, path: string, text: string, encoding: string = Encoding.DEFAULT) =>
+export const write = (fs: FSUtil.Interface, path: string, text: string, encoding: string = Encoding.DEFAULT) =>
   Effect.gen(function* () {
     const data = Encoding.encode(text, encoding)
     if (!(yield* enabled)) return yield* fs.writeWithDirs(path, data)
@@ -32,7 +32,7 @@ export const write = (fs: AppFileSystem.Interface, path: string, text: string, e
     )
   }).pipe(Effect.mapError(wrap))
 
-export const sync = (fs: AppFileSystem.Interface, path: string, bom: boolean, encoding: string) =>
+export const sync = (fs: FSUtil.Interface, path: string, bom: boolean, encoding: string) =>
   Effect.gen(function* () {
     const current = yield* read(fs, path)
     const target =

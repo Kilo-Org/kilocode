@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "ย้อนกลับ {{count}} ข้อความแล้ว",
   "revert.banner.redo": "ทำซ้ำ",
   "revert.banner.redo.all": "ทำซ้ำทั้งหมด",
-  "revert.banner.hint": "ส่งข้อความใหม่เพื่อทำให้การเปลี่ยนแปลงนี้ถาวร",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
@@ -384,6 +384,7 @@ export const dict = {
     "คลิกเพื่อจำกัดการเขียนในระบบไฟล์ การตั้งค่า sandbox ของคุณยังคงอนุญาตให้เข้าถึงเครือข่าย",
 
   "speechToText.tooltip.start": "เริ่มการป้อนข้อมูลด้วยเสียงด้วย Kilo Gateway",
+  "speechToText.tooltip.starting": "กำลังเริ่มไมโครโฟน... โปรดรอก่อนพูด",
   "speechToText.tooltip.stop": "หยุดจับเสียง",
   "speechToText.tooltip.transcribing": "กำลังถอดเสียง... คลิกเพื่อยกเลิก",
   "speechToText.tooltip.error": "การป้อนข้อมูลด้วยเสียงล้มเหลว คลิกเพื่อล้าง",
@@ -626,7 +627,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "ค้นหา Grep",
   "ui.permission.toolLabel.webSearch": "ค้นหาเว็บ",
   "ui.permission.toolLabel.list": "รายการ",
-  "ui.permission.toolLabel.externalDirectory": "อ่านไดเรกทอรีภายนอก",
+  "ui.permission.toolLabel.externalDirectory": "อนุญาตให้เข้าถึงโฟลเดอร์ภายนอก",
   "ui.permission.toolLabel.webFetch": "ดึงข้อมูลเว็บ",
   "ui.permission.toolLabel.task": "งาน",
   "ui.permission.toolLabel.skill": "ทักษะ",
@@ -981,6 +982,7 @@ export const dict = {
   "provider.custom.models.name.label": "ชื่อ",
   "provider.custom.models.name.placeholder": "ชื่อที่แสดง",
   "provider.custom.models.reasoning.label": "การใช้เหตุผล",
+  "provider.custom.models.modalities.image": "รูปภาพ",
   "provider.custom.models.variants.label": "รูปแบบ",
   "provider.custom.models.variants.add": "เพิ่มรูปแบบ",
   "provider.custom.models.variants.remove": "ลบรูปแบบ",
@@ -1226,6 +1228,8 @@ export const dict = {
 
   "common.retry": "ลองอีกครั้ง",
   "common.refresh": "รีเฟรช",
+  "common.reload": "โหลดใหม่",
+  "common.reloadDescription": "โหลดการตั้งค่า ทักษะ เอเจนต์ และคำสั่งจากดิสก์ใหม่",
 
   "profile.title": "โปรไฟล์",
   "profile.notLoggedIn": "ยังไม่ได้เข้าสู่ระบบ",
@@ -1404,6 +1408,12 @@ export const dict = {
   "settings.experimental.batch.description": "เปิดใช้งานการประมวลผลแบทช์ของการเรียกเครื่องมือ",
   "settings.experimental.codebaseSearch.title": "ค้นหาโค้ดเบส",
   "settings.experimental.codebaseSearch.description": "เปิดใช้งานการค้นหาด้วยภาษาธรรมชาติโดย AI ทั่วทั้งโค้ดเบส",
+  "settings.experimental.imageGeneration.title": "การสร้างภาพ",
+  "settings.experimental.imageGeneration.description": "เปิดใช้งานการสร้างภาพด้วย AI",
+  "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
+  "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
+  "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
+
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToText.description":
     "เปิดใช้งานการป้อนข้อมูลด้วยเสียงในช่องพรอมต์โดยใช้บัญชี Kilo ของคุณผ่าน Kilo Gateway",
@@ -1419,7 +1429,20 @@ export const dict = {
   "settings.sandboxing.title": "การทำงานในแซนด์บ็อกซ์",
   "settings.sandboxing.network.title": "จำกัดการเข้าถึงเครือข่าย",
   "settings.sandboxing.network.description":
-    "บล็อกการเข้าถึงเครือข่ายขาออกจากคำสั่งที่มาจากโมเดลและเครื่องมือ HTTP เซิร์ฟเวอร์ MCP ภายในเครื่องและฮุกของปลั๊กอินทำงานอยู่นอกข้อจำกัดนี้ การรับส่งข้อมูลสำหรับการอนุมานของผู้ให้บริการและโมเดลยังคงใช้งานได้",
+    "บล็อกการเข้าถึงขาออกโดยตรงจากคำสั่งที่เริ่มต้นโดยโมเดลและเครื่องมือ HTTP เครื่องมือ MCP ทั้งในเครื่องและระยะไกลจะใช้งานไม่ได้ในขณะที่มีการจำกัดนี้ การรับส่งข้อมูลของผู้ให้บริการและฮุกของปลั๊กอินที่เชื่อถือได้จะไม่อยู่ภายใต้ข้อจำกัดนี้",
+
+  "settings.sandboxing.allowedHosts.title": "ปลายทางเครือข่ายที่อนุญาต",
+  "settings.sandboxing.allowedHosts.description":
+    "โฮสต์ DNS และพอร์ตปลายทางสำหรับทราฟฟิกพร็อกซี HTTP และ HTTPS ในแซนด์บ็อกซ์ GitHub CLI และ HTTPS Git มักต้องใช้ github.com:443 และ api.github.com:443 การเปลี่ยนแปลงจะมีผลกับเซสชันใหม่",
+  "settings.sandboxing.writablePaths.title": "เส้นทางที่เขียนได้เพิ่มเติม",
+  "settings.sandboxing.writablePaths.description":
+    "เส้นทางระบบไฟล์เพิ่มเติมที่แซนด์บ็อกซ์อนุญาตให้เขียนได้ (เช่น /tmp, /var/log) จะถูกรวมเข้ากับเส้นทางที่เขียนได้เริ่มต้นเมื่อแซนด์บ็อกซ์เปิดใช้งาน",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "เปิดใช้ SWE-Pruner: ตัดทอนผลลัพธ์ขนาดใหญ่ของเครื่องมืออ่าน ค้นหา และเชลล์โดยคำนึงถึงงานและใช้คำถามโฟกัสที่เอเจนต์ระบุเป็นแนวทาง",
+  "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
@@ -1444,11 +1467,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "พรอมต์กำหนดเอง",
   "settings.agentBehaviour.prompt.description": "พรอมต์ระบบเพิ่มเติมสำหรับเอเจนต์นี้",
   "settings.agentBehaviour.temperature.title": "อุณหภูมิ",
-  "settings.agentBehaviour.temperature.description": "อุณหภูมิการสุ่มตัวอย่าง (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "ควบคุมระดับความสุ่มของคำตอบจาก AI (0–2) ค่าที่ต่ำกว่า (เช่น 0.2) จะให้ผลลัพธ์ที่ตรงประเด็นและสม่ำเสมอ ส่วนค่าที่สูงกว่า (เช่น 1.0) จะให้คำตอบที่หลากหลายและสร้างสรรค์มากขึ้น เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นของโมเดล",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "พารามิเตอร์ nucleus sampling (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "เกณฑ์การสุ่มแบบ nucleus (0–1) จำกัดตัวเลือกโทเค็นไว้ที่ชุดที่เล็กที่สุดซึ่งมีความน่าจะเป็นสะสมถึง P ค่าที่ต่ำกว่าจะทำให้ผลลัพธ์ตรงประเด็นมากขึ้น ส่วนค่าที่สูงกว่าจะเพิ่มความหลากหลาย เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นของโมเดล",
   "settings.agentBehaviour.maxSteps.title": "ขั้นตอนสูงสุด",
-  "settings.agentBehaviour.maxSteps.description": "จำนวนรอบเอเจนต์สูงสุด",
+  "settings.agentBehaviour.maxSteps.description":
+    "จำนวนขั้นตอนสูงสุดของเอเจนต์ เมื่อถึงขีดจำกัด เอเจนต์จะได้รับคำสั่งให้หยุดใช้เครื่องมือและให้คำตอบสุดท้าย เพิ่มค่านี้สำหรับงานหลายขั้นตอนที่ซับซ้อน หรือลดค่าเพื่อให้คำตอบสั้นลงและคาดเดาได้มากขึ้น",
   "settings.agentBehaviour.hidden.title": "ซ่อน",
   "settings.agentBehaviour.hidden.description": "ซ่อนเอเจนต์นี้จากตัวสลับโหมดในช่องป้อนแชท",
   "settings.agentBehaviour.disable.title": "ปิดใช้งาน",
@@ -1550,8 +1576,8 @@ export const dict = {
     "ไม่มีคำสั่งแบบกำหนดเองที่กำหนดค่าไว้ เพิ่มคำสั่งใน opencode.json เพื่อดูที่นี่",
   "settings.agentBehaviour.workflows.detail.description": "คำอธิบาย",
   "settings.agentBehaviour.workflows.detail.template": "เทมเพลต",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "เรียกใช้คำสั่ง shell ของ agent ใน sandbox ระดับระบบปฏิบัติการที่จำกัดการเขียนไปยังโฟลเดอร์สถานะของโปรเจ็กต์และ Kilo",
 
   "settings.autoApprove.description":
@@ -1591,6 +1617,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "สร้างจุดตรวจก่อนแก้ไขไฟล์",
   "settings.context.autoCompaction.title": "การบีบอัดอัตโนมัติ",
   "settings.context.autoCompaction.description": "บีบอัดบริบทอัตโนมัติก่อนถึงขีดจำกัด",
+  "settings.context.compaction.title": "การบีบอัด",
   "settings.context.compactionLimit.title": "ขีดจำกัดการบีบอัดอัตโนมัติ",
   "settings.context.compactionLimit.description":
     "บีบอัดเมื่อบริบทถึงเปอร์เซ็นต์นี้ของหน้าต่างโมเดล เว้นว่างไว้เพื่อใช้เฉพาะบัฟเฟอร์ความปลอดภัย",
@@ -1598,6 +1625,42 @@ export const dict = {
   "settings.context.prune.description": "ลบผลลัพธ์เครื่องมือเก่าระหว่างการบีบอัด",
   "settings.context.watcherPatterns": "รูปแบบการละเว้นตัวเฝ้าดูไฟล์",
   "settings.context.watcherPatterns.description": "รูปแบบ glob สำหรับไฟล์ที่ตัวเฝ้าดูควรละเว้น",
+
+  "settings.context.memory.title": "ความจำ",
+  "settings.context.memory.project.title": "ความจำของโปรเจกต์",
+  "settings.context.memory.autoSave.title": "บันทึกความจำของโปรเจกต์อัตโนมัติ",
+  "settings.context.memory.autoSave.description":
+    "บันทึกข้อเท็จจริงถาวรของโปรเจกต์จากรอบที่เสร็จแล้วโดยอัตโนมัติเมื่อเปิดใช้ความจำ",
+  "settings.context.memory.index.title": "ดัชนีความจำ",
+  "settings.context.memory.status.notLoaded": "ยังไม่ได้โหลด",
+  "settings.context.memory.status.disabled": "ปิดใช้งาน",
+  "settings.context.memory.status.enabledTokensOps":
+    "เปิดใช้งาน - ~{{session}} โทเค็นบริบทเริ่มต้นในเซสชันนี้ - ~{{tokens}} โทเค็นในดัชนีที่บันทึกไว้ - การทำงานล่าสุด {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "เปิดใช้ความจำเพื่อสร้างไฟล์ความจำของโปรเจกต์",
+  "settings.context.memory.inspect": "ตรวจสอบ",
+  "settings.context.memory.rebuild": "สร้างดัชนีความจำใหม่",
+  "chat.memory.on": "เปิดความจำ",
+  "chat.memory.label": "ความจำ · {{tokens}} โทเค็น",
+  "chat.memory.status.loading": "กำลังโหลดสถานะความจำ",
+  "chat.memory.session.tokens": "บริบทเริ่มต้นของเซสชันนี้: {{tokens}} โทเค็น",
+  "chat.memory.total.tokens": "ดัชนีที่บันทึกไว้: {{tokens}} โทเค็น",
+  "chat.memory.project.enabled": "เปิดใช้ความจำของโปรเจกต์แล้ว",
+  "chat.memory.project.disabled": "ปิดใช้ความจำของโปรเจกต์แล้ว",
+  "chat.memory.command.failed": "คำสั่งความจำล้มเหลว",
+  "chat.memory.savedOperations": "การทำงานความจำล่าสุด: {{count}} รายการ",
+  "chat.memory.inspect": "ตรวจสอบความจำ",
+  "chat.memory.remember": "จำ",
+  "chat.memory.forget": "ลืม",
+  "chat.memory.rebuild": "สร้างดัชนีใหม่",
+  "chat.memory.disable": "ปิดใช้ความจำ",
+  "chat.memory.badge.injected": "แทรกความจำแล้ว",
+  "chat.memory.badge.recalled": "เรียกคืนความจำแล้ว",
+  "chat.memory.badge.startupCtx": "ctx เริ่มต้น",
+  "chat.memory.badge.items": "{{count}} รายการ",
+  "chat.memory.badge.tokens": "{{tokens}} โทเค็น",
+  "chat.memory.badge.recalledDetail": "เรียกคืนความจำแล้ว: {{count}} รายการ - {{tokens}} โทเค็น",
+  "chat.memory.badge.files": "ไฟล์ความจำ: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "ใช้ prompt แบบกำหนดเอง",
@@ -1608,6 +1671,10 @@ export const dict = {
     "System prompt ที่ส่งไปยัง AI เมื่อสร้าง commit messages สิ่งนี้จะแทนที่ prompt เริ่มต้นทั้งหมด",
   "settings.commitMessage.prompt.placeholder":
     "เช่น สร้าง commit messages เป็นภาษาสเปนตามรูปแบบ conventional commits คืนค่าเฉพาะ commit message เท่านั้น",
+
+  "settings.commitMessage.language.sync": "ซิงค์กับภาษา UI",
+  "settings.commitMessage.language.title": "ภาษา",
+  "settings.commitMessage.language.description": "เลือกภาษาใดที่จะใช้สําหรับข้อความ commit ที่สร้างโดย AI:",
 
   "settings.display.username.title": "ชื่อผู้ใช้",
   "settings.display.username.description": "ชื่อผู้ใช้กำหนดเองในบทสนทนา",
@@ -1777,4 +1844,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "แผนพร้อมแล้ว:",
+  "chat.search.placeholder": "ค้นหาในแชท…",
+  "chat.search.toggle": "ค้นหาในแชท",
+  "chat.search.matchCase": "ตรงตามตัวพิมพ์ใหญ่-เล็ก",
+  "chat.search.matchWholeWord": "ตรงทั้งคำ",
+  "chat.search.useRegex": "ใช้นิพจน์ทั่วไป",
+  "chat.search.previousMatch": "รายการที่ตรงกันก่อนหน้า",
+  "chat.search.nextMatch": "รายการที่ตรงกันถัดไป",
+  "chat.search.close": "ปิดการค้นหา",
+  "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
+  "chat.search.noResults": "ไม่มีผลลัพธ์",
+  "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
 }

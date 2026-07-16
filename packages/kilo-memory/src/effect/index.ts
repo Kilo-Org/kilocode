@@ -1,5 +1,5 @@
 import { Memory } from "../memory"
-import type { MemoryOperations } from "../capture/ops"
+import type { MemoryOperations } from "../capture/operations"
 import { MemorySchema } from "../schema"
 import { MemoryFiles } from "../storage/store"
 import { MemoryToken } from "../recall/token"
@@ -58,7 +58,7 @@ export namespace KiloMemory {
     const id = "ctx" in input ? MemoryPaths.identity({ ctx: input.ctx }) : undefined
     const result = await Memory.enable({ root: dir, id })
     await MemoryEvents.publish({
-      event: "updated",
+      event: "status",
       payload: MemoryEvents.status({
         root: dir,
         state: result.state,
@@ -108,7 +108,7 @@ export namespace KiloMemory {
 
   export async function configure(
     input: Input & {
-      settings: Partial<Pick<MemorySchema.State, "autoConsolidate">>
+      settings: Partial<Pick<MemorySchema.State, "autoConsolidate" | "verbose">>
     },
   ) {
     const result = await Memory.configure({ root: await prepare(input), settings: input.settings })
@@ -298,7 +298,14 @@ export namespace KiloMemory {
   }
 
   export async function recordSession(
-    input: Input & { sessionID: string; topic?: string; summary: string; time?: number; tokens?: number },
+    input: Input & {
+      sessionID: string
+      topic?: string
+      summary: string
+      time?: number
+      tokens?: number
+      fallback?: boolean
+    },
   ) {
     const output = await Memory.recordSession({
       root: await prepare(input),
@@ -307,6 +314,7 @@ export namespace KiloMemory {
       summary: input.summary,
       time: input.time,
       tokens: input.tokens,
+      fallback: input.fallback,
     })
     if (output.skipped) {
       await MemoryEvents.publish({

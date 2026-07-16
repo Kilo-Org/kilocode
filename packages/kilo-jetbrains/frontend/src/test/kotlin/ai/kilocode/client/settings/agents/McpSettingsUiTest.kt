@@ -350,9 +350,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == key }
             list.selectedIndex = idx
-            val row = rows(panel)[idx]
-            val bounds = list.getCellBounds(idx, idx)
-            val area = settingsListCellBounds(list, bounds, row, selected = true).getValue(id)
+            val area = settingsListCellBounds(list, idx, selected = true).getValue(id)
             click(list, center(area))
             true
         }
@@ -440,8 +438,8 @@ class McpSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
-        repeat(30) {
-            delay(100)
+        repeat(300) {
+            delay(10)
             edt { UIUtil.dispatchAllInvocationEvents(); true }
             if (done()) return@runBlocking
         }

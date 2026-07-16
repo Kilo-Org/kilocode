@@ -8,6 +8,7 @@ import { Global } from "@opencode-ai/core/global"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { Effect } from "effect"
 import { spawn } from "child_process"
+import { once } from "node:events"
 import fs from "fs/promises"
 import path from "path"
 import { provideTestInstance, TestInstance, tmpdir } from "../fixture/fixture"
@@ -383,21 +384,31 @@ setInterval(() => console.log("tick"), 100)
           command,
           cwd: test.directory,
           lifetime: "persistent",
-          ready: { pattern: "ready", timeout: 5_000 },
+          ready: { pattern: "ready", timeout: 15_000 },
         }),
       )
 
-      const otherID = SessionID.descending()
-      const visible = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: otherID }))
-      expect(visible.map((item) => item.id)).toContain(info.id)
-      yield* Effect.promise(() => BackgroundProcess.shutdown())
-      const adopted = yield* Effect.promise(() => BackgroundProcess.get(info.id))
-      expect(adopted?.pid).toBe(info.pid)
-      expect(adopted?.lifetime).toBe("persistent")
-      expect(adopted?.output).toContain("ready")
-
-      yield* Effect.promise(() => BackgroundProcess.stop(info.id))
-      yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+      try {
+        expect(info.status).toBe("ready")
+        const otherID = SessionID.descending()
+        const visible = yield* Effect.promise(() => BackgroundProcess.list({ sessionID: otherID }))
+        expect(visible.map((item) => item.id)).toContain(info.id)
+        const files = artifacts(test.directory, info.id)
+        yield* Effect.promise(() =>
+          until(async () => {
+            const log = Bun.file(files.log)
+            return (await log.exists()) && (await log.text()).includes("ready")
+          }, "persistent process output was not flushed before reload"),
+        )
+        yield* Effect.promise(() => BackgroundProcess.shutdown())
+        const adopted = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+        expect(adopted?.pid).toBe(info.pid)
+        expect(adopted?.lifetime).toBe("persistent")
+        expect(adopted?.output).toContain("ready")
+      } finally {
+        yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+        yield* Effect.promise(() => BackgroundProcess.stopSession(sessionID))
+      }
     }),
   )
 
@@ -421,7 +432,7 @@ setInterval(() => {}, 1_000)
             command,
             cwd: first.path,
             lifetime: "persistent",
-            ready: { pattern: "ready", timeout: 5_000 },
+            ready: { pattern: "ready", timeout: 15_000 },
           }),
       })
 
@@ -463,7 +474,7 @@ setInterval(() => {}, 1_000)
             command,
             cwd: tmp.path,
             lifetime: "persistent",
-            ready: { pattern: "ready", timeout: 5_000 },
+            ready: { pattern: "ready", timeout: 15_000 },
           }),
       })
 
@@ -566,7 +577,7 @@ setInterval(() => {}, 1_000)
           command,
           cwd: test.directory,
           lifetime: "persistent",
-          ready: { pattern: "ready", timeout: 5_000 },
+          ready: { pattern: "ready", timeout: 15_000 },
         }),
       )
       const files = artifacts(test.directory, info.id)
@@ -594,29 +605,46 @@ setInterval(() => {}, 1_000)
         expect(alive(unrelated.pid)).toBe(true)
         expect(yield* Effect.promise(() => Bun.file(target.manifest).exists())).toBe(false)
       } finally {
-        if (unrelated.pid && alive(unrelated.pid)) {
-          if (process.platform === "win32") unrelated.kill("SIGKILL")
-          else process.kill(-unrelated.pid, "SIGKILL")
-        }
+        yield* Effect.promise(async () => {
+          const exited =
+            unrelated.exitCode !== null || unrelated.signalCode !== null ? undefined : once(unrelated, "exit")
+          if (unrelated.pid && alive(unrelated.pid)) {
+            if (process.platform === "win32") unrelated.kill("SIGKILL")
+            else process.kill(-unrelated.pid, "SIGKILL")
+          }
+          await exited
+        })
         yield* Effect.promise(() => BackgroundProcess.stop(info.id))
       }
     }),
   )
 
-  it.instance("keeps persistent descendants manageable after the leader exits", () =>
-    Effect.gen(function* () {
-      if (!["linux", "darwin", "win32"].includes(process.platform)) return
-      const test = yield* TestInstance
-      const sessionID = SessionID.descending()
-      const child = path.join(test.directory, "descendant.mjs")
-      yield* Effect.promise(() => Bun.write(child, "setInterval(() => {}, 1_000)\n"))
-      // Bun kills its detached children when their parent exits on Windows (oven-sh/bun#31603).
-      const exec = process.platform === "win32" ? "node" : process.execPath
-      const command = yield* Effect.promise(() =>
-        script(
-          test.directory,
-          "leader.cjs",
-          `const { spawn } = require("child_process")
+  it.instance(
+    "keeps persistent descendants manageable after the leader exits",
+    () =>
+      Effect.gen(function* () {
+        if (!["linux", "darwin", "win32"].includes(process.platform)) return
+        const test = yield* TestInstance
+        const sessionID = SessionID.descending()
+        const child = path.join(test.directory, "descendant.mjs")
+        const ready = path.join(test.directory, "descendant-ready")
+        yield* Effect.promise(() =>
+          Bun.write(
+            child,
+            `import { writeFileSync } from "fs"
+writeFileSync(${JSON.stringify(ready)}, "ready")
+setInterval(() => {}, 1_000)
+`,
+          ),
+        )
+        // Use Node so child process-group inheritance is consistent across Bun versions.
+        const exec = "node"
+        const command = yield* Effect.promise(() =>
+          script(
+            test.directory,
+            "leader.cjs",
+            `const { spawn } = require("child_process")
+const { existsSync } = require("fs")
 console.log("leader:" + process.pid)
 const child = spawn(process.execPath, [${JSON.stringify(child)}], {
   stdio: "ignore",
@@ -624,56 +652,64 @@ const child = spawn(process.execPath, [${JSON.stringify(child)}], {
   windowsHide: true,
 })
 child.unref()
-console.log("child:" + child.pid)
+const timer = setInterval(() => {
+  if (!existsSync(${JSON.stringify(ready)})) return
+  clearInterval(timer)
+  console.log("child:" + child.pid)
+}, 10)
 if (process.platform === "win32") setTimeout(() => {}, 5_000)
 `,
-          exec,
-        ),
-      )
-      const info = yield* Effect.promise(() =>
-        BackgroundProcess.start({
-          sessionID,
-          command,
-          cwd: test.directory,
-          lifetime: "persistent",
-          ready: { pattern: "child:", timeout: 5_000 },
-        }),
-      )
-      const leader = Number(info.output.match(/leader:(\d+)/)?.[1])
-      const pid = Number(info.output.match(/child:(\d+)/)?.[1])
-      const runner = info.pid
-      try {
-        expect(leader).toBeGreaterThan(0)
-        expect(pid).toBeGreaterThan(0)
-        yield* Effect.promise(() => until(() => !alive(leader), "persistent command leader did not exit", 10_000))
-        if (process.platform === "win32") {
-          // Assert after the runner's one-second ancestry grace window has elapsed.
-          yield* Effect.promise(() => Bun.sleep(2_000))
-          expect(alive(runner)).toBe(true)
-        }
-        if (process.platform !== "win32") {
-          yield* Effect.promise(() => until(() => !alive(runner), "persistent runner did not exit"))
-        }
-        const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
-        expect(current?.status === "running" || current?.status === "ready").toBe(true)
-        expect(alive(pid)).toBe(true)
-        yield* Effect.promise(() => BackgroundProcess.stop(info.id))
-        yield* Effect.promise(() => until(() => !alive(pid), "persistent descendant was not terminated"))
-      } finally {
-        yield* Effect.promise(async () => {
-          await Promise.allSettled([BackgroundProcess.stop(info.id)])
-          for (const item of [pid, runner]) {
-            if (!item || !alive(item)) continue
-            try {
-              process.kill(item, "SIGKILL")
-            } catch (err) {
-              if (alive(item)) throw err
-            }
+            exec,
+          ),
+        )
+        const info = yield* Effect.promise(() =>
+          BackgroundProcess.start({
+            sessionID,
+            command,
+            cwd: test.directory,
+            lifetime: "persistent",
+            ready: { pattern: "child:", timeout: 15_000 },
+          }),
+        )
+        const leader = Number(info.output.match(/leader:(\d+)/)?.[1])
+        const pid = Number(info.output.match(/child:(\d+)/)?.[1])
+        const runner = info.pid
+        try {
+          expect(info.status).toBe("ready")
+          expect(leader).toBeGreaterThan(0)
+          expect(pid).toBeGreaterThan(0)
+          yield* Effect.promise(() => until(() => !alive(leader), "persistent command leader did not exit", 10_000))
+          if (process.platform === "win32") {
+            // Assert after the runner's one-second ancestry grace window has elapsed.
+            yield* Effect.promise(() => Bun.sleep(2_000))
+            expect(alive(runner)).toBe(true)
           }
-        })
-      }
-    }),
-    30_000,
+          if (process.platform !== "win32") {
+            yield* Effect.promise(() => until(() => !alive(runner), "persistent runner did not exit"))
+          }
+          const current = yield* Effect.promise(() => BackgroundProcess.get(info.id))
+          if (!current) throw new Error("Persistent process disappeared while its descendant was running")
+          expect(["running", "ready"]).toContain(current.status)
+          expect(alive(pid)).toBe(true)
+          yield* Effect.promise(() => BackgroundProcess.stop(info.id))
+          yield* Effect.promise(() => until(() => !alive(pid), "persistent descendant was not terminated"))
+        } finally {
+          yield* Effect.promise(async () => {
+            await Promise.allSettled([BackgroundProcess.stop(info.id)])
+            for (const item of [pid, runner]) {
+              if (!item || !alive(item)) continue
+              try {
+                process.kill(item, "SIGKILL")
+              } catch (err) {
+                if (alive(item)) throw err
+              }
+            }
+          })
+        }
+      }),
+    // Windows process-tree ownership uses PowerShell/CIM probes and intentionally
+    // keeps the leader alive for five seconds, so it needs a larger outer budget.
+    process.platform === "win32" ? 60_000 : 30_000,
   )
 
   it.instance("rejects invalid readiness patterns before launching", () =>

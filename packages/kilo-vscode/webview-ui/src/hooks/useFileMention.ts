@@ -10,16 +10,11 @@ import {
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  FILE_PICKER_RESULT,
   type MentionResult,
 } from "./file-mention-utils"
 
 const FILE_SEARCH_DEBOUNCE_MS = 150
-
-const rtl = (textarea: HTMLTextAreaElement): boolean => {
-  if (textarea.matches(":dir(rtl)")) return true
-  if (textarea.matches(":dir(ltr)")) return false
-  return getComputedStyle(textarea).direction === "rtl"
-}
 
 interface VSCodeContext {
   postMessage: (message: WebviewMessage) => void
@@ -71,6 +66,15 @@ export interface FileMention {
   snapSelection: (textarea: HTMLTextAreaElement) => void
   /** Seed known paths from existing text (e.g. after undo restores a draft). */
   seedFromText: (text: string) => void
+  /** Insert a file-picker result at the stored cursor position. Ignored unless requestId matches the pending request. */
+  insertFilePickerResult: (path: string, requestId: string) => void
+  /**
+   * Seed known paths from a set of already-confirmed exact paths (e.g. a
+   * reverted message's file attachments), then prune against `text`. Prefer
+   * this over seedFromText when exact paths are available, since seedFromText
+   * cannot correctly rediscover paths containing spaces from raw text alone.
+   */
+  seedFromParts: (paths: string[], text: string) => void
 }
 
 export function useFileMention(
@@ -89,6 +93,16 @@ export function useFileMention(
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
+  let filePickerCounter = 0
+  let pickerState: {
+    requestId: string
+    textarea: HTMLTextAreaElement
+    atStart: number
+    atEnd: number
+    setText: (text: string) => void
+    onSelect?: () => void
+  } | null = null
+  let pendingArrowSnap: { timer: ReturnType<typeof setTimeout>; prevValue: string; prevPosition: number } | undefined
 
   const showMention = () => mentionQuery() !== null
 
@@ -109,6 +123,7 @@ export function useFileMention(
   onCleanup(() => {
     unsubscribe()
     if (fileSearchTimer) clearTimeout(fileSearchTimer)
+    if (pendingArrowSnap) clearTimeout(pendingArrowSnap.timer)
   })
 
   const requestFileSearch = (query: string) => {
@@ -144,6 +159,18 @@ export function useFileMention(
     const cursor = textarea.selectionStart ?? val.length
     const before = val.substring(0, cursor)
     const after = val.substring(cursor)
+
+    if (result.type === "file-picker") {
+      const match = before.match(AT_PATTERN)!
+      const prefix = /^\s/.test(match[0]) ? 1 : 0
+      const atPos = match.index! + prefix
+      filePickerCounter++
+      const requestId = `file-picker-${filePickerCounter}`
+      pickerState = { requestId, textarea, atStart: atPos, atEnd: cursor, setText: _setText, onSelect }
+      closeMention()
+      vscode.postMessage({ type: "requestFilePicker", requestId })
+      return
+    }
 
     // Add to knownPaths BEFORE execCommand so syncMentionedPaths (triggered
     // by the input event) can discover the new path.
@@ -278,32 +305,62 @@ export function useFileMention(
     return true
   }
 
+  const resolvePendingArrowSnap = (textarea: HTMLTextAreaElement) => {
+    const pending = pendingArrowSnap
+    if (!pending) return
+
+    clearTimeout(pending.timer)
+    pendingArrowSnap = undefined
+
+    if (textarea.value !== pending.prevValue) return
+    const start = textarea.selectionStart ?? 0
+    const end = textarea.selectionEnd ?? 0
+    if (start !== end) return
+
+    if (start === pending.prevPosition) return
+
+    const range = findMentionRange(pending.prevValue, start, mentionedPaths())
+    if (!range) return
+
+    const pos = start > pending.prevPosition ? range.end : range.start
+    if (pos === start) return
+
+    textarea.setSelectionRange(pos, pos)
+  }
+
   const handleArrowKey = (e: KeyboardEvent, textarea: HTMLTextAreaElement | undefined): boolean => {
-    if ((e.key !== "ArrowLeft" && e.key !== "ArrowRight") || !textarea) return false
+    if (!textarea) return false
+    resolvePendingArrowSnap(textarea)
+
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return false
     // Don't interfere with selection (Shift) or word/line navigation (Ctrl/Cmd/Alt)
     if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return false
-    const cursor = textarea.selectionStart ?? 0
     // Only when there's no active selection
     if (textarea.selectionStart !== textarea.selectionEnd) return false
 
-    const forward = e.key === (rtl(textarea) ? "ArrowLeft" : "ArrowRight")
-    // Check where the cursor WOULD land after the native move
-    const next = forward ? cursor + 1 : cursor - 1
-    const range = findMentionRange(textarea.value, next, mentionedPaths())
-    if (!range) return false
+    const prevPosition = textarea.selectionStart ?? 0
+    const prevValue = textarea.value
 
-    e.preventDefault()
-    const pos = forward ? range.end : range.start
-    textarea.setSelectionRange(pos, pos)
-    return true
+    // Let the textarea perform its native bidi-aware caret move,
+    // then read the updated selection and snap only if it landed inside a mention.
+    const timer = setTimeout(() => {
+      resolvePendingArrowSnap(textarea)
+    }, 0)
+    pendingArrowSnap = { timer, prevValue, prevPosition }
+    return false
   }
 
   let snapping = false
+  let last: { start: number; end: number } | undefined
   const snapSelection = (textarea: HTMLTextAreaElement): void => {
     if (snapping) return
     const start = textarea.selectionStart
     const end = textarea.selectionEnd
-    if (start === end) return // cursor, not a selection
+    const dir = textarea.selectionDirection
+    if (start === end) {
+      last = undefined
+      return // cursor, not a selection
+    }
 
     const val = textarea.value
     const paths = mentionedPaths()
@@ -311,24 +368,85 @@ export function useFileMention(
     let snappedEnd = end
 
     const startRange = findMentionRange(val, start, paths)
-    if (startRange) snapped = startRange.start
+    if (startRange) {
+      const shrink = dir === "backward" && last?.start === startRange.start && last.end === end
+      snapped = shrink ? startRange.end : startRange.start
+    }
 
     const endRange = findMentionRange(val, end, paths)
-    if (endRange) snappedEnd = endRange.end
+    if (endRange) {
+      const shrink = dir === "forward" && last?.start === start && last.end === endRange.end
+      snappedEnd = shrink ? endRange.start : endRange.end
+    }
 
     if (snapped !== start || snappedEnd !== end) {
       snapping = true
-      textarea.setSelectionRange(snapped, snappedEnd, textarea.selectionDirection)
+      textarea.setSelectionRange(snapped, snappedEnd, dir)
       snapping = false
     }
+    last = { start: snapped, end: snappedEnd }
   }
 
   const seedFromText = (text: string) => {
-    const re = /@([\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+)/g
+    // The optional drive-letter prefix is scoped to a single letter directly after
+    // @ (e.g. "C:") so a colon elsewhere in the match (as in "@https://example.com")
+    // doesn't get mistaken for a Windows path.
+    const re = /@((?:[A-Za-z]:)?(?:[\w./-]+\.[\w]+|[\w.-]+\/[\w./-]+))/g
     let m: RegExpExecArray | null
     while ((m = re.exec(text))) {
       knownPaths.add(m[1])
     }
+    syncMentionedPaths(text)
+  }
+
+  const insertFilePickerResult = (path: string, requestId: string) => {
+    const state = pickerState
+    if (!state || state.requestId !== requestId) return
+    if (!path) {
+      pickerState = null
+      return
+    }
+    const norm = path.replaceAll("\\", "/")
+    pickerState = null
+    const textarea = state.textarea
+    if (!textarea.isConnected) return
+    const after = textarea.value.substring(state.atEnd)
+    const suffix = /^\s/.test(after) ? "" : " "
+    // Insert as a styled @mention so it renders like any other file reference and
+    // is clickable to preview (openFile is a plain editor action on the user's own
+    // disk, unrelated to the AI permission system). The actual security boundary
+    // lives in buildFileAttachments: paths outside the workspace are never turned
+    // into an auto-read FileAttachment, regardless of how they were mentioned, so
+    // a prior "deny" decision can't be bypassed by picking/attaching this way. If
+    // the model wants the file's contents it must call the Read tool, which
+    // enforces the normal external-directory permission checks.
+    // Restore focus before execCommand: after the native dialog closes the textarea
+    // is no longer the active element, so execCommand would otherwise silently no-op.
+    textarea.focus()
+    suppress = true
+    try {
+      textarea.setSelectionRange(state.atStart, state.atEnd)
+      document.execCommand("insertText", false, `@${norm}${suffix}`)
+    } finally {
+      suppress = false
+    }
+    knownPaths.add(norm)
+    setMentionedPaths((prev) => new Set([...prev, norm]))
+    syncMentionedPaths(textarea.value)
+    state.setText(textarea.value)
+    state.onSelect?.()
+  }
+
+  // Seed known paths from a set of already-confirmed exact paths (e.g. the
+  // file attachments of a message being restored after a revert), then prune
+  // mentionedPaths against the current text. Unlike seedFromText, this does
+  // not re-derive candidate paths from the text via regex: that regex cannot
+  // distinguish a complete mention from a truncated prefix when the real
+  // path contains a space (e.g. it would discover only "dir/my" from
+  // "@dir/my report.txt", which then passes syncMentionedPaths' boundary
+  // check too, since a real space genuinely follows "my" in the full name).
+  const seedFromParts = (paths: string[], text: string) => {
+    for (const p of paths) knownPaths.add(p)
     syncMentionedPaths(text)
   }
 
@@ -348,5 +466,7 @@ export function useFileMention(
     handleArrowKey,
     snapSelection,
     seedFromText,
+    insertFilePickerResult,
+    seedFromParts,
   }
 }

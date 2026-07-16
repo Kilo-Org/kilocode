@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.controller.SessionController
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.client.session.controller.SessionControllerTestBase
@@ -29,6 +30,19 @@ class ConnectionPanelTest : SessionControllerTestBase() {
 
         assertTrue(panel.isVisible)
         assertEquals("Loading...", panel.summaryText())
+        assertEquals("", panel.detailsText())
+        assertFalse(panel.toggleVisible())
+        assertFalse(panel.detailsVisible())
+        assertFalse(panel.retryVisible())
+    }
+
+    fun `test downloading hides retry and details`() {
+        edt {
+            panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowDownloading(42, "1.2.3", "darwin-arm64"))
+        }
+
+        assertTrue(panel.isVisible)
+        assertEquals(KiloBundle.message("session.connection.downloading.version", "1.2.3", "darwin-arm64", 42), panel.summaryText())
         assertEquals("", panel.detailsText())
         assertFalse(panel.toggleVisible())
         assertFalse(panel.detailsVisible())
@@ -80,7 +94,7 @@ class ConnectionPanelTest : SessionControllerTestBase() {
         assertEquals("Try again", panel.retryText())
     }
 
-    fun `test retry popup group uses cli recovery actions`() {
+    fun `test retry popup group uses core recovery actions`() {
         edt {
             panel.onEvent(SessionControllerEvent.ConnectionChanged.ShowError("CLI startup failed", null))
         }
@@ -90,9 +104,10 @@ class ConnectionPanelTest : SessionControllerTestBase() {
 
         assertTrue(panel.retryVisible())
         assertEquals("Kilo.CliGroup", ConnectionPanel.CLI_GROUP_ID)
-        assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"CLI\" popup=\"true\">"))
+        assertTrue(xml.contains("<group id=\"Kilo.CliGroup\" text=\"Core\" popup=\"true\">"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Restart\"/>"))
         assertTrue(xml.contains("<reference ref=\"Kilo.Reinstall\"/>"))
+        assertTrue(xml.contains("<reference ref=\"Kilo.CoreInfo\"/>"))
     }
 
     fun `test ready warnings show collapsed banner with retry`() {

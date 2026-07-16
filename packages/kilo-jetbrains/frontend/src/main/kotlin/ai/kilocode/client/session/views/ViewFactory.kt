@@ -8,6 +8,7 @@ import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
 import ai.kilocode.client.session.views.tool.ShellToolView
+import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.model.Compaction
@@ -53,6 +54,7 @@ object ViewFactory {
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
+            TaskToolView.canRender(content) -> TaskToolView(content, selection = selection)
             else -> ToolView(content, selection = selection)
         }
         is Compaction -> CompactionView(content)
@@ -98,6 +100,8 @@ object ViewFactory {
         if (view !is SearchToolView && SearchToolView.canRender(content)) return true
         if (view is ReadToolView) return !ReadToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view is ToolView && ReadToolView.canRender(content)) return true
+        if (view is TaskToolView) return !TaskToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view !is TaskToolView && TaskToolView.canRender(content)) return true
         if (view is ToolView) return QuestionResultView.canRender(content)
         return false
     }

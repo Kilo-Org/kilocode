@@ -6,6 +6,7 @@ import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
 import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
+import { formatCompactCount } from "../../utils/format"
 
 interface TaskUsageProps {
   tokens: TokenSummary
@@ -27,11 +28,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
       }),
   )
 
-  const number = (value: number) => {
-    if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
-    if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`
-    return String(value)
-  }
+  const number = formatCompactCount
   const count = (value: number) => value.toLocaleString(language.locale())
   const cost = (input: number) => {
     const value = Math.max(0, Number.isFinite(input) ? input : 0)
@@ -53,16 +50,16 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
           {number(props.tokens.input)}
         </span>
       </Show>
+      <Show when={props.tokens.cached > 0}>
+        <span class="task-header-tokens-value">
+          <Icon name="arrow-up" size="small" />
+          cache {number(props.tokens.cached)}
+        </span>
+      </Show>
       <Show when={props.tokens.output > 0}>
         <span class="task-header-tokens-value">
           <Icon name="arrow-down-to-line" size="small" />
           {number(props.tokens.output)}
-        </span>
-      </Show>
-      <Show when={props.tokens.cached > 0}>
-        <span class="task-header-tokens-value">
-          <Icon name="arrow-down-to-line" size="small" />
-          cache {number(props.tokens.cached)}
         </span>
       </Show>
     </>

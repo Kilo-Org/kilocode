@@ -25,8 +25,6 @@ import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import java.awt.BorderLayout
-import java.awt.Container
 import java.awt.Dimension
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -196,7 +194,6 @@ class ShellToolView(
             MdCodeBlockFactory.default(
                 MdCodeBlockOptions(
                     border = MdCodeBlockBorder.None,
-                    maxLines = SessionUiStyle.View.Popup.MAX_LINES,
                     verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
                     editorOnly = true,
                 ),
@@ -210,7 +207,8 @@ class ShellToolView(
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         md.set(popupMd(formatCommand(cmd)))
-        return HeaderPopupBody(PopupPanel(md.component), md, style.editorBackground)
+        padPopup(md.component)
+        return HeaderPopupBody(md.component, md, style.editorBackground)
     }
 
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"
@@ -220,36 +218,21 @@ class ShellToolView(
     }
 }
 
-private class PopupPanel(child: JComponent) : JPanel(BorderLayout()) {
-    init {
-        // Transparent so the balloon fill (editor background) shows uniformly behind the content.
-        isOpaque = false
-        add(child, BorderLayout.CENTER)
-    }
-
-    override fun getPreferredSize(): Dimension {
-        // The markdown code block reports a preferred width of 0 so transcript layout can stretch it.
-        // A balloon has no such constraint, so derive the natural content width and cap it instead.
-        val size = super.getPreferredSize()
-        val width = contentWidth(this).coerceAtMost(JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
-        return Dimension(maxOf(width, size.width), size.height)
+private fun padPopup(root: JComponent) {
+    root.components.filterIsInstance<JBScrollPane>().forEach { pane ->
+        val field = pane.viewport.view as? EditorTextField ?: return@forEach
+        field.border = JBUI.Borders.empty(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT, 0, 0, 0)
+        val pad = field.border.getBorderInsets(field).top
+        field.preferredSize = grow(field.preferredSize, pad)
+        field.minimumSize = grow(field.minimumSize, pad)
+        field.maximumSize = grow(field.maximumSize, pad)
+        pane.preferredSize = grow(pane.preferredSize, pad)
+        pane.minimumSize = grow(pane.minimumSize, pad)
+        pane.maximumSize = grow(pane.maximumSize, pad)
     }
 }
 
-private fun contentWidth(root: Container): Int {
-    var max = 0
-    for (child in root.components) {
-        if (child is JBScrollPane) {
-            val view = child.viewport.view as? JComponent
-            val content = view?.preferredSize?.width ?: 0
-            val insets = child.insets
-            val viewport = child.viewportBorder?.getBorderInsets(child) ?: JBUI.emptyInsets()
-            max = maxOf(max, content + insets.left + insets.right + viewport.left + viewport.right)
-        }
-        if (child is Container) max = maxOf(max, contentWidth(child))
-    }
-    return max
-}
+private fun grow(size: Dimension, pad: Int) = Dimension(size.width, size.height + pad)
 
 class ShellHolder(
     private val tool: Tool,
@@ -322,7 +305,7 @@ class ShellBody(
     private fun styleShell() {
         val root = md.component as? JPanel ?: return
         root.components.filterIsInstance<JBHtmlPane>().forEach {
-            it.border = JBUI.Borders.emptyLeft(JBUI.scale(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING))
+            it.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING)
         }
     }
 

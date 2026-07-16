@@ -3,10 +3,15 @@ import { Effect } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { Permission } from "../../src/permission"
 import { provideTestInstance } from "../fixture/fixture"
-import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 
 function load<A>(dir: string, fn: (svc: Agent.Interface) => Effect.Effect<A>) {
-  return Effect.runPromise(provideInstance(dir)(Agent.Service.use(fn)).pipe(Effect.provide(Agent.defaultLayer)))
+  return Effect.runPromise(
+    provideInstance(dir)(Agent.Service.use(fn)).pipe(
+      Effect.provide(Agent.defaultLayer),
+      Effect.provide(testInstanceStoreLayer),
+    ),
+  )
 }
 
 afterEach(async () => {

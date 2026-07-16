@@ -328,7 +328,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(2, panes.size)
         labels.forEach {
             val label = it.border?.getBorderInsets(it)
-            assertEquals(JBUI.scale(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING), label?.left ?: 0)
+            assertEquals(JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING), label?.left ?: 0)
             assertEquals(0, label?.right ?: 0)
         }
         panes.forEach {
@@ -347,8 +347,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         val output = (1..30).joinToString("\n") { "line $it" }
         val view = track(ShellToolView(tool().also { it.output = output }))
         view.toggle()
-        val root = view.mdComponent()!!
-        val pane = root.components.filterIsInstance<JBScrollPane>().single()
+        val pane = view.mdComponent()!!.components.filterIsInstance<JBScrollPane>().single()
         val editor = view.codeEditors().single()
         val nested = editor.getEditor(true)!!.scrollPane
         val line = editor.getEditor(true)!!.lineHeight
@@ -401,8 +400,25 @@ class ShellToolViewTest : BasePlatformTestCase() {
 
             assertEquals(1, editors.size)
             assertEquals("echo one;\n echo two;\n echo three", editors.single().text)
-            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
+            val pane = popupScrollPanes(body.component).single { it.viewport.view is com.intellij.ui.EditorTextField }
+            val pad = pane.viewportBorder.getBorderInsets(pane)
+            val field = editors.single()
+            val border = field.border.getBorderInsets(field)
+            val editor = field.getEditor(true)!!
+            val lines = field.text.lines().size
+            assertEquals(
+                SessionUiStyle.View.Code.topPadding(),
+                pad.top,
+            )
+            assertEquals(SessionUiStyle.View.Code.VIEWPORT_BOTTOM_PADDING, pad.bottom)
+            assertEquals(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT, border.top)
+            assertEquals(0, border.bottom)
+            assertTrue(field.preferredSize.height - border.top >= editor.lineHeight * lines)
+            assertTrue(field.minimumSize.height - border.top >= editor.lineHeight * lines)
+            assertTrue(pane.preferredSize.height >= field.preferredSize.height + pad.top + pad.bottom)
+            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(350))
             assertTrue(body.component.preferredSize.height > 0)
+            assertTrue(body.component.preferredSize.height <= JBUI.scale(450))
         } finally {
             Disposer.dispose(body.disposable)
         }
@@ -522,6 +538,16 @@ class ShellToolViewTest : BasePlatformTestCase() {
         val found = mutableListOf<com.intellij.ui.EditorTextField>()
         fun visit(component: JComponent) {
             if (component is com.intellij.ui.EditorTextField) found.add(component)
+            component.components.filterIsInstance<JComponent>().forEach(::visit)
+        }
+        visit(root)
+        return found
+    }
+
+    private fun popupScrollPanes(root: JComponent): List<JBScrollPane> {
+        val found = mutableListOf<JBScrollPane>()
+        fun visit(component: JComponent) {
+            if (component is JBScrollPane) found.add(component)
             component.components.filterIsInstance<JComponent>().forEach(::visit)
         }
         visit(root)

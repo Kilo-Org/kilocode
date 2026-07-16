@@ -72,7 +72,7 @@ class PromptView(
         md.linkColor = color
     }
 
-    override fun styleFont(style: SessionEditorStyle) = style.editorFont
+    override fun styleFont(style: SessionEditorStyle) = style.transcriptFont
 
     override fun styleBackground(style: SessionEditorStyle) = style.editorBackground
 

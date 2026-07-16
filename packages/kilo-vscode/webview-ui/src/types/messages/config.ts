@@ -40,14 +40,23 @@ export interface WatcherConfig {
 export interface ExperimentalConfig {
   batch_tool?: boolean
   codebase_search?: boolean
+  image_generation?: boolean
+  image_generation_model?: string
   agent_requirements?: boolean
   native_notebook_tools?: boolean
   speech_to_text_model?: string
   primary_tools?: string[]
   continue_loop_on_deny?: boolean
   mcp_timeout?: number
-  sandbox?: boolean
-  sandbox_restrict_network?: boolean
+  swe_pruner?: boolean
+  swe_pruner_model?: string
+}
+
+export interface SandboxConfig {
+  enabled?: boolean
+  network?: "allow" | "deny"
+  writable_paths?: string[]
+  allowed_hosts?: string[]
 }
 
 export interface CommitMessageConfig {
@@ -146,6 +155,7 @@ export interface Config {
   tools?: Record<string, boolean>
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
+  sandbox?: SandboxConfig
   indexing?: IndexingConfig
 }
 

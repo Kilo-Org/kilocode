@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { CodexAuthExpiredError, refreshCodexAuth } from "../../src/kilocode/provider/codex-refresh"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { spawn } from "child_process"
 import fs from "fs/promises"
 import os from "os"
@@ -139,7 +139,7 @@ async function race(input: { reuse: "early" | "late"; delay: number; lock?: Lock
 
 describe("Codex auth refresh", () => {
   test("serializes expired Codex auth as ProviderAuthError", () => {
-    const result = MessageV2.fromError(new CodexAuthExpiredError(), { providerID: ProviderID.make("openai") })
+    const result = MessageV2.fromError(new CodexAuthExpiredError(), { providerID: ProviderV2.ID.make("openai") })
 
     expect(result).toStrictEqual({
       name: "ProviderAuthError",

@@ -16,3 +16,8 @@ bin/
 **/.kotlin/
 **/bin/
 !gradle/wrapper/gradle-wrapper.jar
+
+# Downloaded CLI artifacts
+**/cli-cache/
+kilo-*.zip
+kilo-*.tar.gz

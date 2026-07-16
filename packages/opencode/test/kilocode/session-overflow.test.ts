@@ -123,6 +123,19 @@ describe("Kilo auto-compaction threshold", () => {
 
     expect(isOverflow({ cfg: conf, model: mdl, tokens: { ...tokens(0), total: 150_000 } })).toBe(true)
   })
+
+  test("uses the output cap as the reserve for single-window gateway models", () => {
+    const mdl = model({ context: 262_144, output: 262_144 })
+
+    expect(usable({ cfg: cfg(), model: mdl })).toBe(230_144)
+    expect(usable({ cfg: cfg({ reserved: 20_000 }), model: mdl })).toBe(230_144)
+  })
+
+  test("keeps usable context for small single-window models with large output limits", () => {
+    const mdl = model({ context: 40_000, output: 262_144 })
+
+    expect(usable({ cfg: cfg(), model: mdl })).toBe(8_000)
+  })
 })
 
 describe("Kilo request estimation", () => {
