@@ -1925,7 +1925,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   // kilocode_change end
   return (
     <Show when={props.part.text.trim()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
+      <box id={"assistant-text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0} /* kilocode_change */>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}

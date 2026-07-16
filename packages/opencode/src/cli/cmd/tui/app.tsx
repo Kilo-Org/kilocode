@@ -4,6 +4,7 @@ import * as Clipboard from "@tui/util/clipboard"
 import * as Selection from "@tui/util/selection"
 import * as TuiAudio from "@tui/util/audio"
 import { createCliRenderer, MouseButton, type CliRenderer, type CliRendererConfig } from "@opentui/core"
+import { AssistantLink } from "@/kilocode/cli/cmd/tui/assistant-link" // kilocode_change
 import { RouteProvider, useRoute } from "@tui/context/route"
 import {
   Switch,
@@ -1113,7 +1114,20 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         evt.preventDefault()
         evt.stopPropagation()
       }}
-      onMouseUp={Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT ? undefined : () => Selection.copy(renderer, toast)}
+      // kilocode_change start - Ghostty cannot encode macOS Command in SGR mouse reports, so a
+      // plain left click on an assistant HTTP(S) link is treated as the intended open gesture.
+      onMouseUp={(evt) => {
+        if (
+          AssistantLink.handle({
+            renderer,
+            event: evt,
+            error: (err) => toast.show({ variant: "error", message: `Could not open link: ${errorMessage(err)}` }),
+          })
+        )
+          return
+        if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) Selection.copy(renderer, toast)
+      }}
+      // kilocode_change end
     >
       <Show when={Flag.KILO_SHOW_TTFD}>
         <TimeToFirstDraw />
