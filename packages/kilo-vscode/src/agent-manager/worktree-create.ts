@@ -8,6 +8,7 @@ import type { AgentManagerOutMessage } from "./types"
 export type CreateWorktreeOnDiskOptions = {
   groupId?: string
   baseBranch?: string
+  baseRef?: string
   branchName?: string
   existingBranch?: string
   name?: string
@@ -61,6 +62,7 @@ export async function createWorktreeOnDisk(
     result = await manager.createWorktree({
       prompt: opts?.name || "kilo",
       baseBranch: effectiveBase ?? opts?.baseBranch,
+      baseRef: opts?.baseRef,
       branchName: opts?.branchName,
       existingBranch: opts?.existingBranch,
     })

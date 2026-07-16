@@ -1488,11 +1488,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
   "settings.agentBehaviour.prompt.description": "Дополнительный системный промпт для этого агента",
   "settings.agentBehaviour.temperature.title": "Температура",
-  "settings.agentBehaviour.temperature.description": "Температура сэмплирования (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Управляет степенью случайности ответов ИИ (0–2). Низкие значения (например, 0.2) дают более сфокусированный и последовательный результат. Высокие значения (например, 1.0) дают более разнообразные и творческие ответы. Оставьте поле пустым, чтобы использовать значение модели по умолчанию.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Порог nucleus-сэмплирования (0–1). Ограничивает выбор токенов минимальным набором, совокупная вероятность которого достигает P. Низкие значения делают результат более сфокусированным, а высокие допускают больше разнообразия. Оставьте поле пустым, чтобы использовать значение модели по умолчанию.",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
-  "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.maxSteps.description":
+    "Максимальное количество шагов агента. При достижении лимита агенту даётся указание прекратить использовать инструменты и дать окончательный ответ. Увеличьте для сложных многоэтапных задач; уменьшите, чтобы ответы были короче и предсказуемее.",
   "settings.agentBehaviour.hidden.title": "Скрытый",
   "settings.agentBehaviour.hidden.description": "Скрыть этого агента из переключателя режимов в поле ввода чата",
   "settings.agentBehaviour.disable.title": "Отключён",

@@ -33,13 +33,6 @@ export const FILE_PICKER_RESULT: MentionResult = {
   description: "Select a file outside the workspace",
 }
 
-/**
- * Escape special regex characters in a string so it can be used in a RegExp.
- */
-function escape(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
 export function getTerminalMentionResult(query: string): MentionResult[] {
   const normalized = query.toLowerCase()
   if (!TERMINAL_MENTION.startsWith(normalized)) return []
@@ -62,8 +55,8 @@ export function buildMentionResults(query: string, items: Array<FileSearchItem |
   return [
     ...getTerminalMentionResult(query),
     ...(git ? getGitChangesMentionResult(query) : []),
-    FILE_PICKER_RESULT,
     ...results,
+    FILE_PICKER_RESULT,
   ]
 }
 
@@ -84,14 +77,38 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
  *
  * Uses boundary-aware matching (whitespace or start/end of string) and processes
  * paths longest-first to prevent `@src/a.ts` from false-matching `@src/a.tsx`.
+ *
+ * A trailing space can no longer be assumed to end a mention now that paths
+ * may contain spaces: `@a.txt` is a literal, whitespace-bounded prefix of the
+ * space-containing `@a.txt backup.txt`. Checking each candidate occurrence
+ * against every longer path already accepted at the same position (rather
+ * than relying on whitespace alone) prevents a stale, unrelated `a.txt` from
+ * a prior mention surviving just because it happens to collide with the
+ * start of a longer path mentioned in the current text.
  */
 export function syncMentionedPaths(prev: Set<string>, text: string): Set<string> {
   const next = new Set<string>()
   // Sort longest-first so e.g. "src/a.tsx" is checked before "src/a.ts"
   const sorted = [...prev].sort((a, b) => b.length - a.length)
+  const accepted: string[] = []
   for (const path of sorted) {
-    const pattern = new RegExp(`(?:^|\\s)@${escape(path)}(?:\\s|$)`)
-    if (pattern.test(text)) next.add(path)
+    const token = `@${path}`
+    let search = 0
+    const valid = (() => {
+      while (true) {
+        const idx = text.indexOf(token, search)
+        if (idx === -1) return false
+        const before = idx === 0 || /\s/.test(text[idx - 1] ?? "")
+        const end = idx + token.length
+        const after = end >= text.length || /\s/.test(text[end] ?? "")
+        const collides = accepted.some((other) => other !== path && text.startsWith(`@${other}`, idx))
+        if (before && after && !collides) return true
+        search = idx + 1
+      }
+    })()
+    if (!valid) continue
+    accepted.push(path)
+    next.add(path)
   }
   return next
 }
@@ -228,6 +245,10 @@ function isInsideWorkspace(abs: string, dir: string): boolean {
  * which enforces the normal external-directory permission checks. Every
  * resolved path (relative or absolute) is normalized before the containment
  * check so a "../" sequence can't slip past a literal string-prefix match.
+ *
+ * Includes source.text position data so the message renderer can highlight
+ * the full mention span (including paths with spaces or non-ASCII characters)
+ * without falling back to the regex-based detection that stops at spaces.
  */
 export function buildFileAttachments(
   text: string,
@@ -237,13 +258,32 @@ export function buildFileAttachments(
   const result: FileAttachment[] = []
   const dir = normalizeAbsolutePath(workspaceDir.replaceAll("\\", "/")).replace(/\/+$/, "")
   for (const path of mentionedPaths) {
-    if (text.includes(`@${path}`)) {
+    const token = `@${path}`
+    const idx = text.indexOf(token)
+    if (idx !== -1) {
       const raw = isAbsolutePath(path) ? path.replaceAll("\\", "/") : `${dir}/${path}`
       const abs = normalizeAbsolutePath(raw)
       if (!isInsideWorkspace(abs, dir)) continue
       const url = new URL("file://")
-      url.pathname = abs.startsWith("/") ? abs : `/${abs}`
-      result.push({ mime: "text/plain", url: url.href })
+      // Pre-encode spaces and literal percent signs before assigning to
+      // pathname: VS Code's webview (Chromium) does not percent-encode spaces
+      // in file:// URL pathnames, which causes Bun's fileURLToPath on the
+      // server to truncate the path at the first space. A literal "%" in the
+      // filename must also be escaped first (to "%25"), otherwise a name like
+      // "100%20real.txt" would be indistinguishable from an already-encoded
+      // space and get decoded back to "100 real.txt" server-side. Other
+      // non-ASCII characters are encoded correctly by the URL class, so only
+      // "%" and " " need this explicit treatment.
+      url.pathname = (abs.startsWith("/") ? abs : `/${abs}`).replace(/%/g, "%25").replace(/ /g, "%20")
+      result.push({
+        mime: "text/plain",
+        url: url.href,
+        source: {
+          type: "file",
+          path,
+          text: { value: token, start: idx, end: idx + token.length },
+        },
+      })
     }
   }
   return result

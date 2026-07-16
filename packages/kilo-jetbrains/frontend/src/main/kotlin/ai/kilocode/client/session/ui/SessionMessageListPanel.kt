@@ -18,7 +18,7 @@ import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
-import com.intellij.util.ui.JBUI
+import java.awt.Insets
 import javax.swing.JComponent
 
 /**
@@ -62,12 +62,12 @@ class SessionMessageListPanel(
     private val cancelRevert: (() -> Unit)? = null,
     private val banner: RevertBanner? = null,
 ) : SessionLayoutPanel(
-    JBUI.scale(SessionUiStyle.SessionLayout.GAP),
-    JBUI.insets(
-        SessionUiStyle.SessionLayout.InnerInsets.top,
-        SessionUiStyle.SessionLayout.InnerInsets.left,
-        SessionUiStyle.SessionLayout.InnerInsets.bottom,
-        SessionUiStyle.SessionLayout.InnerInsets.right + SessionUiStyle.SessionLayout.TRANSCRIPT_SCROLLBAR_PADDING,
+    SessionUiStyle.SessionLayout.GAP,
+    Insets(
+        SessionUiStyle.SessionLayout.INNER_TOP,
+        SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
+        SessionUiStyle.SessionLayout.INNER_BOTTOM,
+        SessionUiStyle.SessionLayout.INNER_HORIZONTAL,
     ),
 ), Disposable, SessionEditorStyleTarget {
 

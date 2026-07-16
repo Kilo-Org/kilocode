@@ -1403,11 +1403,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "自訂提示詞",
   "settings.agentBehaviour.prompt.description": "此 Agent 的附加系統提示詞",
   "settings.agentBehaviour.temperature.title": "溫度",
-  "settings.agentBehaviour.temperature.description": "取樣溫度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "控制 AI 回應的隨機程度（0–2）。較低的值（例如 0.2）會產生更聚焦、更一致的輸出。較高的值（例如 1.0）會產生更多樣、更有創意的回應。留空則使用模型預設值。",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核取樣參數（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "核取樣閾值（0–1）。將候選詞元限制為累積機率達到 P 的最小集合。較低的值會讓輸出更聚焦；較高的值則允許更多樣性。留空則使用模型預設值。",
   "settings.agentBehaviour.maxSteps.title": "最大步數",
-  "settings.agentBehaviour.maxSteps.description": "最大 Agent 迭代次數",
+  "settings.agentBehaviour.maxSteps.description":
+    "Agent 的最大步驟數。達到上限後，Agent 會收到指示，停止使用工具並提供最終回應。對於複雜的多步驟工作可提高此值；降低此值可讓回應更短且更容易預測。",
   "settings.agentBehaviour.hidden.title": "隱藏",
   "settings.agentBehaviour.hidden.description": "在聊天輸入的模式切換器中隱藏此 Agent",
   "settings.agentBehaviour.disable.title": "已停用",

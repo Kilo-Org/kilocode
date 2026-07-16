@@ -606,7 +606,8 @@ setInterval(() => {}, 1_000)
         expect(yield* Effect.promise(() => Bun.file(target.manifest).exists())).toBe(false)
       } finally {
         yield* Effect.promise(async () => {
-          const exited = unrelated.exitCode !== null || unrelated.signalCode !== null ? undefined : once(unrelated, "exit")
+          const exited =
+            unrelated.exitCode !== null || unrelated.signalCode !== null ? undefined : once(unrelated, "exit")
           if (unrelated.pid && alive(unrelated.pid)) {
             if (process.platform === "win32") unrelated.kill("SIGKILL")
             else process.kill(-unrelated.pid, "SIGKILL")
@@ -706,7 +707,9 @@ if (process.platform === "win32") setTimeout(() => {}, 5_000)
           })
         }
       }),
-    30_000,
+    // Windows process-tree ownership uses PowerShell/CIM probes and intentionally
+    // keeps the leader alive for five seconds, so it needs a larger outer budget.
+    process.platform === "win32" ? 60_000 : 30_000,
   )
 
   it.instance("rejects invalid readiness patterns before launching", () =>
