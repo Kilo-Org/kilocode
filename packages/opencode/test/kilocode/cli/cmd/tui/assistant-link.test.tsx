@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { testRender } from "@opentui/solid"
 import { SyntaxStyle, type MouseEvent } from "@opentui/core"
+import { createMockMouse } from "@opentui/core/testing"
 import { AssistantLink } from "@/kilocode/cli/cmd/tui/assistant-link"
 
 const active: Awaited<ReturnType<typeof testRender>>[] = []
@@ -9,11 +10,23 @@ afterEach(() => {
   for (const app of active.splice(0)) app.renderer.destroy()
 })
 
+async function settle(app: Awaited<ReturnType<typeof testRender>>) {
+  let previous = ""
+  for (let i = 0; i < 100; i++) {
+    await app.renderOnce()
+    const frame = app.captureCharFrame()
+    if (frame === previous && frame.trim().length > 0) return
+    previous = frame
+    await Bun.sleep(10)
+  }
+}
+
 describe("assistant link Ghostty fallback", () => {
   test("enables only in macOS Ghostty", () => {
     expect(AssistantLink.ghostty({ platform: "darwin", env: { TERM_PROGRAM: "ghostty" } })).toBe(true)
     expect(AssistantLink.ghostty({ platform: "darwin", env: { TERM: "xterm-ghostty" } })).toBe(true)
     expect(AssistantLink.ghostty({ platform: "linux", env: { TERM_PROGRAM: "ghostty" } })).toBe(false)
+    expect(AssistantLink.ghostty({ platform: "darwin", env: { TERM_PROGRAM: "Apple_Terminal" } })).toBe(false)
     expect(AssistantLink.ghostty({ platform: "darwin", env: { TERM_PROGRAM: "iTerm.app" } })).toBe(false)
   })
 
@@ -46,14 +59,7 @@ async function renderMarkdown(content: string, width = 80) {
   // The test renderer has no active render loop here, so poll by repeatedly
   // driving renderOnce() until the frame stops changing, rather than a fixed
   // delay that can be too short on a slower or more loaded CI runner.
-  let previous = ""
-  for (let i = 0; i < 100; i++) {
-    await app.renderOnce()
-    const frame = app.captureCharFrame()
-    if (frame === previous && frame.trim().length > 0) return app
-    previous = frame
-    await Bun.sleep(10)
-  }
+  await settle(app)
   return app
 }
 
@@ -124,24 +130,34 @@ describe("assistant link hyperlink resolution", () => {
 })
 
 describe("assistant link fallback handler", () => {
-  function event(overrides: Partial<{ button: number; x: number; y: number; target: { id: string; parent: null } | null }>) {
+  function event(
+    overrides: Partial<{
+      button: number
+      x: number
+      y: number
+      isDragging: boolean
+      target: { id: string; parent: null } | null
+    }>,
+  ) {
     return {
       button: overrides.button ?? 0,
       x: overrides.x ?? 0,
       y: overrides.y ?? 0,
+      isDragging: overrides.isDragging ?? false,
       target: overrides.target ?? { id: "assistant-text-part-1", parent: null },
       preventDefault: () => {},
       stopPropagation: () => {},
     } as unknown as MouseEvent
   }
 
-  test("launches once and consumes the event on macOS Ghostty for an assistant HTTP(S) cell", async () => {
+  test("launches once after a stationary selection mouse-up on macOS Ghostty", async () => {
     const app = await renderMarkdown("[Kilo](https://kilo.ai)")
     const p = point(app.captureCharFrame(), "https://kilo.ai")
     let launched: string | undefined
     const handled = AssistantLink.handle({
       renderer: app.renderer,
-      event: event({ x: p.x, y: p.y }),
+      event: event({ x: p.x, y: p.y, isDragging: true }),
+      dragged: false,
       platform: "darwin",
       env: { TERM_PROGRAM: "ghostty" },
       launch: async (url) => {
@@ -151,6 +167,74 @@ describe("assistant link fallback handler", () => {
 
     expect(handled).toBe(true)
     expect(launched).toBe("https://kilo.ai")
+  })
+
+  test("does not launch when releasing a text selection over a link", async () => {
+    const app = await renderMarkdown("https://kilo.ai")
+    const p = point(app.captureCharFrame(), "https://kilo.ai")
+    let launched = false
+
+    const handled = AssistantLink.handle({
+      renderer: app.renderer,
+      event: event({ x: p.x, y: p.y, isDragging: true }),
+      dragged: true,
+      platform: "darwin",
+      env: { TERM_PROGRAM: "ghostty" },
+      launch: async () => {
+        launched = true
+      },
+    })
+
+    expect(handled).toBe(false)
+    expect(launched).toBe(false)
+  })
+
+  test("distinguishes a real stationary click from a drag gesture", async () => {
+    const syntax = SyntaxStyle.fromStyles({ default: { fg: "#ffffff" } })
+    let dragged = false
+    const launched: string[] = []
+    const app = await testRender(
+      () => (
+        <box
+          id="assistant-text-part-1"
+          onMouseDown={() => {
+            dragged = false
+          }}
+          onMouseDrag={() => {
+            dragged = true
+          }}
+          onMouseUp={(event) => {
+            AssistantLink.handle({
+              renderer: app.renderer,
+              event,
+              dragged,
+              platform: "darwin",
+              env: { TERM_PROGRAM: "ghostty" },
+              launch: async (url) => {
+                launched.push(url)
+              },
+            })
+            dragged = false
+          }}
+        >
+          <markdown syntaxStyle={syntax} content="https://kilo.ai" conceal={true} />
+        </box>
+      ),
+      { width: 40, height: 4 },
+    )
+    active.push(app)
+    await settle(app)
+    const p = point(app.captureCharFrame(), "https://kilo.ai")
+    const mouse = createMockMouse(app.renderer)
+
+    await mouse.click(p.x, p.y)
+    expect(launched).toEqual(["https://kilo.ai"])
+
+    await mouse.drag(p.x, p.y, p.x + 4, p.y)
+    expect(launched).toEqual(["https://kilo.ai"])
+
+    await mouse.click(p.x, p.y)
+    expect(launched).toEqual(["https://kilo.ai", "https://kilo.ai"])
   })
 
   test("does not intercept on macOS iTerm2 or Ghostty on Linux", async () => {

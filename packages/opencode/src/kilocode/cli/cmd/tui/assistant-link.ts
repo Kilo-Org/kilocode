@@ -13,6 +13,7 @@ type Native = {
 type Input = {
   renderer: CliRenderer
   event: MouseEvent
+  dragged?: boolean
   platform?: NodeJS.Platform
   env?: NodeJS.ProcessEnv
   launch?: (url: string) => Promise<unknown>
@@ -38,7 +39,9 @@ export namespace AssistantLink {
   }
 
   function isNative(value: unknown): value is Native {
-    return typeof value === "object" && value !== null && "linkGetUrl" in value && typeof value.linkGetUrl === "function"
+    return (
+      typeof value === "object" && value !== null && "linkGetUrl" in value && typeof value.linkGetUrl === "function"
+    )
   }
 
   // OpenTUI only attaches native hyperlink metadata to the URL substring of a
@@ -202,6 +205,7 @@ export namespace AssistantLink {
   export function handle(input: Input) {
     if (!ghostty({ platform: input.platform ?? process.platform, env: input.env ?? process.env })) return false
     if (input.event.button !== MouseButton.LEFT) return false
+    if (input.dragged) return false
     if (!target(input.event.target)) return false
 
     const href = url(input.renderer, input.event.x, input.event.y)

@@ -1100,13 +1100,18 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     return render({ params: route.data.data })
   })
 
+  let dragged = false // kilocode_change
+
   return (
     <box
       width={dimensions().width}
       height={dimensions().height}
       flexDirection="column"
       backgroundColor={theme.background}
+      // kilocode_change start - Ghostty cannot encode macOS Command in SGR mouse reports, so a
+      // plain left click on an assistant HTTP(S) link is treated as the intended open gesture.
       onMouseDown={(evt) => {
+        if (evt.button === MouseButton.LEFT) dragged = false
         if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) return
         if (evt.button !== MouseButton.RIGHT) return
 
@@ -1114,17 +1119,18 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
         evt.preventDefault()
         evt.stopPropagation()
       }}
-      // kilocode_change start - Ghostty cannot encode macOS Command in SGR mouse reports, so a
-      // plain left click on an assistant HTTP(S) link is treated as the intended open gesture.
+      onMouseDrag={() => {
+        dragged = true
+      }}
       onMouseUp={(evt) => {
-        if (
-          AssistantLink.handle({
-            renderer,
-            event: evt,
-            error: (err) => toast.show({ variant: "error", message: `Could not open link: ${errorMessage(err)}` }),
-          })
-        )
-          return
+        const handled = AssistantLink.handle({
+          renderer,
+          event: evt,
+          dragged,
+          error: (err) => toast.show({ variant: "error", message: `Could not open link: ${errorMessage(err)}` }),
+        })
+        dragged = false
+        if (handled) return
         if (!Flag.KILO_EXPERIMENTAL_DISABLE_COPY_ON_SELECT) Selection.copy(renderer, toast)
       }}
       // kilocode_change end
