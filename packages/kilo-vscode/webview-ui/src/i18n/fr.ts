@@ -137,7 +137,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messages annulés",
   "revert.banner.redo": "Rétablir",
   "revert.banner.redo.all": "Tout rétablir",
-  "revert.banner.hint": "Envoyez un nouveau message pour rendre ceci permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Attendre la fin de l'agent",
   "command.session.compact": "Compacter la session",
   "command.session.compact.description": "Résumer la session pour réduire la taille du contexte",
@@ -641,7 +641,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Recherche Grep",
   "ui.permission.toolLabel.webSearch": "Recherche Web",
   "ui.permission.toolLabel.list": "Lister",
-  "ui.permission.toolLabel.externalDirectory": "Lire répertoire externe",
+  "ui.permission.toolLabel.externalDirectory": "Accéder au répertoire externe",
   "ui.permission.toolLabel.webFetch": "Récupération Web",
   "ui.permission.toolLabel.task": "Tâche",
   "ui.permission.toolLabel.skill": "Compétence",
@@ -1008,6 +1008,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nom",
   "provider.custom.models.name.placeholder": "Nom d'affichage",
   "provider.custom.models.reasoning.label": "Raisonnement",
+  "provider.custom.models.modalities.image": "Image",
   "provider.custom.models.variants.label": "Variantes",
   "provider.custom.models.variants.add": "Ajouter une variante",
   "provider.custom.models.variants.remove": "Supprimer la variante",
@@ -1456,6 +1457,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Recherche de code",
   "settings.experimental.codebaseSearch.description":
     "Activer la recherche en langage naturel par IA dans toute la base de code",
+  "settings.experimental.imageGeneration.title": "Génération d'images",
+  "settings.experimental.imageGeneration.description": "Activer la génération d'images par IA",
+  "settings.experimental.imageGenerationModel.title": "Modèle d'image",
+  "settings.experimental.imageGenerationModel.description": "Modèle de génération d'images",
+  "settings.experimental.imageGenerationModel.placeholder": "Par défaut (Auto Router)",
+
   "settings.experimental.speechToText.title": "Transcription vocale",
   "settings.experimental.speechToText.description":
     "Activez la saisie vocale dans les champs de prompt en utilisant votre compte Kilo via Kilo Gateway.",
@@ -1473,11 +1480,20 @@ export const dict = {
   "settings.sandboxing.title": "Mise en bac à sable",
   "settings.sandboxing.network.title": "Restreindre l'accès au réseau",
   "settings.sandboxing.network.description":
-    "Bloquer l'accès réseau sortant des commandes provenant du modèle et des outils HTTP. Les serveurs MCP locaux et les hooks de plugin ne sont pas soumis à cette restriction. Le trafic d'inférence des fournisseurs et des modèles reste disponible.",
+    "Bloque l’accès sortant direct des commandes lancées par le modèle et des outils HTTP. Les outils MCP locaux et distants ne sont pas disponibles tant que la restriction s’applique. Le trafic du fournisseur et les hooks de plugins approuvés restent en dehors de cette restriction.",
 
+  "settings.sandboxing.allowedHosts.title": "Destinations réseau autorisées",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinations d’hôte et de port DNS pour le trafic proxy HTTP et HTTPS isolé. GitHub CLI et HTTPS Git nécessitent généralement github.com:443 et api.github.com:443. Les modifications s’appliquent aux nouvelles sessions.",
   "settings.sandboxing.writablePaths.title": "Chemins en écriture supplémentaires",
   "settings.sandboxing.writablePaths.description":
     "Chemins système supplémentaires autorisés en écriture par le bac à sable (par ex. /tmp, /var/log). Ils sont fusionnés avec les chemins en écriture par défaut lorsque le bac à sable est actif.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Activer SWE-Pruner : élagage des sorties volumineuses des outils de lecture, de recherche et de shell, tenant compte de la tâche et guidé par une question de focalisation fournie par l’agent",
+  "settings.experimental.swePrunerModel.title": "Modèle SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modèle utilisé pour élaguer les sorties d'outils ; par défaut, le small model configuré",
   "settings.experimental.mcpTimeout.title": "Délai MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Délai des requêtes du serveur MCP en millisecondes",
   "settings.experimental.remote.title": "Contrôle Remote",
@@ -1502,11 +1518,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personnalisé",
   "settings.agentBehaviour.prompt.description": "Prompt système supplémentaire pour cet agent",
   "settings.agentBehaviour.temperature.title": "Température",
-  "settings.agentBehaviour.temperature.description": "Température d'échantillonnage (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Contrôle le degré d’aléa des réponses de l’IA (0–2). Les valeurs plus faibles (par ex. 0.2) produisent des résultats ciblés et cohérents. Les valeurs plus élevées (par ex. 1.0) produisent des réponses plus variées et créatives. Laissez ce champ vide pour utiliser la valeur par défaut du modèle.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Paramètre d'échantillonnage nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Seuil d’échantillonnage nucleus (0–1). Limite le choix des jetons au plus petit ensemble dont la probabilité cumulée atteint P. Les valeurs plus faibles rendent le résultat plus ciblé ; les valeurs plus élevées permettent davantage de diversité. Laissez ce champ vide pour utiliser la valeur par défaut du modèle.",
   "settings.agentBehaviour.maxSteps.title": "Étapes max.",
-  "settings.agentBehaviour.maxSteps.description": "Itérations maximales de l'agent",
+  "settings.agentBehaviour.maxSteps.description":
+    "Nombre maximal d’étapes de l’agent. Lorsque la limite est atteinte, l’agent reçoit pour instruction de cesser d’utiliser les outils et de fournir une réponse finale. Augmentez cette valeur pour les tâches complexes à plusieurs étapes ; réduisez-la pour obtenir des réponses plus courtes et plus prévisibles.",
   "settings.agentBehaviour.hidden.title": "Masqué",
   "settings.agentBehaviour.hidden.description": "Masquer cet agent du sélecteur de mode dans la saisie du chat",
   "settings.agentBehaviour.disable.title": "Désactivé",
@@ -1615,8 +1634,8 @@ export const dict = {
     "Aucune commande personnalisée configurée. Ajoutez des commandes à opencode.json pour les voir ici.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Modèle",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Exécuter les commandes shell de l'agent dans un sandbox au niveau du système d'exploitation qui restreint les écritures aux répertoires d'état du projet et de Kilo",
 
   "settings.autoApprove.description":
@@ -1720,6 +1739,11 @@ export const dict = {
     "prompt système envoyé à l'IA lors de la génération des commit messages. Cela remplace entièrement le prompt par défaut.",
   "settings.commitMessage.prompt.placeholder":
     "par ex. Générer des commit messages en espagnol en suivant le format conventional commits. Retourner UNIQUEMENT le commit message.",
+
+  "settings.commitMessage.language.sync": "Synchronisation avec la langue UI",
+  "settings.commitMessage.language.title": "Langue",
+  "settings.commitMessage.language.description":
+    "Choisissez la langue à utiliser pour les messages de commit générés par l'IA:",
 
   "settings.display.username.title": "Nom d'utilisateur",
   "settings.display.username.description": "Nom d'utilisateur personnalisé dans les conversations",
@@ -1895,4 +1919,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Chargement des branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Le plan est prêt :",
+  "chat.search.placeholder": "Rechercher dans la conversation…",
+  "chat.search.toggle": "Rechercher dans la conversation",
+  "chat.search.matchCase": "Respecter la casse",
+  "chat.search.matchWholeWord": "Mot entier",
+  "chat.search.useRegex": "Utiliser une expression régulière",
+  "chat.search.previousMatch": "Résultat précédent",
+  "chat.search.nextMatch": "Résultat suivant",
+  "chat.search.close": "Fermer la recherche",
+  "chat.search.invalidRegex": "Expression régulière non valide",
+  "chat.search.noResults": "Aucun résultat",
+  "chat.search.searchingHistory": "Recherche dans les messages précédents…",
 }

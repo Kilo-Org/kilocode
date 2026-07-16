@@ -8,7 +8,7 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -21,6 +21,8 @@ import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
 import { ContextProgress } from "./ContextProgress"
 import { TaskUsage } from "./TaskUsage"
+import { TranscriptSearch } from "./TranscriptSearch"
+import { useTranscriptSearch } from "../../context/transcript-search"
 import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
@@ -35,6 +37,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const memory = useMemory()
   const language = useLanguage()
+  const search = useTranscriptSearch()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
@@ -107,6 +110,36 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   }
   window.addEventListener("message", handler)
   onCleanup(() => window.removeEventListener("message", handler))
+
+  // "Kilo Code: Toggle Chat Search" (Command Palette) toggles the search
+  // bar from here rather than TranscriptSearch.tsx itself: that component
+  // only mounts once search.active() is already true (it's behind a
+  // <Show>), so it can never be what turns search on in the first place —
+  // and it also wouldn't exist anymore to react to a request to close it.
+  // TaskHeader is mounted the whole time there's an active chat, so it's
+  // the right place to react to the external toggle request.
+  const toggleSearch = () => (search.active() ? search.closeSearch() : search.setActive(true))
+  window.addEventListener("focusTranscriptSearch", toggleSearch)
+  onCleanup(() => window.removeEventListener("focusTranscriptSearch", toggleSearch))
+
+  // Whenever search closes via an explicit user action — the header toggle
+  // button, the command palette toggle above, the search bar's own "X", or
+  // Escape — send focus back to the chat input rather than leaving it
+  // stranded on whatever control was just clicked/removed. Watches
+  // `closeSignal` rather than `active()` transitions so that MessageList
+  // silently resetting the widget on a session/tab change (which also
+  // flips `active()` false) can't trigger this same aggressive restore and
+  // steal focus back from the tab strip's own focus handling. `defer: true`
+  // skips the initial run so mounting doesn't immediately steal focus.
+  createEffect(
+    on(
+      () => search.closeSignal(),
+      () => {
+        window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+      },
+      { defer: true },
+    ),
+  )
 
   const toggle = () => {
     const next = !expanded()
@@ -228,6 +261,18 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             </Tooltip>
           </Show>
           <Show when={hasMessages()}>
+            <Tooltip value={language.t("chat.search.toggle")} placement="bottom">
+              <IconButton
+                icon="magnifying-glass"
+                size="small"
+                variant="ghost"
+                class="task-header-search-toggle"
+                data-active={search.active() ? "" : undefined}
+                onClick={toggleSearch}
+                aria-label={language.t("chat.search.toggle")}
+                aria-pressed={search.active()}
+              />
+            </Tooltip>
             <button
               data-slot="task-header-expand"
               onClick={toggle}
@@ -239,6 +284,14 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
       </div>
+      {/* Standalone search bar, directly under the header, so it has room for
+          the VS Code–style inline options and doesn't require the timeline
+          to be expanded. */}
+      <Show when={search.active()}>
+        <div data-component="task-header-search">
+          <TranscriptSearch />
+        </div>
+      </Show>
       {/* Expanded graph section: timeline + context bar + token breakdown */}
       <Show when={expanded() && hasTimeline()}>
         <div data-component="task-header-graph">

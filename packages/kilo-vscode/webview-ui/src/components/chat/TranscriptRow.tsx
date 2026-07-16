@@ -4,6 +4,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart, SnapshotFileDiff } from "@kilocode/sdk/v2"
 import type { TranscriptRow } from "../../context/transcript-rows"
+import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
@@ -17,6 +18,14 @@ interface TranscriptRowViewProps {
   row: TranscriptRow
   index?: number
   onForkMessage?: (sessionId: string, messageId: string) => void
+  /** Part behind the currently hovered/focused task-timeline bar, if any. */
+  highlight?: () => TimelineHighlight | undefined
+  activeSearch?: boolean
+  /** id of the part (tool call/reasoning block) containing the current chat
+   * search match within this row, if any. */
+  activeSearchPartID?: string
+  /** For a multi-file apply_patch match, the specific file within that part. */
+  activeSearchPartFile?: string
 }
 
 export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
@@ -40,6 +49,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
       data-row-index={props.index}
       data-turn={props.row.turn}
       data-live={props.row.live ? "" : undefined}
+      data-search-active={props.activeSearch ? "" : undefined}
     >
       <Show when={props.row.type === "user" ? props.row : undefined}>
         {(row) => (
@@ -76,6 +86,9 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
               showAssistantCopyPartID={row().copy}
+              forceOpenPartID={props.activeSearchPartID}
+              forceOpenFile={props.activeSearchPartFile}
+              highlight={props.highlight}
               feedback={{
                 enabled: feedback.telemetryEnabled(),
                 rating: feedback.getRating(row().message.id),

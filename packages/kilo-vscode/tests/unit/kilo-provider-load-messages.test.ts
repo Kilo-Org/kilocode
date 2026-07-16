@@ -54,6 +54,10 @@ function mkResult(items: unknown[]) {
   return { data: items, response: { headers: new Headers() } }
 }
 
+function mkCreatedSession(id = "created") {
+  return { id, title: "Created", time: { created: 0, updated: 0 } }
+}
+
 function createClient(options?: {
   messagesDeferred?: Deferred<{ data: unknown[]; response: { headers: Headers } }>
   messagesData?: unknown[]
@@ -61,15 +65,18 @@ function createClient(options?: {
   revertDeferred?: Deferred<{ data?: unknown; error?: unknown }>
   sessionData?: unknown
   sessionGet?: (params: { sessionID: string; directory?: string }) => Promise<{ data: unknown }>
+  createDeferred?: Deferred<{ data: ReturnType<typeof mkCreatedSession> }>
   abortFailures?: string[]
-  createDeferred?: Deferred<{ data: unknown }>
+  abortDeferred?: Deferred<void>
   supportDeferred?: Deferred<{ data: { available: boolean; reason?: string } }>
   sandboxDeferred?: Deferred<{ data: unknown }>
   sandboxStarted?: Deferred<void>
+  createSession?: (params: Record<string, unknown>, index: number) => Promise<{ data: unknown }>
 }) {
   const calls: { before?: string; limit?: number }[] = []
   const stopped: { sessionID: string; directory?: string }[] = []
   const aborted: { sessionID: string; directory?: string }[] = []
+  const deleted: { sessionID: string; directory?: string }[] = []
   const prompted: Array<Record<string, unknown>> = []
   const reverted: Array<Record<string, unknown>> = []
   const created: Array<Record<string, unknown>> = []
@@ -80,6 +87,7 @@ function createClient(options?: {
     calls,
     stopped,
     aborted,
+    deleted,
     prompted,
     reverted,
     created,
@@ -90,7 +98,8 @@ function createClient(options?: {
       list: async () => ({ data: [] }),
       create: async (params: Record<string, unknown>) => {
         created.push(params)
-        return options?.createDeferred?.promise ?? { data: mkSession() }
+        if (options?.createSession) return options.createSession(params, created.length - 1)
+        return options?.createDeferred?.promise ?? { data: mkCreatedSession() }
       },
       get: async (params: { sessionID: string; directory?: string }) => {
         if (options?.sessionGet) return options.sessionGet(params)
@@ -109,6 +118,7 @@ function createClient(options?: {
       abort: async (params: { sessionID: string; directory?: string }) => {
         aborted.push(params)
         if (params.directory && options?.abortFailures?.includes(params.directory)) throw new Error("abort failed")
+        await options?.abortDeferred?.promise
         return { data: true }
       },
       messages: async (params: { before?: string; limit?: number }) => {
@@ -116,7 +126,8 @@ function createClient(options?: {
         if (options?.messagesDeferred) return options.messagesDeferred.promise
         return mkResult(options?.messagesData ?? [])
       },
-      delete: async () => {
+      delete: async (params: { sessionID: string; directory?: string }) => {
+        deleted.push(params)
         if (options?.deleteDeferred) return options.deleteDeferred.promise
         return { data: {} }
       },
@@ -197,8 +208,10 @@ function createConnection(client: ReturnType<typeof createClient>) {
     recordMessageSessionId: () => undefined,
     notifyNotificationDismissed: () => undefined,
     pruneSession: () => undefined,
-    registerFocused: () => undefined,
-    unregisterFocused: () => undefined,
+    registerVisible: () => undefined,
+    unregisterVisible: () => undefined,
+    registerAttached: () => undefined,
+    unregisterAttached: () => undefined,
   }
 }
 
@@ -209,6 +222,8 @@ type ProviderInternals = {
   contextSessionID: string | undefined
   sessionDirectories: Map<string, string>
   trackedSessionIds: Set<string>
+  openSessionIds: Set<string>
+  draftSessions: Map<string, { sid: string; dir: string; expires: number }>
   checkpoints: Map<string, Promise<void>>
   revisions: Map<string, { id: string; seq: number }>
   streams: { push: (msg: PartUpdate) => void }
@@ -218,10 +233,12 @@ type ProviderInternals = {
   stopCurrentSessionProcesses: (next?: string) => void
   handleEvent: (event: unknown, directory?: string) => void
   handleAbort: (sid?: string) => Promise<void>
+  resolveSession: (sid?: string, draft?: string, context?: string, dir?: string) => Promise<unknown>
   handleCostAlertResponse: (sid: string, limit: number, response: "continue" | "stop") => Promise<void>
   setMaxCost: (value: unknown) => void
   handleRevertSession: (sid: string, messageID: string) => Promise<void>
   handleSendMessage: (text: string, messageID?: string, sessionID?: string, draftID?: string) => Promise<void>
+  trackOpenSessions: (ids: string[]) => void
   fetchAndSendSandboxDefault: (directory?: string, requestID?: string) => Promise<void>
   handleSetSandboxDefault: (enabled: boolean, requestID: string, directory?: string) => Promise<void>
   handleToggleSandbox: (input: { sessionID: string; requestID: string }) => Promise<void>
@@ -308,6 +325,87 @@ describe("KiloProvider.handleAbort", () => {
     expect(sent.at(-1)).toMatchObject({ type: "sessionStatus", sessionID: "s1", status: "busy" })
     expect(error).toHaveBeenCalledTimes(1)
     error.mockRestore()
+  })
+
+  it("snapshots every session owner before provider disposal", async () => {
+    const pending = defer<void>()
+    const client = createClient({ abortDeferred: pending })
+    const { provider, internal } = makeProvider(client)
+    internal.handleEvent(
+      {
+        type: "session.status",
+        properties: { sessionID: "s1", status: { type: "busy" } },
+      },
+      "/repo",
+    )
+    provider.setSessionDirectory("s1", "/repo/worktree")
+    provider.setSessionDirectory("s2", "/repo/other")
+
+    const stopped = provider.abortSessions(["s1", "s2", "s2"])
+    provider.dispose()
+
+    expect(client.aborted).toEqual([
+      { sessionID: "s1", directory: "/repo" },
+      { sessionID: "s1", directory: "/repo/worktree" },
+      { sessionID: "s2", directory: "/repo/other" },
+    ])
+    pending.resolve(undefined)
+    await stopped
+  })
+
+  it("discards a session created after its pending tab closes", async () => {
+    const created = defer<{ data: ReturnType<typeof mkCreatedSession> }>()
+    const client = createClient({ createDeferred: created })
+    const { provider, internal, sent } = makeProvider(client)
+
+    const resolving = internal.resolveSession(undefined, "pending:1", "local")
+    await provider.abortSessions(["pending:1"])
+    created.resolve({ data: mkCreatedSession() })
+
+    expect(await resolving).toBeUndefined()
+    expect(client.deleted).toEqual([{ sessionID: "created", directory: "/repo" }])
+    expect(sent).not.toContainEqual(expect.objectContaining({ type: "sessionCreated" }))
+  })
+
+  it("does not tombstone a pending tab that never started creating", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+
+    await provider.abortSessions(["pending:1"])
+    expect(await internal.resolveSession(undefined, "pending:1", "local")).toBeDefined()
+    expect(client.deleted).toEqual([])
+  })
+
+  it("does not submit a prompt when its pending tab closes after creation", async () => {
+    const context = defer<Record<string, never>>()
+    const client = createClient()
+    const { provider, internal, sent } = makeProvider(client)
+    internal.gatherEditorContext = () => context.promise
+
+    const sending = internal.handleSendMessage("hello", "msg-1", undefined, "pending:1")
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(sent).toContainEqual(expect.objectContaining({ type: "sessionCreated" }))
+
+    await provider.abortSessions(["pending:1"])
+    context.resolve({})
+    await sending
+
+    expect(client.aborted).toEqual([{ sessionID: "created", directory: "/repo" }])
+    expect(client.prompted).toEqual([])
+
+    await provider.abortSessions(["pending:1"])
+    expect(client.aborted).toHaveLength(1)
+  })
+
+  it("releases draft routing after the webview adopts the created session", async () => {
+    const client = createClient()
+    const { provider, internal } = makeProvider(client)
+
+    expect(await internal.resolveSession(undefined, "pending:1", "local")).toBeDefined()
+    provider.acknowledgeDraft("pending:1", "created")
+    await provider.abortSessions(["pending:1"])
+
+    expect(client.aborted).toEqual([])
   })
 })
 
@@ -438,10 +536,42 @@ describe("KiloProvider sandbox toggle", () => {
   })
 })
 
+describe("KiloProvider sidebar tabs", () => {
+  it("creates distinct sessions for explicit drafts even when another session is current", async () => {
+    const client = createClient({
+      createSession: async (_params, index) => ({ data: { ...mkSession(), id: `s${index + 1}` } }),
+    })
+    const { internal } = makeProvider(client)
+    internal.gatherEditorContext = async () => ({})
+
+    await internal.handleSendMessage("first", "m1", undefined, "draft-1")
+    await internal.handleSendMessage("second", "m2", undefined, "draft-2")
+    await internal.handleSendMessage("second follow-up", "m3", undefined, "draft-2")
+
+    expect(client.created).toHaveLength(2)
+    expect(client.prompted.map((call) => call.sessionID)).toEqual(["s1", "s2", "s2"])
+
+    internal.trackOpenSessions(["s1", "s2"])
+    expect(internal.draftSessions.size).toBe(0)
+  })
+
+  it("untracks sessions removed from the sidebar working set", () => {
+    const client = createClient()
+    const { internal } = makeProvider(client)
+
+    internal.trackOpenSessions(["s1", "s2"])
+    internal.trackOpenSessions(["s2"])
+
+    expect(internal.openSessionIds).toEqual(new Set(["s2"]))
+    expect(internal.trackedSessionIds).toEqual(new Set(["s2"]))
+  })
+})
+
 describe("KiloProvider revert ordering", () => {
   it("unwraps the nested sync payload emitted by the live SSE endpoint", () => {
     const event = unwrapSyncEvent({
       type: "sync",
+      id: "evt_clear",
       syncEvent: {
         type: "session.updated.1",
         id: "evt_clear",

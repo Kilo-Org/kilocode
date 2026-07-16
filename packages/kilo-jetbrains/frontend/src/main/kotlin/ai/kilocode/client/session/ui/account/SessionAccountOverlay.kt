@@ -124,7 +124,8 @@ internal class SessionAccountOverlay(
         var layout = false
 
         val orgs = prof.organizations
-        val next = listOf(AccountChoice(null, KiloBundle.message("profile.personalAccount"))) +
+        val personal = prof.hasPersonalAccount
+        val next = (if (personal) listOf(AccountChoice(null, KiloBundle.message("profile.personalAccount"))) else emptyList()) +
             orgs.map { org -> AccountChoice(org.id, org.name) }
         if (next != choices) {
             choices = next
@@ -133,7 +134,7 @@ internal class SessionAccountOverlay(
 
         if (currentOrgId != prof.currentOrgId) currentOrgId = prof.currentOrgId
 
-        val activeId = if (switching) target else prof.currentOrgId
+        val activeId = if (switching) target else prof.currentOrgId ?: if (personal) null else orgs.firstOrNull()?.id
         val active = choices.firstOrNull { it.org == activeId } ?: choices.firstOrNull()
         val title = "${active?.title ?: " "} ▾"
         if (picker.text != title) {

@@ -206,6 +206,7 @@ class SessionHeaderPanel(
                 is SessionModelEvent.DiffUpdated,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
+                is SessionModelEvent.RevertChanged,
                 is SessionModelEvent.Compacted,
                 is SessionModelEvent.HistoryLoaded,
                 is SessionModelEvent.Cleared,

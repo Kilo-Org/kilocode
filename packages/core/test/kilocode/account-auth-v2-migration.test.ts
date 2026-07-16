@@ -1,16 +1,16 @@
 import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
-import { AccountV2 } from "@opencode-ai/core/account"
+import { Auth } from "@opencode-ai/core/auth"
 import { EventV2 } from "@opencode-ai/core/event"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { tmpdir } from "../fixture/tmpdir"
 import { it } from "../lib/effect"
 
 function layer(dir: string) {
-  return AccountV2.layer.pipe(
-    Layer.provide(AppFileSystem.defaultLayer),
+  return Auth.layer.pipe(
+    Layer.provide(FSUtil.defaultLayer),
     Layer.provideMerge(EventV2.defaultLayer),
     Layer.provide(Global.layerWith({ data: dir })),
   )
@@ -29,7 +29,7 @@ const auth = Effect.acquireRelease(
     }),
 )
 
-describe("AccountV2 auth-v2 migration", () => {
+describe("Auth auth-v2 migration", () => {
   it.live("preserves multiple accounts, active selection, and Kilo organization", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -72,10 +72,10 @@ describe("AccountV2 auth-v2 migration", () => {
               yield* Effect.promise(() => Bun.write(path.join(tmp.path, "auth-v2.json"), JSON.stringify(store)))
 
               const result = yield* Effect.gen(function* () {
-                const accounts = yield* AccountV2.Service
+                const accounts = yield* Auth.Service
                 return {
                   all: yield* accounts.all(),
-                  active: yield* accounts.active(AccountV2.ServiceID.make("kilo")),
+                  active: yield* accounts.active(Auth.ServiceID.make("kilo")),
                 }
               }).pipe(Effect.provide(layer(tmp.path)))
 

@@ -4,14 +4,14 @@ import { symlink } from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { LSP } from "../../src/lsp/lsp"
 import { Instruction } from "../../src/session/instruction"
 import { Truncate } from "../../src/tool/truncate"
 import { MessageID, SessionID } from "../../src/session/schema"
 import { ReadTool } from "../../src/tool/read"
 import { Tool } from "../../src/tool/tool"
-import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const baseCtx = {
@@ -30,11 +30,12 @@ const expandCtx = { ...baseCtx, extra: { includeDirectoryFiles: true } }
 const it = testEffect(
   Layer.mergeAll(
     Agent.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     Instruction.defaultLayer,
     LSP.defaultLayer,
     Truncate.defaultLayer,
+    testInstanceStoreLayer,
   ),
 )
 
@@ -60,12 +61,12 @@ const exec = Effect.fn("ReadDirectoryTest.exec")(function* (
 })
 
 const put = Effect.fn("ReadDirectoryTest.put")(function* (p: string, content: string | Uint8Array) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   yield* fs.writeWithDirs(p, content)
 })
 
 describe("kilocode directory reads", () => {
-  it.live("includes top-level file contents for directory reads", () =>
+  it.live("lists directory entries without reading child contents", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
       yield* put(path.join(dir, "folder", "a.txt"), "alpha")
@@ -75,10 +76,10 @@ describe("kilocode directory reads", () => {
       const result = yield* exec(dir, { filePath: path.join(dir, "folder") })
 
       expect(result.output).toContain("a.txt")
-      expect(result.output).toContain('<file_content path="folder/a.txt">\nalpha\n</file_content>')
+      expect(result.output).not.toContain("alpha")
       expect(result.output).not.toContain('<file_content path="folder/nested/b.txt">')
       expect(result.output).not.toContain('<file_content path="folder/binary.bin">')
-      expect(result.metadata.loaded).toContain(path.join(dir, "folder", "a.txt"))
+      expect(result.metadata.loaded).toEqual([])
     }),
   )
 

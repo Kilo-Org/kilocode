@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
@@ -68,6 +70,29 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(33, c3.y)   // 10 + 4 + 15 + 4
     }
 
+    fun `test user prompt after first component uses prompt gap`() {
+        val p = panel(gap = 4, width = 300)
+        val c1 = label(height = 20)
+        val c2 = view(height = 30, kind = SessionView.Kind.UserPrompt)
+        p.add(c1)
+        p.add(c2)
+        p.doLayout()
+
+        assertEquals(20 + JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP), c2.y)
+    }
+
+    fun `test first user prompt uses standard gap`() {
+        val p = panel(gap = 4, width = 300)
+        val c1 = view(height = 20, kind = SessionView.Kind.UserPrompt)
+        val c2 = label(height = 30)
+        p.add(c1)
+        p.add(c2)
+        p.doLayout()
+
+        assertEquals(0, c1.y)
+        assertEquals(20 + 4, c2.y)
+    }
+
     fun `test all children receive full available width`() {
         val p = panel(width = 500)
         val c1 = label(height = 20)
@@ -83,15 +108,15 @@ class SessionLayoutTest : BasePlatformTestCase() {
     fun `test layout padding offsets children and reduces available width`() {
         val p = panel(
             width = 500,
-            pad = JBUI.insets(6, 12, 8, 16),
+            pad = Insets(6, 12, 8, 16),
         )
         val child = label(height = 20)
         p.add(child)
         p.doLayout()
 
-        assertEquals(12, child.x)
-        assertEquals(6, child.y)
-        assertEquals(500 - 12 - 16, child.width)
+        assertEquals(JBUI.scale(12), child.x)
+        assertEquals(JBUI.scale(6), child.y)
+        assertEquals(500 - JBUI.scale(12) - JBUI.scale(16), child.width)
         assertEquals(20, child.height)
     }
 
@@ -99,7 +124,7 @@ class SessionLayoutTest : BasePlatformTestCase() {
         val p = panel(
             gap = 8,
             width = 300,
-            pad = JBUI.insets(5, 10, 7, 11),
+            pad = Insets(5, 10, 7, 11),
         )
         val c1 = label(height = 20)
         val c2 = label(height = 30)
@@ -107,12 +132,12 @@ class SessionLayoutTest : BasePlatformTestCase() {
         p.add(c2)
         p.doLayout()
 
-        assertEquals(10, c1.x)
-        assertEquals(5, c1.y)
-        assertEquals(10, c2.x)
-        assertEquals(5 + 20 + 8, c2.y)
-        assertEquals(300 - 10 - 11, c1.width)
-        assertEquals(300 - 10 - 11, c2.width)
+        assertEquals(JBUI.scale(10), c1.x)
+        assertEquals(JBUI.scale(5), c1.y)
+        assertEquals(JBUI.scale(10), c2.x)
+        assertEquals(JBUI.scale(5) + 20 + JBUI.scale(8), c2.y)
+        assertEquals(300 - JBUI.scale(10) - JBUI.scale(11), c1.width)
+        assertEquals(300 - JBUI.scale(10) - JBUI.scale(11), c2.width)
     }
 
     fun `test user prompt is inset from left when enough width remains`() {
@@ -138,13 +163,13 @@ class SessionLayoutTest : BasePlatformTestCase() {
     }
 
     fun `test user prompt inset composes with layout padding`() {
-        val p = panel(width = 350, pad = JBUI.insets(0, 12, 0, 18))
+        val p = panel(width = 350, pad = Insets(0, 12, 0, 18))
         val child = view(height = 20, kind = SessionView.Kind.UserPrompt)
         p.add(child)
         p.doLayout()
 
-        assertEquals(12 + 100, child.x)
-        assertEquals(350 - 12 - 18 - 100, child.width)
+        assertEquals(JBUI.scale(12) + JBUI.scale(100), child.x)
+        assertEquals(350 - JBUI.scale(12) - JBUI.scale(18) - JBUI.scale(100), child.width)
         assertEquals(20, child.height)
     }
 
@@ -177,13 +202,13 @@ class SessionLayoutTest : BasePlatformTestCase() {
     }
 
     fun `test only invisible children produce padding height`() {
-        val p = panel(gap = 8, width = 300, pad = JBUI.insets(5, 0, 7, 0))
+        val p = panel(gap = 8, width = 300, pad = Insets(5, 0, 7, 0))
         val c = label(height = 20).also { it.isVisible = false }
         p.add(c)
         p.doLayout()
 
         val size = p.layout.preferredLayoutSize(p)
-        assertEquals(5 + 7, size.height)
+        assertEquals(JBUI.scale(5) + JBUI.scale(7), size.height)
     }
 
     // ---- preferred size ------
@@ -199,6 +224,16 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(10 + 4 + 15 + 4 + 20, size.height)
     }
 
+    fun `test preferredLayoutSize uses prompt gap before non-first user prompt`() {
+        val p = panel(gap = 4, width = 300)
+        p.add(label(height = 10))
+        p.add(view(height = 15, kind = SessionView.Kind.UserPrompt))
+        p.doLayout()
+
+        val size = p.layout.preferredLayoutSize(p)
+        assertEquals(10 + JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP) + 15, size.height)
+    }
+
     fun `test preferredLayoutSize with no children is zero`() {
         val p = panel(width = 300)
         val size = p.layout.preferredLayoutSize(p)
@@ -206,14 +241,44 @@ class SessionLayoutTest : BasePlatformTestCase() {
     }
 
     fun `test preferredLayoutSize includes layout padding`() {
-        val p = panel(gap = 4, width = 300, pad = JBUI.insets(5, 10, 7, 11))
+        val p = panel(gap = 4, width = 300, pad = Insets(5, 10, 7, 11))
         p.add(label(height = 10))
         p.add(label(height = 15))
         p.doLayout()
 
         val size = p.layout.preferredLayoutSize(p)
         assertEquals(300, size.width)
-        assertEquals(5 + 10 + 4 + 15 + 7, size.height)
+        assertEquals(JBUI.scale(5) + 10 + JBUI.scale(4) + 15 + JBUI.scale(7), size.height)
+    }
+
+    fun `test preferredLayoutSize is not double-scaled by user scale factor`() {
+        // IDE zoom raises the JBUI user scale factor. Child heights and gaps are already
+        // scaled px, so the transcript preferred height must not be scaled a second time.
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+            val p = panel(gap = 4, width = 300)
+            p.add(label(height = 10))
+            p.add(label(height = 15))
+            p.add(label(height = 20))
+            p.doLayout()
+
+            val size = p.layout.preferredLayoutSize(p)
+            assertEquals(10 + JBUI.scale(4) + 15 + JBUI.scale(4) + 20, size.height)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
+
+    fun `test layout scales base gap at layout time`() {
+        val p = panel(gap = 8, width = 300)
+        val c1 = label(height = 20)
+        val c2 = label(height = 30)
+        p.add(c1)
+        p.add(c2)
+        p.doLayout()
+
+        assertEquals(20 + JBUI.scale(8), c2.y)
     }
 
     // ---- helpers ------

@@ -45,13 +45,14 @@ import javax.swing.text.html.StyleSheet
 class PermissionView(
     private val reply: (String, PermissionReplyDto) -> Unit,
     private val selection: SessionSelection? = null,
+    focus: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget, SessionView {
     override val sessionViewKind = SessionView.Kind.Default
 
     private var requestId: String? = null
     private var style = SessionEditorStyle.current()
 
-    private val card = BaseQuestionView(selection)
+    private val card = BaseQuestionView(selection, focus)
 
     private val body = Stack.vertical()
 

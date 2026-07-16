@@ -97,3 +97,6 @@ internal fun hiddenProvider(provider: ProviderSettingsProviderDto) = provider.id
 
 internal fun configured(provider: ProviderSettingsProviderDto, state: ProviderSettingsDto, ids: Set<String>) =
     provider.id in ids || provider.key != null || provider.source == "config" || provider.id in state.config
+
+internal fun customEditable(provider: ProviderSettingsProviderDto, state: ProviderSettingsDto) =
+    state.config[provider.id]?.npm == CUSTOM_PROVIDER_PACKAGE

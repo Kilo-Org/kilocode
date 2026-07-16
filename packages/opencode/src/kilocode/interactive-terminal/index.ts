@@ -10,7 +10,7 @@ import { Shell } from "@/shell/shell"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
 import * as Log from "@opencode-ai/core/util/log"
-import type { Disp, Proc } from "#pty"
+import type { Disp, Proc } from "@opencode-ai/core/pty/driver"
 import { Context, Effect, Layer, Schema, Types } from "effect"
 import path from "path"
 import stripAnsi from "strip-ansi"
@@ -301,7 +301,7 @@ export namespace InteractiveTerminal {
     const cols = Math.max(1, input.cols ?? DEFAULT_COLS)
     const rows = Math.max(1, input.rows ?? DEFAULT_ROWS)
     const args = Shell.args(input.shell, gate(input.shell, input.command), cwd)
-    const { spawn } = await import("#pty")
+    const { spawn } = await import("@opencode-ai/core/pty/driver")
     const proc = spawn(input.shell, args, {
       name: "xterm-256color",
       cols,

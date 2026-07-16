@@ -137,7 +137,7 @@ export const dict = {
   "revert.banner.count_other": "已還原 {{count}} 則訊息",
   "revert.banner.redo": "重做",
   "revert.banner.redo.all": "全部重做",
-  "revert.banner.hint": "傳送新訊息以使此變更永久生效",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "等待 Agent 完成",
   "command.session.compact": "精簡工作階段",
   "command.session.compact.description": "總結工作階段以減少上下文大小",
@@ -616,7 +616,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep搜尋",
   "ui.permission.toolLabel.webSearch": "Web搜尋",
   "ui.permission.toolLabel.list": "列出",
-  "ui.permission.toolLabel.externalDirectory": "讀取外部目錄",
+  "ui.permission.toolLabel.externalDirectory": "存取外部目錄",
   "ui.permission.toolLabel.webFetch": "Web取得",
   "ui.permission.toolLabel.task": "任務",
   "ui.permission.toolLabel.skill": "技能",
@@ -928,6 +928,7 @@ export const dict = {
   "provider.custom.models.name.label": "名稱",
   "provider.custom.models.name.placeholder": "顯示名稱",
   "provider.custom.models.reasoning.label": "推理",
+  "provider.custom.models.modalities.image": "圖片",
   "provider.custom.models.variants.label": "變體",
   "provider.custom.models.variants.add": "新增變體",
   "provider.custom.models.variants.remove": "移除變體",
@@ -1347,6 +1348,12 @@ export const dict = {
   "settings.experimental.batch.description": "啟用多個工具呼叫的批次處理",
   "settings.experimental.codebaseSearch.title": "程式碼庫搜尋",
   "settings.experimental.codebaseSearch.description": "啟用 AI 驅動的自然語言程式碼庫搜尋",
+  "settings.experimental.imageGeneration.title": "圖像生成",
+  "settings.experimental.imageGeneration.description": "啟用 AI 圖像生成",
+  "settings.experimental.imageGenerationModel.title": "圖像模型",
+  "settings.experimental.imageGenerationModel.description": "圖像生成模型",
+  "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
+
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",
   "settings.models.speechToText.disabledDescription":
@@ -1360,11 +1367,19 @@ export const dict = {
   "settings.sandboxing.title": "沙盒",
   "settings.sandboxing.network.title": "限制網路存取",
   "settings.sandboxing.network.description":
-    "封鎖模型發起的命令和 HTTP 工具的對外網路存取。本機 MCP 伺服器和外掛程式鉤子不受此限制。供應商與模型推論流量仍然可用。",
+    "阻止由模型發起的命令和 HTTP 工具直接進行對外存取。受限時，本機和遠端 MCP 工具均無法使用。提供者流量和受信任的外掛程式掛鉤不受此限制。",
 
+  "settings.sandboxing.allowedHosts.title": "允許的網路目的地",
+  "settings.sandboxing.allowedHosts.description":
+    "適用於沙盒 HTTP 和 HTTPS Proxy 流量的 DNS 主機與連接埠目標。GitHub CLI 和 HTTPS Git 通常需要 github.com:443 和 api.github.com:443。變更將套用至新工作階段。",
   "settings.sandboxing.writablePaths.title": "額外可寫路徑",
   "settings.sandboxing.writablePaths.description":
     "沙盒允許寫入的額外檔案系統路徑（例如 /tmp、/var/log）。沙盒啟用後，這些路徑會與預設可寫路徑合併。",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "啟用 SWE-Pruner：根據智能體提供的聚焦問題，對讀取、搜尋與 shell 工具的大型輸出進行任務感知裁剪",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner 模型",
+  "settings.experimental.swePrunerModel.description": "用於裁剪工具輸出的模型;預設為已設定的小模型",
   "settings.experimental.mcpTimeout.title": "MCP 逾時（毫秒）",
   "settings.experimental.mcpTimeout.description": "MCP 伺服器請求的逾時時間（毫秒）",
   "settings.experimental.remote.title": "Remote 控制",
@@ -1388,11 +1403,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "自訂提示詞",
   "settings.agentBehaviour.prompt.description": "此 Agent 的附加系統提示詞",
   "settings.agentBehaviour.temperature.title": "溫度",
-  "settings.agentBehaviour.temperature.description": "取樣溫度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "控制 AI 回應的隨機程度（0–2）。較低的值（例如 0.2）會產生更聚焦、更一致的輸出。較高的值（例如 1.0）會產生更多樣、更有創意的回應。留空則使用模型預設值。",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核取樣參數（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "核取樣閾值（0–1）。將候選詞元限制為累積機率達到 P 的最小集合。較低的值會讓輸出更聚焦；較高的值則允許更多樣性。留空則使用模型預設值。",
   "settings.agentBehaviour.maxSteps.title": "最大步數",
-  "settings.agentBehaviour.maxSteps.description": "最大 Agent 迭代次數",
+  "settings.agentBehaviour.maxSteps.description":
+    "Agent 的最大步驟數。達到上限後，Agent 會收到指示，停止使用工具並提供最終回應。對於複雜的多步驟工作可提高此值；降低此值可讓回應更短且更容易預測。",
   "settings.agentBehaviour.hidden.title": "隱藏",
   "settings.agentBehaviour.hidden.description": "在聊天輸入的模式切換器中隱藏此 Agent",
   "settings.agentBehaviour.disable.title": "已停用",
@@ -1487,8 +1505,8 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "未設定自訂命令。將命令新增至 opencode.json 即可在此處看到。",
   "settings.agentBehaviour.workflows.detail.description": "描述",
   "settings.agentBehaviour.workflows.detail.template": "範本",
-  "settings.experimental.sandbox.title": "沙盒",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "沙盒",
+  "settings.sandboxing.enabled.description":
     "在作業系統層級沙盒中執行代理 shell 指令，將寫入限制在專案和 Kilo 狀態目錄內",
 
   "settings.autoApprove.description":
@@ -1576,6 +1594,10 @@ export const dict = {
     "在產生 commit messages 時發送給 AI 的系統 prompt。這將完全取代預設的 prompt。",
   "settings.commitMessage.prompt.placeholder":
     "例如：按照 conventional commits 格式用西班牙語產生 commit messages。只回傳 commit message。",
+
+  "settings.commitMessage.language.sync": "跟隨介面語言",
+  "settings.commitMessage.language.title": "語言",
+  "settings.commitMessage.language.description": "選擇用於 AI 產生 commit message 的語言：",
 
   "settings.display.username.title": "使用者名稱",
   "settings.display.username.description": "對話中顯示的自訂使用者名稱",
@@ -1777,4 +1799,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "正在載入分支…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "計畫已準備就緒：",
+  "chat.search.placeholder": "搜尋聊天…",
+  "chat.search.toggle": "搜尋聊天",
+  "chat.search.matchCase": "區分大小寫",
+  "chat.search.matchWholeWord": "全字拼寫須相符",
+  "chat.search.useRegex": "使用規則運算式",
+  "chat.search.previousMatch": "上一個相符項",
+  "chat.search.nextMatch": "下一個相符項",
+  "chat.search.close": "關閉搜尋",
+  "chat.search.invalidRegex": "規則運算式無效",
+  "chat.search.noResults": "無結果",
+  "chat.search.searchingHistory": "正在搜尋較早的訊息…",
 } satisfies Partial<Record<Keys, string>>

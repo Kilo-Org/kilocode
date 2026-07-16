@@ -16,13 +16,12 @@ import {
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
+import type { SyncPayload } from "../../src/services/cli-backend/sdk-sse-adapter"
 import type {
   Session,
   Agent,
   Provider,
   Event,
-  SyncEventMessagePartUpdated,
-  SyncEventMessageUpdated,
   EventSessionStatus,
   EventSessionTurnClose,
   EventSandboxStatusChanged,
@@ -35,12 +34,15 @@ import type {
   EventSuggestionShown,
   EventSuggestionAccepted,
   EventSuggestionDismissed,
-  SyncEventSessionCreated,
-  SyncEventSessionUpdated,
   EventServerConnected,
   TextPart,
   AssistantMessage,
 } from "@kilocode/sdk/v2/client"
+
+type SyncEventMessagePartUpdated = Extract<SyncPayload, { name: "message.part.updated.1" }>
+type SyncEventMessageUpdated = Extract<SyncPayload, { name: "message.updated.1" }>
+type SyncEventSessionCreated = Extract<SyncPayload, { name: "session.created.1" }>
+type SyncEventSessionUpdated = Extract<SyncPayload, { name: "session.updated.1" }>
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {

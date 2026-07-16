@@ -662,7 +662,13 @@ class KiloCliDataParserTest {
                         "title": "Updated title",
                         "version": "1",
                         "time": { "created": 1.0, "updated": 2.0 },
-                        "summary": { "additions": 3, "deletions": 1, "files": 2 }
+                        "summary": { "additions": 3, "deletions": 1, "files": 2 },
+                        "revert": {
+                            "messageID": "msg_rollback",
+                            "partID": "prt_rollback",
+                            "snapshot": "snap_rollback",
+                            "diff": "diff --git a/file b/file"
+                        }
                     }
                 }
             """)
@@ -673,6 +679,8 @@ class KiloCliDataParserTest {
             assertEquals("ses_1", result.sessionID)
             assertEquals("Updated title", result.session.title)
             assertEquals(2, result.session.summary?.files)
+            assertEquals("msg_rollback", result.session.revert?.messageID)
+            assertEquals("prt_rollback", result.session.revert?.partID)
         }
 
         @Test
@@ -2020,6 +2028,26 @@ class KiloCliDataParserTest {
         fun `buildSummarizeJson - writes provider and model`() {
             val result = KiloCliDataParser.buildSummarizeJson(ModelSelectionDto("anthropic", "claude-4"))
             assertEquals("""{"providerID":"anthropic","modelID":"claude-4"}""", result)
+        }
+
+        // ---- buildRevertJson ----
+
+        @Test
+        fun `buildRevertJson - writes message only`() {
+            val result = KiloCliDataParser.buildRevertJson("m1", null)
+            assertEquals("""{"messageID":"m1"}""", result)
+        }
+
+        @Test
+        fun `buildRevertJson - writes message and part`() {
+            val result = KiloCliDataParser.buildRevertJson("m1", "p1")
+            assertEquals("""{"messageID":"m1","partID":"p1"}""", result)
+        }
+
+        @Test
+        fun `buildRevertJson - escapes ids`() {
+            val result = KiloCliDataParser.buildRevertJson("m\"\\1", "p\"\\1")
+            assertEquals("""{"messageID":"m\"\\1","partID":"p\"\\1"}""", result)
         }
 
         // ---- buildConfigPartial ----

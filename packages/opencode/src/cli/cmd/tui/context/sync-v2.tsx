@@ -1,5 +1,6 @@
 import { useEvent } from "@tui/context/event"
 import type {
+  Event,
   SessionMessage,
   SessionMessageAssistant,
   SessionMessageAssistantReasoning,
@@ -15,6 +16,11 @@ function activeAssistant(messages: SessionMessage[]) {
   if (index < 0) return
   const assistant = messages[index]
   return assistant?.type === "assistant" ? assistant : undefined
+}
+
+function ownedAssistant(messages: SessionMessage[], messageID: string) {
+  const message = messages.find((message) => message.type === "assistant" && message.id === messageID)
+  return message?.type === "assistant" ? message : undefined
 }
 
 function activeCompaction(messages: SessionMessage[]) {
@@ -37,14 +43,21 @@ function latestTool(assistant: SessionMessageAssistant | undefined, callID?: str
   )
 }
 
-function latestText(assistant: SessionMessageAssistant | undefined) {
-  return assistant?.content.findLast((item): item is SessionMessageAssistantText => item.type === "text")
+function latestText(assistant: SessionMessageAssistant | undefined, textID: string) {
+  return assistant?.content.findLast(
+    (item): item is SessionMessageAssistantText => item.type === "text" && item.id === textID,
+  )
 }
 
 function latestReasoning(assistant: SessionMessageAssistant | undefined, reasoningID: string) {
   return assistant?.content.findLast(
     (item): item is SessionMessageAssistantReasoning => item.type === "reasoning" && item.id === reasoningID,
   )
+}
+
+function prepend(messages: SessionMessage[], message: SessionMessage) {
+  if (messages.some((item) => item.id === message.id)) return
+  messages.unshift(message)
 }
 
 export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext({
@@ -60,6 +73,18 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
 
     const event = useEvent()
     const sdk = useSDK()
+    const applied = new Set<string>()
+    const buffering = new Map<string, Event[]>()
+    const syncing = new Map<string, Promise<void>>()
+
+    function duplicate(id: string) {
+      if (applied.has(id)) return true
+      applied.add(id)
+      if (applied.size <= 1000) return false
+      const oldest = applied.values().next()
+      if (!oldest.done) applied.delete(oldest.value)
+      return false
+    }
 
     function update(sessionID: string, fn: (messages: SessionMessage[]) => void) {
       setStore(
@@ -70,229 +95,362 @@ export const { use: useSyncV2, provider: SyncProviderV2 } = createSimpleContext(
       )
     }
 
-    event.sync((event) => {
-      switch (event.name) {
-        case "session.next.prompted.1": {
-          update(event.data.sessionID, (draft) => {
-            draft.unshift({
-              id: event.id,
+    async function hydrate(sessionID: string) {
+      const pending: Event[] = []
+      const before = JSON.parse(JSON.stringify(store.messages[sessionID] ?? [])) as SessionMessage[]
+      buffering.set(sessionID, pending)
+      try {
+        const response = await sdk.client.v2.session.messages({ sessionID })
+        const messages = response.data?.data ?? []
+        const snapshotIDs = new Set(messages.map((message) => message.id))
+        setStore(
+          "messages",
+          sessionID,
+          reconcile([...messages, ...before.filter((message) => !snapshotIDs.has(message.id))]),
+        )
+        buffering.delete(sessionID)
+        for (const event of pending) apply(event)
+      } catch (error) {
+        buffering.delete(sessionID)
+        throw error
+      }
+    }
+
+    function sync(sessionID: string) {
+      const existing = syncing.get(sessionID)
+      if (existing) return existing
+      const result = hydrate(sessionID).finally(() => syncing.delete(sessionID))
+      syncing.set(sessionID, result)
+      return result
+    }
+
+    function apply(event: Event) {
+      switch (event.type) {
+        case "session.next.agent.switched":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
+              type: "agent-switched",
+              agent: event.properties.agent,
+              time: { created: event.properties.timestamp },
+            })
+          })
+          break
+        case "session.next.model.switched":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
+              type: "model-switched",
+              model: event.properties.model,
+              time: { created: event.properties.timestamp },
+            })
+          })
+          break
+        case "session.next.prompted": {
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
               type: "user",
-              text: event.data.prompt.text,
-              files: event.data.prompt.files,
-              agents: event.data.prompt.agents,
-              time: { created: event.data.timestamp },
+              text: event.properties.prompt.text,
+              files: event.properties.prompt.files,
+              agents: event.properties.prompt.agents,
+              references: event.properties.prompt.references,
+              time: { created: event.properties.timestamp },
             })
           })
           break
         }
-        case "session.next.synthetic.1":
-          update(event.data.sessionID, (draft) => {
-            draft.unshift({
-              id: event.id,
+        case "session.next.prompt.admitted":
+          break
+        case "session.next.prompt.promoted":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
+              type: "user",
+              text: event.properties.prompt.text,
+              files: event.properties.prompt.files,
+              agents: event.properties.prompt.agents,
+              references: event.properties.prompt.references,
+              time: { created: event.properties.timeCreated },
+            })
+          })
+          break
+        case "session.next.context.updated":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
+              type: "system",
+              text: event.properties.text,
+              time: { created: event.properties.timestamp },
+            })
+          })
+          break
+        case "session.next.synthetic":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
               type: "synthetic",
-              sessionID: event.data.sessionID,
-              text: event.data.text,
-              time: { created: event.data.timestamp },
+              sessionID: event.properties.sessionID,
+              text: event.properties.text,
+              time: { created: event.properties.timestamp },
             })
           })
           break
-        case "session.next.shell.started.1":
-          update(event.data.sessionID, (draft) => {
-            draft.unshift({
-              id: event.id,
+        case "session.next.shell.started":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
               type: "shell",
-              callID: event.data.callID,
-              command: event.data.command,
+              callID: event.properties.callID,
+              command: event.properties.command,
               output: "",
-              time: { created: event.data.timestamp },
+              time: { created: event.properties.timestamp },
             })
           })
           break
-        case "session.next.shell.ended.1":
-          update(event.data.sessionID, (draft) => {
-            const match = activeShell(draft, event.data.callID)
+        case "session.next.shell.ended":
+          update(event.properties.sessionID, (draft) => {
+            const match = activeShell(draft, event.properties.callID)
             if (!match) return
-            match.output = event.data.output
-            match.time.completed = event.data.timestamp
+            match.output = event.properties.output
+            match.time.completed = event.properties.timestamp
           })
           break
-        case "session.next.step.started.1":
-          update(event.data.sessionID, (draft) => {
+        case "session.next.step.started":
+          update(event.properties.sessionID, (draft) => {
+            if (draft.some((message) => message.id === event.properties.assistantMessageID)) return
             const currentAssistant = activeAssistant(draft)
-            if (currentAssistant) currentAssistant.time.completed = event.data.timestamp
-            draft.unshift({
-              id: event.id,
+            if (currentAssistant) currentAssistant.time.completed = event.properties.timestamp
+            prepend(draft, {
+              id: event.properties.assistantMessageID,
               type: "assistant",
-              agent: event.data.agent,
-              model: event.data.model,
+              agent: event.properties.agent,
+              model: event.properties.model,
               content: [],
-              snapshot: event.data.snapshot ? { start: event.data.snapshot } : undefined,
-              time: { created: event.data.timestamp },
+              snapshot: event.properties.snapshot ? { start: event.properties.snapshot } : undefined,
+              time: { created: event.properties.timestamp },
             })
           })
           break
-        case "session.next.step.ended.1":
-          update(event.data.sessionID, (draft) => {
-            const currentAssistant = activeAssistant(draft)
+        case "session.next.step.ended":
+          update(event.properties.sessionID, (draft) => {
+            const currentAssistant = ownedAssistant(draft, event.properties.assistantMessageID)
             if (!currentAssistant) return
-            currentAssistant.time.completed = event.data.timestamp
-            currentAssistant.finish = event.data.finish
-            currentAssistant.cost = event.data.cost
-            currentAssistant.tokens = event.data.tokens
-            if (event.data.snapshot)
-              currentAssistant.snapshot = { ...currentAssistant.snapshot, end: event.data.snapshot }
+            currentAssistant.time.completed = event.properties.timestamp
+            currentAssistant.finish = event.properties.finish
+            currentAssistant.cost = event.properties.cost
+            currentAssistant.tokens = event.properties.tokens
+            if (event.properties.snapshot)
+              currentAssistant.snapshot = { ...currentAssistant.snapshot, end: event.properties.snapshot }
           })
           break
-        case "session.next.step.failed.1":
-          update(event.data.sessionID, (draft) => {
-            const currentAssistant = activeAssistant(draft)
+        case "session.next.step.failed":
+          update(event.properties.sessionID, (draft) => {
+            const currentAssistant = ownedAssistant(draft, event.properties.assistantMessageID)
             if (!currentAssistant) return
-            currentAssistant.time.completed = event.data.timestamp
+            currentAssistant.time.completed = event.properties.timestamp
             currentAssistant.finish = "error"
-            currentAssistant.error = event.data.error
+            currentAssistant.error = event.properties.error
           })
           break
-        case "session.next.text.started.1":
-          update(event.data.sessionID, (draft) => {
-            activeAssistant(draft)?.content.push({ type: "text", text: "" })
-          })
-          break
-        case "session.next.text.delta.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestText(activeAssistant(draft))
-            if (match) match.text += event.data.delta
-          })
-          break
-        case "session.next.text.ended.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestText(activeAssistant(draft))
-            if (match) match.text = event.data.text
-          })
-          break
-        case "session.next.tool.input.started.1":
-          update(event.data.sessionID, (draft) => {
-            activeAssistant(draft)?.content.push({
-              type: "tool",
-              id: event.data.callID,
-              name: event.data.name,
-              time: { created: event.data.timestamp },
-              state: { status: "pending", input: "" },
-            })
-          })
-          break
-        case "session.next.tool.input.delta.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.data.callID)
-            if (match?.state.status === "pending") match.state.input += event.data.delta
-          })
-          break
-        case "session.next.tool.input.ended.1":
-          break
-        case "session.next.tool.called.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.data.callID)
-            if (!match) return
-            match.time.ran = event.data.timestamp
-            match.provider = event.data.provider
-            match.state = { status: "running", input: event.data.input, structured: {}, content: [] }
-          })
-          break
-        case "session.next.tool.progress.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.data.callID)
-            if (match?.state.status !== "running") return
-            match.state.structured = event.data.structured
-            match.state.content = [...event.data.content]
-          })
-          break
-        case "session.next.tool.success.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.data.callID)
-            if (match?.state.status !== "running") return
-            match.state = {
-              status: "completed",
-              input: match.state.input,
-              structured: event.data.structured,
-              content: [...event.data.content],
-            }
-            match.provider = event.data.provider
-            match.time.completed = event.data.timestamp
-          })
-          break
-        case "session.next.tool.failed.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestTool(activeAssistant(draft), event.data.callID)
-            if (match?.state.status !== "running") return
-            match.state = {
-              status: "error",
-              error: event.data.error,
-              input: match.state.input,
-              structured: match.state.structured,
-              content: match.state.content,
-            }
-            match.provider = event.data.provider
-            match.time.completed = event.data.timestamp
-          })
-          break
-        case "session.next.reasoning.started.1":
-          update(event.data.sessionID, (draft) => {
-            activeAssistant(draft)?.content.push({
-              type: "reasoning",
-              id: event.data.reasoningID,
+        case "session.next.text.started":
+          update(event.properties.sessionID, (draft) => {
+            ownedAssistant(draft, event.properties.assistantMessageID)?.content.push({
+              type: "text",
+              id: event.properties.textID,
               text: "",
             })
           })
           break
-        case "session.next.reasoning.delta.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestReasoning(activeAssistant(draft), event.data.reasoningID)
-            if (match) match.text += event.data.delta
+        case "session.next.text.delta":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestText(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.textID,
+            )
+            if (match) match.text += event.properties.delta
           })
           break
-        case "session.next.reasoning.ended.1":
-          update(event.data.sessionID, (draft) => {
-            const match = latestReasoning(activeAssistant(draft), event.data.reasoningID)
-            if (match) match.text = event.data.text
+        case "session.next.text.ended":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestText(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.textID,
+            )
+            if (match) match.text = event.properties.text
           })
           break
-        case "session.next.retried.1":
-          break
-        case "session.next.compaction.started.1":
-          update(event.data.sessionID, (draft) => {
-            draft.unshift({
-              id: event.id,
-              type: "compaction",
-              reason: event.data.reason,
-              summary: "",
-              time: { created: event.data.timestamp },
+        case "session.next.tool.input.started":
+          update(event.properties.sessionID, (draft) => {
+            ownedAssistant(draft, event.properties.assistantMessageID)?.content.push({
+              type: "tool",
+              id: event.properties.callID,
+              name: event.properties.name,
+              time: { created: event.properties.timestamp },
+              state: { status: "pending", input: "" },
             })
           })
           break
-        case "session.next.compaction.delta.1":
-          update(event.data.sessionID, (draft) => {
-            const match = activeCompaction(draft)
-            if (match) match.summary += event.data.text
+        case "session.next.tool.input.delta":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestTool(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.callID,
+            )
+            if (match?.state.status === "pending") match.state.input += event.properties.delta
           })
           break
-        case "session.next.compaction.ended.1":
-          update(event.data.sessionID, (draft) => {
+        case "session.next.tool.input.ended":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestTool(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.callID,
+            )
+            if (match?.state.status === "pending") match.state.input = event.properties.text
+          })
+          break
+        case "session.next.tool.called":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestTool(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.callID,
+            )
+            if (!match) return
+            match.time.ran = event.properties.timestamp
+            match.provider = event.properties.provider
+            match.state = { status: "running", input: event.properties.input, structured: {}, content: [] }
+          })
+          break
+        case "session.next.tool.progress":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestTool(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.callID,
+            )
+            if (match?.state.status !== "running") return
+            match.state.structured = event.properties.structured
+            match.state.content = [...event.properties.content]
+          })
+          break
+        case "session.next.tool.success":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestTool(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.callID,
+            )
+            if (match?.state.status !== "running") return
+            match.state = {
+              status: "completed",
+              input: match.state.input,
+              structured: event.properties.structured,
+              content: [...event.properties.content],
+              result: event.properties.result,
+            }
+            match.provider = {
+              executed: event.properties.provider.executed || match.provider?.executed === true,
+              metadata: match.provider?.metadata,
+              resultMetadata: event.properties.provider.metadata,
+            }
+            match.time.completed = event.properties.timestamp
+          })
+          break
+        case "session.next.tool.failed":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestTool(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.callID,
+            )
+            if (!match || (match.state.status !== "pending" && match.state.status !== "running")) return
+            match.state = {
+              status: "error",
+              error: event.properties.error,
+              input: typeof match.state.input === "string" ? {} : match.state.input,
+              structured: match.state.status === "running" ? match.state.structured : {},
+              content: match.state.status === "running" ? match.state.content : [],
+              result: event.properties.result,
+            }
+            match.provider = {
+              executed: event.properties.provider.executed || match.provider?.executed === true,
+              metadata: match.provider?.metadata,
+              resultMetadata: event.properties.provider.metadata,
+            }
+            match.time.completed = event.properties.timestamp
+          })
+          break
+        case "session.next.reasoning.started":
+          update(event.properties.sessionID, (draft) => {
+            ownedAssistant(draft, event.properties.assistantMessageID)?.content.push({
+              type: "reasoning",
+              id: event.properties.reasoningID,
+              text: "",
+              providerMetadata: event.properties.providerMetadata,
+            })
+          })
+          break
+        case "session.next.reasoning.delta":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestReasoning(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.reasoningID,
+            )
+            if (match) match.text += event.properties.delta
+          })
+          break
+        case "session.next.reasoning.ended":
+          update(event.properties.sessionID, (draft) => {
+            const match = latestReasoning(
+              ownedAssistant(draft, event.properties.assistantMessageID),
+              event.properties.reasoningID,
+            )
+            if (match) {
+              match.text = event.properties.text
+              if (event.properties.providerMetadata !== undefined)
+                match.providerMetadata = event.properties.providerMetadata
+            }
+          })
+          break
+        case "session.next.retried":
+          break
+        case "session.next.compaction.started":
+          update(event.properties.sessionID, (draft) => {
+            prepend(draft, {
+              id: event.properties.messageID,
+              type: "compaction",
+              reason: event.properties.reason,
+              summary: "",
+              time: { created: event.properties.timestamp },
+            })
+          })
+          break
+        case "session.next.compaction.delta":
+          update(event.properties.sessionID, (draft) => {
+            const match = activeCompaction(draft)
+            if (match) match.summary += event.properties.text
+          })
+          break
+        case "session.next.compaction.ended":
+          update(event.properties.sessionID, (draft) => {
             const match = activeCompaction(draft)
             if (!match) return
-            match.summary = event.data.text
-            match.include = event.data.include
+            match.summary = event.properties.text
+            match.include = event.properties.include
           })
           break
       }
+    }
+
+    event.subscribe((event) => {
+      if (duplicate(event.id)) return
+      if ("sessionID" in event.properties && typeof event.properties.sessionID === "string")
+        buffering.get(event.properties.sessionID)?.push(event)
+      apply(event)
     })
 
     const result = {
       data: store,
       session: {
         message: {
-          async sync(sessionID: string) {
-            const response = await sdk.client.v2.session.messages({ sessionID })
-            setStore("messages", sessionID, reconcile(response.data?.items ?? []))
-          },
+          sync,
           fromSession(sessionID: string) {
             const messages = store.messages[sessionID]
             if (!messages) return []

@@ -4,11 +4,13 @@ import path from "node:path"
 import { expect } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
 import type { Tool as AITool, ToolExecutionOptions } from "ai"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "@/agent/agent"
 import { Bus } from "@/bus"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Format } from "@/format"
@@ -16,7 +18,7 @@ import { LSP } from "@/lsp/lsp"
 import * as ToolNetwork from "@/kilocode/sandbox/network"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
-import { ProjectID } from "@/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import type { InstanceContext } from "@/project/instance-context"
 import { Plugin } from "@/plugin"
 import { MessageV2 } from "@/session/message-v2"
@@ -33,7 +35,7 @@ import { tmpdirScoped } from "../../fixture/fixture"
 import { ProviderTest } from "../../fake/provider"
 import { testEffect } from "../../lib/effect"
 
-const projectID = ProjectID.make("sandbox-session-tools")
+const projectID = ProjectV2.ID.make("sandbox-session-tools")
 const sessionID = SessionID.make("ses_sandbox-session-tools")
 const model = ProviderTest.model()
 const agent: Agent.Info = {
@@ -89,7 +91,7 @@ function context(directory: string, main: string, sandboxes: string[]): Instance
 }
 
 const config = TestConfig.layer({
-  get: () => Effect.succeed({ experimental: { sandbox: true } }),
+  get: () => Effect.succeed({ sandbox: { enabled: true } }),
 })
 const agents = Layer.mock(Agent.Service)({
   get: () => Effect.succeed(agent),
@@ -131,7 +133,9 @@ const base = Layer.mergeAll(
   format,
   truncate,
   Bus.layer,
-  AppFileSystem.defaultLayer,
+  EventV2Bridge.defaultLayer,
+  Database.defaultLayer,
+  FSUtil.defaultLayer,
   CrossSpawnSpawner.defaultLayer,
   RuntimeFlags.layer(),
 )

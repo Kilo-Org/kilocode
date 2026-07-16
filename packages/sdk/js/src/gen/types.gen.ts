@@ -1343,6 +1343,23 @@ export type Config = {
      */
     url?: string
   }
+  /**
+   * Sandbox configuration for agent tools
+   */
+  sandbox?: {
+    /**
+     * Enable sandbox confinement for new sessions (default: false)
+     */
+    enabled?: boolean
+    /**
+     * Control outbound network access from sandboxed tools (default: deny)
+     */
+    network?: "allow" | "deny"
+    /**
+     * Additional filesystem paths that sandboxed tools may write to
+     */
+    writable_paths?: Array<string>
+  }
   experimental?: {
     hook?: {
       file_edited?: {
@@ -1373,14 +1390,6 @@ export type Config = {
      * Enable OpenTelemetry spans for AI SDK calls (using the 'experimental_telemetry' flag)
      */
     openTelemetry?: boolean
-    /**
-     * Run agent tools inside a sandbox that restricts writes to project and Kilo state directories and can restrict outbound network access
-     */
-    sandbox?: boolean
-    /**
-     * Restrict outbound network access for model-originated commands and first-party HTTP tools; local MCP servers and plugin hooks are not covered (default: true)
-     */
-    sandbox_restrict_network?: boolean
     /**
      * Tools that should only be available to primary agents.
      */
