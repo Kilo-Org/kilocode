@@ -33,7 +33,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.profile"
-                groupWeight="4"
+                groupWeight="5"
                 instance="ai.kilocode.client.settings.profile.UserProfileConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.profile.displayName"/>
@@ -41,10 +41,18 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.models"
-                groupWeight="3"
+                groupWeight="4"
                 instance="ai.kilocode.client.settings.models.ModelsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.models.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.context"
+                groupWeight="3"
+                instance="ai.kilocode.client.settings.context.ContextConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.context.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
