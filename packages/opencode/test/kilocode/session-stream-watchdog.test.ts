@@ -258,10 +258,10 @@ const exists = (file: string) =>
   )
 
 // Windows CI runners spawn git-bash noticeably slower than the Unix shells
-// used elsewhere in this file, so the marker file these tests poll for can
-// take longer than 5s to appear even when the tool is already reported as
-// running. Matches the existing platform-aware timeout doubling in
-// test/kilocode/background-process.test.ts.
+// used elsewhere in this file, so give the marker file these tests poll for
+// extra headroom there even with a correctly resolved path (see `posixPath`
+// below for the actual bug this was masking). Matches the existing
+// platform-aware timeout doubling in test/kilocode/background-process.test.ts.
 const waitForFile = (file: string, label: string, duration = process.platform === "win32" ? 15_000 : 5_000) =>
   pollWithTimeout(
     Effect.gen(function* () {
@@ -313,8 +313,18 @@ const assertNotInterrupted = (parts: SessionV1.WithParts["parts"]) => {
   }
 }
 
+// kilocode_change: normalize to forward slashes before embedding in the
+// shell script. `ready`/`release` come from `path.join`, which yields
+// backslash-separated paths on Windows; inside a double-quoted git-bash
+// string a literal backslash is an escape character, so a Windows path can
+// silently mangle into the wrong filename (or a path bash's `[ -f ... ]`
+// test can't resolve) rather than throwing. Git-bash/MSYS accept
+// forward-slash paths natively, so this is safe on every platform this
+// suite runs on.
+const posixPath = (p: string) => p.replaceAll("\\", "/")
+
 const bashGate = (dir: string, ready: string, release: string) =>
-  `touch ${JSON.stringify(ready)} && while [ ! -f ${JSON.stringify(release)} ]; do sleep 0.05; done && echo done`
+  `touch ${JSON.stringify(posixPath(ready))} && while [ ! -f ${JSON.stringify(posixPath(release))} ]; do sleep 0.05; done && echo done`
 
 describe("session stream watchdog integration", () => {
   it.live(
