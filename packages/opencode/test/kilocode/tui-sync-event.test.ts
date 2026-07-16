@@ -28,7 +28,7 @@ function sessionInfo(id: string, revert?: Session["revert"]): Session {
     title: "Session",
     version: "1",
     time: { created: 1, updated: 1 },
-    revert,
+    ...(revert !== undefined ? { revert } : {}),
   }
 }
 
@@ -337,6 +337,8 @@ describe("TUI sync event wire format", () => {
     const sessionID = "ses_revert"
     const revertedID = "msg_000000000001"
     const freshID = "msg_000000000002"
+    const cleared = sessionInfo(sessionID)
+    expect(Object.hasOwn(cleared, "revert")).toBe(false)
     const { app, emit, sync } = await mount((url) => {
       if (url.pathname === "/session") return json([sessionInfo(sessionID, { messageID: revertedID })])
     })
@@ -353,7 +355,7 @@ describe("TUI sync event wire format", () => {
             id: "evt_clear",
             seq: 1,
             aggregateID: sessionID,
-            data: { sessionID, info: sessionInfo(sessionID) },
+            data: { sessionID, info: cleared },
           },
         },
       } as unknown as GlobalEvent)
