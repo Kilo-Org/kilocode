@@ -13,6 +13,7 @@ import { AppRuntime } from "@/effect/app-runtime"
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process"
 import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
+import { createWorkerRemoteExit } from "@/cli/cmd/tui/remote-exit-worker" // kilocode_change
 
 ensureProcessMetadata("worker")
 
@@ -45,8 +46,15 @@ GlobalBus.on("event", (event) => {
 })
 
 let server: Awaited<ReturnType<typeof Server.listen>> | undefined
+const remoteExit = createWorkerRemoteExit(Rpc.emit) // kilocode_change
 
 export const rpc = {
+  tuiReady() {
+    remoteExit.ready() // kilocode_change
+  },
+  tuiGone() {
+    remoteExit.gone() // kilocode_change
+  },
   async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
     const headers = { ...input.headers }
     const auth = ServerAuth.header()
@@ -90,6 +98,7 @@ export const rpc = {
   },
   async shutdown() {
     Log.Default.info("worker shutting down")
+    remoteExit.shutdown() // kilocode_change
 
     await InstanceRuntime.disposeAllInstances()
     if (server) await server.stop(true)

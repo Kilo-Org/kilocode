@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test"
 import { afterEach, mock, spyOn } from "bun:test"
 import { Effect } from "effect"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
 import { RemoteModelCatalog } from "../../../src/kilo-sessions/remote-model-catalog"
 import { RemoteSender } from "../../../src/kilo-sessions/remote-sender"
 import type { RemoteWS } from "../../../src/kilo-sessions/remote-ws"
@@ -15,6 +17,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "../../../src/session/schema"
 import { Session } from "../../../src/session/session"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
+import { createExit } from "../../../src/cli/cmd/tui/context/exit"
 
 function fakeConn() {
   const sent: any[] = []
@@ -73,6 +76,18 @@ function prompts(calls: SessionPrompt.PromptInput[]) {
   return async (input: SessionPrompt.PromptInput) => {
     calls.push(input)
   }
+}
+
+function info(id: SessionID, directory = "/workspace/project-a") {
+  return {
+    id,
+    slug: id,
+    projectID: ProjectV2.ID.make("project_test"),
+    directory,
+    title: "Test session",
+    version: "test",
+    time: { created: 0, updated: 0 },
+  } satisfies Session.Info
 }
 
 function catalogModel(providerID: string, modelID: string, name: string, reasoning = false) {
@@ -2080,6 +2095,298 @@ describe("RemoteSender slash commands", () => {
     expect(flattened).not.toContain("token-must-not-leak")
     expect(flattened).not.toContain("credential=must-not-leak")
     expect(flattened).not.toContain("secret=")
+  })
+
+  test("send_command rejects process exit before ACK without invoking command or graceful exit", async () => {
+    const { conn, sent } = fakeConn()
+    const calls: unknown[] = []
+    let callbacks = 0
+    const commands = RemoteCommand.create({
+      exitAvailable: () => true,
+      list: async () => [],
+      command: async (input) => {
+        calls.push(input)
+      },
+      session: {
+        get: async () => {
+          throw new Error("unexpected command session lookup")
+        },
+        messages: async () => {
+          throw new Error("unexpected command message lookup")
+        },
+      },
+      agent: { default: async () => "unexpected-agent" },
+      provider: { default: async () => ({ providerID: "unexpected", modelID: "unexpected" }) },
+      revert: { cleanup: async () => {} },
+      compaction: { create: async () => {} },
+      prompt: { loop: async () => {} },
+    })
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      commands,
+      remoteExit: {
+        get: () => {
+          callbacks += 1
+          return async () => {}
+        },
+      },
+      catalog: {
+        get: async (id) => info(id),
+        messages: async () => [],
+        providers: async () => ({}),
+        default: async () => undefined,
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_send_exit")
+    sender.handle({
+      type: "command",
+      id: "req_send_exit",
+      command: "send_command",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1, command: "exit", arguments: "" },
+    })
+    await response.promise
+    response.restore()
+    await Promise.resolve()
+
+    expect(sent).toEqual([{ type: "response", id: "req_send_exit", error: "unknown slash command" }])
+    expect(calls).toEqual([])
+    expect(callbacks).toBe(0)
+  })
+
+  test("exit_cli rejects invalid, missing, unresolved, and unavailable sessions before ACK", async () => {
+    const { conn, sent } = fakeConn()
+    const lookups: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => {
+          lookups.push(id)
+          if (id === SessionID.make("ses_missing")) throw new Error("private missing-session detail")
+          return info(id)
+        },
+        children: async () => [],
+      },
+      remoteExit: {
+        get: () => undefined,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_exit_no_session",
+      command: "exit_cli",
+      data: { protocolVersion: 1 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_exit_invalid_session",
+      command: "exit_cli",
+      sessionId: "not-a-session-id",
+      data: { protocolVersion: 1 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_exit_bad_protocol",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 2 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_exit_extra",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1, extra: true },
+    })
+
+    const missing = expectResponse(conn, sent, "req_exit_missing")
+    sender.handle({
+      type: "command",
+      id: "req_exit_missing",
+      command: "exit_cli",
+      sessionId: "ses_missing",
+      data: { protocolVersion: 1 },
+    })
+    await missing.promise
+    missing.restore()
+
+    const unavailable = expectResponse(conn, sent, "req_exit_unavailable")
+    sender.handle({
+      type: "command",
+      id: "req_exit_unavailable",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await unavailable.promise
+    unavailable.restore()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_exit_no_session", error: "invalid exit_cli command" },
+      { type: "response", id: "req_exit_invalid_session", error: "invalid exit_cli command" },
+      { type: "response", id: "req_exit_bad_protocol", error: "invalid exit_cli command" },
+      { type: "response", id: "req_exit_extra", error: "invalid exit_cli command" },
+      { type: "response", id: "req_exit_missing", error: "failed to exit CLI" },
+      { type: "response", id: "req_exit_unavailable", error: "graceful exit unavailable" },
+    ])
+    expect(lookups).toEqual(["ses_missing", "ses_current"])
+  })
+
+  test("exit_cli ACKs before invoking the worker callback in a microtask", async () => {
+    const { conn, sent } = fakeConn()
+    const order: string[] = []
+    const tasks: VoidFunction[] = []
+    const original = globalThis.queueMicrotask
+    globalThis.queueMicrotask = (task) => {
+      tasks.push(task)
+    }
+    const send = conn.send.bind(conn)
+    conn.send = (message) => {
+      order.push("response")
+      send(message)
+    }
+    const invoked = Promise.withResolvers<void>()
+    const remoteExit = {
+      get: () => async () => {
+        order.push("callback")
+        invoked.resolve()
+      },
+    }
+    try {
+      const sender = RemoteSender.create({
+        conn,
+        directory: "/tmp/process-default",
+        log: nolog,
+        subscribe: fakeBus().subscribe,
+        session: {
+          get: async (id) => info(id),
+          children: async () => [],
+        },
+        remoteExit,
+      })
+
+      const ack = expectResponse(conn, sent, "req_exit")
+      sender.handle({
+        type: "command",
+        id: "req_exit",
+        command: "exit_cli",
+        sessionId: "ses_current",
+        data: { protocolVersion: 1 },
+      })
+      await ack.promise
+      ack.restore()
+
+      expect(sent).toEqual([{ type: "response", id: "req_exit", result: {} }])
+      expect(order).toEqual(["response"])
+      expect(tasks).toHaveLength(1)
+
+      tasks[0]?.()
+      await invoked.promise
+      expect(order).toEqual(["response", "callback"])
+    } finally {
+      globalThis.queueMicrotask = original
+    }
+  })
+
+  test("concurrent exit_cli requests ACK while idempotent local Exit cleans up once", async () => {
+    const { conn, sent } = fakeConn()
+    const completed = Promise.withResolvers<void>()
+    const calls: string[] = []
+    const exit = createExit(async () => {
+      calls.push("cleanup")
+      completed.resolve()
+    })
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      remoteExit: {
+        get: () => exit,
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_exit_first",
+      command: "exit_cli",
+      sessionId: "ses_first",
+      data: { protocolVersion: 1 },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_exit_second",
+      command: "exit_cli",
+      sessionId: "ses_second",
+      data: { protocolVersion: 1 },
+    })
+    await completed.promise
+    await Promise.resolve()
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_exit_first", result: {} },
+      { type: "response", id: "req_exit_second", result: {} },
+    ])
+    expect(calls).toEqual(["cleanup"])
+  })
+
+  test("exit_cli logs only the error class when graceful exit fails after ACK", async () => {
+    class CredentialLeakError extends Error {
+      override name = "CredentialLeakError"
+    }
+    const { conn, sent } = fakeConn()
+    const logs: unknown[][] = []
+    const logged = Promise.withResolvers<void>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: {
+        ...nolog,
+        error: (...args: unknown[]) => {
+          logs.push(args)
+          logged.resolve()
+        },
+      },
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      remoteExit: {
+        get: () => async () => {
+          throw new CredentialLeakError("token=must-not-leak")
+        },
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_exit_failed",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await logged.promise
+
+    expect(sent).toEqual([{ type: "response", id: "req_exit_failed", result: {} }])
+    expect(logs).toEqual([
+      ["exit CLI failed after ACK", { id: "req_exit_failed", operation: "exit_cli", error: "CredentialLeakError" }],
+    ])
+    expect(JSON.stringify(logs)).not.toContain("must-not-leak")
+    expect(JSON.stringify(logs)).not.toContain("token=")
   })
 
   test("create_session creates a root session in the current directory and responds in order", async () => {

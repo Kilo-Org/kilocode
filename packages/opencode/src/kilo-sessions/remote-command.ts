@@ -5,6 +5,7 @@ import type { MessageV2 } from "@/session/message-v2"
 import type { SessionPrompt } from "@/session/prompt"
 import type { Info as SessionInfo } from "@/session/session"
 import { MessageID, type SessionID } from "@/session/schema"
+import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import z from "zod"
 
 export namespace RemoteCommand {
@@ -15,6 +16,12 @@ export namespace RemoteCommand {
   export const MAX_RESULT_BYTES = 512 * 1024
 
   export const ListRequest = z
+    .object({
+      protocolVersion: z.literal(1),
+    })
+    .strict()
+
+  export const ExitRequest = z
     .object({
       protocolVersion: z.literal(1),
     })
@@ -68,6 +75,16 @@ export namespace RemoteCommand {
     hints: [],
   }
 
+  const exit: Info = {
+    name: "exit",
+    description: "Exit the CLI",
+    hints: [],
+  }
+
+  export function executable(name: string): boolean {
+    return name !== exit.name
+  }
+
   function compare(a: Info, b: Info) {
     if (a.name < b.name) return -1
     if (a.name > b.name) return 1
@@ -75,16 +92,21 @@ export namespace RemoteCommand {
   }
 
   // Truncates the alphabetical tail to stay within the count and byte caps.
-  // The `compact` entry is seeded first so truncation can never take remote
-  // compaction away; sizes are accumulated per entry to keep this a single pass.
+  // Required synthesized entries are seeded first so truncation cannot remove
+  // them; sizes are accumulated per entry to keep this a single pass.
   function truncate(commands: Info[]): Info[] {
     const encoder = new TextEncoder()
     const measure = (value: unknown) => encoder.encode(JSON.stringify(value)).byteLength
-    const required = commands.find((item) => item.name === compact.name) ?? compact
-    const selected: Info[] = [required]
-    let budget = MAX_RESULT_BYTES - measure({ protocolVersion: 1, commands: [] }) - measure(required)
+    const required = [commands.find((item) => item.name === compact.name) ?? compact]
+    const processExit = commands.find((item) => item.name === exit.name)
+    if (processExit) required.push(processExit)
+    const selected: Info[] = [...required]
+    let budget =
+      MAX_RESULT_BYTES -
+      measure({ protocolVersion: 1, commands: [] }) -
+      required.reduce((total, item, index) => total + measure(item) + (index ? 1 : 0), 0)
     for (const item of commands) {
-      if (item === required) continue
+      if (required.includes(item)) continue
       if (selected.length >= MAX_COMMANDS) break
       const bytes = measure(item) + 1 // +1 for the separating comma
       if (bytes > budget) break
@@ -98,7 +120,7 @@ export namespace RemoteCommand {
   // entries whose fields exceed the per-field limits. Shared by build() and
   // the compact shadow check so discovery and execution apply the same rules.
   function parse(source: CommandInfo): Info | undefined {
-    if (source.source === "skill") return
+    if (source.source === "skill" || source.name === exit.name) return
     const item = Info.safeParse({
       name: source.name,
       ...(source.description !== undefined ? { description: source.description } : {}),
@@ -111,7 +133,7 @@ export namespace RemoteCommand {
     return item.success ? item.data : undefined
   }
 
-  export function build(items: ReadonlyArray<CommandInfo>): Response {
+  export function build(items: ReadonlyArray<CommandInfo>, exitAvailable = false): Response {
     const names = new Set<string>()
     const commands: Info[] = []
 
@@ -122,9 +144,10 @@ export namespace RemoteCommand {
       commands.push(item)
     }
 
-    // truncate() sorts its output and seeds the synthesized "compact" first, so
-    // the response stays alphabetized regardless of input order.
+    // truncate() sorts its output after preserving synthesized entries, so the
+    // response stays alphabetized regardless of input order.
     if (!names.has(compact.name)) commands.push(compact)
+    if (exitAvailable) commands.push(exit)
     return Response.parse({ protocolVersion: 1, commands: truncate(commands) })
   }
 
@@ -132,6 +155,7 @@ export namespace RemoteCommand {
 
   export type Services = {
     list: () => Promise<CommandInfo[]>
+    exitAvailable?: () => boolean
     command: (input: SessionPrompt.CommandInput) => Promise<void>
     session: {
       get: (sessionID: SessionID) => Promise<SessionInfo>
@@ -158,7 +182,7 @@ export namespace RemoteCommand {
 
   export function create(services: Services): Interface {
     return {
-      list: async () => build(await services.list()),
+      list: async () => build(await services.list(), services.exitAvailable?.() ?? false),
       execute: async (input) => {
         // kilocode_change - enforce membership in the supplied bounded
         // remote-safe catalog. The dispatcher's preflight also gates
@@ -168,7 +192,7 @@ export namespace RemoteCommand {
         // the mobile client was never offered. Reject with a specific
         // error so the failure is distinguishable from runtime faults.
         const catalogNames = new Set(input.catalog.commands.map((item) => item.name))
-        if (!catalogNames.has(input.command)) {
+        if (!executable(input.command) || !catalogNames.has(input.command)) {
           throw new Error(`unknown slash command: ${input.command}`)
         }
         // A registered command named `compact` shadows the built-in whenever it
@@ -221,6 +245,7 @@ export namespace RemoteCommand {
 
   export function live(): Interface {
     return create({
+      exitAvailable: () => !!RemoteExit.get(),
       list: async () => {
         const [{ AppRuntime }, { Command }] = await Promise.all([import("@/effect/app-runtime"), import("@/command")])
         return AppRuntime.runPromise(Command.Service.use((service) => service.list()))

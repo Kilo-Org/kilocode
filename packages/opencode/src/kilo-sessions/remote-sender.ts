@@ -1,4 +1,5 @@
 import { RemoteCommand } from "@/kilo-sessions/remote-command"
+import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
@@ -144,6 +145,9 @@ export namespace RemoteSender {
       readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
     }
     commands?: RemoteCommand.Interface
+    remoteExit?: {
+      get: () => RemoteExit.Callback | undefined
+    }
   }
 
   export type Sender = {
@@ -255,6 +259,7 @@ export namespace RemoteSender {
     // kilocode_change end
     // kilocode_change start - injectable slash command discovery + execution
     const commands = options.commands ?? RemoteCommand.live()
+    const remoteExit = options.remoteExit ?? RemoteExit
     // kilocode_change end
 
     const sub =
@@ -482,7 +487,10 @@ export namespace RemoteSender {
                 // Reject stale catalog entries (command deleted or renamed since the
                 // client listed) before the ACK — after it, failures are only logged.
                 const available = await commands.list()
-                if (!available.commands.some((item) => item.name === parsed.data.command)) {
+                if (
+                  !RemoteCommand.executable(parsed.data.command) ||
+                  !available.commands.some((item) => item.name === parsed.data.command)
+                ) {
                   options.conn.send({ type: "response", id: msg.id, error: "unknown slash command" })
                   return
                 }
@@ -514,6 +522,38 @@ export namespace RemoteSender {
               error: errorName(error),
             })
             options.conn.send({ type: "response", id: msg.id, error: "failed to send command" })
+          }
+        })()
+        return
+      }
+      if (msg.command === "exit_cli") {
+        const parsed = RemoteCommand.ExitRequest.safeParse(msg.data)
+        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(current)) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid exit_cli command" })
+          return
+        }
+        void (async () => {
+          try {
+            await session.get(current.value)
+            const exit = remoteExit.get()
+            if (!exit) {
+              options.conn.send({ type: "response", id: msg.id, error: "graceful exit unavailable" })
+              return
+            }
+            options.conn.send({ type: "response", id: msg.id, result: {} })
+            queueMicrotask(() => {
+              void exit().catch((error) => {
+                options.log.error("exit CLI failed after ACK", {
+                  id: msg.id,
+                  operation: "exit_cli",
+                  error: errorName(error),
+                })
+              })
+            })
+          } catch (error) {
+            options.log.error("exit CLI preflight failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to exit CLI" })
           }
         })()
         return

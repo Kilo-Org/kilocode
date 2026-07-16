@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { RemoteCommand } from "../../../src/kilo-sessions/remote-command"
+import { RemoteExit } from "../../../src/kilo-sessions/remote-exit"
 import type { Info as SessionInfo } from "../../../src/session/session"
 import { MessageV2 } from "../../../src/session/message-v2"
 import { MessageID, SessionID } from "../../../src/session/schema"
@@ -9,6 +10,13 @@ describe("RemoteCommand", () => {
     expect(RemoteCommand.ListRequest.safeParse({ protocolVersion: 1 }).success).toBe(true)
     expect(RemoteCommand.ListRequest.safeParse({ protocolVersion: 2 }).success).toBe(false)
     expect(RemoteCommand.ListRequest.safeParse({ protocolVersion: 1, extra: true }).success).toBe(false)
+  })
+
+  test("validates strict exit CLI requests", () => {
+    expect(RemoteCommand.ExitRequest.safeParse({ protocolVersion: 1 }).success).toBe(true)
+    expect(RemoteCommand.ExitRequest.safeParse({}).success).toBe(false)
+    expect(RemoteCommand.ExitRequest.safeParse({ protocolVersion: 2 }).success).toBe(false)
+    expect(RemoteCommand.ExitRequest.safeParse({ protocolVersion: 1, extra: true }).success).toBe(false)
   })
 
   test("validates structured command requests without duplicating session identity", () => {
@@ -99,6 +107,82 @@ describe("RemoteCommand", () => {
     })
     expect(JSON.stringify(catalog)).not.toContain("template")
     expect(JSON.stringify(catalog)).not.toContain("secret-skill")
+  })
+
+  test("advertises only canonical exit while the embedded worker callback is registered", () => {
+    const base = RemoteCommand.build([
+      { name: "beta", source: "command", hints: [], template: "beta" },
+      { name: "alpha", source: "command", hints: [], template: "alpha" },
+    ])
+    expect(base.commands.map((item) => item.name)).toEqual(["alpha", "beta", "compact"])
+
+    const catalog = RemoteCommand.build(
+      [
+        ...base.commands.map((item) => ({ ...item, template: item.name })),
+        { name: "exit", source: "command", hints: ["must-not-leak"], template: "must-not-run" },
+      ],
+      true,
+    )
+
+    expect(catalog.commands).toEqual([
+      { name: "alpha", source: "command", hints: [] },
+      { name: "beta", source: "command", hints: [] },
+      {
+        name: "compact",
+        description: "compact the current session context",
+        hints: [],
+      },
+      {
+        name: "exit",
+        description: "Exit the CLI",
+        hints: [],
+      },
+    ])
+    expect(catalog.commands.some((item) => item.name === "quit" || item.name === "q")).toBe(false)
+
+    expect(RemoteCommand.build([]).commands.map((item) => item.name)).toEqual(["compact"])
+  })
+
+  test("catalog omits exit until the embedded worker TUI is ready", async () => {
+    const remote = RemoteCommand.create({
+      exitAvailable: () => !!RemoteExit.get(),
+      list: async () => [],
+      command: async () => {},
+      session: { get: async () => null as never, messages: async () => [] },
+      agent: { default: async () => "test" },
+      provider: { default: async () => ({ providerID: "test", modelID: "test" }) },
+      revert: { cleanup: async () => {} },
+      compaction: { create: async () => {} },
+      prompt: { loop: async () => {} },
+    })
+    expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(false)
+
+    const unregister = RemoteExit.register(async () => {})
+    try {
+      expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(true)
+    } finally {
+      unregister()
+    }
+
+    expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(false)
+  })
+
+  test("keeps compact and exit within command and byte caps", () => {
+    const commands = Array.from({ length: RemoteCommand.MAX_COMMANDS + 10 }, (_, index) => ({
+      name: `command-${String(index).padStart(3, "0")}`,
+      description: "x".repeat(1_900),
+      source: "command" as const,
+      hints: [],
+      template: "hidden",
+    }))
+    const catalog = RemoteCommand.build(commands, true)
+
+    expect(catalog.commands).toHaveLength(RemoteCommand.MAX_COMMANDS)
+    expect(catalog.commands.some((item) => item.name === "compact")).toBe(true)
+    expect(catalog.commands.some((item) => item.name === "exit")).toBe(true)
+    expect(new TextEncoder().encode(JSON.stringify(catalog)).byteLength).toBeLessThanOrEqual(
+      RemoteCommand.MAX_RESULT_BYTES,
+    )
   })
 
   test("truncates catalogs over the command limit", () => {
