@@ -3741,6 +3741,8 @@ export type EventMemoryStatus = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      added?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      removed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       sources?: Array<string>
       files?: Array<string>
@@ -3776,6 +3778,8 @@ export type EventMemoryUpdated = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      added?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      removed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       sources?: Array<string>
       files?: Array<string>
@@ -3811,6 +3815,8 @@ export type EventMemoryError = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      added?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      removed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       sources?: Array<string>
       files?: Array<string>
@@ -6207,6 +6213,8 @@ export type EventMemoryStatus1 = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      added?: number | "NaN" | "Infinity" | "-Infinity"
+      removed?: number | "NaN" | "Infinity" | "-Infinity"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
       sources?: Array<string>
       files?: Array<string>
@@ -6242,6 +6250,8 @@ export type EventMemoryUpdated1 = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      added?: number | "NaN" | "Infinity" | "-Infinity"
+      removed?: number | "NaN" | "Infinity" | "-Infinity"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
       sources?: Array<string>
       files?: Array<string>
@@ -6277,6 +6287,8 @@ export type EventMemoryError1 = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      added?: number | "NaN" | "Infinity" | "-Infinity"
+      removed?: number | "NaN" | "Infinity" | "-Infinity"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
       sources?: Array<string>
       files?: Array<string>

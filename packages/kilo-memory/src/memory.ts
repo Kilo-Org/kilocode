@@ -31,6 +31,8 @@ export namespace Memory {
       type: "saved"
       message: string
       operationCount: number
+      added: number
+      removed: number
       sources: string[]
       files: string[]
     }
@@ -248,6 +250,8 @@ export namespace Memory {
                 count: result.operationCount,
               }),
               operationCount: result.operationCount,
+              added: result.added,
+              removed: result.removed,
               sources: MemoryShared.refs(accepted),
               files: MemoryShared.files(accepted),
             },

@@ -9,6 +9,8 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
+import { MemoryContract } from "@kilocode/kilo-memory/effect/httpapi"
+import { MemorySchema } from "@kilocode/kilo-memory/schema"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -989,8 +991,24 @@ export const TaskHeaderWithTodosAllDone: Story = {
   },
 }
 
+const state = MemorySchema.create()
 const mockMemory: MemoryContextValue = {
-  status: () => ({}) as any,
+  status: () => ({
+    root: "/project",
+    state: MemoryContract.state({
+      ...state,
+      enabled: true,
+      stats: {
+        ...state.stats,
+        lastInjectedAt: headerNow,
+        lastInjectedBytes: 2_132,
+        lastInjectedTokens: 533,
+        lastInjectedSessionID: SESSION_ID,
+      },
+    }),
+    exists: { state: true, index: true },
+    index: { bytes: 49_600, estimatedTokens: 12_400, preview: "" },
+  }),
   show: () => undefined,
   loading: () => false,
   pending: () => false,
@@ -998,11 +1016,22 @@ const mockMemory: MemoryContextValue = {
   enabled: () => true,
   sessionTokens: () => 533,
   totalTokens: () => 12_400,
+  activity: () => [
+    {
+      type: "loaded",
+      at: headerNow,
+      tokens: 533,
+      count: 1,
+      items: [],
+      refs: ["project.md"],
+    },
+  ],
   refresh: () => {},
   showMemory: () => {},
   enable: () => {},
   disable: () => {},
   auto: () => {},
+  verbose: () => {},
   rebuild: () => {},
   remember: () => {},
   forget: () => {},

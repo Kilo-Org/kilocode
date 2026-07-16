@@ -199,6 +199,23 @@ describe("memory marker metadata", () => {
     })
   })
 
+  test("extracts display text from typed and digest recall records", () => {
+    const output = [
+      "record id=style source=project.md",
+      "text: project_style :: Use type=module in package.json.",
+      "record id=session source=sessions/session.md",
+      'text: session=ses_123 topic="memory UX" 2026-07-15T10:00:00Z :: Restore the database icon.',
+    ].join("\n")
+
+    expect(
+      MemoryMarkerMeta.fromRecall({
+        output,
+        metadata: { sources: ["project.md", "sessions/session.md"], count: 2 },
+        tokens: 12,
+      })?.items,
+    ).toEqual(["Use type=module in package.json.", "Restore the database icon."])
+  })
+
   test("does not retain startup context snippets", () => {
     const text = Array.from(
       { length: 6 },
