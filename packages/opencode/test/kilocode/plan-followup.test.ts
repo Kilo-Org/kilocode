@@ -446,6 +446,7 @@ describe("plan follow-up", () => {
       const configSpy = spyOn(PlanFollowupRuntime, "config").mockResolvedValue({
         compaction: { threshold_percent: 80 },
       } as any)
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(undefined)
       const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
       const seeded = await seed({
         text: "1. Build",
@@ -483,6 +484,7 @@ describe("plan follow-up", () => {
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
       configSpy.mockRestore()
+      agentSpy.mockRestore()
       modelSpy.mockRestore()
     }))
 
@@ -491,6 +493,7 @@ describe("plan follow-up", () => {
       const configSpy = spyOn(PlanFollowupRuntime, "config").mockResolvedValue({
         compaction: { threshold_percent: 75 },
       } as any)
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(undefined)
       const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue({
         ...fakeModel,
         limit: { context: 400_000, input: 200_000 },
@@ -526,12 +529,14 @@ describe("plan follow-up", () => {
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
       configSpy.mockRestore()
+      agentSpy.mockRestore()
       modelSpy.mockRestore()
     }))
 
   test("ask - recommends a fresh session at the default usable limit", () =>
     withInstance(async () => {
       const configSpy = spyOn(PlanFollowupRuntime, "config").mockResolvedValue({} as any)
+      const agentSpy = spyOn(PlanFollowupRuntime, "agent").mockResolvedValue(undefined)
       const modelSpy = spyOn(PlanFollowupRuntime, "model").mockResolvedValue(fakeModel)
       const seeded = await seed({
         text: "1. Build",
@@ -563,6 +568,7 @@ describe("plan follow-up", () => {
       await question.reject(item.id)
       await expect(pending).resolves.toBe("break")
       configSpy.mockRestore()
+      agentSpy.mockRestore()
       modelSpy.mockRestore()
     }))
 
