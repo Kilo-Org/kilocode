@@ -8,6 +8,7 @@ import * as SandboxInheritance from "@/kilocode/sandbox/inheritance"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { Provider } from "@/provider/provider"
 import { SessionID } from "@/session/schema"
+import * as ToolJsonSchema from "@/tool/json-schema"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
@@ -75,6 +76,16 @@ const PromptParams = Schema.Struct({
 })
 
 export const Params = Schema.Union([StartParams, ListParams, PromptParams])
+
+const WireParams = Schema.Struct({
+  mode: Schema.optional(StartParams.fields.mode),
+  versions: Schema.optional(StartParams.fields.versions),
+  tasks: Schema.optional(StartParams.fields.tasks),
+  action: Schema.optional(Schema.Literals(["list", "prompt"])),
+  filter: Schema.optional(ListParams.fields.filter),
+  sessionID: Schema.optional(PromptParams.fields.sessionID),
+  prompt: Schema.optional(PromptParams.fields.prompt),
+})
 
 type Input = Schema.Schema.Type<typeof Task>
 type Selected = { task?: AgentManagerTask; error?: string }
@@ -237,6 +248,7 @@ export const AgentManagerTool = Tool.define<
     return {
       description: DESCRIPTION,
       parameters: Params,
+      jsonSchema: ToolJsonSchema.fromSchema(WireParams),
       execute: (params, ctx) =>
         Effect.gen(function* () {
           if ("action" in params) {

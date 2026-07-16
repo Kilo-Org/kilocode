@@ -267,6 +267,10 @@ const AppContent: Component = () => {
       case "cyclePreviousAgentMode":
         if (document.hasFocus()) cycleAgent(-1)
         break
+      case "focusSearch":
+        setCurrentView("newTask")
+        window.dispatchEvent(new CustomEvent("focusTranscriptSearch"))
+        break
     }
   }
 

@@ -564,9 +564,7 @@ export const { use: useSync, provider: SyncProvider } = createSimpleContext({
           setStore(
             "session",
             match.index,
-            produce((draft) => {
-              Object.assign(draft, event.data.info)
-            }),
+            reconcile(event.data.info), // kilocode_change - session.updated carries a full snapshot, including omitted optional fields
           )
           break
         }
