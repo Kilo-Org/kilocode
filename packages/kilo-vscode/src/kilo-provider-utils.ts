@@ -27,7 +27,7 @@ export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler
  * must clear it client-side when the first post-revert message arrives.
  */
 export function shouldClearRevertForMessage(sessionID: string | undefined, session: Session | undefined): boolean {
-  return session != null && session.id === sessionID && session.revert != null
+  return session !== undefined && session.id === sessionID && session.revert !== undefined
 }
 
 /** A single provider entry as returned by the /provider list endpoint. */

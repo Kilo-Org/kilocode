@@ -1,4 +1,5 @@
 import { describe, it, expect } from "bun:test"
+import type { Session } from "@kilocode/sdk/v2/client"
 import { loadSessions, flushPendingSessionRefresh, type SessionRefreshContext } from "../../src/kilo-provider-utils"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
@@ -303,5 +304,68 @@ describe("KiloProvider pending session refresh", () => {
     })
 
     expect(errors).toEqual([])
+  })
+})
+
+describe("KiloProvider revert clearing on resubmit", () => {
+  type RevertInternals = ProviderInternals & {
+    currentSession: Session | null
+    trackedSessionIds: Set<string>
+    handleEvent: (event: unknown, directory?: string) => void
+  }
+
+  function makeRevertedSession(revert?: { messageID: string }): Session {
+    return {
+      id: "sess-1",
+      slug: "test",
+      projectID: "proj-1",
+      directory: "/tmp",
+      title: "Test",
+      version: "1",
+      time: { created: 1, updated: 2 },
+      permission: [],
+      ...(revert ? { revert } : {}),
+    } as Session
+  }
+
+  function setup() {
+    const client = createClient()
+    const connection = createConnection(client)
+    const provider = new KiloProvider({} as never, connection as never)
+    const internal = provider as unknown as RevertInternals
+    const sent: unknown[] = []
+    internal.webview = { postMessage: async (message: unknown) => sent.push(message) }
+    internal.connectionState = "connected"
+    internal.trackedSessionIds.add("sess-1")
+    return { internal, sent }
+  }
+
+  it("clears the stale revert marker and notifies the webview when a message arrives for a reverted session", () => {
+    const { internal, sent } = setup()
+    internal.currentSession = makeRevertedSession({ messageID: "msg-1" })
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: { sessionID: "sess-1", info: { id: "msg-2", sessionID: "sess-1", role: "user", time: { created: 3 } } },
+    } as never)
+
+    expect(internal.currentSession?.revert).toBeUndefined()
+    expect(sent).toContainEqual(
+      expect.objectContaining({ type: "sessionUpdated", session: { id: "sess-1", revert: null } }),
+    )
+  })
+
+  it("does not post sessionUpdated(revert:null) when the current session has no revert", () => {
+    const { internal, sent } = setup()
+    internal.currentSession = makeRevertedSession()
+
+    internal.handleEvent({
+      type: "message.updated",
+      properties: { sessionID: "sess-1", info: { id: "msg-2", sessionID: "sess-1", role: "user", time: { created: 3 } } },
+    } as never)
+
+    expect(sent).not.toContainEqual(
+      expect.objectContaining({ type: "sessionUpdated", session: { id: "sess-1", revert: null } }),
+    )
   })
 })

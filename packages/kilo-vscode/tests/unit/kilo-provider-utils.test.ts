@@ -12,6 +12,7 @@ import {
   MessageConfirmation,
   getErrorMessage,
   getConfigErrorDetails,
+  shouldClearRevertForMessage,
   type ProviderInfo,
 } from "../../src/kilo-provider-utils"
 import type { CloudSessionMessage } from "../../src/services/cli-backend/types"
@@ -923,5 +924,30 @@ describe("getConfigErrorDetails", () => {
 
   it("returns undefined when issues array is empty and no path", () => {
     expect(getConfigErrorDetails({ data: { issues: [] } })).toBeUndefined()
+  })
+})
+
+describe("shouldClearRevertForMessage", () => {
+  it("returns true when the current session has a revert marker matching the event session", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" } })
+    expect(shouldClearRevertForMessage("sess-1", session)).toBe(true)
+  })
+
+  it("returns false when there is no current session", () => {
+    expect(shouldClearRevertForMessage("sess-1", undefined)).toBe(false)
+  })
+
+  it("returns false when the current session has no revert marker", () => {
+    expect(shouldClearRevertForMessage("sess-1", makeSession())).toBe(false)
+  })
+
+  it("returns false when the event session id differs from the current session", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" } })
+    expect(shouldClearRevertForMessage("other-session", session)).toBe(false)
+  })
+
+  it("returns false when the event session id is undefined", () => {
+    const session = makeSession({ revert: { messageID: "msg-1" } })
+    expect(shouldClearRevertForMessage(undefined, session)).toBe(false)
   })
 })
