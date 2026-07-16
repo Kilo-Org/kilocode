@@ -5,7 +5,7 @@ import Attention from "@/kilocode/plugins/attention"
 import HomeFooter from "@/kilocode/plugins/home-footer"
 import Permissions from "@/kilocode/plugins/permissions"
 import SidebarFooter from "@/kilocode/plugins/sidebar-footer"
-import SidebarMemory from "@/kilocode/plugins/sidebar-memory"
+import MemoryStatus from "@/kilocode/plugins/memory-status"
 import MemoryPalette from "@/kilocode/plugins/memory-palette"
 import SidebarProcesses from "@/kilocode/plugins/sidebar-background-processes"
 import SidebarIndexing from "@/kilocode/plugins/sidebar-indexing"
@@ -25,7 +25,7 @@ const plugins = [
   HomeFooter,
   Permissions,
   SidebarFooter,
-  SidebarMemory,
+  MemoryStatus,
   MemoryPalette,
   SidebarProcesses,
   SidebarIndexing,

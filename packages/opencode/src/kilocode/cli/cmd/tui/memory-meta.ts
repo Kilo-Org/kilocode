@@ -5,7 +5,9 @@ export namespace MemoryTuiMeta {
     return MemoryMarkerMeta.fromParts(parts)
   }
 
-  export function snippets(input: MemoryMarkerMeta.Decoded | undefined, verbose: boolean) {
-    return MemoryMarkerMeta.snippets(input, verbose)
+  export function items(input: unknown) {
+    const value = input as { items?: unknown } | undefined
+    if (!Array.isArray(value?.items)) return []
+    return value.items.filter((item): item is string => typeof item === "string")
   }
 }
