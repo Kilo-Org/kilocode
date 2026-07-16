@@ -257,7 +257,12 @@ const exists = (file: string) =>
       .catch(() => false),
   )
 
-const waitForFile = (file: string, label: string, duration = 5_000) =>
+// Windows CI runners spawn git-bash noticeably slower than the Unix shells
+// used elsewhere in this file, so the marker file these tests poll for can
+// take longer than 5s to appear even when the tool is already reported as
+// running. Matches the existing platform-aware timeout doubling in
+// test/kilocode/background-process.test.ts.
+const waitForFile = (file: string, label: string, duration = process.platform === "win32" ? 15_000 : 5_000) =>
   pollWithTimeout(
     Effect.gen(function* () {
       const ok = yield* exists(file)
@@ -349,7 +354,7 @@ describe("session stream watchdog integration", () => {
 
           const exit = yield* awaitWithTimeout(Fiber.await(fiber), "root bash loop did not finish", "15 seconds")
           expect(Exit.isSuccess(exit)).toBe(true)
-          
+
           // Check all messages in the session for interrupted tools
           const allMessages = yield* sessions.messages({ sessionID: chat.id })
           for (const msg of allMessages) {
@@ -358,7 +363,10 @@ describe("session stream watchdog integration", () => {
         }),
         { git: true, config: (url) => ({ ...providerCfg(url), permission: { bash: "allow" } }) },
       ),
-    { timeout: 30_000 },
+    // kilocode_change: doubled on Windows — git-bash spawns and writes the
+    // readiness marker noticeably slower there than the Unix shells used
+    // elsewhere in this file (see waitForFile above).
+    { timeout: process.platform === "win32" ? 60_000 : 30_000 },
   )
 
   it.live(
@@ -398,9 +406,13 @@ describe("session stream watchdog integration", () => {
 
           gate.resolve(undefined)
 
-          const exit = yield* awaitWithTimeout(Fiber.await(fiber), "root foreground child loop did not finish", "15 seconds")
+          const exit = yield* awaitWithTimeout(
+            Fiber.await(fiber),
+            "root foreground child loop did not finish",
+            "15 seconds",
+          )
           expect(Exit.isSuccess(exit)).toBe(true)
-          
+
           // Check all messages in root and child sessions for interrupted tools
           const allMessages = yield* sessions.messages({ sessionID: chat.id })
           for (const msg of allMessages) {
@@ -484,9 +496,13 @@ describe("session stream watchdog integration", () => {
 
           yield* touch(release)
 
-          const exit = yield* awaitWithTimeout(Fiber.await(fiber), "nested child bash loop did not finish", "15 seconds")
+          const exit = yield* awaitWithTimeout(
+            Fiber.await(fiber),
+            "nested child bash loop did not finish",
+            "15 seconds",
+          )
           expect(Exit.isSuccess(exit)).toBe(true)
-          
+
           // Check all messages in root and child sessions for interrupted tools
           const rootMessages = yield* sessions.messages({ sessionID: chat.id })
           for (const msg of rootMessages) {
@@ -514,6 +530,7 @@ describe("session stream watchdog integration", () => {
           }),
         },
       ),
-    { timeout: 30_000 },
+    // kilocode_change: doubled on Windows, see the matching comment on test A.
+    { timeout: process.platform === "win32" ? 60_000 : 30_000 },
   )
 })
