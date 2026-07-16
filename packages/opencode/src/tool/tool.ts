@@ -42,7 +42,7 @@ function format(error: unknown) {
   }
   const result = formatter(error.issue)
   if (result.issues.length === 0) {
-    return String(error)
+    return "The input did not match the expected schema. Please rewrite the arguments so they satisfy it."
   }
   return result.issues.map((issue) => `${path(issue.path)}: ${reason(issue.message)}`).join("\n")
 }
@@ -61,7 +61,7 @@ function reason(message: string) {
   if (message.toLowerCase().includes("required")) {
     return message
   }
-  if (message === "Missing key") {
+  if (message.toLowerCase().includes("missing key")) {
     return "is missing and is required"
   }
   return message
