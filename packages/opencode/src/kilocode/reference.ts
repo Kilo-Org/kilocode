@@ -131,6 +131,22 @@ export function ensure(cache: RepositoryCache.Interface, item: Extract<Resolved,
   )
 }
 
+function same(left: Reference.Source | undefined, right: Reference.Source) {
+  if (!left || left.type !== right.type) return false
+  if (left.type === "local" && right.type === "local") {
+    return left.path === right.path && left.description === right.description && left.hidden === right.hidden
+  }
+  if (left.type === "git" && right.type === "git") {
+    return (
+      left.repository === right.repository &&
+      left.branch === right.branch &&
+      left.description === right.description &&
+      left.hidden === right.hidden
+    )
+  }
+  return false
+}
+
 // Keep Core V2 tools on the same effective Kilo config used by stable tools. Core's standalone
 // scanner cannot see account/managed config or KILO_CONFIG_CONTENT, so replace its provisional
 // references after both config systems finish booting.
@@ -141,7 +157,6 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
 }) {
   const service = yield* Reference.Service
   const entries = resolveAll(input)
-  if (entries.length === 0 && (yield* service.list()).length === 0) return
   const sources = entries.flatMap<readonly [string, Reference.Source]>((item) => {
     if (item.kind === "invalid") return []
     if (item.kind === "local") {
@@ -170,5 +185,7 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
       ] as const,
     ]
   })
+  const current = new Map((yield* service.list()).map((item) => [item.name, item.source]))
+  if (current.size === sources.length && sources.every(([name, source]) => same(current.get(name), source))) return
   yield* service.replace(sources)
 })

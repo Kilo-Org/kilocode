@@ -9,10 +9,12 @@ import { ServerAuth } from "./auth"
 import { handlers } from "./handlers"
 import { authorizationLayer } from "./middleware/authorization"
 import { schemaErrorLayer } from "./middleware/schema-error"
+import { noop as referenceNoop } from "./kilocode/reference-reconciler" // kilocode_change
 
 export function createRoutes(password?: string) {
   return HttpApiBuilder.layer(Api, { openapiPath: "/openapi.json" }).pipe(
     Layer.provide(handlers),
+    Layer.provide(referenceNoop), // kilocode_change - standalone server has no Kilo config reconciler
     Layer.provide(authorizationLayer),
     Layer.provide(schemaErrorLayer),
     Layer.provide(

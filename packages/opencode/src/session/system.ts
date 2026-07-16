@@ -29,6 +29,8 @@ import SOUL from "../kilocode/soul.txt"
 import type { EditorContext } from "../kilocode/editor-context"
 import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
 import { isLing } from "../kilocode/model-match"
+import { Config } from "@/config/config"
+import * as KiloReference from "@/kilocode/reference"
 // kilocode_change end
 
 // kilocode_change start
@@ -97,6 +99,7 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const skill = yield* Skill.Service
     const locations = yield* LocationServiceMap
+    const config = yield* Config.Service // kilocode_change
 
     return Service.of({
       // kilocode_change start
@@ -105,8 +108,14 @@ export const layer = Layer.effect(
         editorContext?: EditorContext,
       ) {
         const ctx = yield* InstanceState.context
+        const cfg = yield* config.get()
         const references = yield* Effect.gen(function* () {
           yield* (yield* PluginBoot.Service).wait()
+          yield* KiloReference.sync({
+            references: cfg.references ?? cfg.reference ?? {},
+            directory: ctx.directory,
+            worktree: ctx.worktree,
+          })
           return (yield* (yield* Reference.Service).list()).filter((reference) => reference.description !== undefined)
         }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
         return [
@@ -150,10 +159,14 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Skill.defaultLayer), Layer.provide(LocationServiceMap.layer))
+export const defaultLayer = layer.pipe(
+  Layer.provide(Skill.defaultLayer),
+  Layer.provide(LocationServiceMap.layer),
+  Layer.provide(Config.defaultLayer), // kilocode_change
+)
 
 const locationServiceMapNode = LayerNode.make(LocationServiceMap.layer, [])
 
-export const node = LayerNode.make(layer, [Skill.node, locationServiceMapNode])
+export const node = LayerNode.make(layer, [Skill.node, locationServiceMapNode, Config.node]) // kilocode_change
 
 export * as SystemPrompt from "./system"

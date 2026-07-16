@@ -1,5 +1,4 @@
 import { SessionV2 } from "@opencode-ai/core/session"
-import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 import { PermissionSaved } from "@opencode-ai/core/permission/saved"
 import { Layer } from "effect"
 import { layer as locationLayer } from "./groups/location"
@@ -43,5 +42,5 @@ export const handlers = Layer.mergeAll(
   Layer.provide(SessionV2.defaultLayer),
   Layer.provide(SessionExecutionLocal.defaultLayer),
   Layer.provide(PermissionSaved.defaultLayer),
-  Layer.provide(LocationServiceMap.layer),
+  // kilocode_change - the host provides LocationServiceMap so Kilo can install effective-reference initialization
 )

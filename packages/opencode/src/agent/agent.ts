@@ -125,6 +125,11 @@ export const layer = Layer.effect(
         // kilocode_change start - include global config dirs so agents can read them without prompting
         const referenceDirs = yield* Effect.gen(function* () {
           yield* (yield* PluginBoot.Service).wait()
+          yield* KiloReference.sync({
+            references: cfg.references ?? cfg.reference ?? {},
+            directory: ctx.directory,
+            worktree: ctx.worktree,
+          })
           return (yield* (yield* Reference.Service).list()).map((reference) => reference.path)
         }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
         const whitelistedDirs = [

@@ -102,7 +102,10 @@ import { sessionHandlers } from "./handlers/session"
 import { syncHandlers } from "./handlers/sync"
 import { tuiHandlers } from "./handlers/tui"
 import { handlers } from "@opencode-ai/server/handlers"
-import { layer as referenceReconcilerLayer } from "@/kilocode/server/reference-reconciler" // kilocode_change
+import {
+  layer as referenceReconcilerLayer,
+  locations as locationServiceMapLayer,
+} from "@/kilocode/server/reference-reconciler" // kilocode_change
 import { schemaErrorLayer as v2SchemaErrorLayer } from "@opencode-ai/server/middleware/schema-error"
 import { workspaceHandlers } from "./handlers/workspace"
 // kilocode_change start
@@ -181,7 +184,9 @@ const instanceRoutes = instanceApiRoutes.pipe(
   Layer.provide([httpApiAuthLayer, workspaceRoutingLive, instanceContextLayer, schemaErrorLayer]),
 )
 const serverRoutes = HttpApiBuilder.layer(Api).pipe(
-  Layer.provide(handlers.pipe(Layer.provide(referenceReconcilerLayer))), // kilocode_change
+  // kilocode_change start - effective references must be ready before any V2 location consumer runs
+  Layer.provide(handlers.pipe(Layer.provide(locationServiceMapLayer), Layer.provide(referenceReconcilerLayer))),
+  // kilocode_change end
   Layer.provide([serverHttpApiAuthLayer, v2SchemaErrorLayer]),
 )
 

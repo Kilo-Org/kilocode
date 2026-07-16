@@ -1,4 +1,4 @@
-// kilocode_change new file
+// kilocode_change - new file
 import { RGBA } from "@opentui/core"
 import { For, type JSX } from "solid-js"
 import { useTheme, tint } from "@tui/context/theme"

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createRoot } from "solid-js"
+import { createLeadingTrailingSignal } from "@/kilocode/plugins/session-switcher/preview-pane"
 import { createDebouncedSignal } from "@tui/util/signal"
 
 describe("TUI scheduling", () => {
@@ -13,6 +14,26 @@ describe("TUI scheduling", () => {
 
       await Bun.sleep(30)
       expect(value()).toBe("last")
+      dispose()
+    })
+  })
+
+  test("updates on the leading and trailing edges", async () => {
+    await createRoot(async (dispose) => {
+      const [value, , schedule] = createLeadingTrailingSignal("initial", 10)
+
+      schedule("leading")
+      expect(value()).toBe("leading")
+
+      schedule("middle")
+      schedule("trailing")
+      expect(value()).toBe("leading")
+
+      await Bun.sleep(30)
+      expect(value()).toBe("trailing")
+
+      schedule("next")
+      expect(value()).toBe("next")
       dispose()
     })
   })
