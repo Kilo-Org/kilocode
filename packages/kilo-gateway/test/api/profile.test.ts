@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test"
-import { defaultOrganizationId } from "../../src/api/profile.js"
+import { describe, expect, mock, spyOn, test } from "bun:test"
+import { defaultOrganizationId, fetchBalance } from "../../src/api/profile.js"
 import type { KilocodeProfile } from "../../src/types.js"
 
 const profile = (input: Partial<KilocodeProfile> = {}): KilocodeProfile => ({
@@ -48,5 +48,23 @@ describe("defaultOrganizationId", () => {
         }),
       ),
     ).toBe("org_2")
+  })
+})
+
+describe("fetchBalance", () => {
+  test("handles transport failures without writing over the TUI", async () => {
+    const prev = global.fetch
+    const warn = spyOn(console, "warn").mockImplementation(() => undefined)
+    const issue = mock(() => undefined)
+    global.fetch = mock(() => Promise.reject(new DOMException("The operation timed out.", "TimeoutError")))
+
+    try {
+      await expect(fetchBalance("token", undefined, issue)).resolves.toBeNull()
+      expect(issue).toHaveBeenCalledTimes(1)
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+      global.fetch = prev
+    }
   })
 })

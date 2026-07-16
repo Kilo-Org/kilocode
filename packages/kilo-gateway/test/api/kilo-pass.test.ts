@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test"
-import { parseKiloPassState } from "../../src/api/kilo-pass"
+import { describe, expect, mock, spyOn, test } from "bun:test"
+import { fetchKiloPassState, parseKiloPassState } from "../../src/api/kilo-pass"
 
 describe("parseKiloPassState", () => {
   test("parses batched tRPC subscription data", () => {
@@ -59,5 +59,21 @@ describe("parseKiloPassState", () => {
 
   test("returns null without period amounts", () => {
     expect(parseKiloPassState({ status: "none" })).toBeNull()
+  })
+
+  test("handles transport failures without writing over the TUI", async () => {
+    const prev = global.fetch
+    const warn = spyOn(console, "warn").mockImplementation(() => undefined)
+    const issue = mock(() => undefined)
+    global.fetch = mock(() => Promise.reject(new DOMException("The operation timed out.", "TimeoutError")))
+
+    try {
+      await expect(fetchKiloPassState("token", issue)).resolves.toBeNull()
+      expect(issue).toHaveBeenCalledTimes(1)
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+      global.fetch = prev
+    }
   })
 })

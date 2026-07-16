@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test"
 import type { KiloPassState } from "@kilocode/kilo-gateway"
 import type { Message } from "@kilocode/sdk/v2"
 
-import { billable, creditLabel, format, passLine, resetLabel, scope } from "../../src/kilocode/plugins/sidebar-footer"
+import { billable, creditLabel, format, passLine, resetLabel, scope, warning } from "../../src/kilocode/plugins/sidebar-footer"
 
 const kiloPass = {
   currentPeriodBaseCreditsUsd: 199,
@@ -51,5 +51,11 @@ describe("Kilo sidebar footer", () => {
     expect(billable({ ...message, providerID: "anthropic" })).toBeFalse()
     expect(billable({ ...message, cost: 0 })).toBeFalse()
     expect(billable({ ...message, time: { created: 1 } })).toBeFalse()
+  })
+
+  test("describes failed usage refreshes", () => {
+    expect(warning(["kiloPass"])).toBe("Kilo Pass usage could not be refreshed.")
+    expect(warning(["balance"])).toBe("Balance could not be refreshed.")
+    expect(warning(["balance", "kiloPass"])).toBe("Balance and Kilo Pass usage could not be refreshed.")
   })
 })
