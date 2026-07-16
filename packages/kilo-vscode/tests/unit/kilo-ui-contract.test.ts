@@ -225,7 +225,10 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput highlights only while expanded", () => {
     expect(src).toContain("if (!props.active) return")
-    expect(block).toContain("active={open()}")
+    // Also active when forceOpen fires from a virtualized remount that
+    // starts already open — `open()` alone only reflects the toggle
+    // transition, not that initial-mount case.
+    expect(block).toContain("active={open() || !!props.forceOpen}")
   })
 
   it("BashHighlightedOutput keeps command and output in separate terminal containers", () => {
@@ -388,7 +391,7 @@ describe("Collapsed deferred tool details contract (source)", () => {
     const block =
       message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
     expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
-    expect(block).toMatch(/if \(open\(\) \|\| pending\(\)\) setMounted\(true\)/)
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
     expect(block).toContain("hasDetails")
     expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
   })
