@@ -199,50 +199,26 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const meta = createMemo(() =>
     MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
   )
-  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
+  const recall = createMemo(() => {
+    const item = meta()
+    if (item?.type === "recall") return item
+  })
   const fmt = (value: number) => value.toLocaleString(language.locale())
   const count = (item: MemoryItem) => fmt(item.count)
-  const tokens = (item: MemoryItem) => fmt(item.tokens)
-  const label = (item: MemoryItem) =>
-    item.type === "startup" ? language.t("chat.memory.badge.injected") : language.t("chat.memory.badge.recalled")
-  const detail = (item: MemoryItem) =>
-    item.type === "startup"
-      ? language.t("chat.memory.badge.startupCtx")
-      : language.t("chat.memory.badge.items", { count: count(item) })
+  const items = (item: MemoryItem) => item.items ?? []
+  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
   const tip = (item: MemoryItem) => {
-    const err = mem.error()
-    if (err) return <span>{err}</span>
-    const status = mem.status()
-    if (!status) return <span>{language.t("chat.memory.status.loading")}</span>
-    const ops = status.state.stats.lastOperationCount
-    const total = mem.totalTokens().toLocaleString(language.locale())
+    const values = MemoryMarkerMeta.snippets(item, verbose())
     return (
       <div style={{ "text-align": "left", "white-space": "normal", "max-width": "280px" }}>
-        <div>
-          {item.type === "startup"
-            ? language.t("chat.memory.session.tokens", { tokens: tokens(item) })
-            : language.t("chat.memory.badge.recalledDetail", { count: count(item), tokens: tokens(item) })}
-        </div>
-        <div>{language.t("chat.memory.total.tokens", { tokens: total })}</div>
-        <div>
-          {!status.state.enabled
-            ? language.t("chat.memory.project.disabled")
-            : language.t("chat.memory.project.enabled")}
-        </div>
-        <Show when={ops > 0}>
-          <div>
-            {language.t("chat.memory.savedOperations", {
-              count: ops.toLocaleString(language.locale()),
-            })}
-          </div>
+        <Show
+          when={values.length > 0}
+          fallback={
+            <div>{`${language.t("chat.memory.badge.recalled")} · ${language.t("chat.memory.badge.items", { count: count(item) })}`}</div>
+          }
+        >
+          <For each={values}>{(value) => <div>{value}</div>}</For>
         </Show>
-        <Show when={mem.show()?.changes}>
-          <div>{mem.show()!.changes.split("\n").filter(Boolean).slice(-1)[0]}</div>
-        </Show>
-        <Show when={item.files.length > 0}>
-          <div>{language.t("chat.memory.badge.files", { files: item.files.join(", ") })}</div>
-        </Show>
-        <For each={MemoryMarkerMeta.snippets(item, verbose())}>{(value) => <div>{value}</div>}</For>
       </div>
     )
   }
@@ -362,12 +338,13 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={mem.enabled() && meta()}>
+      <Show when={mem.enabled() && recall()}>
         {(item) => (
           <Tooltip value={tip(item())} placement="top">
             <div data-component="assistant-memory-badge">
-              {label(item())} · {detail(item())} · {language.t("chat.memory.badge.tokens", { tokens: tokens(item()) })}
-              <Show when={MemoryMarkerMeta.snippets(item(), verbose())[0]}>{(value) => <> · {value()}</>}</Show>
+              {language.t("chat.memory.badge.recalled")} ·{" "}
+              {language.t("chat.memory.badge.items", { count: count(item()) })}
+              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
             </div>
           </Tooltip>
         )}

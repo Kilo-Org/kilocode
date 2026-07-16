@@ -1296,6 +1296,7 @@ describe("memory core package", () => {
       const shown = await Memory.show({ root: t.root })
 
       expect(result.result.removed).toBe(1)
+      expect(result.detail).toMatchObject({ type: "saved", added: 0, removed: 1 })
       expect(shown.sources.project).not.toContain("Project tests")
       expect(shown.sources.environment).toContain("bun test")
     })
