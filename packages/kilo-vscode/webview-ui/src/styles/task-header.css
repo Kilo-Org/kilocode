@@ -118,8 +118,9 @@
 
 [data-component="task-header-running-agent"] {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 12px;
   min-width: 0;
   padding: 4px 16px;
   border-bottom: 1px solid var(--border-weak-base);
@@ -127,8 +128,15 @@
   font-size: var(--kilo-font-size-12);
   flex-shrink: 0;
 
+  [data-slot="task-header-running-agent-item"] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+  }
+
   [data-slot="task-header-running-agent-name"] {
-    font-weight: var(--font-weight-medium, 500);
+    font-weight: var(--font-weight-medium);
     color: var(--text-base);
     white-space: nowrap;
     text-transform: capitalize;
@@ -138,7 +146,7 @@
     flex-shrink: 0;
     color: var(--text-weak);
     background: var(--surface-tool-output-base);
-    border-radius: var(--radius-sm);
+    border-radius: var(--kilo-chat-radius-sm);
     padding: 0 4px;
   }
 

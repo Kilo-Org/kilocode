@@ -408,7 +408,7 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
      stays a soft inset rather than a heavy, separately-elevated box. */
   padding: 8px 12px;
   border-radius: var(--kilo-chat-radius-md);
-  background: color-mix(in srgb, var(--vscode-foreground) 5%, transparent);
+  background: color-mix(in srgb, var(--vscode-foreground, var(--text-base)) 5%, transparent);
   transition: background-color 0.2s var(--kilo-chat-ease);
 
   [data-slot="user-message-attachment"][data-queued] {
@@ -434,7 +434,11 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
         right: 0;
         bottom: 0;
         height: 48px;
-        background: linear-gradient(to bottom, transparent, var(--background-stronger));
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          color-mix(in srgb, var(--vscode-foreground, var(--text-base)) 5%, transparent)
+        );
         pointer-events: none;
       }
     }
@@ -447,7 +451,7 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     border: none;
     background: none;
     font-size: var(--font-size-small);
-    font-weight: 500;
+    font-weight: var(--font-weight-medium);
     color: var(--vscode-textLink-foreground, var(--syntax-property));
     cursor: pointer;
 

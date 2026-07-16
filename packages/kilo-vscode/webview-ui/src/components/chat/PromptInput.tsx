@@ -382,6 +382,10 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     if (!(event instanceof CustomEvent) || typeof event.detail !== "string") return
     if (text().trim().length > 0) return
     setText(event.detail)
+    if (textareaRef) {
+      textareaRef.value = event.detail
+      adjustHeight()
+    }
     window.dispatchEvent(new Event("focusPrompt"))
   }
   window.addEventListener("kilo:setPromptDraft", onSetDraft)

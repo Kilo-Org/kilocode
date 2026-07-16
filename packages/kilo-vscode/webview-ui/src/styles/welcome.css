@@ -71,6 +71,11 @@
   box-shadow: none;
 }
 
+.quick-action-chip:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, var(--border-focus));
+  outline-offset: 2px;
+}
+
 /* ============================================
    Work Style Picker
    ============================================ */

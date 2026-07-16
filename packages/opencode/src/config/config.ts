@@ -736,8 +736,8 @@ export const layer = Layer.effect(
         }
 
         // kilocode_change start - import commands from .claude/commands and .cursor/commands
-        // without requiring the user to symlink them into a Kilo-native command/ dir. Merged
-        // last so a project's own Kilo-native command/ definitions win on a name collision.
+        // without requiring the user to symlink them into a Kilo-native command/ dir. Kilo-native
+        // command definitions retain precedence on name collisions.
         for (const dir of yield* ConfigPaths.externalCommandDirectories(ctx.directory, ctx.worktree)) {
           // kilocode_change - same trust model as the native config dirs loop above: global
           // dirs (outside the project) are trusted, project-local dirs are confined to
@@ -747,10 +747,10 @@ export const layer = Layer.effect(
           const extTrusted = !containsPath(dir, ctx)
           const extFileScope = extTrusted ? undefined : { root: projectRoot, source: dir }
           const extSourceScope = extTrusted ? undefined : { root: projectRoot, source: dir }
-          result.command = mergeDeep(
-            result.command ?? {},
-            yield* Effect.promise(() => ConfigCommand.load(dir, warnings, extTrusted, extFileScope, extSourceScope)),
+          const commands = yield* Effect.promise(() =>
+            ConfigCommand.load(dir, warnings, extTrusted, extFileScope, extSourceScope),
           )
+          result.command = mergeDeep(commands, result.command ?? {})
         }
         // kilocode_change end
 

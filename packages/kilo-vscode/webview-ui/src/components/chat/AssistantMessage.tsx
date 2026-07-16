@@ -250,7 +250,10 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   // Multi-provider pipelines (e.g. Claude via a proxy for most roles, Qwen for
   // one role) otherwise give no visual cue for which model produced a given
   // turn - only subagent "task" rows carried a model badge before this.
-  const modelLabel = createMemo(() => props.message.modelID)
+  const modelLabel = createMemo(() => {
+    const model = props.message.modelID
+    return model?.slice(model.lastIndexOf("/") + 1)
+  })
 
   return (
     <>

@@ -34,7 +34,13 @@
   z-index: 1;
   padding: 1.5px;
   border-radius: inherit;
-  background: linear-gradient(135deg, #34d399, #38bdf8, #a78bfa, #f472b6);
+  background: linear-gradient(
+    135deg,
+    var(--vscode-terminal-ansiGreen, var(--syntax-string)),
+    var(--vscode-terminal-ansiCyan, var(--syntax-type)),
+    var(--vscode-terminal-ansiMagenta, var(--syntax-keyword)),
+    var(--vscode-terminal-ansiRed, var(--syntax-property))
+  );
   opacity: 0.55;
   pointer-events: none;
   -webkit-mask:
