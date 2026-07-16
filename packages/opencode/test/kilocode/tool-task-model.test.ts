@@ -201,6 +201,8 @@ function run(input: {
   state?: unknown
   client?: string
   variant?: string
+  model?: string
+  callVariant?: string
   config?: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
 }) {
   return provideTmpdirInstance(
@@ -220,6 +222,8 @@ function run(input: {
             description: `run ${input.agent}`,
             prompt: "inspect resolution",
             subagent_type: input.agent,
+            model: input.model,
+            variant: input.callVariant,
           },
           {
             sessionID: chat.id,
@@ -254,6 +258,71 @@ function run(input: {
 }
 
 describe("tool.task model resolution", () => {
+   it.live("call-site model and variant beat saved and configured choices", () =>
+    run({
+      agent: "pinned",
+      model: "sub-provider/sub-model",
+      callVariant: "max",
+      state: { model: { pinned: saved }, variant: { "saved-provider/saved-model": savedVariant } },
+      config: { subagent_variant_overrides: { "sub-provider/sub-model": overrideVariant } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(sub)
+          expect(result.variant).toEqual("max")
+          expect(result.model).toEqual(sub)
+          expect(result.metadataVariant).toEqual("max")
+        }),
+      ),
+    ),
+  )
+
+  it.live("unavailable call-site model falls back while preserving call-site variant", () =>
+    run({
+      agent: "pinned",
+      model: "missing-provider/missing-model",
+      callVariant: "max",
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(cfg)
+          expect(result.variant).toEqual("max")
+          expect(result.model).toEqual(cfg)
+          expect(result.metadataVariant).toEqual("max")
+        }),
+      ),
+    ),
+  )
+  
+  it.live("model-specific override applies to a call-site model without a call-site variant", () =>
+    run({
+      agent: "worker",
+      model: "sub-provider/sub-model",
+      config: { subagent_variant_overrides: { "sub-provider/sub-model": overrideVariant } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(sub)
+          expect(result.variant).toEqual(overrideVariant)
+          expect(result.model).toEqual(sub)
+          expect(result.metadataVariant).toEqual(overrideVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("call-site variant overrides the inherited parent variant", () =>
+    run({ agent: "worker", variant: inherited, callVariant: "max" }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual("max")
+          expect(result.metadataVariant).toEqual("max")
+        }),
+      ),
+    ),
+  )
+
   it.live("saved model beats agent config for pinned", () =>
     run({
       agent: "pinned",
