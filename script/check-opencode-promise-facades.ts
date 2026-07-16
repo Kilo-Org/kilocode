@@ -43,6 +43,10 @@ const testAllow: Record<string, { count: number; reason: string }> = {
   },
   "kilocode/session/platform-attribution.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/session-prompt-queue.test.ts": { count: 6, reason: "prompt queue legacy instance bridge regression" },
+  "kilocode/sessions/remote-run-live.test.ts": {
+    count: 4,
+    reason: "mocked AppRuntime boundary for local runtime prompt startup integration",
+  },
   "server/experimental-session-list.test.ts": { count: 2, reason: "Kilo session list integration test" },
   "kilocode/server/listener-runtime.test.ts": { count: 4, reason: "listener and AppRuntime integration test" },
   "tool/recall.test.ts": { count: 11, reason: "existing runtime integration test" },
