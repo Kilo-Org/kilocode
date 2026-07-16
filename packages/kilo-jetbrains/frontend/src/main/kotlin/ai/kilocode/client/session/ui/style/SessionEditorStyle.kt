@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui.style
 
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.ide.ui.UISettingsUtils
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
@@ -98,7 +99,11 @@ data class SessionEditorStyle(
         /** Builds a style snapshot from the current global editor color scheme. */
         fun current(): SessionEditorStyle {
             val scheme = EditorColorsManager.getInstance().globalScheme
-            return create(scheme, scheme.editorFontName, scheme.editorFontSize)
+            val size = UISettingsUtils.getInstance()
+                .scaleFontSize(scheme.editorFontSize.toFloat())
+                .roundToInt()
+                .coerceAtLeast(1)
+            return create(scheme, scheme.editorFontName, size)
         }
 
         internal fun create(

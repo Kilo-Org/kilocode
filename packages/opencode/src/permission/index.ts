@@ -17,6 +17,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
+import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 // kilocode_change end
 
@@ -120,8 +121,12 @@ export function resolve(permission: string, pattern: string, ruleset: Ruleset, .
       ? (permission: string, pattern: string, ...sets: Ruleset[]) =>
           ExternalDirectoryPermission.evaluate(permission, pattern, ...sets)
       : evaluate
-  const base = ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset))
-  const saved = evalFn(permission, pattern, ...overrides)
+  const base = AgentManagerPermission.harden(
+    permission,
+    pattern,
+    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset)),
+  ) // kilocode_change
+  const saved = AgentManagerPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides)) // kilocode_change
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {

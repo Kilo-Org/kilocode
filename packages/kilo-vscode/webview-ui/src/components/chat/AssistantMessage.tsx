@@ -106,6 +106,13 @@ interface AssistantMessageProps {
   parts?: SDKPart[]
   showAssistantCopyPartID?: string | null
   feedback?: MessageFeedbackControls
+  /** id of the part containing the current chat-search match, if any — forces
+   * that part's collapsed tool/reasoning content open so the user can see
+   * the highlighted match without manually expanding it first. */
+  forceOpenPartID?: string
+  /** For a multi-file apply_patch match, the specific file within that part —
+   * lets that one nested item open instead of every file in the patch. */
+  forceOpenFile?: string
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
 }
@@ -119,7 +126,7 @@ type ToolStateProps = {
 
 type MemoryItem = MemoryMarkerMeta.Decoded
 
-function TodoToolCard(props: { part: ToolPart }) {
+function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   return (
@@ -135,6 +142,7 @@ function TodoToolCard(props: { part: ToolPart }) {
           output={state()?.output}
           status={state()?.status}
           defaultOpen
+          forceOpen={props.forceOpen}
           reveal={false}
         />
       )}
@@ -142,7 +150,7 @@ function TodoToolCard(props: { part: ToolPart }) {
   )
 }
 
-function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
+function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
   return (
@@ -159,6 +167,7 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean }) {
           output={state()?.output}
           status={state()?.status}
           defaultOpen={props.defaultOpen}
+          forceOpen={props.forceOpen}
           animate
           reveal={state()?.status === "pending" || state()?.status === "running"}
         />
@@ -190,47 +199,25 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const meta = createMemo(() =>
     MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
   )
+  const recall = createMemo(() => {
+    const item = meta()
+    if (item?.type === "recall") return item
+  })
   const fmt = (value: number) => value.toLocaleString(language.locale())
   const count = (item: MemoryItem) => fmt(item.count)
-  const tokens = (item: MemoryItem) => fmt(item.tokens)
-  const label = (item: MemoryItem) =>
-    item.type === "startup" ? language.t("chat.memory.badge.injected") : language.t("chat.memory.badge.recalled")
-  const detail = (item: MemoryItem) =>
-    item.type === "startup"
-      ? language.t("chat.memory.badge.startupCtx")
-      : language.t("chat.memory.badge.items", { count: count(item) })
+  const items = (item: MemoryItem) => item.items ?? []
+  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
   const tip = (item: MemoryItem) => {
-    const err = mem.error()
-    if (err) return <span>{err}</span>
-    const status = mem.status()
-    if (!status) return <span>{language.t("chat.memory.status.loading")}</span>
-    const ops = status.state.stats.lastOperationCount
-    const total = mem.totalTokens().toLocaleString(language.locale())
+    const values = MemoryMarkerMeta.snippets(item, verbose())
     return (
       <div style={{ "text-align": "left", "white-space": "normal", "max-width": "280px" }}>
-        <div>
-          {item.type === "startup"
-            ? language.t("chat.memory.session.tokens", { tokens: tokens(item) })
-            : language.t("chat.memory.badge.recalledDetail", { count: count(item), tokens: tokens(item) })}
-        </div>
-        <div>{language.t("chat.memory.total.tokens", { tokens: total })}</div>
-        <div>
-          {!status.state.enabled
-            ? language.t("chat.memory.project.disabled")
-            : language.t("chat.memory.project.enabled")}
-        </div>
-        <Show when={ops > 0}>
-          <div>
-            {language.t("chat.memory.savedOperations", {
-              count: ops.toLocaleString(language.locale()),
-            })}
-          </div>
-        </Show>
-        <Show when={mem.show()?.changes}>
-          <div>{mem.show()!.changes.split("\n").filter(Boolean).slice(-1)[0]}</div>
-        </Show>
-        <Show when={item.files.length > 0}>
-          <div>{language.t("chat.memory.badge.files", { files: item.files.join(", ") })}</div>
+        <Show
+          when={values.length > 0}
+          fallback={
+            <div>{`${language.t("chat.memory.badge.recalled")} · ${language.t("chat.memory.badge.items", { count: count(item) })}`}</div>
+          }
+        >
+          <For each={values}>{(value) => <div>{value}</div>}</For>
         </Show>
       </div>
     )
@@ -261,6 +248,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             if (!planExitInfo(part)) return
             return part as unknown as ToolPart
           })
+          const forceOpen = createMemo(() => !!props.forceOpenPartID && part.id === props.forceOpenPartID)
 
           // Lights up when this part is behind the hovered/focused task-timeline
           // bar, using that bar's own color so the two stay easy to correlate.
@@ -283,6 +271,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
               <div
                 data-component="tool-part-wrapper"
                 data-part-type={part.type}
+                data-part-id={part.id}
                 data-timeline-highlight={highlighted() ? "" : undefined}
                 style={
                   highlighted() ? { "--timeline-color": timelineColor(part as unknown as TimelinePart) } : undefined
@@ -308,6 +297,8 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
                                       defaultOpen={editOpen(part, edit())}
+                                      forceOpen={forceOpen()}
+                                      forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
                                       animate={
@@ -318,11 +309,17 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                     />
                                   }
                                 >
-                                  <TodoToolCard part={part as unknown as ToolPart} />
+                                  <TodoToolCard part={part as unknown as ToolPart} forceOpen={forceOpen()} />
                                 </Show>
                               }
                             >
-                              {(tool) => <BashToolCard part={tool() as unknown as ToolPart} defaultOpen={open()} />}
+                              {(tool) => (
+                                <BashToolCard
+                                  part={tool() as unknown as ToolPart}
+                                  defaultOpen={open()}
+                                  forceOpen={forceOpen()}
+                                />
+                              )}
                             </Show>
                           }
                         >
@@ -341,11 +338,13 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={mem.enabled() && meta()}>
+      <Show when={mem.enabled() && recall()}>
         {(item) => (
           <Tooltip value={tip(item())} placement="top">
             <div data-component="assistant-memory-badge">
-              {label(item())} · {detail(item())} · {language.t("chat.memory.badge.tokens", { tokens: tokens(item()) })}
+              {language.t("chat.memory.badge.recalled")} ·{" "}
+              {language.t("chat.memory.badge.items", { count: count(item()) })}
+              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
             </div>
           </Tooltip>
         )}

@@ -124,7 +124,7 @@ export const SessionMessageTable = sqliteTable(
       .notNull()
       .references(() => SessionTable.id, { onDelete: "cascade" }),
     type: text().$type<SessionMessage.Type>().notNull(),
-    seq: integer().notNull(),
+    seq: integer(), // kilocode_change - allow released clients to share databases with newer schemas
     ...Timestamps,
     data: text({ mode: "json" }).notNull().$type<SessionMessageData>(),
   },

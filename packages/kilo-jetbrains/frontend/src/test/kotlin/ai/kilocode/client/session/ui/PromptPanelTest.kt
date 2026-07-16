@@ -69,6 +69,7 @@ import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -275,7 +276,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(editor.preferredSize.height > min)
     }
 
-    fun `test prompt editor keeps three line minimum`() {
+    fun `test prompt editor keeps compact empty minimum`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
 
@@ -285,6 +286,53 @@ class PromptPanelTest : BasePlatformTestCase() {
             JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
 
         assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt ignores narrow placeholder preferred height`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val view = editor.getEditor(false)!!
+        val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt minimum ignores user scale factor`() {
+        // The empty-prompt minimum is line height (ide scale) plus scaled chrome. Under a
+        // raised user scale factor it must equal that computed minimum, not a doubled value.
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+            val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+            val editor = panel.defaultFocusedComponent as EditorTextField
+
+            realize(panel, 400, 400)
+            UIUtil.dispatchAllInvocationEvents()
+            val view = editor.getEditor(false)!!
+            val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+                JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+            assertEquals(min, editor.preferredSize.height)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
+
+    fun `test empty prompt panel stays compact at narrow width`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 900)
+        UIUtil.dispatchAllInvocationEvents()
+        val chrome = (panel.shellForTest().preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = panel.insets
+
+        assertEquals(editor.preferredSize.height + chrome + ins.top + ins.bottom, panel.preferredSize.height)
+        assertTrue(panel.preferredSize.height < 180)
     }
 
     fun `test prompt editor grows when single line wraps`() {
