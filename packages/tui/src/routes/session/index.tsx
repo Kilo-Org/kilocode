@@ -184,7 +184,6 @@ const context = createContext<{
   providers: () => ReadonlyMap<string, Provider>
   sync: ReturnType<typeof useSync>
   tui: ReturnType<typeof useTuiConfig>
-  memory: () => boolean // kilocode_change
 }>()
 
 function use() {
@@ -1297,7 +1296,6 @@ export function Session() {
           providers,
           sync,
           tui: tuiConfig,
-          memory, // kilocode_change
         }}
       >
         <box flexDirection="row" flexGrow={1} minHeight={0}>
@@ -1418,6 +1416,7 @@ export function Session() {
                           last={lastAssistant()?.id === message.id}
                           message={message as AssistantMessage}
                           parts={sync.data.part[message.id] ?? []}
+                          memory={memory /* kilocode_change */}
                         />
                       </Match>
                     </Switch>
@@ -1626,7 +1625,12 @@ function UserMessage(props: {
   )
 }
 
-function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
+function AssistantMessage(props: {
+  message: AssistantMessage
+  parts: Part[]
+  last: boolean
+  memory(): boolean // kilocode_change
+}) {
   const ctx = use()
   const local = useLocal()
   const { theme } = useTheme()
@@ -1739,7 +1743,7 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
               {/* kilocode_change start */}
-              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={ctx.memory()} />
+              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={props.memory} />{" "}
               {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>

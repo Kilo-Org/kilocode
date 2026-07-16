@@ -7,6 +7,7 @@ import { MemorySchema } from "../schema"
 import { MemoryFiles } from "../storage/store"
 import { MemoryToken } from "../recall/token"
 import { KiloMemory } from "./index"
+import { MemoryEvents } from "./events"
 import { MemoryInstance } from "./instance"
 import { MemoryError, type MemoryError as Failure } from "./errors"
 
@@ -235,10 +236,10 @@ export namespace MemoryService {
           }),
         ),
       recordRecall: (input) =>
-        bridge(() =>
-          MemoryFiles.queue(input.root, async () => {
+        bridge(async () => {
+          const saved = await MemoryFiles.queue(input.root, async () => {
             const state = await MemoryFiles.readState(input.root)
-            await MemoryFiles.writeState(input.root, {
+            const next = {
               ...state,
               stats: {
                 ...state.stats,
@@ -246,9 +247,25 @@ export namespace MemoryService {
                 lastRecallCount: input.count,
                 lastRecallSessionID: input.sessionID,
               },
-            })
-          }),
-        ),
+            }
+            await MemoryFiles.writeState(input.root, next)
+            return next
+          })
+          await MemoryEvents.publish({
+            event: "status",
+            payload: MemoryEvents.status({
+              root: input.root,
+              state: saved,
+              phase: "injecting",
+              sessionID: input.sessionID,
+              detail: {
+                type: "recalled",
+                message: `Memory recalled · ${input.count} ${input.count === 1 ? "item" : "items"}`,
+                operationCount: input.count,
+              },
+            }),
+          })
+        }),
       decide: (input) => bridge(() => MemoryFiles.decide(input.root, input.decision)),
       readSource: (input) => bridge(() => MemoryFiles.readSource(input.root, input.file)),
       // Ref-counted so every acquirer — in-flight or queued behind `withPermits` — shares one

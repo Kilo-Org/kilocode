@@ -15,6 +15,7 @@ export namespace MemoryPrompt {
     client: KiloClient
     workspace?: string
     directory?: string
+    sessionID?: string
     toast: ToastContext
     dialog: DialogContext
     renderer?: CliRenderer
@@ -25,6 +26,7 @@ export namespace MemoryPrompt {
       client: input.client,
       workspace: input.workspace,
       directory: input.directory,
+      sessionID: input.sessionID,
       toast: input.toast,
       renderer: input.renderer,
       show: () => showMemoryDialog(input.dialog, { workspace: input.workspace, directory: input.directory }),

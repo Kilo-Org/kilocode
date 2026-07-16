@@ -58,7 +58,7 @@ export namespace KiloMemory {
     const id = "ctx" in input ? MemoryPaths.identity({ ctx: input.ctx }) : undefined
     const result = await Memory.enable({ root: dir, id })
     await MemoryEvents.publish({
-      event: "updated",
+      event: "status",
       payload: MemoryEvents.status({
         root: dir,
         state: result.state,

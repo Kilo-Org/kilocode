@@ -1,8 +1,8 @@
 /** @jsxImportSource @opentui/solid */
 import { describe, expect, test } from "bun:test"
-import type { BackgroundProcessInfo, GlobalEvent } from "@kilocode/sdk/v2"
+import type { BackgroundProcessInfo, GlobalEvent, Session } from "@kilocode/sdk/v2"
 import { normalizeSyncEvent } from "@tui/context/event"
-import { mount, wait } from "../../../tui/test/cli/cmd/tui/sync-fixture"
+import { json, mount, wait } from "../../../tui/test/cli/cmd/tui/sync-fixture"
 
 function processInfo(id: string, sessionID: string, lifetime: BackgroundProcessInfo["lifetime"], updated: number) {
   return {
@@ -17,6 +17,19 @@ function processInfo(id: string, sessionID: string, lifetime: BackgroundProcessI
     output: "",
     time: { started: 1, updated },
   } satisfies BackgroundProcessInfo
+}
+
+function sessionInfo(id: string, revert?: Session["revert"]): Session {
+  return {
+    id,
+    slug: "session",
+    projectID: "proj_test",
+    directory: "/tmp/opencode/packages/opencode",
+    title: "Session",
+    version: "1",
+    time: { created: 1, updated: 1 },
+    ...(revert !== undefined ? { revert } : {}),
+  }
 }
 
 describe("TUI sync event wire format", () => {
@@ -315,6 +328,65 @@ describe("TUI sync event wire format", () => {
       await wait(() => sync.data.part[messageID]?.[0]?.type === "text")
       expect(sync.data.message[sessionID]?.[0]?.id).toBe(messageID)
       expect(sync.data.part[messageID]?.[0]).toMatchObject({ type: "text", text: "rendered response" })
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+
+  test("clears an omitted revert before accepting a fresh message id", async () => {
+    const sessionID = "ses_revert"
+    const revertedID = "msg_000000000001"
+    const freshID = "msg_000000000002"
+    const cleared = sessionInfo(sessionID)
+    expect(Object.hasOwn(cleared, "revert")).toBe(false)
+    const { app, emit, sync } = await mount((url) => {
+      if (url.pathname === "/session") return json([sessionInfo(sessionID, { messageID: revertedID })])
+    })
+
+    try {
+      await wait(() => sync.data.session.some((item) => item.id === sessionID))
+      emit({
+        directory: "/tmp/opencode/packages/opencode",
+        project: "proj_test",
+        payload: {
+          type: "sync",
+          syncEvent: {
+            type: "session.updated.1",
+            id: "evt_clear",
+            seq: 1,
+            aggregateID: sessionID,
+            data: { sessionID, info: cleared },
+          },
+        },
+      } as unknown as GlobalEvent)
+      emit({
+        directory: "/tmp/opencode/packages/opencode",
+        project: "proj_test",
+        payload: {
+          type: "sync",
+          syncEvent: {
+            type: "message.updated.1",
+            id: "evt_fresh",
+            seq: 2,
+            aggregateID: sessionID,
+            data: {
+              sessionID,
+              info: {
+                id: freshID,
+                sessionID,
+                role: "user",
+                agent: "code",
+                model: { providerID: "kilo", modelID: "kilo-auto/free" },
+                time: { created: 2 },
+              },
+            },
+          },
+        },
+      } as unknown as GlobalEvent)
+
+      await wait(() => sync.data.message[sessionID]?.some((item) => item.id === freshID) === true)
+      expect(sync.session.get(sessionID)?.revert).toBeUndefined()
+      expect(sync.data.message[sessionID]?.at(-1)?.id).toBe(freshID)
     } finally {
       app.renderer.destroy()
     }

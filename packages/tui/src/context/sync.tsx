@@ -640,7 +640,7 @@ export const {
           setStore(
             "session",
             match.index,
-            produce((draft) => void Object.assign(draft, event.data.info)),
+            reconcile(event.data.info), // kilocode_change - session.updated carries a full snapshot, including omitted optional fields
           )
           break
         }
