@@ -86,8 +86,9 @@ function output(text?: string) {
   return value
 }
 
-function expanded(status?: string, open?: boolean) {
+function expanded(act?: string, status?: string, open?: boolean) {
   if (open !== undefined) return open
+  if (act === "status") return status === "pending" || status === "running"
   return status === "pending" || status === "running" || status === "completed"
 }
 
@@ -121,7 +122,7 @@ function BackgroundProcessTool(props: ToolProps) {
         subtitle: command() ?? text(props.input.description) ?? id(),
         args: [],
       }}
-      defaultOpen={expanded(props.status, props.defaultOpen)}
+      defaultOpen={expanded(act(), props.status, props.defaultOpen)}
       allowPendingToggle
     >
       <Show when={rows().length > 0 || data().output}>
