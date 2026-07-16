@@ -237,4 +237,46 @@ describe("kilocode.session.llm.watchdogStream", () => {
     const err = await run(Effect.flip(Stream.runCollect(KiloLLM.watchdogStream(stream, 1_000))))
     expect((err as Error).message).toBe("upstream broken")
   })
+
+  test("return() closes the source immediately without waiting on a stalled pull", async () => {
+    // Regression test: a hand-rolled async generator's `.return()` cannot
+    // preempt an in-flight internal `await` — it only takes effect once that
+    // await settles on its own, which never happens for a genuinely stalled
+    // source. `watchdogAsyncIterable` must instead expose a `return()` that
+    // runs immediately and forwards to the source's `return()` without
+    // waiting for the outstanding `next()` to resolve.
+    let sourceReturnCalled = false
+    let neverResolvingNextCalled = false
+    const source: AsyncIterable<FullStreamPart> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next() {
+            neverResolvingNextCalled = true
+            return new Promise<IteratorResult<FullStreamPart>>(() => {
+              // Never resolves — simulates a fully stalled source (e.g. a
+              // hung fetch response) whose pending pull is abandoned once
+              // the consumer decides to stop.
+            })
+          },
+          async return() {
+            sourceReturnCalled = true
+            return { done: true, value: undefined }
+          },
+        }
+      },
+    }
+    const wrapped = KiloLLM.watchdogAsyncIterable(source, 60_000)
+    const it = wrapped[Symbol.asyncIterator]()
+    const pending = it.next()
+    expect(neverResolvingNextCalled).toBe(true)
+
+    const returned = await Promise.race([
+      it.return!(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("return() hung")), 500)),
+    ])
+    expect(returned).toMatchObject({ done: true })
+    expect(sourceReturnCalled).toBe(true)
+    // The abandoned pull is left unresolved; only return() is asserted here.
+    void pending
+  })
 })

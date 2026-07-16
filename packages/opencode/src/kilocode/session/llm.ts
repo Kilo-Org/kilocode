@@ -107,34 +107,65 @@ export namespace KiloLLM {
     abort?: AbortController,
   ): AsyncIterable<FullStreamPart> {
     if (idleMs === undefined) return source
-    return watchIterable(source, idleMs, abort)
+    return { [Symbol.asyncIterator]: () => watchIterator(source, idleMs, abort) }
   }
 
-  async function* watchIterable(
+  /**
+   * Implemented as a hand-rolled `AsyncIterator` rather than an `async
+   * function*` generator. An async generator's `.return()` cannot preempt an
+   * in-flight internal `await`: per spec, when the generator is suspended
+   * mid-`await` (as opposed to suspended at a `yield`), a `.return()` call
+   * only takes effect once that `await` settles on its own. When the source
+   * is genuinely stalled — the exact case this watchdog exists to catch —
+   * that `await` never settles, so a caller that wants to cancel promptly
+   * (e.g. Effect interrupting the consuming Stream) would hang forever
+   * waiting for cleanup instead. A plain iterator object's `return()` runs
+   * immediately and forwards to the underlying source's `return()` without
+   * waiting on any outstanding pull, matching how interruption already
+   * behaves for the unwrapped upstream iterator.
+   */
+  function watchIterator(
     source: AsyncIterable<FullStreamPart>,
     idleMs: number,
     abort?: AbortController,
-  ): AsyncGenerator<FullStreamPart, void, void> {
+  ): AsyncIterator<FullStreamPart> {
     const local = new Set<string>()
     const iter = source[Symbol.asyncIterator]()
     let suspended = false
-    try {
-      while (true) {
-        // Decide BEFORE pulling whether the next event is allowed to take as
-        // long as upstream needs. Local tool work in flight must not be timed
-        // out — the AI SDK only emits a tool-result / tool-error once the
-        // client-side tool has actually finished.
-        const pull = suspended ? iter.next() : raceWithTimeout(iter.next(), idleMs, abort)
-        const value = await pull
-        suspended = false
-        if (value.done) return
-        const part = value.value
-        trackPart(local, part)
-        yield part
-        suspended = local.size > 0
-      }
-    } finally {
-      await safeClose(iter)
+    let closed = false
+    return {
+      async next(): Promise<IteratorResult<FullStreamPart>> {
+        if (closed) return { done: true, value: undefined }
+        try {
+          // Decide BEFORE pulling whether the next event is allowed to take as
+          // long as upstream needs. Local tool work in flight must not be timed
+          // out — the AI SDK only emits a tool-result / tool-error once the
+          // client-side tool has actually finished.
+          const pull = suspended ? iter.next() : raceWithTimeout(iter.next(), idleMs, abort)
+          const value = await pull
+          suspended = false
+          if (value.done) {
+            closed = true
+            await safeClose(iter)
+            return value
+          }
+          const part = value.value
+          trackPart(local, part)
+          suspended = local.size > 0
+          return { done: false, value: part }
+        } catch (e) {
+          closed = true
+          await safeClose(iter)
+          throw e
+        }
+      },
+      async return(value?: unknown): Promise<IteratorResult<FullStreamPart>> {
+        if (!closed) {
+          closed = true
+          await safeClose(iter)
+        }
+        return { done: true, value: value as FullStreamPart }
+      },
     }
   }
 
