@@ -15,6 +15,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "../../../src/session/schema"
 import { Session } from "../../../src/session/session"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
+import { KiloSessionPromptQueue } from "../../../src/kilocode/session/prompt-queue" // kilocode_change - queue snapshot replay
 
 function fakeConn() {
   const sent: any[] = []
@@ -1640,6 +1641,9 @@ describe("RemoteSender", () => {
     spyOn(Suggestion, "list").mockResolvedValue([
       { id: "sug_1", sessionID: "ses_other", text: "Review?", actions: [] } as any,
     ])
+    // kilocode_change start - queue snapshot is always replayed, even when empty
+    spyOn(KiloSessionPromptQueue, "snapshot").mockReturnValue([])
+    // kilocode_change end
 
     const sender = RemoteSender.create({
       conn,
@@ -1663,9 +1667,87 @@ describe("RemoteSender", () => {
     sender.handle({ type: "subscribe", sessionId: "ses_target" })
     await new Promise((r) => setTimeout(r, 10))
 
-    const events = sent.filter((m: any) => m.type === "event")
-    expect(events).toHaveLength(0)
+    // No question/permission/suggestion events for the subscribed session, but
+    // the queue snapshot replay always fires (here, an empty list) so a
+    // resubscribing client can reconcile stale "Queued" badges.
+    const replayed = sent.filter((m: any) => m.type === "event")
+    expect(replayed).toEqual([
+      {
+        type: "event",
+        sessionId: "ses_target",
+        event: "session.queue.changed",
+        data: { sessionID: "ses_target", queued: [] },
+      },
+    ])
   })
+
+  // kilocode_change start - queue snapshot replay-on-subscribe coverage
+  test("subscribe always replays the current queue snapshot, including empty", async () => {
+    // A resubscribing/reconnecting client must see the authoritative queue
+    // state immediately, even when the session has no queued messages. This
+    // is what lets mobile reconcile a stale "Queued" badge away.
+    const { conn, sent } = fakeConn()
+    const bus = fakeBus()
+
+    spyOn(Suggestion, "list").mockResolvedValue([])
+    spyOn(KiloSessionPromptQueue, "snapshot").mockReturnValue([])
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: bus.subscribe,
+      provide: async (input: any) => input.fn(),
+      question: questions(),
+      permission: permissions(),
+    })
+
+    sender.handle({ type: "subscribe", sessionId: "ses_target" })
+    await new Promise((r) => setTimeout(r, 10))
+
+    const queueEvents = sent.filter((m: any) => m.event === "session.queue.changed")
+    expect(queueEvents).toEqual([
+      {
+        type: "event",
+        sessionId: "ses_target",
+        event: "session.queue.changed",
+        data: { sessionID: "ses_target", queued: [] },
+      },
+    ])
+    expect(KiloSessionPromptQueue.snapshot).toHaveBeenCalledWith(SessionID.make("ses_target"))
+  })
+
+  test("subscribe replays a non-empty queue snapshot for the subscribed session", async () => {
+    const { conn, sent } = fakeConn()
+    const bus = fakeBus()
+
+    spyOn(Suggestion, "list").mockResolvedValue([])
+    spyOn(KiloSessionPromptQueue, "snapshot").mockReturnValue(["msg_a", "msg_b"] as any)
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: bus.subscribe,
+      provide: async (input: any) => input.fn(),
+      question: questions(),
+      permission: permissions(),
+    })
+
+    sender.handle({ type: "subscribe", sessionId: "ses_target" })
+    await new Promise((r) => setTimeout(r, 10))
+
+    const queueEvents = sent.filter((m: any) => m.event === "session.queue.changed")
+    expect(queueEvents).toEqual([
+      {
+        type: "event",
+        sessionId: "ses_target",
+        event: "session.queue.changed",
+        data: { sessionID: "ses_target", queued: ["msg_a", "msg_b"] },
+      },
+    ])
+  })
+  // kilocode_change end
 
   test("subscribe replays pending suggestion for the subscribed session", async () => {
     const { conn, sent } = fakeConn()

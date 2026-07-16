@@ -2,7 +2,7 @@ import { prepareForkedPart as _prepareForkedPart } from "./fork"
 import z from "zod"
 import { Cause, Effect, Schema } from "effect"
 import { Bus } from "@/bus"
-import { Instance } from "@/kilocode/instance"
+import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
 import { Session } from "@/session/session"
 import { MessageID, SessionID } from "@/session/schema"
@@ -18,6 +18,7 @@ import type { Provider } from "@/provider/provider"
 import { ENV_FEATURE } from "@kilocode/kilo-gateway"
 import { existsSync } from "fs"
 import path from "path"
+import { iife } from "@/util/iife"
 import { KiloSessionEvent, type KiloSessionCloseReason } from "./event"
 
 export namespace KiloSession {
@@ -37,6 +38,29 @@ export namespace KiloSession {
 
   export const publishTurnClose = (input: { sessionID: SessionID; parentID?: SessionID; reason: CloseReason }) =>
     Effect.promise(() => Bus.publish(Instance.current, Event.TurnClose, input))
+
+  // kilocode_change start - FIFO snapshot of the per-session waiting list.
+  // Emitted by KiloSessionPromptQueue on every transition that changes the set
+  // of queued (not-yet-running) user messages.
+  export const publishQueueChanged = (input: { sessionID: SessionID; queued: MessageID[] }) =>
+    Effect.promise(() => Bus.publish(Instance.current, Event.QueueChanged, input))
+
+  // Synchronous, fire-and-forget variant for callers that run outside an Effect
+  // context (e.g. KiloSessionPromptQueue transitions, which fire from inside
+  // Effect.sync blocks). Swallows errors so a transient context loss never
+  // breaks the queue.
+  export function publishQueueChangedAsync(input: { sessionID: SessionID; queued: MessageID[] }) {
+    const ctx = iife((): InstanceContext | undefined => {
+      try {
+        return Instance.current
+      } catch {
+        return undefined
+      }
+    })
+    if (!ctx) return
+    Bus.publish(ctx, Event.QueueChanged, input).catch(err => log.warn("queue changed publish failed", { err }))
+  }
+  // kilocode_change end
 
   // ---------------------------------------------------------------------------
   // Per-session platform override (telemetry attribution)
