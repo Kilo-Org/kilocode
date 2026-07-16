@@ -2574,7 +2574,6 @@ const AgentManagerContent: Component = () => {
           loaded={sessionsLoaded}
           collapsed={sessionsCollapsed}
           active={() => (selection() === null ? session.currentSessionID() : undefined)}
-          keybind={() => kb().newWorktree ?? ""}
           onToggle={toggleSessions}
           onSelect={selectUnassigned}
           onPromote={promoteSession}

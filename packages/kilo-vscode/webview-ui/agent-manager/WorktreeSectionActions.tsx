@@ -22,7 +22,7 @@ interface WorktreeSectionActionsProps {
   onRef: (ref: SidebarSearchMenuRef) => void
   onSelect: (item: SidebarSearchItem) => void
   onCreate: () => void
-  onAdvanced: () => void
+  onNew: () => void
   onSection: () => void
   onShortcuts: () => void
   onSetup: () => void
@@ -48,14 +48,19 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
     />
     <Show when={props.git}>
       <div class="am-split-button">
-        <IconButton
-          icon="plus"
-          size="small"
-          variant="ghost"
-          label={props.t("agentManager.worktree.new")}
-          onClick={props.onCreate}
-          disabled={!props.loaded}
-        />
+        <TooltipKeybind
+          title={props.t("agentManager.shortcuts.advancedWorktree")}
+          keybind={props.bindings.newWorktree ?? ""}
+        >
+          <IconButton
+            icon="plus"
+            size="small"
+            variant="ghost"
+            label={props.t("agentManager.worktree.new")}
+            onClick={props.onNew}
+            disabled={!props.loaded}
+          />
+        </TooltipKeybind>
         <DropdownMenu gutter={4} placement="bottom-end">
           <DropdownMenu.Trigger
             class="am-split-arrow"
@@ -76,16 +81,7 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
                   </span>
                 </DropdownMenu.ItemLabel>
                 <span class="am-menu-shortcut">
-                  {parseBindingTokens(props.bindings.newWorktree ?? "").map((token) => (
-                    <kbd class="am-menu-key">{token}</kbd>
-                  ))}
-                </span>
-              </DropdownMenu.Item>
-              <DropdownMenu.Item onSelect={props.onAdvanced}>
-                <Icon name="settings-gear" size="small" />
-                <DropdownMenu.ItemLabel>{props.t("agentManager.dialog.configureWorktree")}</DropdownMenu.ItemLabel>
-                <span class="am-menu-shortcut">
-                  {parseBindingTokens(props.bindings.advancedWorktree ?? "").map((token) => (
+                  {parseBindingTokens(props.bindings.quickWorktree ?? "").map((token) => (
                     <kbd class="am-menu-key">{token}</kbd>
                   ))}
                 </span>
