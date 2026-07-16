@@ -188,6 +188,10 @@ if (ci) await fs.mkdir(xmldir, { recursive: true })
 const counter = { done: 0 }
 const pad = String(files.length).length
 const progress = { width: 80 }
+const active = new Map<number, ReturnType<typeof Bun.spawn>>()
+const pending = new Map<number, Promise<void>>()
+const stopping = { promise: undefined as Promise<void> | undefined }
+const stopped = { value: false }
 const marks = {
   pass: ".",
   retry: "R",
@@ -218,32 +222,64 @@ async function run(file: string): Promise<Result> {
     stderr: "pipe",
     windowsHide: true,
   })
+  active.set(proc.pid, proc)
 
   const timer = setTimeout(() => {
     killed.value = true
     proc.kill()
   }, deadline)
 
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]).finally(async () => {
+  const stdout = new Response(proc.stdout).text()
+  const stderr = new Response(proc.stderr).text()
+  const code = await proc.exited.finally(async () => {
     clearTimeout(timer)
-    await cleanup(proc.pid)
+    await finish(proc)
   })
+  const output = await Promise.all([stdout, stderr])
 
   return {
     file,
     passed: code === 0,
     code,
-    stdout,
-    stderr,
+    stdout: output[0],
+    stderr: output[1],
     duration: performance.now() - start,
     timedout: killed.value,
     attempts: 1,
   }
 }
+
+function finish(proc: ReturnType<typeof Bun.spawn>) {
+  const found = pending.get(proc.pid)
+  if (found) return found
+
+  const promise = (async () => {
+    await proc.exited
+    await cleanup(proc.pid)
+  })().finally(() => {
+    active.delete(proc.pid)
+    pending.delete(proc.pid)
+  })
+  pending.set(proc.pid, promise)
+  return promise
+}
+
+function shutdown(code: number) {
+  if (stopping.promise) return stopping.promise
+  stopping.promise = (async () => {
+    stopped.value = true
+    const children = [...active.values()]
+    for (const proc of children) {
+      if (proc.exitCode === null) proc.kill("SIGKILL")
+    }
+    await Promise.all(children.map(finish))
+    process.exit(code)
+  })()
+  return stopping.promise
+}
+
+process.once("SIGINT", () => void shutdown(130))
+process.once("SIGTERM", () => void shutdown(143))
 
 // ---------------------------------------------------------------------------
 // Report a single result
@@ -304,7 +340,6 @@ console.log()
 const start = performance.now()
 const results: Result[] = []
 const queue = TestShard.order(files, weight)
-const stopped = { value: false }
 
 const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
