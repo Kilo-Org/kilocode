@@ -56,6 +56,7 @@ import ai.kilocode.rpc.dto.ProviderMetadataDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
+import ai.kilocode.rpc.dto.PermissionRuleDecisionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
@@ -1165,6 +1166,7 @@ object KiloCliDataParser {
         }?.toMap() ?: emptyMap()
         val path = metaObj.path()
         val diffs = metaObj.permissionDiffs(path)
+        val rules = metaObj.rules().ifEmpty { bashHierarchy(permission, patterns, always) }
         return PermissionRequestDto(
             id = id,
             sessionID = sid,
@@ -1175,7 +1177,8 @@ object KiloCliDataParser {
             tool = toolRef(obj),
             message = obj.str("message") ?: metaObj?.str("message"),
             command = metaObj?.str("command") ?: obj.str("command"),
-            rules = metaObj.rules(),
+            rules = rules,
+            ruleDecisions = metaObj.ruleDecisions(rules.ifEmpty { always }),
             filePath = path,
             fileDiffs = diffs,
         )
@@ -1598,7 +1601,11 @@ private fun JsonObject?.rules(): List<String> {
     val raw = this["rules"] ?: return emptyList()
     val arr = raw.arr()
     if (arr != null) {
-        return arr.mapNotNull { it.jsonPrimitive.contentOrNull }
+        return arr.mapNotNull { elem ->
+            val obj = elem.obj()
+            if (obj != null) return@mapNotNull obj.str("pattern") ?: obj.str("rule") ?: obj.str("text")
+            runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull()
+        }
     }
     val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return emptyList()
     if (text.startsWith("[")) {
@@ -1607,6 +1614,53 @@ private fun JsonObject?.rules(): List<String> {
         }.getOrElse { listOf(text) }
     }
     return listOf(text)
+}
+
+private fun JsonObject?.ruleDecisions(fallback: List<String>): List<PermissionRuleDecisionDto> {
+    if (this == null) return fallback.map { PermissionRuleDecisionDto(it) }
+    val raw = this["rules"] ?: return fallback.map { PermissionRuleDecisionDto(it) }
+    val arr = raw.arr()
+    if (arr != null) {
+        return arr.mapNotNull { elem ->
+            val obj = elem.obj()
+            if (obj != null) {
+                val pattern = obj.str("pattern") ?: obj.str("rule") ?: obj.str("text") ?: return@mapNotNull null
+                return@mapNotNull PermissionRuleDecisionDto(pattern, obj.decision())
+            }
+            val pattern = runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull() ?: return@mapNotNull null
+            PermissionRuleDecisionDto(pattern)
+        }
+    }
+    val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return fallback.map { PermissionRuleDecisionDto(it) }
+    if (text.startsWith("[")) return KiloCliDataParser.parseRulesJson(text).map { PermissionRuleDecisionDto(it) }
+    return listOf(PermissionRuleDecisionDto(text))
+}
+
+private fun JsonObject.decision(): String {
+    val value = str("decision") ?: str("state") ?: str("action") ?: return "pending"
+    return when (value.lowercase()) {
+        "approved", "allow" -> "approved"
+        "denied", "deny" -> "denied"
+        else -> "pending"
+    }
+}
+
+private fun bashHierarchy(permission: String, patterns: List<String>, always: List<String>): List<String> {
+    if (permission != "bash") return emptyList()
+    val out = linkedSetOf<String>()
+    val prefixes = always.mapNotNull { item -> item.removeSuffix(" *").takeIf { it != item && it.isNotBlank() } }
+    for (pattern in patterns) {
+        val text = pattern.trim()
+        if (text.isBlank()) continue
+        val prefix = prefixes
+            .sortedByDescending { it.length }
+            .firstOrNull { text == it || text.startsWith("$it ") }
+            ?: text.substringBefore(' ')
+        val parts = prefix.split(Regex("\\s+")).filter { it.isNotBlank() }
+        for (i in 1..parts.size) out.add(parts.take(i).joinToString(" ") + " *")
+        if (text != prefix) out.add(text)
+    }
+    return out.ifEmpty { always }.toList()
 }
 
 private fun JsonObject?.permissionDiffs(path: String?): List<PermissionFileDiffDto> {

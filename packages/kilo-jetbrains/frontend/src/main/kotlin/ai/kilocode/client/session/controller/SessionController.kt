@@ -13,6 +13,8 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.PermissionRuleCandidate
+import ai.kilocode.client.session.model.PermissionRuleDecision
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
@@ -41,6 +43,7 @@ import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PermissionRuleDecisionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.ProvidersDto
@@ -2436,6 +2439,9 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         ?: dto.metadata["filePath"]
         ?: dto.metadata["file"]
         ?: dto.metadata["path"]
+    val patterns = dto.rules.ifEmpty { dto.always }
+    val rules = dto.ruleDecisions.map { it.toRuleCandidate() }
+        .ifEmpty { patterns.map { PermissionRuleCandidate(it) } }
     return Permission(
         id = dto.id,
         sessionId = dto.sessionID,
@@ -2444,7 +2450,8 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         always = dto.always,
         meta = PermissionMeta(
             command = dto.command ?: dto.metadata["command"],
-            rules = dto.rules,
+            rules = patterns,
+            ruleDecisions = rules,
             diff = dto.metadata["diff"],
             filePath = file,
             fileDiff = diffs.firstOrNull(),
@@ -2455,6 +2462,15 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         tool = ref,
         state = state,
     )
+}
+
+private fun PermissionRuleDecisionDto.toRuleCandidate(): PermissionRuleCandidate {
+    val next = when (decision.lowercase()) {
+        "approved", "allow" -> PermissionRuleDecision.APPROVED
+        "denied", "deny" -> PermissionRuleDecision.DENIED
+        else -> PermissionRuleDecision.PENDING
+    }
+    return PermissionRuleCandidate(pattern, next)
 }
 
 private fun toQuestion(dto: QuestionRequestDto): Question {
