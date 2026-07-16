@@ -3940,7 +3940,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     // Resubmit clears revert on the backend, but that never reaches the webview,
     // so the stale revert marker keeps hiding the new message. Clear it here.
-    if (this.currentSession && event.type === "message.updated" && shouldClearRevertForMessage(sessionID, this.currentSession)) {
+    if (
+      this.currentSession &&
+      event.type === "message.updated" &&
+      shouldClearRevertForMessage(sessionID, this.currentSession, event.properties.info.id)
+    ) {
       this.setCurrentSession({ ...this.currentSession, revert: undefined })
       this.postMessage({ type: "sessionUpdated", session: { id: sessionID, revert: null } })
     }

@@ -26,8 +26,18 @@ export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler
  * webview (sync `session.updated` events map to null / are dropped), so we
  * must clear it client-side when the first post-revert message arrives.
  */
-export function shouldClearRevertForMessage(sessionID: string | undefined, session: Session | undefined): boolean {
-  return session !== undefined && session.id === sessionID && session.revert !== undefined
+export function shouldClearRevertForMessage(
+  sessionID: string | undefined,
+  session: Session | undefined,
+  messageID: string | undefined,
+): boolean {
+  return (
+    session !== undefined &&
+    session.id === sessionID &&
+    session.revert !== undefined &&
+    messageID !== undefined &&
+    messageID > session.revert.messageID
+  )
 }
 
 /** A single provider entry as returned by the /provider list endpoint. */
