@@ -108,7 +108,7 @@ export namespace KiloMemory {
 
   export async function configure(
     input: Input & {
-      settings: Partial<Pick<MemorySchema.State, "autoConsolidate">>
+      settings: Partial<Pick<MemorySchema.State, "autoConsolidate" | "verbose">>
     },
   ) {
     const result = await Memory.configure({ root: await prepare(input), settings: input.settings })

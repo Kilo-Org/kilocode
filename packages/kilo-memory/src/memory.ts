@@ -112,13 +112,14 @@ export namespace Memory {
 
   export async function configure(input: {
     root: string
-    settings: Partial<Pick<MemorySchema.State, "autoConsolidate">>
+    settings: Partial<Pick<MemorySchema.State, "autoConsolidate" | "verbose">>
   }) {
     return MemoryFiles.queue(input.root, async () => {
       const state = await MemoryFiles.readState(input.root)
       const next = {
         ...state,
         ...(input.settings.autoConsolidate === undefined ? {} : { autoConsolidate: input.settings.autoConsolidate }),
+        ...(input.settings.verbose === undefined ? {} : { verbose: input.settings.verbose }),
       }
       await MemoryFiles.writeState(input.root, next)
       await MemoryFiles.append(
@@ -126,6 +127,7 @@ export namespace Memory {
         [
           `settings ${next.scope}`,
           input.settings.autoConsolidate === undefined ? "" : `autoConsolidate=${next.autoConsolidate}`,
+          input.settings.verbose === undefined ? "" : `verbose=${next.verbose}`,
         ]
           .filter(Boolean)
           .join(" "),

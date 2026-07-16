@@ -629,7 +629,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
 
     if (message.type === "setChatBoxMessage") {
       setText(message.text)
-      mention.seedFromText(message.text)
+      // Prefer the exact attachment paths when available (e.g. reverting to a
+      // message with @mentions) — seedFromText re-derives candidate mentions
+      // from raw text via regex, which truncates at the first space in a
+      // filename and cannot be relied on to reconstruct spaced paths correctly.
+      if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
+      else mention.seedFromText(message.text)
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -987,7 +992,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         type: "memoryOperation",
         operation: memory.operation,
         sessionID: sid(),
-        ...(memory.operation === "auto" ? { mode: memory.mode } : {}),
+        ...(memory.operation === "auto" || memory.operation === "verbose" ? { mode: memory.mode } : {}),
         ...(memory.operation === "purge" ? { confirm: memory.confirm } : {}),
         ...(memory.operation === "remember" || memory.operation === "correct" ? { text: memory.text } : {}),
         ...(memory.operation === "forget" ? { query: memory.query } : {}),

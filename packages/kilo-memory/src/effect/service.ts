@@ -15,7 +15,7 @@ type SessionID = string
 const IDLE_SETTLE_MS = 30_000
 
 type ConfigureInput = KiloMemory.Input & {
-  settings: Partial<Pick<MemorySchema.State, "autoConsolidate">>
+  settings: Partial<Pick<MemorySchema.State, "autoConsolidate" | "verbose">>
 }
 
 type ApplyInput = KiloMemory.Input & {

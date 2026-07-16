@@ -17906,6 +17906,9 @@
                         "autoConsolidate": {
                           "type": "boolean"
                         },
+                        "verbose": {
+                          "type": "boolean"
+                        },
                         "capture": {
                           "type": "object",
                           "properties": {
@@ -18027,6 +18030,7 @@
                         "scope",
                         "autoInject",
                         "autoConsolidate",
+                        "verbose",
                         "capture",
                         "limits",
                         "stats"
@@ -18161,6 +18165,9 @@
                         "autoConsolidate": {
                           "type": "boolean"
                         },
+                        "verbose": {
+                          "type": "boolean"
+                        },
                         "capture": {
                           "type": "object",
                           "properties": {
@@ -18282,6 +18289,7 @@
                         "scope",
                         "autoInject",
                         "autoConsolidate",
+                        "verbose",
                         "capture",
                         "limits",
                         "stats"
@@ -18415,6 +18423,9 @@
                         "autoConsolidate": {
                           "type": "boolean"
                         },
+                        "verbose": {
+                          "type": "boolean"
+                        },
                         "capture": {
                           "type": "object",
                           "properties": {
@@ -18536,6 +18547,7 @@
                         "scope",
                         "autoInject",
                         "autoConsolidate",
+                        "verbose",
                         "capture",
                         "limits",
                         "stats"
@@ -18660,6 +18672,9 @@
                         "autoConsolidate": {
                           "type": "boolean"
                         },
+                        "verbose": {
+                          "type": "boolean"
+                        },
                         "capture": {
                           "type": "object",
                           "properties": {
@@ -18781,6 +18796,7 @@
                         "scope",
                         "autoInject",
                         "autoConsolidate",
+                        "verbose",
                         "capture",
                         "limits",
                         "stats"
@@ -18886,6 +18902,9 @@
                         "autoConsolidate": {
                           "type": "boolean"
                         },
+                        "verbose": {
+                          "type": "boolean"
+                        },
                         "capture": {
                           "type": "object",
                           "properties": {
@@ -19007,6 +19026,7 @@
                         "scope",
                         "autoInject",
                         "autoConsolidate",
+                        "verbose",
                         "capture",
                         "limits",
                         "stats"
@@ -19058,6 +19078,9 @@
                 "type": "object",
                 "properties": {
                   "autoConsolidate": {
+                    "type": "boolean"
+                  },
+                  "verbose": {
                     "type": "boolean"
                   }
                 },
@@ -19127,6 +19150,9 @@
                         "autoConsolidate": {
                           "type": "boolean"
                         },
+                        "verbose": {
+                          "type": "boolean"
+                        },
                         "capture": {
                           "type": "object",
                           "properties": {
@@ -19248,6 +19274,7 @@
                         "scope",
                         "autoInject",
                         "autoConsolidate",
+                        "verbose",
                         "capture",
                         "limits",
                         "stats"
@@ -23709,6 +23736,9 @@
             "$ref": "#/components/schemas/EventPermissionReplied"
           },
           {
+            "$ref": "#/components/schemas/EventReferenceUpdated"
+          },
+          {
             "$ref": "#/components/schemas/EventConnectorUpdated"
           },
           {
@@ -23716,9 +23746,6 @@
           },
           {
             "$ref": "#/components/schemas/EventPermissionV2Replied"
-          },
-          {
-            "$ref": "#/components/schemas/EventReferenceUpdated"
           },
           {
             "$ref": "#/components/schemas/EventFileEdited"
@@ -26823,6 +26850,9 @@
                 "$ref": "#/components/schemas/EventPermissionReplied"
               },
               {
+                "$ref": "#/components/schemas/EventReferenceUpdated"
+              },
+              {
                 "$ref": "#/components/schemas/EventConnectorUpdated"
               },
               {
@@ -26830,9 +26860,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventPermissionV2Replied"
-              },
-              {
-                "$ref": "#/components/schemas/EventReferenceUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventFileEdited"
@@ -26944,9 +26971,6 @@
               },
               {
                 "$ref": "#/components/schemas/SyncEventSessionNextPromptPromoted"
-              },
-              {
-                "$ref": "#/components/schemas/SyncEventSessionNextInterruptRequested"
               },
               {
                 "$ref": "#/components/schemas/SyncEventSessionNextContextUpdated"
@@ -38080,9 +38104,12 @@
               },
               "recent": {
                 "type": "string"
+              },
+              "include": {
+                "type": "string"
               }
             },
-            "required": ["timestamp", "sessionID", "messageID", "reason", "text", "recent"],
+            "required": ["timestamp", "sessionID", "text"],
             "additionalProperties": false
           }
         },
@@ -38530,6 +38557,24 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventReferenceUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["reference.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventConnectorUpdated": {
         "type": "object",
         "properties": {
@@ -38646,24 +38691,6 @@
             },
             "required": ["sessionID", "requestID", "reply"],
             "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventReferenceUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["reference.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {}
           }
         },
         "required": ["id", "type", "properties"],
@@ -40133,56 +40160,6 @@
         "required": ["type", "id", "syncEvent"],
         "additionalProperties": false
       },
-      "SyncEventSessionNextInterruptRequested": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": ["sync"]
-          },
-          "id": {
-            "type": "string",
-            "pattern": "^evt_"
-          },
-          "syncEvent": {
-            "type": "object",
-            "properties": {
-              "type": {
-                "type": "string",
-                "enum": ["session.next.interrupt.requested.1"]
-              },
-              "id": {
-                "type": "string",
-                "pattern": "^evt_"
-              },
-              "seq": {
-                "type": "number"
-              },
-              "aggregateID": {
-                "type": "string"
-              },
-              "data": {
-                "type": "object",
-                "properties": {
-                  "timestamp": {
-                    "type": "number"
-                  },
-                  "sessionID": {
-                    "type": "string",
-                    "pattern": "^ses"
-                  }
-                },
-                "required": ["timestamp", "sessionID"],
-                "additionalProperties": false
-              }
-            },
-            "required": ["type", "id", "seq", "aggregateID", "data"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["type", "id", "syncEvent"],
-        "additionalProperties": false
-      },
       "SyncEventSessionNextContextUpdated": {
         "type": "object",
         "properties": {
@@ -41467,7 +41444,7 @@
             "properties": {
               "type": {
                 "type": "string",
-                "enum": ["session.next.compaction.ended.2"]
+                "enum": ["session.next.compaction.ended.1"]
               },
               "id": {
                 "type": "string",
@@ -41502,9 +41479,12 @@
                   },
                   "recent": {
                     "type": "string"
+                  },
+                  "include": {
+                    "type": "string"
                   }
                 },
-                "required": ["timestamp", "sessionID", "messageID", "reason", "text", "recent"],
+                "required": ["timestamp", "sessionID", "text"],
                 "additionalProperties": false
               }
             },

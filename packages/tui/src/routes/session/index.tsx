@@ -184,6 +184,7 @@ const context = createContext<{
   providers: () => ReadonlyMap<string, Provider>
   sync: ReturnType<typeof useSync>
   tui: ReturnType<typeof useTuiConfig>
+  memory: () => boolean // kilocode_change
 }>()
 
 function use() {
@@ -339,6 +340,7 @@ export function Session() {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
   const sdk = useSDK()
+  const memory = MemorySessionTui.verbose({ sessionID: () => route.sessionID }) // kilocode_change
   const editor = useEditorContext()
   onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
@@ -1295,6 +1297,7 @@ export function Session() {
           providers,
           sync,
           tui: tuiConfig,
+          memory, // kilocode_change
         }}
       >
         <box flexDirection="row" flexGrow={1} minHeight={0}>
@@ -1735,7 +1738,9 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
-              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} /> {/* kilocode_change */}
+              {/* kilocode_change start */}
+              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={ctx.memory()} />
+              {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>

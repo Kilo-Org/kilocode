@@ -48,6 +48,10 @@ function auto(input: boolean) {
   return `Memory auto-save ${input ? "on" : "off"}`
 }
 
+function verbose(input: boolean) {
+  return `Memory verbose ${input ? "on" : "off"}`
+}
+
 async function edit(input: { file: string; cwd?: string; renderer?: CliRenderer }) {
   const editor = (process.env["VISUAL"] || process.env["EDITOR"])?.trim()
   if (!editor) throw new Error("Set $VISUAL or $EDITOR to use /memory edit")
@@ -131,6 +135,16 @@ export async function runMemoryCommand(input: {
         }),
       )
       input.toast.show({ variant: "info", message: auto(result.state.autoConsolidate) })
+      return true
+    }
+    if (parsed.operation === "verbose") {
+      const result = read(
+        await input.client.memory.configure({
+          ...route(input),
+          verbose: parsed.mode === "on",
+        }),
+      )
+      input.toast.show({ variant: "info", message: verbose(result.state.verbose) })
       return true
     }
     if (parsed.operation === "disable") {

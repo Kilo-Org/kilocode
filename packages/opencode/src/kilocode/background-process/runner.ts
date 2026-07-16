@@ -98,6 +98,7 @@ export namespace BackgroundProcessRunner {
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0 || !out.text.trim()) return seen

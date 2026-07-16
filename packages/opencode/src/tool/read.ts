@@ -249,9 +249,18 @@ export const ReadTool = Tool.define<
           always: ["*"],
           metadata: {},
         })
+        // kilocode_change start - reject any canonical path change after permission approval
         if (ctx.extra?.["denyDirectory"] === true) {
-          return yield* Effect.fail(new Error(`Directory attachments cannot be expanded: ${requested}`))
+          // Re-resolve after permission approval to detect TOCTOU symlink swaps.
+          // If the canonical target changed, the approved permission no longer
+          // applies to the resolved path, so deny before listing.
+          const resolved2 = yield* fs.realPath(requested)
+          const target2 = process.platform === "win32" ? FSUtil.normalizePath(resolved2) : resolved2
+          if (target2 !== target) {
+            return yield* Effect.fail(new Error(`Directory attachments cannot be expanded: ${requested}`))
+          }
         }
+        // kilocode_change end
         const items = yield* list(target)
         const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT) // kilocode_change - prevent zero-limit loops
         const offset = params.offset || 1
