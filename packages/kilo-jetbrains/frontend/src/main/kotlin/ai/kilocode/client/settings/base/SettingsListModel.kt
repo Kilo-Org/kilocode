@@ -21,6 +21,7 @@ internal data class SettingsListConfig(
     val height: SettingsListRowHeight,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
+    val tooltip: Boolean = true,
 ) {
     companion object {
         val Equal = SettingsListConfig(SettingsListRowHeight.EQUAL)
@@ -41,6 +42,7 @@ internal data class SettingsListCell(
 internal interface SettingsListItem {
     val key: String
     val title: String
+    val note: String? get() = null
     val description: String? get() = null
     val icon: Icon? get() = null
     val section: String? get() = null

@@ -24,7 +24,7 @@ internal class SettingsListView(
     private val model = CollectionListModel<SettingsListItem>()
     internal val list = object : JBList<SettingsListItem>(model) {
         override fun getToolTipText(event: MouseEvent): String? {
-            if (!cfg.description) return null
+            if (!cfg.description || !cfg.tooltip) return null
             val idx = locationToIndex(event.point)
             if (idx < 0) return null
             val bounds = getCellBounds(idx, idx) ?: return null

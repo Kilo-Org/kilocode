@@ -67,9 +67,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var mcpStatus = 200
     @Volatile var mcpActionStatus = 200
     @Volatile var agentRemoveStatus = 200
+    @Volatile var skillRemoveStatus = 200
     @Volatile var agentBuilderStatus = 200
     @Volatile var lastMcpActionPath: String? = null
     @Volatile var lastAgentRemoveBody: String? = null
+    @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
     @Volatile var lastAgentBuilderBody: String? = null
     @Volatile var lastAgentBuilderMethod: String? = null
@@ -367,6 +369,10 @@ class MockCliServer : AutoCloseable {
                 bare == "/kilocode/agent/remove" && method == "POST" -> {
                     lastAgentRemoveBody = body
                     respond(output, agentRemoveStatus, if (agentRemoveStatus == 200) "true" else """{"error":"Agent not found"}""")
+                }
+                bare == "/kilocode/skill/remove" && method == "POST" -> {
+                    lastSkillRemoveBody = body
+                    respond(output, skillRemoveStatus, if (skillRemoveStatus == 200) "true" else """{"error":"Skill not found"}""")
                 }
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)

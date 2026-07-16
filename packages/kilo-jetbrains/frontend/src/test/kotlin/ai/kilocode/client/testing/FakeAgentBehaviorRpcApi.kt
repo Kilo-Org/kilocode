@@ -11,9 +11,12 @@ import ai.kilocode.rpc.dto.SkillDto
 
 class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var agents = emptyList<AgentDetailDto>()
+    var skills = emptyList<SkillDto>()
     var mcps = emptyList<McpStatusDto>()
     var mcpConfigs = emptyMap<String, McpServerConfigDto>()
     val agentCalls = mutableListOf<String>()
+    val skillCalls = mutableListOf<String>()
+    val skillRemovals = mutableListOf<Pair<String, String>>()
     val mcpCalls = mutableListOf<String>()
     val mcpConfigCalls = mutableListOf<String>()
     val mcpSaves = mutableListOf<Triple<String, String, McpConfigDto?>>()
@@ -28,9 +31,11 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
     var createError: Exception? = null
     var removeError: Exception? = null
+    var removeSkillError: Exception? = null
     var mcpStatusError: Exception? = null
     var mcpConnectError: Exception? = null
     var removeResult = true
+    var removeSkillResult = true
     var mcpConnectResult = true
     var mcpDisconnectResult = true
     var mcpAuthenticateResult = true
@@ -43,12 +48,16 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun skills(directory: String): List<SkillDto> {
         assertNotEdt("agentBehavior.skills")
-        return emptyList()
+        skillCalls.add(directory)
+        return skills
     }
 
     override suspend fun removeSkill(directory: String, location: String): Boolean {
         assertNotEdt("agentBehavior.removeSkill")
-        return false
+        removeSkillError?.let { throw it }
+        skillRemovals.add(directory to location)
+        if (removeSkillResult) skills = skills.filterNot { it.location == location }
+        return removeSkillResult
     }
 
     override suspend fun removeAgent(directory: String, name: String): Boolean {

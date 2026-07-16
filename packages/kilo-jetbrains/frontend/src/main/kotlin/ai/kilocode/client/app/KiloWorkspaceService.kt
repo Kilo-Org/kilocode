@@ -168,6 +168,15 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
+    suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean {
+        return try {
+            call { openFile(path, line, column) }
+        } catch (e: Exception) {
+            LOG.warn("workspace file open failed for path=$path", e)
+            false
+        }
+    }
+
     suspend fun localConfigTarget(directory: String): ConfigTargetDto? {
         return try {
             val target = call { this.localConfigTarget(directory) }

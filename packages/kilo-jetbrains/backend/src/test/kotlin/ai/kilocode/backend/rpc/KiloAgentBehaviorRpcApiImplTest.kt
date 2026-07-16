@@ -79,6 +79,29 @@ class KiloAgentBehaviorRpcApiImplTest {
     }
 
     @Test
+    fun `skills and remove skill call CLI endpoints`() = runBlocking {
+        mock.skills = """[
+            {"name":"plan","description":"Plan work","location":"/tmp/skill/SKILL.md"},
+            {"name":"builtin","location":"builtin"}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        val skills = rpc.skills("/test project")
+        assertEquals(listOf("plan", "builtin"), skills.map { it.name })
+        assertEquals("Plan work", skills.single { it.name == "plan" }.description)
+
+        assertTrue(rpc.removeSkill("/test project", "/tmp/skill/SKILL.md"))
+        assertEquals("{\"location\":\"/tmp/skill/SKILL.md\"}", mock.lastSkillRemoveBody)
+        assertEquals(1, mock.requestCount("/kilocode/skill/remove"))
+
+        mock.skillRemoveStatus = 400
+        val err = assertFailsWith<RuntimeException> {
+            rpc.removeSkill("/test", "/tmp/missing/SKILL.md")
+        }
+        assertContains(err.message.orEmpty(), "HTTP 400")
+    }
+
+    @Test
     fun `mcp config writes global and workspace patches`() = runBlocking {
         mock.config = """{"mcp":{"global":{"type":"local","command":["node","g.js"]}}}"""
         mock.workspaceConfig = """{"mcp":{"workspace":{"type":"remote","url":"https://workspace.test"}}}"""

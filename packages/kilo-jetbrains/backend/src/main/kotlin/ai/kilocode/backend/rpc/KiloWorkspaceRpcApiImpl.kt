@@ -311,7 +311,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
             }
             descriptor.navigate(true)
             if (cont.isActive) cont.resume(Unit)
-        }, ModalityState.any())
+        }, ModalityState.current())
     }
 
     private fun project(path: Path): Project? {
