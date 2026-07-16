@@ -275,6 +275,7 @@ internal class KiloBackendProviderSettingsManager(
         if (!input.baseUrl.startsWith("http://") && !input.baseUrl.startsWith("https://")) return "Base URL must start with http:// or https://."
         if (!env.isNullOrBlank() && !Regex("^[A-Za-z_][A-Za-z0-9_]*$").matches(env)) return "Environment variable name is invalid."
         if (input.headers.keys.any { it.isBlank() }) return "Header names cannot be empty."
+        if (input.models.isEmpty()) return "At least one model ID is required."
         if (input.models.any { it.id.isBlank() }) return "Model IDs cannot be empty."
         return null
     }

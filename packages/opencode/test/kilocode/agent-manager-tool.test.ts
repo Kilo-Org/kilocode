@@ -8,6 +8,7 @@ import { AgentManagerEvent, type AgentManagerStart } from "../../src/kilocode/ag
 import { AgentManager } from "../../src/kilocode/agent-manager/service"
 import { Bus } from "../../src/bus"
 import { Tool } from "../../src/tool/tool"
+import * as ToolJsonSchema from "../../src/tool/json-schema"
 import { Truncate } from "../../src/tool/truncate"
 import { Agent } from "../../src/agent/agent"
 import { Provider } from "../../src/provider/provider"
@@ -149,6 +150,25 @@ function publish(
 }
 
 describe("agent_manager tool", () => {
+  test("uses an object-root input schema without combinators", async () => {
+    const tool = await init()
+    const schema = ToolJsonSchema.fromTool(tool)
+
+    expect(schema.type).toBe("object")
+    expect(schema.anyOf).toBeUndefined()
+    expect(schema.oneOf).toBeUndefined()
+    expect(schema.allOf).toBeUndefined()
+    expect(Object.keys(schema.properties ?? {})).toEqual([
+      "mode",
+      "versions",
+      "tasks",
+      "action",
+      "filter",
+      "sessionID",
+      "prompt",
+    ])
+  })
+
   test("asks for agent_manager permission", async () => {
     const tool = await init()
     const calls: unknown[] = []
