@@ -1237,8 +1237,11 @@ export const dict = {
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Limita l'accesso alla rete",
   "settings.sandboxing.network.description":
-    "Blocca l'accesso in uscita alla rete per i comandi avviati dal modello e gli strumenti HTTP. I server MCP locali e gli hook dei plugin operano al di fuori di questa restrizione. Il traffico verso i provider e per l'inferenza dei modelli rimane disponibile.",
+    "Blocca l'accesso in uscita diretto dai comandi avviati dal modello e dagli strumenti HTTP. Gli strumenti MCP locali e remoti non sono disponibili mentre la restrizione è attiva. Il traffico del provider e gli hook dei plugin attendibili restano al di fuori di questa restrizione.",
 
+  "settings.sandboxing.allowedHosts.title": "Destinazioni di rete consentite",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinazioni DNS di host e porta per il traffico proxy HTTP e HTTPS in sandbox. GitHub CLI e HTTPS Git richiedono comunemente github.com:443 e api.github.com:443. Le modifiche si applicano alle nuove sessioni.",
   "settings.sandboxing.writablePaths.title": "Percorsi di scrittura aggiuntivi",
   "settings.sandboxing.writablePaths.description":
     "Percorsi aggiuntivi del file system in cui la sandbox consente la scrittura (es. /tmp, /var/log). Vengono uniti con i percorsi di scrittura predefiniti quando la sandbox è attiva.",
@@ -1270,11 +1273,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizzato",
   "settings.agentBehaviour.prompt.description": "Prompt di sistema aggiuntivo per questo agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura di campionamento (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controlla il grado di casualità delle risposte dell’IA (0–2). Valori più bassi (ad es. 0.2) producono risultati mirati e coerenti. Valori più alti (ad es. 1.0) producono risposte più varie e creative. Lascia vuoto per usare il valore predefinito del modello.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parametro di campionamento nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Soglia di campionamento nucleus (0–1). Limita la scelta dei token all’insieme più piccolo la cui probabilità cumulativa raggiunge P. Valori più bassi rendono il risultato più mirato; valori più alti consentono una maggiore varietà. Lascia vuoto per usare il valore predefinito del modello.",
   "settings.agentBehaviour.maxSteps.title": "Passaggi massimi",
-  "settings.agentBehaviour.maxSteps.description": "Numero massimo di iterazioni agentiche",
+  "settings.agentBehaviour.maxSteps.description":
+    "Numero massimo di passaggi dell’agente. Al raggiungimento del limite, l’agente riceve l’istruzione di smettere di usare gli strumenti e fornire una risposta finale. Aumentalo per attività complesse in più passaggi; riducilo per mantenere le risposte più brevi e prevedibili.",
   "settings.agentBehaviour.hidden.title": "Nascosto",
   "settings.agentBehaviour.hidden.description": "Nascondi questo agente dal selettore modalità nell'input chat",
   "settings.agentBehaviour.disable.title": "Disabilitato",
@@ -1798,4 +1804,15 @@ export const dict = {
   "speechToText.error.emptyTranscript": "Nessun parlato rilevato.",
   "speechToText.error.encoding": "Impossibile codificare la registrazione.",
   "speechToText.toast.transcribed": "Trascrizione inserita",
+  "chat.search.placeholder": "Cerca nella chat…",
+  "chat.search.toggle": "Cerca nella chat",
+  "chat.search.matchCase": "Maiuscole/minuscole",
+  "chat.search.matchWholeWord": "Parola intera",
+  "chat.search.useRegex": "Usa espressione regolare",
+  "chat.search.previousMatch": "Risultato precedente",
+  "chat.search.nextMatch": "Risultato successivo",
+  "chat.search.close": "Chiudi ricerca",
+  "chat.search.invalidRegex": "Espressione regolare non valida",
+  "chat.search.noResults": "Nessun risultato",
+  "chat.search.searchingHistory": "Ricerca nei messaggi precedenti…",
 } as const

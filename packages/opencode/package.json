@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.4.5",
+  "version": "7.4.9",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -13,10 +13,8 @@
     "bench:test": "bun run script/bench-test-suite.ts",
     "profile:test": "bun run script/profile-test-files.ts",
     "build": "bun run script/build.ts",
-    "fix-node-pty": "bun run script/fix-node-pty.ts",
     "dev": "bun run --conditions=browser ./src/index.ts",
-    "dev:temporary": "bun run --conditions=browser ./src/temporary.ts",
-    "db": "bun drizzle-kit"
+    "dev:temporary": "bun run --conditions=browser ./src/temporary.ts"
   },
   "bin": {
     "kilo": "./bin/kilo",
@@ -30,11 +28,6 @@
       "bun": "./src/storage/db.bun.ts",
       "node": "./src/storage/db.node.ts",
       "default": "./src/storage/db.bun.ts"
-    },
-    "#pty": {
-      "bun": "./src/pty/pty.bun.ts",
-      "node": "./src/pty/pty.node.ts",
-      "default": "./src/pty/pty.bun.ts"
     }
   },
   "devDependencies": {
@@ -68,22 +61,25 @@
     "vscode-languageserver-types": "3.17.5",
     "why-is-node-running": "3.2.2",
     "@types/npmcli__arborist": "6.3.3",
-    "@opencode-ai/http-recorder": "workspace:*"
+    "@opencode-ai/http-recorder": "workspace:*",
+    "@babel/core": "7.28.4",
+    "@standard-schema/spec": "1.0.0",
+    "@types/babel__core": "7.20.5"
   },
   "dependencies": {
     "@actions/core": "1.11.1",
     "@actions/github": "6.0.1",
     "@agentclientprotocol/sdk": "0.21.0",
     "@ai-sdk/alibaba": "1.0.17",
-    "@ai-sdk/amazon-bedrock": "4.0.96",
+    "@ai-sdk/amazon-bedrock": "4.0.112",
     "@ai-sdk/anthropic": "3.0.71",
     "@ai-sdk/azure": "3.0.49",
     "@ai-sdk/cerebras": "2.0.54",
     "@ai-sdk/cohere": "3.0.27",
     "@ai-sdk/deepinfra": "2.0.41",
     "@ai-sdk/gateway": "3.0.104",
-    "@ai-sdk/google": "3.0.63",
-    "@ai-sdk/google-vertex": "4.0.112",
+    "@ai-sdk/google": "3.0.73",
+    "@ai-sdk/google-vertex": "4.0.128",
     "@ai-sdk/groq": "3.0.31",
     "@ai-sdk/mistral": "3.0.27",
     "@ai-sdk/openai": "3.0.53",
@@ -94,7 +90,7 @@
     "@ai-sdk/togetherai": "2.0.41",
     "@ai-sdk/vercel": "2.0.39",
     "@ai-sdk/xai": "3.0.92",
-    "@aws-sdk/credential-providers": "3.1025.0",
+    "@aws-sdk/credential-providers": "3.1057.0",
     "@clack/prompts": "1.0.0-alpha.1",
     "@effect/opentelemetry": "catalog:",
     "@effect/platform-node": "catalog:",
@@ -170,14 +166,25 @@
     "tree-sitter-wasms": "^0.1.12",
     "turndown": "7.2.0",
     "ulid": "catalog:",
-    "venice-ai-sdk-provider": "2.0.1",
+    "venice-ai-sdk-provider": "2.0.2",
     "vscode-jsonrpc": "8.2.1",
     "web-tree-sitter": "0.25.10",
     "which": "6.0.1",
     "ws": "8.21.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "yargs": "18.0.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@openauthjs/openauth": "catalog:",
+    "@opencode-ai/server": "workspace:*",
+    "@opentelemetry/context-async-hooks": "2.6.1",
+    "@opentelemetry/exporter-trace-otlp-http": "0.214.0",
+    "@pierre/diffs": "catalog:",
+    "@standard-schema/spec": "1.0.0",
+    "chokidar": "4.0.3",
+    "glob": "13.0.5",
+    "minimatch": "10.0.3",
+    "partial-json": "0.1.7",
+    "xdg-basedir": "5.1.0"
   },
   "overrides": {
     "drizzle-orm": "catalog:"

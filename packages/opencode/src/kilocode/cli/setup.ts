@@ -18,6 +18,7 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+import { JsonMigration } from "@/kilocode/storage/json-migration"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -54,6 +55,10 @@ export namespace KiloCli {
     if (!process.env[ENV_FEATURE]) process.env[ENV_FEATURE] = process.argv.includes("serve") ? "unknown" : "cli"
     if (!process.env[ENV_VERSION]) process.env[ENV_VERSION] = InstallationVersion
     process.env.KILO = "1"
+
+    // Must run before AppRuntime initializes the SQLite database, or the marker
+    // exists before legacy JSON can be imported.
+    await JsonMigration.bootstrap()
 
     const cfg = await AppRuntime.runPromise(Config.Service.use((c) => c.getGlobal()))
     await Telemetry.init({

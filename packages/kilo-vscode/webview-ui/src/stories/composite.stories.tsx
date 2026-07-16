@@ -8,7 +8,7 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import type { AssistantMessage as SDKAssistantMessage, TextPart, ToolPart } from "@kilocode/sdk/v2"
+import type { AssistantMessage as SDKAssistantMessage, ReasoningPart, TextPart, ToolPart } from "@kilocode/sdk/v2"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { AssistantMessage } from "../components/chat/AssistantMessage"
 import { VscodeSessionTurn } from "../components/chat/VscodeSessionTurn"
@@ -43,6 +43,15 @@ const baseAssistantMessage: SDKAssistantMessage = {
   path: { cwd: "/project", root: "/project" },
   cost: 0.0023,
   tokens: { total: 512, input: 256, output: 256, reasoning: 0, cache: { read: 0, write: 0 } },
+}
+
+const titleOnlyReasoning: ReasoningPart = {
+  id: "part-reasoning-title-only",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "reasoning",
+  text: "**Assessing search behavior**\n\n<!-- -->",
+  time: { start: now - 7000, end: now - 6500 },
 }
 
 // ---------------------------------------------------------------------------
@@ -638,6 +647,37 @@ export const ToolCards: Story = {
   name: "Tool Cards",
   render: () => {
     const data = dataWith([readCompleted, globCompleted, grepCompleted, lsCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <AssistantMessage message={baseAssistantMessage} />
+      </StoryProviders>
+    )
+  },
+}
+
+export const TimelineHighlightedTool: Story = {
+  name: "Task Timeline — highlighted tool",
+  render: () => {
+    const data = dataWith([readCompleted])
+    return (
+      <StoryProviders data={data} sessionID={SESSION_ID}>
+        <div class="vscode-session-turn" data-row="assistant">
+          <div class="vscode-session-turn-assistant">
+            <AssistantMessage
+              message={baseAssistantMessage}
+              highlight={() => ({ msgId: ASST_MSG_ID, partId: readCompleted.id })}
+            />
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+export const TitleOnlyReasoning: Story = {
+  name: "Reasoning - title only",
+  render: () => {
+    const data = dataWith([titleOnlyReasoning, textPart])
     return (
       <StoryProviders data={data} sessionID={SESSION_ID}>
         <AssistantMessage message={baseAssistantMessage} />

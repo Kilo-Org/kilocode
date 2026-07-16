@@ -10,6 +10,7 @@ import { APICallError } from "ai"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import type { LLMEvent } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -20,7 +21,8 @@ import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Reference } from "../../src/reference/reference"
 import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
@@ -34,14 +36,14 @@ import { Snapshot } from "../../src/snapshot"
 import { SyncEvent } from "../../src/sync"
 import * as Log from "@opencode-ai/core/util/log"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { provideTmpdirProject } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 type Script = Stream.Stream<LLMEvent, unknown>
@@ -116,7 +118,7 @@ const reference = Layer.mock(Reference.Service)({
   ensure: () => Effect.void,
   contains: () => Effect.succeed(false),
 })
-const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 const deps = Layer.mergeAll(
   Session.defaultLayer,
@@ -131,6 +133,7 @@ const deps = Layer.mergeAll(
   Image.defaultLayer,
   SyncEvent.defaultLayer,
   EventV2Bridge.defaultLayer,
+  Database.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
@@ -146,7 +149,7 @@ describe("session processor retry limit", () => {
   it.live(
     "stops after two retries with the normalized retryable error",
     () =>
-      provideTmpdirInstance(
+      provideTmpdirProject(
         (dir) =>
           Effect.gen(function* () {
             process.env.KILO_SESSION_RETRY_LIMIT = "2"
@@ -204,7 +207,7 @@ describe("session processor retry limit", () => {
               tools: {},
             }
 
-            const expected = MessageV2.fromError(retryable429(), { providerID: ProviderID.make("test") })
+            const expected = MessageV2.fromError(retryable429(), { providerID: ProviderV2.ID.make("test") })
             try {
               const result = yield* handle.process(input)
               const calls = yield* test.calls

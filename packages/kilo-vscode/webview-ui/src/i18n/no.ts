@@ -1409,8 +1409,11 @@ export const dict = {
   "settings.sandboxing.title": "Kjøring i sandkasse",
   "settings.sandboxing.network.title": "Begrens nettverkstilgang",
   "settings.sandboxing.network.description":
-    "Blokker utgående nettverkstilgang fra kommandoer generert av modellen og HTTP-verktøy. Lokale MCP-servere og programtilleggskroker kjører utenfor denne begrensningen. Trafikk for leverandør- og modellinferens forblir tilgjengelig.",
+    "Blokker direkte utgående tilgang fra kommandoer initiert av modellen og HTTP-verktøy. Lokale og eksterne MCP-verktøy er utilgjengelige mens denne begrensningen er aktiv. Leverandørtrafikk og pålitelige plugin-kroker omfattes ikke av denne begrensningen.",
 
+  "settings.sandboxing.allowedHosts.title": "Tillatte nettverksmål",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-verts- og portdestinasjoner for HTTP- og HTTPS-proxytrafikk i sandkassen. GitHub CLI og HTTPS Git trenger vanligvis github.com:443 og api.github.com:443. Endringer gjelder for nye økter.",
   "settings.sandboxing.writablePaths.title": "Ytterligere skrivbare baner",
   "settings.sandboxing.writablePaths.description":
     "Ytterligere filsystembaner som sandkassen tillater skriving til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare banene når sandkassen er aktiv.",
@@ -1481,11 +1484,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Egendefinert prompt",
   "settings.agentBehaviour.prompt.description": "Ekstra systemprompt for denne agenten",
   "settings.agentBehaviour.temperature.title": "Temperatur",
-  "settings.agentBehaviour.temperature.description": "Samplingstemperatur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Styrer hvor tilfeldige KI-svarene er (0–2). Lavere verdier (f.eks. 0.2) gir fokuserte og konsistente resultater. Høyere verdier (f.eks. 1.0) gir mer varierte og kreative svar. La feltet stå tomt for å bruke modellens standardverdi.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingsparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Terskel for nucleus-sampling (0–1). Begrenser tokenvalgene til det minste settet der den kumulative sannsynligheten når P. Lavere verdier gjør resultatet mer fokusert; høyere verdier tillater større variasjon. La feltet stå tomt for å bruke modellens standardverdi.",
   "settings.agentBehaviour.maxSteps.title": "Maks. trinn",
-  "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterasjoner",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maksimalt antall agenttrinn. Når grensen nås, får agenten beskjed om å slutte å bruke verktøy og gi et endelig svar. Øk verdien for komplekse oppgaver med flere trinn; reduser den for å holde svarene kortere og mer forutsigbare.",
   "settings.agentBehaviour.hidden.title": "Skjult",
   "settings.agentBehaviour.hidden.description": "Skjul denne agenten fra modusvelgeren i chatinntastingen",
   "settings.agentBehaviour.disable.title": "Deaktivert",
@@ -1858,4 +1864,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
+  "chat.search.placeholder": "Søk i chat…",
+  "chat.search.toggle": "Søk i chat",
+  "chat.search.matchCase": "Skill mellom store og små bokstaver",
+  "chat.search.matchWholeWord": "Treff hele ord",
+  "chat.search.useRegex": "Bruk regulært uttrykk",
+  "chat.search.previousMatch": "Forrige treff",
+  "chat.search.nextMatch": "Neste treff",
+  "chat.search.close": "Lukk søk",
+  "chat.search.invalidRegex": "Ugyldig regulært uttrykk",
+  "chat.search.noResults": "Ingen resultater",
+  "chat.search.searchingHistory": "Søker i tidligere meldinger…",
 } satisfies Partial<Record<Keys, string>>

@@ -2,7 +2,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
-import { Cause, Effect, Exit } from "effect"
+import { Cause, Effect, Exit, Fiber, Scope } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
@@ -14,13 +14,14 @@ import { PlanFollowup } from "@/kilocode/plan-followup"
 import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
-import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
+import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
-import { InstanceState } from "@/effect/instance-state"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
@@ -29,6 +30,43 @@ import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
+  type Intake = { cancelled: boolean; fiber?: Fiber.Fiber<unknown, unknown> }
+  const intakes = new Map<SessionID, Set<Intake>>()
+
+  export function intake<A, E, R>(sessionID: SessionID, work: Effect.Effect<A, E, R>) {
+    return Effect.scoped(
+      Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const scope = yield* Scope.Scope
+          const entry: Intake = { cancelled: false }
+          const cleanup = Effect.sync(() => {
+            const entries = intakes.get(sessionID)
+            entries?.delete(entry)
+            if (entries?.size === 0) intakes.delete(sessionID)
+          })
+          const entries = intakes.get(sessionID) ?? new Set()
+          entries.add(entry)
+          intakes.set(sessionID, entries)
+          const fiber = yield* work.pipe(Effect.ensuring(cleanup), Effect.forkIn(scope, { startImmediately: true }))
+          entry.fiber = fiber
+          if (entry.cancelled) yield* Fiber.interrupt(fiber)
+          return yield* restore(Fiber.join(fiber))
+        }),
+      ),
+    )
+  }
+
+  export const abortIntakes = Effect.fn("KiloSessionPrompt.abortIntakes")(function* (sessionID: SessionID) {
+    const entries = [...(intakes.get(sessionID) ?? [])]
+    yield* Effect.forEach(
+      entries,
+      (entry) => {
+        entry.cancelled = true
+        return entry.fiber ? Fiber.interrupt(entry.fiber) : Effect.void
+      },
+      { concurrency: "unbounded", discard: true },
+    )
+  })
 
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`
@@ -94,9 +132,32 @@ export namespace KiloSessionPrompt {
     return action === "continue" ? "continue" : "break"
   }
 
-  export function abortPlanFollowup(sessionID: SessionID) {
-    return PlanFollowup.abort(sessionID)
-  }
+  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(function* (input: {
+    sessionID: SessionID
+    sessions: Pick<Session.Interface, "children">
+    cancel: (sessionID: SessionID) => Effect.Effect<void>
+  }) {
+    function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
+      return Effect.gen(function* () {
+        const children = yield* input.sessions.children(sessionID)
+        const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
+        return [...children.map((child) => child.id), ...nested.flat()]
+      })
+    }
+
+    const children = yield* descendants(input.sessionID)
+    yield* Effect.forEach(
+      [input.sessionID, ...children],
+      (sessionID) =>
+        Effect.gen(function* () {
+          yield* KiloSessionPromptQueue.cancel(sessionID)
+          PlanFollowup.abort(sessionID)
+          yield* abortIntakes(sessionID)
+          yield* input.cancel(sessionID)
+        }),
+      { concurrency: "unbounded", discard: true },
+    )
+  })
 
   export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
     sessionID: SessionID
@@ -230,6 +291,15 @@ export namespace KiloSessionPrompt {
     cache: MemoryMarker.Cache
   }) {
     const enabled = yield* memoryToolEnabled({ ctx: input.ctx })
+    const verbose =
+      input.cache.verbose ??
+      (enabled
+        ? yield* Effect.tryPromise(() => KiloMemory.status({ ctx: input.ctx })).pipe(
+            Effect.map((item) => item.state.verbose),
+            // Fail closed: unavailable state must not persist memory snippets.
+            Effect.catch(() => Effect.succeed(false)),
+          )
+        : false)
     const cached = pinnedMemory.get(input.sessionID)
     const built =
       cached?.enabled === enabled
@@ -243,15 +313,11 @@ export namespace KiloSessionPrompt {
             Effect.map((mem) => ({ blocks: mem.blocks, enabled, marker: mem.marker })),
             Effect.tap((mem) => Effect.sync(() => writePinnedMemory(input.sessionID, mem))),
           )
-    MemoryMarker.startup({ marker: built.marker, cache: input.cache })
+    MemoryMarker.startup({ marker: built.marker, cache: input.cache, verbose })
     return built.blocks
   })
 
-  export function memoryPart(input: {
-    sessionID: SessionID
-    message: MessageV2.Assistant
-    cache: MemoryMarker.Cache
-  }) {
+  export function memoryPart(input: { sessionID: SessionID; message: MessageV2.Assistant; cache: MemoryMarker.Cache }) {
     return MemoryMarker.part(input)
   }
 

@@ -17,11 +17,11 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   autoShare: bool("KILO_AUTO_SHARE"),
   pure: bool("KILO_PURE"),
   disableDefaultPlugins: bool("KILO_DISABLE_DEFAULT_PLUGINS"),
-  disableChannelDb: bool("KILO_DISABLE_CHANNEL_DB"),
+  disableChannelDb: bool("KILO_DISABLE_CHANNEL_DB"), // kilocode_change
   disableEmbeddedWebUi: bool("KILO_DISABLE_EMBEDDED_WEB_UI"),
   disableExternalSkills: bool("KILO_DISABLE_EXTERNAL_SKILLS"),
   disableLspDownload: bool("KILO_DISABLE_LSP_DOWNLOAD"),
-  skipMigrations: bool("KILO_SKIP_MIGRATIONS"),
+  skipMigrations: bool("KILO_SKIP_MIGRATIONS"), // kilocode_change
   disableClaudeCodePrompt: Config.all({
     broad: bool("KILO_DISABLE_CLAUDE_CODE"),
     direct: bool("KILO_DISABLE_CLAUDE_CODE_PROMPT"),
@@ -42,6 +42,7 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
   enableExperimentalModels: bool("KILO_ENABLE_EXPERIMENTAL_MODELS"),
   enableQuestionTool: bool("KILO_ENABLE_QUESTION_TOOL"),
   experimentalScout: enabledByExperimental("KILO_EXPERIMENTAL_SCOUT"),
+  experimentalReferences: enabledByExperimental("KILO_EXPERIMENTAL_REFERENCES"),
   experimentalBackgroundSubagents: enabledByExperimental("KILO_EXPERIMENTAL_BACKGROUND_SUBAGENTS"),
   experimentalLspTy: bool("KILO_EXPERIMENTAL_LSP_TY"),
   experimentalLspTool: enabledByExperimental("KILO_EXPERIMENTAL_LSP_TOOL"),

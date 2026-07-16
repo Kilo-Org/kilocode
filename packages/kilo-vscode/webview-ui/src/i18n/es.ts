@@ -1464,8 +1464,11 @@ export const dict = {
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Restringir el acceso a la red",
   "settings.sandboxing.network.description":
-    "Bloquea el acceso saliente a la red para los comandos iniciados por el modelo y las herramientas HTTP. Los servidores MCP locales y los hooks de plugins no están sujetos a esta restricción. El tráfico de proveedores y de inferencia de modelos sigue estando disponible.",
+    "Bloquea el acceso saliente directo de los comandos originados por el modelo y las herramientas HTTP. Las herramientas MCP locales y remotas no están disponibles mientras se aplica la restricción. El tráfico del proveedor y los hooks de plugins de confianza permanecen fuera de esta restricción.",
 
+  "settings.sandboxing.allowedHosts.title": "Destinos de red permitidos",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinos de host y puerto DNS para el tráfico de proxy HTTP y HTTPS en zona de pruebas. GitHub CLI y HTTPS Git suelen necesitar github.com:443 y api.github.com:443. Los cambios se aplican a las sesiones nuevas.",
   "settings.sandboxing.writablePaths.title": "Rutas de escritura adicionales",
   "settings.sandboxing.writablePaths.description":
     "Rutas del sistema de archivos adicionales donde el sandbox permite escritura (por ej., /tmp, /var/log). Se combinan con las rutas de escritura predeterminadas cuando el sandbox está activo.",
@@ -1499,11 +1502,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura de muestreo (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controla el grado de aleatoriedad de las respuestas de la IA (0–2). Los valores más bajos (p. ej., 0.2) producen resultados centrados y coherentes. Los valores más altos (p. ej., 1.0) producen respuestas más variadas y creativas. Déjalo vacío para usar el valor predeterminado del modelo.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parámetro de muestreo nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Umbral de muestreo nucleus (0–1). Limita las opciones de tokens al conjunto más pequeño cuya probabilidad acumulada alcanza P. Los valores más bajos hacen que el resultado sea más centrado; los más altos permiten mayor diversidad. Déjalo vacío para usar el valor predeterminado del modelo.",
   "settings.agentBehaviour.maxSteps.title": "Pasos máximos",
-  "settings.agentBehaviour.maxSteps.description": "Iteraciones máximas del agente",
+  "settings.agentBehaviour.maxSteps.description":
+    "Número máximo de pasos del agente. Al alcanzar el límite, se indica al agente que deje de usar herramientas y proporcione una respuesta final. Auméntalo para tareas complejas de varios pasos; redúcelo para mantener las respuestas más cortas y predecibles.",
   "settings.agentBehaviour.hidden.title": "Oculto",
   "settings.agentBehaviour.hidden.description": "Ocultar este agente del selector de modos en la entrada del chat",
   "settings.agentBehaviour.disable.title": "Desactivado",
@@ -1889,4 +1895,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Cargando ramas…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "El plan está listo:",
+  "chat.search.placeholder": "Buscar en el chat…",
+  "chat.search.toggle": "Buscar en el chat",
+  "chat.search.matchCase": "Coincidir mayúsculas y minúsculas",
+  "chat.search.matchWholeWord": "Solo palabras completas",
+  "chat.search.useRegex": "Usar expresión regular",
+  "chat.search.previousMatch": "Coincidencia anterior",
+  "chat.search.nextMatch": "Coincidencia siguiente",
+  "chat.search.close": "Cerrar búsqueda",
+  "chat.search.invalidRegex": "Expresión regular no válida",
+  "chat.search.noResults": "Sin resultados",
+  "chat.search.searchingHistory": "Buscando en mensajes anteriores…",
 }

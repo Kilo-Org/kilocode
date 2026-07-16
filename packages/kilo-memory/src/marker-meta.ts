@@ -1,4 +1,7 @@
 export namespace MemoryMarkerMeta {
+  const LIMIT = 5
+  const CHARS = 120
+
   export type Type = "recall" | "startup"
 
   export type Info = {
@@ -7,6 +10,7 @@ export namespace MemoryMarkerMeta {
     tokens: number
     count: number
     files: string[]
+    items: string[]
   }
 
   export type Part = {
@@ -21,9 +25,10 @@ export namespace MemoryMarkerMeta {
     tokens: number
     count: number
     files: string[]
+    items: string[]
   }
 
-  export function metadata(marker: Info) {
+  export function metadata(marker: Info, verbose = false) {
     return {
       kiloMemory: {
         type: marker.type,
@@ -31,6 +36,7 @@ export namespace MemoryMarkerMeta {
         tokens: marker.tokens,
         count: marker.count,
         files: marker.files,
+        ...(verbose && marker.type === "recall" ? { items: marker.items } : {}),
       },
     }
   }
@@ -48,6 +54,25 @@ export namespace MemoryMarkerMeta {
     }
   }
 
+  function clip(input: string) {
+    return Array.from(input).slice(0, CHARS).join("")
+  }
+
+  function list(input: readonly string[]) {
+    return input.filter(Boolean).slice(0, LIMIT).map(clip)
+  }
+
+  function items(input: string) {
+    return list(
+      input.split("\n").flatMap((line) => (line.startsWith("text:") ? [line.slice("text:".length).trim()] : [])),
+    )
+  }
+
+  export function snippets(input: Decoded | undefined, verbose: boolean) {
+    if (!verbose || input?.type !== "recall") return []
+    return input.items
+  }
+
   export function fromBlocks(blocks: readonly { text: string; bytes: number; estimatedTokens: number }[]) {
     const records = blocks.flatMap((block) =>
       block.text
@@ -63,6 +88,7 @@ export namespace MemoryMarkerMeta {
       tokens: blocks.reduce((sum, block) => sum + block.estimatedTokens, 0),
       count: records.length,
       files,
+      items: [],
     } satisfies Info
   }
 
@@ -78,6 +104,7 @@ export namespace MemoryMarkerMeta {
       tokens: input.tokens,
       count: typeof input.metadata?.count === "number" ? input.metadata.count : files.length,
       files: [...new Set(files)],
+      items: items(text),
     } satisfies Info
   }
 
@@ -86,7 +113,14 @@ export namespace MemoryMarkerMeta {
       if (part.type !== "text") continue
       const meta = part.metadata?.kiloMemory
       if (!meta || typeof meta !== "object") continue
-      const value = meta as { type?: unknown; tokens?: unknown; count?: unknown; files?: unknown; sources?: unknown }
+      const value = meta as {
+        type?: unknown
+        tokens?: unknown
+        count?: unknown
+        files?: unknown
+        sources?: unknown
+        items?: unknown
+      }
       const type = value.type === "startup" ? "startup" : "recall"
       const tokens = typeof value.tokens === "number" ? value.tokens : 0
       // `sources` fallback covers parts persisted before the key was dropped from metadata().
@@ -96,7 +130,10 @@ export namespace MemoryMarkerMeta {
           ? value.sources.filter((item) => typeof item === "string")
           : []
       const count = typeof value.count === "number" ? value.count : files.length
-      return { type, tokens, count, files }
+      const items = Array.isArray(value.items)
+        ? list(value.items.filter((item): item is string => typeof item === "string"))
+        : []
+      return { type, tokens, count, files, items }
     }
     return undefined
   }

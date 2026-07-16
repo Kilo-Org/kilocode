@@ -30,6 +30,7 @@ const ASSISTANT_MESSAGE_FILE = path.join(
   MONOREPO_ROOT,
   "packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx",
 )
+const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
 
 function check(code: string): { ok: boolean; output: string } {
@@ -224,7 +225,10 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput highlights only while expanded", () => {
     expect(src).toContain("if (!props.active) return")
-    expect(block).toContain("active={open()}")
+    // Also active when forceOpen fires from a virtualized remount that
+    // starts already open — `open()` alone only reflects the toggle
+    // transition, not that initial-mount case.
+    expect(block).toContain("active={open() || !!props.forceOpen}")
   })
 
   it("BashHighlightedOutput keeps command and output in separate terminal containers", () => {
@@ -308,9 +312,10 @@ describe("HighlightedText @mention regex fallback and click handler (source)", (
 
 describe("AssistantMessage visible row contract (source)", () => {
   const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+  const parts = fs.readFileSync(TRANSCRIPT_PARTS_FILE, "utf-8")
 
   it("filters suppressed tools that have no visible renderer", () => {
-    expect(src).toContain('state.status === "completed" && !!ToolRegistry.render(tool)')
+    expect(parts).toContain('part.state.status === "completed" && !!ToolRegistry.render(part.tool)')
   })
 
   it("filters pending questions until their dock request exists", () => {
@@ -319,8 +324,8 @@ describe("AssistantMessage visible row contract (source)", () => {
   })
 
   it("filters completed synthetic text and redaction-only reasoning", () => {
-    expect(src).toContain('part.type === "text" && part.synthetic && props.message.time.completed')
-    expect(src).toContain('.text?.replace("[REDACTED]", "").trim()')
+    expect(parts).toContain("part.synthetic && message?.time.completed")
+    expect(parts).toContain('.text?.replace("[REDACTED]", "").trim()')
   })
 
   it("uses the plan exit card only when plan metadata is renderable", () => {
@@ -386,7 +391,7 @@ describe("Collapsed deferred tool details contract (source)", () => {
     const block =
       message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
     expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
-    expect(block).toMatch(/if \(open\(\) \|\| pending\(\)\) setMounted\(true\)/)
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
     expect(block).toContain("hasDetails")
     expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
   })

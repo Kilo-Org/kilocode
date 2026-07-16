@@ -14,19 +14,19 @@ export const KiloPlugin = PluginV2.define({
           if (item.provider.id !== id) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
             // kilocode_change start
-            const options = provider.options.aisdk.provider
+            const options = provider.request.body
             const token = options.kilocodeToken ?? options.apiKey ?? process.env.KILO_API_KEY
             const org = process.env.KILO_ORG_ID ?? options.kilocodeOrganizationId
 
-            provider.endpoint = {
+            provider.api = {
               type: "aisdk",
               package: "@kilocode/kilo-gateway",
               url: KILO_OPENROUTER_BASE,
             }
             // kilocode_change end
-            provider.options.headers["HTTP-Referer"] = "https://kilo.ai/"
+            provider.request.headers["HTTP-Referer"] = "https://kilo.ai/"
             // kilocode_change start
-            provider.options.headers["X-Title"] = "Kilo Code"
+            provider.request.headers["X-Title"] = "Kilo Code"
             options.kilocodeToken = token ?? "anonymous"
             if (org) options.kilocodeOrganizationId = org
             if (!provider.enabled) provider.enabled = { via: "custom", data: { anonymous: true } }

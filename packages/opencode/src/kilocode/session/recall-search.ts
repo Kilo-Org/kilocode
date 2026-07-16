@@ -1,15 +1,19 @@
 import path from "path"
-import { eq, inArray } from "drizzle-orm"
-import { Database } from "@/storage/db"
+import { eq, inArray, sql } from "drizzle-orm"
+import { Effect } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
 import type { MessageV2 } from "@/session/message-v2"
-import { SessionTable } from "@/session/session.sql"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import type { MessageID, PartID, SessionID } from "@/session/schema"
 import { Filesystem } from "@/util/filesystem"
-import { ProjectTable } from "@/project/project.sql"
-import { ProjectID } from "@/project/schema"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { AbsolutePath } from "@opencode-ai/core/schema"
 
 export namespace RecallSearch {
+  const BATCH = 128
   const PAGE_SIZE = 1_024
+  const SCAN_SIZE = 16_384
   const MAX_QUERY = 256
   const MAX_TERMS = 12
   const MAX_SNIPPETS = 3
@@ -18,6 +22,7 @@ export namespace RecallSearch {
   const segmenter = new Intl.Segmenter("en", { granularity: "grapheme" })
 
   const FIELDS_SQL = `
+    p.rowid AS rowid,
     p.id AS partID,
     p.session_id AS sessionID,
     CASE
@@ -49,31 +54,63 @@ export namespace RecallSearch {
     OR (json_extract(p.data, '$.type') = 'tool'
       AND json_extract(p.data, '$.state.status') = 'error')`
 
-  const SEARCH_SQL = `
-    SELECT ${FIELDS_SQL}
-    FROM json_each(?) AS ids
-    CROSS JOIN part AS p
-    CROSS JOIN message AS m
-    WHERE p.id = ids.value
-      AND m.id = p.message_id
-      AND m.session_id = p.session_id
-      AND NOT (
-        m.session_id = ? AND (
-          (json_extract(m.data, '$.role') = 'user' AND m.id >= ?)
-          OR (json_extract(m.data, '$.role') = 'assistant' AND json_extract(m.data, '$.parentID') >= ?)
+  const pageSql = (
+    ids: SessionID[],
+    cursor: { sessionID: SessionID | ""; rowid: number },
+    rowid: number,
+    partID: string,
+    sessionID: SessionID | "",
+    messageID: MessageID | "",
+  ) => sql`
+    WITH page AS (
+      SELECT p.rowid, p.id, p.message_id, p.session_id, p.data
+      FROM part AS p INDEXED BY part_session_idx
+      WHERE p.session_id IN (${sql.join(
+        ids.map((id) => sql`${id}`),
+        sql`,`,
+      )})
+        AND (p.session_id > ${cursor.sessionID} OR (p.session_id = ${cursor.sessionID} AND p.rowid > ${cursor.rowid}))
+        AND p.rowid <= ${rowid}
+        AND p.id <= ${partID}
+      ORDER BY p.session_id, p.rowid
+      LIMIT ${SCAN_SIZE}
+    ), found AS (
+      SELECT ${sql.raw(FIELDS_SQL)}
+      FROM page AS p
+      JOIN message AS m ON m.id = p.message_id
+        AND m.session_id = p.session_id
+      WHERE NOT (
+          m.session_id = ${sessionID} AND (
+            (json_extract(m.data, '$.role') = 'user' AND m.id >= ${messageID})
+            OR (json_extract(m.data, '$.role') = 'assistant' AND json_extract(m.data, '$.parentID') >= ${messageID})
+          )
         )
-      )
-      AND (${FILTER_SQL})`
-
-  const PAGE_SQL = `
-    SELECT p.rowid AS rowid, p.id AS partID
-    FROM part AS p INDEXED BY part_session_idx
-    WHERE p.session_id = ? AND p.rowid > ? AND p.rowid <= ? AND p.id <= ?
-    ORDER BY p.rowid
-    LIMIT ${PAGE_SIZE}`
-
-  const END_ROWID_SQL = "SELECT max(rowid) AS rowid FROM part"
-  const END_ID_SQL = "SELECT max(id) AS id FROM part"
+        AND (${sql.raw(FILTER_SQL)})
+      ORDER BY p.session_id, p.rowid
+      LIMIT ${PAGE_SIZE}
+    ), next AS (
+      SELECT
+        CASE WHEN (SELECT count(*) FROM found) = ${PAGE_SIZE}
+          THEN (SELECT sessionID FROM found ORDER BY sessionID DESC, rowid DESC LIMIT 1)
+          ELSE (SELECT session_id FROM page ORDER BY session_id DESC, rowid DESC LIMIT 1)
+        END AS sessionID,
+        CASE WHEN (SELECT count(*) FROM found) = ${PAGE_SIZE}
+          THEN (SELECT rowid FROM found ORDER BY sessionID DESC, rowid DESC LIMIT 1)
+          ELSE (SELECT rowid FROM page ORDER BY session_id DESC, rowid DESC LIMIT 1)
+        END AS rowid
+    ), meta AS (
+      SELECT next.sessionID, next.rowid, count(*) AS parts
+      FROM next
+      JOIN page AS p ON p.session_id < next.sessionID OR (p.session_id = next.sessionID AND p.rowid <= next.rowid)
+      WHERE next.sessionID IS NOT NULL
+      GROUP BY next.sessionID, next.rowid
+    )
+    SELECT rowid, partID, sessionID, source, text, 0 AS meta, 0 AS parts
+    FROM found
+    UNION ALL
+    SELECT rowid, NULL AS partID, sessionID, NULL AS source, NULL AS text, 1 AS meta, parts
+    FROM meta
+    ORDER BY meta, sessionID, rowid`
 
   export type Source = "user" | "assistant" | "reference" | "error"
 
@@ -119,10 +156,15 @@ export namespace RecallSearch {
 
   type PageRow = {
     rowid: number
-    partID: PartID
+    partID: PartID | null
+    sessionID: SessionID
+    source: Source | null
+    text: string | null
+    meta: number
+    parts: number
   }
 
-  export async function search(input: {
+  export const search = Effect.fn("RecallSearch.search")(function* (input: {
     query: string
     projectID: string
     directories: string[]
@@ -130,7 +172,7 @@ export namespace RecallSearch {
     signal?: AbortSignal
     excludeSessionID?: SessionID
     excludeFromMessageID?: MessageID
-  }): Promise<Output> {
+  }) {
     const parsed = parse(input.query)
     const limit = input.limit ?? 20
     if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
@@ -140,20 +182,20 @@ export namespace RecallSearch {
     const roots = [...new Set(input.directories.map(Filesystem.resolve))]
     if (roots.length === 0) return { results: [], sessions: 0, parts: 0 }
 
-    abort(input.signal)
-    const projects = family(input.projectID).map((id) => ProjectID.make(id))
-    const rows = Database.use((db) =>
-      db
-        .select({
-          id: SessionTable.id,
-          title: SessionTable.title,
-          directory: SessionTable.directory,
-          updated: SessionTable.time_updated,
-        })
-        .from(SessionTable)
-        .where(inArray(SessionTable.project_id, projects))
-        .all(),
-    )
+    yield* abort(input.signal)
+    const { db } = yield* Database.Service
+    const projects = (yield* family(input.projectID)).map((id) => ProjectV2.ID.make(id))
+    const rows = yield* db
+      .select({
+        id: SessionTable.id,
+        title: SessionTable.title,
+        directory: SessionTable.directory,
+        updated: SessionTable.time_updated,
+      })
+      .from(SessionTable)
+      .where(inArray(SessionTable.project_id, projects))
+      .all()
+      .pipe(Effect.orDie)
     const items = new Map<SessionID, Item>()
     for (const row of rows) {
       const directory = Filesystem.resolve(row.directory)
@@ -174,15 +216,15 @@ export namespace RecallSearch {
         candidates: Array.from({ length: parsed.terms.length }),
       })
     }
-    abort(input.signal)
+    yield* abort(input.signal)
     if (items.size === 0) return { results: [], sessions: 0, parts: 0 }
 
     const ids = [...items.keys()]
-    const sqlite = Database.Client().$client
-    const rowid = sqlite.prepare<{ rowid: number | null }, []>(END_ROWID_SQL).get()?.rowid ?? 0
-    const partID = sqlite.prepare<{ id: string | null }, []>(END_ID_SQL).get()?.id ?? ""
-    const statement = sqlite.prepare<Row, [string, string, string, string]>(SEARCH_SQL)
-    const page = sqlite.prepare<PageRow, [string, number, number, string]>(PAGE_SQL)
+    const rowid =
+      (yield* db.get<{ rowid: number | null }>(sql`SELECT max(rowid) AS rowid FROM part`).pipe(Effect.orDie))?.rowid ??
+      0
+    const partID =
+      (yield* db.get<{ id: string | null }>(sql`SELECT max(id) AS id FROM part`).pipe(Effect.orDie))?.id ?? ""
     const excludeSessionID = input.excludeSessionID ?? ""
     const excludeFromMessageID = input.excludeFromMessageID ?? ""
     let parts = 0
@@ -211,33 +253,28 @@ export namespace RecallSearch {
       )
     }
 
-    for (let index = 0; index < ids.length; index++) {
-      abort(input.signal)
-      const sessionID = ids[index]
-      let cursor = 0
-      while (cursor < rowid) {
-        const rows = page.all(sessionID, cursor, rowid, partID)
-        if (rows.length === 0) break
-        cursor = rows.at(-1)!.rowid
-        for (const row of statement.iterate(
-          JSON.stringify(rows.map((entry) => entry.partID)),
-          excludeSessionID,
-          excludeFromMessageID,
-          excludeFromMessageID,
-        )) {
-          consume(row)
+    for (let index = 0; index < ids.length; index += BATCH) {
+      yield* abort(input.signal)
+      const batch = ids.slice(index, index + BATCH)
+      let cursor = { sessionID: "" as SessionID | "", rowid: 0 }
+      while (cursor.rowid <= rowid) {
+        const found = yield* db
+          .all<PageRow>(pageSql(batch, cursor, rowid, partID, excludeSessionID, excludeFromMessageID))
+          .pipe(Effect.orDie)
+        if (found.length === 0) break
+        const last = found.at(-1)!
+        cursor = { sessionID: last.sessionID, rowid: last.rowid }
+        parts += last.parts
+        for (const row of found) {
+          if (row.meta || !row.partID || !row.source) continue
+          consume({ partID: row.partID, sessionID: row.sessionID, source: row.source, text: row.text ?? "" })
         }
-        parts += rows.length
-        if (rows.length < PAGE_SIZE) break
-        await pause()
-        abort(input.signal)
+        yield* pause
+        yield* abort(input.signal)
       }
-      if (index % 16 !== 15) continue
-      await pause()
-      abort(input.signal)
     }
-    await pause()
-    abort(input.signal)
+    yield* pause
+    yield* abort(input.signal)
 
     const full = (1 << parsed.terms.length) - 1
     const best: Item[] = []
@@ -257,7 +294,7 @@ export namespace RecallSearch {
       sessions: items.size,
       parts,
     }
-  }
+  })
 
   export function inert(value: string) {
     return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
@@ -280,26 +317,24 @@ export namespace RecallSearch {
     return info.parentID < messageID
   }
 
-  function family(id: string) {
-    const row = Database.use((db) =>
-      db
-        .select({ worktree: ProjectTable.worktree })
-        .from(ProjectTable)
-        .where(eq(ProjectTable.id, ProjectID.make(id)))
-        .get(),
-    )
+  const family = Effect.fn("RecallSearch.family")(function* (id: string) {
+    const { db } = yield* Database.Service
+    const row = yield* db
+      .select({ worktree: ProjectTable.worktree })
+      .from(ProjectTable)
+      .where(eq(ProjectTable.id, ProjectV2.ID.make(id)))
+      .get()
+      .pipe(Effect.orDie)
     const root = row?.worktree ? Filesystem.resolve(row.worktree) : undefined
     if (!root || root === path.parse(root).root) return [id]
-    const ids = Database.use((db) =>
-      db
-        .select({ id: ProjectTable.id })
-        .from(ProjectTable)
-        .where(eq(ProjectTable.worktree, root))
-        .all()
-        .map((item) => item.id),
-    )
+    const ids = (yield* db
+      .select({ id: ProjectTable.id })
+      .from(ProjectTable)
+      .where(eq(ProjectTable.worktree, AbsolutePath.make(root)))
+      .all()
+      .pipe(Effect.orDie)).map((item) => item.id)
     return ids.length ? ids : [id]
-  }
+  })
 
   function parse(query: string) {
     const value = query.trim()
@@ -408,11 +443,9 @@ export namespace RecallSearch {
   }
 
   function abort(signal?: AbortSignal) {
-    if (!signal?.aborted) return
-    throw signal.reason ?? new Error("Recall search aborted")
+    if (!signal?.aborted) return Effect.void
+    return Effect.fail(signal.reason ?? new Error("Recall search aborted"))
   }
 
-  function pause() {
-    return new Promise<void>((resolve) => setTimeout(resolve, 0))
-  }
+  const pause = Effect.promise(() => new Promise<void>((resolve) => setTimeout(resolve, 0)))
 }

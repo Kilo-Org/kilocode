@@ -78,7 +78,9 @@ function isUpstreamMerge() {
     const [parents = "", subject = ""] = line.split("\t")
     if (!parents.includes(" ")) return false
     const s = subject.toLowerCase()
-    return s.startsWith("merge: upstream ") || s.startsWith("resolve merge conflict")
+    return (
+      s.startsWith("merge: upstream ") || s.startsWith("merge: opencode ") || s.startsWith("resolve merge conflict")
+    )
   })
 }
 

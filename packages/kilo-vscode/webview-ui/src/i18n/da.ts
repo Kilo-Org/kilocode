@@ -1446,8 +1446,11 @@ export const dict = {
   "settings.sandboxing.title": "Sandboxing",
   "settings.sandboxing.network.title": "Begræns netværksadgang",
   "settings.sandboxing.network.description":
-    "Bloker udgående netværksadgang fra kommandoer, der stammer fra modellen, og HTTP-værktøjer. Lokale MCP-servere og plugin-hooks er ikke underlagt denne begrænsning. Inferenstrafik til udbydere og modeller er fortsat tilgængelig.",
+    "Blokerer direkte udgående adgang fra modelgenererede kommandoer og HTTP-værktøjer. Lokale og eksterne MCP-værktøjer er ikke tilgængelige, mens begrænsningen er aktiv. Udbydertrafik og pålidelige plugin-hooks forbliver uden for denne begrænsning.",
 
+  "settings.sandboxing.allowedHosts.title": "Tilladte netværksdestinationer",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-værts- og portdestinationer for sandboxet HTTP- og HTTPS-proxytrafik. GitHub CLI og HTTPS Git kræver typisk github.com:443 og api.github.com:443. Ændringer gælder for nye sessioner.",
   "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
   "settings.sandboxing.writablePaths.description":
     "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
@@ -1481,11 +1484,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
   "settings.agentBehaviour.prompt.description": "Yderligere systemprompt for denne agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
-  "settings.agentBehaviour.temperature.description": "Samplingtemperatur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Styrer, hvor tilfældige AI-svarene er (0–2). Lavere værdier (f.eks. 0.2) giver fokuserede og ensartede resultater. Højere værdier (f.eks. 1.0) giver mere varierede og kreative svar. Lad feltet være tomt for at bruge modellens standardværdi.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Tærskel for nucleus-sampling (0–1). Begrænser valget af tokens til den mindste mængde, hvis kumulative sandsynlighed når P. Lavere værdier gør resultatet mere fokuseret; højere værdier tillader større variation. Lad feltet være tomt for at bruge modellens standardværdi.",
   "settings.agentBehaviour.maxSteps.title": "Maks. trin",
-  "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterationer",
+  "settings.agentBehaviour.maxSteps.description":
+    "Det maksimale antal agenttrin. Ved grænsen bliver agenten instrueret i at stoppe med at bruge værktøjer og give et endeligt svar. Forøg værdien til komplekse opgaver med flere trin; sænk den for at holde svarene kortere og mere forudsigelige.",
   "settings.agentBehaviour.hidden.title": "Skjult",
   "settings.agentBehaviour.hidden.description": "Skjul denne agent fra tilstandsvælgeren i chatinput",
   "settings.agentBehaviour.disable.title": "Deaktiveret",
@@ -1865,4 +1871,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
+  "chat.search.placeholder": "Søg i chat…",
+  "chat.search.toggle": "Søg i chat",
+  "chat.search.matchCase": "Forskel på store/små bogstaver",
+  "chat.search.matchWholeWord": "Match helt ord",
+  "chat.search.useRegex": "Brug regulært udtryk",
+  "chat.search.previousMatch": "Forrige match",
+  "chat.search.nextMatch": "Næste match",
+  "chat.search.close": "Luk søgning",
+  "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
+  "chat.search.noResults": "Ingen resultater",
+  "chat.search.searchingHistory": "Søger i tidligere beskeder…",
 }

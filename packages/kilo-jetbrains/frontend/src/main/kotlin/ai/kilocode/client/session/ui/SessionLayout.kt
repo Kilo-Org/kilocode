@@ -1,7 +1,6 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Component
@@ -21,8 +20,8 @@ import java.awt.LayoutManager
  * 1. Uses the parent's *actual* width as the available width for all children.
  * 2. Calls `setSize(w, …)` on each child before reading `preferredSize.height`
  *    so that HTML components reflow and report the correct height.
- * 3. Applies layout-owned [pad] around the children.
- * 4. Stacks children top-to-bottom with a configurable [gap].
+ * 3. Applies layout-owned padding around the children.
+ * 4. Stacks children top-to-bottom with a configurable gap.
  * 5. Skips invisible children.
  *
  * Pair with [SessionLayoutPanel] (or any panel that implements [Scrollable]
@@ -30,8 +29,8 @@ import java.awt.LayoutManager
  * the panel width and the layout always has a valid width to work with.
  */
 class SessionLayout(
-    private val gap: Int = JBUI.scale(SessionUiStyle.SessionLayout.GAP),
-    private val pad: Insets = JBUI.emptyInsets(),
+    private val baseGap: Int = SessionUiStyle.SessionLayout.GAP,
+    private val basePad: Insets = JBUI.emptyInsets(),
 ) : LayoutManager {
 
     override fun addLayoutComponent(name: String, comp: Component) = Unit
@@ -51,7 +50,10 @@ class SessionLayout(
             comp.setSize(child.width, comp.height.coerceAtLeast(1))
             h += comp.preferredSize.height
         }
-        return JBDimension(w + ins.left + ins.right, h)
+        // w and h are already scaled px (child preferred heights + scaled gaps/insets) and
+        // match what layoutContainer stacks, so return a plain Dimension. A JBDimension would
+        // scale again by the user scale factor and inflate the transcript height under IDE zoom.
+        return Dimension(w + ins.left + ins.right, h)
     }
 
     override fun minimumLayoutSize(parent: Container): Dimension = preferredLayoutSize(parent)
@@ -86,16 +88,16 @@ class SessionLayout(
     private fun insets(parent: Container): Insets {
         val base = parent.insets
         return Insets(
-            base.top + pad.top,
-            base.left + pad.left,
-            base.bottom + pad.bottom,
-            base.right + pad.right,
+            base.top + JBUI.scale(basePad.top),
+            base.left + JBUI.scale(basePad.left),
+            base.bottom + JBUI.scale(basePad.bottom),
+            base.right + JBUI.scale(basePad.right),
         )
     }
 
     private fun gap(comp: Component): Int {
         if (view(comp)?.sessionGapKind == SessionView.Kind.UserPrompt) return JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP)
-        return gap
+        return JBUI.scale(baseGap)
     }
 
     private fun view(comp: Component): SessionView? = comp as? SessionView
@@ -111,7 +113,7 @@ class SessionLayout(
  * [SessionLayout] a valid width to measure against.
  */
 open class SessionLayoutPanel(
-    gap: Int = JBUI.scale(SessionUiStyle.SessionLayout.GAP),
+    gap: Int = SessionUiStyle.SessionLayout.GAP,
     pad: Insets = JBUI.emptyInsets(),
 ) : BorderLayoutPanel(), javax.swing.Scrollable {
     init {

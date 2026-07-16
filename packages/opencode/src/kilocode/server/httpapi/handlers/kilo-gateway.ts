@@ -35,13 +35,13 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { KilocodeConfig } from "@/kilocode/config/config"
 import { Auth } from "@/auth"
 import { EffectBridge } from "@/effect/bridge"
-import { Bus } from "@/bus"
+import { EventV2Bridge } from "@/event-v2-bridge"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { InstanceStore } from "@/project/instance-store"
 import { ModelCache } from "@/provider/model-cache"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
-import { MessageTable, PartTable, SessionTable } from "@/session/session.sql"
+import { MessageTable, PartTable, SessionTable } from "@opencode-ai/core/session/sql"
 import { Session } from "@/session/session"
 import { Database } from "@/storage/db"
 import { Storage } from "@/storage/storage"
@@ -65,6 +65,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
     const auth = yield* Auth.Service
     const store = yield* InstanceStore.Service
     const cache = yield* ModelCache.Service
+    const events = yield* EventV2Bridge.Service
 
     const profile = Effect.fn("KiloGatewayHttpApi.profile")(function* () {
       const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
@@ -498,10 +499,12 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
                   PartTable,
                   SessionToRow: Session.toRow,
                   Bus: {
-                    publish: (_event, payload) =>
-                      Bus.publish(Instance.current, Session.Event.Created, payload as never),
+                    publish: (_event, payload) => {
+                      const info = (payload as { info: Session.Info }).info
+                      return bridge.promise(events.publish(Session.Event.Created, { sessionID: info.id, info }))
+                    },
                   },
-                  SessionCreatedEvent: Session.Event.Created,
+                  SessionCreatedEvent: { type: Session.Event.Created.type, properties: Session.Event.Created.data },
                   Identifier,
                 }),
               )

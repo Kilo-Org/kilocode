@@ -1452,8 +1452,11 @@ export const dict = {
   "settings.sandboxing.title": "Rad u izoliranom okruženju",
   "settings.sandboxing.network.title": "Ograniči pristup mreži",
   "settings.sandboxing.network.description":
-    "Blokiraj odlazni mrežni pristup za naredbe koje potiču od modela i HTTP alate. Lokalni MCP serveri i hookovi dodataka izvršavaju se izvan ovog ograničenja. Saobraćaj za inferenciju pružatelja i modela ostaje dostupan.",
+    "Blokira direktni odlazni pristup iz naredbi koje potiču od modela i HTTP alata. Lokalni i udaljeni MCP alati nisu dostupni dok je ograničenje aktivno. Saobraćaj provajdera i pouzdane zakačke dodataka ostaju izvan ovog ograničenja.",
 
+  "settings.sandboxing.allowedHosts.title": "Dozvoljena mrežna odredišta",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS odredišta hosta i porta za sandboxirani HTTP i HTTPS proxy promet. GitHub CLI i HTTPS Git obično trebaju github.com:443 i api.github.com:443. Promjene se primjenjuju na nove sesije.",
   "settings.sandboxing.writablePaths.title": "Dodatne upisive putanje",
   "settings.sandboxing.writablePaths.description":
     "Dodatne putanje sistema datoteka u koje sandbox dozvoljava upis (npr. /tmp, /var/log). Spajaju se sa zadanim upisivim putanjama kada je sandbox aktivan.",
@@ -1487,11 +1490,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prilagođeni prompt",
   "settings.agentBehaviour.prompt.description": "Dodatni sistemski prompt za ovog agenta",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura uzorkovanja (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Kontroliše koliko su AI odgovori nasumični (0–2). Niže vrijednosti (npr. 0.2) daju fokusirane i dosljedne rezultate. Više vrijednosti (npr. 1.0) daju raznovrsnije i kreativnije odgovore. Ostavite prazno da biste koristili zadanu vrijednost modela.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus parametar uzorkovanja (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Prag nucleus uzorkovanja (0–1). Ograničava izbor tokena na najmanji skup čija kumulativna vjerovatnoća dostiže P. Niže vrijednosti čine rezultat fokusiranijim; više vrijednosti omogućavaju veću raznolikost. Ostavite prazno da biste koristili zadanu vrijednost modela.",
   "settings.agentBehaviour.maxSteps.title": "Maks. koraci",
-  "settings.agentBehaviour.maxSteps.description": "Maksimalne iteracije agenta",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maksimalan broj koraka agenta. Kada se dostigne ograničenje, agent dobija uputu da prestane koristiti alate i da završni odgovor. Povećajte za složene zadatke u više koraka; smanjite da bi odgovori bili kraći i predvidljiviji.",
   "settings.agentBehaviour.hidden.title": "Skriveno",
   "settings.agentBehaviour.hidden.description": "Sakrij ovog agenta iz prebacivača modova u unosu chata",
   "settings.agentBehaviour.disable.title": "Onemogućeno",
@@ -1873,4 +1879,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan je spreman:",
+  "chat.search.placeholder": "Pretraži chat…",
+  "chat.search.toggle": "Pretraži chat",
+  "chat.search.matchCase": "Podudaranje velikih/malih slova",
+  "chat.search.matchWholeWord": "Podudaranje cijele riječi",
+  "chat.search.useRegex": "Koristi regularni izraz",
+  "chat.search.previousMatch": "Prethodno podudaranje",
+  "chat.search.nextMatch": "Sljedeće podudaranje",
+  "chat.search.close": "Zatvori pretragu",
+  "chat.search.invalidRegex": "Nevažeći regularni izraz",
+  "chat.search.noResults": "Nema rezultata",
+  "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
 }

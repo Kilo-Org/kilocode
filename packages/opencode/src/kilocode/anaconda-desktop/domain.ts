@@ -1,4 +1,4 @@
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import path from "path"
 import { Effect, Option, Schema } from "effect"
 
@@ -319,7 +319,7 @@ export const parseStore = Effect.fn("AnacondaDesktop.parseStore")(function* (tex
 })
 
 export const readConfig = Effect.fn("AnacondaDesktop.readConfig")(function* (dir: string) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   const text = yield* fs
     .readFileStringSafe(path.join(dir, CONFIG_FILE))
     .pipe(Effect.mapError(() => new ConfigError({ reason: "malformed" as const })))
@@ -328,7 +328,7 @@ export const readConfig = Effect.fn("AnacondaDesktop.readConfig")(function* (dir
 })
 
 export const readStore = Effect.fn("AnacondaDesktop.readStore")(function* (dir: string) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   const text = yield* fs
     .readFileStringSafe(path.join(dir, STORE_FILE))
     .pipe(Effect.mapError(() => new StoreError({ reason: "malformed" as const })))

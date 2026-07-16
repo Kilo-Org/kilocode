@@ -1456,8 +1456,11 @@ export const dict = {
   "settings.sandboxing.title": "Isolamento em sandbox",
   "settings.sandboxing.network.title": "Restringir acesso à rede",
   "settings.sandboxing.network.description":
-    "Bloqueie o acesso de saída à rede para comandos originados pelo modelo e ferramentas HTTP. Servidores MCP locais e hooks de plugins são executados fora dessa restrição. O tráfego de inferência de provedores e modelos permanece disponível.",
+    "Bloqueia o acesso direto de saída de comandos originados pelo modelo e ferramentas HTTP. As ferramentas MCP locais e remotas ficam indisponíveis enquanto a restrição estiver ativa. O tráfego do provedor e os hooks de plugins confiáveis permanecem fora desta restrição.",
 
+  "settings.sandboxing.allowedHosts.title": "Destinos de rede permitidos",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinos de host e porta DNS para o tráfego de proxy HTTP e HTTPS em sandbox. GitHub CLI e HTTPS Git geralmente precisam de github.com:443 e api.github.com:443. As alterações se aplicam a novas sessões.",
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
@@ -1491,11 +1494,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura de amostragem (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controla o grau de aleatoriedade das respostas da IA (0–2). Valores mais baixos (por exemplo, 0.2) produzem resultados focados e consistentes. Valores mais altos (por exemplo, 1.0) produzem respostas mais variadas e criativas. Deixe em branco para usar o padrão do modelo.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parâmetro de amostragem nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Limite da amostragem nucleus (0–1). Restringe as opções de tokens ao menor conjunto cuja probabilidade acumulada atinge P. Valores mais baixos tornam o resultado mais focado; valores mais altos permitem maior diversidade. Deixe em branco para usar o padrão do modelo.",
   "settings.agentBehaviour.maxSteps.title": "Passos máximos",
-  "settings.agentBehaviour.maxSteps.description": "Iterações máximas do agente",
+  "settings.agentBehaviour.maxSteps.description":
+    "Número máximo de etapas do agente. Ao atingir o limite, o agente é instruído a parar de usar ferramentas e fornecer uma resposta final. Aumente para tarefas complexas com várias etapas; reduza para manter as respostas mais curtas e previsíveis.",
   "settings.agentBehaviour.hidden.title": "Oculto",
   "settings.agentBehaviour.hidden.description": "Ocultar este agente do seletor de modos na entrada do chat",
   "settings.agentBehaviour.disable.title": "Desativado",
@@ -1881,4 +1887,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Carregando branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plano pronto:",
+  "chat.search.placeholder": "Pesquisar na conversa…",
+  "chat.search.toggle": "Pesquisar na conversa",
+  "chat.search.matchCase": "Diferenciar maiúsculas de minúsculas",
+  "chat.search.matchWholeWord": "Coincidir palavra inteira",
+  "chat.search.useRegex": "Usar expressão regular",
+  "chat.search.previousMatch": "Correspondência anterior",
+  "chat.search.nextMatch": "Próxima correspondência",
+  "chat.search.close": "Fechar pesquisa",
+  "chat.search.invalidRegex": "Expressão regular inválida",
+  "chat.search.noResults": "Nenhum resultado",
+  "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
 }

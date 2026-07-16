@@ -52,6 +52,8 @@ exclude = [
   '^https?://api\.apertis\.ai/v1/?$',
   # Redirects to authenticated Google Cloud console
   '^https?://console\.cloud\.google\.com',
+  # Google AI Studio API keys page redirects to Google sign-in
+  '^https?://aistudio\.google\.com/api-keys/?$',
   # Linear intermittently returns 503 to CI link checks.
   '^https?://linear\.app/?$',
   # Consistently times out in CI
@@ -59,6 +61,8 @@ exclude = [
   '^https?://zod\.dev/v4/changelog',
   # Example punycode domain used in homograph attack documentation — does not exist
   '^https?://xn--pitest',
-  # OpenAI docs return 404 to plain GET link checks but resolve in browsers
-  '^https?://platform\.openai\.com/docs/api-reference/responses/create',
+   # OpenAI docs return 404 to plain GET link checks but resolve in browsers
+   '^https?://platform\.openai\.com/docs/api-reference/responses/create',
+   # Telegram deep links reject automated requests from CI runners with connection failures
+   '^https?://t\.me/',
 ]
