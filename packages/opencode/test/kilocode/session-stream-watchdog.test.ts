@@ -257,12 +257,15 @@ const exists = (file: string) =>
       .catch(() => false),
   )
 
-// Windows CI runners spawn git-bash noticeably slower than the Unix shells
-// used elsewhere in this file, so give the marker file these tests poll for
-// extra headroom there even with a correctly resolved path (see `posixPath`
-// below for the actual bug this was masking). Matches the existing
+// The production bash tool runs every command through a *login* shell
+// (`bash -l -c ...`, see src/shell/shell.ts) so `~/.bashrc` and shell
+// aliases behave the same as an interactive terminal. Git for Windows'
+// login-shell startup rescans the full Windows `PATH` and is well known to
+// take several seconds on CI hardware — well beyond what a Unix login shell
+// costs — before it even reaches the `touch` in `bashGate`. Give the marker
+// file these tests poll for a generous margin there. Matches the existing
 // platform-aware timeout doubling in test/kilocode/background-process.test.ts.
-const waitForFile = (file: string, label: string, duration = process.platform === "win32" ? 15_000 : 5_000) =>
+const waitForFile = (file: string, label: string, duration = process.platform === "win32" ? 30_000 : 5_000) =>
   pollWithTimeout(
     Effect.gen(function* () {
       const ok = yield* exists(file)
@@ -373,10 +376,9 @@ describe("session stream watchdog integration", () => {
         }),
         { git: true, config: (url) => ({ ...providerCfg(url), permission: { bash: "allow" } }) },
       ),
-    // kilocode_change: doubled on Windows — git-bash spawns and writes the
-    // readiness marker noticeably slower there than the Unix shells used
-    // elsewhere in this file (see waitForFile above).
-    { timeout: process.platform === "win32" ? 60_000 : 30_000 },
+    // kilocode_change: extended on Windows to cover the slow login-shell
+    // startup described on waitForFile above.
+    { timeout: process.platform === "win32" ? 90_000 : 30_000 },
   )
 
   it.live(
@@ -540,7 +542,7 @@ describe("session stream watchdog integration", () => {
           }),
         },
       ),
-    // kilocode_change: doubled on Windows, see the matching comment on test A.
-    { timeout: process.platform === "win32" ? 60_000 : 30_000 },
+    // kilocode_change: extended on Windows, see the matching comment on test A.
+    { timeout: process.platform === "win32" ? 90_000 : 30_000 },
   )
 })
