@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { Effect, Schema } from "effect"
-import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
+import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import * as path from "path"
 import { readFile } from "fs/promises"
 import * as Tool from "../../tool/tool"
@@ -10,7 +10,8 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { assertExternalDirectoryEffect } from "../../tool/external-directory"
 import { Config } from "@/config/config"
-import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway"
+import { HEADER_FEATURE, HEADER_ORGANIZATIONID, KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway"
+import { KiloSession } from "@/kilocode/session"
 import DESCRIPTION from "./generate-image.txt"
 
 const log = Log.create({ service: "tool.generate_image" })
@@ -101,12 +102,22 @@ export function ensureExtension(relPath: string, format: ImageFormat): string {
 
 type ResolvedRequest = { url: string; headers: Record<string, string>; body: string }
 
-function buildRequest(resolved: ResolvedProvider, prompt: string, model: string, inputImage?: string): ResolvedRequest {
+export function buildRequest(
+  resolved: ResolvedProvider,
+  prompt: string,
+  model: string,
+  sessionID: string,
+  inputImage?: string,
+): ResolvedRequest {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${resolved.token}`,
     "Content-Type": "application/json",
   }
-  if (resolved.organizationId) headers["X-KILOCODE-ORGANIZATIONID"] = resolved.organizationId
+  if (resolved.provider === "kilo") {
+    const feature = KiloSession.attribution(sessionID).feature
+    if (feature) headers[HEADER_FEATURE] = feature
+    if (resolved.organizationId) headers[HEADER_ORGANIZATIONID] = resolved.organizationId
+  }
 
   const content = inputImage
     ? [
@@ -197,7 +208,7 @@ export const GenerateImageTool = Tool.define(
 
           const cfg = yield* configSvc.get()
           const model = params.model ?? cfg.experimental?.image_generation_model ?? DEFAULT_MODEL
-          const req = buildRequest(resolved, params.prompt, model, inputImage)
+          const req = buildRequest(resolved, params.prompt, model, ctx.sessionID, inputImage)
 
           const response = yield* http.execute(
             HttpClientRequest.post(req.url).pipe(

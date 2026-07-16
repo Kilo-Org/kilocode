@@ -1,12 +1,32 @@
 // kilocode_change - new file
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { ENV_FEATURE, HEADER_FEATURE, HEADER_ORGANIZATIONID } from "@kilocode/kilo-gateway"
+import { KiloSession } from "../../../src/kilocode/session"
 import {
+  buildRequest,
   parseImageResponse,
   resolveProvider,
   ensureExtension,
   IMAGE_MODELS,
   DEFAULT_MODEL,
 } from "../../../src/kilocode/tool/generate-image"
+
+const env = {
+  feature: process.env[ENV_FEATURE],
+  platform: process.env["KILO_PLATFORM"],
+}
+
+beforeEach(() => {
+  delete process.env[ENV_FEATURE]
+  delete process.env["KILO_PLATFORM"]
+})
+
+afterEach(() => {
+  if (env.feature === undefined) delete process.env[ENV_FEATURE]
+  else process.env[ENV_FEATURE] = env.feature
+  if (env.platform === undefined) delete process.env["KILO_PLATFORM"]
+  else process.env["KILO_PLATFORM"] = env.platform
+})
 
 describe("generate-image response parser", () => {
   test("extracts PNG from data URL in choices[0].message.images[0]", () => {
@@ -88,6 +108,54 @@ describe("generate-image provider resolver", () => {
     const result = resolveProvider({ type: "oauth", access: "kilo-token" }, "or-key")
     expect(result!.provider).toBe("kilo")
     expect(result!.token).toBe("kilo-token")
+  })
+})
+
+describe("generate-image request headers", () => {
+  test("includes session-derived feature and existing Kilo headers", () => {
+    const id = "image-vscode"
+    KiloSession.register({ id, platform: "vscode" })
+
+    try {
+      const resolved = resolveProvider({ type: "oauth", access: "kilo-token", accountId: "org-123" }, undefined)!
+      const req = buildRequest(resolved, "draw a fox", DEFAULT_MODEL, id)
+
+      expect(req.headers.Authorization).toBe("Bearer kilo-token")
+      expect(req.headers[HEADER_ORGANIZATIONID]).toBe("org-123")
+      expect(req.headers[HEADER_FEATURE]).toBe("vscode-extension")
+    } finally {
+      KiloSession.clearPlatformOverride(id)
+    }
+  })
+
+  test("honors session and launcher-derived feature values", () => {
+    const id = "image-agent-manager"
+    KiloSession.register({ id, platform: "agent-manager" })
+
+    try {
+      const resolved = resolveProvider({ type: "api", key: "kilo-api-key" }, undefined)!
+      expect(buildRequest(resolved, "draw a fox", DEFAULT_MODEL, id).headers[HEADER_FEATURE]).toBe("agent-manager")
+
+      KiloSession.clearPlatformOverride(id)
+      process.env[ENV_FEATURE] = "jetbrains-plugin"
+      expect(buildRequest(resolved, "draw a fox", DEFAULT_MODEL, id).headers[HEADER_FEATURE]).toBe("jetbrains-plugin")
+
+      delete process.env[ENV_FEATURE]
+      process.env["KILO_PLATFORM"] = "cli"
+      expect(buildRequest(resolved, "draw a fox", DEFAULT_MODEL, id).headers[HEADER_FEATURE]).toBe("cli")
+    } finally {
+      KiloSession.clearPlatformOverride(id)
+    }
+  })
+
+  test("omits Kilo-specific headers for direct OpenRouter requests", () => {
+    process.env[ENV_FEATURE] = "cloud-agent"
+    const resolved = resolveProvider(undefined, "or-key-123")!
+    const req = buildRequest(resolved, "draw a fox", DEFAULT_MODEL, "image-openrouter")
+
+    expect(req.headers.Authorization).toBe("Bearer or-key-123")
+    expect(req.headers[HEADER_FEATURE]).toBeUndefined()
+    expect(req.headers[HEADER_ORGANIZATIONID]).toBeUndefined()
   })
 })
 
