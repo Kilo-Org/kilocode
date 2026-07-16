@@ -393,6 +393,8 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 
   [data-slot="user-message-text"] {
     unicode-bidi: plaintext; /* Match the prompt input */
+    background-color: color-mix(in srgb, var(--text-base) 7%, transparent);
+    border: 1px solid transparent;
     transition: opacity 0.3s ease;
 
     &[data-queued] {
@@ -407,6 +409,11 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
     color: var(--text-weak);
     user-select: none;
   }
+}
+
+body.vscode-high-contrast [data-component="user-message"] [data-slot="user-message-text"],
+body.vscode-high-contrast-light [data-component="user-message"] [data-slot="user-message-text"] {
+  border-color: var(--border-weak-base);
 }
 
 [data-component="tool-output"] {
