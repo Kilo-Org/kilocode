@@ -224,7 +224,7 @@
   grid-template-columns: max-content 1fr;
   gap: 8px 20px;
   margin: 0;
-  font-size: var(--vscode-font-size, 13px);
+  font-size: var(--kilo-font-size-13);
 }
 
 .task-timeline-detail-grid dt {
@@ -251,12 +251,12 @@
 
 .task-timeline-detail-token-label {
   color: var(--vscode-descriptionForeground);
-  font-size: var(--vscode-font-size, 13px);
+  font-size: var(--kilo-font-size-13);
 }
 
 .task-timeline-detail-token-line {
   color: var(--vscode-foreground);
-  font-size: 13px;
+  font-size: var(--kilo-font-size-13);
 }
 
 .task-timeline-detail-badge {
@@ -264,13 +264,13 @@
   border-radius: 999px;
   color: var(--vscode-descriptionForeground);
   border: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 80%, transparent);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   white-space: nowrap;
 }
 
 .task-timeline-detail-meta {
   color: var(--vscode-descriptionForeground);
-  font-size: var(--vscode-font-size, 13px);
+  font-size: var(--kilo-font-size-13);
 }
 
 .task-timeline-detail-value {
@@ -285,7 +285,7 @@
 
 .task-timeline-detail-label {
   color: var(--vscode-descriptionForeground);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   margin-bottom: 4px;
 }
 
@@ -298,7 +298,7 @@
   border: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 80%, transparent);
   background: color-mix(in srgb, var(--vscode-editor-background) 84%, transparent);
   font-family: var(--vscode-editor-font-family, monospace);
-  font-size: 12px;
+  font-size: var(--kilo-font-size-12);
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
