@@ -15,7 +15,7 @@ export type ReviewCommand = "review"
 export interface IndexingTelemetryProperties extends Record<string, unknown> {
   source: "scan" | "watcher"
   provider: string
-  vectorStore: "lancedb" | "qdrant"
+  vectorStore: "lancedb" | "qdrant" | "valkey"
   modelId?: string
   trigger?: "background" | "manual"
   mode?: "full" | "incremental"

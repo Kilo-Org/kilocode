@@ -46,6 +46,7 @@ const allProviders: { value: ProviderId; label: string }[] = [
 const stores: Option[] = [
   { value: "lancedb", label: "LanceDB (default)" },
   { value: "qdrant", label: "Qdrant" },
+  { value: "valkey", label: "Valkey" },
 ]
 
 const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
@@ -191,7 +192,7 @@ const IndexingTab: Component = () => {
     return value ?? ""
   }
 
-  const storeValue = (group: "qdrant" | "lancedb", key: string) => {
+  const storeValue = (group: "qdrant" | "lancedb" | "valkey", key: string) => {
     const draftKey = `${scope()}.${group}.${key}`
     const draft = storeDrafts()[draftKey]
     if (draft !== undefined) return draft
@@ -206,7 +207,7 @@ const IndexingTab: Component = () => {
     setProviderDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
   }
 
-  const saveStoreField = (group: "qdrant" | "lancedb", key: string, value: string) => {
+  const saveStoreField = (group: "qdrant" | "lancedb" | "valkey", key: string, value: string) => {
     const current = (raw()[group] as Record<string, string | undefined> | undefined) ?? {}
     updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
     const draftKey = `${scope()}.${group}.${key}`
@@ -439,7 +440,9 @@ const IndexingTab: Component = () => {
             current={stores.find((item) => item.value === vectorStore())}
             value={(item) => item.value}
             label={(item) => item.label}
-            onSelect={(item) => updateIndexing({ vectorStore: item?.value as "lancedb" | "qdrant" | undefined })}
+            onSelect={(item) =>
+              updateIndexing({ vectorStore: item?.value as "lancedb" | "qdrant" | "valkey" | undefined })
+            }
             variant="secondary"
             size="small"
             triggerVariant="settings"
@@ -509,6 +512,39 @@ const IndexingTab: Component = () => {
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
                   saveStoreField("qdrant", "apiKey", target.value)
+                }}
+              />
+            </SettingsRow>
+          </>
+        </Show>
+        <Show when={vectorStore() === "valkey"}>
+          <>
+            <SettingsRow title="Valkey URL" description="Connection URL for the Valkey vector store">
+              <TextField
+                value={storeValue("valkey", "url")}
+                placeholder="redis://localhost:6379"
+                onInput={(e: InputEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.valkey.url`]: target.value }))
+                }}
+                onBlur={(e: FocusEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  saveStoreField("valkey", "url", target.value)
+                }}
+              />
+            </SettingsRow>
+            <SettingsRow title="Valkey Password" description="Optional authentication password" last>
+              <TextField
+                type="password"
+                value={storeValue("valkey", "password")}
+                placeholder="Optional password"
+                onInput={(e: InputEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.valkey.password`]: target.value }))
+                }}
+                onBlur={(e: FocusEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  saveStoreField("valkey", "password", target.value)
                 }}
               />
             </SettingsRow>
