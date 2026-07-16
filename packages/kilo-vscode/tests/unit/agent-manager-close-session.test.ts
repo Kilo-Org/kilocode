@@ -5,6 +5,7 @@ const { AgentManagerProvider } = await import("../../src/agent-manager/AgentMana
 type Manager = {
   connectionService: { getClient: () => unknown }
   panel: {
+    postMessage: (message: unknown) => void
     sessions: {
       getSessionDirectories: () => ReadonlyMap<string, string>
       clearSessionDirectory: (id: string) => void
@@ -24,6 +25,7 @@ function createManager(options?: { dir?: string; panelDir?: string; state?: bool
   const aborted: string[][] = []
   const cleared: string[] = []
   const removed: string[] = []
+  const messages: unknown[] = []
   const events: string[] = []
   const client = {
     backgroundProcess: {
@@ -44,6 +46,7 @@ function createManager(options?: { dir?: string; panelDir?: string; state?: bool
   const manager = Object.create(AgentManagerProvider.prototype) as Manager
   manager.connectionService = { getClient: () => client }
   manager.panel = {
+    postMessage: (message) => messages.push(message),
     sessions: {
       getSessionDirectories: () => new Map(options?.panelDir ? [["s1", options.panelDir]] : []),
       clearSessionDirectory: (id) => cleared.push(id),
@@ -59,12 +62,12 @@ function createManager(options?: { dir?: string; panelDir?: string; state?: bool
   manager.pushState = mock(() => undefined)
   manager.log = mock(() => undefined)
 
-  return { manager, stopped, aborted, cleared, removed, events }
+  return { manager, stopped, aborted, cleared, removed, messages, events }
 }
 
 describe("AgentManagerProvider closeSession", () => {
   it("aborts the agent before stopping processes and removing its tab", async () => {
-    const { manager, stopped, aborted, cleared, removed, events } = createManager({ dir: "/repo/worktree" })
+    const { manager, stopped, aborted, cleared, removed, messages, events } = createManager({ dir: "/repo/worktree" })
 
     await manager.onCloseSession("s1")
 
@@ -73,6 +76,7 @@ describe("AgentManagerProvider closeSession", () => {
     expect(events).toEqual(["abort", "processes", "remove"])
     expect(removed).toEqual(["s1"])
     expect(cleared).toEqual(["s1"])
+    expect(messages).toEqual([{ type: "agentManager.sessionClosed", sessionId: "s1" }])
     expect(manager.panelSessions.has("s1")).toBe(false)
   })
 
