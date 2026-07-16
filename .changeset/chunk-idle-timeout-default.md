@@ -2,4 +2,4 @@
 "@kilocode/cli": patch
 ---
 
-Prevent stalled model streams from leaving agent and subagent sessions stuck indefinitely. Apply a 60,000 ms chunk idle timeout by default for normal agent model streams, with prepared request, model, and agent overrides and provider-level fallbacks still winning as before.
+Prevent agent and subagent sessions from stalling indefinitely with a 60-second model-stream idle watchdog that pauses while local tools run. Set `chunkTimeout: false` to disable it.
