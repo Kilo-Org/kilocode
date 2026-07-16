@@ -15,7 +15,6 @@ import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
-import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -23,31 +22,17 @@ import ai.kilocode.rpc.dto.ModelsWorkspaceDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
-import com.intellij.ide.actions.searcheverywhere.FoundItemDescriptor
-import com.intellij.ide.util.gotoByName.ChooseByNameInScopeItemProvider
-import com.intellij.ide.util.gotoByName.ChooseByNamePopup
-import com.intellij.ide.util.gotoByName.ChooseByNameViewModel
-import com.intellij.ide.util.gotoByName.GotoFileModel
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
-import com.intellij.openapi.application.readAction
 import com.intellij.openapi.components.service
-import com.intellij.openapi.progress.EmptyProgressIndicator
-import com.intellij.openapi.project.DumbService
-import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.fileEditor.OpenFileDescriptor
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.platform.project.ProjectId
 import com.intellij.platform.project.findProjectOrNull
-import com.intellij.navigation.NavigationItem
-import com.intellij.psi.PsiFileSystemItem
-import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.util.indexing.FindSymbolParameters
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -88,7 +73,6 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         private val LEGACY = listOf("opencode.jsonc", "opencode.json")
         private val GLOBAL = MODERN + LEGACY + "config.json"
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
-        private const val SEARCH_CAP = 2_000
         private const val DIFF_CAP = 200_000
         private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
@@ -200,31 +184,11 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         return found.values.toList()
     }
 
-    override suspend fun searchFiles(
-        directory: String,
-        query: String,
-        limit: Int,
-        backend: FileSearchBackendDto,
-    ): FileSearchResultDto {
+    override suspend fun searchFiles(directory: String, query: String, limit: Int): FileSearchResultDto {
         val base = file(clean(directory) ?: directory) ?: return FileSearchResultDto()
         val git = withContext(Dispatchers.IO) { gitAvailable(base) }
-        LOG.debug { "workspace file search backend=$backend directory=$directory query=$query limit=$limit" }
-        if (backend == FileSearchBackendDto.KILO) return searchKilo(directory, query, limit, git)
-        return searchIntellij(base, query, limit, git)
-    }
-
-    private suspend fun searchIntellij(base: Path, query: String, limit: Int, git: Boolean): FileSearchResultDto {
-        val project = project(base) ?: return FileSearchResultDto(git = git)
-        if (DumbService.getInstance(project).isDumb) return FileSearchResultDto(indexing = true, git = git)
-        return try {
-            val files = readAction { search(project, base, query, limit.coerceIn(1, 200)) }
-            FileSearchResultDto(files = files, git = git)
-        } catch (e: IndexNotReadyException) {
-            FileSearchResultDto(indexing = true, git = git)
-        } catch (e: LinkageError) {
-            LOG.warn("file search API unavailable; returning no suggestions", e)
-            FileSearchResultDto(git = git)
-        }
+        LOG.debug { "workspace file search directory=$directory query=$query limit=$limit" }
+        return searchKilo(directory, query, limit, git)
     }
 
     private suspend fun searchKilo(directory: String, query: String, limit: Int, git: Boolean): FileSearchResultDto {
@@ -382,83 +346,6 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             val base = item.basePath?.let(::file) ?: return@firstOrNull false
             path.startsWith(base)
         } ?: projects.firstOrNull()
-    }
-
-    // Uses the IDE Go-to-File engine (com.intellij.ide.util.gotoByName.*). These are public but
-    // unstable lang-impl classes (not @ApiStatus.Internal) -- the same engine behind Search Everywhere,
-    // chosen for proven large-repo performance. searchFiles() degrades gracefully on LinkageError.
-    @Suppress("UnstableApiUsage")
-    private fun search(project: Project, base: Path, query: String, limit: Int): List<WorkspaceFileDto> {
-        val text = query.trim()
-        if (text.isBlank()) return roots(project, base, limit)
-        val scope = GlobalSearchScope.projectScope(project)
-        val model = object : GotoFileModel(project) {
-            override fun acceptItem(item: NavigationItem): Boolean {
-                val psi = item as? PsiFileSystemItem ?: return false
-                val path = file(psi.virtualFile.path) ?: return false
-                return relativeWithinWorkspace(base, path) != null && super.acceptItem(item)
-            }
-
-            override fun loadInitialCheckBoxState(): Boolean = false
-
-            override fun saveInitialCheckBoxState(state: Boolean) {}
-        }
-        val view = object : ChooseByNameViewModel {
-            override fun getProject(): Project = project
-
-            override fun getModel() = model
-
-            override fun isSearchInAnyPlace(): Boolean = model.useMiddleMatching()
-
-            override fun transformPattern(pattern: String): String = ChooseByNamePopup.getTransformedPattern(pattern, model)
-
-            override fun canShowListForEmptyPattern(): Boolean = false
-
-            override fun getMaximumListSizeLimit(): Int = limit
-        }
-        val provider = model.getItemProvider(null)
-        val params = FindSymbolParameters.wrap(text, scope)
-        val found = mutableListOf<FoundItemDescriptor<*>>()
-        val indicator = EmptyProgressIndicator()
-        if (provider is ChooseByNameInScopeItemProvider) {
-            provider.filterElementsWithWeights(view, params, indicator) { item ->
-                found += item
-                found.size < SEARCH_CAP
-            }
-        } else {
-            provider.filterElements(view, text, false, indicator) { item ->
-                found += FoundItemDescriptor(item, 0)
-                found.size < SEARCH_CAP
-            }
-        }
-        return found.asSequence()
-            .sortedByDescending { it.weight }
-            .mapNotNull { item -> (item.item as? PsiFileSystemItem)?.virtualFile }
-            .mapNotNull { vf -> fileDto(base, vf) }
-            .distinctBy { it.path }
-            .take(limit)
-            .toList()
-    }
-
-    private fun roots(project: Project, base: Path, limit: Int): List<WorkspaceFileDto> {
-        val root = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(base) ?: return emptyList()
-        val index = ProjectFileIndex.getInstance(project)
-        return root.children.asSequence()
-            .filter { it.name != ".git" }
-            .filterNot { index.isExcluded(it) }
-            .mapNotNull { fileDto(base, it) }
-            .sortedWith(
-                compareByDescending<WorkspaceFileDto> { it.directory }
-                    .thenBy(String.CASE_INSENSITIVE_ORDER) { it.name },
-            )
-            .take(limit)
-            .toList()
-    }
-
-    private fun fileDto(base: Path, vf: VirtualFile): WorkspaceFileDto? {
-        val path = file(vf.path) ?: return null
-        val rel = relativeWithinWorkspace(base, path) ?: return null
-        return WorkspaceFileDto(rel, vf.name, vf.isDirectory)
     }
 
     private fun gitAvailable(base: Path): Boolean {

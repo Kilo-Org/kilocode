@@ -5,7 +5,6 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
-import ai.kilocode.rpc.dto.FileSearchBackendDto
 import ai.kilocode.rpc.dto.WorkspaceFileDto
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,19 +36,14 @@ class KiloWorkspaceRpcApiImplTest {
     }
 
     @Test
-    fun `Kilo backend searches files and directories through core`() = runBlocking {
+    fun `searches files and directories through core`() = runBlocking {
         mock.findFiles = """["src/Main.kt",".kilo/worktrees/hidden.kt"]"""
         mock.findDirectories = """["src/","docs/"]"""
         val dir = Files.createTempDirectory("kilo-search")
         try {
             val app = app()
 
-            val result = KiloWorkspaceRpcApiImpl(app).searchFiles(
-                dir.toString(),
-                "src",
-                3,
-                FileSearchBackendDto.KILO,
-            )
+            val result = KiloWorkspaceRpcApiImpl(app).searchFiles(dir.toString(), "src", 3)
 
             assertEquals(
                 listOf(
@@ -62,20 +56,6 @@ class KiloWorkspaceRpcApiImplTest {
             assertEquals(2, mock.requestCount("/find/file"))
             assertTrue(mock.findFilePaths.any { it.contains("type=file") && it.contains("query=src") })
             assertTrue(mock.findFilePaths.any { it.contains("type=directory") && it.contains("query=src") })
-        } finally {
-            delete(dir)
-        }
-    }
-
-    @Test
-    fun `IntelliJ backend does not call core file search`() = runBlocking {
-        val dir = Files.createTempDirectory("kilo-search")
-        try {
-            val app = app()
-
-            KiloWorkspaceRpcApiImpl(app).searchFiles(dir.toString(), "src", 3, FileSearchBackendDto.INTELLIJ)
-
-            assertEquals(0, mock.requestCount("/find/file"))
         } finally {
             delete(dir)
         }

@@ -9,7 +9,6 @@
     <extensions defaultExtensionNs="com.intellij">
         <applicationService serviceImplementation="ai.kilocode.client.migration.KiloMigrationService"/>
         <applicationService serviceImplementation="ai.kilocode.client.autocomplete.KiloAutocompleteSettingsService"/>
-        <applicationService serviceImplementation="ai.kilocode.client.app.KiloFileSearchSettingsService"/>
         <customPasteProvider implementation="ai.kilocode.client.session.ui.prompt.PromptAttachmentPasteProvider"/>
 
         <notificationGroup id="Kilo Code"
@@ -112,9 +111,6 @@
         <action id="Kilo.OpenSettings"
                 class="ai.kilocode.client.actions.OpenSettingsAction"/>
 
-        <action id="Kilo.FileSearch.UseIntelliJ"
-                class="ai.kilocode.client.actions.UseIntelliJFileSearchAction"/>
-
         <action id="Kilo.OpenLocalConfig"
                 class="ai.kilocode.client.actions.OpenLocalConfigAction"/>
 
@@ -140,8 +136,6 @@
 
         <group id="Kilo.SettingsGroup">
             <reference ref="Kilo.OpenSettings"/>
-            <separator/>
-            <reference ref="Kilo.FileSearch.UseIntelliJ"/>
             <separator/>
             <reference ref="Kilo.OpenConfigGroup"/>
             <separator/>
