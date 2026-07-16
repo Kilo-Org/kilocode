@@ -40,14 +40,14 @@ describe("revert session synchronization", () => {
     expect(unrevert).toContain('type: "sessionUpdated"')
   })
 
-  it("uses ordered sync patches instead of duplicate bus snapshots", () => {
+  it("uses ordered sync snapshots instead of duplicate bus snapshots", () => {
     expect(provider).toMatch(/source: "sync"/)
     expect(provider).toMatch(
       /if \(event\.type === "session\.updated"\) return "source" in event && event\.source === "sync"/,
     )
     expect(provider).toMatch(/if \(!isLegacySyncEvent\(event\)\) return/)
     expect(provider).toMatch(
-      /this\.setCurrentSession\(applySessionPatch\(this\.currentSession, event\.properties\.info\)\)/,
+      /this\.setCurrentSession\(event\.properties\.info\)/,
     )
   })
 })
