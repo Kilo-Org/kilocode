@@ -376,6 +376,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   window.addEventListener("focusPrompt", onFocusPrompt)
   onCleanup(() => window.removeEventListener("focusPrompt", onFocusPrompt))
 
+  // Fill the draft from a quick-action chip (e.g. the empty-state suggestions) - only
+  // when the box is empty, so it never clobbers something the user already typed.
+  const onSetDraft = (event: Event) => {
+    if (!(event instanceof CustomEvent) || typeof event.detail !== "string") return
+    if (text().trim().length > 0) return
+    setText(event.detail)
+    window.dispatchEvent(new Event("focusPrompt"))
+  }
+  window.addEventListener("kilo:setPromptDraft", onSetDraft)
+  onCleanup(() => window.removeEventListener("kilo:setPromptDraft", onSetDraft))
+
   // Start a new task, carrying over the current prompt text (without auto-sending it)
   const onNewTaskRequest = () => {
     const draft = text().trim()

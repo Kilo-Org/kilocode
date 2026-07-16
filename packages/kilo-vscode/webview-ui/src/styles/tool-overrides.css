@@ -6,6 +6,7 @@
 [data-component="tool-output"][data-scrollable]:has([data-component="task-tools"]) {
   margin-inline: -6px;
   max-height: 200px;
+  border-radius: var(--kilo-chat-radius-md);
   background: var(--surface-tool-output-base);
 
   > [data-component="task-tools"] {
@@ -21,7 +22,7 @@
   overflow: hidden;
   margin-inline: -6px;
   width: calc(100% + 12px);
-  border-radius: var(--radius-sm);
+  border-radius: var(--kilo-chat-radius-md);
   background: var(--surface-tool-output-base);
 }
 
@@ -84,7 +85,7 @@ html[data-theme="kilo-vscode"]
   overflow: hidden;
   margin-inline: -6px;
   width: calc(100% + 12px);
-  border-radius: var(--radius-sm);
+  border-radius: var(--kilo-chat-radius-md);
   background: var(--surface-tool-output-base);
 
   > [data-component="tool-output"] {

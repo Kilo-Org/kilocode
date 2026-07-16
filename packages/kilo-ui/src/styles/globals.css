@@ -29,12 +29,26 @@
   --font-size-base: var(--kilo-font-size-13);
   --font-size-large: var(--kilo-font-size-16);
 
-  /* Tight border radius (~2px) */
+  /* Tight border radius (~2px) - used app-wide (settings, dialogs, native VS Code chrome) */
   --radius-xs: 2px;
   --radius-sm: 2px;
   --radius-md: 2px;
   --radius-lg: 4px;
   --radius-xl: 6px;
+
+  /* Chat-surface-only tokens - softer, Apple-leaning scale
+     for the conversation view itself (messages, tool blocks, input, welcome
+     screen, task header). Deliberately separate from --radius- and --shadow-
+     above so the rest of the extension (settings, dialogs, history list)
+     keeps VS Code's native flat look untouched. */
+  --kilo-chat-radius-sm: 8px;
+  --kilo-chat-radius-md: 14px;
+  --kilo-chat-radius-pill: 999px;
+  --kilo-chat-ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --kilo-chat-shadow-soft: 0 1px 2px color-mix(in srgb, var(--vscode-widget-shadow, #000) 6%, transparent), 0 4px
+    16px color-mix(in srgb, var(--vscode-widget-shadow, #000) 10%, transparent);
+  --kilo-chat-shadow-lift: 0 2px 4px color-mix(in srgb, var(--vscode-widget-shadow, #000) 8%, transparent), 0 8px
+    24px color-mix(in srgb, var(--vscode-widget-shadow, #000) 14%, transparent);
 }
 
 /* ===== Interactive cursors ===== */

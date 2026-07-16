@@ -111,13 +111,56 @@
 }
 
 /* ============================================
+   Task Header — running subagent indicator
+   Stays visible in the sticky header while a task-tool subagent is
+   running, even after its row scrolls out of the transcript.
+   ============================================ */
+
+[data-component="task-header-running-agent"] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 4px 16px;
+  border-bottom: 1px solid var(--border-weak-base);
+  background-color: var(--background-base);
+  font-size: var(--kilo-font-size-12);
+  flex-shrink: 0;
+
+  [data-slot="task-header-running-agent-name"] {
+    font-weight: var(--font-weight-medium, 500);
+    color: var(--text-base);
+    white-space: nowrap;
+    text-transform: capitalize;
+  }
+
+  [data-slot="task-header-running-agent-model"] {
+    flex-shrink: 0;
+    color: var(--text-weak);
+    background: var(--surface-tool-output-base);
+    border-radius: var(--radius-sm);
+    padding: 0 4px;
+  }
+
+  [data-slot="task-header-running-agent-desc"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-weak);
+  }
+}
+
+/* ============================================
    Task Timeline
    ============================================ */
 
 .task-timeline-outer {
   width: 100%;
   overflow: hidden;
-  padding: 0 8px;
+  padding: 2px 4px;
+  border-radius: var(--kilo-chat-radius-sm);
+  background: color-mix(in srgb, var(--vscode-foreground) 3%, transparent);
 }
 
 .task-timeline {
@@ -155,11 +198,12 @@
   background: var(--timeline-color);
   opacity: 0.7;
   pointer-events: none;
+  transition: opacity 0.2s var(--kilo-chat-ease);
 }
 
 .task-timeline-bar--active {
   opacity: 1;
-  animation: timeline-pulse 2s ease-in-out infinite 0.5s;
+  animation: timeline-pulse 2s cubic-bezier(0.45, 0, 0.55, 1) infinite 0.5s;
 }
 
 .task-timeline-tooltip {
@@ -238,16 +282,22 @@
 [data-component="task-header-graph"] {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 4px 0 6px;
-  border-bottom: 1px solid var(--border-weak-base);
+  gap: 8px;
+  margin: 6px 8px;
+  padding: 10px 8px 8px;
+  border-radius: var(--kilo-chat-radius-md);
+  background: color-mix(in srgb, var(--vscode-foreground) 4%, transparent);
+  box-shadow: var(--kilo-chat-shadow-soft);
+  transition:
+    background 0.2s var(--kilo-chat-ease),
+    box-shadow 0.2s var(--kilo-chat-ease);
 }
 
 [data-slot="task-header-graph-row"] {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
+  padding: 0 4px;
 }
 
 /* ============================================
@@ -367,34 +417,41 @@
 /* Token breakdown in expanded state */
 .task-header-tokens {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   flex-wrap: wrap;
-  gap: 2px 6px;
-  padding: 0 8px;
+  gap: 3px 10px;
+  padding: 0 4px;
   font-size: var(--kilo-font-size-11);
   color: var(--vscode-descriptionForeground);
 }
 
 .task-header-tokens-label {
-  font-weight: 600;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--vscode-descriptionForeground) 75%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.92em;
 }
 
 .task-header-tokens-value {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+  color: var(--vscode-foreground);
 }
 
 .task-header-usage-trigger {
   display: flex;
   align-items: center;
-  width: calc(100% - 16px);
+  width: calc(100% - 8px);
   min-height: 28px;
   height: auto;
-  margin: 0 8px;
-  padding: 2px 0;
-  border-radius: 3px;
+  margin: 0 4px;
+  padding: 4px 6px;
+  border-radius: var(--kilo-chat-radius-sm);
   color: inherit;
+  transition: background-color 0.2s var(--kilo-chat-ease);
 }
 
 .task-header-usage-trigger:hover {

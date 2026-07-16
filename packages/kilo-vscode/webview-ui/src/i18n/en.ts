@@ -1224,6 +1224,13 @@ export const dict = {
   "session.messages.empty": "Start a conversation by typing a message below.",
   "session.messages.welcome":
     "Kilo Code is an AI coding assistant. Ask it to build features, fix bugs, or explain your codebase.",
+  "session.messages.greeting": "How can I help?",
+  "session.messages.quickAction.fixBug": "Fix a bug",
+  "session.messages.quickAction.explainCode": "Explain this code",
+  "session.messages.quickAction.writeTest": "Write a test",
+  "session.messages.quickAction.reviewChanges": "Review my changes",
+  "session.messages.quickAction.makeAPlan": "Make a plan",
+  "session.messages.quickAction.improveCode": "Improve this code",
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",

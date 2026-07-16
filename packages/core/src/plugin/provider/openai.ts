@@ -13,7 +13,19 @@ export const OpenAIPlugin = PluginV2.define({
         evt.sdk = mod.createOpenAI(evt.options)
       }),
       "aisdk.language": Effect.fn(function* (evt) {
-        if (evt.model.providerID !== ProviderV2.ID.openai) return
+        // kilocode_change start - also route custom-named providers that reuse the
+        // @ai-sdk/openai package (e.g. a self-hosted proxy configured with
+        // npm: "@ai-sdk/openai" instead of "@ai-sdk/openai-compatible") through
+        // Responses, not just the literal built-in "openai" provider. Without this,
+        // such a provider silently falls back to the plain chat-completions
+        // language model and loses separated reasoning content for reasoning
+        // models - matches how native-request.ts already dispatches on npm
+        // package rather than provider ID.
+        const isOpenAI =
+          evt.model.providerID === ProviderV2.ID.openai ||
+          (evt.model.api.type === "aisdk" && evt.model.api.package === "@ai-sdk/openai")
+        if (!isOpenAI) return
+        // kilocode_change end
         evt.language = evt.sdk.responses(evt.model.api.id)
       }),
       "catalog.transform": Effect.fn(function* (evt) {

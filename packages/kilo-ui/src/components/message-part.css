@@ -5,6 +5,22 @@
 
   [data-slot="text-part-body"] {
     margin-top: 0;
+    transition:
+      opacity 0.25s var(--kilo-chat-ease),
+      font-size 0.25s var(--kilo-chat-ease);
+  }
+
+  /* In-turn narration text (see isNarration in message-part.tsx): reads
+     as the model thinking out loud between tool calls, not the final
+     answer. Dim and shrink it slightly so the eye lands on the real
+     answer and on tool-call rows instead of a wall of equal-weight prose. */
+  &[data-narration] [data-slot="text-part-body"] {
+    opacity: 0.6;
+    font-size: 0.94em;
+  }
+
+  &[data-narration] [data-slot="text-part-body"]:hover {
+    opacity: 0.92;
   }
 
   [data-slot="text-part-copy-wrapper"] {
@@ -387,6 +403,14 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 
 /* Queued state (upstream removed in v1.2.25) */
 [data-component="user-message"] {
+  /* Subtle tonal card, not a chat bubble - the surrounding layout deliberately
+     treats every turn as flowing document text (see chat-layout.css), so this
+     stays a soft inset rather than a heavy, separately-elevated box. */
+  padding: 8px 12px;
+  border-radius: var(--kilo-chat-radius-md);
+  background: color-mix(in srgb, var(--vscode-foreground) 5%, transparent);
+  transition: background-color 0.2s var(--kilo-chat-ease);
+
   [data-slot="user-message-attachment"][data-queued] {
     opacity: 0.6;
   }
@@ -396,6 +420,39 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
 
     &[data-queued] {
       opacity: 0.6;
+    }
+
+    &[data-collapsed] {
+      position: relative;
+      max-height: 220px;
+      overflow: hidden;
+
+      &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 48px;
+        background: linear-gradient(to bottom, transparent, var(--background-stronger));
+        pointer-events: none;
+      }
+    }
+  }
+
+  [data-slot="user-message-expand-toggle"] {
+    display: block;
+    margin-top: 4px;
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: var(--font-size-small);
+    font-weight: 500;
+    color: var(--vscode-textLink-foreground, var(--syntax-property));
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
     }
   }
 
@@ -667,10 +724,10 @@ html[data-theme="kilo-vscode"] [data-component="reasoning-part"] {
     height: auto;
     padding: 2px 6px;
     background: transparent;
-    border-radius: 4px;
+    border-radius: var(--kilo-chat-radius-sm);
     transition:
-      background-color 0.15s ease,
-      color 0.15s ease;
+      background-color 0.2s var(--kilo-chat-ease),
+      color 0.2s var(--kilo-chat-ease);
 
     &:hover {
       background-color: var(--vscode-list-hoverBackground, var(--surface-raised-base-hover));

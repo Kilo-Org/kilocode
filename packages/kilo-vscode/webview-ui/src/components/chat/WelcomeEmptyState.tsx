@@ -25,16 +25,45 @@ export const KiloLogo = () => {
   )
 }
 
+const QUICK_ACTIONS = [
+  { labelKey: "session.messages.quickAction.fixBug", prompt: "Help me fix a bug. Ask me what's failing." },
+  {
+    labelKey: "session.messages.quickAction.explainCode",
+    prompt: "Explain the code in the currently open file.",
+  },
+  { labelKey: "session.messages.quickAction.writeTest", prompt: "Write a test for the currently open file." },
+  { labelKey: "session.messages.quickAction.reviewChanges", prompt: "Review my uncommitted changes." },
+  { labelKey: "session.messages.quickAction.makeAPlan", prompt: "Help me make a plan for: " },
+  {
+    labelKey: "session.messages.quickAction.improveCode",
+    prompt: "Suggest improvements for the currently open file.",
+  },
+] as const
+
 export const WelcomeEmptyState: Component<WelcomeEmptyStateProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const dialog = useDialog()
   const recent = () => recentSessions(session.sessions())
 
+  const useQuickAction = (prompt: string) => {
+    window.dispatchEvent(new CustomEvent("kilo:setPromptDraft", { detail: prompt }))
+  }
+
   return (
     <div class="message-list-empty">
       <KiloLogo />
+      <h2 class="kilo-greeting">{language.t("session.messages.greeting")}</h2>
       <p class="kilo-about-text">{language.t("session.messages.welcome")}</p>
+      <div class="quick-actions">
+        <For each={QUICK_ACTIONS}>
+          {(action) => (
+            <button class="quick-action-chip" onClick={() => useQuickAction(action.prompt)}>
+              {language.t(action.labelKey)}
+            </button>
+          )}
+        </For>
+      </div>
       <Show when={recent().length > 0 && props.onSelectSession}>
         <div class="recent-sessions">
           <span class="recent-sessions-label">{language.t("session.recent")}</span>

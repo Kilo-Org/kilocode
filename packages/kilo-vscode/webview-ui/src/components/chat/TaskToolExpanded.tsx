@@ -63,6 +63,18 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     return typeof val === "string" ? val : undefined
   })
 
+  // Short model label (e.g. "claude-sonnet-4-6" from "myprovider/claude-sonnet-4-6") for the
+  // subagent this task row spawned, so a multi-role/multi-provider pipeline shows which
+  // model handled each phase at a glance.
+  const model = createMemo(() => {
+    const name = props.input.subagent_type
+    if (typeof name !== "string") return undefined
+    const raw = session.allAgents().find((a) => a.name === name)?.model
+    if (!raw) return undefined
+    const idx = raw.lastIndexOf("/")
+    return idx === -1 ? raw : raw.slice(idx + 1)
+  })
+
   // All tool parts from the child session — the compact summary list
   const childToolParts = createMemo(() => {
     const id = childSessionId()
@@ -124,6 +136,9 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         <span data-slot="basic-tool-tool-title" class="capitalize">
           {title()}
         </span>
+        <Show when={model()}>
+          <span data-slot="basic-tool-tool-model">{model()}</span>
+        </Show>
         <Show when={description() || childToolCount() > 0}>
           <span data-slot="basic-tool-tool-subtitle">
             {description()}

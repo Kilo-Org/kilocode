@@ -17,10 +17,31 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  position: relative;
   container: chat / inline-size;
   --chat-readable-width: 98ch;
   --chat-gutter: clamp(16px, 4cqi, 48px);
   --chat-scrollbar-width: 10px;
+}
+
+/* Gradient glow ring around the panel edge. Inset (not a bleeding outer
+   shadow) since the sidebar's own overflow:hidden would clip anything
+   drawn outside its bounds anyway. */
+.chat-view::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  padding: 1.5px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, #34d399, #38bdf8, #a78bfa, #f472b6);
+  opacity: 0.55;
+  pointer-events: none;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
 }
 
 .chat-messages-wrapper {
