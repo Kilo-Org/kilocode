@@ -7,12 +7,15 @@ import ai.kilocode.client.settings.base.SettingsListCell
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.rpc.dto.ProviderSettingsDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
+import com.intellij.icons.AllIcons
 import javax.swing.Icon
 
 internal enum class ProviderListAction {
     CONNECT,
     OAUTH,
+    EDIT,
     DISCONNECT,
+    DELETE,
     ENABLE,
 }
 
@@ -20,7 +23,6 @@ internal data class ProviderListRow(
     val provider: ProviderSettingsProviderDto,
     override val section: String,
     val actions: List<ProviderListAction>,
-    val connected: Boolean = false,
     override val disabled: Boolean = false,
 ) : SettingsListItem {
     override val key: String get() = provider.id
@@ -38,7 +40,9 @@ internal data class ProviderListRow(
                 action.name,
                 providerListActionText(action),
                 enabled(action),
-                alwaysVisible = action == ProviderListAction.DISCONNECT && connected,
+                icon = if (action == ProviderListAction.DELETE) AllIcons.Actions.GC else null,
+                iconOnly = action == ProviderListAction.DELETE,
+                primary = action == ProviderListAction.EDIT,
             )
         }
 
@@ -48,7 +52,9 @@ internal data class ProviderListRow(
 internal fun providerListActionText(action: ProviderListAction) = when (action) {
     ProviderListAction.CONNECT -> KiloBundle.message("settings.providers.connect")
     ProviderListAction.OAUTH -> KiloBundle.message("settings.providers.oauth")
+    ProviderListAction.EDIT -> KiloBundle.message("settings.providers.edit")
     ProviderListAction.DISCONNECT -> KiloBundle.message("settings.providers.disconnect")
+    ProviderListAction.DELETE -> KiloBundle.message("settings.providers.delete")
     ProviderListAction.ENABLE -> KiloBundle.message("settings.providers.enable")
 }
 
@@ -74,7 +80,7 @@ internal fun providerListRows(state: ProviderSettingsDto, query: String, disable
         .filter { !hiddenProvider(it) }
         .sortedWith(compareBy<ProviderSettingsProviderDto> { it.name.lowercase() }.thenBy { it.id })
     val rows = mutableListOf<ProviderListRow>()
-    rows += connected.map { ProviderListRow(it, KiloBundle.message("settings.providers.connected"), providerActions(it, state, disabled), connected = true, disabled = disabledRows) }
+    rows += connected.map { ProviderListRow(it, KiloBundle.message("settings.providers.connected"), providerActions(it, state, disabled), disabled = disabledRows) }
     rows += popular.map { ProviderListRow(it, KiloBundle.message("settings.providers.popular"), providerActions(it, state, disabled), disabled = disabledRows) }
     rows += all.map { ProviderListRow(it, KiloBundle.message("settings.providers.all"), providerActions(it, state, disabled), disabled = disabledRows) }
     return rows
@@ -87,7 +93,13 @@ internal fun providerActions(
 ): List<ProviderListAction> {
     if (provider.id in disabled) return listOf(ProviderListAction.ENABLE)
     if (provider.id == KILO_PROVIDER_ID && configured(provider, state, state.connected.toSet())) return emptyList()
-    if (configured(provider, state, state.connected.toSet())) return listOf(ProviderListAction.DISCONNECT)
+    if (configured(provider, state, state.connected.toSet())) {
+        return if (customEditable(provider, state)) {
+            listOf(ProviderListAction.EDIT, ProviderListAction.DELETE)
+        } else {
+            listOf(ProviderListAction.DISCONNECT)
+        }
+    }
     val methods = providerMethods(provider, state)
     return buildList {
         if (methods.any { it.type == "oauth" }) add(ProviderListAction.OAUTH)

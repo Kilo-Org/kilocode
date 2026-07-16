@@ -1,31 +1,27 @@
-# PR #12204 Kilo Test-Coverage Audit: Third Pass
+# PR #12204 Kilo Test-Coverage Audit: Fourth Pass
 
-Reviewed PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Reviewed PR HEAD `627be20ed6ceb589316df9b54a2ae398146fd684` against actual merge base `e084ab7492eb6f330768157663b29c347dc0fa18`.
 
-## Findings
+## Finding
 
-### Medium: mixed-version projector storage lacks a raw-row assertion
+### Medium: restored Kilo TUI modules lost direct regression coverage
 
-`packages/core/src/session/projector.ts` now encodes projected messages for downgraded readers. Existing compatibility tests validate the helper and normalize rows before projector assertions, but no test inspects the raw `SessionMessageTable` row written by the projector or decodes it with the released schema.
+The PR deletes all seven direct tests for the retained `packages/opencode/src/kilocode/plugins/sync-v2.tsx` implementation. New standalone TUI data tests exercise a different `DataProvider` and hydration implementation, so they do not protect the Kilo V2 debug plugin's buffering and hydration logic.
 
-Add projector-level raw compaction and tool-content assertions so removal of the encoder cannot leave tests green while breaking older readers.
+The focused `createLeadingTrailingSignal()` test was also removed while the helper remains in the restored session-switcher preview.
 
-### Medium: effective reference and MCP profile integration remain partially tested
+Restore direct tests for duplicate-event handling, hydration races, snapshot ordering, and leading/trailing scheduling in these retained modules.
 
-No test executes `KiloReference.sync()` through the Agent call site, validates direct endpoint/startup ordering, or preserves `hidden` and `description`. MCP subprocess tests do not set `KILO_CONFIG_DIR` or assert the default path remains untouched.
+## Verified Coverage
 
-These gaps directly cover the remaining config/pipeline finding and a newly fixed profile-routing branch.
+Previous gaps are resolved:
 
-### Low: new boundary branches lack focused coverage
+- Projector tests inspect raw compatibility rows.
+- Reference tests cover metadata-preserving synchronization, first-request effective config, and config refresh.
+- MCP subprocess coverage exercises `KILO_CONFIG_DIR` and default-profile isolation.
+- FFF tests cover filesystem-root and home boundaries.
+- OAuth tests exercise callback timeout.
+- Credential tests cover active-selection dual-writing and legacy logout synchronization.
+- Experimental plugin registration has registry coverage.
 
-- FFF broad scanning at exact filesystem-root and home locations has no direct test.
-- The code-OAuth callback timeout is not exercised; the existing timeout test stalls credential persistence after callback completion.
-- Active-credential switch dual-writing is not asserted in `auth.json`.
-
-## Resolved Coverage
-
-The former zero-task package gap is fixed. Exact-head logs report `Running test:ci in 24 packages` and `15 successful, 15 total`. JUnit artifacts include Core, LLM, and TUI; restored hydration tests execute rather than skip.
-
-All earlier coverage findings remain resolved: Darwin profile validation, direct skill-picker tests, logger initialization, real-Git reference refresh, JUnit publication, and package CI. The latest changed tests add no skip or todo.
-
-All required exact-head checks pass across Linux, macOS, Windows, HttpApi, JetBrains, VS Code, typechecks, and visual regression. This was a read-only source, CI-log, and artifact audit.
+No PR-added skip or todo was found. Exact-head Linux, macOS, Windows, HttpApi, JetBrains, VS Code, typecheck, and visual checks pass, and unit artifacts were uploaded. This was a read-only source, CI-log, and artifact audit.

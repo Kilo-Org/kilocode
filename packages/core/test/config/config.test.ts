@@ -162,6 +162,7 @@ describe("Config", () => {
     ),
   )
 
+  // kilocode_change start
   it.live("skips project configuration when project discovery is disabled", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -198,6 +199,7 @@ describe("Config", () => {
       ),
     ),
   )
+            // kilocode_change end
 
   it.live("loads JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(

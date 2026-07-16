@@ -13,6 +13,8 @@ export type Resolved =
       name: string
       kind: "local"
       path: string
+      description?: string
+      hidden?: boolean
     }
   | {
       name: string
@@ -21,6 +23,8 @@ export type Resolved =
       reference: RemoteReference
       path: string
       branch?: string
+      description?: string
+      hidden?: boolean
     }
   | {
       name: string
@@ -30,8 +34,8 @@ export type Resolved =
     }
 
 type Normalized =
-  | { kind: "local"; path: string }
-  | { kind: "git"; repository: string; branch?: string }
+  | { kind: "local"; path: string; description?: string; hidden?: boolean }
+  | { kind: "git"; repository: string; branch?: string; description?: string; hidden?: boolean }
   | { kind: "invalid"; message: string }
 
 function normalize(name: string, entry: ConfigReference.Entry): Normalized {
@@ -45,8 +49,16 @@ function normalize(name: string, entry: ConfigReference.Entry): Normalized {
     }
     return { kind: "git", repository: entry }
   }
-  if ("path" in entry) return { kind: "local", path: entry.path }
-  return { kind: "git", repository: entry.repository, branch: entry.branch }
+  if ("path" in entry) {
+    return { kind: "local", path: entry.path, description: entry.description, hidden: entry.hidden }
+  }
+  return {
+    kind: "git",
+    repository: entry.repository,
+    branch: entry.branch,
+    description: entry.description,
+    hidden: entry.hidden,
+  }
 }
 
 function local(input: { directory: string; worktree: string; value: string }) {
@@ -58,7 +70,13 @@ function local(input: { directory: string; worktree: string; value: string }) {
 function resolve(name: string, entry: Normalized, directory: string, worktree: string): Resolved {
   if (entry.kind === "invalid") return { name, kind: "invalid", message: entry.message }
   if (entry.kind === "local") {
-    return { name, kind: "local", path: local({ directory, worktree, value: entry.path }) }
+    return {
+      name,
+      kind: "local",
+      path: local({ directory, worktree, value: entry.path }),
+      description: entry.description,
+      hidden: entry.hidden,
+    }
   }
   const reference = parseRepositoryReference(entry.repository)
   if (!reference || reference.protocol === "file:") {
@@ -76,6 +94,8 @@ function resolve(name: string, entry: Normalized, directory: string, worktree: s
     reference,
     path: repositoryCachePath(reference),
     branch: entry.branch,
+    description: entry.description,
+    hidden: entry.hidden,
   }
 }
 
@@ -131,6 +151,8 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
           new Reference.LocalSource({
             type: "local",
             path: AbsolutePath.make(item.path),
+            description: item.description,
+            hidden: item.hidden,
           }),
         ] as const,
       ]
@@ -142,6 +164,8 @@ export const sync = Effect.fn("KiloReference.sync")(function* (input: {
           type: "git",
           repository: item.repository,
           branch: item.branch,
+          description: item.description,
+          hidden: item.hidden,
         }),
       ] as const,
     ]

@@ -213,6 +213,92 @@ describe("useFileMention", () => {
     dispose.fn?.()
   })
 
+  it("seedFromText truncates a mention path at the first space (known limitation, see seedFromParts)", () => {
+    // Documents why seedFromParts exists: seedFromText re-derives candidate
+    // paths from raw text via a regex that stops at whitespace. For a path
+    // containing a space, it discovers only the prefix before the space, and
+    // that truncated candidate then incorrectly passes syncMentionedPaths'
+    // boundary check too, since a real space genuinely follows it in the text.
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromText("Say hi to @mention-test/my quarterly report.txt !")
+
+    expect(mention.mentionedPaths().has("mention-test/my")).toBe(true)
+    expect(mention.mentionedPaths().has("mention-test/my quarterly report.txt")).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromParts seeds an exact path correctly even when it contains a space", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "Say hi to @mention-test/my quarterly report.txt !"
+    mention.seedFromParts(["mention-test/my quarterly report.txt"], text)
+
+    expect(mention.mentionedPaths().has("mention-test/my quarterly report.txt")).toBe(true)
+    expect(mention.mentionedPaths().has("mention-test/my")).toBe(false)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromParts prunes paths no longer present in the text", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    mention.seedFromParts(["mention-test/gone.ts"], "no mentions here anymore")
+
+    expect(mention.mentionedPaths().size).toBe(0)
+
+    dispose.fn?.()
+  })
+
+  it("seedFromParts seeds multiple exact paths from a single message", () => {
+    const ctx = {
+      postMessage: () => {},
+      onMessage: () => () => {},
+    }
+
+    const dispose: { fn?: () => void } = {}
+    const mention = createRoot((root) => {
+      dispose.fn = root
+      return useFileMention(ctx, undefined, () => false)
+    })
+
+    const text = "Compare @a data.ts and @b data.ts please"
+    mention.seedFromParts(["a data.ts", "b data.ts"], text)
+
+    expect(mention.mentionedPaths().has("a data.ts")).toBe(true)
+    expect(mention.mentionedPaths().has("b data.ts")).toBe(true)
+
+    dispose.fn?.()
+  })
+
   it("filters visible results synchronously while a new search is pending", async () => {
     const posted: WebviewMessage[] = []
     const handlers = new Set<(message: ExtensionMessage) => void>()

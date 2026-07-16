@@ -74,8 +74,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
 
     const event = useEvent()
     const sdk = useSDK()
-    // kilocode_change - serialize message hydration per session
-    const syncing = new Map<string, Promise<void>>()
+    const syncing = new Map<string, Promise<void>>() // kilocode_change
     const [defaultLocation, setDefaultLocation] = createSignal<LocationRef>({
       directory: sdk.directory ?? process.cwd(),
     })
@@ -124,6 +123,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       },
     }
 
+    // kilocode_change start
     const apply = (
       event: Event,
       metadata: {
@@ -131,7 +131,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         workspace: string | undefined
       },
     ) => {
-      // kilocode_change
+    // kilocode_change end
       switch (event.type) {
         case "session.next.agent.switched":
           message.update(event.properties.sessionID, (draft) => {
@@ -419,16 +419,21 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         case "session.next.compaction.delta":
           break
         case "session.next.compaction.ended":
+          // kilocode_change start - legacy v1 compaction events do not carry a projectable message identity.
+          if (!event.properties.messageID || !event.properties.reason) break
+          const id = event.properties.messageID
+          const reason = event.properties.reason
           message.update(event.properties.sessionID, (draft) => {
             message.prepend(draft, {
-              id: event.properties.messageID,
+              id,
               type: "compaction",
-              reason: event.properties.reason,
+              reason,
               summary: event.properties.text,
-              recent: event.properties.recent,
+              recent: event.properties.recent ?? "",
               time: { created: event.properties.timestamp },
             })
           })
+          // kilocode_change end
           break
         case "reference.updated":
           void result.location.reference.refresh()
@@ -442,7 +447,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
           void result.location.connector.refresh({ directory: metadata.directory, workspaceID: metadata.workspace })
           break
       }
-    }
+    } // kilocode_change
 
     // kilocode_change start - project live V2 session events into the hydrated message store
     event.subscribe((event, metadata) => {

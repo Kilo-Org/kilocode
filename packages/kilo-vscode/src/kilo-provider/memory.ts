@@ -414,6 +414,7 @@ export class KiloProviderMemory {
     if (op === "rebuild") return (await api.rebuild({ directory }, { throwOnError: true })).data
     if (op === "purge") return this.purge(api, directory, message)
     if (op === "auto") return this.auto(api, directory, message)
+    if (op === "verbose") return this.verbose(api, directory, message)
     if (op === "remember") return this.remember(api, directory, message)
     if (op === "correct") return this.correct(api, directory, message)
     return this.forget(api, directory, message)
@@ -479,5 +480,12 @@ export class KiloProviderMemory {
       return (await api.configure({ directory, autoConsolidate: message.mode === "on" }, { throwOnError: true })).data
     }
     throw new Error("Auto-save mode is required")
+  }
+
+  private async verbose(api: MemoryApi, directory: string, message: KiloProviderMemoryMessage) {
+    if (message.mode === "on" || message.mode === "off") {
+      return (await api.configure({ directory, verbose: message.mode === "on" }, { throwOnError: true })).data
+    }
+    throw new Error("Verbose mode is required")
   }
 }

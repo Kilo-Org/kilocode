@@ -2557,8 +2557,8 @@ noLLMServer.instance(
       const text = stored.parts.find((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic)
 
       expect(text?.text).toBe("Use @docs for context")
-      expect(synthetic.some((part) => part.text.includes("Directory attachments cannot be expanded"))).toBe(true) // kilocode_change
-      expect(files).toHaveLength(0) // kilocode_change
+      expect(synthetic.some((part) => part.text.includes("Called the Read tool"))).toBe(true) // kilocode_change
+      expect(files).toHaveLength(1) // kilocode_change - directory attachment is expanded, not denied
 
       yield* sessions.remove(session.id)
     }),

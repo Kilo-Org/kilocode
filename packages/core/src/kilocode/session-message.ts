@@ -10,7 +10,7 @@ function record(value: unknown): value is Record<string, unknown> {
 
 export function normalize(value: unknown): unknown {
   if (!record(value)) return value
-  // kilocode_change - new readers recover the canonical summary while old readers receive recent context inline.
+  // New readers recover the canonical summary while old readers receive recent context inline.
   if (value.type === "compaction" && typeof value.kilo_summary === "string") {
     return { ...value, summary: value.kilo_summary }
   }
@@ -29,7 +29,7 @@ export function normalize(value: unknown): unknown {
 
 export function encode(value: unknown): unknown {
   if (!record(value)) return value
-  // kilocode_change start - preserve current semantics while making released compaction rows self-contained.
+  // Preserve current semantics while making released compaction rows self-contained.
   if (value.type === "compaction" && typeof value.summary === "string" && typeof value.recent === "string") {
     return {
       ...value,
@@ -37,7 +37,6 @@ export function encode(value: unknown): unknown {
       kilo_summary: value.summary,
     }
   }
-  // kilocode_change end
   if (value.type !== "assistant" || !Array.isArray(value.content)) return value
   return {
     ...value,

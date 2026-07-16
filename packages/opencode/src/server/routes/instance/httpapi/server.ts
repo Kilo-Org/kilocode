@@ -37,9 +37,11 @@ import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Provider } from "@/provider/provider"
 import { PtyTicket } from "@opencode-ai/core/pty/ticket"
 import { Question } from "@/question"
-import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
-import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
-import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
+// kilocode_change start
+import { Notebook } from "@/kilocode/notebook/service"
+import { AgentManager } from "@/kilocode/agent-manager/service"
+import { KiloViewers } from "@/kilocode/presence/service"
+// kilocode_change end
 import { Session } from "@/session/session"
 import { SessionCompaction } from "@/session/compaction"
 import { LLM } from "@/session/llm"
@@ -54,10 +56,13 @@ import { ShareNext } from "@/share/share-next"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Database } from "@opencode-ai/core/database/database"
+import { Credential } from "@opencode-ai/core/credential" // kilocode_change
 import { Skill } from "@/skill"
 import { Snapshot } from "@/snapshot"
-import { Storage } from "@/storage/storage" // kilocode_change
+// kilocode_change start
+import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
+// kilocode_change end
 import { ToolRegistry } from "@/tool/registry"
 import { lazy } from "@/util/lazy"
 import { Vcs } from "@/project/vcs"
@@ -97,6 +102,7 @@ import { sessionHandlers } from "./handlers/session"
 import { syncHandlers } from "./handlers/sync"
 import { tuiHandlers } from "./handlers/tui"
 import { handlers } from "@opencode-ai/server/handlers"
+import { layer as referenceReconcilerLayer } from "@/kilocode/server/reference-reconciler" // kilocode_change
 import { schemaErrorLayer as v2SchemaErrorLayer } from "@opencode-ai/server/middleware/schema-error"
 import { workspaceHandlers } from "./handlers/workspace"
 // kilocode_change start
@@ -175,7 +181,7 @@ const instanceRoutes = instanceApiRoutes.pipe(
   Layer.provide([httpApiAuthLayer, workspaceRoutingLive, instanceContextLayer, schemaErrorLayer]),
 )
 const serverRoutes = HttpApiBuilder.layer(Api).pipe(
-  Layer.provide(handlers),
+  Layer.provide(handlers.pipe(Layer.provide(referenceReconcilerLayer))), // kilocode_change
   Layer.provide([serverHttpApiAuthLayer, v2SchemaErrorLayer]),
 )
 
@@ -227,6 +233,7 @@ export function createRoutes(
       fenceLayer.pipe(Layer.provide(Database.defaultLayer)),
       cors(corsOptions),
       Database.defaultLayer,
+      Credential.defaultLayer, // kilocode_change
       Account.defaultLayer,
       Agent.defaultLayer,
       Auth.defaultLayer,
@@ -252,10 +259,12 @@ export function createRoutes(
       Provider.defaultLayer,
       PtyTicket.defaultLayer,
       Question.defaultLayer,
-      AgentManager.defaultLayer, // kilocode_change
-      Notebook.defaultLayer, // kilocode_change
-      KiloViewers.defaultLayer, // kilocode_change
+      // kilocode_change start
+      AgentManager.defaultLayer,
+      Notebook.defaultLayer,
+      KiloViewers.defaultLayer,
       Ripgrep.defaultLayer,
+      // kilocode_change end
       RuntimeFlags.defaultLayer,
       Session.defaultLayer,
       SessionCompaction.defaultLayer,
@@ -267,8 +276,10 @@ export function createRoutes(
       SessionSummary.defaultLayer,
       ShareNext.defaultLayer,
       Snapshot.defaultLayer,
-      Storage.defaultLayer, // kilocode_change
+      // kilocode_change start
+      Storage.defaultLayer,
       SyncEvent.defaultLayer,
+      // kilocode_change end
       EventV2Bridge.defaultLayer,
       EventV2.defaultLayer,
       Skill.defaultLayer,

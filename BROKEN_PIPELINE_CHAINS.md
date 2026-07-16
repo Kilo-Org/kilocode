@@ -1,37 +1,35 @@
-# Broken Kilo Pipeline Chains: PR #12204, Third Pass
+# Broken Kilo Pipeline Chains: PR #12204, Fourth Pass
 
-Audited PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Audited PR HEAD `627be20ed6ceb589316df9b54a2ae398146fd684` against actual merge base `e084ab7492eb6f330768157663b29c347dc0fa18`.
 
 ## Findings
 
-### Medium: legacy provider logout leaves the Core credential active
+### High: effective references remain provisional for non-reference consumers
 
-The new bridge dual-writes Core credential changes into `auth.json`, but legacy removal is not synchronized back:
+Effective Kilo reconciliation is invoked only by `/api/reference`. Other consumers wait for Core plugin boot and read the provisional filesystem-scanned `Reference.Service` directly:
 
-- `packages/opencode/src/auth/index.ts:84-89` removes only the legacy entry.
-- CLI provider logout and the legacy server DELETE route use this path and report success.
-- Core credentials remain durable in SQLite and continue feeding `Credential.activeAll()` and the V2 catalog.
-- Startup reconciliation imports entries present in `auth.json` but never removes a Core row whose legacy entry disappeared.
+- Agent external-directory permissions
+- Stable system prompt references
+- V2 reference guidance
+- Core named-reference Glob and Grep tools
 
-A provider can therefore remain authenticated through Core/V2 immediately after successful logout and across restart. Route legacy removal through Core credential removal/deactivation or implement explicit bidirectional deletion ownership. Test CLI and HTTP logout followed by immediate and restarted V2 lookup.
+A CLI or API flow that reaches these consumers before, or without, `/api/reference` misses account, managed, and `KILO_CONFIG_CONTENT` references. Agent permissions derived from provisional state can remain cached after later reconciliation.
 
-### Medium: effective reference synchronization races and drops metadata
+Move reconciliation to a location initialization barrier and require every effective-reference consumer to await it. Test first-use Agent permissions, system prompts, guidance, and tools using effective-only configuration.
 
-`KiloReference.sync()` is called only during stable Agent initialization. The reference endpoint directly lists Core's provisional state, and TUI agent/reference refreshes start concurrently, so a direct client or startup race can observe provisional references.
+### Medium: reference listing has an unconditional mutation/event feedback edge
 
-The synchronization also reconstructs reference sources without `description` or `hidden`. Hidden aliases can become visible in autocomplete, and described references disappear from model guidance.
+Every `/api/reference` request reconciles and unconditionally calls `Reference.replace()`, even when sources are unchanged. Replacement always rebuilds state, may restart Git refreshes, and publishes `reference.updated`. The TUI responds to that event by requesting `/api/reference` again.
 
-Move effective-config reconciliation into reference initialization or the endpoint, await it before listing, and preserve all source metadata. Add direct API and startup-order coverage using effective-only configuration.
+The source-level feedback cycle is confirmed. In normal TUI startup it may terminate once project filtering rejects project-less endpoint events, so an indefinitely sustained loop is not guaranteed; before project resolution or for consumers without that filter, repeated requests/events remain possible.
 
-## Resolved Since Second Pass
+Make equal replacements no-op, suppress reconciliation-originated updates, or remove event-driven refetch. Add repeated-GET and event-refetch tests.
 
-The OAuth completion race is fixed: code completion claims settlement before awaiting the callback, cancellation and expiry cannot remove the claimed attempt, and failures no longer produce a false HTTP 204. A focused cancellation race test covers the original window.
+## Resolved Since Third Pass
 
-The package-test, README, relative reference root, and profile-aware MCP write fixes also remain connected.
+- Legacy CLI and HTTP logout now remove matching Core credentials before deleting legacy auth, with focused coverage.
+- `description` and `hidden` survive reconciliation.
+- Session-switcher and V2 debug experimental plugin chains are restored with registry coverage.
+- Previous OAuth, TUI rendering, package-test, and MCP profile findings remain resolved.
 
-## Owner Decisions
-
-- The experimental session-switcher preview remains deleted; confirm intentional retirement.
-- `experimentalEventSystem` still reaches an unused TUI registry option; remove the dead option or restore the debug plugin.
-
-All exact-head required checks pass. This was a read-only source audit; the two findings were independently traced end to end but not reproduced in a live process.
+All exact-head required checks pass. This was a read-only source audit; the findings were independently traced but not reproduced in a live TUI.

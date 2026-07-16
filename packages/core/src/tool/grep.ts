@@ -5,8 +5,10 @@ import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { FileSystem } from "../filesystem"
 import { FSUtil } from "../fs-util"
-import { Global } from "../global" // kilocode_change
-import * as SearchTarget from "../kilocode/search-target" // kilocode_change
+// kilocode_change start
+import { Global } from "../global"
+import * as SearchTarget from "../kilocode/search-target"
+// kilocode_change end
 import { Location } from "../location"
 import { Reference } from "../reference" // kilocode_change
 import { PermissionV2 } from "../permission"
@@ -24,15 +26,17 @@ export const Input = Schema.Struct({
   path: RelativePath.pipe(Schema.optional).annotate({
     description: "Relative directory to search. Defaults to the active Location.",
   }),
+  // kilocode_change start
   reference: Schema.NonEmptyString.pipe(Schema.optional).annotate({
     description: "Named project reference to search instead of the active Location",
-  }), // kilocode_change
+  }),
+  // kilocode_change end
   include: FileSystem.GrepInput.fields.include.annotate({
     description: 'File glob to include in the search (for example, "*.js" or "*.{ts,tsx}")',
   }),
-  limit: FileSystem.SearchLimit.pipe(Schema.optional).annotate({
+  limit: FileSystem.SearchLimit.pipe(Schema.optional).annotate({ // kilocode_change
     description: "Maximum matches to return",
-  }), // kilocode_change
+  }),
 })
 
 // kilocode_change start - retain bounded-search status in tool results and model output
@@ -127,16 +131,18 @@ export const layer = Layer.effectDiscard(
               const retained = !ref && absolute && !contained && (yield* SearchTarget.managed(fs, global.data, target))
               if (root.type !== "directory" || (!contained && !retained))
                 return yield* Effect.fail(new Error("Path escapes the active Location"))
+              const cwd = target.type === "directory" ? target.path : path.dirname(target.path)
               // kilocode_change end
-              const cwd = target.type === "directory" ? target.path : path.dirname(target.path) // kilocode_change
               return yield* ripgrep
                 .grep({
                   cwd, // kilocode_change
                   pattern: input.pattern,
                   file: target.type === "file" ? path.basename(target.path) : undefined, // kilocode_change
                   include: input.include,
-                  limit: input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT, // kilocode_change
-                  validate: SearchTarget.validate(fs, target), // kilocode_change - reject post-approval replacement
+                  // kilocode_change start
+                  limit: input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT,
+                  validate: SearchTarget.validate(fs, target),
+                  // kilocode_change end
                 })
                 .pipe(
                   // kilocode_change start - preserve search status after canonical path mapping
@@ -153,7 +159,7 @@ export const layer = Layer.effectDiscard(
                                 path: RelativePath.make(
                                   path.relative(
                                     location.directory,
-                                    path.resolve(cwd, match.entry.path), // kilocode_change
+                                    path.resolve(cwd, match.entry.path),
                                   ),
                                 ),
                               }),

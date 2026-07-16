@@ -4,8 +4,10 @@ import { ToolFailure } from "@opencode-ai/llm"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { FileSystem } from "../filesystem"
-import { FSUtil } from "../fs-util" // kilocode_change
-import * as SearchTarget from "../kilocode/search-target" // kilocode_change
+// kilocode_change start
+import { FSUtil } from "../fs-util"
+import * as SearchTarget from "../kilocode/search-target"
+// kilocode_change end
 import { Location } from "../location"
 import { Reference } from "../reference" // kilocode_change
 import { Ripgrep } from "../ripgrep"
@@ -21,12 +23,14 @@ export const Input = Schema.Struct({
   path: RelativePath.pipe(Schema.optional).annotate({
     description: "Relative directory to search. Defaults to the active Location.",
   }),
+  // kilocode_change start
   reference: Schema.NonEmptyString.pipe(Schema.optional).annotate({
     description: "Named project reference to search instead of the active Location",
-  }), // kilocode_change
+  }),
   limit: FileSystem.SearchLimit.pipe(Schema.optional).annotate({
+  // kilocode_change end
     description: "Maximum results to return",
-  }), // kilocode_change
+  }),
 })
 
 // kilocode_change start - retain bounded-search status in tool results and model output
@@ -109,8 +113,10 @@ export const layer = Layer.effectDiscard(
                 .glob({
                   cwd: target.path, // kilocode_change
                   pattern: input.pattern,
-                  limit: input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT, // kilocode_change
-                  validate: SearchTarget.validate(fs, target), // kilocode_change - reject post-approval replacement
+                  // kilocode_change start
+                  limit: input.limit ?? FileSystem.DEFAULT_SEARCH_LIMIT,
+                  validate: SearchTarget.validate(fs, target),
+                  // kilocode_change end
                 })
                 .pipe(
                   // kilocode_change start - preserve search status after canonical path mapping
@@ -119,7 +125,6 @@ export const layer = Layer.effectDiscard(
                       new Result({
                         ...result,
                         items: result.items.map(
-                          // kilocode_change start - report paths from the canonical validated target
                           (entry) =>
                             new FileSystem.Entry({
                               ...entry,
@@ -127,7 +132,6 @@ export const layer = Layer.effectDiscard(
                                 path.relative(location.directory, path.resolve(target.path, entry.path)),
                               ),
                             }),
-                          // kilocode_change end
                         ),
                       }),
                   ),

@@ -96,10 +96,10 @@ export type Event =
   | EventInstallationUpdateAvailable
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventReferenceUpdated
   | EventConnectorUpdated
   | EventPermissionV2Asked
   | EventPermissionV2Replied
-  | EventReferenceUpdated
   | EventFileEdited
   | EventFileWatcherUpdated
   | EventPtyCreated
@@ -1127,10 +1127,10 @@ export type GlobalEvent = {
     | EventInstallationUpdateAvailable
     | EventPermissionAsked
     | EventPermissionReplied
+    | EventReferenceUpdated
     | EventConnectorUpdated
     | EventPermissionV2Asked
     | EventPermissionV2Replied
-    | EventReferenceUpdated
     | EventFileEdited
     | EventFileWatcherUpdated
     | EventPtyCreated
@@ -1167,7 +1167,6 @@ export type GlobalEvent = {
     | SyncEventSessionNextPrompted
     | SyncEventSessionNextPromptAdmitted
     | SyncEventSessionNextPromptPromoted
-    | SyncEventSessionNextInterruptRequested
     | SyncEventSessionNextContextUpdated
     | SyncEventSessionNextSynthetic
     | SyncEventSessionNextShellStarted
@@ -4558,10 +4557,11 @@ export type EventSessionNextCompactionEnded = {
   properties: {
     timestamp: number
     sessionID: string
-    messageID: string
-    reason: "auto" | "manual"
+    messageID?: string
+    reason?: "auto" | "manual"
     text: string
-    recent: string
+    recent?: string
+    include?: string
   }
 }
 
@@ -4708,6 +4708,14 @@ export type EventPermissionReplied = {
   }
 }
 
+export type EventReferenceUpdated = {
+  id: string
+  type: "reference.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
 export type EventConnectorUpdated = {
   id: string
   type: "connector.updated"
@@ -4747,14 +4755,6 @@ export type EventPermissionV2Replied = {
     sessionID: string
     requestID: string
     reply: PermissionV2Reply
-  }
-}
-
-export type EventReferenceUpdated = {
-  id: string
-  type: "reference.updated"
-  properties: {
-    [key: string]: unknown
   }
 }
 
@@ -5231,21 +5231,6 @@ export type SyncEventSessionNextPromptPromoted = {
   }
 }
 
-export type SyncEventSessionNextInterruptRequested = {
-  type: "sync"
-  id: string
-  syncEvent: {
-    type: "session.next.interrupt.requested.1"
-    id: string
-    seq: number
-    aggregateID: string
-    data: {
-      timestamp: number
-      sessionID: string
-    }
-  }
-}
-
 export type SyncEventSessionNextContextUpdated = {
   type: "sync"
   id: string
@@ -5645,17 +5630,18 @@ export type SyncEventSessionNextCompactionEnded = {
   type: "sync"
   id: string
   syncEvent: {
-    type: "session.next.compaction.ended.2"
+    type: "session.next.compaction.ended.1"
     id: string
     seq: number
     aggregateID: string
     data: {
       timestamp: number
       sessionID: string
-      messageID: string
-      reason: "auto" | "manual"
+      messageID?: string
+      reason?: "auto" | "manual"
       text: string
-      recent: string
+      recent?: string
+      include?: string
     }
   }
 }
@@ -13800,6 +13786,7 @@ export type MemoryStatusResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13880,6 +13867,7 @@ export type MemoryShowResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13960,6 +13948,7 @@ export type MemoryEnableResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -14037,6 +14026,7 @@ export type MemoryDisableResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -14076,6 +14066,7 @@ export type MemoryDisableResponse = MemoryDisableResponses[keyof MemoryDisableRe
 export type MemoryConfigureData = {
   body?: {
     autoConsolidate?: boolean
+    verbose?: boolean
   }
   path?: never
   query?: {
@@ -14110,6 +14101,7 @@ export type MemoryConfigureResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -14181,6 +14173,7 @@ export type MemoryRebuildResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean

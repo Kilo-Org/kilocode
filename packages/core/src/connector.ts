@@ -323,15 +323,15 @@ export const locationLayer = Layer.effect(
     const settle = Effect.fnUntraced(function* (
       attemptID: AttemptID,
       exit: Exit.Exit<Credential.Value, AuthorizationError>,
-      owned = false, // kilocode_change - completion may pre-claim settlement before awaiting its callback
+      owned = false,
     ) {
       return yield* Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const pending = yield* SynchronizedRef.modify(attempts, (current) => {
             const attempt = current.get(attemptID)
-            if (!attempt || attempt.status !== "pending") return [undefined, current] // kilocode_change
-            if (owned) return attempt.settling ? [attempt, current] : [undefined, current] // kilocode_change
-            if (attempt.settling) return [undefined, current] // kilocode_change
+            if (!attempt || attempt.status !== "pending") return [undefined, current]
+            if (owned) return attempt.settling ? [attempt, current] : [undefined, current]
+            if (attempt.settling) return [undefined, current]
             return [attempt, new Map(current).set(attemptID, { ...attempt, settling: true })]
           })
           if (!pending) return
@@ -378,8 +378,7 @@ export const locationLayer = Layer.effect(
         const next = new Map(current)
         const scopes: Scope.Closeable[] = []
         for (const [id, attempt] of current) {
-          // kilocode_change - settlement owns attempts once persistence starts
-          if (attempt.status === "pending" && !attempt.settling && attempt.time.expires <= now) {
+          if (attempt.status === "pending" && !attempt.settling && attempt.time.expires <= now) { // kilocode_change
             scopes.push(attempt.scope)
             next.set(id, { status: "expired", time: attempt.time, removeAt: now + terminalRetention })
             continue
@@ -496,8 +495,7 @@ export const locationLayer = Layer.effect(
               const match = current.get(input.attemptID)
               if (!match || match.status !== "pending" || match.completing) return [match, current]
               if (match.authorization.mode === "code" && input.code === undefined) return [match, current]
-              // kilocode_change - claim the attempt before awaiting the callback so cancel cannot delete it.
-              return [match, new Map(current).set(input.attemptID, { ...match, completing: true, settling: true })]
+              return [match, new Map(current).set(input.attemptID, { ...match, completing: true, settling: true })] // kilocode_change
             })
             if (!attempt) return yield* Effect.die(`OAuth attempt not found: ${input.attemptID}`)
             if (attempt.status !== "pending") return
@@ -526,8 +524,7 @@ export const locationLayer = Layer.effect(
           cancel: Effect.fn("Connector.connect.oauth.cancel")(function* (attemptID) {
             const attempt = yield* SynchronizedRef.modify(attempts, (current) => {
               const match = current.get(attemptID)
-              // kilocode_change - once persistence starts, settlement owns the attempt
-              if (!match || match.status !== "pending" || match.settling) return [undefined, current]
+              if (!match || match.status !== "pending" || match.settling) return [undefined, current] // kilocode_change
               const next = new Map(current)
               next.delete(attemptID)
               return [match, next]

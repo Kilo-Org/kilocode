@@ -1,30 +1,23 @@
-# Infrastructure Review: PR #12204, Third Pass
+# Infrastructure Review: PR #12204, Fourth Pass
 
-Reviewed PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Reviewed exact PR HEAD `627be20ed6ceb589316df9b54a2ae398146fd684` against actual merge base `e084ab7492eb6f330768157663b29c347dc0fa18`.
 
 ## Findings
 
-### Low: dormant supply-chain quarantine exceptions remain
+### Low: unused supply-chain quarantine exceptions remain
 
-`bunfig.toml` exempts `@ff-labs/fff-node`, `app-builder-lib`, `dmg-builder`, `electron-builder`, and `electron-publish` from the release-age quarantine, but none appears in a workspace manifest or `bun.lock` at this head. Remove dormant exceptions or document their install path.
+`bunfig.toml` adds release-age bypasses including `@ff-labs/fff-node`, `app-builder-lib`, `dmg-builder`, `electron-builder`, and `electron-publish`, but none appears in a workspace manifest or lockfile at this head. Remove unused exceptions and document why active native-binary exceptions bypass Kilo's quarantine.
 
 ### Low: CODEOWNERS rules cannot enforce approval
 
-`.github/CODEOWNERS` assigns absent `packages/app/` and `packages/desktop/` paths to users with read-only repository permission. These rules do not weaken a currently shipped path, but they cannot enforce approval and should be aligned with Kilo ownership.
+`.github/CODEOWNERS` assigns absent `packages/app/` and `packages/desktop/` paths to users with read-only repository permission. This is not a shipped-path regression, but the rules cannot satisfy code-owner approval and should be removed or assigned to active Kilo maintainers.
 
-## Resolved Since Second Pass
+## Revalidation
 
-The zero-task CI issue is fixed:
+- Package CI continues to execute real `test:ci` tasks and publish all platform artifacts.
+- No workflow was added or removed; the allowlist passes and action permissions remain scoped.
+- TUI workspace, Turbo graph, lockfile, CLI build, native FFF patching, private HTTP recorder packaging, SDK generation, and Kilo release assets remain coherent.
+- No Docker, Nix, deployment, dependency-bot, template, or changeset change appears in the reviewed range.
+- `git diff --check` passes.
 
-- The generic fallback command was removed.
-- The seven previously uncovered packages now expose JUnit-producing `test:ci` scripts.
-- Turbo defines the generic `test:ci` task and output.
-- Exact-head Linux, macOS, and Windows logs report `Running test:ci in 24 packages` and `15 successful, 15 total` without zero-task warnings.
-
-All prior infrastructure findings remain resolved, including TUI startup, JUnit publication, Darwin profile validation, JetBrains pinning, `dev:local`, the `fff-bun@0.9.4` patch, and HTTP recorder privacy.
-
-## CI And Limitations
-
-All required exact-head checks pass, including the full platform unit matrix, HttpApi, JetBrains, typechecks, docs, visual regression, source links, policy checks, and CodeQL analyses. No workflow was added or removed, and no new Docker, Nix, deployment, dependency-bot, or template change was found.
-
-This was a read-only object and CI-log audit; no release build or publication dry run was performed.
+All exact-head checks pass, including the full unit matrix, HttpApi, JetBrains, typechecks, docs, visual regression, source links, policy checks, and underlying CodeQL analyses. This was a read-only audit; no release build or publication dry run was performed.

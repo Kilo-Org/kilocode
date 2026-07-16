@@ -201,6 +201,48 @@ describe("SessionProjector", () => {
         timestamp: created,
         model,
       })
+      // kilocode_change start
+      const assistantID = SessionMessage.ID.create()
+      yield* events.publish(SessionEvent.Step.Started, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        agent: "build",
+        model,
+      })
+      yield* events.publish(SessionEvent.Tool.Input.Started, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        callID: "call-read",
+        name: "read",
+      })
+      yield* events.publish(SessionEvent.Tool.Input.Ended, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        callID: "call-read",
+        text: '{"path":"pixel.png"}',
+      })
+      yield* events.publish(SessionEvent.Tool.Called, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: created,
+        callID: "call-read",
+        tool: "read",
+        input: { path: "pixel.png" },
+        provider: { executed: false },
+      })
+      yield* events.publish(SessionEvent.Tool.Success, {
+        sessionID,
+        assistantMessageID: assistantID,
+        timestamp: DateTime.makeUnsafe(1),
+        callID: "call-read",
+        structured: {},
+        content: [{ type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png", name: "pixel.png" }],
+        provider: { executed: false },
+      })
+      // kilocode_change end
       yield* events.publish(SessionEvent.Synthetic, {
         sessionID,
         messageID: SessionMessage.ID.create(),
@@ -265,15 +307,68 @@ describe("SessionProjector", () => {
         .orderBy(asc(SessionMessageTable.seq))
         .all()
         .pipe(Effect.orDie)
+      // kilocode_change start - assert the projector itself writes the released-reader compaction shape.
+      const compaction = rows.find((row) => row.type === "compaction")
+      expect(compaction?.data).toMatchObject({
+        summary: "summary\n\nRecent context:\nrecent context",
+        kilo_summary: "summary",
+        recent: "recent context",
+      })
+      const released = Schema.decodeUnknownSync(
+        Schema.Struct({ type: Schema.Literal("compaction"), summary: Schema.String }),
+      )({ ...compaction?.data, type: compaction?.type })
+      expect(released.summary).toBe("summary\n\nRecent context:\nrecent context")
+      const assistant = rows.find((row) => row.id === assistantID)
+      expect(assistant?.data).toMatchObject({
+        content: [
+          {
+            type: "tool",
+            state: {
+              content: [
+                {
+                  type: "file",
+                  source: { type: "data", data: "AAAA" },
+                  mime: "image/png",
+                  name: "pixel.png",
+                },
+              ],
+            },
+          },
+        ],
+      })
+      Schema.decodeUnknownSync(
+        Schema.Struct({
+          type: Schema.Literal("assistant"),
+          content: Schema.Array(
+            Schema.Struct({
+              type: Schema.Literal("tool"),
+              state: Schema.Struct({
+                content: Schema.Array(
+                  Schema.Struct({
+                    type: Schema.Literal("file"),
+                    source: Schema.Struct({ type: Schema.Literal("data"), data: Schema.String }),
+                    mime: Schema.String,
+                    name: Schema.String,
+                  }),
+                ),
+              }),
+            }),
+          ),
+        }),
+      )({ ...assistant?.data, type: assistant?.type })
+      // kilocode_change end
       const messages = rows.map((row) =>
+        // kilocode_change start
         Schema.decodeUnknownSync(SessionMessage.Message)(
-          StoredMessage.normalize({ ...row.data, id: row.id, type: row.type }), // kilocode_change
+          StoredMessage.normalize({ ...row.data, id: row.id, type: row.type }),
         ),
+        // kilocode_change end
       )
 
       expect(messages.map((message) => message.type)).toEqual([
         "agent-switched",
         "model-switched",
+        "assistant", // kilocode_change
         "synthetic",
         "shell",
         "compaction",

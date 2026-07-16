@@ -96,9 +96,8 @@ describe("Credential", () => {
     ),
   )
 
-  // kilocode_change end
-  // kilocode_change - released auth.json remains authoritative when reconciling on startup
   it.live("reconciles supported legacy auth.json credentials on startup", () =>
+  // kilocode_change end
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -225,6 +224,20 @@ describe("Credential", () => {
           expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
             "legacy-reader": { type: "api", key: "first" },
           })
+
+          const other = yield* service.create({
+            connectorID,
+            methodID: Connector.MethodID.make("api-key"),
+            value: new Credential.Key({ type: "key", key: "other" }),
+          })
+          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
+            "legacy-reader": { type: "api", key: "other" },
+          })
+          yield* service.activate(created.id)
+          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
+            "legacy-reader": { type: "api", key: "first" },
+          })
+          yield* service.remove(other.id)
 
           yield* service.update(created.id, { value: new Credential.Key({ type: "key", key: "second" }) })
           expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({

@@ -1,28 +1,24 @@
-# Config Regression Review: PR #12204, Third Pass
+# Config Regression Review: PR #12204, Fourth Pass
 
-Audited PR HEAD `790affb98f75832a33b680885e4d5fa7586a7290` against merge base `19bd048e21464f69b45e0d7a27c98a77037ebb08`.
+Audited PR HEAD `627be20ed6ceb589316df9b54a2ae398146fd684` against actual merge base `e084ab7492eb6f330768157663b29c347dc0fa18`.
 
 ## Finding
 
-### Medium: V2 references do not reliably represent effective Kilo config
+### High: effective reference config is not a runtime initialization invariant
 
-`KiloReference.sync()` now copies stable merged references into Core state, covering explicit, inline, profile, account, managed, linked-worktree, disabled-project, and precedence semantics. However, synchronization only runs while stable Agents initialize.
+Reference parsing and endpoint reconciliation are correct, but effective Kilo references are synchronized only when `/api/reference` runs. Agent permissions, system prompts, V2 guidance, and named-reference tools can consume provisional Core state first or never invoke the endpoint.
 
-The reference endpoint directly lists Core state without invoking or awaiting sync. In the TUI, agent and reference requests begin concurrently, so provisional Core results can race effective synchronization. Direct API clients can always receive provisional results if Agent loading has not occurred.
-
-Synchronization also drops `description` and `hidden`, which can expose hidden aliases and remove reference guidance.
-
-Move reconciliation into reference initialization or the endpoint, await it before listing, and preserve all metadata. Add direct endpoint and TUI startup-order tests using effective-only Kilo config.
+This is a configuration propagation regression for account, managed, inline, and other stable-only sources. Move reconciliation to shared location initialization and await it from every consumer rather than attaching it to one read endpoint.
 
 ## Verified Fixes
 
-- Relative local references again resolve from the worktree root, with the active directory used for non-project locations.
-- Interactive-global and non-interactive `mcp add` target `KILO_CONFIG_DIR` when configured.
-- Core discovery ignores `.opencode`, recognizes `.kilo` and `.kilocode`, and gives `.kilo` the intended precedence.
-- Stable config, skill, TUI config, and theme discovery remain Kilo-only.
+- Reference listing awaits reconciliation and preserves `description` and `hidden`.
+- Direct first-request coverage verifies `KILO_CONFIG_CONTENT` endpoint semantics.
+- Local references remain worktree-relative.
+- Core discovery ignores `.opencode`, accepts `.kilo` and `.kilocode`, and gives `.kilo` intended precedence.
+- `mcp add` honors `KILO_CONFIG_DIR`; subprocess coverage proves the default profile remains untouched.
+- Stable and reconciled paths use the same effective `references` fallback.
 
-## Test Gaps
-
-No test currently exercises `KiloReference.sync()` through its Agent call site, direct endpoint ordering, or `hidden`/`description` retention. MCP subprocess tests still cover only the default global path, not `KILO_CONFIG_DIR`.
+There is no config schema, parsing, or migration regression. The remaining issue is when effective configuration becomes visible to runtime consumers.
 
 This was a read-only Git-object audit; exact-head required CI passes.
