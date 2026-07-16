@@ -62,12 +62,19 @@ export function billable(info: Message) {
   return info.providerID === "kilo" && info.time.completed !== undefined && info.cost > 0
 }
 
+export function warning(issues: readonly ("balance" | "kiloPass")[]) {
+  if (issues.includes("balance") && issues.includes("kiloPass")) return "Balance and Kilo Pass usage could not be refreshed."
+  if (issues.includes("balance")) return "Balance could not be refreshed."
+  return "Kilo Pass usage could not be refreshed."
+}
+
 function View(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
   const [state, setState] = createSignal<State>()
   let seq = 0
   let inflight: AbortController | undefined
   let teamPoll: ReturnType<typeof setInterval> | undefined
+  let warned = false
   const has = createMemo(() =>
     props.api.state.provider.some(
       (item) =>
@@ -98,6 +105,16 @@ function View(props: { api: TuiPluginApi }) {
       name: list.at(-1) ?? "",
     }
   })
+  const warn = (message: string) => {
+    if (warned) return
+    warned = true
+    props.api.ui.toast({
+      title: "Usage refresh failed",
+      message: `${message} Showing last known data.`,
+      variant: "warning",
+      duration: 5_000,
+    })
+  }
   const refresh = () => {
     const id = ++seq
     // Cancel any prior request and time this one out — the client path has no fetch timeout,
@@ -111,23 +128,27 @@ function View(props: { api: TuiPluginApi }) {
       .then((res) => {
         if (id !== seq) return
         if (res.error || !res.data) {
-          setState(undefined)
+          warn("Balance and Kilo Pass usage could not be refreshed.")
           return
         }
+        const issues = res.data.issues
+        const prev = state()
         // Show the wallet whenever authenticated — an empty/zero balance is real data, not "still loading".
         const next: State = {
-          balance: res.data.balance?.balance,
+          balance: issues.includes("balance") ? prev?.balance : res.data.balance?.balance,
           scope: scope(res.data.currentOrgId, res.data.profile.organizations),
-          pass: res.data.kiloPass ?? null,
+          pass: issues.includes("kiloPass") ? (prev?.pass ?? null) : (res.data.kiloPass ?? null),
         }
         setState(next)
+        if (issues.length) warn(warning(issues))
+        if (!issues.length) warned = false
         // Team balances move with other members' usage, so poll while on a team; personal updates on spend.
         clearInterval(teamPoll)
         teamPoll = next.scope.kind === "Team" ? setInterval(refresh, TEAM_POLL_MS) : undefined
       })
       .catch((err) => {
         if (id !== seq) return
-        setState(undefined)
+        warn("Balance and Kilo Pass usage could not be refreshed.")
         log.debug("balance refresh failed", { err })
       })
       .finally(() => {

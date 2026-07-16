@@ -11823,6 +11823,7 @@ export type KiloProfileResponses = {
       nextBillingAt?: string | null
     } | null
     currentOrgId: string | null
+    issues: Array<"balance" | "kiloPass">
   }
 }
 
