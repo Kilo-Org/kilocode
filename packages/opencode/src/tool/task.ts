@@ -56,6 +56,12 @@ const BaseParameterFields = {
     description:
       "This should only be set if you mean to resume a previous task (you can pass a prior task_id and the task will continue the same subagent session as before instead of creating a fresh one)",
   }),
+  model: Schema.optional(Schema.String).annotate({
+    description: "The provider/model to use for this task, overriding configured subagent model selection",
+  }),
+  variant: Schema.optional(Schema.String).annotate({
+    description: "The model variant or reasoning effort to use for this task",
+  }),
   command: Schema.optional(Schema.String).annotate({ description: "The command that triggered this task" }),
 }
 
@@ -225,6 +231,8 @@ export const TaskTool = Tool.define(
           providerID: msg.info.providerID,
         },
         variant: msg.info.variant,
+        callModel: params.model,
+        callVariant: params.variant,
         provider,
       })
       const model = selected.model
