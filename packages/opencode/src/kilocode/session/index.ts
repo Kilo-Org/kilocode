@@ -149,13 +149,9 @@ export namespace KiloSession {
    *   1. OpenRouter chat completions  -> `metadata.openrouter.usage.cost`
    *                                      (`costDetails.upstreamInferenceCost` for Kilo)
    *   2. Anthropic Messages or OpenAI Responses via OpenRouter
-   *                                   -> `usage.providerMetadata.<provider>.cost_details`
-   *      (native LLM usage retains the verbatim provider payload under its provider key,
-   *      so OpenRouter's upstream inference cost remains available with snake_case preserved)
+   *                                   -> `usage.providerMetadata.aiSdk.cost_details`
    *   3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway
-   *                                   -> `metadata.gateway.marketCost` (defensive: the
-   *      gateway emits this in the SSE `provider_metadata` field, which the current AI SDK
-   *      providers drop before they reach this layer)
+   *                                   -> `metadata.gateway.marketCost`
    *
    * Kilo does not charge end users a per-request fee, so for the Kilo provider the
    * top-level `cost` field (the gateway/marketplace fee) would understate the user's
@@ -194,28 +190,18 @@ export namespace KiloSession {
       if (cost !== undefined) return cost
     }
 
-    // 2. Anthropic Messages or OpenAI Responses via OpenRouter. Native LLM usage keeps
-    //    each provider's verbatim usage payload under `providerMetadata`, so OpenRouter's
-    //    upstream inference cost remains available with snake_case preserved. Kilo doesn't
-    //    charge end users a per-request fee, so only the upstream cost is meaningful here.
+    // 2. Anthropic Messages or OpenAI Responses via OpenRouter. The Kilo Gateway wrapper
+    //    restores the verbatim usage payload under the AI SDK's raw usage escape hatch.
+    //    Kilo doesn't charge end users a per-request fee, so only upstream cost is relevant.
     const usage = input.usage?.providerMetadata
-    const anthropic = usage?.["anthropic"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
-    const openai = usage?.["openai"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
     const aiSdk = usage?.["aiSdk"]?.["cost_details"] as { upstream_inference_cost?: number } | undefined
-    const upstream = num(
-      anthropic?.upstream_inference_cost ?? openai?.upstream_inference_cost ?? aiSdk?.upstream_inference_cost,
-    )
+    const upstream = num(aiSdk?.upstream_inference_cost)
     if (upstream !== undefined) return upstream
 
     // 3. Anthropic Messages or OpenAI Responses via Vercel AI Gateway. `cost` is the
     //    gateway fee that Kilo would pass through, but Kilo doesn't charge end users a
     //    per-request fee, so always use `marketCost` (the upstream provider's price).
     //    Values are emitted as strings on the wire.
-    //
-    //    NOTE: this branch is currently dormant because neither `@ai-sdk/anthropic` nor
-    //    `@ai-sdk/openai` (responses) forwards the SSE-level `provider_metadata.gateway`
-    //    block to `providerMetadata`. Kept as defensive code so the cost starts flowing
-    //    automatically once the SDK gap is closed.
     const gateway = input.metadata?.["gateway"] as { marketCost?: string | number } | undefined
     const marketCost = num(gateway?.marketCost)
     if (marketCost !== undefined) return marketCost

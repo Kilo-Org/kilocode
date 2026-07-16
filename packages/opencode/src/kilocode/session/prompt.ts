@@ -21,6 +21,7 @@ import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryMarker } from "@/kilocode/memory/marker"
 import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
@@ -290,6 +291,15 @@ export namespace KiloSessionPrompt {
     cache: MemoryMarker.Cache
   }) {
     const enabled = yield* memoryToolEnabled({ ctx: input.ctx })
+    const verbose =
+      input.cache.verbose ??
+      (enabled
+        ? yield* Effect.tryPromise(() => KiloMemory.status({ ctx: input.ctx })).pipe(
+            Effect.map((item) => item.state.verbose),
+            // Fail closed: unavailable state must not persist memory snippets.
+            Effect.catch(() => Effect.succeed(false)),
+          )
+        : false)
     const cached = pinnedMemory.get(input.sessionID)
     const built =
       cached?.enabled === enabled
@@ -303,7 +313,7 @@ export namespace KiloSessionPrompt {
             Effect.map((mem) => ({ blocks: mem.blocks, enabled, marker: mem.marker })),
             Effect.tap((mem) => Effect.sync(() => writePinnedMemory(input.sessionID, mem))),
           )
-    MemoryMarker.startup({ marker: built.marker, cache: input.cache })
+    MemoryMarker.startup({ marker: built.marker, cache: input.cache, verbose })
     return built.blocks
   })
 

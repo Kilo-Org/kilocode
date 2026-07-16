@@ -52,6 +52,22 @@
 
 ## [Unreleased]
 
+## [7.0.7] - 2026-07-15
+
+### Added
+
+- Add support for OpenAI-compatible custom providers.
+
+### Fixed
+
+- Improve custom provider setup by validating required fields and showing configuration errors in the dialog.
+- Close the custom provider dialog correctly after adding a provider.
+- Clean up deleted custom providers by using the disconnect flow.
+
+### Changed
+
+- Keep the JetBrains plugin pinned to Kilo Core 7.4.5 for this release.
+
 ## [7.0.6] - 2026-07-14
 
 ### Fixed
