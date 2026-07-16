@@ -26,19 +26,15 @@ export function parseKiloPassState(value: unknown): KiloPassState | null {
   }
 }
 
-export async function fetchKiloPassState(token: string, onError?: (err: unknown) => void): Promise<KiloPassState | null> {
+export async function fetchKiloPassState(token: string): Promise<KiloPassState | null> {
   try {
     const params = new URLSearchParams({ batch: "1", input: JSON.stringify({ "0": null }) })
     const response = await fetch(`${KILO_API_BASE}/api/trpc/kiloPass.getState?${params}`, {
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...buildKiloHeaders() },
     })
-    if (!response.ok) {
-      onError?.(new Error(`Failed to fetch Kilo Pass: ${response.status}`))
-      return null
-    }
+    if (!response.ok) return null
     return parseKiloPassState(await response.json())
-  } catch (err) {
-    onError?.(err)
+  } catch {
     return null
   }
 }

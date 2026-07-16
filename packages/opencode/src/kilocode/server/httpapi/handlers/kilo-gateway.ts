@@ -72,17 +72,16 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       if (!info || info.type !== "oauth") return yield* Effect.fail(new HttpApiError.Unauthorized({}))
 
       const currentOrgId = info.accountId ?? null
-      const issues: Array<"balance" | "kiloPass"> = []
       const [profile, balance, kiloPass] = yield* Effect.tryPromise({
         try: () =>
           Promise.all([
             fetchProfile(info.access),
-            fetchBalance(info.access, currentOrgId ?? undefined, () => issues.push("balance")),
-            fetchKiloPassState(info.access, () => issues.push("kiloPass")),
+            fetchBalance(info.access, currentOrgId ?? undefined),
+            fetchKiloPassState(info.access),
           ]),
         catch: () => new HttpApiError.BadRequest({}),
       })
-      return { profile, balance, kiloPass, currentOrgId, issues }
+      return { profile, balance, kiloPass, currentOrgId }
     })
 
     const authStatus = Effect.fn("KiloGatewayHttpApi.authStatus")(function* () {

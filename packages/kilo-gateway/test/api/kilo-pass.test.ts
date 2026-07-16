@@ -61,15 +61,13 @@ describe("parseKiloPassState", () => {
     expect(parseKiloPassState({ status: "none" })).toBeNull()
   })
 
-  test("handles transport failures without writing over the TUI", async () => {
+  test("silently ignores transport failures", async () => {
     const prev = global.fetch
     const warn = spyOn(console, "warn").mockImplementation(() => undefined)
-    const issue = mock(() => undefined)
     global.fetch = mock(() => Promise.reject(new DOMException("The operation timed out.", "TimeoutError")))
 
     try {
-      await expect(fetchKiloPassState("token", issue)).resolves.toBeNull()
-      expect(issue).toHaveBeenCalledTimes(1)
+      await expect(fetchKiloPassState("token")).resolves.toBeNull()
       expect(warn).not.toHaveBeenCalled()
     } finally {
       warn.mockRestore()

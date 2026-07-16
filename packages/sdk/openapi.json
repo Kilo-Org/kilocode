@@ -13203,16 +13203,9 @@
                           "type": "null"
                         }
                       ]
-                    },
-                    "issues": {
-                      "type": "array",
-                      "items": {
-                        "type": "string",
-                        "enum": ["balance", "kiloPass"]
-                      }
                     }
                   },
-                  "required": ["profile", "balance", "kiloPass", "currentOrgId", "issues"],
+                  "required": ["profile", "balance", "kiloPass", "currentOrgId"],
                   "additionalProperties": false,
                   "description": "Profile data"
                 }

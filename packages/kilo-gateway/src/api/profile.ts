@@ -64,11 +64,7 @@ export function defaultOrganizationId(profile: KilocodeProfile): string | undefi
  * @param token - Authentication token
  * @param organizationId - Optional organization ID for team balance
  */
-export async function fetchBalance(
-  token: string,
-  organizationId?: string,
-  onError?: (err: unknown) => void,
-): Promise<KilocodeBalance | null> {
+export async function fetchBalance(token: string, organizationId?: string): Promise<KilocodeBalance | null> {
   try {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -81,14 +77,14 @@ export async function fetchBalance(
     const response = await fetch(`${KILO_API_BASE}/api/profile/balance`, { headers })
 
     if (!response.ok) {
-      onError?.(new Error(`Failed to fetch balance: ${response.status}`))
+      console.warn(`Failed to fetch balance: ${response.status}`)
       return null
     }
 
     const data = (await response.json()) as { balance?: number }
     return { balance: data.balance ?? 0 }
-  } catch (err) {
-    onError?.(err)
+  } catch (error) {
+    console.warn("Error fetching balance:", error)
     return null
   }
 }

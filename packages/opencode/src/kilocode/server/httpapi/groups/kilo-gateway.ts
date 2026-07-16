@@ -41,7 +41,6 @@ export const ProfileWithBalance = Schema.Struct({
   balance: Schema.NullOr(Balance),
   kiloPass: Schema.NullOr(KiloPassState),
   currentOrgId: Schema.NullOr(Schema.String),
-  issues: Schema.Array(Schema.Literals(["balance", "kiloPass"])),
 })
 
 export const AuthStatus = Schema.Struct({
