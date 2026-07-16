@@ -264,7 +264,10 @@ describe("tool.task model resolution", () => {
       model: "sub-provider/sub-model",
       callVariant: "max",
       state: { model: { pinned: saved }, variant: { "saved-provider/saved-model": savedVariant } },
-      config: { subagent_variant_overrides: { "sub-provider/sub-model": overrideVariant } },
+      config: {
+        subagent_model: "parent-provider/parent-model",
+        subagent_variant_overrides: { "sub-provider/sub-model": overrideVariant },
+      },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
