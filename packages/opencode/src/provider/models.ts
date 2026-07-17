@@ -70,7 +70,27 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
             yield* cache.refresh("apertis", aptOpts).pipe(Effect.ignore, Effect.forkDetach)
         })
 
+        const aiml = cfg.provider?.aimlapi?.options
+        const aimlURL = process.env.AIMLAPI_INFERENCE_URL ?? aiml?.baseURL ?? "https://api.aimlapi.com/v1"
+        const aimlOpts = aimlURL === "https://api.aimlapi.com/v1" ? {} : { baseURL: aimlURL }
+
+        const addAimlapi = Effect.fnUntraced(function* () {
+          if (providers.aimlapi) return
+          const models = yield* cache.fetch("aimlapi", aimlOpts).pipe(Effect.catch(() => Effect.succeed({})))
+          providers.aimlapi = {
+            id: "aimlapi",
+            name: "aimlapi.com",
+            env: ["AIMLAPI_API_KEY"],
+            api: aimlURL,
+            npm: "@ai-sdk/openai-compatible",
+            models,
+          }
+          if (Object.keys(models).length === 0)
+            yield* cache.refresh("aimlapi", aimlOpts).pipe(Effect.ignore, Effect.forkDetach)
+        })
+
         if (!allowed) {
+          yield* addAimlapi()
           yield* addApertis()
           return providers
         }
@@ -94,6 +114,7 @@ export const layer: Layer.Layer<Service, never, Core.Service | Config.Service | 
           models,
         }
         if (Object.keys(fetched).length === 0) yield* cache.refresh("kilo", fetch).pipe(Effect.ignore, Effect.forkDetach)
+        yield* addAimlapi()
         yield* addApertis()
         return providers
       })

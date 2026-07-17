@@ -56,6 +56,22 @@ const ApertisItem = Schema.Struct({ id: Schema.String, owned_by: Schema.optional
 const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(ApertisItem)) })
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
+const AIMLAPI_BASE_URL = "https://api.aimlapi.com/v1"
+const AimlapiInfo = Schema.Struct({
+  name: Schema.optional(Schema.String),
+  developer: Schema.optional(Schema.String),
+  releasedAt: Schema.optional(Schema.String),
+  contextLength: Schema.optional(Schema.Finite),
+})
+const AimlapiItem = Schema.Struct({
+  id: Schema.String,
+  type: Schema.optional(Schema.String),
+  info: Schema.optional(AimlapiInfo),
+  tags: Schema.optional(Schema.Array(Schema.String)),
+})
+const AimlapiResponse = Schema.Struct({ data: Schema.optional(Schema.Array(AimlapiItem)) })
+type AimlapiItem = Schema.Schema.Type<typeof AimlapiItem>
+
 export const layer: Layer.Layer<
   Service,
   never,
@@ -118,8 +134,54 @@ export const layer: Layer.Layer<
       return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
     })
 
+    const aimlapiModel = (item: AimlapiItem): Models[string] => ({
+      id: item.id,
+      name: item.info?.name ?? item.id,
+      family: item.info?.developer ?? "",
+      release_date: item.info?.releasedAt ?? "",
+      attachment: false,
+      reasoning: false,
+      temperature: true,
+      tool_call: true,
+      cost: { input: 0, output: 0 },
+      limit: { context: item.info?.contextLength ?? 128000, output: 8192 },
+      modalities: { input: ["text"], output: ["text"] },
+    })
+
+    const fetchAimlapiModels = Effect.fn("ModelCache.fetchAimlapiModels")(function* (options: Options) {
+      const baseURL = options.baseURL ?? AIMLAPI_BASE_URL
+      if (!options.apiKey) {
+        log.debug("no API key for aimlapi, skipping model fetch")
+        return {}
+      }
+
+      const url = `${baseURL.replace(/\/+$/, "")}/models`
+      const response = yield* HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        HttpClientRequest.bearerToken(options.apiKey),
+        http.execute,
+        Effect.timeout("10 seconds"),
+      )
+      if (response.status < 200 || response.status >= 300) {
+        log.error("aimlapi model fetch failed", { status: response.status })
+        return {}
+      }
+
+      const json = yield* HttpClientResponse.schemaBodyJson(AimlapiResponse)(response)
+      const chat = (json.data ?? []).filter((item) => item.type === "openai/chat-completions")
+      // Coding-tagged models rank first so the picker surfaces them on top.
+      let recommended = 0
+      return Object.fromEntries(
+        chat.map((item) => {
+          const base = aimlapiModel(item)
+          const model = item.tags?.includes("playground:code") ? { ...base, recommendedIndex: recommended++ } : base
+          return [item.id, model] as const
+        }),
+      )
+    })
+
     const authOptions = Effect.fn("ModelCache.authOptions")(function* (providerID: string) {
-      if (providerID !== "kilo" && providerID !== "apertis") return {}
+      if (providerID !== "kilo" && providerID !== "apertis" && providerID !== "aimlapi") return {}
       const config = yield* cfg.get()
       const options: Options = {}
 
@@ -160,12 +222,29 @@ export const layer: Layer.Layer<
         })
       }
 
+      if (providerID === "aimlapi") {
+        const item = config.provider?.[providerID]
+        if (item?.options?.apiKey) options.apiKey = item.options.apiKey
+        if (item?.options?.baseURL) options.baseURL = item.options.baseURL
+
+        const info = yield* auth.get(providerID)
+        if (info?.type === "api") options.apiKey = info.key
+        if (process.env.AIMLAPI_API_KEY) options.apiKey = process.env.AIMLAPI_API_KEY
+        if (process.env.AIMLAPI_INFERENCE_URL) options.baseURL = process.env.AIMLAPI_INFERENCE_URL
+        log.debug("aimlapi auth options resolved", {
+          providerID,
+          hasKey: !!options.apiKey,
+          hasBaseURL: !!options.baseURL,
+        })
+      }
+
       return options
     })
 
     const fetchModels = (providerID: string, options: Options): Effect.Effect<Result, unknown> => {
       if (providerID === "kilo") return kilo.fetch(options)
       if (providerID === "apertis") return fetchApertisModels(options).pipe(Effect.map((models) => ({ models })))
+      if (providerID === "aimlapi") return fetchAimlapiModels(options).pipe(Effect.map((models) => ({ models })))
       log.debug("provider not implemented", { providerID })
       return Effect.succeed({ models: {} })
     }
@@ -186,7 +265,8 @@ export const layer: Layer.Layer<
       if (providerID === "kilo") {
         return JSON.stringify([providerID, options?.baseURL, options?.kilocodeOrganizationId, options?.kilocodeToken])
       }
-      if (providerID === "apertis") return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
+      if (providerID === "apertis" || providerID === "aimlapi")
+        return JSON.stringify([providerID, options?.baseURL, options?.apiKey])
       return providerID
     }
 

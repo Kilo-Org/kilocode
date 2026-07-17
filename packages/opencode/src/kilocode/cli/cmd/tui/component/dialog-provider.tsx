@@ -47,11 +47,12 @@ export function failedDescription(providerID: string, failed: string[]): string 
 
 export const PROVIDER_PRIORITY: Record<string, number> = {
   kilo: -1,
-  anthropic: 0,
-  "github-copilot": 1,
-  openai: 2,
-  google: 3,
-  "anaconda-desktop": 4,
+  aimlapi: 0,
+  anthropic: 1,
+  "github-copilot": 2,
+  openai: 3,
+  google: 4,
+  "anaconda-desktop": 5,
 }
 
 // ---------------------------------------------------------------------------
@@ -60,12 +61,14 @@ export const PROVIDER_PRIORITY: Record<string, number> = {
 
 export const PROVIDER_DESCRIPTIONS: Record<string, string> = {
   kilo: "(Recommended)",
+  aimlapi: "(1000+ models, one-click setup)",
   anthropic: "(Claude Max or API key)",
   openai: "(ChatGPT login or API key)",
   "anaconda-desktop": "(Local models)",
 }
 
 export const PROVIDER_TITLES: Record<string, string> = {
+  aimlapi: "aimlapi.com",
   openai: "OpenAI / Codex",
 }
 
