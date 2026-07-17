@@ -55,7 +55,7 @@ export function billing(state: CloudState): KiloBilling {
           autoTopUp: {
             enabled: state.topup.value.enabled,
             amountCents: state.topup.value.amountCents,
-            thresholdCents: state.topup.value.thresholdCents,
+            thresholdDollars: state.topup.value.thresholdDollars,
             ...(state.topup.value.paymentMethod?.type && { paymentType: state.topup.value.paymentMethod.type }),
             ...(state.topup.value.paymentMethod?.brand && { paymentBrand: state.topup.value.paymentMethod.brand }),
             ...(state.topup.value.paymentMethod?.last4 && { paymentLast4: state.topup.value.paymentMethod.last4 }),
