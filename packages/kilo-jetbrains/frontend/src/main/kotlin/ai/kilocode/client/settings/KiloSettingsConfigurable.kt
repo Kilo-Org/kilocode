@@ -58,14 +58,6 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         models.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(models)
 
-        val context = ActionLink(KiloBundle.message("settings.context.displayName")) { e ->
-            val src = e.source as? JComponent ?: return@ActionLink
-            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
-            open(settings, ContextConfigurable.ID)
-        }
-        context.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
-        panel.next(context)
-
         val providers = ActionLink(KiloBundle.message("settings.providers.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink
             val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
@@ -81,6 +73,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         behavior.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(behavior)
+
+        val context = ActionLink(KiloBundle.message("settings.context.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, ContextConfigurable.ID)
+        }
+        context.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(context)
 
         return panel
     }

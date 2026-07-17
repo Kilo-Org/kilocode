@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.context
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.CompactionConfigDto
@@ -12,6 +13,8 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.WatcherConfigDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +25,9 @@ import kotlinx.coroutines.runBlocking
 import java.awt.Container
 import javax.swing.AbstractButton
 import javax.swing.JLabel
+import javax.swing.ListSelectionModel
 import javax.swing.JTextField
+import javax.swing.text.AbstractDocument
 import javax.swing.text.JTextComponent
 
 class ContextSettingsUiTest : BasePlatformTestCase() {
@@ -52,7 +57,7 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         rpc.state.value = state
         app._state.value = state
         edt { ui = ContextSettingsUi(uiScope, app, workspaces) }
-        flushUntil { text(requireUi()).contains("Auto-compaction") }
+        flushUntil { text(requireUi()).contains("Auto Compaction") }
     }
 
     override fun tearDown() {
@@ -95,6 +100,25 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         assertEquals(80.0, rpc.configPatches.single().compaction?.threshold_percent)
     }
 
+    fun `test threshold row shows percent label and rejects out of range values`() {
+        val panel = requireUi()
+
+        edt {
+            val field = threshold(panel)
+            assertTrue(text(panel).contains("%"))
+            assertTrue(text(panel).contains("Auto Compaction Limit"))
+            assertTrue(text(panel).contains("Prune Old Outputs"))
+            assertEquals("Default", field.emptyText.text)
+            field.text = ""
+            field.text = "101"
+            assertEquals("", field.text)
+            field.text = "100"
+            assertEquals("100", field.text)
+            (field.document as AbstractDocument).replace(0, field.document.length, "-1", null)
+            assertEquals("100", field.text)
+        }
+    }
+
     fun `test clearing threshold sends clear patch`() {
         val panel = requireUi()
 
@@ -111,14 +135,45 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         val panel = requireUi()
 
         edt {
-            val list = components(panel).filterIsInstance<PatternList>().single()
-            list.entry.text = "**/dist/**"
-            buttons(panel).single { it.text == "Add pattern" }.doClick()
+            val patterns = components(panel).filterIsInstance<PatternList>().single()
+            patterns.input = { "**/dist/**" }
+            icon(panel, "Add pattern").doClick()
+            assertEquals(listOf("**/dist/**"), patternList(panel).selectedValuesList)
             panel.applyDraft()
         }
 
         flushUntil { rpc.configPatches.isNotEmpty() }
         assertEquals(listOf("tmp/**", "**/dist/**"), rpc.configPatches.single().watcher?.ignore)
+    }
+
+    fun `test removing selected watcher patterns supports multi selection`() {
+        val panel = requireUi()
+
+        edt {
+            val patterns = components(panel).filterIsInstance<PatternList>().single()
+            val inputs = ArrayDeque(listOf("**/dist/**", "**/build/**"))
+            patterns.input = { inputs.removeFirst() }
+            icon(panel, "Add pattern").doClick()
+            icon(panel, "Add pattern").doClick()
+            val list = patternList(panel)
+            assertEquals(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION, list.selectionMode)
+            list.setSelectionInterval(0, 1)
+            icon(panel, "Remove selected patterns").doClick()
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() }
+        assertEquals(listOf("**/build/**"), rpc.configPatches.single().watcher?.ignore)
+    }
+
+    fun `test watcher section does not repeat ignored patterns row title`() {
+        val panel = requireUi()
+
+        edt {
+            assertFalse(text(panel).contains("Ignored patterns"))
+            assertTrue(text(panel).contains("File Watcher Ignore Patterns"))
+            assertEquals(1, components(panel).filterIsInstance<JTextField>().size)
+        }
     }
 
     fun `test failed apply stays visible while panel open`() {
@@ -154,11 +209,19 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
 
     private fun requireUi(): ContextSettingsUi = requireNotNull(ui)
 
-    private fun threshold(panel: ContextSettingsUi): JTextField = components(panel)
-        .filterIsInstance<JTextField>()
+    private fun threshold(panel: ContextSettingsUi): JBTextField = components(panel)
+        .filterIsInstance<JBTextField>()
         .single { it.columns == 8 }
 
-    private fun buttons(panel: ContextSettingsUi): List<AbstractButton> = components(panel).filterIsInstance<AbstractButton>()
+    private fun patternList(panel: ContextSettingsUi): JBList<String> {
+        val list = components(panel).filterIsInstance<JBList<*>>().single()
+        @Suppress("UNCHECKED_CAST")
+        return list as JBList<String>
+    }
+
+    private fun icon(panel: ContextSettingsUi, tip: String): HoverIcon = components(panel)
+        .filterIsInstance<HoverIcon>()
+        .single { it.toolTipText == tip }
 
     private fun <T> edt(block: () -> T): T {
         var result: T? = null
@@ -185,7 +248,6 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
                 is AbstractButton -> comp.text?.let { out.add(it) }
                 is JLabel -> comp.text?.let { out.add(it) }
                 is JTextComponent -> comp.text?.let { out.add(it) }
-                is JTextField -> comp.text?.let { out.add(it) }
             }
         }
         return out.joinToString("\n")

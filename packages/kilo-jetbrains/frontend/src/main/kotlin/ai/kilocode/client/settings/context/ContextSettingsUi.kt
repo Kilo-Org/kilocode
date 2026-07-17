@@ -7,8 +7,8 @@ import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.BaseSettingsUi
 import ai.kilocode.client.settings.base.SettingsBannerKind
 import ai.kilocode.client.settings.base.SettingsRow
-import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.settings.base.SettingsToggle
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
@@ -22,16 +22,21 @@ import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.components.service
+import com.intellij.openapi.ui.Messages
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.DocumentAdapter
-import com.intellij.ui.ToolbarDecorator
+import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
-import javax.swing.JButton
+import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import javax.swing.ListSelectionModel
+import javax.swing.ScrollPaneConstants
 import javax.swing.event.DocumentEvent
 import javax.swing.text.AbstractDocument
 import javax.swing.text.AttributeSet
@@ -125,13 +130,14 @@ internal class ContextSettingsContent(
 ) : BaseContentPanel() {
     private val auto = SettingsToggle { value -> update { copy(auto = value) } }
     private val prune = SettingsToggle { value -> update { copy(prune = value) } }
-    private val threshold = ThresholdField { value -> update { copy(threshold = value) } }
+    private val threshold = ThresholdField(
+        KiloBundle.message("settings.context.compaction.threshold.placeholder"),
+    ) { value -> update { copy(threshold = value) } }
     private val patterns = PatternList { value -> update { copy(ignore = value) } }
 
     init {
         section(
             KiloBundle.message("settings.context.compaction.title"),
-            KiloBundle.message("settings.context.compaction.description"),
         ).apply {
             row(SettingsRow(
                 KiloBundle.message("settings.context.compaction.auto.title"),
@@ -141,7 +147,10 @@ internal class ContextSettingsContent(
             row(SettingsRow(
                 KiloBundle.message("settings.context.compaction.threshold.title"),
                 KiloBundle.message("settings.context.compaction.threshold.description"),
-                threshold.align(HAlign.RIGHT, VAlign.CENTER),
+                Stack.horizontal(UiStyle.Gap.xs())
+                    .next(threshold)
+                    .next(JBLabel("%"))
+                    .align(HAlign.RIGHT, VAlign.CENTER),
             ))
             row(SettingsRow(
                 KiloBundle.message("settings.context.compaction.prune.title"),
@@ -152,11 +161,7 @@ internal class ContextSettingsContent(
         section(
             KiloBundle.message("settings.context.watcher.title"),
             KiloBundle.message("settings.context.watcher.description"),
-        ).row(SettingsStackedRow(
-            KiloBundle.message("settings.context.watcher.patterns.title"),
-            KiloBundle.message("settings.context.watcher.patterns.description"),
-            patterns,
-        ))
+        ).row(patterns)
     }
 
     @RequiresEdt
@@ -170,13 +175,14 @@ internal class ContextSettingsContent(
 }
 
 private class ThresholdField(
+    placeholder: String,
     private val change: (String) -> Unit,
 ) : JBTextField() {
     private var syncing = false
 
     init {
         columns = THRESHOLD_COLUMNS
-        emptyText.text = KiloBundle.message("settings.context.compaction.threshold.placeholder")
+        emptyText.text = placeholder
         (document as AbstractDocument).documentFilter = NumberFilter()
         document.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) {
@@ -208,7 +214,9 @@ private class NumberFilter : DocumentFilter() {
 
     private fun valid(value: String): Boolean {
         if (value.count { it == '.' } > 1) return false
-        return value.all { it.isDigit() || it == '.' }
+        if (!value.all { it.isDigit() || it == '.' }) return false
+        val num = value.toDoubleOrNull() ?: return false
+        return num >= 0.0 && num <= 100.0
     }
 }
 
@@ -216,76 +224,98 @@ internal class PatternList(
     private val change: (List<String>) -> Unit,
 ) : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()) {
     private val model = CollectionListModel<String>()
-    internal val entry = JBTextField().apply {
-        emptyText.text = KiloBundle.message("settings.context.watcher.placeholder")
+    internal var input: () -> String? = {
+        Messages.showInputDialog(
+            this,
+            KiloBundle.message("settings.context.watcher.input.prompt"),
+            KiloBundle.message("settings.context.watcher.input.title"),
+            null,
+        )
     }
-    private val add = JButton(KiloBundle.message("settings.context.watcher.add"), AllIcons.General.Add).apply {
+    private val add = HoverIcon().apply {
+        icon = AllIcons.General.Add
+        toolTipText = KiloBundle.message("settings.context.watcher.add")
         addActionListener { add() }
     }
+    private val remove = HoverIcon().apply {
+        icon = AllIcons.General.Remove
+        toolTipText = KiloBundle.message("settings.context.watcher.remove")
+        addActionListener { remove() }
+    }
     private val list = JBList(model).apply {
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
+        selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
+        isFocusable = true
         emptyText.text = KiloBundle.message("settings.context.watcher.empty")
     }
-    private val panel = ToolbarDecorator.createDecorator(list)
-        .disableUpDownActions()
-        .disableAddAction()
-        .setRemoveAction { remove() }
-        .setRemoveActionUpdater { isEnabled && list.selectedIndex >= 0 }
-        .createPanel()
+    private val toolbar = Stack.horizontal().next(add).next(remove)
+    private val scroll = JBScrollPane(list).apply {
+        border = null
+        viewportBorder = null
+        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+    }
 
     init {
-        entry.document.addDocumentListener(object : DocumentAdapter() {
-            override fun textChanged(e: DocumentEvent) = syncAdd()
-        })
-        entry.registerKeyboardAction(
-            { add() },
-            javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0),
+        border = JBUI.Borders.empty(UiStyle.Gap.pad(), 0, UiStyle.Gap.pad(), 0)
+        list.addListSelectionListener { if (!it.valueIsAdjusting) syncActions() }
+        list.registerKeyboardAction(
+            { remove() },
+            javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
             JComponent.WHEN_FOCUSED,
         )
-        next(Stack.horizontal(UiStyle.Gap.sm()).next(entry).next(add))
-        next(panel)
-        syncAdd()
+        ScrollingUtil.installActions(list)
+        next(toolbar.align(HAlign.LEFT, VAlign.CENTER))
+        gap(UiStyle.Gap.sm())
+        next(scroll)
+        syncActions()
     }
 
     @RequiresEdt
     fun sync(values: List<String>) {
-        if (model.items == values) return
-        model.replaceAll(values)
-        syncAdd()
+        if (model.items != values) model.replaceAll(values)
+        syncActions()
     }
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
-        entry.isEnabled = enabled
-        add.isEnabled = enabled && entry.text.trim().isNotBlank()
+        add.isEnabled = enabled
+        remove.isEnabled = enabled && list.selectedIndices.isNotEmpty()
         list.isEnabled = enabled
-        panel.isEnabled = enabled
-        syncAdd()
+        scroll.isEnabled = enabled
+        toolbar.isEnabled = enabled
+        syncActions()
     }
 
     private fun add() {
-        val value = entry.text.trim()
+        if (!isEnabled) return
+        val value = input()?.trim().orEmpty()
         if (!isEnabled || value.isBlank()) return
         val values = model.items.toMutableList()
-        if (value !in values) values += value
-        entry.text = ""
-        model.replaceAll(values)
-        change(values)
-        syncAdd()
+        val idx = values.indexOf(value).takeIf { it >= 0 } ?: run {
+            values += value
+            model.replaceAll(values)
+            change(values)
+            values.lastIndex
+        }
+        list.selectedIndex = idx
+        ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        syncActions()
     }
 
     private fun remove() {
-        val idx = list.selectedIndex
-        if (!isEnabled || idx < 0 || idx >= model.size) return
+        val indices = list.selectedIndices.filter { it >= 0 && it < model.size }
+        if (!isEnabled || indices.isEmpty()) return
         val values = model.items.toMutableList()
-        values.removeAt(idx)
+        indices.sortedDescending().forEach(values::removeAt)
         model.replaceAll(values)
+        val next = indices.minOrNull()?.coerceAtMost(values.lastIndex) ?: -1
+        if (next >= 0) list.selectedIndex = next else list.clearSelection()
         change(values)
-        syncAdd()
+        syncActions()
     }
 
-    private fun syncAdd() {
-        add.isEnabled = isEnabled && entry.text.trim().isNotBlank()
+    private fun syncActions() {
+        add.isEnabled = isEnabled
+        remove.isEnabled = isEnabled && list.selectedIndices.isNotEmpty()
     }
 }
 

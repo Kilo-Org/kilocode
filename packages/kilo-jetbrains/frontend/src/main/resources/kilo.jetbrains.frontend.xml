@@ -48,14 +48,6 @@
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
-                id="ai.kilocode.jetbrains.settings.context"
-                groupWeight="3"
-                instance="ai.kilocode.client.settings.context.ContextConfigurable"
-                bundle="messages.KiloBundle"
-                key="settings.context.displayName"/>
-
-        <applicationConfigurable
-                parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.providers"
                 groupWeight="2"
                 instance="ai.kilocode.client.settings.providers.ProvidersConfigurable"
@@ -69,6 +61,14 @@
                 instance="ai.kilocode.client.settings.agents.AgentBehaviorConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.context"
+                groupWeight="0"
+                instance="ai.kilocode.client.settings.context.ContextConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.context.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
