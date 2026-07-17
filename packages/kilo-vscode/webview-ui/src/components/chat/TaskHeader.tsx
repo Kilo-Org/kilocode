@@ -13,6 +13,7 @@ import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
+import { TextShimmer } from "@kilocode/kilo-ui/text-shimmer"
 import { Switch } from "@kilocode/kilo-ui/switch"
 import { useSession } from "../../context/session"
 import { useMemory } from "../../context/memory"
@@ -89,6 +90,27 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
       if (session.getParts(m.id).some((p) => p.type !== "step-start")) return true
     }
     return false
+  })
+
+  // Persistent "which subagent is running right now" indicator - stays visible in the
+  // sticky header even after the task row itself scrolls out of view.
+  const runningAgent = createMemo(() => {
+    const found: { name: string; description?: string; model?: string }[] = []
+    for (const m of session.visibleMessages()) {
+      if (m.role !== "assistant") continue
+      for (const p of session.getParts(m.id)) {
+        if (p.type !== "tool" || p.tool !== "task" || p.state.status !== "running") continue
+        const input = p.state.input as { subagent_type?: string; description?: string }
+        if (typeof input.subagent_type !== "string") continue
+        const raw = session.allAgents().find((a) => a.name === input.subagent_type)?.model
+        found.push({
+          name: input.subagent_type,
+          description: input.description,
+          model: raw ? raw.slice(raw.lastIndexOf("/") + 1) : undefined,
+        })
+      }
+    }
+    return found
   })
 
   const memoryVerbose = createMemo(() => Boolean(memory.status()?.state.verbose))
@@ -448,6 +470,25 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           </Show>
         </div>
       </div>
+      <Show when={runningAgent().length > 0}>
+        <div data-component="task-header-running-agent">
+          <For each={runningAgent()}>
+            {(agent) => (
+              <div data-slot="task-header-running-agent-item">
+                <span data-slot="task-header-running-agent-name">
+                  <TextShimmer as="span" text={agent.name} />
+                </span>
+                <Show when={agent.model}>
+                  <span data-slot="task-header-running-agent-model">{agent.model}</span>
+                </Show>
+                <Show when={agent.description}>
+                  <span data-slot="task-header-running-agent-desc">{agent.description}</span>
+                </Show>
+              </div>
+            )}
+          </For>
+        </div>
+      </Show>
       {/* Standalone search bar, directly under the header, so it has room for
           the VS Code–style inline options and doesn't require the timeline
           to be expanded. */}

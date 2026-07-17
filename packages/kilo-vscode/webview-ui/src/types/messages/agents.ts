@@ -26,6 +26,7 @@ export interface AgentInfo {
   deprecated?: boolean
   color?: string
   permission?: PermissionRuleItem[]
+  model?: string | null
 }
 
 export interface AgentRequirementSkill {

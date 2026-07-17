@@ -20,6 +20,62 @@
   line-height: 1.4;
 }
 
+.kilo-greeting {
+  margin: 4px 0 0;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-20);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+/* ============================================
+   Quick-action chips (empty state)
+   ============================================ */
+
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  max-width: 300px;
+  margin-top: 4px;
+}
+
+.quick-action-chip {
+  appearance: none;
+  border: 1px solid var(--vscode-panel-border, var(--border-weak-base));
+  border-radius: var(--kilo-chat-radius-pill);
+  background: transparent;
+  color: var(--vscode-foreground);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--kilo-font-size-12);
+  padding: 5px 12px;
+  box-shadow: none;
+  transition:
+    background-color 0.2s var(--kilo-chat-ease),
+    border-color 0.2s var(--kilo-chat-ease),
+    box-shadow 0.2s var(--kilo-chat-ease),
+    transform 0.2s var(--kilo-chat-ease);
+}
+
+.quick-action-chip:hover {
+  background: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder, var(--vscode-textLink-foreground));
+  box-shadow: var(--kilo-chat-shadow-soft);
+  transform: translateY(-1px);
+}
+
+.quick-action-chip:active {
+  transform: translateY(0);
+  box-shadow: none;
+}
+
+.quick-action-chip:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, var(--border-focus));
+  outline-offset: 2px;
+}
+
 /* ============================================
    Work Style Picker
    ============================================ */

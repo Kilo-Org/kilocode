@@ -66,10 +66,7 @@ Please suggest improvements for:
 
 Provide the improved code along with explanations for each enhancement.`,
 
-  ADD_TO_CONTEXT: `\${filePath}:\${startLine}-\${endLine}
-\`\`\`
-\${selectedText}
-\`\`\``,
+  ADD_TO_CONTEXT: `@\${filePath}:\${startLine}-\${endLine}`,
 
   TERMINAL_ADD_TO_CONTEXT: `\${userInput}
 Terminal output:

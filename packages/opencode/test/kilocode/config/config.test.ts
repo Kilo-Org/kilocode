@@ -637,6 +637,31 @@ describe("project config directory precedence", () => {
   })
 })
 
+describe("external command directory precedence", () => {
+  test("prefers Kilo-native commands over external commands", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await Filesystem.write(
+      path.join(tmp.path, ".kilo", "command", "shared.md"),
+      "---\ndescription: Kilo command\n---\nKilo command template",
+    )
+    await Filesystem.write(
+      path.join(tmp.path, ".claude", "commands", "shared.md"),
+      "---\ndescription: Claude command\n---\nClaude command template",
+    )
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.command?.shared).toMatchObject({
+          description: "Kilo command",
+          template: "Kilo command template",
+        })
+      },
+    })
+  })
+})
+
 describe("linked worktree config", () => {
   test("uses primary config directories as local fallbacks", async () => {
     await using primary = await tmpdir({ git: true })

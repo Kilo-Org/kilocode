@@ -750,12 +750,20 @@ export function UserMessageDisplay(props: {
   const dialog = useDialog()
   const i18n = useI18n()
   const [copied, setCopied] = createSignal(false)
+  const [expanded, setExpanded] = createSignal(false)
 
   const textPart = createMemo(
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
   const text = createMemo(() => props.text ?? textPart()?.text ?? "")
+
+  // Long user messages (e.g. a slash command's full expanded template, or a big pasted doc)
+  // collapse to a preview by default so the transcript stays scannable.
+  const isLong = createMemo(() => {
+    const value = text()
+    return value.length > 800 || (value.match(/\n/g)?.length ?? 0) > 12
+  })
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 
@@ -857,9 +865,22 @@ export function UserMessageDisplay(props: {
             <div data-slot="user-message-body">
               {props.header}
               <Show when={text()}>
-                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                <div
+                  data-slot="user-message-text"
+                  data-queued={props.queued ? "" : undefined}
+                  data-collapsed={isLong() && !expanded() ? "" : undefined}
+                >
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
+                <Show when={isLong()}>
+                  <button
+                    type="button"
+                    data-slot="user-message-expand-toggle"
+                    onClick={() => setExpanded((v) => !v)}
+                  >
+                    {expanded() ? i18n.t("ui.message.collapse") : i18n.t("ui.message.expand")}
+                  </button>
+                </Show>
               </Show>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
@@ -1333,6 +1354,22 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   // in the chat history on the next reload.
   const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
 
+  // Some models (e.g. reasoning-capable models accessed through a plain
+  // Chat Completions shape with no dedicated reasoning channel) emit their
+  // extended thinking as literal `text` parts instead of `reasoning` parts,
+  // so the collapsible reasoning UI never engages. Heuristically dim any
+  // text part followed by a later tool part in the same message — it reads
+  // as in-turn narration, not the final answer. Recomputes live as new tool
+  // parts stream in, so the current last part is never dimmed prematurely.
+  const isNarration = createMemo(() => {
+    if (props.message.role !== "assistant") return false
+    const list = data.store.part?.[props.message.id]
+    if (!list) return false
+    const idx = list.findIndex((p) => p.id === part().id)
+    if (idx < 0) return false
+    return list.slice(idx + 1).some((p) => p.type === "tool")
+  })
+
   const showCopy = createMemo(() => {
     // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo
     // guard) are transient status indicators, not assistant output — they
@@ -1382,7 +1419,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
 
   return (
     <Show when={throttledText() && showSyntheticPart()}>
-      <div data-component="text-part">
+      <div data-component="text-part" data-narration={isNarration() ? "" : undefined}>
         <div data-slot="text-part-body">
           <Markdown text={throttledText()} cacheKey={part().id} streaming={streaming()} onClick={handleMarkdownClick} />
         </div>

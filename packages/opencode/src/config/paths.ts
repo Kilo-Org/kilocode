@@ -40,6 +40,23 @@ export const directories = Effect.fn("ConfigPaths.directories")(function* (direc
   ])
 })
 
+// kilocode_change start - auto-import commands from other agent tools' own command dirs
+// (Claude Code's .claude/commands, Cursor's .cursor/commands) so users don't have to
+// manually symlink them into a Kilo-native command/ dir. Scoped to commands only - these
+// tools' other config (agents, rules) isn't in a format Kilo understands, so we don't try.
+export const externalCommandDirectories = Effect.fn("ConfigPaths.externalCommandDirectories")(function* (
+  directory: string,
+  worktree?: string,
+) {
+  const afs = yield* FSUtil.Service
+  const targets = [".claude", ".cursor"]
+  return unique([
+    ...(!Flag.KILO_DISABLE_PROJECT_CONFIG ? yield* afs.up({ targets, start: directory, stop: worktree }) : []),
+    ...(yield* afs.up({ targets, start: Global.Path.home, stop: Global.Path.home })),
+  ])
+})
+// kilocode_change end
+
 export function fileInDirectory(dir: string, name: string) {
   return [path.join(dir, `${name}.json`), path.join(dir, `${name}.jsonc`)]
 }

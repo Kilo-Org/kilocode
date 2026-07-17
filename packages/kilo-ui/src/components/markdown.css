@@ -50,5 +50,26 @@
   [data-component="markdown-code"] {
     background: var(--background-stronger);
     margin-bottom: 1rem;
+    border: 1px solid var(--border-weak-base);
+    border-radius: var(--kilo-chat-radius-sm);
+  }
+
+  /* Inline code: give it its own tinted chip instead of blending into prose. */
+  :not(pre) > code {
+    background: var(--surface-tool-output-base);
+    border-radius: var(--kilo-chat-radius-sm);
+    padding: 1px 5px;
+  }
+
+  /* Tighten default prose spacing so code blocks read as the focal point. */
+  p {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+  }
+
+  ul,
+  ol {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
   }
 }
