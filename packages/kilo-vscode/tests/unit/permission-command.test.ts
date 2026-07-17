@@ -101,7 +101,7 @@ describe("parseHeredoc", () => {
   })
 
   it("detects heredoc with double-quoted delimiter", () => {
-    const result = parseHeredoc("cat << \"EOF\"\nhello\nEOF")
+    const result = parseHeredoc('cat << "EOF"\nhello\nEOF')
     expect(result).not.toBeNull()
     expect(result!.head).toBe('cat << "EOF"\nEOF')
     expect(result!.body).toBe("hello")
@@ -109,7 +109,7 @@ describe("parseHeredoc", () => {
   })
 
   it("detects heredoc with delimiter containing hyphens", () => {
-    const result = parseHeredoc("cat << \"my-delim\"\nhello world\nmy-delim")
+    const result = parseHeredoc('cat << "my-delim"\nhello world\nmy-delim')
     expect(result).not.toBeNull()
     expect(result!.head).toBe('cat << "my-delim"\nmy-delim')
     expect(result!.body).toBe("hello world")
