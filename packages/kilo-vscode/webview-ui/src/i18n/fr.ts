@@ -1277,6 +1277,7 @@ export const dict = {
   "profile.usage.description": "Quota et soldes du forfait actuel",
   "profile.usage.refresh": "Actualiser l'utilisation du fournisseur",
   "profile.usage.empty": "Aucune source d'utilisation de fournisseur détectée.",
+  "profile.usage.detailsUnavailable": "Le fournisseur n'a fourni aucun détail sur l'utilisation.",
   "profile.usage.source.viaKilo": "via Kilo",
   "profile.usage.source.direct": "Direct",
   "profile.usage.source.chatgpt": "ChatGPT",

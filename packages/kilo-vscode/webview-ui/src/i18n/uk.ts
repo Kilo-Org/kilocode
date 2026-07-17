@@ -1207,6 +1207,7 @@ export const dict = {
   "profile.usage.description": "Квота й баланси поточного плану",
   "profile.usage.refresh": "Оновити дані про використання провайдерів",
   "profile.usage.empty": "Джерел даних про використання провайдерів не виявлено.",
+  "profile.usage.detailsUnavailable": "Провайдер не надав детальної інформації про використання.",
   "profile.usage.source.viaKilo": "через Kilo",
   "profile.usage.source.direct": "Напряму",
   "profile.usage.source.chatgpt": "ChatGPT",

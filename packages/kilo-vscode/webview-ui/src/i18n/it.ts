@@ -1018,6 +1018,7 @@ export const dict = {
   "profile.usage.description": "Quota e saldi del piano attuale",
   "profile.usage.refresh": "Aggiorna l'utilizzo dei provider",
   "profile.usage.empty": "Non è stata rilevata alcuna fonte di utilizzo dei provider.",
+  "profile.usage.detailsUnavailable": "Il provider non ha fornito dettagli sull'utilizzo.",
   "profile.usage.source.viaKilo": "tramite Kilo",
   "profile.usage.source.direct": "Diretto",
   "profile.usage.source.chatgpt": "ChatGPT",

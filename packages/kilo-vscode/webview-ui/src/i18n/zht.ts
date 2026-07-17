@@ -1184,6 +1184,7 @@ export const dict = {
   "profile.usage.description": "目前方案配額和餘額",
   "profile.usage.refresh": "重新整理供應商用量",
   "profile.usage.empty": "未偵測到供應商用量來源。",
+  "profile.usage.detailsUnavailable": "供應商未回報用量詳細資料。",
   "profile.usage.source.viaKilo": "透過 Kilo",
   "profile.usage.source.direct": "直接",
   "profile.usage.source.chatgpt": "ChatGPT",

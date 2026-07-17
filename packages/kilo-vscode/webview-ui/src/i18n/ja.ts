@@ -1247,6 +1247,7 @@ export const dict = {
   "profile.usage.description": "現在のプランの利用枠と残高",
   "profile.usage.refresh": "プロバイダーの使用状況を更新",
   "profile.usage.empty": "プロバイダー使用量の取得元が検出されませんでした。",
+  "profile.usage.detailsUnavailable": "プロバイダーから使用状況の詳細が報告されていません。",
   "profile.usage.source.viaKilo": "Kilo経由",
   "profile.usage.source.direct": "直接",
   "profile.usage.source.chatgpt": "ChatGPT",

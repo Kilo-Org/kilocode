@@ -1273,6 +1273,7 @@ export const dict = {
   "profile.usage.description": "Kontingent und Guthaben des aktuellen Tarifs",
   "profile.usage.refresh": "Anbieternutzung aktualisieren",
   "profile.usage.empty": "Keine Quellen für Anbieternutzung erkannt.",
+  "profile.usage.detailsUnavailable": "Der Anbieter hat keine Nutzungsdetails gemeldet.",
   "profile.usage.source.viaKilo": "über Kilo",
   "profile.usage.source.direct": "Direkt",
   "profile.usage.source.chatgpt": "ChatGPT",

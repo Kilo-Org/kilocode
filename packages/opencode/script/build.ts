@@ -82,6 +82,8 @@ function smokeEnv(root: string) {
   delete env.KILO_CONFIG_DIR
   return {
     ...env,
+    HOME: path.join(root, "home"),
+    USERPROFILE: path.join(root, "home"),
     XDG_DATA_HOME: path.join(root, "data"),
     XDG_CACHE_HOME: path.join(root, "cache"),
     XDG_CONFIG_HOME: path.join(root, "config"),

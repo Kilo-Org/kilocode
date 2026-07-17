@@ -1170,6 +1170,7 @@ export const dict = {
   "profile.usage.description": "Current plan quota and balances",
   "profile.usage.refresh": "Refresh provider usage",
   "profile.usage.empty": "No provider usage sources detected.",
+  "profile.usage.detailsUnavailable": "No usage details reported by provider for this plan.",
   "profile.usage.source.viaKilo": "via Kilo",
   "profile.usage.source.direct": "Direct",
   "profile.usage.source.chatgpt": "ChatGPT",

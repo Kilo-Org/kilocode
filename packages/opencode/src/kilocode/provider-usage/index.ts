@@ -4,6 +4,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Provider from "@/provider/provider"
 import * as Cloud from "./cloud"
 import { direct } from "@/kilocode/provider/minimax/usage"
+import { codex } from "@/kilocode/provider/codex/usage"
 import type { Info, KiloBilling, UsageSnapshot } from "./schema"
 
 const successTtl = 60_000
@@ -11,7 +12,10 @@ const errorTtl = 10_000
 
 export interface AdapterContext {
   providers: Record<string, Provider.Info>
-  auth: Auth.Info | undefined
+  auth: {
+    kilo: Auth.Info | undefined
+    openai: Auth.Info | undefined
+  }
   cloud: (() => Promise<Cloud.CloudState>) | undefined
   token: string | undefined
   fetch: typeof fetch
@@ -79,7 +83,30 @@ const minimax: ProviderUsageAdapter = {
   },
 }
 
-export const registry: readonly ProviderUsageAdapter[] = [billing, managed, minimax]
+const openai: ProviderUsageAdapter = {
+  id: "codex",
+  providerIDs: ["openai"],
+  cachePrefixes: ["codex-chatgpt"],
+  async run(ctx) {
+    const provider = ctx.providers.openai
+    if (
+      ctx.auth.openai?.type !== "oauth" ||
+      !provider ||
+      provider.source !== "custom" ||
+      typeof provider.options.fetch !== "function"
+    ) {
+      ctx.prune("codex-chatgpt", [])
+      return { items: [] }
+    }
+    const item = await ctx.source("codex-chatgpt", async () => {
+      const items = await codex(ctx.auth.openai, ctx.providers)
+      return items[0]
+    })
+    return { items: [item] }
+  },
+}
+
+export const registry: readonly ProviderUsageAdapter[] = [billing, managed, minimax, openai]
 
 export class ServiceError extends Schema.TaggedErrorClass<ServiceError>()("ProviderUsageServiceError", {
   message: Schema.String,
@@ -202,14 +229,14 @@ export const layer = Layer.effect(
     const state = yield* InstanceState.make<State>(() => Effect.succeed({ sources: new Map(), cloud: { expires: 0 } }))
 
     const evaluate = Effect.fn("ProviderUsage.evaluate")(function* (current: State, force: boolean) {
-      const info = yield* auth
-        .get("kilo")
-        .pipe(Effect.mapError(() => new ServiceError({ message: "Unable to read provider authentication." })))
+      const [kilo, openai] = yield* Effect.all([auth.get("kilo"), auth.get("openai")]).pipe(
+        Effect.mapError(() => new ServiceError({ message: "Unable to read provider authentication." })),
+      )
       const providers = yield* provider.list()
-      const token = info?.type === "oauth" && !info.accountId && info.access ? info.access : undefined
+      const token = kilo?.type === "oauth" && !kilo.accountId && kilo.access ? kilo.access : undefined
       const ctx: AdapterContext = {
         providers,
-        auth: info,
+        auth: { kilo, openai },
         cloud: token ? () => cloud(current, token, force) : undefined,
         token,
         fetch,

@@ -1252,6 +1252,7 @@ export const dict = {
   "profile.usage.description": "Kvote og saldi for det aktuelle abonnement",
   "profile.usage.refresh": "Opdatér udbyderforbrug",
   "profile.usage.empty": "Ingen kilder til udbyderforbrug fundet.",
+  "profile.usage.detailsUnavailable": "Udbyderen har ikke rapporteret detaljer om forbruget.",
   "profile.usage.source.viaKilo": "via Kilo",
   "profile.usage.source.direct": "Direkte",
   "profile.usage.source.chatgpt": "ChatGPT",

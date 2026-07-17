@@ -1215,6 +1215,7 @@ export const dict = {
   "profile.usage.description": "Limit i salda bieżącego planu",
   "profile.usage.refresh": "Odśwież wykorzystanie dostawców",
   "profile.usage.empty": "Nie wykryto źródeł wykorzystania dostawców.",
+  "profile.usage.detailsUnavailable": "Dostawca nie przekazał szczegółów wykorzystania.",
   "profile.usage.source.viaKilo": "przez Kilo",
   "profile.usage.source.direct": "Bezpośrednio",
   "profile.usage.source.chatgpt": "ChatGPT",
