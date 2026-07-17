@@ -1506,6 +1506,99 @@ export const layer = Layer.effect(
             )
             parsed.models[modelID] = parsedModel
           }
+
+          const npm = provider.npm ?? "@ai-sdk/openai-compatible"
+          if (npm === "@ai-sdk/openai-compatible" && provider.discoverModels === true) {
+            discoveryLoaders[providerID] = async () => {
+              const first = Object.values(parsed.models)[0]
+              const baseURL = provider.options?.baseURL ?? provider.api ?? first?.api.url
+              if (typeof baseURL !== "string" || baseURL === "") return {}
+
+              const url = new URL("models", baseURL.endsWith("/") ? baseURL : `${baseURL}/`).toString()
+              const headers: Record<string, string> = {}
+              if (provider.options?.headers && typeof provider.options.headers === "object") {
+                Object.assign(headers, provider.options.headers)
+              }
+              const apiKey = typeof provider.options?.apiKey === "string" ? provider.options.apiKey : undefined
+              if (apiKey && headers.Authorization === undefined && headers.authorization === undefined) {
+                headers.Authorization = `Bearer ${apiKey}`
+              }
+
+              const timeout = buildTimeoutSignal(provider.options ?? {})
+              try {
+                const response = await fetch(url, {
+                  headers,
+                  signal: timeout.signal,
+                })
+                if (!response.ok) throw new Error(`unexpected status ${response.status}`)
+
+                const body = (await response.json()) as { data?: Array<{ id?: unknown }> }
+                if (!Array.isArray(body.data)) return {}
+
+                const models: Record<string, Model> = {}
+                for (const item of body.data) {
+                  const modelID = typeof item?.id === "string" ? item.id : undefined
+                  if (!modelID) continue
+                  models[modelID] = {
+                    id: ModelV2.ID.make(modelID),
+                    providerID: ProviderV2.ID.make(providerID),
+                    api: {
+                      id: modelID,
+                      url,
+                      npm: "@ai-sdk/openai-compatible",
+                    },
+                    name: modelID,
+                    family: "",
+                    status: "active",
+                    options: {},
+                    headers: {},
+                    cost: {
+                      input: 0,
+                      output: 0,
+                      cache: {
+                        read: 0,
+                        write: 0,
+                      },
+                    },
+                    limit: {
+                      context: 0,
+                      output: 0,
+                    },
+                    capabilities: {
+                      temperature: false,
+                      reasoning: false,
+                      attachment: false,
+                      toolcall: true,
+                      input: {
+                        text: true,
+                        audio: false,
+                        image: false,
+                        video: false,
+                        pdf: false,
+                      },
+                      output: {
+                        text: true,
+                        audio: false,
+                        image: false,
+                        video: false,
+                        pdf: false,
+                      },
+                      interleaved: false,
+                    },
+                    release_date: "",
+                    variants: {},
+                  }
+                }
+                return models
+              } catch (error) {
+                log.warn("openai-compatible model discovery failed", { providerID, error })
+                return {}
+              } finally {
+                timeout.clear()
+              }
+            }
+          }
+
           database[providerID] = parsed
         }
 
@@ -1605,21 +1698,25 @@ export const layer = Layer.effect(
         }
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
 
-        const gitlab = ProviderV2.ID.make("gitlab")
-        if (discoveryLoaders[gitlab] && providers[gitlab] && isProviderAllowed(gitlab)) {
-          yield* Effect.promise(async () => {
-            try {
-              const discovered = await discoveryLoaders[gitlab]()
-              for (const [modelID, model] of Object.entries(discovered)) {
-                if (!providers[gitlab].models[modelID]) {
-                  providers[gitlab].models[modelID] = model
+        yield* Effect.promise(async () => {
+          await Promise.all(
+            Object.entries(discoveryLoaders).map(async ([providerID, loader]) => {
+              if (!providers[providerID]) return
+              if (!isProviderAllowed(providerID)) return
+
+              try {
+                const discovered = await loader()
+                for (const [modelID, model] of Object.entries(discovered)) {
+                  if (!providers[providerID].models[modelID]) {
+                    providers[providerID].models[modelID] = model
+                  }
                 }
+              } catch (error) {
+                log.warn("state discovery error", { id: providerID, error })
               }
-            } catch (e) {
-              log.warn("state discovery error", { id: "gitlab", error: e })
-            }
-          })
-        }
+            }),
+          )
+        })
 
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderV2.ID.make(id)
