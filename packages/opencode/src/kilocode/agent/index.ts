@@ -592,7 +592,10 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
 
 async function removeConfigAgent(name: string, directory: string) {
   const { KilocodeConfigOverlay } = await import("@/kilocode/config/overlay")
-  const files = [KilocodeConfigOverlay.globalTarget(), await KilocodeConfigOverlay.projectTarget({ directory })]
+  const files = [
+    KilocodeConfigOverlay.globalTarget(),
+    await KilocodeConfigOverlay.projectTarget({ directory }),
+  ]
   let found = false
 
   for (const file of new Set(files)) {
@@ -606,8 +609,9 @@ async function removeConfigAgent(name: string, directory: string) {
     const opts = { formattingOptions: { insertSpaces: true, tabSize: 2 } }
     const next = applyEdits(text, modify(text, ["agent", name], undefined, opts))
     const parsed = parseJsonc(next)
-    const final =
-      parsed.default_agent === name ? applyEdits(next, modify(next, ["default_agent"], undefined, opts)) : next
+    const final = parsed.default_agent === name
+      ? applyEdits(next, modify(next, ["default_agent"], undefined, opts))
+      : next
     await Bun.write(file, final)
     found = true
   }
