@@ -12,6 +12,7 @@ type Ctx = {
   dir: string
   post: (msg: unknown) => void
   exportTranscript: (sessionID: string) => Promise<void>
+  openSessions: (ids: string[]) => void
 }
 
 export async function routeEarlyMessage(message: { type: string }, ctx: Ctx): Promise<boolean> {
@@ -20,6 +21,14 @@ export async function routeEarlyMessage(message: { type: string }, ctx: Ctx): Pr
   if (message.type === "exportSessionTranscript") {
     const input = message as { sessionID?: unknown }
     if (typeof input.sessionID === "string") await ctx.exportTranscript(input.sessionID)
+    return true
+  }
+  if (message.type === "sidebar.openSessions") {
+    const input = message as { sessionIDs?: unknown }
+    const ids = Array.isArray(input.sessionIDs)
+      ? input.sessionIDs.filter((id): id is string => typeof id === "string")
+      : []
+    ctx.openSessions(ids)
     return true
   }
   return await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post })

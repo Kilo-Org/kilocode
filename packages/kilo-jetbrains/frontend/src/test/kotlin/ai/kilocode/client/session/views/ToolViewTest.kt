@@ -11,6 +11,7 @@ import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.scale.JBUIScale
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -303,6 +304,31 @@ class ToolViewTest : BasePlatformTestCase() {
 
         assertEquals(15, view.bodyMaxRows())
         assertTrue(view.preferredSize.height > 0)
+    }
+
+    fun `test expanded body height ignores user scale factor`() {
+        // The tool body height comes from the editor line height, which tracks the IDE
+        // scale (editor font), not the JBUI user scale factor. Raising the user scale
+        // factor alone must not change the body height; a double-scaling regression would.
+        val original = JBUIScale.scale(1f)
+        val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "log")
+            it.output = (1..6).joinToString("\n") { line -> "line $line" }
+        }
+        try {
+            JBUIScale.setUserScaleFactorForTest(1f)
+            val view = track(ToolView(t))
+            view.toggle()
+            val before = view.bodyEditor()!!.preferredSize.height
+
+            JBUIScale.setUserScaleFactorForTest(2f)
+            view.applyStyle(SessionEditorStyle.current())
+            val after = view.bodyEditor()!!.preferredSize.height
+
+            assertEquals(before, after)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
     }
 
     fun `test large tool output is truncated in preview`() {

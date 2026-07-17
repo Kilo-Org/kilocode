@@ -13,6 +13,7 @@ import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
@@ -109,6 +110,46 @@ class SessionModelTest : BasePlatformTestCase() {
     fun `test removeMessage unknown id is noop`() {
         model.removeMessage("unknown")
         assertTrue(events.isEmpty())
+    }
+
+    fun `test reverted count includes user messages from marker`() {
+        model.addMessage(msg("u1", "user"))
+        model.addMessage(msg("a1", "assistant"))
+        model.addMessage(msg("u2", "user"))
+        model.addMessage(msg("a2", "assistant"))
+
+        model.setRevert(SessionRevertDto("u1"))
+        assertEquals(2, model.revertedCount())
+
+        model.setRevert(SessionRevertDto("u2"))
+        assertEquals(1, model.revertedCount())
+
+        model.setRevert(SessionRevertDto("missing"))
+        assertEquals(0, model.revertedCount())
+    }
+
+    fun `test isRevertedMessage matches marker and later messages`() {
+        model.addMessage(msg("u1", "user"))
+        model.addMessage(msg("a1", "assistant"))
+        model.addMessage(msg("u2", "user"))
+        model.addMessage(msg("a2", "assistant"))
+
+        model.setRevert(SessionRevertDto("u2"))
+
+        assertFalse(model.isRevertedMessage("u1"))
+        assertFalse(model.isRevertedMessage("a1"))
+        assertTrue(model.isRevertedMessage("u2"))
+        assertTrue(model.isRevertedMessage("a2"))
+    }
+
+    fun `test snapshotless revert still counts reverted messages`() {
+        model.addMessage(msg("u1", "user"))
+        model.addMessage(msg("a1", "assistant"))
+
+        model.setRevert(SessionRevertDto("u1", snapshot = null))
+
+        assertEquals(1, model.revertedCount())
+        assertTrue(model.isRevertedMessage("u1"))
     }
 
     fun `test updateContent text creates Text content and fires ContentAdded`() {

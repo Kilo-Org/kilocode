@@ -13,6 +13,7 @@ import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
 import { Notebook } from "@/kilocode/notebook/service"
+import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
@@ -52,14 +53,24 @@ export namespace KiloToolRegistry {
 
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are
    * satisfied at the outer registry scope instead of leaking into InstanceState's Effect. */
-  export function infos(notebook?: Notebook.Interface) {
+  const unavailable = AgentManager.Service.of({
+    request: () =>
+      Effect.fail(
+        new HostError({ code: "disconnected", detail: "Agent Manager orchestration is unavailable in this runtime" }),
+      ),
+    list: () => Effect.succeed([]),
+    reply: () => Effect.die(new Error("Agent Manager orchestration is unavailable in this runtime")),
+    reject: () => Effect.die(new Error("Agent Manager orchestration is unavailable in this runtime")),
+  })
+
+  export function infos(host?: AgentManager.Interface, notebook?: Notebook.Interface) {
     return Effect.gen(function* () {
       const codebase = yield* CodebaseSearchTool
       const recall = yield* RecallTool
       const managerModels = yield* AgentManagerModelsTool
       const memory = yield* MemoryRecallTool
       const save = yield* MemorySaveTool
-      const manager = yield* AgentManagerTool
+      const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
       const image = yield* GenerateImageTool
       const terminal = yield* InteractiveTerminalTool

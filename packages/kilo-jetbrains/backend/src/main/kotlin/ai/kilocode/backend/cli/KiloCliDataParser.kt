@@ -63,6 +63,7 @@ import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
@@ -777,6 +778,12 @@ object KiloCliDataParser {
     fun buildSummarizeJson(model: ModelSelectionDto): String =
         """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
 
+    fun buildRevertJson(messageID: String, partID: String?): String {
+        val fields = mutableListOf("\"messageID\":${escape(messageID)}")
+        partID?.let { fields += "\"partID\":${escape(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
     fun buildCommandJson(command: String, args: String, prompt: PromptDto): String {
         val fields = mutableListOf(
             "\"command\":${escape(command)}",
@@ -1432,6 +1439,18 @@ object KiloCliDataParser {
                     files = it.long("files")?.safeInt() ?: 0,
                 )
             },
+            revert = parseRevert(obj["revert"].obj()),
+        )
+    }
+
+    private fun parseRevert(obj: JsonObject?): SessionRevertDto? {
+        if (obj == null) return null
+        val message = obj.str("messageID") ?: return null
+        return SessionRevertDto(
+            messageID = message,
+            partID = obj.str("partID"),
+            snapshot = obj.str("snapshot"),
+            diff = obj.str("diff"),
         )
     }
 

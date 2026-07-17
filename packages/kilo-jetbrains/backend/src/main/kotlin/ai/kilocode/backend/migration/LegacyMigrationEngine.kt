@@ -337,18 +337,13 @@ class LegacyMigrationEngine(
             }
         }
 
-        // Language
+        // Language: this version has no configurable UI-language preference to write (no v7
+        // config key and no JetBrains language settings service), so it cannot be applied.
+        // Report a warning rather than claiming a false success.
         if (selections.settings.language && !settings.language.isNullOrEmpty()) {
-            sink.item(LegacyMigrationItemProgress("Language preference", MigrationItemProgressStatus.migrating))
-            val conv = LegacyMigrationConverters.convertLanguage(settings.language)
-            if (conv.mapped != null) {
-                // Language setting is JetBrains-only; for now report success but don't write anywhere
-                results.add(LegacyMigrationResultItem("Language preference", MigrationItemCategory.settings, MigrationItemStatus.success))
-                sink.item(LegacyMigrationItemProgress("Language preference", MigrationItemProgressStatus.success))
-            } else {
-                results.add(LegacyMigrationResultItem("Language preference", MigrationItemCategory.settings, conv.status, conv.message))
-                sink.item(LegacyMigrationItemProgress("Language preference", conv.status.toProgressStatus(), conv.message))
-            }
+            val msg = "Language preference is not configurable in this version"
+            results.add(LegacyMigrationResultItem("Language preference", MigrationItemCategory.settings, MigrationItemStatus.warning, msg))
+            sink.item(LegacyMigrationItemProgress("Language preference", MigrationItemProgressStatus.warning, msg))
         }
 
         // Autocomplete settings are persisted by the JetBrains frontend before backend migration starts.

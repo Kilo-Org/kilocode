@@ -1,3 +1,4 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { describe, expect } from "bun:test"
 import path from "path"
 // kilocode_change start
@@ -8,8 +9,8 @@ import { Cause, Effect, Exit, Layer } from "effect"
 import { GlobTool } from "../../src/tool/glob"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Ripgrep } from "../../src/file/ripgrep"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { Truncate } from "@/tool/truncate"
 import { Agent } from "../../src/agent/agent"
@@ -33,7 +34,7 @@ const referenceLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
 const toolLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   Layer.mergeAll(
     CrossSpawnSpawner.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     Ripgrep.defaultLayer,
     Truncate.defaultLayer,
     Agent.defaultLayer,
@@ -42,7 +43,7 @@ const toolLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
   )
 
 const it = testEffect(toolLayer())
-const scout = testEffect(toolLayer({ experimentalScout: true }))
+const references = testEffect(toolLayer({ experimentalReferences: true }))
 
 const ctx = {
   sessionID: SessionID.make("ses_test"),
@@ -60,12 +61,12 @@ const unixInstance = process.platform !== "win32" ? it.instance : it.instance.sk
 // kilocode_change end
 
 const asks = () => {
-  const items: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
+  const items: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
   return {
     items,
     next: {
       ...ctx,
-      ask: (req: Omit<Permission.Request, "id" | "sessionID" | "tool">) =>
+      ask: (req: Omit<PermissionV1.Request, "id" | "sessionID" | "tool">) =>
         Effect.sync(() => {
           items.push(req)
         }),
@@ -177,12 +178,12 @@ describe("tool.glob", () => {
   )
   // kilocode_change end
 
-  scout.instance(
+  references.instance(
     "does not ask for external_directory permission inside configured git references",
     () =>
       Effect.gen(function* () {
         yield* TestInstance
-        const fs = yield* AppFileSystem.Service
+        const fs = yield* FSUtil.Service
         const cache = path.join(Global.Path.repos, "github.com", "opencode-glob-reference", "repo")
         yield* fs.remove(cache, { recursive: true }).pipe(Effect.ignore)
         yield* Effect.addFinalizer(() => fs.remove(cache, { recursive: true }).pipe(Effect.ignore))

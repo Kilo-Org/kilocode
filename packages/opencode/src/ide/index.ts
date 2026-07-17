@@ -1,4 +1,4 @@
-import { BusEvent } from "@/bus/bus-event"
+import { EventV2 } from "@opencode-ai/core/event"
 import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
 
@@ -11,12 +11,12 @@ const SUPPORTED_IDES = [
 ]
 
 export const Event = {
-  Installed: BusEvent.define(
-    "ide.installed",
-    Schema.Struct({
+  Installed: EventV2.define({
+    type: "ide.installed",
+    schema: {
       ide: Schema.String,
-    }),
-  ),
+    },
+  }),
 }
 
 export const AlreadyInstalledError = NamedError.create("AlreadyInstalledError", {})

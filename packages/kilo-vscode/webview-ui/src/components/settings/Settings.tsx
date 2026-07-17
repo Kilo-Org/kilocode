@@ -208,7 +208,7 @@ const Settings: Component<SettingsProps> = (props) => {
           </Tabs.Trigger>
           <Show when={features().indexing}>
             <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
-              <Icon name="server" />
+              <Icon name="database" />
               <span class="label">{language.t("settings.indexing.title")}</span>
             </Tabs.Trigger>
           </Show>

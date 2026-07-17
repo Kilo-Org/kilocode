@@ -1,38 +1,42 @@
-import os from "os"
-import path from "path"
+import { ConfigVariable } from "@/config/variable"
+import { InvalidError } from "@opencode-ai/core/v1/config/error"
 import { Filesystem } from "@/util/filesystem"
+import { ConfigVariableGuard } from "./variable"
 
 export namespace KilocodeMarkdown {
-  function ref(token: string) {
-    const file = token.replace(/^\{file:/, "").replace(/\}$/, "")
-    if (file.startsWith("~/")) return path.join(os.homedir(), file.slice(2))
-    return file
+  export type Source = {
+    trusted: boolean
+    source: string
+    root?: string
   }
 
-  export async function substitute(text: string, item: string) {
-    const body = text.replace(/\{env:([^}]+)\}/g, (_, name) => process.env[name] || "")
-    const matches = Array.from(body.matchAll(/\{file:[^}]+\}/g))
-    if (!matches.length) return body
+  export type Options = {
+    trusted: boolean
+    fileScope?: ConfigVariable.FileScope
+    sourceScope?: ConfigVariable.FileScope
+  }
 
-    const dir = path.dirname(item)
-    const chunks = await Promise.all(
-      matches.map(async (match, i) => {
-        const token = match[0]
-        const index = match.index ?? 0
-        const prev = matches[i - 1]
-        const cursor = prev ? (prev.index ?? 0) + prev[0].length : 0
-        const head = body.slice(cursor, index)
-        const start = body.lastIndexOf("\n", index - 1) + 1
-        const prefix = body.slice(start, index).trimStart()
-        if (prefix.startsWith("//")) return head + token
+  export function read(item: string, options: Options) {
+    if (options.trusted) return Filesystem.readText(item)
+    const scope = options.sourceScope ?? options.fileScope
+    if (!scope) {
+      throw new InvalidError({
+        path: item,
+        message: "project markdown cannot be read without a project scope",
+      })
+    }
+    return ConfigVariableGuard.read(item, { ...scope, token: `markdown source "${item}"` })
+  }
 
-        const file = ref(token)
-        const target = path.isAbsolute(file) ? file : path.resolve(dir, file)
-        const content = await Filesystem.readText(target).catch(() => "")
-        return head + content.trim()
-      }),
-    )
-    const last = matches.at(-1)
-    return chunks.join("") + (last ? body.slice((last.index ?? 0) + last[0].length) : "")
+  export function substitute(text: string, item: string, options: Options) {
+    return ConfigVariable.substitute({
+      text,
+      type: "path",
+      path: item,
+      missing: "empty",
+      escapeJson: false,
+      trusted: options.trusted,
+      fileScope: options.fileScope,
+    })
   }
 }

@@ -22,6 +22,7 @@ describe("Sandboxing settings visibility", () => {
   test("edits global sandbox config without promoting project policy", async () => {
     const src = await Bun.file("webview-ui/src/components/settings/SandboxingTab.tsx").text()
     expect(src).toContain("const { globalConfig, updateGlobalConfig } = useConfig()")
+    expect(src).toContain("allowed_hosts")
     expect(src).not.toContain("const { config, updateConfig } = useConfig()")
   })
 

@@ -5,7 +5,7 @@ import path from "path"
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { Global } from "@opencode-ai/core/global"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
 import { Hash } from "@opencode-ai/core/util/hash"
 import { Snapshot } from "../../src/snapshot"
@@ -13,7 +13,7 @@ import { Instance } from "../../src/kilocode/instance"
 import { Filesystem } from "../../src/util/filesystem"
 import { KiloSnapshotMaterialize } from "../../src/kilocode/snapshot/materialize"
 import { KiloSnapshotSeed } from "../../src/kilocode/snapshot/seed"
-import { disposeAllInstances, provideInstance, tmpdir } from "../fixture/fixture"
+import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 
 const fwd = (...parts: string[]) => path.join(...parts).replaceAll("\\", "/")
 
@@ -48,7 +48,7 @@ function durable(snapshot: Snapshot.Interface) {
   })
 }
 
-const infra = Layer.mergeAll(AppProcess.defaultLayer, AppFileSystem.defaultLayer)
+const infra = Layer.mergeAll(AppProcess.defaultLayer, FSUtil.defaultLayer)
 
 function run<A>(dir: string, body: (snapshot: Snapshot.Interface) => Effect.Effect<A>) {
   return Effect.runPromise(
@@ -57,7 +57,7 @@ function run<A>(dir: string, body: (snapshot: Snapshot.Interface) => Effect.Effe
       const value = yield* body(snapshot)
       const gitdir = path.join(Global.Path.data, "snapshot", Instance.project.id, Hash.fast(Instance.worktree))
       return { value, gitdir }
-    }).pipe(provideInstance(dir), Effect.provide(Snapshot.defaultLayer)),
+    }).pipe(provideInstance(dir), Effect.provide(Snapshot.defaultLayer), Effect.provide(testInstanceStoreLayer)),
   )
 }
 
@@ -343,7 +343,7 @@ test("interrupted seed removes borrowed state after source gc", async () => {
   await Effect.runPromise(
     Effect.gen(function* () {
       const process = yield* AppProcess.Service
-      const fsys = yield* AppFileSystem.Service
+      const fsys = yield* FSUtil.Service
       const reached = yield* Deferred.make<void>()
       const raw = (cmd: string[], opts?: { cwd?: string; env?: Record<string, string>; stdin?: string }) =>
         process

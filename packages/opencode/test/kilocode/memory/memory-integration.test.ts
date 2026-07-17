@@ -16,7 +16,7 @@ import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
 import { MemoryEvents } from "../../../src/kilocode/memory/events"
 import type { Provider } from "../../../src/provider/provider"
 import type { InstanceContext } from "../../../src/project/instance-context"
-import { ProjectID } from "../../../src/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { SessionID } from "../../../src/session/schema"
 import { provideTestInstance, tmpdir } from "../../fixture/fixture"
 
@@ -48,7 +48,7 @@ function ctx(dir: string): InstanceContext {
     directory: dir,
     worktree: dir,
     project: {
-      id: ProjectID.make("project"),
+      id: ProjectV2.ID.make("project"),
       worktree: dir,
       vcs: "git",
       time: { created: 0, updated: 0 },
@@ -179,7 +179,7 @@ describe("KiloMemory integration", () => {
 
   test("targeted recall metadata replaces startup memory badge marker", () => {
     const cache: MemoryMarker.Cache = {
-      marker: { type: "startup", bytes: 20, tokens: 5, count: 1, files: ["project.md"] },
+      marker: { type: "startup", bytes: 20, tokens: 5, count: 1, files: ["project.md"], items: [] },
       marked: true,
     }
 
@@ -580,6 +580,38 @@ describe("KiloMemory integration", () => {
       KiloToolRegistry.invalidateMemoryEnabled(root)
       const removed = await build()
       expect(removed.join("\n")).not.toContain("toggle_fact")
+    })
+  })
+
+  test("memorySystem refreshes verbose marker state for each turn", async () => {
+    await using tmp = await tmpdir()
+    await withConfig(path.join(tmp.path, "global", ".kilo"), async () => {
+      const context = ctx(tmp.path)
+      await KiloMemory.enable({ ctx: context })
+      KiloSessionPrompt.clearPinnedMemory()
+
+      const first = KiloSessionPrompt.memoryCache()
+      await Effect.runPromise(
+        KiloSessionPrompt.memoryInject({
+          ctx: context,
+          sessionID: SessionID.make("ses_verbose"),
+          record: false,
+          cache: first,
+        }),
+      )
+      expect(first.verbose).toBe(false)
+
+      await KiloMemory.configure({ ctx: context, settings: { verbose: true } })
+      const second = KiloSessionPrompt.memoryCache()
+      await Effect.runPromise(
+        KiloSessionPrompt.memoryInject({
+          ctx: context,
+          sessionID: SessionID.make("ses_verbose"),
+          record: false,
+          cache: second,
+        }),
+      )
+      expect(second.verbose).toBe(true)
     })
   })
 

@@ -5,6 +5,7 @@ import ai.kilocode.client.settings.profile.ProfileUi
 import ai.kilocode.client.settings.profile.formatResetDate
 import ai.kilocode.client.settings.profile.formatShortBalance
 import ai.kilocode.client.testing.FakeAppRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -20,9 +21,6 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Component
@@ -45,7 +43,7 @@ import javax.swing.event.ListDataListener
 @Suppress("UnstableApiUsage")
 class UserProfileConfigurableTest : BasePlatformTestCase() {
 
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeAppRpcApi
     private lateinit var app: KiloAppService
     private lateinit var panel: ProfileUi
@@ -53,15 +51,15 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         rpc = FakeAppRpcApi()
-        app = KiloAppService(scope, rpc)
+        app = KiloAppService(coroutines.scope, rpc)
         app._state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         edt {
             panel = ProfileUi(
                 profile = null,
                 status = KiloAppStatusDto.READY,
-                cs = scope,
+                cs = coroutines.scope,
                 app = app,
                 browse = { urls.add(it) },
             )
@@ -70,7 +68,7 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -1068,11 +1066,10 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
         return result as T
     }
 
-    private fun flush() = runBlocking {
-        repeat(5) {
-            delay(100)
-            edt { UIUtil.dispatchAllInvocationEvents() }
-        }
+    private fun flush() = coroutines.drain(::pump)
+
+    private fun pump() {
+        edt { UIUtil.dispatchAllInvocationEvents() }
     }
 
     private fun visible(comp: Component): Boolean =

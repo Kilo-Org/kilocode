@@ -5,6 +5,7 @@ import { TextField } from "@kilocode/kilo-ui/text-field"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import PermissionEditor from "./PermissionEditor"
+import { DEFAULT_RULES } from "./permission-utils"
 import SettingsRow from "./SettingsRow"
 
 const AutoApproveTab: Component = () => {
@@ -54,7 +55,10 @@ const AutoApproveTab: Component = () => {
 
       <PermissionEditor
         permissions={permissions()}
+        rules={DEFAULT_RULES}
         description={language.t("settings.autoApprove.description")}
+        inherited
+        showDefaultLevel
         onChange={(patch) => updateConfig({ permission: patch })}
       />
     </div>

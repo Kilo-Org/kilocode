@@ -7,7 +7,7 @@ export namespace RemoteWS {
   export type Options = {
     url: string
     getToken: () => Promise<string | undefined>
-    getSessions: () => Promise<{ sessions: SessionInfo[]; focused?: string[]; open?: string[] }>
+    getSessions: () => Promise<{ sessions: SessionInfo[] }>
     log: {
       info: (...args: any[]) => void
       error: (...args: any[]) => void

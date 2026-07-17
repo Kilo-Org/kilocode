@@ -4,12 +4,12 @@ import { Auth } from "@/auth"
 import { ProviderUsage } from "@/kilocode/provider-usage"
 import * as Cloud from "@/kilocode/provider-usage/cloud"
 import { Provider } from "@/provider/provider"
-import { ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ProviderTest } from "../../fake/provider"
 import { testEffect } from "../../lib/effect"
 
 const info = (id: "minimax-coding-plan" | "minimax-cn-coding-plan", key: string) => {
-  const providerID = ProviderID.make(id)
+  const providerID = ProviderV2.ID.make(id)
   return ProviderTest.info(
     {
       id: providerID,

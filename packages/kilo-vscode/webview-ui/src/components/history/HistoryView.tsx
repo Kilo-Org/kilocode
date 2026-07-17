@@ -9,6 +9,7 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { useLanguage } from "../../context/language"
 import { useSession } from "../../context/session"
+import { useLocalTabs } from "../../context/local-tabs"
 import { CloudImportDialog } from "../chat/CloudImportDialog"
 import SessionList from "./SessionList"
 import CloudSessionList from "./CloudSessionList"
@@ -22,6 +23,7 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   const language = useLanguage()
   const dialog = useDialog()
   const session = useSession()
+  const tabs = useLocalTabs()
   const [tab, setTab] = createSignal<"local" | "cloud">("local")
   let local: HTMLButtonElement | undefined
   let cloud: HTMLButtonElement | undefined
@@ -53,6 +55,7 @@ const HistoryView: Component<HistoryViewProps> = (props) => {
   }
 
   function selectCloudSession(id: string) {
+    tabs?.previewCloud(id)
     session.selectCloudSession(id)
     props.onBack?.()
   }

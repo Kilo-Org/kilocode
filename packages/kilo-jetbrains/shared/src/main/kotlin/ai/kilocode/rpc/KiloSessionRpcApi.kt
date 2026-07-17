@@ -87,6 +87,12 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Summarize/compact a session using the selected model. */
     suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
 
+    /** Revert a session to a prior user message or part. */
+    suspend fun revert(id: String, directory: String, messageID: String, partID: String?)
+
+    /** Redo all reverted changes for a session. */
+    suspend fun unrevert(id: String, directory: String)
+
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>
 

@@ -12,6 +12,7 @@ import Settings from "../components/settings/Settings"
 import ProvidersTab from "../components/settings/ProvidersTab"
 import ModelsTab from "../components/settings/ModelsTab"
 import AgentBehaviourTab from "../components/settings/AgentBehaviourTab"
+import AutoApproveTab from "../components/settings/AutoApproveTab"
 import ModeEditView from "../components/settings/ModeEditView"
 import McpEditView from "../components/settings/McpEditView"
 import type { AgentConfig, CommandConfig, Config } from "../types/messages"
@@ -51,10 +52,42 @@ export const SettingsPanel: Story = {
   ),
 }
 
+export const AutoApproveBashOnly: Story = {
+  name: "AutoApproveTab — Bash-only config defaults",
+  render: () => (
+    <StoryProviders config={{ permission: { bash: { "*": "ask", "git status *": "allow" } } } as any}>
+      <div style={{ "max-height": "700px", overflow: "auto" }}>
+        <AutoApproveTab />
+      </div>
+    </StoryProviders>
+  ),
+}
+
 export const SandboxingPanel: Story = {
   name: "Settings — sandboxing controls",
   render: () => (
     <StoryProviders config={{ sandbox: { network: "deny" } }} features={{ sandboxControls: true }}>
+      <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
+        <Settings tab="sandboxing" />
+      </div>
+    </StoryProviders>
+  ),
+}
+
+export const SandboxingAllowlist: Story = {
+  name: "Settings — sandboxing with network destinations",
+  render: () => (
+    <StoryProviders
+      config={{
+        sandbox: {
+          enabled: true,
+          network: "deny",
+          allowed_hosts: ["github.com:443", "api.github.com:443"],
+          writable_paths: ["~/shared-output"],
+        },
+      }}
+      features={{ sandboxControls: true }}
+    >
       <div style={{ height: "700px", display: "flex", "flex-direction": "column" }}>
         <Settings tab="sandboxing" />
       </div>

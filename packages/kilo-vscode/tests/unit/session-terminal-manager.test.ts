@@ -134,6 +134,18 @@ describe("SessionTerminalManager structure", () => {
     const text = body("hasActiveTerminal")
     expect(text).toContain("this.host.activeTerminal()")
   })
+
+  it("resolves the session that owns the active managed terminal", () => {
+    const text = body("activeSession")
+    expect(text).toContain("this.host.activeTerminal()")
+    expect(text).toContain("entry.terminal === active")
+  })
+
+  it("rejects context capture from another managed session", () => {
+    const text = body("prepareContext")
+    expect(text).toContain("this.showExisting(sessionId)")
+    expect(text).toContain("this.activeSession()")
+  })
 })
 
 describe("SessionTerminalManager command restoration", () => {

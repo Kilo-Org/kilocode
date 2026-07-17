@@ -7,7 +7,7 @@ import { Instance, type InstanceContext } from "@/kilocode/instance"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { SessionID } from "@/session/schema"
 import { Shell } from "@/shell/shell"
-import { ProjectID } from "@/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { Process } from "@/util/process"
 import { NonNegativeInt, PositiveInt, optionalOmitUndefined, withStatics } from "@opencode-ai/core/schema"
 import { zod, ZodOverride } from "@opencode-ai/core/effect-zod"
@@ -194,7 +194,7 @@ export namespace BackgroundProcess {
   ) {}
 
   function scoped(ctx: InstanceContext) {
-    const root = ctx.project.id === ProjectID.global ? ctx.directory : ctx.project.worktree
+    const root = ctx.project.id === ProjectV2.ID.global ? ctx.directory : ctx.project.worktree
     const hash = Hash.fast(`${ctx.project.id}\0${Filesystem.resolve(root)}`)
     return { key: `scope:${hash}`, dir: `scope-${hash}` }
   }
@@ -380,7 +380,7 @@ export namespace BackgroundProcess {
   }
 
   function eventscope(active: Active) {
-    if (active.info.lifetime === "persistent" && active.ctx.project.id !== ProjectID.global) {
+    if (active.info.lifetime === "persistent" && active.ctx.project.id !== ProjectV2.ID.global) {
       return active.ctx.project.worktree
     }
     return active.ctx.directory
@@ -653,6 +653,7 @@ export namespace BackgroundProcess {
     if (!pid || !token) return "unknown"
     const out = await Process.text(["ps", "eww", "-axo", "pid=,pgid=,command="], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0) return "unknown"
@@ -672,6 +673,7 @@ export namespace BackgroundProcess {
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0) return "unknown"
