@@ -65,6 +65,7 @@ describe("cloud session import preparation", () => {
         parentID: "ses_cloud_parent",
         share: { url: "https://example.com/share" },
         revert: { messageID: "msg_cloud_child", partID: "prt_cloud_compaction" },
+        permission: [{ permission: "*", pattern: "*", action: "allow" }],
         metadata: { source: "cloud" },
         title: "Cloud session",
         version: "7.4.11",
@@ -158,7 +159,9 @@ describe("cloud session import preparation", () => {
   test("remaps references and target context without mutating the export", () => {
     const data = sample()
     const before = structuredClone(data)
+    const start = Date.now()
     const result = prepareSessionImport(data, deps())
+    const end = Date.now()
 
     expect(result.info).toMatchObject({
       id: "ses_local",
@@ -175,7 +178,9 @@ describe("cloud session import preparation", () => {
     expect(result.info).not.toHaveProperty("parentID")
     expect(result.info).not.toHaveProperty("share")
     expect(result.info).not.toHaveProperty("revert")
-    expect(result.info.time.updated).toBeGreaterThanOrEqual(before.info.time.updated)
+    expect(result.info).not.toHaveProperty("permission")
+    expect(result.info.time.updated).toBeGreaterThanOrEqual(start)
+    expect(result.info.time.updated).toBeLessThanOrEqual(end)
     expect(result.messages[0]).toMatchObject({
       id: "msg_local_child",
       session_id: "ses_local",
@@ -237,6 +242,8 @@ describe("cloud session import preparation", () => {
       { ...base, messages: [first, { ...second, info: { ...second.info, id: first.info.id } }] },
       { ...base, messages: [first, { ...second, parts: [part, { ...part }] }] },
       { ...base, messages: [{ ...first, info: { ...first.info, parentID: "msg_missing" } }, second] },
+      { ...base, messages: [{ ...first, info: { ...first.info, parentID: first.info.id } }, second] },
+      { ...base, messages: [first, { ...second, info: { ...second.info, parentID: first.info.id } }] },
       { ...base, messages: [first, { ...second, parts: [{ ...part, tail_start_id: "msg_missing" }] }] },
       { ...base, messages: [first, { ...second, parts: [{ ...part, messageID: "msg_missing" }] }] },
       {

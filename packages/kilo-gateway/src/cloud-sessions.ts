@@ -196,6 +196,17 @@ export function prepareSessionImport(data: Export, deps: PrepareDeps) {
     items.push({ id, created: time.created, info: msg.info, parts, ...(parent !== undefined ? { parent } : {}) })
   }
 
+  const parents = new Map(items.map((item) => [item.id, item.parent]))
+  for (const item of items) {
+    const seen = new Set([item.id])
+    let parent = item.parent
+    while (parent !== undefined) {
+      if (seen.has(parent)) throw new SessionImportValidationError("Circular message parent")
+      seen.add(parent)
+      parent = parents.get(parent)
+    }
+  }
+
   const now = Date.now()
   const time = {
     created: data.info.time?.created ?? now,
@@ -225,6 +236,7 @@ export function prepareSessionImport(data: Export, deps: PrepareDeps) {
   delete info.parentID
   delete info.share
   delete info.revert
+  delete info.permission
 
   const messages: Array<{
     id: string
@@ -294,10 +306,18 @@ export function importSessionToDb(data: Export, deps: ImportDeps) {
     db.insert(deps.SessionTable).values(deps.SessionToRow(prepared.info)).onConflictDoNothing().run()
 
     for (const row of prepared.messages) {
-      db.insert(deps.MessageTable).values(row).onConflictDoNothing().run()
+      const { id: _, sessionID: __, ...data } = row.data
+      db.insert(deps.MessageTable)
+        .values({ id: row.id, session_id: row.session_id, time_created: row.time_created, data })
+        .onConflictDoNothing()
+        .run()
     }
     for (const row of prepared.parts) {
-      db.insert(deps.PartTable).values(row).onConflictDoNothing().run()
+      const { id: _, messageID: __, sessionID: ___, ...data } = row.data
+      db.insert(deps.PartTable)
+        .values({ id: row.id, message_id: row.message_id, session_id: row.session_id, data })
+        .onConflictDoNothing()
+        .run()
     }
 
     deps.Database.effect(() => deps.Bus.publish(deps.SessionCreatedEvent, { info: prepared.info }))

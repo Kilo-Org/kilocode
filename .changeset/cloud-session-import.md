@@ -3,4 +3,4 @@
 "@kilocode/kilo-gateway": patch
 ---
 
-Allow forking Cloud Agent sessions into the local CLI.
+Fix Cloud Agent session imports in installed CLI builds and prevent malformed exports or write failures from leaving partial imports.
