@@ -333,10 +333,16 @@ export const layer = Layer.effect(
     // kilocode_change end
 
     const tools: Interface["tools"] = Effect.fn("ToolRegistry.tools")(function* (input) {
+      const cfg = yield* config.get() // kilocode_change
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
-          return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
+          // kilocode_change start
+          return webSearchEnabled(input.providerID, {
+            exa: flags.enableExa || cfg.experimental?.enable_exa === true,
+            parallel: flags.enableParallel,
+          })
+          // kilocode_change end
         }
 
         const usePatch = KiloToolRegistry.usePatch(input) // kilocode_change

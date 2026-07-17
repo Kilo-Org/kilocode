@@ -1232,6 +1232,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Modello di immagine",
   "settings.experimental.imageGenerationModel.description": "Modello di generazione di immagini",
   "settings.experimental.imageGenerationModel.placeholder": "Predefinito (Auto Router)",
+  "settings.experimental.enableExa.title": "Ricerca web Exa",
+  "settings.experimental.enableExa.description":
+    "Abilita lo strumento websearch per provider non-Kilo (es. Codex). Già disponibile con il provider Kilo.",
 
   "settings.experimental.nativeNotebookTools.title": "Strumenti nativi per notebook",
   "settings.experimental.nativeNotebookTools.description":

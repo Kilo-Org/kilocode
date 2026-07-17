@@ -1428,6 +1428,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Görüntü modeli",
   "settings.experimental.imageGenerationModel.description": "Görüntü oluşturma modeli",
   "settings.experimental.imageGenerationModel.placeholder": "Varsayılan (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa Web Arama",
+  "settings.experimental.enableExa.description":
+    "Kilo dışı sağlayıcılar (ör. Codex) için websearch aracını etkinleştirin. Kilo sağlayıcısı kullanılırken zaten kullanılabilir.",
 
   "settings.experimental.speechToText.title": "Sesten metne",
   "settings.experimental.speechToText.description":

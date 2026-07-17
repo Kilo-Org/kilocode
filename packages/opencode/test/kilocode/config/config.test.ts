@@ -168,6 +168,21 @@ describe("kilocode indexing config", () => {
     })
   })
 
+  test("accepts experimental.enable_exa for non-Kilo websearch", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await writeConfig(tmp.path, {
+      experimental: { enable_exa: true },
+    })
+
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const config = await load()
+        expect(config.experimental?.enable_exa).toBe(true)
+      },
+    })
+  })
+
   test("keeps global indexing enabled in global config", async () => {
     await using globalTmp = await tmpdir()
     await using tmp = await tmpdir()

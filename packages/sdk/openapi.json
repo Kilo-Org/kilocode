@@ -28474,6 +28474,9 @@
               "image_generation_model": {
                 "type": "string"
               },
+              "enable_exa": {
+                "type": "boolean"
+              },
               "agent_requirements": {
                 "type": "boolean"
               },

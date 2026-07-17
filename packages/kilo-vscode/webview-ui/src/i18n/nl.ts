@@ -1437,6 +1437,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
   "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
   "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa-webzoeken",
+  "settings.experimental.enableExa.description":
+    "Schakel de websearch-tool in voor niet-Kilo-providers (bijv. Codex). Al beschikbaar bij gebruik van de Kilo-provider.",
 
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":

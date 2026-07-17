@@ -171,6 +171,19 @@ const ExperimentalTab: Component = () => {
           </Switch>
         </SettingsRow>
 
+        <SettingsRow
+          title={language.t("settings.experimental.enableExa.title")}
+          description={language.t("settings.experimental.enableExa.description")}
+        >
+          <Switch
+            checked={experimental().enable_exa ?? false}
+            onChange={(checked) => updateExperimental("enable_exa", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.enableExa.title")}
+          </Switch>
+        </SettingsRow>
+
         <Show when={experimental().image_generation}>
           <SettingsRow
             title={language.t("settings.experimental.imageGenerationModel.title")}

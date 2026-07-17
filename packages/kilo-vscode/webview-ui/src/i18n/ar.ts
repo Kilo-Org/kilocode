@@ -1408,6 +1408,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "نموذج الصور",
   "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
   "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
+  "settings.experimental.enableExa.title": "بحث الويب Exa",
+  "settings.experimental.enableExa.description":
+    "تمكين أداة websearch لمزودي الخدمة غير Kilo (مثل Codex). متاحة بالفعل عند استخدام مزود Kilo.",
 
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":

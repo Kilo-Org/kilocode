@@ -1462,6 +1462,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Bildmodell",
   "settings.experimental.imageGenerationModel.description": "Bildgenerierungsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa-Websuche",
+  "settings.experimental.enableExa.description":
+    "Websearch-Tool für Nicht-Kilo-Anbieter aktivieren (z. B. Codex). Bei Verwendung des Kilo-Anbieters bereits verfügbar.",
 
   "settings.experimental.speechToText.title": "Sprache zu Text",
   "settings.experimental.speechToText.description":

@@ -180,6 +180,7 @@ Available experimental settings include:
 - **LSP integration** - expose language server diagnostics to the agent
 - **Paste summary** - summarize large clipboard pastes before including them
 - **Batch tool** - allow the agent to batch multiple tool calls in one step
+- **Exa web search** - enable the `websearch` tool for non-Kilo providers (already available with the Kilo provider)
 - **OpenTelemetry** - enable Kilo telemetry and optional OTLP export when configured
 
 Advanced options not exposed in the UI can be configured via the `experimental` key in `kilo.jsonc`:
@@ -188,6 +189,7 @@ Advanced options not exposed in the UI can be configured via the `experimental` 
 {
   "experimental": {
     "codebase_search": true,
+    "enable_exa": true,
     "batch_tool": false,
     "openTelemetry": true,
     "disable_paste_summary": false,

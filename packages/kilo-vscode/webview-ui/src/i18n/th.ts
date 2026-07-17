@@ -1417,6 +1417,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "โมเดลภาพ",
   "settings.experimental.imageGenerationModel.description": "โมเดลการสร้างภาพ",
   "settings.experimental.imageGenerationModel.placeholder": "ค่าเริ่มต้น (Auto Router)",
+  "settings.experimental.enableExa.title": "ค้นหาเว็บ Exa",
+  "settings.experimental.enableExa.description":
+    "เปิดใช้เครื่องมือ websearch สำหรับผู้ให้บริการที่ไม่ใช่ Kilo (เช่น Codex) ใช้งานได้อยู่แล้วเมื่อใช้ผู้ให้บริการ Kilo",
 
   "settings.experimental.speechToText.title": "แปลงเสียงเป็นข้อความ",
   "settings.experimental.speechToText.description":

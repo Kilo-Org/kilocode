@@ -1429,6 +1429,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "画像モデル",
   "settings.experimental.imageGenerationModel.description": "画像生成モデル",
   "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa Web検索",
+  "settings.experimental.enableExa.description":
+    "Kilo以外のプロバイダー（例: Codex）でwebsearchツールを有効にします。Kiloプロバイダー使用時は既に利用可能です。",
 
   "settings.experimental.speechToText.title": "音声認識",
   "settings.experimental.speechToText.description":

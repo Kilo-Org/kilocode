@@ -1353,6 +1353,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "圖像模型",
   "settings.experimental.imageGenerationModel.description": "圖像生成模型",
   "settings.experimental.imageGenerationModel.placeholder": "預設 (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa 網頁搜尋",
+  "settings.experimental.enableExa.description":
+    "為非 Kilo 供應商（例如 Codex）啟用 websearch 工具。使用 Kilo 供應商時已可用。",
 
   "settings.experimental.speechToText.title": "語音轉文字",
   "settings.experimental.speechToText.description": "透過 Kilo Gateway 使用您的 Kilo 帳戶在提示詞欄位中啟用語音輸入。",

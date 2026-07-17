@@ -285,6 +285,12 @@ export const Info = Schema.Struct({
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
       }),
+      // kilocode_change start
+      enable_exa: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Enable the websearch tool for non-Kilo providers via Exa (also set by KILO_ENABLE_EXA / KILO_EXPERIMENTAL)",
+      }),
+      // kilocode_change end
       agent_requirements: Schema.optional(Schema.Boolean).annotate({
         description: "Require declared agent skills, MCPs, and VS Code extensions before VS Code prompts can run",
       }),

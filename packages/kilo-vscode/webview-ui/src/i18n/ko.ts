@@ -1421,6 +1421,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "이미지 모델",
   "settings.experimental.imageGenerationModel.description": "이미지 생성 모델",
   "settings.experimental.imageGenerationModel.placeholder": "기본값 (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa 웹 검색",
+  "settings.experimental.enableExa.description":
+    "Kilo가 아닌 제공자(예: Codex)에서 websearch 도구를 활성화합니다. Kilo 제공자 사용 시에는 이미 사용할 수 있습니다.",
 
   "settings.experimental.speechToText.title": "음성 텍스트 변환",
   "settings.experimental.speechToText.description":

@@ -1440,6 +1440,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Model slike",
   "settings.experimental.imageGenerationModel.description": "Model za generisanje slika",
   "settings.experimental.imageGenerationModel.placeholder": "Zadano (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa web pretraga",
+  "settings.experimental.enableExa.description":
+    "Omogućite websearch alat za ne-Kilo provajdere (npr. Codex). Već dostupno kada koristite Kilo provajder.",
 
   "settings.experimental.speechToText.title": "Govor u tekst",
   "settings.experimental.speechToText.description":

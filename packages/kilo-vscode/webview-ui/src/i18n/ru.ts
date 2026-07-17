@@ -1438,6 +1438,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Модель изображений",
   "settings.experimental.imageGenerationModel.description": "Модель генерации изображений",
   "settings.experimental.imageGenerationModel.placeholder": "По умолчанию (Auto Router)",
+  "settings.experimental.enableExa.title": "Веб-поиск Exa",
+  "settings.experimental.enableExa.description":
+    "Включить инструмент websearch для провайдеров, отличных от Kilo (например, Codex). Уже доступен при использовании провайдера Kilo.",
 
   "settings.experimental.speechToText.title": "Речь в текст",
   "settings.experimental.speechToText.description":

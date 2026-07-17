@@ -1393,6 +1393,9 @@ export const dict = {
   "settings.experimental.imageGenerationModel.title": "Bildemodell",
   "settings.experimental.imageGenerationModel.description": "Bildegenereringsmodell",
   "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
+  "settings.experimental.enableExa.title": "Exa-nettsøk",
+  "settings.experimental.enableExa.description":
+    "Aktiver websearch-verktøyet for ikke-Kilo-leverandører (f.eks. Codex). Allerede tilgjengelig når du bruker Kilo-leverandøren.",
 
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
