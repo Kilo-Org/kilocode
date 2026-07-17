@@ -75,6 +75,55 @@
     }
   }
 
+  [data-slot="permission-heredoc"] {
+    margin: 0 10px 4px;
+  }
+
+  [data-slot="permission-heredoc-trigger"] {
+    all: unset;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: var(--kilo-font-size-11);
+    color: var(--vscode-descriptionForeground, var(--text-weak));
+    width: fit-content;
+  }
+
+  [data-slot="permission-heredoc-trigger"]:hover {
+    background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+  }
+
+  [data-slot="permission-heredoc-label"] {
+    font-weight: 500;
+  }
+
+  [data-slot="permission-heredoc-content"] {
+    font-size: var(--kilo-font-size-11);
+    font-family: var(--vscode-editor-font-family, monospace);
+  }
+
+  [data-slot="permission-heredoc-body"] {
+    margin: 4px 0 0;
+    padding: 8px;
+    border: 1px solid var(--vscode-editorWidget-border, var(--vscode-panel-border, transparent));
+    border-radius: 4px;
+    background: var(--vscode-textCodeBlock-background, var(--vscode-editor-background));
+    overflow-x: auto;
+
+    code {
+      font-size: var(--kilo-font-size-12);
+      font-family: var(--vscode-editor-font-family, monospace);
+      color: var(--vscode-editor-foreground, var(--vscode-foreground));
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      background: transparent;
+    }
+  }
+
   [data-slot="permission-command-copy"] {
     all: unset;
     position: absolute;
