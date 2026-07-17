@@ -24,8 +24,8 @@ internal fun contextDraft(config: ConfigDto?): ContextDraft = ContextDraft(
     ignore = config?.watcher?.ignore ?: emptyList(),
 )
 
-internal fun patch(from: ContextDraft, to: ContextDraft): ConfigPatchDto {
-    if (thresholdStatus(to.threshold) == ThresholdStatus.INVALID) return ConfigPatchDto()
+internal fun patch(from: ContextDraft, to: ContextDraft): ConfigPatchDto? {
+    if (thresholdStatus(to.threshold) == ThresholdStatus.INVALID) return null
 
     val compaction = compactionPatch(from, to)
     val watcher = if (from.ignore != to.ignore) WatcherPatchDto(ignore = to.ignore) else null
@@ -49,10 +49,9 @@ internal fun thresholdStatus(value: String): ThresholdStatus {
 }
 
 private fun compactionPatch(from: ContextDraft, to: ContextDraft): CompactionPatchDto? {
-    val clear = mutableListOf<String>()
     val threshold = parseThreshold(to.threshold)
     val fromThreshold = parseThreshold(from.threshold)
-    if (fromThreshold != threshold && threshold == null) clear += "threshold_percent"
+    val clear = if (fromThreshold != threshold && threshold == null) listOf("threshold_percent") else emptyList()
     val patch = CompactionPatchDto(
         clear = clear,
         auto = to.auto.takeIf { from.auto != to.auto },

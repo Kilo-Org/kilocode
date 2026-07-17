@@ -27,7 +27,7 @@ class ContextSettingsStateTest {
     fun `unchanged draft emits no patch`() {
         val draft = ContextDraft(auto = true, threshold = "75", prune = false, ignore = listOf("tmp/**"))
 
-        assertFalse(changed(patch(draft, draft)))
+        assertEquals(false, patch(draft, draft)?.let(::changed))
     }
 
     @Test
@@ -36,8 +36,8 @@ class ContextSettingsStateTest {
         val to = ContextDraft(auto = false, prune = false)
         val patch = patch(from, to)
 
-        assertEquals(false, patch.compaction?.auto)
-        assertEquals(false, patch.compaction?.prune)
+        assertEquals(false, patch?.compaction?.auto)
+        assertEquals(false, patch?.compaction?.prune)
     }
 
     @Test
@@ -46,9 +46,9 @@ class ContextSettingsStateTest {
         val set = ContextDraft(threshold = "80")
         val clear = ContextDraft(threshold = "")
 
-        assertEquals(80.0, patch(from, set).compaction?.threshold_percent)
-        assertEquals(listOf("threshold_percent"), patch(set, clear).compaction?.clear)
-        assertNull(patch(set, clear).compaction?.threshold_percent)
+        assertEquals(80.0, patch(from, set)?.compaction?.threshold_percent)
+        assertEquals(listOf("threshold_percent"), patch(set, clear)?.compaction?.clear)
+        assertNull(patch(set, clear)?.compaction?.threshold_percent)
     }
 
     @Test
@@ -56,16 +56,16 @@ class ContextSettingsStateTest {
         val from = ContextDraft(ignore = listOf("**/dist/**"))
         val to = ContextDraft(ignore = emptyList())
 
-        assertEquals(emptyList(), patch(from, to).watcher?.ignore)
+        assertEquals(emptyList(), patch(from, to)?.watcher?.ignore)
     }
 
     @Test
-    fun `invalid threshold prevents patch`() {
+    fun `invalid threshold prevents patch without looking like no changes`() {
         val from = ContextDraft(threshold = "50")
-        val to = ContextDraft(threshold = "101")
+        val to = ContextDraft(auto = true, threshold = "101", prune = true, ignore = listOf("tmp/**"))
 
         assertEquals(ThresholdStatus.INVALID, thresholdStatus(to.threshold))
-        assertFalse(changed(patch(from, to)))
+        assertNull(patch(from, to))
     }
 
     @Test

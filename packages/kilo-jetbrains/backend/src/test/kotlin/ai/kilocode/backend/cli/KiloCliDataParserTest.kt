@@ -1191,6 +1191,23 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - malformed compaction fields do not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"openai/gpt",
+                    "watcher":{"ignore":["tmp/**"]},
+                    "compaction":{"auto":{},"threshold_percent":[],"prune":false}
+                }"""
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(listOf("tmp/**"), cfg.watcher?.ignore)
+            assertNull(cfg.compaction?.auto)
+            assertNull(cfg.compaction?.threshold_percent)
+            assertEquals(false, cfg.compaction?.prune)
+        }
+
+        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""

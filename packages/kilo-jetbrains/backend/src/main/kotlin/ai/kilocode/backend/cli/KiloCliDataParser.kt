@@ -546,9 +546,9 @@ object KiloCliDataParser {
     private fun parseCompactionConfig(obj: JsonObject?): CompactionConfigDto? {
         if (obj == null) return null
         return CompactionConfigDto(
-            auto = obj.flagOrNull("auto"),
-            threshold_percent = obj.num("threshold_percent"),
-            prune = obj.flagOrNull("prune"),
+            auto = runCatching { obj.flagOrNull("auto") }.getOrNull(),
+            threshold_percent = runCatching { obj.num("threshold_percent") }.getOrNull(),
+            prune = runCatching { obj.flagOrNull("prune") }.getOrNull(),
         )
     }
 

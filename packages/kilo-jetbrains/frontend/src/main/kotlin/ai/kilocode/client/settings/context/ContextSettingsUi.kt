@@ -57,7 +57,7 @@ internal class ContextSettingsUi(
         startSettings(ContextSettingsContent { updateDraft(it) })
     }
 
-    override fun change(from: ContextDraft, to: ContextDraft): ConfigPatchDto? = patch(from, to).takeIf(::changed)
+    override fun change(from: ContextDraft, to: ContextDraft): ConfigPatchDto? = patch(from, to)?.takeIf(::changed)
 
     override fun save(change: ConfigPatchDto, done: (KiloAppStateDto?) -> Unit) {
         app.updateConfigAsync(change, done)
@@ -149,7 +149,7 @@ internal class ContextSettingsContent(
                 KiloBundle.message("settings.context.compaction.threshold.description"),
                 Stack.horizontal(UiStyle.Gap.xs())
                     .next(threshold)
-                    .next(JBLabel("%"))
+                    .next(JBLabel(KiloBundle.message("settings.context.compaction.threshold.suffix")))
                     .align(HAlign.RIGHT, VAlign.CENTER),
             ))
             row(SettingsRow(
@@ -288,7 +288,7 @@ internal class PatternList(
     private fun add() {
         if (!isEnabled) return
         val value = input()?.trim().orEmpty()
-        if (!isEnabled || value.isBlank()) return
+        if (value.isBlank()) return
         val values = model.items.toMutableList()
         val idx = values.indexOf(value).takeIf { it >= 0 } ?: run {
             values += value
