@@ -1,5 +1,5 @@
 ---
-"@kilocode/cli": patch
+"kilo-code": patch
 ---
 
-Keep sessions usable after deprecated local review commands display their replacement notice.
+Keep sessions usable after deprecated local review commands complete without a session status transition.

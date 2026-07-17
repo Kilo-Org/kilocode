@@ -2042,7 +2042,6 @@ export const layer = Layer.effect(
           arguments: input.arguments,
           messageID: result.info.id,
         })
-        yield* status.set(input.sessionID, yield* status.get(input.sessionID))
         return result
       }
       // kilocode_change end

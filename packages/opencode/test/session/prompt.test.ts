@@ -2632,22 +2632,13 @@ noLLMServer.instance(
 
 // kilocode_change start - Kilo review command behavior
 noLLMServer.instance(
-  "deprecated review alias returns static message and publishes terminal status",
+  "deprecated review alias returns static message without LLM",
   () =>
     Effect.gen(function* () {
-      const events = yield* EventV2Bridge.Service
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
       const session = yield* sessions.create({})
       const text = legacyReviewMessage("local-review-uncommitted")!
-      const states: string[] = []
-      const off = yield* events.listen((event) => {
-        if (event.type !== SessionStatus.Event.Status.type) return Effect.void
-        const data = event.data as typeof SessionStatus.Event.Status.data.Type
-        if (data.sessionID === session.id) states.push(data.status.type)
-        return Effect.void
-      })
-      yield* Effect.addFinalizer(() => off)
 
       const result = yield* prompt.command({
         sessionID: session.id,
@@ -2660,46 +2651,12 @@ noLLMServer.instance(
       expect(result.parts).toHaveLength(1)
       expect(result.parts[0].type).toBe("text")
       if (result.parts[0].type === "text") expect(result.parts[0].text).toBe(text)
-      expect(states).toEqual(["idle"])
 
       const msgs = yield* sessions.messages({ sessionID: session.id })
       const user = msgs.find((msg) => msg.info.role === "user")
       expect(
         user?.parts.some((part) => part.type === "text" && part.text === "/local-review-uncommitted focus on tests"),
       ).toBe(true)
-    }),
-  { config: cfg },
-  30_000,
-)
-
-noLLMServer.instance(
-  "deprecated review alias preserves an active session status",
-  () =>
-    Effect.gen(function* () {
-      const events = yield* EventV2Bridge.Service
-      const prompt = yield* SessionPrompt.Service
-      const sessions = yield* Session.Service
-      const status = yield* SessionStatus.Service
-      const session = yield* sessions.create({})
-      yield* status.set(session.id, { type: "busy" })
-      const states: string[] = []
-      const off = yield* events.listen((event) => {
-        if (event.type !== SessionStatus.Event.Status.type) return Effect.void
-        const data = event.data as typeof SessionStatus.Event.Status.data.Type
-        if (data.sessionID === session.id) states.push(data.status.type)
-        return Effect.void
-      })
-      yield* Effect.addFinalizer(() => off)
-
-      yield* prompt.command({
-        sessionID: session.id,
-        command: "local-review",
-        arguments: "",
-        model: "test/test-model",
-      })
-
-      expect(states).toEqual(["busy"])
-      expect(yield* status.get(session.id)).toEqual({ type: "busy" })
     }),
   { config: cfg },
   30_000,
