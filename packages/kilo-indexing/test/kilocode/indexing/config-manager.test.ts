@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test"
-import { toIndexingConfigInput } from "../../../src/config"
+import {
+  IndexingConfig,
+  normalizeFileExtensions,
+  parseFileExtensions,
+  toIndexingConfigInput,
+} from "../../../src/config"
 import { CodeIndexConfigManager, type IndexingConfigInput } from "../../../src/indexing/config-manager"
 
 function createInput(input: Partial<IndexingConfigInput> = {}): IndexingConfigInput {
@@ -70,6 +75,25 @@ describe("CodeIndexConfigManager", () => {
 
     expect(input.vectorStoreProvider).toBe("qdrant")
     expect(cfg.getConfig().vectorStoreProvider).toBe("qdrant")
+  })
+
+  test("normalizes configured file extensions", () => {
+    expect(normalizeFileExtensions([" PHP ", ".JS", "js", "css"])).toEqual([".css", ".js", ".php"])
+    expect(parseFileExtensions(" PHP, .JS, js, css ")).toEqual([".css", ".js", ".php"])
+    expect(parseFileExtensions("  ")).toBeUndefined()
+    expect(toIndexingConfigInput({ fileExtensions: ["PHP", ".JS"] }).fileExtensions).toEqual([".js", ".php"])
+    expect(normalizeFileExtensions(["", "  "])).toBeUndefined()
+    expect(
+      normalizeFileExtensions(Array.from({ length: 10_000 }, (_, index) => (index % 2 ? " PHP " : ".JS"))),
+    ).toEqual([".js", ".php"])
+  })
+
+  test("validates file extension tokens", () => {
+    expect(IndexingConfig.safeParse({ fileExtensions: ["php", " .JS "] }).success).toBe(true)
+    expect(IndexingConfig.safeParse({ fileExtensions: [] }).success).toBe(false)
+    expect(IndexingConfig.safeParse({ fileExtensions: ["*.js"] }).success).toBe(false)
+    expect(IndexingConfig.safeParse({ fileExtensions: ["src/php"] }).success).toBe(false)
+    expect(IndexingConfig.safeParse({ fileExtensions: [".d.ts"] }).success).toBe(false)
   })
 
   test("configures Kilo with hosted auth options and explicit model metadata", () => {
@@ -205,6 +229,14 @@ describe("CodeIndexConfigManager", () => {
       )
 
       expect(result.requiresRestart).toBe(true)
+    })
+
+    test("restarts only when the normalized file extension allowlist changes", () => {
+      const cfg = new CodeIndexConfigManager(createInput({ fileExtensions: ["php", ".JS"] }))
+
+      expect(cfg.getConfig().fileExtensions).toEqual([".js", ".php"])
+      expect(cfg.loadConfiguration(createInput({ fileExtensions: [".js", ".PHP", "php"] })).requiresRestart).toBe(false)
+      expect(cfg.loadConfiguration(createInput({ fileExtensions: [".css"] })).requiresRestart).toBe(true)
     })
   })
 })

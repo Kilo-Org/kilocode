@@ -1,7 +1,12 @@
 import { extensions as allExtensions } from "../../tree-sitter"
+import { normalizeFileExtensions } from "../../file-extensions"
 
 // Include all extensions including markdown for the scanner
 export const scannerExtensions = allExtensions
+
+export function resolveFileExtensions(input: readonly string[] | undefined): string[] {
+  return normalizeFileExtensions(input) ?? [...scannerExtensions]
+}
 
 /**
  * Extensions that should always use fallback chunking instead of tree-sitter parsing.

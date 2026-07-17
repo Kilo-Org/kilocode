@@ -21,6 +21,7 @@ const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.t
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
 const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const CLOUD_SESSION_FILE = path.join(ROOT, "src/kilo-provider/handlers/cloud-session.ts")
 const CONNECTION_SERVICE_FILE = path.join(ROOT, "src/services/cli-backend/connection-service.ts")
 
 function readFile(filePath: string): string {
@@ -76,6 +77,32 @@ describe("sendCommand dismisses pending tool requests", () => {
 
   it("rejects questions before sending", () => {
     expect(body).toContain("dismissQuestion")
+  })
+})
+
+describe("static command completion contract", () => {
+  const source = readFile(SESSION_FILE)
+
+  it("finishes only the acknowledged command submission", () => {
+    const body = extractFunctionBody(source, "handleCommandCompletion")
+    expect(body).toMatch(/message\.type === "sessionCommandCompleted"\) finishSubmission\(message\.messageID\)/)
+  })
+
+  it("acknowledges aliases after direct and cloud command confirmation", () => {
+    const provider = readFile(KILOPROVIDER_FILE)
+    const cloud = readFile(CLOUD_SESSION_FILE)
+    expect(provider).toMatch(
+      /await runWithMessageConfirmation[\s\S]*?if \(messageID && completesWithoutStatus\(command\)\)[\s\S]*?sessionCommandCompleted/,
+    )
+    expect(cloud).toMatch(
+      /await run\(messageID, "Cloud import send"[\s\S]*?if \(messageID && command && completesWithoutStatus\(command\)\)[\s\S]*?sessionCommandCompleted/,
+    )
+  })
+
+  it("does not clear every session submission or active abort", () => {
+    const body = extractFunctionBody(source, "handleCommandCompletion")
+    expect(body).not.toContain("confirmSubmissions")
+    expect(body).not.toContain("aborts.clear")
   })
 })
 
