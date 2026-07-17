@@ -20,6 +20,7 @@ import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
 import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
+import { IgnorePermission } from "@/kilocode/permission/ignore"
 
 const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
@@ -110,6 +111,11 @@ export interface Interface {
 
 // kilocode_change start
 const add = Effect.fnUntraced(function* (state: State, match: Match, events: EventV2Bridge.Service["Service"]) {
+  const ctx = yield* InstanceState.context
+  const allowed = yield* Effect.promise(() =>
+    IgnorePermission.allowed({ ctx, access: "read", candidates: [{ requested: match.path }] }),
+  )
+  if (!allowed) return
   const source = match.sourceRoot ?? match.root
   // kilocode_change end
   const md = yield* Effect.tryPromise({
@@ -119,15 +125,15 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, events: Eve
         trusted: match.trusted,
         fileScope: match.trusted || !match.root ? undefined : { root: match.root, source: match.path },
         sourceScope: match.trusted || !source ? undefined : { root: source, source: match.path },
+        authorize: ({ requested, target }) =>
+          IgnorePermission.allowed({ ctx, access: "read", candidates: [{ requested, target }] }),
       }),
     // kilocode_change end
     catch: (err) => err,
   }).pipe(
     Effect.catch(
       Effect.fnUntraced(function* (err) {
-        const message = FrontmatterError.isInstance(err)
-          ? err.data.message
-          : `Failed to parse skill ${match.path}` // kilocode_change
+        const message = FrontmatterError.isInstance(err) ? err.data.message : `Failed to parse skill ${match.path}` // kilocode_change
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
         yield* events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
         log.error("failed to load skill", { skill: match.path, err }) // kilocode_change
@@ -332,28 +338,26 @@ export const layer = Layer.effect(
         ).pipe(Effect.provideService(Git.Service, git)) // kilocode_change
       }),
     )
-    const state = yield* InstanceState.make(
-      Effect.fn("Skill.state")(function* () {
-        const s: State = { skills: {}, dirs: new Set() }
-        yield* loadSkills(s, yield* InstanceState.get(discovered), events)
-        return s
-      }),
-    )
+    const current = Effect.fn("Skill.current")(function* () {
+      const s: State = { skills: {}, dirs: new Set() }
+      yield* loadSkills(s, yield* InstanceState.get(discovered), events)
+      return s
+    })
 
     const get = Effect.fn("Skill.get")(function* (name: string) {
-      const s = yield* InstanceState.get(state)
+      const s = yield* current()
       return s.skills[name]
     })
 
     const require = Effect.fn("Skill.require")(function* (name: string) {
-      const s = yield* InstanceState.get(state)
+      const s = yield* current()
       const info = s.skills[name]
       if (info) return info
       return yield* new NotFoundError({ name, available: Object.keys(s.skills).toSorted() })
     })
 
     const all = Effect.fn("Skill.all")(function* () {
-      const s = yield* InstanceState.get(state)
+      const s = yield* current()
       return Object.values(s.skills)
     })
 
@@ -362,7 +366,7 @@ export const layer = Layer.effect(
     })
 
     const available = Effect.fn("Skill.available")(function* (agent?: Agent.Info) {
-      const s = yield* InstanceState.get(state)
+      const s = yield* current()
       const list = Object.values(s.skills).toSorted((a, b) => a.name.localeCompare(b.name))
       if (!agent) return list
       return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")

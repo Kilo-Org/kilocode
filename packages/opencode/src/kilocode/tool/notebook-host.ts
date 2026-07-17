@@ -3,6 +3,12 @@ import { Path, type Result } from "@/kilocode/notebook/protocol"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as Tool from "@/tool/tool"
 import { Effect, Schema } from "effect"
+import path from "path"
+import { InstanceState } from "@/effect/instance-state"
+import { KiloFileGuard } from "@/kilocode/tool/file-guard"
+
+const resolve = (input: string, directory: string) =>
+  path.isAbsolute(input) ? path.resolve(input) : path.resolve(directory, input)
 
 const Source = Schema.String.check(Schema.isMaxLength(200_000))
 const Revision = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(200)).annotate({
@@ -62,17 +68,23 @@ export const NotebookReadTool = Tool.define<
       parameters: ReadParams,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          const instance = yield* InstanceState.context
+          const filepath = resolve(params.path, instance.directory)
+          const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath, access: "read" }).pipe(
+            Effect.orDie,
+          )
           yield* ctx.ask({
             permission: "notebook_read",
-            patterns: [params.path],
-            always: [params.path],
-            metadata: { path: params.path, includeOutputs: params.include_outputs === true },
+            patterns: [...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item)))],
+            always: [path.relative(instance.worktree, plan.target)],
+            metadata: { path: plan.target, includeOutputs: params.include_outputs === true },
           })
+          const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan, access: "read" }).pipe(Effect.orDie)
           const result = yield* run(
             notebook.request({
               operation: "read",
               sessionID: ctx.sessionID,
-              path: params.path,
+              path: target.target,
               includeOutputs: params.include_outputs === true,
             }),
             ctx.abort,
@@ -156,24 +168,28 @@ export const NotebookEditTool = Tool.define<
       parameters: EditParams,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          const instance = yield* InstanceState.context
+          const filepath = resolve(params.path, instance.directory)
+          const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath }).pipe(Effect.orDie)
           const edit = yield* cellEdit(params)
           const index = params.action === "create" ? 0 : params.index!
           yield* ctx.ask({
             permission: "notebook_edit",
-            patterns: [params.path],
-            always: [params.path],
+            patterns: [...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item)))],
+            always: [path.relative(instance.worktree, plan.target)],
             metadata: {
-              path: params.path,
+              path: plan.target,
               action: params.action,
               index,
               expectedRevision: params.expected_revision,
             },
           })
+          const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan }).pipe(Effect.orDie)
           const result = yield* run(
             notebook.request({
               operation: "edit",
               sessionID: ctx.sessionID,
-              path: params.path,
+              path: target.target,
               ...(params.expected_revision !== undefined ? { expectedRevision: params.expected_revision } : {}),
               index,
               edit,
@@ -212,17 +228,23 @@ export const NotebookExecuteTool = Tool.define<
       parameters: ExecuteParams,
       execute: (params, ctx) =>
         Effect.gen(function* () {
+          const instance = yield* InstanceState.context
+          const filepath = resolve(params.path, instance.directory)
+          const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath, access: "read" }).pipe(
+            Effect.orDie,
+          )
           yield* ctx.ask({
             permission: "notebook_execute",
-            patterns: [params.path],
-            always: [params.path],
-            metadata: { path: params.path, index: params.index, expectedRevision: params.expected_revision },
+            patterns: [...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item)))],
+            always: [path.relative(instance.worktree, plan.target)],
+            metadata: { path: plan.target, index: params.index, expectedRevision: params.expected_revision },
           })
+          const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan, access: "read" }).pipe(Effect.orDie)
           const result = yield* run(
             notebook.request({
               operation: "execute",
               sessionID: ctx.sessionID,
-              path: params.path,
+              path: target.target,
               expectedRevision: params.expected_revision,
               index: params.index,
             }),

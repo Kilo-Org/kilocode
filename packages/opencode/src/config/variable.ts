@@ -26,7 +26,8 @@ type SubstituteInput = ParseSource & {
   escapeJson?: boolean // kilocode_change
   // kilocode_change start - trust gates {env:}; untrusted project config may only read files inside fileScope.root
   trusted?: boolean
-  fileScope?: ConfigVariableGuard.FileScope
+  fileScope?: ConfigVariableGuard.FileScope & { authorize?: ConfigVariableGuard.Authorize }
+  authorize?: ConfigVariableGuard.Authorize
   // kilocode_change end
   env?: Record<string, string>
 }
@@ -115,28 +116,30 @@ export async function substitute(input: SubstituteInput) {
     // kilocode_change start - validate and read one opened file to prevent credential substitution races;
     // untrusted config passes a fileScope so reads are confined to the project root.
     const fileContent = (
-      await ConfigVariableGuard.read(resolvedPath, input.fileScope && { ...input.fileScope, token }).catch(
-        (error: NodeJS.ErrnoException) => {
-          // kilocode_change - a deliberate scope block must always reject; only genuine missing/IO errors are
-          // emptied under missing:"empty", so an out-of-scope {file:} surfaces instead of being silently dropped.
-          if (ConfigVariableGuard.isBlocked(error)) {
-            throw new InvalidError({ path: configSource, message: error.message }, { cause: error })
-          }
-          if (missing === "empty") return ""
+      await ConfigVariableGuard.read(resolvedPath, {
+        ...(input.fileScope ?? {}),
+        token,
+        authorize: input.authorize ?? input.fileScope?.authorize,
+      }).catch((error: NodeJS.ErrnoException) => {
+        // kilocode_change - a deliberate scope block must always reject; only genuine missing/IO errors are
+        // emptied under missing:"empty", so an out-of-scope {file:} surfaces instead of being silently dropped.
+        if (ConfigVariableGuard.isBlocked(error)) {
+          throw new InvalidError({ path: configSource, message: error.message }, { cause: error })
+        }
+        if (missing === "empty") return ""
 
-          const errMsg = `bad file reference: "${token}"`
-          if (error.code === "ENOENT") {
-            throw new InvalidError(
-              {
-                path: configSource,
-                message: errMsg + ` ${resolvedPath} does not exist`,
-              },
-              { cause: error },
-            )
-          }
-          throw new InvalidError({ path: configSource, message: errMsg }, { cause: error })
-        },
-      )
+        const errMsg = `bad file reference: "${token}"`
+        if (error.code === "ENOENT") {
+          throw new InvalidError(
+            {
+              path: configSource,
+              message: errMsg + ` ${resolvedPath} does not exist`,
+            },
+            { cause: error },
+          )
+        }
+        throw new InvalidError({ path: configSource, message: errMsg }, { cause: error })
+      })
     ).trim()
     // kilocode_change end
 

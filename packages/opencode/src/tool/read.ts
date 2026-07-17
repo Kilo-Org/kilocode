@@ -15,9 +15,11 @@ import { Reference } from "@/reference/reference"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
 import { KiloReference } from "@/kilocode/reference/contains"
+import { KiloFileGuard } from "@/kilocode/tool/file-guard"
 import { KiloReadObject } from "@/kilocode/tool/read-object"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
+import { IgnorePermission } from "@/kilocode/permission/ignore"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -224,6 +226,11 @@ export const ReadTool = Tool.define<
 
       // kilocode_change start - directory mentions expose only a bound listing, never child file bodies
       if (info.type === "Directory") {
+        yield* IgnorePermission.assert({
+          ctx: instance,
+          access: "read",
+          candidates: [{ requested, directory: true }],
+        }).pipe(Effect.orDie)
         const resolved = yield* fs.realPath(requested)
         const target = process.platform === "win32" ? FSUtil.normalizePath(resolved) : resolved
         const explicit =
@@ -287,7 +294,7 @@ export const ReadTool = Tool.define<
         }
       }
       // kilocode_change start - authorize metadata, then bind every content read to the same reopened object
-      const file = yield* KiloReadObject.file(requested)
+      const file = yield* KiloFileGuard.file({ ctx: instance, requested })
       const explicit =
         typeof ctx.extra?.["referenceRoot"] === "string" &&
         (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target))
@@ -302,7 +309,7 @@ export const ReadTool = Tool.define<
         always: ["*"],
         metadata: {},
       })
-      return yield* KiloReadObject.use(file, (bound) =>
+      return yield* KiloFileGuard.use({ ctx: instance, info: file }, (bound) =>
         Effect.gen(function* () {
           const loaded =
             ctx.extra?.["includeInstructions"] === false

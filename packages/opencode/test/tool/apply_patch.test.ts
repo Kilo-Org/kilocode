@@ -8,6 +8,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Format } from "../../src/format"
 import { Agent } from "../../src/agent/agent"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Truncate } from "@/tool/truncate"
 import { TestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -184,6 +185,28 @@ describe("tool.apply_patch freeform", () => {
         expect(moveFile.movePath).toBe(path.join(test.directory, "renamed/dir/name.txt"))
         expect(moveFile.patch).toContain("-old content")
         expect(moveFile.patch).toContain("+new content")
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "rejects moves into .kilocodeignore paths before reading the source",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const { ctx, calls } = makeCtx()
+        const original = path.join(test.directory, "name.txt")
+        yield* writeText(original, "KILO_11637_SECRET\n")
+        yield* writeText(path.join(test.directory, ".kilocodeignore"), "private/\n")
+
+        const patchText =
+          "*** Begin Patch\n*** Update File: name.txt\n*** Move to: private/name.txt\n@@\n-KILO_11637_SECRET\n+changed\n*** End Patch"
+        const exit = yield* execute({ patchText }, ctx).pipe(Effect.exit)
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(PermissionV1.DeniedError)
+        expect(calls).toEqual([])
+        expect(yield* readText(original)).toBe("KILO_11637_SECRET\n")
       }),
     { git: true },
   )

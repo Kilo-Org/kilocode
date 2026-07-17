@@ -2,7 +2,6 @@
 import { Effect, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import * as path from "path"
-import { readFile } from "fs/promises"
 import * as Tool from "../../tool/tool"
 import * as Auth from "../../auth"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -10,6 +9,7 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Log from "@opencode-ai/core/util/log"
 import { assertExternalDirectoryEffect } from "../../tool/external-directory"
 import { Config } from "@/config/config"
+import { KiloFileGuard } from "@/kilocode/tool/file-guard"
 import { KILO_OPENROUTER_BASE } from "@kilocode/kilo-gateway"
 import DESCRIPTION from "./generate-image.txt"
 
@@ -189,7 +189,18 @@ export const GenerateImageTool = Tool.define(
           if (params.image) {
             const imgPath = path.isAbsolute(params.image) ? params.image : path.join(instance.directory, params.image)
             yield* assertExternalDirectoryEffect(ctx, imgPath)
-            const buf = yield* Effect.tryPromise(() => readFile(imgPath))
+            const file = yield* KiloFileGuard.file({ ctx: instance, requested: imgPath })
+            yield* ctx.ask({
+              permission: "read",
+              patterns: [
+                ...new Set([file.requested, file.target].map((item) => path.relative(instance.worktree, item))),
+              ],
+              always: ["*"],
+              metadata: {},
+            })
+            const buf = yield* KiloFileGuard.use({ ctx: instance, info: file }, (file) =>
+              Effect.tryPromise(() => file.read()),
+            )
             const ext = path.extname(imgPath).slice(1).toLowerCase() || "png"
             const mime = ext === "jpg" ? "jpeg" : ext
             inputImage = `data:image/${mime};base64,${buf.toString("base64")}`
@@ -197,6 +208,11 @@ export const GenerateImageTool = Tool.define(
 
           const cfg = yield* configSvc.get()
           const model = params.model ?? cfg.experimental?.image_generation_model ?? DEFAULT_MODEL
+          for (const format of ["png", "jpeg"] as const) {
+            const filepath = ensureExtension(params.path, format)
+            const output = path.isAbsolute(filepath) ? filepath : path.join(instance.directory, filepath)
+            yield* KiloFileGuard.plan({ ctx: instance, requested: output })
+          }
           const req = buildRequest(resolved, params.prompt, model, inputImage)
 
           const response = yield* http.execute(
@@ -230,30 +246,32 @@ export const GenerateImageTool = Tool.define(
           const finalPath = ensureExtension(params.path, parsed.format)
           const absPath = path.isAbsolute(finalPath) ? finalPath : path.join(instance.directory, finalPath)
           yield* assertExternalDirectoryEffect(ctx, absPath)
+          const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: absPath })
           yield* ctx.ask({
             permission: "write",
-            patterns: [path.relative(instance.worktree, absPath)],
+            patterns: [...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item)))],
             always: ["*"],
-            metadata: { filepath: absPath },
+            metadata: { filepath: plan.target },
           })
 
           const buf = Buffer.from(parsed.base64, "base64")
-          yield* fs.writeWithDirs(absPath, buf)
+          const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan })
+          yield* fs.writeWithDirs(target.target, buf)
 
           return {
             title: path.relative(instance.worktree, absPath),
             output: `Image saved to ${finalPath}.`,
             metadata: {
               format: parsed.format,
-              filepath: absPath,
+              filepath: target.target,
               provider: resolved.provider,
             } as Meta,
             attachments: [
               {
                 type: "file" as const,
                 mime: `image/${parsed.format}`,
-                url: `file://${absPath}`,
-                filename: path.basename(absPath),
+                url: `file://${target.target}`,
+                filename: path.basename(target.target),
               },
             ],
           }

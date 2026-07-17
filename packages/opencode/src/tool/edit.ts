@@ -22,6 +22,7 @@ import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import * as Encoding from "../kilocode/encoding" // kilocode_change
+import { KiloFileGuard } from "@/kilocode/tool/file-guard" // kilocode_change
 
 const MAX_DIFF_CONTENT = 500_000 // kilocode_change
 
@@ -107,6 +108,9 @@ export const EditTool = Tool.define(
             ? params.filePath
             : path.join(instance.directory, params.filePath)
           yield* assertExternalDirectoryEffect(ctx, filePath)
+          // kilocode_change start - bind policy and target identity before reading content for the diff
+          const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filePath }).pipe(Effect.orDie)
+          // kilocode_change end
 
           let diff = ""
           let contentOld = ""
@@ -115,7 +119,7 @@ export const EditTool = Tool.define(
           yield* lock(filePath).withPermits(1)(
             Effect.gen(function* () {
               if (params.oldString === "") {
-                const existed = yield* afs.existsSafe(filePath)
+                const existed = plan.exists
                 if (existed) {
                   throw new Error(
                     "oldString cannot be empty when editing an existing file. Provide the exact text to replace, or use write for an intentional full-file replacement.",
@@ -129,17 +133,21 @@ export const EditTool = Tool.define(
                 cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
                 yield* ctx.ask({
                   permission: "edit",
-                  patterns: [path.relative(instance.worktree, filePath)],
+                  patterns: [
+                    ...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item))),
+                  ],
                   always: ["*"],
                   metadata: {
-                    filepath: filePath,
+                    filepath: plan.target,
                     diff,
                     filediff: cachedFilediff, // kilocode_change
                   },
                 })
-                yield* EncodedIO.write(afs, filePath, Bom.join(contentNew, desiredBom), Encoding.DEFAULT) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
-                if (yield* format.file(filePath)) {
-                  contentNew = yield* EncodedIO.sync(afs, filePath, desiredBom, Encoding.DEFAULT)
+                const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan }).pipe(Effect.orDie)
+                yield* EncodedIO.write(afs, target.target, Bom.join(contentNew, desiredBom), Encoding.DEFAULT) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+                if (yield* format.file(target.target)) {
+                  yield* KiloFileGuard.plan({ ctx: instance, requested: target.target }).pipe(Effect.orDie)
+                  contentNew = yield* EncodedIO.sync(afs, target.target, desiredBom, Encoding.DEFAULT)
                 }
                 yield* events.publish(FileSystem.Event.Edited, { file: filePath })
                 yield* events.publish(Watcher.Event.Updated, {
@@ -149,12 +157,12 @@ export const EditTool = Tool.define(
                 return
               }
 
-              const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
+              const info = yield* afs.stat(plan.target).pipe(Effect.catch(() => Effect.succeed(undefined)))
               if (!info) throw new Error(`File ${filePath} not found`)
               if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
               // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
               // derive the BOM flag from the detected encoding label instead of the decoded text.
-              const pre = yield* EncodedIO.read(afs, filePath)
+              const pre = EncodedIO.decode(yield* KiloFileGuard.read({ ctx: instance, requested: filePath }))
               const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
               // kilocode_change end
               contentOld = source.text
@@ -178,18 +186,22 @@ export const EditTool = Tool.define(
               cachedFilediff = buildFileDiff(filePath, contentOld, contentNew) // kilocode_change
               yield* ctx.ask({
                 permission: "edit",
-                patterns: [path.relative(instance.worktree, filePath)],
+                patterns: [
+                  ...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item))),
+                ],
                 always: ["*"],
                 metadata: {
-                  filepath: filePath,
+                  filepath: plan.target,
                   diff,
                   filediff: cachedFilediff, // kilocode_change
                 },
               })
 
-              yield* EncodedIO.write(afs, filePath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
-              if (yield* format.file(filePath)) {
-                contentNew = yield* EncodedIO.sync(afs, filePath, desiredBom, source.encoding)
+              const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan }).pipe(Effect.orDie)
+              yield* EncodedIO.write(afs, target.target, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+              if (yield* format.file(target.target)) {
+                yield* KiloFileGuard.plan({ ctx: instance, requested: target.target }).pipe(Effect.orDie)
+                contentNew = yield* EncodedIO.sync(afs, target.target, desiredBom, source.encoding)
               }
               yield* events.publish(FileSystem.Event.Edited, { file: filePath })
               yield* events.publish(Watcher.Event.Updated, {

@@ -15,6 +15,7 @@ import { FileSystem } from "@opencode-ai/core/filesystem"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
+import { KiloFileGuard } from "@/kilocode/tool/file-guard" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
 
@@ -56,6 +57,17 @@ export const ApplyPatchTool = Tool.define(
       }
 
       const instance = yield* InstanceState.context
+      // kilocode_change start - bind every source and destination before reading patch content
+      const plans = new Map<string, KiloFileGuard.Plan>()
+      for (const filepath of new Set(
+        hunks.flatMap((hunk) => [
+          path.resolve(instance.directory, hunk.path),
+          ...(hunk.type === "update" && hunk.move_path ? [path.resolve(instance.directory, hunk.move_path)] : []),
+        ]),
+      )) {
+        plans.set(filepath, yield* KiloFileGuard.plan({ ctx: instance, requested: filepath }).pipe(Effect.orDie))
+      }
+      // kilocode_change end
 
       // Validate file paths and check permissions
       const fileChanges: Array<{
@@ -75,6 +87,7 @@ export const ApplyPatchTool = Tool.define(
 
       for (const hunk of hunks) {
         const filePath = path.resolve(instance.directory, hunk.path)
+        const plan = plans.get(filePath)!
         yield* assertExternalDirectoryEffect(ctx, filePath)
 
         switch (hunk.type) {
@@ -120,7 +133,7 @@ export const ApplyPatchTool = Tool.define(
             // kilocode_change start - encoding-aware read so non-UTF-8 files decode without
             // mojibake; the resulting diff, additions/deletions counts, and permission-prompt
             // metadata shown to the user must reflect the real file contents.
-            const read = yield* EncodedIO.read(afs, filePath).pipe(
+            const bytes = yield* KiloFileGuard.read({ ctx: instance, requested: filePath }).pipe(
               Effect.catch((error) =>
                 Effect.fail(
                   new Error(
@@ -129,6 +142,7 @@ export const ApplyPatchTool = Tool.define(
                 ),
               ),
             )
+            const read = EncodedIO.decode(bytes)
             const source = Bom.split(read.text)
             // kilocode_change end
             const oldContent = source.text
@@ -180,7 +194,7 @@ export const ApplyPatchTool = Tool.define(
 
           case "delete": {
             // kilocode_change start - encoding-aware read so non-UTF-8 files decode without corruption
-            const deleteRead = yield* EncodedIO.read(afs, filePath).pipe(
+            const bytes = yield* KiloFileGuard.read({ ctx: instance, requested: filePath }).pipe(
               Effect.catch((error) =>
                 Effect.fail(
                   new Error(
@@ -189,6 +203,7 @@ export const ApplyPatchTool = Tool.define(
                 ),
               ),
             )
+            const deleteRead = EncodedIO.decode(bytes)
             const contentToDelete = deleteRead.text
             const source = Bom.split(contentToDelete)
             // kilocode_change end
@@ -226,7 +241,15 @@ export const ApplyPatchTool = Tool.define(
       }))
 
       // Check permissions if needed
-      const relativePaths = fileChanges.map((c) => path.relative(instance.worktree, c.filePath).replaceAll("\\", "/"))
+      const relativePaths = Array.from(
+        new Set(
+          fileChanges.flatMap((change) =>
+            [change.filePath, change.movePath]
+              .filter((filepath): filepath is string => filepath !== undefined)
+              .map((filepath) => path.relative(instance.worktree, filepath).replaceAll("\\", "/")),
+          ),
+        ),
+      )
       yield* ctx.ask({
         permission: "edit",
         patterns: relativePaths,
@@ -238,41 +261,54 @@ export const ApplyPatchTool = Tool.define(
         },
       })
 
+      // kilocode_change start - detect policy or target changes before the first mutation
+      for (const plan of plans.values()) yield* KiloFileGuard.revalidate({ ctx: instance, plan }).pipe(Effect.orDie)
+      // kilocode_change end
+
       // Apply the changes
       const updates: Array<{ file: string; event: "add" | "change" | "unlink" }> = []
 
       for (const change of fileChanges) {
-        const edited = change.type === "delete" ? undefined : (change.movePath ?? change.filePath)
+        // kilocode_change start - revalidate each sequential mutation immediately before committing it
+        const source = yield* KiloFileGuard.revalidate({ ctx: instance, plan: plans.get(change.filePath)! }).pipe(
+          Effect.orDie,
+        )
+        const destination = change.movePath
+          ? yield* KiloFileGuard.revalidate({ ctx: instance, plan: plans.get(change.movePath)! }).pipe(Effect.orDie)
+          : undefined
+        const edited = change.type === "delete" ? undefined : (destination?.target ?? source.target)
+        // kilocode_change end
         switch (change.type) {
           case "add":
             // Create parent directories (recursive: true is safe on existing/root dirs)
-            yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
-            updates.push({ file: change.filePath, event: "add" })
+            yield* EncodedIO.write(afs, source.target, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+            updates.push({ file: source.target, event: "add" })
             break
 
           case "update":
-            yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
-            updates.push({ file: change.filePath, event: "change" })
+            yield* EncodedIO.write(afs, source.target, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+            updates.push({ file: source.target, event: "change" })
             break
 
           case "move":
-            if (change.movePath) {
+            if (destination) {
               // Create parent directories (recursive: true is safe on existing/root dirs)
-              yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
-              yield* afs.remove(change.filePath)
-              updates.push({ file: change.filePath, event: "unlink" })
-              updates.push({ file: change.movePath, event: "add" })
+              yield* EncodedIO.write(afs, destination.target, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+              yield* afs.remove(source.target)
+              updates.push({ file: source.target, event: "unlink" })
+              updates.push({ file: destination.target, event: "add" })
             }
             break
 
           case "delete":
-            yield* afs.remove(change.filePath)
-            updates.push({ file: change.filePath, event: "unlink" })
+            yield* afs.remove(source.target)
+            updates.push({ file: source.target, event: "unlink" })
             break
         }
 
         if (edited) {
           if (yield* format.file(edited)) {
+            yield* KiloFileGuard.plan({ ctx: instance, requested: edited }).pipe(Effect.orDie)
             yield* EncodedIO.sync(afs, edited, change.bom, change.encoding)
           }
           yield* events.publish(FileSystem.Event.Edited, { file: edited })

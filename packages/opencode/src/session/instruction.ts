@@ -104,7 +104,8 @@ export const layer: Layer.Layer<
 
     const read = Effect.fnUntraced(function* (filepath: string, origin?: KilocodeMarkdown.Source) {
       const opts = yield* options(filepath, origin)
-      return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts).catch(() => ""))
+      const ctx = yield* InstanceState.context
+      return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts, ctx).catch(() => ""))
     })
     // kilocode_change end
 
