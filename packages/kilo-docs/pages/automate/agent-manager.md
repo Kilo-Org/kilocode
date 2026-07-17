@@ -69,7 +69,7 @@ The extension uses `gh` to automatically discover PRs for each worktree branch. 
 2. **Branch name** — `gh pr view <branch>` matches same-repo branches pushed to origin
 3. **HEAD commit SHA** — `gh pr list --search "<sha>"` as a last resort, matching PRs whose head ref points to the exact same commit
 
-You can also import a PR directly from the advanced new worktree dialog: open the **New Worktree** dropdown and select **Advanced**, or press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux), switch to the **Import** tab, then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
+You can also import a PR directly from the new worktree dialog: click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux), switch to the **Import** tab, then paste the GitHub PR URL. The branch is checked out and the badge appears automatically.
 
 #### Badge colors
 
@@ -106,11 +106,13 @@ PR badges update automatically in the background. The active worktree refreshes 
 
 ### Creating a New Worktree Session
 
-1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to create a new worktree
+1. Click **New Worktree** or press `Cmd+N` (macOS) / `Ctrl+N` (Windows/Linux) to open the new worktree dialog
 2. Enter a branch name (or let Kilo generate one)
-3. Type your first message to start the agent
+3. Type your first message, then create the worktree
 
 A new git worktree is created from your current branch. The agent works in isolation — your main branch is unaffected.
+
+To create a worktree immediately from the default base branch, press `Cmd+Shift+N` (macOS) / `Ctrl+Shift+N` (Windows/Linux).
 
 ### Multi-Version Mode
 
@@ -352,8 +354,8 @@ Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/wor
 | Shortcut (macOS) | Shortcut (Windows/Linux) | Action |
 |---|---|---|
 | `Cmd+Shift+M` | `Ctrl+Shift+M` | Open / focus Agent Manager (works from anywhere) |
-| `Cmd+N` | `Ctrl+N` | New worktree |
-| `Cmd+Shift+N` | `Ctrl+Shift+N` | New worktree (advanced options) |
+| `Cmd+N` | `Ctrl+N` | Configure a new worktree |
+| `Cmd+Shift+N` | `Ctrl+Shift+N` | Create a new worktree immediately |
 | `Cmd+Shift+O` | `Ctrl+Shift+O` | Import/open worktree |
 | `Cmd+Shift+W` | `Ctrl+Shift+W` | Close current worktree |
 | `Cmd+T` | `Ctrl+T` | New tab (session) in worktree |
