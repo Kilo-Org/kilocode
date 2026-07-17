@@ -1,5 +1,7 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
+import { KiloSessionSummary } from "@/kilocode/session/summary" // kilocode_change
+import { Provider } from "@/provider/provider" // kilocode_change - classify provider errors on the summary route
 import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
@@ -37,6 +39,7 @@ import {
   RevertPayload,
   ShellPayload,
   SummarizePayload,
+  SummaryPayload, // kilocode_change
   UpdatePayload,
   ViewedPayload, // kilocode_change
 } from "../groups/session"
@@ -284,6 +287,31 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return true
     })
 
+    // kilocode_change start
+    const summaryText = Effect.fn("SessionHttpApi.summaryText")(function* (ctx: {
+      params: { sessionID: SessionID }
+      payload: typeof SummaryPayload.Type
+    }) {
+      yield* requireSession(ctx.params.sessionID)
+      const messages = yield* SessionError.mapStorageNotFound(
+        session.messages({ sessionID: ctx.params.sessionID }),
+      )
+      const turns = messages.filter((m) => m.info.role === "user" || m.info.role === "assistant")
+      return yield* KiloSessionSummary.generate({
+        messages: turns,
+        providerID: ctx.payload.providerID,
+        modelID: ctx.payload.modelID,
+      }).pipe(
+        Effect.mapError((error) => {
+          if (Provider.ModelNotFoundError.isInstance(error)) {
+            return new HttpApiError.BadRequest({})
+          }
+          return new HttpApiError.InternalServerError({})
+        }),
+      )
+    })
+    // kilocode_change end
+
     const prompt = Effect.fn("SessionHttpApi.prompt")(function* (ctx: {
       params: { sessionID: SessionID }
       payload: typeof PromptPayload.Type
@@ -445,6 +473,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handle("share", share)
       .handle("unshare", unshare)
       .handle("summarize", summarize)
+      .handle("summary", summaryText) // kilocode_change
       .handle("prompt", prompt)
       .handle("promptAsync", promptAsync)
       .handle("command", command)

@@ -9611,6 +9611,43 @@ export type SessionSummarizeResponses = {
 
 export type SessionSummarizeResponse = SessionSummarizeResponses[keyof SessionSummarizeResponses]
 
+export type SessionSummaryData = {
+  body?: {
+    providerID: string
+    modelID: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/summary"
+}
+
+export type SessionSummaryErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionSummaryError = SessionSummaryErrors[keyof SessionSummaryErrors]
+
+export type SessionSummaryResponses = {
+  /**
+   * Session summary text
+   */
+  200: string
+}
+
+export type SessionSummaryResponse = SessionSummaryResponses[keyof SessionSummaryResponses]
+
 export type SessionPromptAsyncData = {
   body?: {
     messageID?: string

@@ -67,6 +67,12 @@ export const SummarizePayload = Schema.Struct({
   modelID: ModelV2.ID,
   auto: Schema.optional(Schema.Boolean),
 })
+// kilocode_change start
+export const SummaryPayload = Schema.Struct({
+  providerID: ProviderID,
+  modelID: ModelID,
+})
+// kilocode_change end
 export const PromptPayload = Schema.Struct(Struct.omit(SessionPrompt.PromptInput.fields, ["sessionID"]))
 export const CommandPayload = Schema.Struct(Struct.omit(SessionPrompt.CommandInput.fields, ["sessionID"]))
 export const ShellPayload = Schema.Struct(Struct.omit(SessionPrompt.ShellInput.fields, ["sessionID"]))
@@ -105,6 +111,9 @@ export const SessionPaths = {
   share: `${root}/:sessionID/share`,
   init: `${root}/:sessionID/init`,
   summarize: `${root}/:sessionID/summarize`,
+  // kilocode_change start
+  summary: `${root}/:sessionID/summary`,
+  // kilocode_change end
   prompt: `${root}/:sessionID/message`,
   promptAsync: `${root}/:sessionID/prompt_async`,
   command: `${root}/:sessionID/command`,
@@ -327,6 +336,22 @@ export const SessionApi = HttpApi.make("session")
             description: "Generate a concise summary of the session using AI compaction to preserve key information.",
           }),
         ),
+        // kilocode_change start
+        HttpApiEndpoint.post("summary", SessionPaths.summary, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          payload: SummaryPayload,
+          success: described(Schema.String, "Session summary text"),
+          error: [HttpApiError.BadRequest, HttpApiError.InternalServerError, ApiNotFoundError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "session.summary",
+            summary: "Generate session summary",
+            description:
+              "Generate a non-destructive markdown summary of the session focused on accomplishments and architectural decisions. The summary is returned as text and is not persisted as a session message.",
+          }),
+        ),
+        // kilocode_change end
         HttpApiEndpoint.post("prompt", SessionPaths.prompt, {
           params: { sessionID: SessionID },
           query: WorkspaceRoutingQuery,

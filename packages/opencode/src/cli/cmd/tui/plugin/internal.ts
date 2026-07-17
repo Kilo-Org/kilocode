@@ -4,6 +4,7 @@ import HomeTips from "../feature-plugins/home/tips"
 import HomeNews from "@/kilocode/plugins/home-news"
 import HomeOnboarding from "@/kilocode/plugins/home-onboarding"
 import KiloAttention from "@/kilocode/plugins/attention"
+import KiloCopySessionSummary from "@/kilocode/plugins/copy-session-summary"
 import KiloHomeFooter from "@/kilocode/plugins/home-footer"
 import KiloPermissions from "@/kilocode/plugins/permissions" // kilocode_change
 import KiloSidebarFooter from "@/kilocode/plugins/sidebar-footer"
@@ -44,6 +45,7 @@ export function internalTuiPlugins(flags: Pick<RuntimeFlags.Info, "experimentalE
     HomeNews, // kilocode_change
     HomeOnboarding, // kilocode_change
     KiloAttention, // kilocode_change
+    KiloCopySessionSummary, // kilocode_change
     KiloHomeFooter, // kilocode_change
     KiloPermissions, // kilocode_change
     KiloSidebarFooter, // kilocode_change
