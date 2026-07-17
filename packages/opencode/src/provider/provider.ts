@@ -1516,7 +1516,8 @@ export const layer = Layer.effect(
             parsed.models[modelID] = parsedModel
           }
 
-          if (provider.npm === "@ai-sdk/openai-compatible" && provider.discoverModels === true) {
+          const npm = provider.npm ?? "@ai-sdk/openai-compatible"
+          if (npm === "@ai-sdk/openai-compatible" && provider.discoverModels === true) {
             discoveryLoaders[providerID] = async () => {
               const first = Object.values(parsed.models)[0]
               const baseURL = provider.options?.baseURL ?? provider.api ?? first?.api.url
@@ -1705,23 +1706,28 @@ export const layer = Layer.effect(
         }
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
 
-        for (const [providerID, loader] of Object.entries(discoveryLoaders)) {
-          if (!providers[providerID]) continue
-          if (!isProviderAllowed(providerID)) continue
+        yield* Effect.all(
+          Object.entries(discoveryLoaders).map(([providerID, loader]) =>
+            Effect.gen(function* () {
+              if (!providers[providerID]) return
+              if (!isProviderAllowed(providerID)) return
 
-          const discovered = yield* Effect.tryPromise(() => loader()).pipe(
-            Effect.catch((err) =>
-              Effect.logWarning("model discovery failed", { providerID, err }).pipe(
-                Effect.as({} as Record<string, Model>),
-              ),
-            ),
-          )
-          for (const [modelID, model] of Object.entries(discovered)) {
-            if (!providers[providerID].models[modelID]) {
-              providers[providerID].models[modelID] = model
-            }
-          }
-        }
+              const discovered = yield* Effect.tryPromise(() => loader()).pipe(
+                Effect.catch((err) =>
+                  Effect.logWarning("model discovery failed", { providerID, err }).pipe(
+                    Effect.as({} as Record<string, Model>),
+                  ),
+                ),
+              )
+              for (const [modelID, model] of Object.entries(discovered)) {
+                if (!providers[providerID].models[modelID]) {
+                  providers[providerID].models[modelID] = model
+                }
+              }
+            }),
+          ),
+          { concurrency: "unbounded" },
+        )
 
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderV2.ID.make(id)
