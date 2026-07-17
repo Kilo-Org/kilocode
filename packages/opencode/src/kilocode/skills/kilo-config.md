@@ -1,6 +1,8 @@
 # Kilo CLI Configuration Reference
 
-All config lives in `kilo.json` (or `kilo.jsonc`). Precedence low-to-high: remote well-known, global (`~/.config/kilo/kilo.json`), env `KILO_CONFIG`, project `./kilo.json`, `.kilo/kilo.json`, `KILO_CONFIG_CONTENT`, managed (see Config File Locations). Deep-merged; later wins.
+Automatic main-config discovery loads only `kilo.json` and `kilo.jsonc`. At one location, Kilo loads `kilo.json` before `kilo.jsonc`, so JSONC takes precedence. Sources merge low-to-high: remote well-known, global Kilo files, explicit `KILO_CONFIG`, project-root and Kilo config-directory files, `KILO_CONFIG_DIR`, `KILO_CONFIG_CONTENT`, and managed configuration (see Config File Locations). Later values win.
+
+Automatically discovered `opencode.json`, `opencode.jsonc`, `.opencode` directories, global legacy `config.json`, and the legacy TOML `config` file are ignored. Rename OpenCode files to `kilo.json` or `kilo.jsonc` and move them to a Kilo config location. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file. `KILO_CONFIG` is an explicit arbitrary-file override and loads the exact supplied path regardless of its filename. `KILO_CONFIG_DIR` can point to a directory with any name, but loads only `kilo.json` and `kilo.jsonc` inside it.
 
 This also covers where Kilo looks for config files, commands, agents, and skills across project, global, and legacy paths such as `.kilo/`, `.kilocode/`, and `~/.config/kilo/`, plus Agent Manager setup/run scripts in the VS Code extension.
 
@@ -331,19 +333,19 @@ Notification settings are managed through `kilo console` under **Settings > CLI 
 
 ## Config File Locations
 
-### Config files (kilo.json)
+### Config files (`kilo.json` and `kilo.jsonc`)
 
 | Scope | Path |
 |---|---|
-| Project | `./kilo.json`, `./kilo.jsonc`, `./opencode.json` (legacy), `./opencode.jsonc` (legacy) |
-| Global | `~/.config/kilo/kilo.json`, `~/.config/kilo/kilo.jsonc`, `~/.config/kilo/opencode.json` (legacy), `~/.config/kilo/opencode.jsonc` (legacy), `~/.config/kilo/config.json` (legacy) |
-| Managed | Linux: `/etc/kilo/`, macOS: `/Library/Application Support/kilo/`, Windows: `%ProgramData%\kilo\` — loads `kilo.json`, `kilo.jsonc`, `opencode.json`, `opencode.jsonc` (enterprise, highest priority) |
+| Project | `./kilo.json`, `./kilo.jsonc`, and the matching files in `.kilocode/` or `.kilo/` |
+| Global | `~/.config/kilo/kilo.json`, `~/.config/kilo/kilo.jsonc` |
+| Managed | Linux: `/etc/kilo/`, macOS: `/Library/Application Support/kilo/`, Windows: `%ProgramData%\kilo\`; loads `kilo.json` and `kilo.jsonc` (enterprise, highest priority) |
 
-Each config directory (`.kilo/` and legacy `.kilocode/`) can also contain `kilo.json`, `kilo.jsonc`, `opencode.json`, or `opencode.jsonc`.
+Each config directory (`.kilo/` and legacy `.kilocode/`) can contain `kilo.json` and `kilo.jsonc`. `kilo.jsonc` is the preferred update target and wins when both files exist in the same location.
 
 ### Config directories
 
-Two directory names are scanned: `.kilo` (canonical) and `.kilocode` (legacy fallback). Both are checked at each level, and `.kilo` wins when both define the same entry. `.opencode` directories are not loaded.
+Two directory names are scanned: `.kilo` (canonical) and `.kilocode` (legacy fallback). Both are checked at each level, and `.kilo` wins when both define the same entry. `.opencode` directories are not automatically loaded.
 
 - **Project**: walks up from CWD to the git worktree root, checking both directories at each level
 - **Home**: `~/.kilo/` and `~/.kilocode/`
@@ -373,7 +375,7 @@ Example: `~/.config/kilo/command/*.md` (global), `~/.kilocode/command/*.md` (leg
 
 | Variable | Description |
 |---|---|
-| `KILO_CONFIG` | Path to an additional config file (loaded after global) |
-| `KILO_CONFIG_DIR` | Path to an additional config directory (appended to search list) |
+| `KILO_CONFIG` | Explicit path to one additional config file, loaded after global, with any filename |
+| `KILO_CONFIG_DIR` | Path to an additional config directory, appended to the search list; only `kilo.json` and `kilo.jsonc` load from it |
 | `KILO_CONFIG_CONTENT` | Inline JSON config string (high precedence, after project dirs) |
 | `KILO_DISABLE_PROJECT_CONFIG` | Skip all project-level config (files and directories) |

@@ -31,7 +31,7 @@ export type PatchDeps = {
   readText: (file: string) => Promise<string>
   write: (file: string, text: string) => Promise<void>
   exists: (file: string) => Promise<boolean>
-  files: (dir: string, name: "opencode" | "tui") => string[]
+  files: (dir: string, name: "kilo" | "tui") => string[] // kilocode_change
 }
 
 export type PatchInput = {
@@ -85,7 +85,12 @@ const defaultPatchDeps: PatchDeps = {
     await Filesystem.write(file, text)
   },
   exists: (file) => Filesystem.exists(file),
-  files: (dir, name) => ConfigPaths.fileInDirectory(dir, name),
+  // kilocode_change start
+  files: (dir, name) =>
+    name === "kilo"
+      ? [path.join(dir, "kilo.jsonc"), path.join(dir, "kilo.json")]
+      : ConfigPaths.fileInDirectory(dir, name),
+  // kilocode_change end
 }
 
 function pluginSpec(item: unknown) {
@@ -337,8 +342,9 @@ function patchDir(input: PatchInput) {
   return path.join(root, ".kilo") // kilocode_change
 }
 
-function patchName(kind: Kind): "opencode" | "tui" {
-  if (kind === "server") return "opencode"
+function patchName(kind: Kind): "kilo" | "tui" {
+  // kilocode_change
+  if (kind === "server") return "kilo" // kilocode_change
   return "tui"
 }
 

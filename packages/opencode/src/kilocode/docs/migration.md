@@ -4,12 +4,23 @@ This document explains how Kilocode configurations are automatically migrated to
 
 ## Table of Contents
 
+- [Main Configuration Files](#main-configuration-files)
 - [Modes Migration](#modes-migration)
 - [Skills Discovery](#skills-discovery)
 - [Rules Migration](#rules-migration)
 - [Workflows Migration](#workflows-migration)
 - [MCP Migration](#mcp-migration)
 - [Kilo Notifications](#kilo-notifications)
+
+---
+
+# Main Configuration Files
+
+Kilo automatically discovers only `kilo.json` and `kilo.jsonc` as main configuration files. At the same location, Kilo loads `kilo.json` first and `kilo.jsonc` second, so JSONC takes precedence.
+
+Automatically discovered `opencode.json`, `opencode.jsonc`, `.opencode` directories, global legacy `config.json`, and the legacy TOML `config` file are ignored. To migrate an OpenCode JSON file, rename it to `kilo.json` or `kilo.jsonc` and move it to `~/.config/kilo/`, the project root, or a `.kilo/` directory. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file.
+
+`KILO_CONFIG` remains an explicit override for one arbitrary file and loads exactly the supplied path, regardless of filename. `KILO_CONFIG_DIR` can point to a directory with any name, but automatically loads only `kilo.json` and `kilo.jsonc` from that directory.
 
 ---
 
@@ -326,10 +337,10 @@ Kilocode MCP server configurations are migrated to Opencode's `mcp` config. See 
 
 ## Config file location
 
-The CLI reads global config from `~/.config/kilo/` (see [`global/index.ts`](../../global/index.ts): `Global.Path.config` = `xdgConfig` + `"kilo"`). It merges, in order, `config.json`, `opencode.json`, and `opencode.jsonc` in that directory. You can put MCP config in **`opencode.json`** or **`opencode.jsonc`**.
+The CLI reads global Kilo configuration from `~/.config/kilo/` (see [`global/index.ts`](../../global/index.ts): `Global.Path.config` = `xdgConfig` + `"kilo"`). Put MCP config in `kilo.jsonc` (preferred) or `kilo.json`. Kilo loads JSON before JSONC, so JSONC takes precedence when both files exist.
 
-- **macOS / Linux:** `~/.config/kilo/opencode.json` (or `opencode.jsonc`)
-- **Windows:** Config directory depends on `xdg-basedir` (often under `%LOCALAPPDATA%` or `%USERPROFILE%`); filename is still `opencode.json` or `opencode.jsonc`.
+- **macOS / Linux:** `~/.config/kilo/kilo.jsonc` (or `kilo.json`)
+- **Windows:** Config directory depends on `xdg-basedir` (often under `%LOCALAPPDATA%` or `%USERPROFILE%`); filename is `kilo.jsonc` or `kilo.json`.
 
 Use a top-level `"mcp"` object. Each key is the server name. For a local server, value must have `type: "local"` and `command: ["executable", "arg1", ...]`. Optional: `environment` (env vars), `enabled` (boolean), `timeout` (ms). See `Config.McpLocal` in [`config.ts`](../../config/config.ts). Restart the CLI after editing.
 

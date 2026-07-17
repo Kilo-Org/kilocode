@@ -8,7 +8,7 @@
 // Configuration flows through opencode's built-in test affordances:
 //   - KILO_CONFIG_CONTENT      : provider config inline, no files to find
 //   - KILO_TEST_HOME           : pins os.homedir() → tmpdir
-//   - KILO_DISABLE_PROJECT_CONFIG : skip walking up for opencode.json
+//   - KILO_DISABLE_PROJECT_CONFIG : skip walking up for Kilo config // kilocode_change
 //   - KILO_PURE                : skip external plugin discovery + install
 //   - KILO_DISABLE_AUTOUPDATE / AUTOCOMPACT / MODELS_FETCH : no background work
 // Plus HOME / XDG_* pointing at the tmpdir for belt-and-suspenders isolation.

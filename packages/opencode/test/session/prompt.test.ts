@@ -345,7 +345,7 @@ const ensureDir = Effect.fn("test.ensureDir")(function* (dir: string) {
 
 const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config: Partial<ConfigV1.Info>) {
   yield* writeText(
-    path.join(dir, "opencode.json"),
+    path.join(dir, "kilo.jsonc"), // kilocode_change
     JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...config }), // kilocode_change
   )
 })
@@ -2099,15 +2099,17 @@ unixNoLLMServer(
       yield* waitForBusy(chat.id)
       // kilocode_change start - busy is set before shell persistence completes
       yield* pollWithTimeout(
-        sessions.messages({ sessionID: chat.id }).pipe(
-          Effect.map((messages) =>
-            messages.some((message) =>
-              message.parts.some((part) => part.type === "tool" && part.state.status === "running"),
-            )
-              ? true
-              : undefined,
+        sessions
+          .messages({ sessionID: chat.id })
+          .pipe(
+            Effect.map((messages) =>
+              messages.some((message) =>
+                message.parts.some((part) => part.type === "tool" && part.state.status === "running"),
+              )
+                ? true
+                : undefined,
+            ),
           ),
-        ),
         `session ${chat.id} never persisted its running shell tool`,
       )
       // kilocode_change end
@@ -2735,11 +2737,7 @@ it.instance(
       const tagged = trackSpy.mock.calls
         .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
         .find(
-          (p) =>
-            p.mode === "review" &&
-            p.feature === "code_reviews" &&
-            p.command === "review" &&
-            p.tool === "suggest",
+          (p) => p.mode === "review" && p.feature === "code_reviews" && p.command === "review" && p.tool === "suggest",
         )
       expect(tagged).toBeDefined()
     }),

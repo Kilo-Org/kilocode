@@ -415,7 +415,7 @@ export const dict = {
   "dialog.mcp.empty": "Ingen MCP'er konfigureret",
 
   "dialog.lsp.empty": "LSP'er registreret automatisk fra filtyper",
-  "dialog.plugins.empty": "Plugins konfigureret i opencode.json",
+  "dialog.plugins.empty": "Plugins konfigureret i kilo.jsonc",
 
   "mcp.status.connected": "forbundet",
   "mcp.status.failed": "mislykkedes",
@@ -600,7 +600,7 @@ export const dict = {
   "error.chain.responseBody": "Svarindhold:\n{{body}}",
   "error.chain.didYouMean": "Mente du: {{suggestions}}",
   "error.chain.modelNotFound": "Model ikke fundet: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Tjek dine konfigurations (opencode.json) udbyder/modelnavne",
+  "error.chain.checkConfig": "Tjek dine konfigurations (kilo.jsonc) udbyder/modelnavne",
   "error.chain.mcpFailed": 'MCP-server "{{name}}" fejlede. Bemærk, Kilo understøtter ikke MCP-godkendelse endnu.',
   "error.chain.providerAuthFailed": "Udbydergodkendelse mislykkedes ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -1079,14 +1079,12 @@ export const dict = {
   "settings.config.source.xdg": "XDG global konfiguration",
   "settings.config.source.homeKilo": "Home .kilo konfiguration",
   "settings.config.source.homeKilocode": "Home .kilocode konfiguration",
-  "settings.config.source.homeOpencode": "Home .opencode konfiguration",
   "settings.config.source.envFile": "KILO_CONFIG miljøfil",
   "settings.config.source.envDir": "KILO_CONFIG_DIR",
   "settings.config.source.envContent": "Indbygget miljøkonfiguration",
   "settings.config.source.projectKilo": "Projekt .kilo konfiguration",
   "settings.config.source.projectRoot": "Projekt rodkonfiguration",
   "settings.config.source.projectKilocode": "Forældet .kilocode konfiguration",
-  "settings.config.source.projectOpencode": "Forældet .opencode konfiguration",
   "settings.models.title": "Modeller",
   "settings.models.description": "Modelindstillinger vil kunne konfigureres her.",
   "settings.agents.title": "Agenter",
@@ -1589,9 +1587,9 @@ export const dict = {
     "Ingen MCP-servere konfigureret. Tilføj MCP-servere i kilo.jsonc, eller bed agenten om at tilføje dem.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows administreres via workflow-filer i dit arbejdsområde.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows er brugerdefinerede slash-kommandoer defineret i din konfiguration. Skriv /command-name i chatten for at aktivere dem. Kommandoer konfigureres i opencode.json under sektionen 'command'.",
+    "Workflows er brugerdefinerede slash-kommandoer defineret i din konfiguration. Skriv /command-name i chatten for at aktivere dem. Kommandoer konfigureres i kilo.jsonc under sektionen 'command'.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
+    "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til kilo.jsonc for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
   "settings.sandboxing.enabled.title": "Sandbox",

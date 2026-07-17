@@ -211,14 +211,12 @@ export interface OpenConfigFileRequest {
     sourceXdg: string
     sourceHomeKilo: string
     sourceHomeKilocode: string
-    sourceHomeOpencode: string
     sourceEnvFile: string
     sourceEnvDir: string
     sourceEnvContent: string
     sourceProjectKilo: string
     sourceProjectRoot: string
     sourceProjectKilocode: string
-    sourceProjectOpencode: string
   }
 }
 

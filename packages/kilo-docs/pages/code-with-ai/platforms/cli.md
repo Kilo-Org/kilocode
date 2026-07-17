@@ -155,7 +155,7 @@ Review your code locally before pushing — catch issues early without waiting f
 Configuration is managed through:
 
 - `/connect` command for provider setup (interactive)
-- Config files in **`~/.config/kilo/`**: use **`kilo.jsonc`** for provider, model, permission, and **MCP** settings. Restart the CLI after editing. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for MCP config format.
+- Kilo config files: use **`kilo.jsonc`** (preferred) or **`kilo.json`** for provider, model, permission, and **MCP** settings. Kilo automatically discovers these files in `~/.config/kilo/`, the project root, and Kilo config directories. Restart the CLI after editing. See [Using MCP in Kilo Code](/docs/automate/mcp/using-in-kilo-code) for MCP config format.
 - **`tui.jsonc`** for terminal UI settings such as notifications, sounds, themes, and keybindings
 - `kilo auth` for credential management
 
@@ -328,20 +328,22 @@ In Ask and Plan modes, `external_directory` allow rules can still permit reads o
 
 ## Configuration
 
-The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same configuration options. The CLI you install with `npm install -g @kilocode/cli` (Kilo CLI 1.0) is built from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode). For comprehensive configuration documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
+The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports many of the same configuration options. The CLI you install with `npm install -g @kilocode/cli` (Kilo CLI 1.0) is built from [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode). For comprehensive configuration-option documentation, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 
 ### Config File Location (Kilo CLI 1.0)
 
 | Scope | Path |
 |---|---|
-| **Global** | `~/.config/kilo/kilo.json[c]` or legacy `opencode.json[c]` (Windows config dir may vary) |
-| **Project** | `./kilo.json[c]`, legacy `./opencode.json[c]`, or config inside `./.kilo/` (legacy `./.kilocode/` is also read) |
+| **Global** | `~/.config/kilo/kilo.jsonc` (preferred) or `~/.config/kilo/kilo.json` (Windows config directory may vary) |
+| **Project** | `./kilo.jsonc` or `./kilo.json`, or the matching file in `./.kilo/` (legacy `./.kilocode/` is also read) |
 
-Project-level configuration takes precedence over global settings.
+Project-level configuration takes precedence over global settings. Kilo loads `kilo.json` before `kilo.jsonc` at the same location, so JSONC takes precedence when both exist.
 
 {% callout type="warning" %}
-**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+**Migrating older configuration?** Automatically discovered `opencode.json`, `opencode.jsonc`, files in `.opencode/`, global legacy `config.json`, and the legacy TOML `config` file are ignored. Rename OpenCode files to `kilo.json` or `kilo.jsonc`, then move them to `~/.config/kilo/`, the project root, or `.kilo/`. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file.
 {% /callout %}
+
+`KILO_CONFIG` remains an explicit opt-in to one arbitrary config file, so it loads the exact filename you provide. `KILO_CONFIG_DIR` can point to any directory name, but only `kilo.json` and `kilo.jsonc` in that directory are automatically loaded.
 
 ### Key Configuration Options
 
@@ -470,7 +472,7 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 ```
 
 {% callout type="warning" title="Only works in trusted config" %}
-`{env:VAR}` (and `{file:...}`) references are resolved **only** in trusted config: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** use `{env:VAR}` — the reference is ignored and a warning is logged. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` simply by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected.
+`{env:VAR}` (and `{file:...}`) references are resolved **only** in trusted config: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` or `kilo.jsonc` committed to a repository **cannot** use `{env:VAR}` - the reference is ignored and a warning is logged. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` simply by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root - references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected.
 {% /callout %}
 
 For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
@@ -601,7 +603,7 @@ Requires connection to Kilo Gateway. The `/remote` command appears only when aut
 
 **Enable by default:**
 
-Add to `~/.config/kilo/config.json`:
+Add to `~/.config/kilo/kilo.jsonc`:
 
 ```json
 {

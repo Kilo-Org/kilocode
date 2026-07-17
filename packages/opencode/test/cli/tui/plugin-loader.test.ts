@@ -832,7 +832,7 @@ test("does not bootstrap server plugins while initializing tui plugins", async (
           "",
         ].join("\n"),
       )
-      await Bun.write(path.join(dir, "opencode.json"), JSON.stringify({ plugin: [pathToFileURL(plugin).href] }))
+      await Bun.write(path.join(dir, "kilo.jsonc"), JSON.stringify({ plugin: [pathToFileURL(plugin).href] })) // kilocode_change
       return { marker }
     },
   })

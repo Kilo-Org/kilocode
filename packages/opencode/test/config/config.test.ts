@@ -420,17 +420,21 @@ it.effect("updates global config and omits empty shell key in json", () =>
 )
 
 it.effect("updates global config and omits empty shell key in jsonc", () =>
-  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "opencode.jsonc" }, ({ dir }) =>
-    Effect.gen(function* () {
-      yield* Config.use.updateGlobal({ shell: "" })
+  withGlobalConfig(
+    { config: { shell: "bash", model: "test/model" }, name: "kilo.jsonc" },
+    (
+      { dir }, // kilocode_change
+    ) =>
+      Effect.gen(function* () {
+        yield* Config.use.updateGlobal({ shell: "" })
 
-      const file = path.join(dir, "opencode.jsonc")
-      const writtenConfig = yield* FSUtil.use.readFileString(file)
-      const parsed = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(writtenConfig, file), file)
-      expect(writtenConfig).not.toContain('"shell"')
-      expect(parsed.shell).toBeUndefined()
-      expect(parsed.model).toBe("test/model")
-    }),
+        const file = path.join(dir, "kilo.jsonc") // kilocode_change
+        const writtenConfig = yield* FSUtil.use.readFileString(file)
+        const parsed = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(writtenConfig, file), file)
+        expect(writtenConfig).not.toContain('"shell"')
+        expect(parsed.shell).toBeUndefined()
+        expect(parsed.model).toBe("test/model")
+      }),
   ),
 )
 
@@ -1291,6 +1295,10 @@ it.instance("migrates legacy write tool to edit permission", () =>
 it.instance(
   "managed settings override user settings",
   Effect.gen(function* () {
+    // kilocode_change start
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, { model: "user/model", share: "auto", username: "testuser" })
+    // kilocode_change end
     yield* writeManagedSettingsEffect({
       $schema: "https://app.kilo.ai/config.json", // kilocode_change
       model: "managed/model",
@@ -1302,12 +1310,17 @@ it.instance(
     expect(config.share).toBe("disabled")
     expect(config.username).toBe("testuser")
   }),
-  { config: { model: "user/model", share: "auto", username: "testuser" } },
 )
 
+// kilocode_change start
 it.instance(
   "managed settings override project settings",
   Effect.gen(function* () {
+    // kilocode_change end
+    // kilocode_change start
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, { autoupdate: true, disabled_providers: [] })
+    // kilocode_change end
     yield* writeManagedSettingsEffect({
       $schema: "https://app.kilo.ai/config.json", // kilocode_change
       autoupdate: false,
@@ -1317,28 +1330,36 @@ it.instance(
     const config = yield* Config.use.get()
     expect(config.autoupdate).toBe(false)
     expect(config.disabled_providers).toEqual(["openai"])
-  }),
-  { config: { autoupdate: true, disabled_providers: [] } },
-)
+  }), // kilocode_change
+) // kilocode_change
 
-it.instance("managed jsonc settings override managed json settings", () =>
-  Effect.gen(function* () {
-    yield* writeManagedSettingsEffect({ model: "managed/json" })
-    yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "opencode.jsonc")
+it.instance(
+  "managed jsonc settings override managed json settings",
+  () =>
+    // kilocode_change
+    Effect.gen(function* () {
+      yield* writeManagedSettingsEffect({ model: "managed/json" })
+      yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "kilo.jsonc") // kilocode_change
+      yield* writeManagedSettingsEffect({ model: "legacy/opencode" }, "opencode.jsonc") // kilocode_change
 
-    const config = yield* Config.use.get()
-    expect(config.model).toBe("managed/jsonc")
-  }),
-)
+      const config = yield* Config.use.get()
+      expect(config.model).toBe("managed/jsonc")
+    }), // kilocode_change
+) // kilocode_change
 
+// kilocode_change start
 it.instance(
   "missing managed settings file is not an error",
   Effect.gen(function* () {
+    // kilocode_change end
+    // kilocode_change start
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, { model: "user/model" })
+    // kilocode_change end
     const config = yield* Config.use.get()
     expect(config.model).toBe("user/model")
-  }),
-  { config: { model: "user/model" } },
-)
+  }), // kilocode_change
+) // kilocode_change
 
 it.instance("migrates legacy edit tool to edit permission", () =>
   Effect.gen(function* () {

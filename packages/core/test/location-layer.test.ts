@@ -60,7 +60,7 @@ describe("LocationServiceMap", () => {
           })
           yield* Effect.promise(() =>
             fs.writeFile(
-              path.join(blocked.path, "opencode.json"),
+              path.join(blocked.path, "kilo.jsonc"), // kilocode_change
               JSON.stringify({
                 experimental: { policies: [{ effect: "deny", action: "provider.use", resource: "test" }] },
               }),

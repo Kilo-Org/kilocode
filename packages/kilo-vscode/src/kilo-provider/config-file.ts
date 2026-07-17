@@ -8,14 +8,12 @@ export type Source =
   | "sourceXdg"
   | "sourceHomeKilo"
   | "sourceHomeKilocode"
-  | "sourceHomeOpencode"
   | "sourceEnvFile"
   | "sourceEnvDir"
   | "sourceEnvContent"
   | "sourceProjectKilo"
   | "sourceProjectRoot"
   | "sourceProjectKilocode"
-  | "sourceProjectOpencode"
 
 export interface Entry {
   file?: string
@@ -30,15 +28,11 @@ export interface Entry {
 
 const SCHEMA = "https://app.kilo.ai/config.json"
 
-const MODERN = ["kilo.jsonc", "kilo.json"]
-const LEGACY = ["opencode.jsonc", "opencode.json"]
-const FILES = [...MODERN, ...LEGACY]
-const GLOBAL = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"]
-const HOME = [".kilo", ".kilocode", ".opencode"]
+const FILES = ["kilo.jsonc", "kilo.json"]
+const HOME = [".kilo", ".kilocode"]
 const SOURCES: Record<string, Source> = {
   ".kilo": "sourceHomeKilo",
   ".kilocode": "sourceHomeKilocode",
-  ".opencode": "sourceHomeOpencode",
 }
 
 function row(file: string, source: Source, loaded = true, recommended = false): Entry {
@@ -49,7 +43,7 @@ function row(file: string, source: Source, loaded = true, recommended = false): 
     source,
     exists: existsSync(file),
     loaded: loaded && existsSync(file),
-    legacy: name.startsWith("opencode") || name === "config.json" || file.includes(`${path.sep}.kilocode${path.sep}`),
+    legacy: file.includes(`${path.sep}.kilocode${path.sep}`),
     recommended,
   }
 }
@@ -61,7 +55,7 @@ function ensure(list: Entry[], file: string, source: Source) {
 
 export function globalFiles() {
   const root = path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "kilo")
-  const base = GLOBAL.map((file) => row(path.join(root, file), "sourceXdg")).filter((item) => item.exists)
+  const base = FILES.map((file) => row(path.join(root, file), "sourceXdg")).filter((item) => item.exists)
   const dirs = HOME.flatMap((dir) => {
     const base = path.join(os.homedir(), dir)
     if (!existsSync(base)) return []
@@ -93,7 +87,7 @@ export function globalFiles() {
 
 export function localFiles(root: string) {
   const enabled = !process.env.KILO_DISABLE_PROJECT_CONFIG
-  const dirs = [path.join(root, ".kilo"), root, path.join(root, ".kilocode"), path.join(root, ".opencode")]
+  const dirs = [path.join(root, ".kilo"), root, path.join(root, ".kilocode")]
   const list = dirs.flatMap((dir) => FILES.map((file) => row(path.join(dir, file), localSource(root, dir), enabled)))
   return ensure(
     list.filter((item) => item.exists),
@@ -105,8 +99,7 @@ export function localFiles(root: string) {
 function localSource(root: string, dir: string) {
   if (dir === root) return "sourceProjectRoot"
   if (dir.endsWith(`${path.sep}.kilo`)) return "sourceProjectKilo"
-  if (dir.endsWith(`${path.sep}.kilocode`)) return "sourceProjectKilocode"
-  return "sourceProjectOpencode"
+  return "sourceProjectKilocode"
 }
 
 export function content() {

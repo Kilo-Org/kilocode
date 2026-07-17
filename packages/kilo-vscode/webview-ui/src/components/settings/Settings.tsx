@@ -84,14 +84,12 @@ const Settings: Component<SettingsProps> = (props) => {
         sourceXdg: language.t("settings.config.source.xdg"),
         sourceHomeKilo: language.t("settings.config.source.homeKilo"),
         sourceHomeKilocode: language.t("settings.config.source.homeKilocode"),
-        sourceHomeOpencode: language.t("settings.config.source.homeOpencode"),
         sourceEnvFile: language.t("settings.config.source.envFile"),
         sourceEnvDir: language.t("settings.config.source.envDir"),
         sourceEnvContent: language.t("settings.config.source.envContent"),
         sourceProjectKilo: language.t("settings.config.source.projectKilo"),
         sourceProjectRoot: language.t("settings.config.source.projectRoot"),
         sourceProjectKilocode: language.t("settings.config.source.projectKilocode"),
-        sourceProjectOpencode: language.t("settings.config.source.projectOpencode"),
       },
     })
   }

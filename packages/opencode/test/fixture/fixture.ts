@@ -24,8 +24,7 @@ import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 export const testInstanceStoreLayer = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
-const makeTestRuntime = () =>
-  ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
+const makeTestRuntime = () => ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer))) // kilocode_change
 let testRuntime: ReturnType<typeof makeTestRuntime> | undefined
 const runtime = () => (testRuntime ??= makeTestRuntime())
 
@@ -109,7 +108,7 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
   }
   if (options?.config) {
     await Bun.write(
-      path.join(dirpath, "opencode.json"),
+      path.join(dirpath, "kilo.jsonc"), // kilocode_change
       JSON.stringify({
         $schema: "https://app.kilo.ai/config.json",
         ...options.config,
@@ -168,7 +167,7 @@ export function tmpdirScoped<E = never, R = never>(options?: {
       const resolved = typeof options.config === "function" ? options.config() : options.config
       yield* Effect.promise(() =>
         fs.writeFile(
-          path.join(dir, "opencode.json"),
+          path.join(dir, "kilo.jsonc"), // kilocode_change
           JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...resolved }), // kilocode_change
         ),
       )

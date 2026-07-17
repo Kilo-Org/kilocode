@@ -33,7 +33,7 @@ describe("ConfigSkillPlugin.Plugin", () => {
           Config.Service.of({
             entries: () =>
               Effect.succeed([
-                new Config.Directory({ type: "directory", path: AbsolutePath.make("/repo/.opencode") }),
+                new Config.Directory({ type: "directory", path: AbsolutePath.make("/repo/.kilo") }), // kilocode_change
                 new Config.Document({
                   type: "document",
                   info: decode({
@@ -58,11 +58,11 @@ describe("ConfigSkillPlugin.Plugin", () => {
       expect(sources).toEqual([
         new SkillV2.DirectorySource({
           type: "directory",
-          path: AbsolutePath.make(path.join("/repo/.opencode", "skill")),
+          path: AbsolutePath.make(path.join("/repo/.kilo", "skill")), // kilocode_change
         }),
         new SkillV2.DirectorySource({
           type: "directory",
-          path: AbsolutePath.make(path.join("/repo/.opencode", "skills")),
+          path: AbsolutePath.make(path.join("/repo/.kilo", "skills")), // kilocode_change
         }),
         new SkillV2.DirectorySource({ type: "directory", path: AbsolutePath.make(path.join(directory, "skills")) }),
         new SkillV2.DirectorySource({

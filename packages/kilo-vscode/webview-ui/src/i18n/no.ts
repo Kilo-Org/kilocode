@@ -420,7 +420,7 @@ export const dict = {
   "dialog.mcp.empty": "Ingen MCP-er konfigurert",
 
   "dialog.lsp.empty": "LSP-er automatisk oppdaget fra filtyper",
-  "dialog.plugins.empty": "Plugins konfigurert i opencode.json",
+  "dialog.plugins.empty": "Plugins konfigurert i kilo.jsonc",
 
   "mcp.status.connected": "tilkoblet",
   "mcp.status.failed": "mislyktes",
@@ -605,7 +605,7 @@ export const dict = {
   "error.chain.responseBody": "Responsinnhold:\n{{body}}",
   "error.chain.didYouMean": "Mente du: {{suggestions}}",
   "error.chain.modelNotFound": "Modell ikke funnet: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Sjekk leverandør-/modellnavnene i konfigurasjonen din (opencode.json)",
+  "error.chain.checkConfig": "Sjekk leverandør-/modellnavnene i konfigurasjonen din (kilo.jsonc)",
   "error.chain.mcpFailed": 'MCP-server "{{name}}" mislyktes. Merk at Kilo ikke støtter MCP-autentisering ennå.',
   "error.chain.providerAuthFailed": "Leverandørautentisering mislyktes ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -1044,14 +1044,12 @@ export const dict = {
   "settings.config.source.xdg": "XDG global konfigurasjon",
   "settings.config.source.homeKilo": "Home .kilo-konfigurasjon",
   "settings.config.source.homeKilocode": "Home .kilocode-konfigurasjon",
-  "settings.config.source.homeOpencode": "Home .opencode-konfigurasjon",
   "settings.config.source.envFile": "KILO_CONFIG miljøfil",
   "settings.config.source.envDir": "KILO_CONFIG_DIR",
   "settings.config.source.envContent": "Innebygd miljøkonfigurasjon",
   "settings.config.source.projectKilo": "Prosjekt .kilo-konfigurasjon",
   "settings.config.source.projectRoot": "Prosjektets rotkonfigurasjon",
   "settings.config.source.projectKilocode": "Eldre .kilocode-konfigurasjon",
-  "settings.config.source.projectOpencode": "Eldre .opencode-konfigurasjon",
   "settings.models.title": "Modeller",
   "settings.models.description": "Modellinnstillinger vil kunne konfigureres her.",
   "settings.agents.title": "Agenter",
@@ -1589,9 +1587,9 @@ export const dict = {
     "Ingen MCP-servere konfigurert. Legg til MCP-servere i kilo.jsonc, eller be agenten om å legge dem til.",
   "settings.agentBehaviour.workflowsPlaceholder": "Arbeidsflyter administreres via arbeidsflytfiler i arbeidsområdet.",
   "settings.agentBehaviour.workflows.description":
-    "Arbeidsflyter er egendefinerte skråstrekkommandoer definert i konfigurasjonen din. Skriv /command-name i chatten for å kjøre dem. Kommandoer konfigureres i opencode.json under seksjonen 'command'.",
+    "Arbeidsflyter er egendefinerte skråstrekkommandoer definert i konfigurasjonen din. Skriv /command-name i chatten for å kjøre dem. Kommandoer konfigureres i kilo.jsonc under seksjonen 'command'.",
   "settings.agentBehaviour.workflows.empty":
-    "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i opencode.json for å se dem her.",
+    "Ingen egendefinerte kommandoer konfigurert. Legg til kommandoer i kilo.jsonc for å se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Mal",
   "settings.sandboxing.enabled.title": "Sandbox",

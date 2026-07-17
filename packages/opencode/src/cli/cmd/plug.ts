@@ -1,5 +1,6 @@
 import { intro, log, outro, spinner } from "@clack/prompts"
 import { Effect } from "effect"
+import path from "path" // kilocode_change
 
 import { ConfigPaths } from "@/config/paths"
 import { Global } from "@opencode-ai/core/global"
@@ -28,7 +29,7 @@ export type PlugDeps = {
   readText: (file: string) => Promise<string>
   write: (file: string, text: string) => Promise<void>
   exists: (file: string) => Promise<boolean>
-  files: (dir: string, name: "opencode" | "tui") => string[]
+  files: (dir: string, name: "kilo" | "tui") => string[] // kilocode_change
   global: string
 }
 
@@ -57,7 +58,12 @@ const defaultPlugDeps: PlugDeps = {
     await Filesystem.write(file, text)
   },
   exists: (file) => Filesystem.exists(file),
-  files: (dir, name) => ConfigPaths.fileInDirectory(dir, name),
+  // kilocode_change start
+  files: (dir, name) =>
+    name === "kilo"
+      ? [path.join(dir, "kilo.jsonc"), path.join(dir, "kilo.json")]
+      : ConfigPaths.fileInDirectory(dir, name),
+  // kilocode_change end
   global: Global.Path.config,
 }
 

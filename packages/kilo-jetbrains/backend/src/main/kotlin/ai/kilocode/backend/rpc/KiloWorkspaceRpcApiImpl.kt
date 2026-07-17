@@ -79,9 +79,7 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
         private val LOG = KiloLog.create(KiloWorkspaceRpcApiImpl::class.java)
         private const val SCHEMA = "https://app.kilo.ai/config.json"
         private val MODERN = listOf("kilo.jsonc", "kilo.json")
-        private val LEGACY = listOf("opencode.jsonc", "opencode.json")
-        private val GLOBAL = MODERN + LEGACY + "config.json"
-        private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
+        private val LOCAL_DIRS = listOf(".kilo", ".kilocode")
         private const val SEARCH_CAP = 2_000
         private const val DIFF_CAP = 200_000
         private val CONFIG = """{
@@ -263,17 +261,20 @@ class KiloWorkspaceRpcApiImpl : KiloWorkspaceRpcApi {
 
     private fun localConfig(directory: String): Path {
         val root = file(clean(directory) ?: directory)?.takeIf { it.isAbsolute } ?: Path.of(directory).normalize()
-        val dirs = LOCAL_DIRS.map { root.resolve(it) } + root
-        val found = dirs.asSequence()
-            .flatMap { dir -> (MODERN + LEGACY).asSequence().map { name -> dir.resolve(name) } }
-            .firstOrNull { Files.exists(it) }
-        return found ?: root.resolve(".kilo").resolve("kilo.jsonc")
+        val dirs = LOCAL_DIRS.map { root.resolve(it) } + listOf(root)
+        for (dir in dirs) {
+            val jsonc = dir.resolve("kilo.jsonc")
+            if (Files.exists(jsonc)) return jsonc
+            val json = dir.resolve("kilo.json")
+            if (Files.exists(json)) return json
+        }
+        return root.resolve(".kilo").resolve("kilo.jsonc")
     }
 
     private fun globalConfig(): Path {
         val env = buildKiloCliEnv("config")
         val root = KiloCliConfigPath.resolve(env).toPath().normalize()
-        return GLOBAL.asSequence()
+        return MODERN.asSequence()
             .map { root.resolve(it) }
             .firstOrNull { Files.exists(it) }
             ?: root.resolve("kilo.jsonc")

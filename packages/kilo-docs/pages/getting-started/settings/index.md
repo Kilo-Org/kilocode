@@ -27,11 +27,13 @@ This is especially useful for complex configuration like custom model definition
 
 ## Managing Settings
 
-Kilo reads JSONC config from a **global** location (`~/.config/kilo/kilo.jsonc`) and from your **project** (`kilo.jsonc`, or `.kilo/kilo.jsonc`). All clients — CLI, VS Code, and JetBrains — read the same files.
+Kilo automatically reads `kilo.json` and `kilo.jsonc` from a **global** location (`~/.config/kilo/`) and from your **project** (the project root or `.kilo/`). When both Kilo files exist in the same location, `kilo.jsonc` takes precedence. All clients, CLI, VS Code, and JetBrains, read the same files.
 
 {% callout type="warning" %}
-**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+**Migrating older configuration?** Automatically discovered `opencode.json`, `opencode.jsonc`, files in `.opencode/`, global legacy `config.json`, and the legacy TOML `config` file are ignored. Rename OpenCode files to `kilo.json` or `kilo.jsonc`, then move them to `~/.config/kilo/`, your project root, or `.kilo/`. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file.
 {% /callout %}
+
+`KILO_CONFIG` is an explicit opt-in to one arbitrary config file and loads that exact path regardless of its filename. `KILO_CONFIG_DIR` can point to a directory with any name, but Kilo automatically loads only `kilo.json` and `kilo.jsonc` from that directory.
 
 {% tabs %}
 {% tab label="VSCode" %}
@@ -42,10 +44,10 @@ This UI reads and writes to the same underlying JSONC config files used across e
 
 ### Config File Locations
 
-There are two primary config files:
+There are two primary config locations. Both accept `kilo.json` and `kilo.jsonc`; use JSONC when you want comments or when both files would otherwise coexist.
 
-- **Global config:** `~/.config/kilo/kilo.jsonc` — applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\kilo.jsonc`.
-- **Project config:** `kilo.jsonc` in your project root, or `.kilo/kilo.jsonc` for a cleaner setup. The `.kilo/` version takes priority if both exist.
+- **Global config:** `~/.config/kilo/kilo.jsonc` (preferred) or `~/.config/kilo/kilo.json` applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\`.
+- **Project config:** `kilo.jsonc` or `kilo.json` in your project root, or `.kilo/kilo.jsonc` / `.kilo/kilo.json` for a cleaner setup. The `.kilo/` version takes priority if both exist.
 
 Use **Local Config** or **Global Config** in the Settings header to open the matching config file from VS Code. If multiple config files are available, choose the exact file from the picker. If the recommended file does not exist yet, Kilo creates it before opening it.
 
@@ -123,25 +125,25 @@ If you check `kilo.jsonc` into version control, make sure it does not contain AP
 
 ### Config File Locations
 
-There are two primary config files:
+There are two primary config locations. Both accept `kilo.json` and `kilo.jsonc`; Kilo loads JSON first, then JSONC, so JSONC takes precedence when both exist in one location.
 
-- **Global config:** `~/.config/kilo/kilo.jsonc` -- applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\kilo.jsonc`.
-- **Project config:** `kilo.jsonc` in the root of your project -- overrides global settings for that project.
+- **Global config:** `~/.config/kilo/kilo.jsonc` (preferred) or `~/.config/kilo/kilo.json` applies to all projects. On Windows, this is `C:\Users\<username>\.config\kilo\`.
+- **Project config:** `kilo.jsonc` or `kilo.json` in the root of your project overrides global settings for that project. `.kilo/kilo.jsonc` or `.kilo/kilo.json` takes precedence over the project-root file.
 
-Both files use the [JSONC](https://code.visualstudio.com/docs/languages/json#_json-with-comments) format (JSON with comments).
+Both files use JSON syntax. [`kilo.jsonc`](https://code.visualstudio.com/docs/languages/json#_json-with-comments) also allows comments.
 
 ### Config File Precedence
 
-Settings are resolved through an 8-level precedence system (lowest to highest priority):
+Settings are resolved through these file-based sources (lowest to highest priority):
 
-1. **Legacy Kilocode** -- migrated settings from the VSCode extension
-2. **Remote well-known** -- remotely fetched defaults
-3. **Global** -- `~/.config/kilo/kilo.jsonc`
-4. **Custom** -- additional custom config paths
-5. **Project** -- `kilo.jsonc` in the project root
-6. **`.kilo` directory** -- config from a `.kilo/` directory in the project
-7. **Inline environment** -- environment variable overrides
-8. **Managed / Enterprise** -- enterprise-managed configuration (highest priority)
+1. **Legacy Kilocode and remote well-known** - migrated settings and remotely fetched defaults
+2. **Global** - Kilo files in `~/.config/kilo/`
+3. **Explicit file** - `KILO_CONFIG`
+4. **Project root** - `kilo.json` and `kilo.jsonc`
+5. **Project config directories** - legacy `.kilocode/` and canonical `.kilo/`
+6. **Explicit directory** - Kilo files in `KILO_CONFIG_DIR`
+7. **Inline environment** - `KILO_CONFIG_CONTENT`
+8. **Managed / Enterprise** - enterprise-managed configuration
 
 Higher-priority levels override lower ones. This allows organizations to enforce settings at the enterprise level while still letting individual developers customize their local environment.
 

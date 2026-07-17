@@ -73,7 +73,7 @@ export namespace KilocodeConfigOverlay {
     sources: KilocodeConfigSources.Source[]
   }
 
-  const files = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
+  const files = KilocodeConfig.KILO_CONFIG_FILES.toReversed()
   const dirs = [".kilocode", ".kilo"] as const
 
   const fieldPaths = [
@@ -130,15 +130,14 @@ export namespace KilocodeConfigOverlay {
 
   export async function projectTarget(input: { directory: string; worktree?: string }) {
     const found = await Filesystem.findUp(dirs.toReversed(), input.directory, input.worktree)
-    const roots = await Filesystem.findUp([...files], input.directory, input.worktree)
-    const candidates = [...found.flatMap((dir) => files.map((file) => path.join(dir, file))), ...roots]
+    const names = files.toReversed()
+    const roots = await Filesystem.findUp([...names], input.directory, input.worktree)
+    const candidates = [...found.flatMap((dir) => names.map((file) => path.join(dir, file))), ...roots]
     return candidates.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
   }
 
   export function globalTarget() {
-    const candidates = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"].map((file) =>
-      path.join(Global.Path.config, file),
-    )
+    const candidates = files.toReversed().map((file) => path.join(Global.Path.config, file))
     return candidates.find((file) => existsSync(file)) ?? candidates[0]
   }
 

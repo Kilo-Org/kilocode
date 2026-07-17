@@ -60,7 +60,7 @@ describe("config HttpApi", () => {
       })
       yield* Fiber.join(disposed)
       // kilocode_change start
-      expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "opencode.json")).json())).toMatchObject({
+      expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "kilo.jsonc")).json())).toMatchObject({
         // kilocode_change end
         username: "patched-user",
         formatter: false,
