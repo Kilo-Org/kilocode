@@ -9,6 +9,9 @@ import {
   getMentionRemovalRange,
   isCursorAtMentionEnd,
   findMentionRange,
+  FILE_PICKER_RESULT,
+  TERMINAL_RESULT,
+  GIT_CHANGES_RESULT,
 } from "../../webview-ui/src/hooks/file-mention-utils"
 
 describe("AT_PATTERN", () => {
@@ -53,32 +56,42 @@ describe("buildMentionResults", () => {
 
   it("includes terminal for matching prefix", () => {
     const result = buildMentionResults("term", ["src/terminal.ts"])
-    expect(result.map((item) => item.type)).toEqual(["terminal", "file"])
+    expect(result.map((item) => item.type)).toEqual(["terminal", "file", "file-picker"])
   })
 
   it("includes git changes for matching prefix", () => {
     const result = buildMentionResults("git", ["src/git.ts"])
-    expect(result.map((item) => item.type)).toEqual(["git-changes", "file"])
+    expect(result.map((item) => item.type)).toEqual(["git-changes", "file", "file-picker"])
   })
 
   it("omits special mentions for unrelated query", () => {
     const result = buildMentionResults("src", ["src/index.ts"])
-    expect(result.map((item) => item.type)).toEqual(["file"])
+    expect(result.map((item) => item.type)).toEqual(["file", "file-picker"])
   })
 
   it("omits git changes when git is unavailable", () => {
     const result = buildMentionResults("git", ["src/git.ts"], false)
-    expect(result.map((item) => item.type)).toEqual(["file"])
+    expect(result.map((item) => item.type)).toEqual(["file", "file-picker"])
   })
 
   it("includes folder results", () => {
     const result = buildMentionResults("src", [{ path: "src", type: "folder" }])
-    expect(result).toEqual([{ type: "folder", value: "src" }])
+    expect(result).toEqual([{ type: "folder", value: "src" }, FILE_PICKER_RESULT])
   })
 
   it("preserves opened file result type", () => {
     const result = buildMentionResults("src", [{ path: "src/index.ts", type: "opened-file" }])
-    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }])
+    expect(result).toEqual([{ type: "opened-file", value: "src/index.ts" }, FILE_PICKER_RESULT])
+  })
+
+  it("always includes file picker result at the end of the list", () => {
+    const result = buildMentionResults("", ["src/index.ts"])
+    expect(result).toEqual([
+      TERMINAL_RESULT,
+      GIT_CHANGES_RESULT,
+      { type: "file", value: "src/index.ts" },
+      FILE_PICKER_RESULT,
+    ])
   })
 })
 
@@ -87,8 +100,14 @@ describe("filterMentionResults", () => {
     const result = filterMentionResults("gi", [
       { type: "file", value: "README.md" },
       { type: "file", value: "src/git.ts" },
+      FILE_PICKER_RESULT,
     ])
-    expect(result).toEqual([{ type: "file", value: "src/git.ts" }])
+    expect(result).toEqual([{ type: "file", value: "src/git.ts" }, FILE_PICKER_RESULT])
+  })
+
+  it("always preserves file picker result regardless of query", () => {
+    const result = filterMentionResults("zz", [FILE_PICKER_RESULT])
+    expect(result).toEqual([FILE_PICKER_RESULT])
   })
 })
 
@@ -135,6 +154,24 @@ describe("syncMentionedPaths", () => {
     const paths = new Set(["foo.ts"])
     const result = syncMentionedPaths(paths, "@foo.ts is important")
     expect(result.has("foo.ts")).toBe(true)
+  })
+
+  it("does not false-match a stale shorter path against a longer, space-containing path that starts the same way", () => {
+    // "a.txt" is a known path from an earlier, unrelated mention. A space
+    // genuinely follows "a.txt" in the current text, but only because it's
+    // the start of the longer, distinct "a.txt backup.txt" -- a whitespace-only
+    // boundary check would incorrectly treat that as a valid, separate match.
+    const paths = new Set(["a.txt", "a.txt backup.txt"])
+    const result = syncMentionedPaths(paths, "@a.txt backup.txt")
+    expect(result.has("a.txt backup.txt")).toBe(true)
+    expect(result.has("a.txt")).toBe(false)
+  })
+
+  it("keeps a shorter path when it also has its own genuine, separate occurrence", () => {
+    const paths = new Set(["a.txt", "a.txt backup.txt"])
+    const result = syncMentionedPaths(paths, "@a.txt backup.txt and also @a.txt")
+    expect(result.has("a.txt backup.txt")).toBe(true)
+    expect(result.has("a.txt")).toBe(true)
   })
 })
 
@@ -230,17 +267,140 @@ describe("buildFileAttachments", () => {
     expect(result[0]!.url).toContain("foo.ts")
   })
 
-  it("handles absolute paths directly", () => {
+  it("attaches an absolute path that lives inside the workspace", () => {
+    const paths = new Set(["/workspace/src/file.ts"])
+    const result = buildFileAttachments("@/workspace/src/file.ts", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).toContain("/workspace/src/file.ts")
+  })
+
+  it("does not attach an absolute Unix path outside the workspace", () => {
     const paths = new Set(["/abs/path/file.ts"])
     const result = buildFileAttachments("@/abs/path/file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach an absolute Windows path outside the workspace", () => {
+    const paths = new Set(["C:/Users/file.ts"])
+    const result = buildFileAttachments("@C:/Users/file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach a UNC path outside the workspace", () => {
+    const paths = new Set(["\\\\server\\share\\file.ts"])
+    const result = buildFileAttachments("@\\\\server\\share\\file.ts", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach an absolute path that escapes the workspace via ../ segments", () => {
+    const paths = new Set(["/workspace/../../etc/passwd"])
+    const result = buildFileAttachments("@/workspace/../../etc/passwd", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("does not attach a relative-looking mention that escapes the workspace via ../ segments", () => {
+    // Simulates a path seeded from raw text (e.g. seedFromText) rather than the
+    // file picker or file search, which never produce a leading "../".
+    const paths = new Set(["../../etc/passwd"])
+    const result = buildFileAttachments("@../../etc/passwd", paths, "/workspace")
+    expect(result).toEqual([])
+  })
+
+  it("attaches a relative mention with ../ segments that still resolves inside the workspace", () => {
+    const paths = new Set(["sub/../foo.ts"])
+    const result = buildFileAttachments("@sub/../foo.ts", paths, "/workspace")
     expect(result).toHaveLength(1)
-    expect(result[0]!.url).toContain("/abs/path/file.ts")
+    expect(result[0]!.url).toContain("/workspace/foo.ts")
   })
 
   it("normalizes Windows backslashes in workspaceDir", () => {
     const paths = new Set(["foo.ts"])
     const result = buildFileAttachments("@foo.ts", paths, "C:\\Users\\workspace")
     expect(result[0]!.url).not.toContain("\\")
+  })
+
+  it("includes source.text with correct position for a plain mention", () => {
+    const paths = new Set(["src/foo.ts"])
+    const text = "check @src/foo.ts here"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "src/foo.ts",
+      text: { value: "@src/foo.ts", start: 6, end: 17 },
+    })
+  })
+
+  it("includes source.text for a filename with spaces", () => {
+    const paths = new Set(["org data.xlsx"])
+    const text = "see @org data.xlsx now"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "org data.xlsx",
+      text: { value: "@org data.xlsx", start: 4, end: 18 },
+    })
+  })
+
+  it("includes source.text for a Cyrillic filename", () => {
+    const paths = new Set(["файл.txt"])
+    const text = "open @файл.txt"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source?.text.value).toBe("@файл.txt")
+    expect(result[0]!.source?.text.start).toBe(5)
+  })
+
+  it("includes source.text for a Chinese filename", () => {
+    const paths = new Set(["文件.txt"])
+    const text = "@文件.txt"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source?.text.value).toBe("@文件.txt")
+    expect(result[0]!.source?.text.start).toBe(0)
+  })
+
+  it("includes source.text for a path with spaces in both dir and filename", () => {
+    const paths = new Set(["my folder/org data.xlsx"])
+    const text = "using @my folder/org data.xlsx here"
+    const result = buildFileAttachments(text, paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.source).toEqual({
+      type: "file",
+      path: "my folder/org data.xlsx",
+      text: { value: "@my folder/org data.xlsx", start: 6, end: 30 },
+    })
+  })
+
+  it("percent-encodes spaces in the file URL so the server can decode it correctly", () => {
+    const paths = new Set(["org data.xlsx"])
+    const result = buildFileAttachments("@org data.xlsx", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).not.toContain(" ")
+    expect(result[0]!.url).toContain("%20")
+  })
+
+  it("percent-encodes spaces in nested path segments", () => {
+    const paths = new Set(["my folder/my file.txt"])
+    const result = buildFileAttachments("@my folder/my file.txt", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    expect(result[0]!.url).not.toContain(" ")
+    expect(result[0]!.url).toContain("my%20folder")
+    expect(result[0]!.url).toContain("my%20file.txt")
+  })
+
+  it("round-trips a filename containing a literal percent-encoded-looking sequence", () => {
+    // Only escaping spaces before assigning to url.pathname is not enough: a
+    // real filename like "100%20real.txt" already contains the literal text
+    // "%20". If "%" itself isn't escaped first, the URL's "%20" is
+    // indistinguishable from an actually-encoded space, and decoding it (as
+    // Bun's fileURLToPath does server-side) would produce "100 real.txt" --
+    // a different, wrong filename.
+    const paths = new Set(["100%20real.txt"])
+    const result = buildFileAttachments("@100%20real.txt", paths, "/workspace")
+    expect(result).toHaveLength(1)
+    const decoded = decodeURIComponent(new URL(result[0]!.url).pathname)
+    expect(decoded).toBe("/workspace/100%20real.txt")
   })
 })
 

@@ -169,6 +169,7 @@ export interface SessionCreatedMessage {
 export interface SessionForkedMessage {
   type: "sessionForked"
   sessionID: string
+  forkedFromID: string
 }
 
 export interface SessionUpdatedMessage {
@@ -269,6 +270,14 @@ export interface ActionMessage {
 export interface SetChatBoxMessage {
   type: "setChatBoxMessage"
   text: string
+  /**
+   * Exact relative paths of the file attachments carried by the restored
+   * message, if known (e.g. when reverting to a message that had @mentions).
+   * When present, PromptInput seeds these directly instead of re-deriving
+   * candidate mentions from the text via regex, which cannot tell a complete
+   * mention from a truncated prefix when the real path contains a space.
+   */
+  paths?: string[]
 }
 
 export interface AppendChatBoxMessage {
@@ -435,6 +444,12 @@ export interface FileSearchResultMessage {
   paths: string[]
   items?: FileSearchItem[]
   dir: string
+  requestId: string
+}
+
+export interface FilePickerResultMessage {
+  type: "filePickerResult"
+  path: string
   requestId: string
 }
 
@@ -1119,6 +1134,7 @@ export type ExtensionMessage =
   | SpeechToTextResultMessage
   | SpeechToTextErrorMessage
   | FileSearchResultMessage
+  | FilePickerResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
   | GitChangesContextResultMessage

@@ -3,6 +3,7 @@ package ai.kilocode.backend.cli
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.util.SystemInfo
+import com.intellij.util.EnvironmentUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -17,6 +18,10 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import java.io.File
 import java.io.RandomAccessFile
+import java.nio.channels.FileLock
+import java.nio.channels.OverlappingFileLockException
+import java.nio.file.Files
+import java.nio.file.Path
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -25,17 +30,16 @@ import java.util.zip.ZipInputStream
 import kotlin.math.roundToInt
 
 class KiloCliDownloader(
-    private val http: OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .build(),
+    private val http: OkHttpClient = KiloBackendHttpClients.cliDownload(),
     private val log: KiloLog = KiloLog.create(KiloCliDownloader::class.java),
     private val root: File = File(PathManager.getSystemPath(), "kilo/cli"),
     private val baseUrl: String = "https://github.com/Kilo-Org/kilocode/releases/download",
     private val api: String = "https://api.github.com/repos/Kilo-Org/kilocode/releases/tags",
+    private val lockTimeoutMs: Long = LOCK_TIMEOUT_MS,
 ) {
     companion object {
+        private const val LOCK_TIMEOUT_MS = 30_000L
+        private const val LOCK_POLL_MS = 100L
         private val DIGEST = Regex("^sha256:[a-f0-9]{64}$")
         private val JSON = Json { ignoreUnknownKeys = true }
         private val LOCKS = ConcurrentHashMap<String, Any>()
@@ -43,12 +47,18 @@ class KiloCliDownloader(
 
     suspend fun resolve(version: String, force: Boolean = false, onProgress: (CliDownload) -> Unit = {}): File =
         withContext(Dispatchers.IO) {
+            logPaths(version, force)
             locked {
                 val platform = KiloCliPlatform.current()
                 val dir = File(File(root, version), platform)
                 val exe = File(dir, "bin/${KiloCliPlatform.exe()}")
                 val done = File(dir, ".complete")
                 val ext = KiloCliPlatform.archive(platform)
+
+                log.info(
+                    "Kilo CLI cache target: version=$version platform=$platform exe=${exe.absolutePath} " +
+                        "complete=${done.absolutePath} force=$force"
+                )
 
                 if (!force) {
                     cached(version, platform, exe, done)?.let { return@locked it }
@@ -66,6 +76,7 @@ class KiloCliDownloader(
                     )
                     onProgress(CliDownload(0, version, platform))
                     download(version, platform, ext, archive, onProgress)
+                    log.info("Verifying Kilo CLI archive ${archive.absolutePath}")
                     verify(archive, digest)
                     log.info(
                         "Downloaded Kilo CLI $version for $platform to ${archive.absolutePath} (size=${archive.length()} bytes)"
@@ -78,6 +89,7 @@ class KiloCliDownloader(
                     if (archive.exists() && !archive.delete()) {
                         log.warn("Failed to delete extracted Kilo CLI archive ${archive.absolutePath}")
                     }
+                    log.info("Writing Kilo CLI cache completion marker ${complete.absolutePath}")
                     complete.writeText("$digest\n")
                     replace(dir, stage)
                     onProgress(CliDownload(100, version, platform))
@@ -93,7 +105,12 @@ class KiloCliDownloader(
 
     private fun cached(version: String, platform: String, exe: File, done: File): File? {
         val digest = done.takeIf { it.isFile }?.readText()?.trim()
-        if (!exe.isFile || digest == null || !digest.matches(DIGEST)) return null
+        val valid = digest != null && digest.matches(DIGEST)
+        log.info(
+            "Kilo CLI cache check: version=$version platform=$platform exeExists=${exe.isFile} " +
+                "completeExists=${done.isFile} digestValid=$valid exe=${exe.absolutePath} complete=${done.absolutePath}"
+        )
+        if (!exe.isFile || !valid) return null
         log.info("Using cached Kilo CLI $version for $platform at ${exe.absolutePath}")
         if (!SystemInfo.isWindows) exe.setExecutable(true)
         prune(version)
@@ -101,21 +118,50 @@ class KiloCliDownloader(
     }
 
     private fun <T> locked(block: () -> T): T {
+        log.info("Ensuring Kilo CLI cache root ${root.absolutePath}")
         if (!root.isDirectory && !root.mkdirs()) {
             throw IllegalStateException("Failed to create Kilo CLI cache root ${root.absolutePath}")
         }
         val file = File(root, ".lock").canonicalFile
+        log.info("Kilo CLI cache lock path: ${file.absolutePath}")
         val mutex = LOCKS.computeIfAbsent(file.absolutePath) { Any() }
         return synchronized(mutex) {
             RandomAccessFile(file, "rw").channel.use { channel ->
-                channel.lock().use { block() }
+                val start = System.nanoTime()
+                log.info("Waiting for Kilo CLI cache lock: ${file.absolutePath}")
+                val lock = acquire(file, channel::tryLock, start)
+                lock.use {
+                    log.info("Acquired Kilo CLI cache lock after ${elapsed(start)}ms: ${file.absolutePath}")
+                    block()
+                }
             }
         }
     }
 
+    private fun acquire(file: File, attempt: () -> FileLock?, start: Long): FileLock {
+        while (true) {
+            val lock = try {
+                attempt()
+            } catch (_: OverlappingFileLockException) {
+                null
+            }
+            if (lock != null) return lock
+            val waited = elapsed(start)
+            if (waited >= lockTimeoutMs) {
+                val msg = "Timed out waiting for Kilo CLI cache lock after ${waited}ms: ${file.absolutePath}"
+                log.warn(msg)
+                throw IllegalStateException(msg)
+            }
+            Thread.sleep(LOCK_POLL_MS.coerceAtMost((lockTimeoutMs - waited).coerceAtLeast(1L)))
+        }
+    }
+
+    private fun elapsed(start: Long): Long = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start)
+
     private fun stage(version: String, platform: String): File {
         val tmp = File(root, ".tmp")
         val dir = File(tmp, "$version-$platform-${System.nanoTime()}")
+        log.info("Creating Kilo CLI staging directory ${dir.absolutePath}")
         if (!dir.isDirectory && !dir.mkdirs()) {
             throw IllegalStateException("Failed to create Kilo CLI staging directory ${dir.absolutePath}")
         }
@@ -123,6 +169,7 @@ class KiloCliDownloader(
     }
 
     private fun replace(dir: File, stage: File) {
+        log.info("Installing Kilo CLI cache from ${stage.absolutePath} to ${dir.absolutePath}")
         val parent = dir.parentFile
         if (!parent.isDirectory && !parent.mkdirs()) {
             throw IllegalStateException("Failed to create Kilo CLI cache directory ${parent.absolutePath}")
@@ -133,6 +180,7 @@ class KiloCliDownloader(
             throw IllegalStateException("Failed to move existing Kilo CLI cache ${dir.absolutePath} aside")
         }
         if (stage.renameTo(dir)) {
+            log.info("Installed Kilo CLI cache at ${dir.absolutePath}")
             if (backup.exists() && !backup.deleteRecursively()) {
                 log.warn("Failed to delete previous Kilo CLI cache ${backup.absolutePath}")
             }
@@ -318,4 +366,41 @@ class KiloCliDownloader(
 
     private fun url(version: String, platform: String, ext: String) =
         "${baseUrl.trimEnd('/')}/v$version/kilo-$platform.$ext"
+
+    private fun logPaths(version: String, force: Boolean) {
+        val text = buildList {
+            add("version=$version force=$force")
+            add("configPath=${safe { PathManager.getConfigPath() }}")
+            add("systemPath=${safe { PathManager.getSystemPath() }}")
+            add("pluginsPath=${safe { PathManager.getPluginsPath() }}")
+            add("logPath=${safe { PathManager.getLogPath() }}")
+            add("logDir=${safe { PathManager.getLogDir().toString() }}")
+            add("idea.config.path=${safe { System.getProperty("idea.config.path") ?: "<unset>" }}")
+            add("idea.system.path=${safe { System.getProperty("idea.system.path") ?: "<unset>" }}")
+            add("idea.plugins.path=${safe { System.getProperty("idea.plugins.path") ?: "<unset>" }}")
+            add("idea.log.path=${safe { System.getProperty("idea.log.path") ?: "<unset>" }}")
+            add("idea.properties.file=${safe { System.getProperty("idea.properties.file") ?: "<unset>" }}")
+            add("user.home=${safe { System.getProperty("user.home") ?: "<unset>" }}")
+            add("USERPROFILE=${safe { EnvironmentUtil.getValue("USERPROFILE") ?: "<unset>" }}")
+            add("TEMP=${safe { EnvironmentUtil.getValue("TEMP") ?: "<unset>" }}")
+            add("TMP=${safe { EnvironmentUtil.getValue("TMP") ?: "<unset>" }}")
+            add("cacheRoot=${safe { root.absolutePath + info(root) }}")
+        }.joinToString(" ")
+        log.info("Kilo CLI path diagnostics: $text")
+    }
+
+    private fun info(file: File): String = runCatching {
+        val path = existing(file.toPath())
+        val store = Files.getFileStore(path)
+        " (canonical=${file.canonicalPath} fs=${store.type().ifBlank { "<unknown>" }} " +
+            "name=${store.name().ifBlank { "<unknown>" }} readOnly=${store.isReadOnly})"
+    }.getOrElse { " (canonical=<unavailable: ${it.message}> fs=<unavailable>)" }
+
+    private fun existing(path: Path): Path {
+        var current = path
+        while (!Files.exists(current) && current.parent != null) current = current.parent
+        return current
+    }
+
+    private fun safe(value: () -> String): String = runCatching { value() }.getOrElse { "<unavailable: ${it.message}>" }
 }

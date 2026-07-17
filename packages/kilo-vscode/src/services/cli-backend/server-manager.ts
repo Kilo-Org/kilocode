@@ -131,6 +131,9 @@ export class ServerManager {
           // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
           MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
+          // The CLI watches this PID and exits if the extension host is hard-killed without a
+          // chance to run dispose(), so it is never orphaned. See parent-watchdog.ts.
+          KILO_PARENT_PID: String(process.pid),
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
           KILOCODE_FEATURE: "vscode-extension",

@@ -153,11 +153,11 @@ The tool supports two modes:
 | `worktree` | Creates one Agent Manager git worktree and session per task |
 | `local` | Creates Agent Manager sessions in the current workspace without git worktree isolation |
 
-Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. A task with an initial prompt can also specify a `model` (by name, e.g. `Claude Opus 4.1`) and one of that model's reasoning `variant` values. Agent Manager resolves the provider for the chosen model, preferring the provider used by the current default model and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted to force a specific provider. Tasks without those fields use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
+Each request can include 1-20 tasks. Each task must include at least one of `prompt`, `name`, or `branchName`. Prompted tasks inherit the model and reasoning variant used by the chat turn that starts them. A task can override that selection with a `model` (by name, e.g. `Claude Opus 4.1`) when you explicitly request a different model, or with one of the current model's reasoning `variant` values when you request a different variant. Agent Manager resolves the provider for a model override, preferring the provider used by the current turn and falling back to the Kilo Gateway; a qualified `provider/model` ID is also accepted to force a specific provider. Prepared sessions without an initial prompt use the normal model defaults. Use `versions: true` only when the tasks are alternate versions of the same work to compare; otherwise, multiple tasks start as independent sessions.
 
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
-The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested mode, so approving `worktree` does not automatically approve `local`.
+The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly.
 
 ## Sections
 

@@ -1,6 +1,7 @@
 package ai.kilocode.client.session
 
 import ai.kilocode.client.session.ui.SessionMessageListPanel
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.MessageErrorDto
@@ -10,6 +11,7 @@ import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
 import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.ToolRefDto
 import ai.kilocode.client.session.ui.prompt.PromptPanel
@@ -1059,11 +1061,79 @@ class SessionScrollTest : SessionUiTestBase() {
         assertTrue(jumpButton().isVisible)
     }
 
+    fun `test rollback click does not scroll before marker update`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+        val value = bar.value
+        assertTrue(jumpButton().isVisible)
+
+        rollback("msg_36").doClick()
+        settle()
+        drainScroll()
+
+        assertEquals(value, bar.value)
+        assertTrue(jumpButton().isVisible)
+    }
+
+    fun `test rollback scrolls after marker shows banner`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        setValue(bar, bottom(bar) / 2)
+
+        rollback("msg_36").doClick()
+        settle()
+        drainScroll()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_36"))))
+        drainScroll()
+
+        assertBottom(bar)
+        assertTrue(ui.scroll.following())
+        assertFalse(jumpButton().isVisible)
+    }
+
+    fun `test redo scrolls to restored message bottom`() {
+        showMessages()
+        fillTranscript(48)
+        val bar = scrollBar()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_36"))))
+        drainScroll()
+        setValue(bar, 0)
+
+        button(KiloBundle.message("revert.banner.redo")).doClick()
+        settle()
+        drainScroll()
+        emit(ChatEventDto.SessionUpdated("ses_test", session("ses_test").copy(revert = SessionRevertDto("msg_37"))))
+        drainScroll()
+
+        val expected = messageBottomValue("msg_36")
+        assertTrue("expected=$expected bottom=${bottom(bar)}", expected < bottom(bar))
+        assertTrue("value=${bar.value} expected=$expected", kotlin.math.abs(bar.value - expected) <= 1)
+    }
+
     // ------ helpers ------
 
     private fun button(text: String): JButton = findAll<JButton>(ui).first { it.text == text }
 
     private fun icon(text: String): JButton = findAll<JButton>(ui).first { it.toolTipText == text }
+
+    private fun rollback(id: String): JButton {
+        val message = find<SessionMessageListPanel>(ui).findMessage(id) ?: error("missing message $id")
+        return findAll<SessionCopyTarget>(message)
+            .mapNotNull { it.copyToolbar }
+            .flatMap { findAll(it, JButton::class.java) }
+            .first { it.toolTipText == KiloBundle.message("revert.message.rollback") }
+    }
+
+    private fun messageBottomValue(id: String): Int {
+        val pane = scrollComponent() as JBScrollPane
+        val messages = find<SessionMessageListPanel>(ui)
+        val message = messages.findMessage(id) ?: error("missing message $id")
+        val point = SwingUtilities.convertPoint(message, Point(0, message.height.coerceAtLeast(1)), messages)
+        return (point.y - pane.viewport.extentSize.height).coerceIn(0, bottom(scrollBar()))
+    }
 
     private inline fun <reified T> option(label: String): T where T : AbstractButton =
         findAll<T>(ui).first { it.actionCommand == label }

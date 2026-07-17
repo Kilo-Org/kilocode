@@ -116,6 +116,7 @@ describe("kilo_memory_recall", () => {
 
       expect(result.title).toBe("Kilo memory: disabled")
       expect(result.output).toContain("disabled")
+      expect(await Bun.file(path.join(dir.path, "global", "session-export.db")).exists()).toBe(false)
     })
   })
 

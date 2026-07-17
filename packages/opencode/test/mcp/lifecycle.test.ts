@@ -202,7 +202,7 @@ function statusName(status: Record<string, MCPNS.Status> | MCPNS.Status, server:
 
 // kilocode_change start
 it.instance(
-  "classifies production remote MCP tools while leaving local MCP tools available",
+  "denies local and remote MCP tools while network sandboxing is active",
   () =>
     MCP.Service.use((mcp: MCPNS.Interface) =>
       Effect.gen(function* () {
@@ -246,8 +246,8 @@ it.instance(
           ),
         ).pipe(Effect.exit)
 
-        expect(Exit.isSuccess(localExit)).toBe(true)
-        expect(localCalled).toBe(true)
+        expect(Exit.isFailure(localExit)).toBe(true)
+        expect(localCalled).toBe(false)
         expect(Exit.isFailure(remoteExit)).toBe(true)
         expect(remoteCalled).toBe(false)
       }),

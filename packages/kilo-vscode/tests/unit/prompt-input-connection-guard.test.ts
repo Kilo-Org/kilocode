@@ -12,12 +12,14 @@ const icons = readFileSync(iconPath, "utf8")
 describe("PromptInput connection guard", () => {
   it("rechecks the connection after resolving async attachments and before clearing the draft", () => {
     const attachments = src.indexOf("const gitFile = await git.resolveAttachment")
-    const guard = src.indexOf("if (isDisabled()) return", attachments)
+    const guard = src.indexOf("if (isDisabled()) {", attachments)
+    const finish = src.indexOf("finishPending(pendingId)", guard)
     const send = src.indexOf("session.sendMessage(message", guard)
     const clear = src.indexOf("drafts.delete(key)", send)
 
     expect(attachments).toBeGreaterThan(-1)
     expect(guard).toBeGreaterThan(attachments)
+    expect(finish).toBeGreaterThan(guard)
     expect(send).toBeGreaterThan(guard)
     expect(clear).toBeGreaterThan(send)
   })
@@ -59,15 +61,15 @@ describe("PromptInput sandbox toggle", () => {
     expect(end).toBeGreaterThan(start)
     expect(save).toBeGreaterThan(-1)
     expect(move).toBeGreaterThan(save)
-    expect(created).toContain("{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls }")
+    expect(created).toContain("{ text: drafts, comments: reviewDrafts, images: imageDrafts, scrolls: scrollDrafts }")
   })
 
   it("restores each prompt draft's textarea and highlight scroll positions", () => {
-    expect(src).toContain("const scrolls = new Map<string, number>()")
-    expect(src).toContain("const scroll = scrolls.get(key) ?? 0")
+    expect(src).toContain("scrollDrafts")
+    expect(src).toContain("const scroll = scrollDrafts.get(key) ?? 0")
     expect(src).toContain("textareaRef.scrollTop = scroll")
     expect(src).toContain("if (highlightRef) highlightRef.scrollTop = scroll")
-    expect(src).toContain("scrolls.set(draftKey(), textareaRef.scrollTop)")
+    expect(src).toContain("scrollDrafts.set(draftKey(), textareaRef.scrollTop)")
     expect(src).toContain("images: imageAttach.images(),\n    scroll: textareaRef?.scrollTop")
     expect(src).toContain("draft.text, draft.comments, draft.images, draft.scroll")
   })
@@ -81,11 +83,11 @@ describe("PromptInput sandbox toggle", () => {
     expect(src).not.toContain("setSandboxTarget")
   })
 
-  it("keeps persisted sandbox state visible independently of the configured default", () => {
+  it("shows sandbox controls only when the global sandbox setting is enabled", () => {
     expect(src).toContain(
-      'const sandboxVisible = () => features().sandboxControls && !session.currentSessionID()?.startsWith("cloud:")',
+      'globalConfig().sandbox?.enabled === true &&\n    !session.currentSessionID()?.startsWith("cloud:")',
     )
-    expect(src).not.toContain("config().sandbox?.enabled === true")
+    expect(src).toContain("features().sandboxControls &&")
     expect(src).toContain("<Show when={sandboxVisible()}>")
     expect(src).toContain("{ action: toggleSandbox, enabled: () => sandboxVisible() && !sandboxDisabled() }")
     expect(src).toContain('if (!sandboxVisible()) hidden.add("sandbox")')

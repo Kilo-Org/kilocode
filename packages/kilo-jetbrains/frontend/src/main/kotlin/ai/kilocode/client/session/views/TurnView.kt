@@ -4,6 +4,7 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.ui.SessionLayoutPanel
+import ai.kilocode.client.session.ui.SessionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
@@ -12,7 +13,6 @@ import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import javax.swing.JComponent
 
 /**
@@ -34,9 +34,15 @@ class TurnView(
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
-) : SessionLayoutPanel(JBUI.scale(SessionUiStyle.SessionLayout.GAP)), Disposable, SessionEditorStyleTarget {
+    private val revert: ((String) -> Unit)? = null,
+) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
+
+    override val sessionViewKind = SessionView.Kind.Default
+
+    override val sessionGapKind: SessionView.Kind
+        get() = messages.values.firstOrNull { it.isVisible }?.sessionViewKind ?: SessionView.Kind.Default
 
     init {
         isOpaque = false
@@ -44,7 +50,7 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover)
+        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert)
         messages[msg.info.id] = view
         add(view)
         syncCopyToolbars()

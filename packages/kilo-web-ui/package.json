@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-web-ui",
-  "version": "7.4.4",
+  "version": "7.4.11",
   "type": "module",
   "license": "MIT",
   "exports": {

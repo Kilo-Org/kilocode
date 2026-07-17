@@ -1,8 +1,8 @@
 import { describe, expect, mock, test } from "bun:test"
 import { decode } from "@/kilocode/provider/codex/native"
 import { codex, normalize, query } from "@/kilocode/provider/codex/usage"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ProviderTest } from "../../../fake/provider"
-import { ProviderID } from "@/provider/schema"
 
 const response = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } })
@@ -37,7 +37,7 @@ const fixture = {
 }
 
 function provider(fetcher: typeof fetch) {
-  const providerID = ProviderID.make("openai")
+  const providerID = ProviderV2.ID.make("openai")
   return ProviderTest.info(
     { id: providerID, name: "OpenAI", source: "custom", options: { fetch: fetcher } },
     ProviderTest.model({ providerID }),

@@ -19,6 +19,7 @@ const ROOT = path.resolve(import.meta.dir, "../..")
 const SESSION_FILE = path.join(ROOT, "webview-ui/src/context/session.tsx")
 const CHATVIEW_FILE = path.join(ROOT, "webview-ui/src/components/chat/ChatView.tsx")
 const PROMPT_UTILS_FILE = path.join(ROOT, "webview-ui/src/components/chat/prompt-input-utils.ts")
+const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
 const KILOPROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
 const CONNECTION_SERVICE_FILE = path.join(ROOT, "src/services/cli-backend/connection-service.ts")
 
@@ -193,9 +194,9 @@ describe("KiloProvider pruneDeletedSession contract", () => {
   })
 
   it("unfocuses the streams when the deleted id matches the focused session", () => {
-    // Without this, connectionService.focused still reports the deleted id to
-    // the backend (viewed.focused), and focusSession() never calls
-    // unregisterFocused for this instance.
+    // Without this, connectionService still reports the deleted id to the
+    // backend as visible, and focusSession() never clears the visible
+    // registration for this instance.
     const match = source.match(/pruneDeletedSession\(sessionID: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
     expect(match![1]).toMatch(/if \(this\.streams\.focused === sessionID\) this\.focusSession\(undefined\)/)
@@ -246,55 +247,82 @@ describe("sendMessage / sendCommand draft id contract", () => {
     expect(draftBlock![1]).not.toContain("setPendingAgentSelection(null)")
   })
 
+  it("only selects a created session when its explicit draft is still active", () => {
+    const body = extractFunctionBody(source, "handleSessionCreated")
+    expect(body).toMatch(/if \(draftID && \(draft === draftID \|\| active === draftID\)\)/)
+    expect(body).not.toMatch(/if \(!draftID \|\|/)
+  })
+
   it("prunes seeded draft agents only after the draft is abandoned", () => {
     const failed = extractFunctionBody(source, "handleSendMessageFailed")
     expect(source).toMatch(/const agentDrafts = createDraftAgentSeed/)
     expect(source).toContain("active: (draft) => !!submissionMap[draft]")
     expect(failed).toContain("draftSessionID() !== message.draftID")
     expect(failed).toContain("agentDrafts.prune(message.draftID)")
+    expect(failed).not.toContain("setDraftSessionID(message.draftID)")
   })
 })
 
 describe("PromptInput restoreFailed fallback contract", () => {
-  const PROMPT_FILE = path.join(ROOT, "webview-ui/src/components/chat/PromptInput.tsx")
   const source = readFile(PROMPT_FILE)
 
-  it("targets draftKey() instead of computing a key from failed.sessionID", () => {
-    // The contract: restoreFailed early-returns when userClearedSession is
-    // true (covers BOTH "user clicked New Task" and the Delete-current-session
-    // race window where currentSessionID/draftSessionID haven't been cleared
-    // yet but userClearedSession is already true). When the user did NOT
-    // explicitly clear, candidates come from the failure's sessionID/draftID
-    // (the keys the send was actually scoped to), plus :new ONLY when the
-    // user has effectively returned to the empty state via an external
-    // session.deleted.
+  it("stores a failed payload under its originating session or pending draft key", () => {
     const match = source.match(/const restoreFailed = \(failed: SendMessageFailedMessage\) => \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
-    expect(match![1]).not.toMatch(/const effectiveSessionID/)
-    expect(match![1]).toMatch(/if \(session\.userClearedSession\(\)\) return/)
     expect(match![1]).toMatch(
-      /if \(failed\.sessionID\) candidates\.add\(scopeDraftKey\(boxKey\(\),\s*sessionDraftKey\(failed\.sessionID\)\)\)/,
+      /failed\.sessionID\s*\? scopeDraftKey\(boxKey\(\), sessionDraftKey\(failed\.sessionID\)\)/,
     )
-    expect(match![1]).toMatch(
-      /if \(failed\.draftID\) candidates\.add\(scopeDraftKey\(boxKey\(\),\s*pendingDraftKey\(failed\.draftID\)\)\)/,
-    )
-    expect(match![1]).toMatch(
-      /if \(!session\.currentSessionID\(\) && !session\.draftSessionID\(\)\) candidates\.add\(scopeDraftKey\(boxKey\(\),\s*"new"\)\)/,
-    )
-    expect(match![1]).toMatch(/const target = draftKey\(\)/)
-    expect(match![1]).toMatch(/candidates\.has\(target\)/)
+    expect(match![1]).toMatch(/failed\.draftID\s*\? scopeDraftKey\(boxKey\(\), pendingDraftKey\(failed\.draftID\)\)/)
+    expect(match![1]).toContain("if (target !== draftKey())")
+    expect(match![1]).toContain("saveDraft(target, draft, comments, images")
   })
 
-  it("does NOT add :new when the user is on a different live session or pending draft", () => {
-    // Guard against the unconditional-:new regression: if the user has
-    // navigated to a different session/pending draft, the failed draft
-    // must NOT be rehydrated into that unrelated prompt even if the
-    // failure carries scope IDs that no longer match the live state.
+  it("does not restore a late failure for a discarded pending tab", () => {
     const match = source.match(/const restoreFailed = \(failed: SendMessageFailedMessage\) => \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
-    expect(match![1]).not.toMatch(
-      /if \(!failed\.sessionID && !failed\.draftID\) candidates\.add\(scopeDraftKey\(boxKey\(\),\s*"new"\)\)/,
+    expect(match![1]).toContain("isPendingDraftDiscarded(failed.draftID)")
+    expect(match![1]).toContain("isSessionDraftDiscarded(failed.sessionID)")
+  })
+
+  it("retires a discarded real-session marker only after confirmed assistant output", () => {
+    const session = readFile(SESSION_FILE)
+    const created = extractFunctionBody(session, "handleMessageCreated")
+    const status = extractFunctionBody(session, "handleSessionStatus")
+    expect(created).toContain('message.role === "assistant"')
+    expect(created).toContain("clearSessionDraftDiscarded(message.sessionID)")
+    expect(status).not.toContain("clearSessionDraftDiscarded")
+  })
+})
+
+describe("PromptInput send origin contract", () => {
+  const source = readFile(PROMPT_FILE)
+
+  it("captures the real or pending tab before asynchronous attachment resolution", () => {
+    expect(source).toMatch(/const origin = session\.currentSessionID\(\)[\s\S]*const id = origin \?\? pendingId/)
+    expect(source.indexOf("beginPendingSend(pendingId)")).toBeLessThan(
+      source.indexOf("await terminal.resolveAttachment"),
     )
+    expect(source).toMatch(/await terminal\.resolveAttachment\(message, id\)/)
+    expect(source).toMatch(/await git\.resolveAttachment\(message, id, context\)/)
+  })
+
+  it("passes the captured origin to message and command sends", () => {
+    expect(source).toMatch(/session\.sendMessage\([\s\S]*origin \?\? null\)/)
+    expect(source).toMatch(/session\.sendCommand\([\s\S]*origin \?\? null\)/)
+  })
+
+  it("records sent prompts before a pending session key change can return", () => {
+    const start = source.indexOf("const handleSend = async () =>")
+    const end = source.indexOf("\n  return (", start)
+    const body = source.slice(start, end)
+    const send = Math.max(body.indexOf("session.sendMessage("), body.indexOf("session.sendCommand("))
+    const append = body.lastIndexOf("history.append(draft)")
+    const guard = body.indexOf("if (draftKey() !== key) return")
+
+    expect(send).toBeGreaterThan(-1)
+    expect(append).toBeGreaterThan(send)
+    expect(append).toBeLessThan(guard)
+    expect(body.indexOf('setText("")', guard)).toBeGreaterThan(guard)
   })
 })
 
@@ -352,7 +380,7 @@ describe("SessionContext userClearedSession contract", () => {
     // that window: the failure is for the current in-progress draft and must
     // be restorable.
     const body = extractFunctionBody(source, "sendMessage")
-    const block = body.match(/if \(!sid\) \{([\s\S]*?)\}/)
+    const block = body.match(/if \(!sid && \(!draftID \|\| draftSessionID\(\) === scope\)\) \{([\s\S]*?)\}/)
     expect(block).not.toBeNull()
     expect(block![1]).toMatch(/setUserClearedSession\(false\)/)
     expect(block![1]).toMatch(/setDraftSessionID\(scope\)/)
@@ -360,7 +388,7 @@ describe("SessionContext userClearedSession contract", () => {
 
   it("sendCommand resets userClearedSession when starting a fresh draft from :new", () => {
     const body = extractFunctionBody(source, "sendCommand")
-    const block = body.match(/if \(!sid\) \{([\s\S]*?)\}/)
+    const block = body.match(/if \(!sid && \(!draftID \|\| draftSessionID\(\) === scope\)\) \{([\s\S]*?)\}/)
     expect(block).not.toBeNull()
     expect(block![1]).toMatch(/setUserClearedSession\(false\)/)
     expect(block![1]).toMatch(/setDraftSessionID\(scope\)/)
@@ -415,6 +443,17 @@ describe("Cloud import parts cleanup contract", () => {
     const body = extractFunctionBody(source, "handleCloudSessionImported")
     expect(body).toMatch(/pendingCloudPrune\.set\(session\.id,/)
     expect(body).toMatch(/pendingCloudPrune\.delete\(cloudKey\)/)
+  })
+
+  it("selecting a local session clears cloud preview mode", () => {
+    const body = extractFunctionBody(source, "selectSession")
+    expect(body).toContain("setCloudPreviewId(null)")
+  })
+
+  it("a late cloud import only selects its real session while the same preview remains active", () => {
+    const body = extractFunctionBody(source, "handleCloudSessionImported")
+    expect(body).toMatch(/const active = cloudPreviewId\(\) === cloudSessionId && currentSessionID\(\) === cloudKey/)
+    expect(body).toMatch(/if \(active\) \{[\s\S]*setCurrentSessionID\(session\.id\)/)
   })
 
   it("handleMessagesLoaded prunes cloud-import orphans from store.parts and stash", () => {
@@ -517,15 +556,15 @@ describe("Cloud import parts cleanup contract", () => {
 describe("KiloConnectionService pruneSession contract", () => {
   const source = readFile(CONNECTION_SERVICE_FILE)
 
-  it("drops the deleted session from focused and opened Maps", () => {
+  it("drops the deleted session from attached and visible Maps", () => {
     // KiloProvider's pruneDeletedSession calls connectionService.pruneSession.
-    // Without clearing focused/opened entries whose value is the deleted id,
-    // the backend keeps receiving viewed.focused with the dead session id and
-    // any background tab opener stays registered for it.
+    // Without clearing attached/visible entries whose value is the deleted id,
+    // the backend keeps receiving the dead session id and any background tab
+    // opener stays registered for it.
     const match = source.match(/pruneSession\(sessionId: string\): void \{([\s\S]*?)\n  \}/)
     expect(match).not.toBeNull()
-    expect(match![1]).toMatch(/this\.focused\.delete\(key\)/)
-    expect(match![1]).toMatch(/this\.opened\.(?:set|delete)/)
+    expect(match![1]).toMatch(/this\.attached\.(?:set|delete)/)
+    expect(match![1]).toMatch(/this\.visible\.(?:set|delete)/)
     expect(match![1]).toMatch(/this\.flushViewed\(\)/)
   })
 })

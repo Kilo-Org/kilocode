@@ -146,6 +146,7 @@ export class WorktreeManager {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
+    baseRef?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
@@ -195,6 +196,7 @@ export class WorktreeManager {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
+    baseRef?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
@@ -243,6 +245,9 @@ export class WorktreeManager {
       startPoint = await this.resolveStartPoint(requestedBase, params.onProgress, {
         allowFallback: !params.baseBranch, // Only fallback if user didn't explicitly request a specific base
       })
+      if (params.baseRef && !(await this.refExistsLocally(params.baseRef))) {
+        throw new Error(`Could not resolve start point for ref "${params.baseRef}"`)
+      }
       parent = startPoint.branch
       parentRemote = startPoint.remote
     }
@@ -256,7 +261,7 @@ export class WorktreeManager {
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
     // Dereference to commit SHA to prevent upstream tracking for new branches
-    const startRef = params.existingBranch ? undefined : `${startPoint.ref}^{commit}`
+    const startRef = params.existingBranch ? undefined : `${params.baseRef ?? startPoint.ref}^{commit}`
 
     try {
       const args = params.existingBranch

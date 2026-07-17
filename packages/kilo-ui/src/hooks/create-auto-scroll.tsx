@@ -106,7 +106,7 @@ export function createAutoScroll(options: AutoScrollOptions) {
     if (!canScroll(scroll)) return
 
     if (distance < threshold()) {
-      if (store.userScrolled) setStore("userScrolled", false)
+      if (store.userScrolled && (distance < 2 || !userActivity.isRecent())) setStore("userScrolled", false)
       return
     }
 

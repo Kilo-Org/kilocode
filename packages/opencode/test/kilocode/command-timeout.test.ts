@@ -4,7 +4,7 @@ import * as Sink from "effect/Sink"
 import * as TestClock from "effect/testing/TestClock"
 import { ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CommandTimeout } from "@/kilocode/command-timeout"
 import { ShellTool } from "@/tool/shell"
 import { Plugin } from "@/plugin"
@@ -23,7 +23,7 @@ const it = testEffect(Layer.empty)
 const shell = testEffect(
   Layer.mergeAll(
     CrossSpawnSpawner.defaultLayer,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     Plugin.defaultLayer,
     Truncate.defaultLayer,
     Config.defaultLayer,

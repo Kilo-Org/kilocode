@@ -2,7 +2,7 @@ export * as ConfigVariable from "./variable"
 
 import path from "path"
 import os from "os"
-import { InvalidError } from "./error"
+import { InvalidError } from "@opencode-ai/core/v1/config/error"
 import { ConfigVariableGuard } from "@/kilocode/config/variable" // kilocode_change
 
 type ParseSource =
