@@ -26,6 +26,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const id = props.request.id
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -57,8 +58,8 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
   // Chat search indexes only the mounted page's options, and there's no
   // other signal exposing which page that is — publish it here so search
   // stays in sync as the user navigates instead of always assuming page 0.
-  createEffect(() => setActiveQuestionTab(props.request.id, store.tab))
-  onCleanup(() => clearActiveQuestionTab(props.request.id))
+  createEffect(() => setActiveQuestionTab(id, store.tab))
+  onCleanup(() => clearActiveQuestionTab(id))
 
   const question = createMemo(() => questions()[store.tab])
   const confirm = createMemo(() => !single() && store.tab === questions().length)

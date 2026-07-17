@@ -24,6 +24,8 @@ import {
   sanitizedProcessEnv,
 } from "@opencode-ai/core/util/opencode-process"
 import { validateSession } from "./validate-session"
+import { createParentRemoteExitBridge, type RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change
+import type { Exit } from "./context/exit" // kilocode_change
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -31,13 +33,43 @@ declare global {
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
 
+export function embeddedRemoteExitClient<T>(external: boolean, client: T | undefined): T | undefined {
+  return external ? undefined : client
+}
+
+export async function runEmbeddedRemoteExitBridge(input: {
+  client: RemoteExitBridgeClient
+  exit: Exit
+  done: Promise<unknown>
+  timeoutMs?: number
+}) {
+  const timeoutMs = input.timeoutMs ?? 5_000
+  const bridge = createParentRemoteExitBridge(input.client, input.exit)
+  let ready = false
+  try {
+    try {
+      await withTimeout(bridge.ready(), timeoutMs, "remote exit startup timed out")
+      ready = true
+    } catch {
+      await bridge.dispose(timeoutMs).catch(() => {})
+    }
+    await input.done
+  } finally {
+    if (ready) await bridge.dispose(timeoutMs).catch(() => {})
+  }
+}
+
 // kilocode_change start - lazy-load the TUI app after daemon attach in source mode
-async function start(input: StartInput) {
+async function start(input: StartInput, remoteExitClient?: RpcClient) {
   const app = await import("./app")
   // start() creates the renderer for both paths, daemon/worker
   const renderer = await app.createTuiRenderer(input.config)
   const handle = app.tui({ ...input, renderer })
-  await handle.done
+  if (!remoteExitClient) {
+    await handle.done
+    return
+  }
+  await runEmbeddedRemoteExitBridge({ client: remoteExitClient, exit: handle.exit, done: handle.done }) // kilocode_change
 }
 // kilocode_change end
 
@@ -360,28 +392,31 @@ export const TuiThreadCommand = cmd({
         }
 
         // kilocode_change start
-        await start({
-          // kilocode_change - shared lazy loader also supports daemon attach
-          url: transport.url,
-          async onSnapshot() {
-            const tui = writeHeapSnapshot("tui.heapsnapshot")
-            const server = await client.call("snapshot", undefined)
-            return [tui, server]
+        await start(
+          {
+            // kilocode_change - shared lazy loader also supports daemon attach
+            url: transport.url,
+            async onSnapshot() {
+              const tui = writeHeapSnapshot("tui.heapsnapshot")
+              const server = await client.call("snapshot", undefined)
+              return [tui, server]
+            },
+            config,
+            directory: cwd,
+            fetch: transport.fetch,
+            headers: transport.headers, // kilocode_change
+            events: transport.events,
+            args: {
+              continue: args.continue,
+              sessionID: args.session,
+              agent: args.agent,
+              model: args.model,
+              prompt,
+              fork: args.fork,
+            },
           },
-          config,
-          directory: cwd,
-          fetch: transport.fetch,
-          headers: transport.headers, // kilocode_change
-          events: transport.events,
-          args: {
-            continue: args.continue,
-            sessionID: args.session,
-            agent: args.agent,
-            model: args.model,
-            prompt,
-            fork: args.fork,
-          },
-        })
+          embeddedRemoteExitClient(external, client),
+        )
         // kilocode_change end
       } finally {
         await stop()
