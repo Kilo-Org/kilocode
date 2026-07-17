@@ -7,6 +7,7 @@ import * as Vcs from "./vcs"
 import { InstanceState } from "@/effect/instance-state"
 // kilocode_change start - ShareNext init is handled by KilocodeBootstrap; upstream dropped File/FileWatcher bootstrap init
 import { KilocodeBootstrap } from "@/kilocode/bootstrap"
+import { WatcherBootstrap } from "@/kilocode/project/watcher"
 // import { ShareNext } from "@/share/share-next"
 // kilocode_change end
 import { Effect, Layer } from "effect"
@@ -31,6 +32,7 @@ export const layer = Layer.effect(
     const reference = yield* Reference.Service
     // kilocode_change start
     const kilocode = yield* KilocodeBootstrap.Service
+    const watcher = yield* WatcherBootstrap.make
     // const shareNext = yield* ShareNext.Service
     // kilocode_change end
     const snapshot = yield* Snapshot.Service
@@ -44,6 +46,7 @@ export const layer = Layer.effect(
       // Plugin can mutate config so it has to be initialized before anything else.
       yield* plugin.init()
       yield* kilocode.init().pipe(Effect.catchCause((cause) => Effect.logWarning("kilocode init failed", { cause }))) // kilocode_change
+      yield* watcher // kilocode_change
       // Each service self-manages its own slow work via Effect.forkScoped against
       // its per-instance state scope. We just await materialization here.
       yield* Effect.forEach(
