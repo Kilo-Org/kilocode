@@ -150,18 +150,15 @@ export const layer: Layer.Layer<
 
     const fetchAimlapiModels = Effect.fn("ModelCache.fetchAimlapiModels")(function* (options: Options) {
       const baseURL = options.baseURL ?? AIMLAPI_BASE_URL
-      if (!options.apiKey) {
-        log.debug("no API key for aimlapi, skipping model fetch")
-        return {}
-      }
 
+      // The models endpoint is public; attach the key only when present so
+      // the catalog renders before the provider is connected.
       const url = `${baseURL.replace(/\/+$/, "")}/models`
-      const response = yield* HttpClientRequest.get(url).pipe(
-        HttpClientRequest.acceptJson,
-        HttpClientRequest.bearerToken(options.apiKey),
-        http.execute,
-        Effect.timeout("10 seconds"),
-      )
+      let request = HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson)
+      if (options.apiKey) {
+        request = request.pipe(HttpClientRequest.bearerToken(options.apiKey))
+      }
+      const response = yield* request.pipe(http.execute, Effect.timeout("10 seconds"))
       if (response.status < 200 || response.status >= 300) {
         log.error("aimlapi model fetch failed", { status: response.status })
         return {}
