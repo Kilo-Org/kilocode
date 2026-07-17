@@ -16,7 +16,7 @@ import { VoyageEmbedder } from "./embedders/voyage"
 import { QdrantVectorStore } from "./vector-store/qdrant-client"
 import { LanceDBVectorStore } from "./vector-store/lancedb-vector-store"
 import { codeParser, DirectoryScanner, FileWatcher } from "./processors"
-import type { ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
+import type { AvailableEmbedders, ICodeParser, IEmbedder, IFileWatcher, IVectorStore } from "./interfaces"
 import type { CodeIndexConfigManager } from "./config-manager"
 import type { CacheManager } from "./cache-manager"
 import type { IndexingTelemetryMeta, IndexingTelemetryReporter } from "./interfaces/telemetry"
@@ -31,10 +31,28 @@ import type { IgnoreMatcher } from "./shared/load-ignore"
 
 const log = Log.create({ service: "indexing-factory" })
 
-function timeout(provider: string): number {
-  if (provider === "ollama") return OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS
-  return REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS
-}
+// RATIONALE: The OpenAI SDK applies the per-attempt timeout and retries internally.
+const policy = {
+  openai: undefined,
+  openrouter: undefined,
+  "openai-compatible": undefined,
+  kilo: undefined,
+  gemini: undefined,
+  mistral: undefined,
+  "vercel-ai-gateway": undefined,
+  ollama: {
+    timeout: OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS,
+    error: "Connection to embedding service failed (timeout)",
+  },
+  voyage: {
+    timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+    error: "Connection failed. Please check the endpoint URL and network connectivity.",
+  },
+  bedrock: {
+    timeout: REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+    error: "Connection failed. Please check the endpoint URL and network connectivity.",
+  },
+} satisfies Record<AvailableEmbedders, { timeout: number; error: string } | undefined>
 
 /**
  * Factory class responsible for creating and configuring code indexing service dependencies.
@@ -128,26 +146,26 @@ export class CodeIndexServiceFactory {
   }
 
   public async validateEmbedder(embedder: IEmbedder): Promise<{ valid: boolean; error?: string }> {
-    const ms = timeout(embedder.embedderInfo.name)
+    const deadline = policy[embedder.embedderInfo.name]
     let timer: ReturnType<typeof setTimeout> | undefined
     const wait = embedder.validateConfiguration()
-    const fail = new Promise<{ valid: boolean; error?: string }>((resolve) => {
-      timer = setTimeout(
-        () =>
-          resolve({
-            valid: false,
-            error:
-              embedder.embedderInfo.name === "ollama"
-                ? "Connection to embedding service failed (timeout)"
-                : "Connection failed. Please check the endpoint URL and network connectivity.",
-          }),
-        ms,
-      )
-    })
+    const fail =
+      deadline === undefined
+        ? undefined
+        : new Promise<{ valid: boolean; error?: string }>((resolve) => {
+            timer = setTimeout(
+              () =>
+                resolve({
+                  valid: false,
+                  error: deadline.error,
+                }),
+              deadline.timeout,
+            )
+          })
 
     try {
       log.info("validating embedder", { provider: embedder.embedderInfo.name })
-      const result = await Promise.race([wait, fail])
+      const result = fail ? await Promise.race([wait, fail]) : await wait
       if (result.valid) {
         log.info("embedder validation succeeded", { provider: embedder.embedderInfo.name })
       }
