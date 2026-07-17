@@ -25,10 +25,12 @@ interface RequestBase {
 type Request =
   | (RequestBase & { operation: "overview"; filter?: OverviewFilter })
   | (RequestBase & { operation: "prompt"; targetSessionID: string; prompt: string })
+  | (RequestBase & { operation: "stop"; targetSessionID: string })
 
 type Result =
   | { operation: "overview"; overview: Overview }
   | { operation: "prompt"; sessionID: string; delivered: true }
+  | { operation: "stop"; sessionID: string; stopped: true }
 
 interface Failure {
   code: FailureCode | "cancelled" | "disconnected" | "timeout"
@@ -41,6 +43,8 @@ interface Options {
   state(): WorktreeStateManager | undefined
   stats(refresh?: boolean): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }>
   prs(): Map<string, PRStatus>
+  managed(sessionID: string): boolean
+  close(sessionID: string): Promise<void>
   log(...args: unknown[]): void
 }
 
@@ -262,17 +266,25 @@ export class AgentManagerOrchestrationBridge {
         })
         return { result: { operation: "overview", overview: result } }
       }
-      await prompt({
-        client,
-        root,
-        state,
-        sessionID: request.targetSessionID,
-        text: request.prompt,
-        messageID: request.id,
-        signal: active.controller.signal,
-      })
+      if (request.operation === "prompt") {
+        await prompt({
+          client,
+          root,
+          state,
+          sessionID: request.targetSessionID,
+          text: request.prompt,
+          messageID: request.id,
+          signal: active.controller.signal,
+        })
+        if (this.disposed || active.cancelled) return
+        return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
+      }
+      if (!this.options.managed(request.targetSessionID)) {
+        throw new OrchestrationError("unknown_session", "The session is not managed by this Agent Manager workspace")
+      }
+      await this.options.close(request.targetSessionID)
       if (this.disposed || active.cancelled) return
-      return { result: { operation: "prompt", sessionID: request.targetSessionID, delivered: true } }
+      return { result: { operation: "stop", sessionID: request.targetSessionID, stopped: true } }
     } catch (error) {
       if (this.disposed || active.cancelled) return
       return { error: failure(error) }

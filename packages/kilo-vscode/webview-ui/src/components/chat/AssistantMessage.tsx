@@ -33,14 +33,7 @@ import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
-
-const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
-
-function editOpen(part: SDKPart, open: boolean) {
-  if (part.type !== "tool") return undefined
-  const tool = (part as unknown as ToolPart).tool
-  return EDIT_TOOLS.has(tool) ? open : undefined
-}
+import { toolDefaultOpen } from "./tool-default-open"
 
 /** Extract plan path from a completed plan_exit tool part. */
 function planExitInfo(part: SDKPart): { plan: string } | undefined {
@@ -296,7 +289,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       part={part}
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      defaultOpen={editOpen(part, edit())}
+                                      defaultOpen={toolDefaultOpen(part, open(), edit())}
                                       forceOpen={forceOpen()}
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}

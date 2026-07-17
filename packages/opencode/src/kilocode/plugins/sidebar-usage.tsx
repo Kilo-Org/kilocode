@@ -15,11 +15,14 @@ import {
   select,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
+import { ModelRow, UsageRow } from "@/kilocode/plugins/sidebar-usage-row"
 
 const id = "internal:kilo-sidebar-usage"
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
+  const [usageOpen, setUsageOpen] = createSignal(true)
   const [modelsOpen, setModelsOpen] = createSignal(true)
+  const [benchOpen, setBenchOpen] = createSignal(true)
   const [expanded, setExpanded] = createSignal(new Set<string>())
   const theme = () => props.api.theme.current
   const local = useLocal()
@@ -42,10 +45,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     return provider?.models[current.modelID]?.terminalBench
   })
   const Row = (props: { label: string; value: string }) => (
-    <box flexDirection="row" justifyContent="space-between">
-      <text fg={theme().textMuted}>{props.label}</text>
-      <text fg={theme().textMuted}>{props.value}</text>
-    </box>
+    <UsageRow label={props.label} value={props.value} color={theme().textMuted} />
   )
   const toggle = (key: string) =>
     setExpanded((current) => {
@@ -85,37 +85,31 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   return (
     <box gap={1}>
       <box>
-        <text fg={theme().text}>
-          <b>Token Usage</b>
-        </text>
-        <Show
-          when={usage()}
-          fallback={<text fg={theme().textMuted}>{unavailable() ? "Usage unavailable" : "Loading usage..."}</text>}
-        >
-          {(data) => (
-            <>
-              <Row label="Input" value={formatCount(data().totals.tokens.input)} />
-              <Row label="Output" value={formatCount(data().totals.tokens.output)} />
-              <Row label="Reasoning" value={formatCount(data().totals.tokens.reasoning)} />
-              <Row label="Cache read" value={formatCount(data().totals.tokens.cache.read)} />
-              <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
-              <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
-              <Row label="Cost" value={formatCost(data().totals.cost)} />
-            </>
-          )}
+        <box flexDirection="row" gap={1} onMouseDown={() => setUsageOpen((open) => !open)}>
+          <text fg={theme().text}>{usageOpen() ? "▼" : "▶"}</text>
+          <text fg={theme().text}>
+            <b>Token Usage</b>
+          </text>
+        </box>
+        <Show when={usageOpen()}>
+          <Show
+            when={usage()}
+            fallback={<text fg={theme().textMuted}>{unavailable() ? "Usage unavailable" : "Loading usage..."}</text>}
+          >
+            {(data) => (
+              <>
+                <Row label="Input" value={formatCount(data().totals.tokens.input)} />
+                <Row label="Output" value={formatCount(data().totals.tokens.output)} />
+                <Row label="Reasoning" value={formatCount(data().totals.tokens.reasoning)} />
+                <Row label="Cache read" value={formatCount(data().totals.tokens.cache.read)} />
+                <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
+                <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
+                <Row label="Cost" value={formatCost(data().totals.cost)} />
+              </>
+            )}
+          </Show>
         </Show>
       </box>
-      <Show when={bench()}>
-        {(value) => (
-          <box>
-            <text fg={theme().text}>
-              <b>Terminal Bench 2.0</b>
-            </text>
-            <Row label="Completion" value={fmtScore(value().overallScore)} />
-            <Row label="Cost / attempt" value={fmtAttemptCost(value().avgAttemptCostUsd)} />
-          </box>
-        )}
-      </Show>
       <Show when={usage()}>
         {(data) => (
           <box>
@@ -140,10 +134,10 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                             <text fg={theme().textMuted} flexGrow={1} minWidth={0} wrapMode="none">
                               Model
                             </text>
-                            <box width={5} flexShrink={0} justifyContent="flex-end">
+                            <box width={5} flexDirection="row" flexShrink={0} justifyContent="flex-end">
                               <text fg={theme().textMuted}>Steps</text>
                             </box>
-                            <box width={9} flexShrink={0} justifyContent="flex-end">
+                            <box width={9} flexDirection="row" flexShrink={0} justifyContent="flex-end">
                               <text fg={theme().textMuted}>Cost</text>
                             </box>
                           </box>
@@ -152,27 +146,18 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                               const key = `${props.session_id}/${model.providerID}/${model.modelID}`
                               return (
                                 <box>
-                                  <box flexDirection="row" gap={1} onMouseDown={() => toggle(key)}>
-                                    <text fg={theme().text} flexShrink={0}>
-                                      {expanded().has(key) ? "▼" : "▶"}
-                                    </text>
-                                    <box flexGrow={1} minWidth={0} overflow="hidden">
-                                      <text fg={theme().text} wrapMode="none">
-                                        <b>
-                                          {Locale.truncate(
-                                            RoutedModelMeta.label(providers(), model) ?? model.modelID,
-                                            19,
-                                          )}
-                                        </b>
-                                      </text>
-                                    </box>
-                                    <box width={5} flexShrink={0} justifyContent="flex-end">
-                                      <text fg={theme().textMuted}>{formatCount(model.steps)}</text>
-                                    </box>
-                                    <box width={9} flexShrink={0} justifyContent="flex-end">
-                                      <text fg={theme().textMuted}>{formatCost(model.cost)}</text>
-                                    </box>
-                                  </box>
+                                  <ModelRow
+                                    label={Locale.truncate(
+                                      RoutedModelMeta.label(providers(), model) ?? model.modelID,
+                                      19,
+                                    )}
+                                    steps={formatCount(model.steps)}
+                                    cost={formatCost(model.cost)}
+                                    expanded={expanded().has(key)}
+                                    text={theme().text}
+                                    muted={theme().textMuted}
+                                    toggle={() => toggle(key)}
+                                  />
                                   <Show when={expanded().has(key)}>
                                     <box paddingLeft={2}>
                                       <Row label="Input" value={formatCount(model.tokens.input)} />
@@ -193,6 +178,22 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                   </For>
                 </box>
               </Show>
+            </Show>
+          </box>
+        )}
+      </Show>
+      <Show when={bench()}>
+        {(value) => (
+          <box>
+            <box flexDirection="row" gap={1} onMouseDown={() => setBenchOpen((open) => !open)}>
+              <text fg={theme().text}>{benchOpen() ? "▼" : "▶"}</text>
+              <text fg={theme().text}>
+                <b>Terminal Bench 2.0</b>
+              </text>
+            </box>
+            <Show when={benchOpen()}>
+              <Row label="Completion" value={fmtScore(value().overallScore)} />
+              <Row label="Cost / attempt" value={fmtAttemptCost(value().avgAttemptCostUsd)} />
             </Show>
           </box>
         )}

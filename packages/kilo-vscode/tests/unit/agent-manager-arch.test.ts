@@ -20,6 +20,7 @@ const CSS_FILES = [
 ]
 const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/NewWorktreeDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/sortable-tab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/DiffPanel.tsx"),
@@ -266,6 +267,89 @@ describe("Agent Manager Model Picker", () => {
 
     expect(source).toContain("model.tag.dataCollected")
     expect(source).toContain("model.isFree")
+  })
+})
+
+describe("Agent Manager Worktree Actions", () => {
+  it("opens the configuration dialog from the primary plus action", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"), "utf-8")
+    const start = source.indexOf('<div class="am-split-button">')
+    const end = source.indexOf("</div>", start)
+    const actions = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(actions).toContain("onClick={props.onNew}")
+    expect(actions).toContain('keybind={props.bindings.newWorktree ?? ""}')
+    expect(actions).toContain("<DropdownMenu.Item onSelect={props.onCreate}>")
+    expect(actions).toContain('props.t("sidebar.session.newWorktree.from")')
+    expect(actions).toContain('props.bindings.quickWorktree ?? ""')
+    expect(actions).not.toContain("onSelect={props.onNew}")
+  })
+
+  it("opens the configuration dialog from the new-worktree shortcut", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf('else if (msg.action === "newWorktree")')
+    const end = source.indexOf('else if (msg.action === "quickWorktree")', start)
+    const action = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(action).toContain("showNewWorktreeDialog()")
+  })
+
+  it("creates a worktree from the quick-worktree shortcut", () => {
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const start = source.indexOf('else if (msg.action === "quickWorktree")')
+    const end = source.indexOf('else if (msg.action === "openWorktree")', start)
+    const action = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(action).toContain("handleCreateWorktree()")
+  })
+
+  it("registers distinct dialog and quick-create worktree shortcuts", () => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "package.json"), "utf-8")) as {
+      contributes: { keybindings: { command: string; key?: string; mac?: string }[] }
+    }
+    const source = fs.readFileSync(TSX_FILE, "utf-8")
+    const dialog = manifest.contributes.keybindings.find(
+      (item) => item.command === "kilo-code.new.agentManager.newWorktree",
+    )
+    const quick = manifest.contributes.keybindings.find(
+      (item) => item.command === "kilo-code.new.agentManager.quickWorktree",
+    )
+
+    expect(dialog).toMatchObject({ key: "ctrl+n", mac: "cmd+n" })
+    expect(quick).toMatchObject({ key: "ctrl+shift+n", mac: "cmd+shift+n" })
+    expect(source).toContain('newWorktree: isMac ? "⌘N" : "Ctrl+N"')
+    expect(source).toContain('quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N"')
+  })
+
+  it("forwards the quick-worktree command to immediate creation", () => {
+    const source = fs.readFileSync(path.join(ROOT, "src/extension.ts"), "utf-8")
+    const start = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree"')
+    const end = source.indexOf('vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree"', start)
+    const command = source.slice(start, end)
+
+    expect(start).toBeGreaterThanOrEqual(0)
+    expect(end).toBeGreaterThan(start)
+    expect(command).toContain('agentManagerProvider.postMessage({ type: "action", action: "quickWorktree" })')
+  })
+
+  it("shows the same mapping in the keyboard shortcuts dialog", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/shortcuts.ts"), "utf-8")
+
+    expect(source).toContain('t("agentManager.shortcuts.advancedWorktree"), binding: bindings.newWorktree')
+    expect(source).toContain('t("agentManager.shortcuts.newWorktree"), binding: bindings.quickWorktree')
+  })
+
+  it("does not attribute the new-worktree shortcut to session promotion", () => {
+    const source = fs.readFileSync(path.join(ROOT, "webview-ui/agent-manager/UnassignedSessionsSection.tsx"), "utf-8")
+
+    expect(source).toContain('<Tooltip value={t("agentManager.session.openInWorktree")}')
+    expect(source).not.toContain("TooltipKeybind")
   })
 })
 
