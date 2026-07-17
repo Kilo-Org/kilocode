@@ -1049,6 +1049,47 @@ export interface CustomProviderModelsFetchedMessage {
   auth?: boolean
 }
 
+export interface VariantsDiscoveredMessage {
+  type: "variantsDiscovered"
+  requestId: string
+  summary?: {
+    total: number
+    matched: number
+    review: number
+    unmatched: number
+    unsupported: number
+    totalVariants: number
+    results: Array<{
+      modelID: string
+      status: "matched" | "review" | "unmatched" | "unsupported"
+      selected?: {
+        providerID: string
+        modelID: string
+        modelName: string
+        confidence: "high" | "medium" | "low"
+        reason: string
+        effortValues: string[]
+        hasEffortOptions: boolean
+        hasToggleOptions: boolean
+        hasBudgetOptions: boolean
+      }
+      candidates: Array<{
+        providerID: string
+        modelID: string
+        modelName: string
+        confidence: "high" | "medium" | "low"
+        reason: string
+        hasEffortOptions: boolean
+        hasToggleOptions: boolean
+        hasBudgetOptions: boolean
+      }>
+      variants: Record<string, Record<string, unknown>>
+      conflicts?: string[]
+    }>
+  }
+  error?: string
+}
+
 export interface McpStatusEntry {
   status: "connected" | "disabled" | "failed" | "needs_auth" | "needs_client_registration"
   error?: string
@@ -1228,6 +1269,7 @@ export type ExtensionMessage =
   | ProviderActionErrorMessage
   | AnacondaDesktopExtensionMessage
   | CustomProviderModelsFetchedMessage
+  | VariantsDiscoveredMessage
   | RecentsLoadedMessage
   | ModelSelectorExpandedLoadedMessage
   | FavoritesLoadedMessage

@@ -196,6 +196,18 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   const [selected, setSelected] = createSignal<Set<string>>(new Set())
   const [fetchStatus, setFetchStatus] = createSignal<string>()
 
+  // ── Variant discovery state ─────────────────────────────────────────
+  const [discoveringVariants, setDiscoveringVariants] = createSignal(false)
+  const [variantSummary, setVariantSummary] = createSignal<{
+    total: number
+    matched: number
+    review: number
+    unmatched: number
+    unsupported: number
+    totalVariants: number
+  }>()
+  const [variantError, setVariantError] = createSignal<string>()
+
   // Search within fetched models
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
@@ -441,6 +453,70 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
     ])
     setErrors("models", (v) => [...v, { variants: [] }])
+  }
+
+  function discoverVariants() {
+    if (form.models.length === 0) return
+    setDiscoveringVariants(true)
+    setVariantError(undefined)
+    setVariantSummary(undefined)
+
+    const models = form.models.map((m) => ({
+      id: m.id,
+      name: m.name || undefined,
+      ownedBy: undefined,
+      variants: m.variants.length > 0 ? Object.fromEntries(m.variants.map((v) => [v.name, {}])) : undefined,
+    }))
+
+    const rid = crypto.randomUUID()
+    const unsub = vscode.onMessage((msg: ExtensionMessage) => {
+      if (msg.type !== "variantsDiscovered") return
+      if (!("requestId" in msg) || msg.requestId !== rid) return
+      unsub()
+
+      if (msg.error) {
+        setVariantError(msg.error)
+        return
+      }
+
+      if (msg.summary) {
+        setVariantSummary({
+          total: msg.summary.total,
+          matched: msg.summary.matched,
+          review: msg.summary.review,
+          unmatched: msg.summary.unmatched,
+          unsupported: msg.summary.unsupported,
+          totalVariants: msg.summary.totalVariants,
+        })
+
+        for (const result of msg.summary.results) {
+          if (result.status === "matched" && result.selected && result.variants) {
+            const modelIdx = form.models.findIndex((m) => m.id === result.modelID)
+            if (modelIdx >= 0) {
+              const newVariants = Object.entries(result.variants).map(([name, cfg]) => ({
+                name,
+                enableThinking: undefined,
+                thinking: undefined,
+                splitReasoning: undefined,
+                reasoningEffort: undefined,
+                outputEffort: undefined,
+                chatTemplateArgs: undefined,
+                ...((cfg as Record<string, unknown>) || {}),
+              }))
+              setForm("models", modelIdx, "variants", newVariants)
+            }
+          }
+        }
+      }
+    })
+
+    vscode.postMessage({
+      type: "discoverVariants",
+      requestId: rid,
+      baseURL: form.baseURL,
+      npm: form.npm,
+      models,
+    })
   }
 
   function removeModel(index: number) {
@@ -705,6 +781,45 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
             <Button type="button" size="small" variant="ghost" icon="plus-small" onClick={addModel}>
               {language.t("provider.custom.models.add")}
             </Button>
+
+            <Button
+              type="button"
+              size="small"
+              variant="ghost"
+              icon="brain"
+              onClick={discoverVariants}
+              disabled={discoveringVariants() || form.models.length === 0}
+            >
+              {discoveringVariants() ? (
+                <Spinner style={{ width: "12px", height: "12px" }} />
+              ) : (
+                language.t("provider.custom.models.discoverVariants")
+              )}
+            </Button>
+
+            <Show when={variantError()}>
+              {(err) => (
+                <span
+                  style={{ "font-size": "var(--kilo-font-size-12)", color: "var(--vscode-errorForeground, #f14c4c)" }}
+                >
+                  {err()}
+                </span>
+              )}
+            </Show>
+
+            <Show when={!variantError() && variantSummary()}>
+              {(s) => (
+                <span
+                  style={{
+                    "font-size": "var(--kilo-font-size-12)",
+                    color: "var(--text-weak-base, var(--vscode-descriptionForeground))",
+                  }}
+                >
+                  {s().matched} matched | {s().review} review | {s().unmatched} unmatched | {s().unsupported}{" "}
+                  unsupported | {s().totalVariants} variants found
+                </span>
+              )}
+            </Show>
 
             {/* Fetch error */}
             <Show when={fetchError()}>

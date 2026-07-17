@@ -1146,6 +1146,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             console.error("[Kilo New] fetchCustomProviderModels failed:", e),
           )
           break
+        case "discoverVariants":
+          this.handleDiscoverVariants(message).catch((e) => console.error("[Kilo New] discoverVariants failed:", e))
+          break
         case "compact":
           await this.handleCompact(message.sessionID, message.providerID, message.modelID)
           break
@@ -2293,6 +2296,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       const message = err instanceof Error ? err.message : "Failed to fetch models"
       const auth = err instanceof FetchModelsError && err.auth
       this.postMessage({ type: "customProviderModelsFetched", requestId: rid, error: message, auth })
+    }
+  }
+
+  private async handleDiscoverVariants(msg: Record<string, unknown>): Promise<void> {
+    const rid = typeof msg.requestId === "string" ? msg.requestId : ""
+    if (!rid) return
+    const config = this.connectionService.getServerConfig()
+    if (!config) {
+      this.postMessage({ type: "variantsDiscovered", requestId: rid, error: "Not connected to CLI backend" })
+      return
+    }
+    try {
+      const auth = Buffer.from(`kilo:${config.password}`).toString("base64")
+      const res = await fetch(`${config.baseUrl}/provider/discover-variants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${auth}`,
+        },
+        body: JSON.stringify({
+          baseURL: msg.baseURL,
+          npm: msg.npm,
+          models: msg.models,
+        }),
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => "")
+        throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`)
+      }
+      const summary = await res.json()
+      this.postMessage({ type: "variantsDiscovered", requestId: rid, summary })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to discover variants"
+      this.postMessage({ type: "variantsDiscovered", requestId: rid, error: message })
     }
   }
 

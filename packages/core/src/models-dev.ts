@@ -42,6 +42,24 @@ const Cost = Schema.Struct({
   ),
 })
 
+// kilocode_change start - reasoning_options support for variant discovery
+export const ReasoningOption = Schema.Union([
+  Schema.Struct({
+    type: Schema.Literal("effort"),
+    values: Schema.Array(Schema.NullOr(Schema.String)),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("toggle"),
+  }),
+  Schema.Struct({
+    type: Schema.Literal("budget_tokens"),
+    min: Schema.optional(Schema.Finite),
+    max: Schema.optional(Schema.Finite),
+  }),
+])
+export type ReasoningOption = Schema.Schema.Type<typeof ReasoningOption>
+// kilocode_change end
+
 export const Model = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -51,6 +69,9 @@ export const Model = Schema.Struct({
   reasoning: Schema.Boolean,
   temperature: Schema.Boolean,
   tool_call: Schema.Boolean,
+  // kilocode_change start - reasoning_options support for variant discovery
+  reasoning_options: Schema.optional(Schema.Array(ReasoningOption)),
+  // kilocode_change end
   interleaved: Schema.optional(
     Schema.Union([
       Schema.Literal(true),
