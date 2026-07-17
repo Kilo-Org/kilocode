@@ -36,16 +36,34 @@ const embedder = (calls: string[][]): IEmbedder => ({
   },
 })
 
-const config = () =>
+const config = (fileExtensions?: string[]) =>
   new CodeIndexConfigManager({
     enabled: true,
     embedderProvider: "openai",
     openAiKey: "test",
     vectorStoreProvider: "lancedb",
     searchMaxResults: 2,
+    fileExtensions,
   })
 
 describe("CodeIndexSearchService worktree search", () => {
+  test("filters stale results using one vector query", async () => {
+    const limits: number[] = []
+    const state = new CodeIndexStateManager()
+    state.setSystemState("Indexed")
+    const service = new CodeIndexSearchService(
+      config([".php"]),
+      state,
+      embedder([]),
+      store([result("src/old.ts", 0.99), result("src/first.php", 0.9), result("src/second.php", 0.8)], limits),
+    )
+
+    const results = await service.searchIndex("query")
+
+    expect(limits).toEqual([2])
+    expect(results.map((item) => item.payload?.filePath)).toEqual(["src/first.php"])
+  })
+
   test("embeds once, hides baseline paths, and merges the current delta", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "search-worktree-"))
     const main = await mkdtemp(path.join(tmpdir(), "search-main-"))

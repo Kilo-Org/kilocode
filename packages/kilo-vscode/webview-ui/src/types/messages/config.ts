@@ -97,6 +97,7 @@ export interface IndexingConfig {
   searchMaxResults?: number
   embeddingBatchSize?: number
   scannerMaxBatchRetries?: number
+  fileExtensions?: string[]
 }
 
 export type KiloEmbeddingModel = {
