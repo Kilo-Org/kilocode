@@ -12,14 +12,13 @@ import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Global } from "@opencode-ai/core/global"
-import { Instance } from "../../src/kilocode/instance"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
+import { Provider } from "../../src/provider/provider"
 import { MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { Provider } from "../../src/provider/provider"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "../../src/tool/truncate"
 import { ToolRegistry } from "../../src/tool/registry"
@@ -40,17 +39,17 @@ beforeAll(async () => {
 })
 
 const parent = {
-  providerID: ProviderV2.ID.make("parent-provider"),
+  providerID: ProviderV2.ID.make("test"),
   modelID: ModelV2.ID.make("parent-model"),
 }
 
 const saved = {
-  providerID: ProviderV2.ID.make("saved-provider"),
+  providerID: ProviderV2.ID.make("test"),
   modelID: ModelV2.ID.make("saved-model"),
 }
 
 const cfg = {
-  providerID: ProviderV2.ID.make("config-provider"),
+  providerID: ProviderV2.ID.make("test"),
   modelID: ModelV2.ID.make("config-model"),
 }
 
@@ -64,6 +63,22 @@ const sub = {
 }
 const subVariant = "deep"
 
+function spec(id: string, variants: string[] = []) {
+  return {
+    id,
+    name: id,
+    attachment: false,
+    reasoning: variants.length > 0,
+    temperature: false,
+    tool_call: true,
+    release_date: "2025-01-01",
+    limit: { context: 100_000, output: 10_000 },
+    cost: { input: 0, output: 0 },
+    options: {},
+    variants: Object.fromEntries(variants.map((variant) => [variant, {}])),
+  }
+}
+
 function custom(id: string, model: string, variants: string[] = []) {
   return {
     name: id,
@@ -71,19 +86,7 @@ function custom(id: string, model: string, variants: string[] = []) {
     env: [],
     npm: "@ai-sdk/openai-compatible",
     models: {
-      [model]: {
-        id: model,
-        name: model,
-        attachment: false,
-        reasoning: variants.length > 0,
-        temperature: false,
-        tool_call: true,
-        release_date: "2025-01-01",
-        limit: { context: 100_000, output: 10_000 },
-        cost: { input: 0, output: 0 },
-        options: {},
-        variants: Object.fromEntries(variants.map((variant) => [variant, {}])),
-      },
+      [model]: spec(model, variants),
     },
     options: { apiKey: "test-key", baseURL: "http://localhost:1/v1" },
   }
@@ -91,9 +94,18 @@ function custom(id: string, model: string, variants: string[] = []) {
 
 const catalog = {
   provider: {
-    "parent-provider": custom("parent-provider", "parent-model", [inherited, overrideVariant]),
-    "saved-provider": custom("saved-provider", "saved-model", [savedVariant, overrideVariant]),
-    "config-provider": custom("config-provider", "config-model", [cfgVariant, overrideVariant]),
+    test: {
+      id: "test",
+      name: "Test",
+      env: [],
+      npm: "@ai-sdk/openai-compatible",
+      models: {
+        "parent-model": spec("parent-model", [inherited, cfgVariant, savedVariant, overrideVariant]),
+        "saved-model": spec("saved-model", [cfgVariant, savedVariant, overrideVariant]),
+        "config-model": spec("config-model", [cfgVariant, savedVariant, overrideVariant]),
+      },
+      options: { apiKey: "test-key", baseURL: "http://localhost:1/v1" },
+    },
     "sub-provider": custom("sub-provider", "sub-model", [subVariant, overrideVariant]),
   },
 }
@@ -202,6 +214,7 @@ function run(input: {
   client?: string
   variant?: string
   config?: Pick<Config.Info, "subagent_model" | "subagent_variant" | "subagent_variant_overrides">
+  workerVariant?: string
 }) {
   return provideTmpdirInstance(
     () =>
@@ -245,8 +258,8 @@ function run(input: {
         ...catalog,
         ...input.config,
         agent: {
-          worker: { mode: "subagent" },
-          pinned: { mode: "subagent", model: "config-provider/config-model", variant: cfgVariant },
+          worker: { mode: "subagent", ...(input.workerVariant ? { variant: input.workerVariant } : {}) },
+          pinned: { mode: "subagent", model: "test/config-model", variant: cfgVariant },
         },
       },
     },
@@ -254,32 +267,33 @@ function run(input: {
 }
 
 describe("tool.task model resolution", () => {
-  it.live("saved model beats agent config for pinned", () =>
+  it.live("legacy saved variant follows saved model for pinned", () =>
     run({
       agent: "pinned",
-      state: { model: { pinned: saved }, variant: { "saved-provider/saved-model": savedVariant } },
+      state: { model: { pinned: saved }, variant: { "test/saved-model": savedVariant } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual(saved)
           expect(result.variant).toEqual(savedVariant)
-          expect(result.model).toMatchObject({ ...saved, variant: savedVariant })
+          expect(result.model).toEqual(saved)
           expect(result.metadataVariant).toEqual(savedVariant)
         }),
       ),
     ),
   )
 
-  it.live("saved model beats parent for worker", () =>
+  it.live("legacy saved variant beats agent variant for saved worker model", () =>
     run({
       agent: "worker",
-      state: { model: { worker: saved }, variant: { "saved-provider/saved-model": savedVariant } },
+      workerVariant: cfgVariant,
+      state: { model: { worker: saved }, variant: { "test/saved-model": savedVariant } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual(saved)
           expect(result.variant).toEqual(savedVariant)
-          expect(result.model).toMatchObject({ ...saved, variant: savedVariant })
+          expect(result.model).toEqual(saved)
           expect(result.metadataVariant).toEqual(savedVariant)
         }),
       ),
@@ -307,6 +321,22 @@ describe("tool.task model resolution", () => {
     run({
       agent: "worker",
       state: { model: { worker: saved }, variant: { "other-provider/other-model": savedVariant } },
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(saved)
+          expect(result.variant).toBeUndefined()
+          expect(result.model).toEqual(saved)
+          expect(result.metadataVariant).toBeUndefined()
+        }),
+      ),
+    ),
+  )
+
+  it.live("stale legacy saved variant preserves the saved model", () =>
+    run({
+      agent: "worker",
+      state: { model: { worker: saved }, variant: { "test/saved-model": "gone" } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
@@ -373,7 +403,7 @@ describe("tool.task model resolution", () => {
     run({
       agent: "worker",
       variant: inherited,
-      config: { subagent_variant_overrides: { "parent-provider/parent-model": overrideVariant } },
+      config: { subagent_variant_overrides: { "test/parent-model": overrideVariant } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
@@ -390,7 +420,7 @@ describe("tool.task model resolution", () => {
     run({
       agent: "pinned",
       variant: inherited,
-      config: { subagent_variant_overrides: { "config-provider/config-model": overrideVariant } },
+      config: { subagent_variant_overrides: { "test/config-model": overrideVariant } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
@@ -406,14 +436,14 @@ describe("tool.task model resolution", () => {
   it.live("model-specific override follows a saved custom subagent model", () =>
     run({
       agent: "worker",
-      state: { model: { worker: saved }, variant: { "saved-provider/saved-model": savedVariant } },
-      config: { subagent_variant_overrides: { "saved-provider/saved-model": overrideVariant } },
+      state: { model: { worker: saved }, variant: { "test/saved-model": savedVariant } },
+      config: { subagent_variant_overrides: { "test/saved-model": overrideVariant } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual(saved)
           expect(result.variant).toEqual(overrideVariant)
-          expect(result.model).toMatchObject({ ...saved, variant: overrideVariant })
+          expect(result.model).toEqual(saved)
           expect(result.metadataVariant).toEqual(overrideVariant)
         }),
       ),
@@ -424,7 +454,7 @@ describe("tool.task model resolution", () => {
     run({
       agent: "pinned",
       variant: inherited,
-      config: { subagent_variant_overrides: { "config-provider/config-model": "gone" } },
+      config: { subagent_variant_overrides: { "test/config-model": "gone" } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
@@ -444,7 +474,7 @@ describe("tool.task model resolution", () => {
       config: {
         subagent_model: "missing-provider/missing-model",
         subagent_variant: subVariant,
-        subagent_variant_overrides: { "parent-provider/parent-model": overrideVariant },
+        subagent_variant_overrides: { "test/parent-model": overrideVariant },
       },
     }).pipe(
       Effect.tap((result) =>
@@ -507,6 +537,39 @@ describe("tool.task model resolution", () => {
     ),
   )
 
+  it.live("worker config variant applies to parent model when agent model is unset", () =>
+    run({
+      agent: "worker",
+      workerVariant: cfgVariant,
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(cfgVariant)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(cfgVariant)
+        }),
+      ),
+    ),
+  )
+
+  it.live("worker default variant intentionally inherits the parent variant", () =>
+    run({
+      agent: "worker",
+      variant: inherited,
+      workerVariant: "default",
+    }).pipe(
+      Effect.tap((result) =>
+        Effect.sync(() => {
+          expect(result.prompt).toEqual(parent)
+          expect(result.variant).toEqual(inherited)
+          expect(result.model).toEqual(parent)
+          expect(result.metadataVariant).toEqual(inherited)
+        }),
+      ),
+    ),
+  )
+
   it.live("malformed file ignored and falls back to agent config for pinned", () =>
     provideTmpdirInstance(
       () =>
@@ -551,7 +614,7 @@ describe("tool.task model resolution", () => {
           ...catalog,
           agent: {
             worker: { mode: "subagent" },
-            pinned: { mode: "subagent", model: "config-provider/config-model", variant: cfgVariant },
+            pinned: { mode: "subagent", model: "test/config-model", variant: cfgVariant },
           },
         },
       },
@@ -562,14 +625,15 @@ describe("tool.task model resolution", () => {
     run({
       agent: "worker",
       client: "vscode",
-      state: { model: { worker: saved }, variant: { "saved-provider/saved-model": savedVariant } },
+      workerVariant: cfgVariant,
+      state: { model: { worker: saved }, variant: { "test/saved-model": savedVariant } },
     }).pipe(
       Effect.tap((result) =>
         Effect.sync(() => {
           expect(result.prompt).toEqual(parent)
-          expect(result.variant).toBeUndefined()
+          expect(result.variant).toEqual(cfgVariant)
           expect(result.model).toEqual(parent)
-          expect(result.metadataVariant).toBeUndefined()
+          expect(result.metadataVariant).toEqual(cfgVariant)
         }),
       ),
     ),

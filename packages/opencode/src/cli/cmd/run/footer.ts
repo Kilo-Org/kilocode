@@ -36,6 +36,7 @@ import { SUBAGENT_INSPECTOR_ROWS } from "./footer.subagent"
 import { PROMPT_MAX_ROWS, TEXTAREA_MIN_ROWS } from "./footer.prompt"
 import { RunFooterView } from "./footer.view"
 import { RunScrollbackStream } from "./scrollback.surface"
+import { resolveVariantAction, type RunVariantResult } from "@/kilocode/cli/cmd/run/variant-controller" // kilocode_change
 import { RUN_THEME_FALLBACK, resolveRunTheme, type RunTheme } from "./theme"
 import { modelInfo } from "./variant.shared"
 import type {
@@ -61,12 +62,7 @@ import type {
   StreamCommit,
 } from "./types"
 
-type CycleResult = {
-  modelLabel?: string
-  status?: string
-  variant?: string | undefined
-  variants?: string[]
-}
+type CycleResult = RunVariantResult // kilocode_change
 
 type RunFooterOptions = {
   directory: string
@@ -93,7 +89,7 @@ type RunFooterOptions = {
   onTerminalWrite: (input: { terminalID: string; data: string }) => Promise<void> // kilocode_change
   onTerminalResize: (input: { terminalID: string; cols: number; rows: number }) => Promise<void> // kilocode_change
   onTerminalClose: (terminalID: string) => Promise<void> // kilocode_change
-  onCycleVariant?: () => CycleResult | void
+  onCycleVariant?: () => CycleResult | void | Promise<CycleResult | void> // kilocode_change
   onModelSelect?: (model: NonNullable<RunInput["model"]>) => CycleResult | void | Promise<CycleResult | void>
   onVariantSelect?: (variant: string | undefined) => CycleResult | void | Promise<CycleResult | void>
   onInterrupt?: () => void
@@ -804,30 +800,37 @@ export class RunFooter implements FooterApi {
     await this.options.onQuestionReject(input)
   }
 
-  private handleCycle = (): void => {
-    const result = this.options.onCycleVariant?.()
-    if (!result) {
-      this.setNotice("no variants available")
-      return
-    }
+  // kilocode_change start - persist before showing selection and retain save errors
+  private runVariantAction(action: () => CycleResult | void | Promise<CycleResult | void>): void {
+    if (this.isClosed) return
+    const model = this.currentModel()
+    void resolveVariantAction({
+      action,
+      stale: () => {
+        const current = this.currentModel()
+        return !!model && (!current || current.providerID !== model.providerID || current.modelID !== model.modelID)
+      },
+      empty: "no variants available",
+      failure: "failed to update variant",
+    }).then((resolved) => {
+      if (this.isClosed) return
+      if (!resolved.result) {
+        if (resolved.status) this.setNotice(resolved.status)
+        return
+      }
 
-    const patch: FooterPatch = {}
-
-    if ("variants" in result) {
-      this.setVariants(result.variants ?? [])
-    }
-
-    if ("variant" in result) {
-      this.setCurrentVariant(result.variant)
-    }
-
-    if (result.modelLabel) {
-      patch.model = result.modelLabel
-    }
-
-    this.patch(patch)
-    this.setNotice(result.status ?? "variant updated")
+      const result = resolved.result
+      if ("variants" in result) this.setVariants(result.variants ?? [])
+      if ("variant" in result) this.setCurrentVariant(result.variant)
+      if (result.modelLabel) this.patch({ model: result.modelLabel })
+      this.setNotice(result.status ?? "variant updated")
+    })
   }
+
+  private handleCycle = (): void => {
+    this.runVariantAction(() => this.options.onCycleVariant?.())
+  }
+  // kilocode_change end
 
   private handleModelSelect = (model: NonNullable<RunInput["model"]>): void => {
     if (this.isClosed) {
@@ -873,7 +876,7 @@ export class RunFooter implements FooterApi {
           this.setNotice(result.status)
         }
       })
-      .catch(() => {})
+      .catch(() => { const current = this.currentModel(); if (this.isClosed || !current || current.providerID !== model.providerID || current.modelID !== model.modelID) return; this.setNotice("failed to switch model") }) // kilocode_change
   }
 
   private handleVariantSelect = (variant: string | undefined): void => {
@@ -881,40 +884,7 @@ export class RunFooter implements FooterApi {
       return
     }
 
-    const model = this.currentModel()
-    void Promise.resolve()
-      .then(() => this.options.onVariantSelect?.(variant))
-      .then((result) => {
-        const current = this.currentModel()
-        if (
-          !result ||
-          this.isClosed ||
-          (model && (!current || current.providerID !== model.providerID || current.modelID !== model.modelID))
-        ) {
-          return
-        }
-
-        if ("variants" in result) {
-          this.setVariants(result.variants ?? [])
-        }
-
-        if ("variant" in result) {
-          this.setCurrentVariant(result.variant)
-        }
-
-        const patch: FooterPatch = {}
-        if (result.modelLabel) {
-          patch.model = result.modelLabel
-        }
-
-        if (patch.model) {
-          this.patch(patch)
-        }
-        if (result.status) {
-          this.setNotice(result.status)
-        }
-      })
-      .catch(() => {})
+    this.runVariantAction(() => this.options.onVariantSelect?.(variant)) // kilocode_change
   }
 
   private clearInterruptTimer(): void {

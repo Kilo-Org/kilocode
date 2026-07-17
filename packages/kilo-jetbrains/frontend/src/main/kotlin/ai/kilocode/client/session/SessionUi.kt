@@ -491,7 +491,13 @@ class SessionUi(
                         m.model?.let { full -> items.firstOrNull { it.key == full }?.key }
                     prompt.model.setItems(items, selected)
                     prompt.setAttachmentEnabled(items.firstOrNull { it.key == selected }?.attachment ?: true)
-                    prompt.reasoning.setItems(m.variants.map { ReasoningPicker.Item(it, variantTitle(it)) }, m.variant)
+                    val variants = if (m.variants.isEmpty()) {
+                        emptyList()
+                    } else {
+                        listOf(ReasoningPicker.Item("default", variantTitle("default"))) +
+                            m.variants.map { ReasoningPicker.Item(it, variantTitle(it)) }
+                    }
+                    prompt.reasoning.setItems(variants, m.variant)
                     prompt.setResetVisible(m.modelOverride)
                     prompt.setReady(m.isReady())
                     prompt.refreshHighlights()

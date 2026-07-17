@@ -72,7 +72,15 @@ import { errorIDs } from "./session-errors"
 import { PartStash } from "./part-stash"
 import { mergeParts, sameParts } from "./session-parts"
 import { state as todoState } from "./todo-revert"
-import { getVariant, sessionVariantKeys, transferVariants, variantKey } from "./session-variant-store"
+import {
+  agentVariantKeys,
+  getPromptVariant,
+  getVariant,
+  modeVariant,
+  sessionVariantKeys,
+  transferVariants,
+  variantKey,
+} from "./session-variant-store"
 import { KILO_AUTO, KILO_PROVIDER_ID, parseModelString } from "../../../src/shared/provider-model"
 import { reviewMetadata, type ReviewMessageData } from "../../../src/shared/review-comments"
 import { visibleMessages as filterVisibleMessages } from "./session-queue"
@@ -242,7 +250,7 @@ interface SessionContextValue {
   // Thinking variant for the selected model
   variantList: (sessionID?: string) => string[]
   currentVariant: (sessionID?: string) => string | undefined
-  selectVariant: (value: string, sessionID?: string) => void
+  selectVariant: (value: string | undefined, sessionID?: string) => void
 
   // Model favorites
   favoriteModels: Accessor<ModelSelection[]>
@@ -583,6 +591,11 @@ export const SessionProvider: ParentComponent = (props) => {
     return parseModelString(config().agent?.[agentName]?.model)
   }
 
+  function getModeVariant(agentName: string, selection: ModelSelection | null) {
+    const entry = config().agent?.[agentName]
+    return modeVariant(selection, parseModelString(entry?.model), entry?.variant)
+  }
+
   /** Global default model from config (config.model). */
   function getGlobalModel(): ModelSelection | null {
     return parseModelString(config().model)
@@ -892,30 +905,39 @@ export const SessionProvider: ParentComponent = (props) => {
     if (!sel) return undefined
     const list = variantList(sid)
     if (list.length === 0) return undefined
-    return getVariant(store.variantSelections, sel, list, agentForScope(sid), sid)
+    const agent = agentForScope(sid)
+    return getVariant(store.variantSelections, sel, list, agent, sid, getModeVariant(agent, sel))
   }
 
-  const selectVariant = (value: string, sessionID?: string) => {
+  const promptVariant = (sessionID?: string) => {
+    const sid = sessionID ?? currentSessionID()
+    const sel = selected(sid)
+    if (!sel) return undefined
+    const list = variantList(sid)
+    if (list.length === 0) return undefined
+    const agent = agentForScope(sid)
+    return getPromptVariant(store.variantSelections, sel, list, agent, sid, getModeVariant(agent, sel))
+  }
+
+  const selectVariant = (value: string | undefined, sessionID?: string) => {
     const sid = sessionID ?? currentSessionID()
     const sel = selected(sid)
     if (!sel) return
-    const key = variantKey(sel, agentForScope(sid), sid)
-    setStore("variantSelections", key, value)
-    if (!sid) vscode.postMessage({ type: "persistVariant", key, value })
-  }
-
-  // Load persisted variants from extension globalState
-  const unsubVariants = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "variantsLoaded") return
-    for (const [k, v] of Object.entries(message.variants)) {
-      if (k.startsWith("session/")) continue
-      setStore("variantSelections", k, v)
+    const agent = agentForScope(sid)
+    const key = variantKey(sel, agent, sid)
+    setStore(
+      "variantSelections",
+      produce((variants) => {
+        if (!sid) {
+          for (const item of agentVariantKeys(variants, agent)) delete variants[item]
+        }
+        variants[key] = value ?? "default"
+      }),
+    )
+    if (!sid) {
+      vscode.postMessage({ type: "updateConfig", config: { agent: { [agent]: { variant: value ?? "default" } } } })
     }
-  })
-
-  vscode.postMessage({ type: "requestVariants" })
-
-  onCleanup(unsubVariants)
+  }
 
   // Load persisted per-mode model selections from model.json via extension host.
   // Uses replace semantics so a reset (empty payload) clears old entries.
@@ -1317,7 +1339,6 @@ export const SessionProvider: ParentComponent = (props) => {
         const entries = transferVariants(store.variantSelections, draftID, session.id)
         for (const [key, value] of Object.entries(entries)) {
           setStore("variantSelections", key, value)
-          vscode.postMessage({ type: "persistVariant", key, value })
         }
         if (pendingAgent) setStore("agentSelections", session.id, pendingAgent)
         if (pendingModel) setStore("sessionOverrides", session.id, pendingModel)
@@ -2279,7 +2300,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: promptVariant(scope),
         files,
         review,
       })
@@ -2315,7 +2336,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: promptVariant(scope),
       files,
       review,
       agentManagerContext: context,
@@ -2355,7 +2376,7 @@ export const SessionProvider: ParentComponent = (props) => {
         providerID,
         modelID,
         agent,
-        variant: currentVariant(scope),
+        variant: promptVariant(scope),
         files,
         command,
         commandArgs: args,
@@ -2394,7 +2415,7 @@ export const SessionProvider: ParentComponent = (props) => {
       providerID,
       modelID,
       agent,
-      variant: currentVariant(scope),
+      variant: promptVariant(scope),
       files,
       agentManagerContext: context,
     })
@@ -3027,7 +3048,6 @@ export const SessionProvider: ParentComponent = (props) => {
 
   return <SessionContext.Provider value={value}>{props.children}</SessionContext.Provider>
 }
-
 export function useSession(): SessionContextValue {
   const context = useContext(SessionContext)
   if (!context) {

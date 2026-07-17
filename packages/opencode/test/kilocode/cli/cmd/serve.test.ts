@@ -4,6 +4,7 @@ import { tmpdir } from "../../../fixture/fixture"
 
 const root = path.resolve(import.meta.dir, "../../../..")
 const entry = path.join(root, "src/index.ts")
+const tuiPreload = import.meta.resolve("@opentui/solid/preload")
 
 test("prints the local IPv6 URL for wildcard binds", async () => {
   await using tmp = await tmpdir()
@@ -11,7 +12,7 @@ test("prints the local IPv6 URL for wildcard binds", async () => {
     [
       process.execPath,
       "--conditions=browser",
-      "--preload=@opentui/solid/preload",
+      `--preload=${tuiPreload}`,
       entry,
       "serve",
       "--hostname",

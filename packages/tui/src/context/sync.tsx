@@ -604,11 +604,15 @@ export const {
         }
         // kilocode_change start
         case "global.config.updated": {
+          const current = project.workspace.current()
           void sdk.client.global.config.get().then((result) => {
             if (result.data) setStore("globalConfig", reconcile(result.data))
           })
-          void sdk.client.config.get().then((result) => {
+          void sdk.client.config.get({ workspace: current }).then((result) => {
             if (result.data) setStore("config", reconcile(result.data))
+          })
+          void sdk.client.app.agents({ workspace: current }).then((result) => {
+            if (result.data) setStore("agent", reconcile(result.data))
           })
           break
         }

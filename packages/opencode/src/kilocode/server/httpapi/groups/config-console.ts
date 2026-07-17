@@ -96,7 +96,6 @@ export const ConfigModelStateResponse = Schema.Struct({
   model: Schema.Record(Schema.String, ModelRef),
   recent: Schema.Array(ModelRef),
   favorite: Schema.Array(ModelRef),
-  variant: Schema.Record(Schema.String, Schema.String),
 }).annotate({ identifier: "ConfigModelStateResponse" })
 
 export const TuiConfigQuery = Schema.Struct({

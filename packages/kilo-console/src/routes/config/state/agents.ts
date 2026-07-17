@@ -1,9 +1,27 @@
 import { createEffect, createMemo, createSignal } from "solid-js"
 import type { Accessor } from "solid-js"
 import type { AgentBuilderPreviewResponse, Model, Provider } from "@kilocode/sdk/v2/client"
-import { previewAgent, saveAgent, type AgentPayload, type Scope, type Snapshot } from "../../../client"
+import {
+  previewAgent,
+  saveAgent,
+  saveAgentVariant,
+  type AgentPayload,
+  type Scope,
+  type Snapshot,
+} from "../../../client"
 import { useConfig } from "../../../context/config"
 import { clean, friendly, sorted, toMode, toolCapabilities, toolName } from "../../../shared/utils"
+import {
+  variantChoices,
+  variantDirty,
+  variantEdit as canVariantEdit,
+  variantModel as pickVariantModel,
+  variantParent,
+  variantPersist,
+  variantShown,
+  variantState,
+  variantValue,
+} from "./agent-variant"
 import {
   defaults,
   defs,
@@ -102,7 +120,7 @@ const ruleIDs = new Set<string>(ruleDefs.map((item) => item.id))
 const knownPermissions = new Set<string>(defs.map((item) => item.id))
 
 function source(item: AgentItem) {
-  const value = item.options.source
+  const value = item.source ?? item.options.source
   if (typeof value === "string") return value
   return undefined
 }
@@ -151,6 +169,19 @@ export function agentEditable(item: AgentItem, entry?: AgentEntry) {
   return true
 }
 
+export {
+  variantChoices,
+  variantCurrent,
+  variantDirty,
+  variantEdit,
+  variantModel,
+  variantParent,
+  variantPersist,
+  variantShown,
+  variantState,
+  variantValue,
+} from "./agent-variant"
+
 export function useAgentBuilder(agent?: Accessor<string | undefined>) {
   const ctx = useConfig()
   const snap = () => ctx.data()
@@ -162,6 +193,12 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
   const [desc, setDesc] = createSignal("")
   const [mode, setMode] = createSignal<Mode>("subagent")
   const [model, setModel] = createSignal("")
+  const [variant, setVariant] = createSignal("")
+  const [saved, setSaved] = createSignal("")
+  const [base, setBase] = createSignal("")
+  const [stored, setStored] = createSignal("")
+  const [cleared, setCleared] = createSignal(false)
+  const [variantEdit, setVariantEdit] = createSignal(false)
   const [color, setColor] = createSignal("")
   const [steps, setSteps] = createSignal("")
   const [tools, setTools] = createSignal<string[]>([])
@@ -221,6 +258,16 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
     return all().find((model) => model.id === value || `${model.model.providerID}/${model.model.id}` === value)
   }
   const selected = createMemo(() => item(model()))
+  const fallback = createMemo(() => item(pickVariantModel({ draft: model(), agent: saved(), workspace: snap()?.effective.model })))
+  const variantModel = createMemo(() => selected() ?? fallback())
+  const variants = createMemo(() => Object.keys(variantModel()?.model.variants ?? {}))
+  const variantOptions = createMemo(() => variantChoices(variants()))
+  const currentVariant = createMemo(() =>
+    variantShown({ cleared: cleared(), current: variant(), saved: base(), variants: variants() }),
+  )
+  const persisted = createMemo(() =>
+    variantPersist({ cleared: cleared(), current: variant(), saved: base(), variants: variants() }),
+  )
 
   const options = createMemo(() => {
     const data = snap()
@@ -274,6 +321,12 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
     setDesc("")
     setMode("subagent")
     setModel("")
+    setVariant("")
+    setSaved("")
+    setBase("")
+    setStored("")
+    setCleared(false)
+    setVariantEdit(false)
     setColor("")
     setSteps("")
     setTools([])
@@ -318,11 +371,26 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
 
     const entry = agentMeta(data, key)
     const edit = agentEditable(item, entry)
+    const allow = canVariantEdit({
+      scope: scope(),
+      inherited: entry?.inherited,
+      editable: entry?.editable,
+      native: item.native,
+      source: source(item),
+    })
 
     ctx.fail("")
     setReady(true)
     setLocked(!edit)
+    setVariantEdit(allow)
     const cfg = record(entry?.value)
+    const global = record(entry?.global)
+    const state = variantState({
+      scope: scope(),
+      global: global.variant,
+      local: entry?.local && record(entry.local).variant,
+      effective: item.variant,
+    })
     const parts = split(cfg.permission ?? (edit ? undefined : item.permission))
     const step = number(cfg.steps) ?? item.steps
 
@@ -330,6 +398,11 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
     setDesc(string(cfg.description) || item.description || "")
     setMode(toMode(string(cfg.mode) || item.mode))
     setModel(string(cfg.model) || agentModel(item))
+    setSaved(variantParent({ scope: scope(), global: global.model }))
+    setStored(state.stored)
+    setBase(state.shown)
+    setVariant(state.shown)
+    setCleared(false)
     setColor(string(cfg.color) || item.color || "")
     setSteps(step ? String(step) : "")
     setTools(parts.tools)
@@ -380,6 +453,11 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
   function clearModel() {
     if (!guard()) return
     setModel("")
+  }
+
+  function pickVariant(value: string) {
+    setVariant(value)
+    setCleared(value === "")
   }
 
   function openTools() {
@@ -503,10 +581,34 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
   }
 
   function save() {
-    if (!guard()) return
+    if (locked()) {
+      if (!variantEdit()) {
+        ctx.fail("Inspected agents are read-only.")
+        return
+      }
+      const prev = agent?.()
+      if (!prev) return
+      ctx.run("Saving agent variant", async () => {
+        const next = persisted()
+        if (variantDirty({ next, saved: base() })) {
+          await saveAgentVariant(ctx.target(), prev, next)
+        }
+      })
+      return
+    }
     const payload = build()
     if (!payload) return
-    ctx.run("Saving agent", () => saveAgent(ctx.target(), payload).then(setDraft))
+    ctx.run("Saving agent", async () => {
+      const prev = agent?.()
+      const moved = prev && prev !== payload.id
+      const output = await saveAgent(ctx.target(), payload)
+      const next = persisted()
+      if (variantDirty({ next, saved: base() }) || Boolean(moved && stored())) {
+        await saveAgentVariant(ctx.target(), payload.id, next)
+      }
+      if (moved && stored()) await saveAgentVariant(ctx.target(), prev, "")
+      setDraft(output)
+    })
   }
 
   return {
@@ -521,6 +623,12 @@ export function useAgentBuilder(agent?: Accessor<string | undefined>) {
     setMode,
     model,
     setModel,
+    variant,
+    setVariant: pickVariant,
+    currentVariant,
+    variantOptions,
+    variantModel,
+    variantEdit,
     color,
     setColor,
     steps,

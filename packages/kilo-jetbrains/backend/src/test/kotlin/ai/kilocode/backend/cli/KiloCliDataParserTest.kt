@@ -2332,13 +2332,12 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `parseModelState - parses model selections and variants`() {
+        fun `parseModelState - ignores legacy variants`() {
             val result = KiloCliDataParser.parseModelState(
                 """{"model":{"code":{"providerID":"kilo","modelID":"auto"}},"variant":{"kilo/auto":"medium"}}""",
             )
             assertEquals("kilo", result.model["code"]?.providerID)
             assertEquals("auto", result.model["code"]?.modelID)
-            assertEquals("medium", result.variant["kilo/auto"])
         }
 
         @Test
@@ -2357,12 +2356,11 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `parseModelState - drops malformed model selections and variants`() {
+        fun `parseModelState - drops malformed model selections`() {
             val result = KiloCliDataParser.parseModelState(
                 """{"model":{"bad":false,"ok":{"providerID":"kilo","modelID":"auto"}},"variant":{"":"low","kilo/auto":false,"openai/gpt":"high"}}""",
             )
             assertEquals(listOf("ok"), result.model.keys.toList())
-            assertEquals(mapOf("openai/gpt" to "high"), result.variant)
         }
 
         @Test
@@ -2378,21 +2376,20 @@ class KiloCliDataParserTest {
         }
 
         @Test
-        fun `buildModelStateJson - writes model selections and variants`() {
-            val raw = """{"recent":[],"extra":true}"""
+        fun `buildModelStateJson - writes model selections and preserves raw legacy variants`() {
+            val raw = """{"recent":[],"variant":{"kilo/auto":false},"extra":true}"""
             val result = KiloCliDataParser.buildModelStateJson(
                 raw,
                 ModelStateDto(
                     model = mapOf("code" to ModelSelectionDto("kilo", "auto")),
-                    variant = mapOf("kilo/auto" to "medium"),
                     recent = listOf(ModelSelectionDto("anthropic", "claude")),
                 ),
             )
 
             val state = KiloCliDataParser.parseModelState(result)
             assertEquals("auto", state.model["code"]?.modelID)
-            assertEquals("medium", state.variant["kilo/auto"])
             assertEquals(listOf("anthropic/claude"), state.recent.map { "${it.providerID}/${it.modelID}" })
+            assertTrue(result.contains("\"kilo/auto\": false"), result)
             assertTrue(result.contains("\"extra\""), result)
         }
     }

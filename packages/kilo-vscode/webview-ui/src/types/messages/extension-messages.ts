@@ -765,12 +765,6 @@ export interface AgentManagerMultiVersionProgressMessage {
   groupId?: string
 }
 
-// Stored variant selections loaded from extension globalState (extension → webview)
-export interface VariantsLoadedMessage {
-  type: "variantsLoaded"
-  variants: Record<string, string>
-}
-
 export interface RecentsLoadedMessage {
   type: "recentsLoaded"
   recents: ModelSelection[]
@@ -1197,7 +1191,6 @@ export type ExtensionMessage =
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
-  | VariantsLoadedMessage
   | CloudSessionDataLoadedMessage
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage

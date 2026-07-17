@@ -24,6 +24,9 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ProviderDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -179,6 +182,65 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val prompt = find<PromptPanel>(ui)
 
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
+    }
+
+    fun `test reasoning picker displays Default before provider variants`() {
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "kilo/gpt-5", agent = mapOf("code" to AgentConfigDto(variant = "default"))),
+        )
+        val providers = listOf(
+            ProviderDto(
+                id = "kilo",
+                name = "Kilo",
+                models = mapOf("gpt-5" to ModelDto(id = "gpt-5", name = "GPT-5", variants = listOf("low", "high"))),
+            ),
+        )
+        workspaceRpc.state.value = ai.kilocode.rpc.dto.KiloWorkspaceStateDto(
+            status = ai.kilocode.rpc.dto.KiloWorkspaceStatusDto.READY,
+            agents = ai.kilocode.rpc.dto.AgentsDto(
+                agents = listOf(ai.kilocode.rpc.dto.AgentDto(name = "code", displayName = "Code", mode = "code")),
+                all = listOf(ai.kilocode.rpc.dto.AgentDto(name = "code", displayName = "Code", mode = "code")),
+                default = "code",
+            ),
+            providers = ai.kilocode.rpc.dto.ProvidersDto(providers = providers, connected = listOf("kilo"), defaults = emptyMap()),
+        )
+        ui = newUi()
+        settle()
+
+        val picker = find<PromptPanel>(ui).reasoning
+        assertEquals("Default ▾", picker.text)
+        assertEquals("default", picker.selectedForTest()?.id)
+    }
+
+    fun `test reasoning picker stays hidden when selected model has no variants`() {
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "kilo/plain", agent = mapOf("code" to AgentConfigDto(variant = "default"))),
+        )
+        val providers = listOf(
+            ProviderDto(
+                id = "kilo",
+                name = "Kilo",
+                models = mapOf("plain" to ModelDto(id = "plain", name = "Plain")),
+            ),
+        )
+        workspaceRpc.state.value = ai.kilocode.rpc.dto.KiloWorkspaceStateDto(
+            status = ai.kilocode.rpc.dto.KiloWorkspaceStatusDto.READY,
+            agents = ai.kilocode.rpc.dto.AgentsDto(
+                agents = listOf(ai.kilocode.rpc.dto.AgentDto(name = "code", displayName = "Code", mode = "code")),
+                all = listOf(ai.kilocode.rpc.dto.AgentDto(name = "code", displayName = "Code", mode = "code")),
+                default = "code",
+            ),
+            providers = ai.kilocode.rpc.dto.ProvidersDto(providers = providers, connected = listOf("kilo"), defaults = emptyMap()),
+        )
+        ui = newUi()
+        settle()
+
+        val picker = find<PromptPanel>(ui).reasoning
+        assertFalse(picker.isVisible)
+        assertFalse(picker.isEnabled)
+        assertNull(picker.selectedForTest())
     }
 
     fun `test revert sync preserves active prompt draft`() {
