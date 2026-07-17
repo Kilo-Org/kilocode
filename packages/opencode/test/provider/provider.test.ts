@@ -435,6 +435,46 @@ it.instance(
 )
 
 it.instance(
+  "discovers models when npm is omitted",
+  Effect.gen(function* () {
+    let calls = 0
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://custom.openai.com/v1/models") {
+        calls += 1
+        return new Response(
+          JSON.stringify({
+            data: [{ id: "gpt-4.1" }, { id: "gpt-4o" }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        )
+      }
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    const models = providers[ProviderV2.ID.make("custom-openai")].models
+    expect(calls).toBe(1)
+    expect(models["gpt-4.1"]).toBeDefined()
+    expect(models["gpt-4o"]).toBeDefined()
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          api: "https://custom.openai.com/v1",
+          discoverModels: true,
+          env: [],
+          models: { "configured-model": { name: "Configured Model" } },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
   "does not discover models when discovery is omitted",
   Effect.gen(function* () {
     let calls = 0
@@ -459,6 +499,58 @@ it.instance(
           models: {
             "gpt-4.1": { name: "Configured GPT-4.1" },
           },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "discovers models concurrently across providers",
+  Effect.gen(function* () {
+    let secondStarted = false
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://first.custom.openai.com/v1/models") {
+        await Promise.resolve()
+        expect(secondStarted).toBe(true)
+        return new Response(JSON.stringify({ data: [{ id: "first-model" }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      }
+      if (url === "https://second.custom.openai.com/v1/models") {
+        secondStarted = true
+        return new Response(JSON.stringify({ data: [{ id: "second-model" }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      }
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    expect(providers[ProviderV2.ID.make("first-openai")].models["first-model"]).toBeDefined()
+    expect(providers[ProviderV2.ID.make("second-openai")].models["second-model"]).toBeDefined()
+  }),
+  {
+    config: {
+      provider: {
+        "first-openai": {
+          name: "First OpenAI",
+          api: "https://first.custom.openai.com/v1",
+          discoverModels: true,
+          env: [],
+          models: {},
+          options: { apiKey: "test-key" },
+        },
+        "second-openai": {
+          name: "Second OpenAI",
+          api: "https://second.custom.openai.com/v1",
+          discoverModels: true,
+          env: [],
+          models: {},
           options: { apiKey: "test-key" },
         },
       },

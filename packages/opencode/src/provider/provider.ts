@@ -1507,7 +1507,8 @@ export const layer = Layer.effect(
             parsed.models[modelID] = parsedModel
           }
 
-          if (provider.npm === "@ai-sdk/openai-compatible" && provider.discoverModels === true) {
+          const npm = provider.npm ?? "@ai-sdk/openai-compatible"
+          if (npm === "@ai-sdk/openai-compatible" && provider.discoverModels === true) {
             discoveryLoaders[providerID] = async () => {
               const first = Object.values(parsed.models)[0]
               const baseURL = provider.options?.baseURL ?? provider.api ?? first?.api.url
@@ -1698,21 +1699,23 @@ export const layer = Layer.effect(
         patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
 
         yield* Effect.promise(async () => {
-          for (const [providerID, loader] of Object.entries(discoveryLoaders)) {
-            if (!providers[providerID]) continue
-            if (!isProviderAllowed(providerID)) continue
+          await Promise.all(
+            Object.entries(discoveryLoaders).map(async ([providerID, loader]) => {
+              if (!providers[providerID]) return
+              if (!isProviderAllowed(providerID)) return
 
-            try {
-              const discovered = await loader()
-              for (const [modelID, model] of Object.entries(discovered)) {
-                if (!providers[providerID].models[modelID]) {
-                  providers[providerID].models[modelID] = model
+              try {
+                const discovered = await loader()
+                for (const [modelID, model] of Object.entries(discovered)) {
+                  if (!providers[providerID].models[modelID]) {
+                    providers[providerID].models[modelID] = model
+                  }
                 }
+              } catch (error) {
+                log.warn("state discovery error", { id: providerID, error })
               }
-            } catch (error) {
-              log.warn("state discovery error", { id: providerID, error })
-            }
-          }
+            }),
+          )
         })
 
         for (const [id, provider] of Object.entries(providers)) {
