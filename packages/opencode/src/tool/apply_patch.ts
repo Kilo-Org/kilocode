@@ -142,7 +142,7 @@ export const ApplyPatchTool = Tool.define(
                 ),
               ),
             )
-            const read = EncodedIO.decode(bytes)
+            const read = KiloFileGuard.decode(bytes)
             const source = Bom.split(read.text)
             // kilocode_change end
             const oldContent = source.text
@@ -203,7 +203,7 @@ export const ApplyPatchTool = Tool.define(
                 ),
               ),
             )
-            const deleteRead = EncodedIO.decode(bytes)
+            const deleteRead = KiloFileGuard.decode(bytes)
             const contentToDelete = deleteRead.text
             const source = Bom.split(contentToDelete)
             // kilocode_change end

@@ -162,7 +162,7 @@ export const EditTool = Tool.define(
               if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
               // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
               // derive the BOM flag from the detected encoding label instead of the decoded text.
-              const pre = EncodedIO.decode(yield* KiloFileGuard.read({ ctx: instance, requested: filePath }))
+              const pre = KiloFileGuard.decode(yield* KiloFileGuard.read({ ctx: instance, requested: filePath }))
               const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
               // kilocode_change end
               contentOld = source.text

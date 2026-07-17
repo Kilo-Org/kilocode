@@ -3,6 +3,7 @@ import { lstat, stat } from "node:fs/promises"
 import path from "node:path"
 import { Effect } from "effect"
 import type { InstanceContext } from "@/project/instance-context"
+import * as Encoding from "@/kilocode/encoding"
 import { IgnorePermission } from "@/kilocode/permission/ignore"
 import { KiloReadObject } from "./read-object"
 
@@ -119,6 +120,11 @@ export namespace KiloFileGuard {
     const info = yield* KiloFileGuard.file(input)
     return yield* KiloFileGuard.use({ ctx: input.ctx, info }, (file) => Effect.tryPromise(() => file.read()))
   })
+
+  export function decode(bytes: Buffer) {
+    const encoding = Encoding.detect(bytes)
+    return { text: Encoding.decode(bytes, encoding), encoding }
+  }
 
   export function use<A, E, R>(
     input: { ctx: InstanceContext; info: KiloReadObject.FileInfo },

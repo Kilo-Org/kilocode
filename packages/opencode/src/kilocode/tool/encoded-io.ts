@@ -15,13 +15,10 @@ const wrap = (cause: unknown) => (cause instanceof Error ? cause : new Error(Str
 export const read = (fs: FSUtil.Interface, path: string) =>
   Effect.gen(function* () {
     const bytes = yield* fs.readFile(path).pipe(Effect.mapError(wrap))
-    return decode(Buffer.from(bytes))
+    const data = Buffer.from(bytes)
+    const encoding = Encoding.detect(data)
+    return { text: Encoding.decode(data, encoding), encoding }
   })
-
-export const decode = (data: Buffer) => {
-  const encoding = Encoding.detect(data)
-  return { text: Encoding.decode(data, encoding), encoding }
-}
 
 export const write = (fs: FSUtil.Interface, path: string, text: string, encoding: string = Encoding.DEFAULT) =>
   Effect.gen(function* () {

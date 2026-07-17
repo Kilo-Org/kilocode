@@ -53,7 +53,7 @@ export const WriteTool = Tool.define(
           // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
           // derive the BOM flag from the detected encoding label instead of the decoded text.
           const pre = exists
-            ? EncodedIO.decode(yield* KiloFileGuard.read({ ctx: instance, requested: filepath }))
+            ? KiloFileGuard.decode(yield* KiloFileGuard.read({ ctx: instance, requested: filepath }))
             : { text: "", encoding: "utf-8" }
           const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
           // kilocode_change end
