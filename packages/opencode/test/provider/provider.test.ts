@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test"
+import { afterEach, expect, mock, test } from "bun:test"
 import { mkdir, unlink } from "fs/promises"
 import path from "path"
 import { Effect, Layer } from "effect"
@@ -22,6 +22,7 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
 const originalEnv = new Map<string, string | undefined>()
+const originalFetch = globalThis.fetch
 
 const rememberEnv = (k: string) => {
   if (!originalEnv.has(k)) originalEnv.set(k, process.env[k])
@@ -53,6 +54,7 @@ afterEach(async () => {
     else process.env[key] = value
   }
   originalEnv.clear()
+  globalThis.fetch = originalFetch
   await disposeAllInstances()
 })
 
@@ -382,6 +384,188 @@ it.instance(
           env: [],
           models: { "gpt-4": { name: "GPT-4", tool_call: true, limit: { context: 128000, output: 4096 } } },
           options: { apiKey: "test-key", baseURL: "https://custom.openai.com/v1" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "discovers models when enabled for an openai-compatible custom provider",
+  Effect.gen(function* () {
+    let calls = 0
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://custom.openai.com/v1/models") {
+        calls += 1
+        return new Response(
+          JSON.stringify({
+            data: [{ id: "gpt-4.1" }, { id: "gpt-4o" }],
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        )
+      }
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    const models = providers[ProviderV2.ID.make("custom-openai")].models
+    expect(calls).toBe(1)
+    expect(models["gpt-4.1"]).toBeDefined()
+    expect(models["gpt-4o"]).toBeDefined()
+    expect(models["gpt-4o"].api.url).toBe("https://custom.openai.com/v1/models")
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          npm: "@ai-sdk/openai-compatible",
+          api: "https://custom.openai.com/v1",
+          discoverModels: true,
+          env: [],
+          models: {
+            "configured-model": { name: "Configured Model" },
+          },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "does not discover models when discovery is omitted",
+  Effect.gen(function* () {
+    let calls = 0
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://custom.openai.com/v1/models") calls += 1
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    expect(providers[ProviderV2.ID.make("custom-openai")]).toBeDefined()
+    expect(calls).toBe(0)
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          npm: "@ai-sdk/openai-compatible",
+          api: "https://custom.openai.com/v1",
+          env: [],
+          models: {
+            "gpt-4.1": { name: "Configured GPT-4.1" },
+          },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "does not discover models when discovery is false",
+  Effect.gen(function* () {
+    let calls = 0
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://custom.openai.com/v1/models") calls += 1
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    expect(providers[ProviderV2.ID.make("custom-openai")]).toBeDefined()
+    expect(calls).toBe(0)
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          npm: "@ai-sdk/openai-compatible",
+          api: "https://custom.openai.com/v1",
+          discoverModels: false,
+          env: [],
+          models: {
+            "gpt-4.1": { name: "Configured GPT-4.1" },
+          },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "keeps configured models when discovery returns duplicate ids",
+  Effect.gen(function* () {
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://custom.openai.com/v1/models") {
+        return new Response(JSON.stringify({ data: [{ id: "gpt-4.1" }, { id: "gpt-4o" }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        })
+      }
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    const model = providers[ProviderV2.ID.make("custom-openai")].models["gpt-4.1"]
+    expect(model.name).toBe("Configured GPT-4.1")
+    expect(providers[ProviderV2.ID.make("custom-openai")].models["gpt-4o"]).toBeDefined()
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          npm: "@ai-sdk/openai-compatible",
+          api: "https://custom.openai.com/v1",
+          discoverModels: true,
+          env: [],
+          models: {
+            "gpt-4.1": { name: "Configured GPT-4.1" },
+          },
+          options: { apiKey: "test-key" },
+        },
+      },
+    },
+  },
+)
+
+it.instance(
+  "keeps loading when discovery fails",
+  Effect.gen(function* () {
+    globalThis.fetch = mock(async (input: Parameters<typeof globalThis.fetch>[0], init?: Parameters<typeof fetch>[1]) => {
+      const url = input instanceof Request ? input.url : String(input)
+      if (url === "https://custom.openai.com/v1/models") {
+        return new Response("nope", { status: 500 })
+      }
+      return originalFetch(input as RequestInfo | URL, init)
+    }) as typeof globalThis.fetch
+
+    const providers = yield* list
+    expect(providers[ProviderV2.ID.make("custom-openai")]).toBeDefined()
+    expect(providers[ProviderV2.ID.make("custom-openai")].models["gpt-4.1"]).toBeDefined()
+    expect(providers[ProviderV2.ID.make("custom-openai")].models["gpt-4o"]).toBeUndefined()
+  }),
+  {
+    config: {
+      provider: {
+        "custom-openai": {
+          name: "Custom OpenAI",
+          npm: "@ai-sdk/openai-compatible",
+          api: "https://custom.openai.com/v1",
+          discoverModels: true,
+          env: [],
+          models: {
+            "gpt-4.1": { name: "Configured GPT-4.1" },
+          },
+          options: { apiKey: "test-key" },
         },
       },
     },
