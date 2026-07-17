@@ -75,13 +75,18 @@ const PromptParams = Schema.Struct({
   ),
 })
 
-export const Params = Schema.Union([StartParams, ListParams, PromptParams])
+const StopParams = Schema.Struct({
+  action: Schema.Literal("stop"),
+  sessionID: SessionID,
+})
+
+export const Params = Schema.Union([StartParams, ListParams, PromptParams, StopParams])
 
 const WireParams = Schema.Struct({
   mode: Schema.optional(StartParams.fields.mode),
   versions: Schema.optional(StartParams.fields.versions),
   tasks: Schema.optional(StartParams.fields.tasks),
-  action: Schema.optional(Schema.Literals(["list", "prompt"])),
+  action: Schema.optional(Schema.Literals(["list", "prompt", "stop"])),
   filter: Schema.optional(ListParams.fields.filter),
   sessionID: Schema.optional(PromptParams.fields.sessionID),
   prompt: Schema.optional(PromptParams.fields.prompt),
@@ -236,7 +241,7 @@ function select(
 
 export const AgentManagerTool = Tool.define<
   typeof Params,
-  { action: "start" | "list" | "prompt"; requestID?: string; count?: number; sessionID?: string },
+  { action: "start" | "list" | "prompt" | "stop"; requestID?: string; count?: number; sessionID?: string },
   AgentManager.Service | Bus.Service | Provider.Service,
   "agent_manager"
 >(
@@ -275,27 +280,50 @@ export const AgentManagerTool = Tool.define<
                 metadata: { action: "list", count },
               }
             }
+            if (params.action === "prompt") {
+              yield* ctx.ask({
+                permission: "agent_manager",
+                patterns: ["prompt"],
+                always: ["prompt"],
+                metadata: { action: "prompt", sessionID: params.sessionID },
+              })
+              const result = yield* run(
+                host.request({
+                  operation: "prompt",
+                  sessionID: ctx.sessionID,
+                  targetSessionID: params.sessionID,
+                  prompt: params.prompt.trim(),
+                }),
+                ctx.abort,
+              )
+              if (result.operation !== "prompt")
+                return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
+              return {
+                title: "Prompt delivered",
+                output: `Delivered the prompt to Agent Manager session ${result.sessionID}. The session accepted it asynchronously.`,
+                metadata: { action: "prompt", sessionID: result.sessionID },
+              }
+            }
             yield* ctx.ask({
               permission: "agent_manager",
-              patterns: ["prompt"],
-              always: ["prompt"],
-              metadata: { action: "prompt", sessionID: params.sessionID },
+              patterns: ["stop"],
+              always: ["stop"],
+              metadata: { action: "stop", sessionID: params.sessionID },
             })
             const result = yield* run(
               host.request({
-                operation: "prompt",
+                operation: "stop",
                 sessionID: ctx.sessionID,
                 targetSessionID: params.sessionID,
-                prompt: params.prompt.trim(),
               }),
               ctx.abort,
             )
-            if (result.operation !== "prompt")
+            if (result.operation !== "stop")
               return yield* Effect.die(new Error("Agent Manager host returned the wrong result type"))
             return {
-              title: "Prompt delivered",
-              output: `Delivered the prompt to Agent Manager session ${result.sessionID}. The session accepted it asynchronously.`,
-              metadata: { action: "prompt", sessionID: result.sessionID },
+              title: "Session stopped",
+              output: `Stopped Agent Manager session ${result.sessionID} and removed it from Agent Manager.`,
+              metadata: { action: "stop", sessionID: result.sessionID },
             }
           }
 

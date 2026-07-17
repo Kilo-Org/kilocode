@@ -793,6 +793,7 @@
         "@types/katex": "0.16.7",
         "@types/luxon": "catalog:",
         "@typescript/native-preview": "catalog:",
+        "happy-dom": "20.8.9",
         "tailwindcss": "catalog:",
         "typescript": "catalog:",
         "vite": "catalog:",
