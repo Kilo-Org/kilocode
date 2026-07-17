@@ -109,6 +109,11 @@ export interface SendMessageFailedMessage {
   review?: import("../../../../src/shared/review-comments").ReviewMessageData
 }
 
+export interface SessionCommandCompletedMessage {
+  type: "sessionCommandCompleted"
+  messageID: string
+}
+
 // Wire shape lives in src/shared/stream-messages.ts; narrow `part` to the
 // webview's concrete union.
 export type PartUpdatedMessage = PartUpdate<Part>
@@ -1091,6 +1096,7 @@ export type ExtensionMessage =
   | ConnectionStateMessage
   | ErrorMessage
   | SendMessageFailedMessage
+  | SessionCommandCompletedMessage
   | PartUpdatedMessage
   | PartsUpdatedMessage
   | PartRemovedMessage
