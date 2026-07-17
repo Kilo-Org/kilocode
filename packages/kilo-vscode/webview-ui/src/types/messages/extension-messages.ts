@@ -643,6 +643,11 @@ export interface AgentManagerSessionForkedMessage {
   worktreeId?: string
 }
 
+export interface AgentManagerSessionClosedMessage {
+  type: "agentManager.sessionClosed"
+  sessionId: string
+}
+
 // Full state push from extension to webview
 export interface AgentManagerStateMessage {
   type: "agentManager.state"
@@ -1162,6 +1167,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
   | AgentManagerSessionForkedMessage
+  | AgentManagerSessionClosedMessage
   | AgentManagerStateMessage
   | AgentManagerRunStatusMessage
   | AgentManagerKeybindingsMessage

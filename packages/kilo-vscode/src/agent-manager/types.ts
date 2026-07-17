@@ -190,6 +190,11 @@ interface SessionForkedMessage {
   worktreeId?: string
 }
 
+interface SessionClosedMessage {
+  type: "agentManager.sessionClosed"
+  sessionId: string
+}
+
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
   status: "creating" | "done"
@@ -307,6 +312,7 @@ export type AgentManagerOutMessage =
   | ErrorOutMessage
   | SessionAddedMessage
   | SessionForkedMessage
+  | SessionClosedMessage
   | MultiVersionProgressMessage
   | SetSessionModelMessage
   | SendInitialMessage

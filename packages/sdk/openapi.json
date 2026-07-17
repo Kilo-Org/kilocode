@@ -22883,6 +22883,28 @@
         "required": ["id", "sessionID", "operation", "targetSessionID", "prompt"],
         "additionalProperties": false
       },
+      "AgentManagerStopRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AgentManagerRequestID"
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "operation": {
+            "type": "string",
+            "enum": ["stop"]
+          },
+          "targetSessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          }
+        },
+        "required": ["id", "sessionID", "operation", "targetSessionID"],
+        "additionalProperties": false
+      },
       "AgentManagerRequest": {
         "anyOf": [
           {
@@ -22890,6 +22912,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerPromptRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerStopRequest"
           }
         ]
       },
@@ -31977,6 +32002,25 @@
         "required": ["operation", "sessionID", "delivered"],
         "additionalProperties": false
       },
+      "AgentManagerStopResult": {
+        "type": "object",
+        "properties": {
+          "operation": {
+            "type": "string",
+            "enum": ["stop"]
+          },
+          "sessionID": {
+            "type": "string",
+            "pattern": "^ses"
+          },
+          "stopped": {
+            "type": "boolean",
+            "enum": [true]
+          }
+        },
+        "required": ["operation", "sessionID", "stopped"],
+        "additionalProperties": false
+      },
       "AgentManagerResult": {
         "anyOf": [
           {
@@ -31984,6 +32028,9 @@
           },
           {
             "$ref": "#/components/schemas/AgentManagerPromptResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentManagerStopResult"
           }
         ]
       },

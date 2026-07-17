@@ -1221,8 +1221,8 @@ const AgentManagerContent: Component = () => {
     // Mark sessions loaded as soon as the session context receives data (even if empty)
     const unsubSessions = vscode.onMessage((msg) => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
+      if (msg.type === "agentManager.sessionClosed") handleCloseTab(msg.sessionId, false)
     })
-
     const unsubRun = vscode.onMessage((msg) => {
       if (msg.type !== "agentManager.runStatus") return
       const ev = msg as RunStatus
@@ -1979,7 +1979,7 @@ const AgentManagerContent: Component = () => {
     if (!sel || sel === LOCAL) return vscode.postMessage(msg)
     vscode.postMessage({ ...msg, worktreeId: sel })
   }
-  const handleCloseTab = (sessionId: string) => {
+  const handleCloseTab = (sessionId: string, notify = true) => {
     freezeTabs()
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
@@ -2009,7 +2009,7 @@ const AgentManagerContent: Component = () => {
       if (session.isSubmitting(sessionId) || isPendingSend(sessionId)) discardPendingDraft(sessionId)
       queueMicrotask(() => deletePendingDraft(sessionId))
     }
-    vscode.postMessage({ type: "agentManager.closeSession", sessionId })
+    if (notify) vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     tabFocus.restore()
   }
 
