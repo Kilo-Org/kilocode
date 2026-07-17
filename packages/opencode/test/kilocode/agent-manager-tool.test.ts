@@ -158,6 +158,8 @@ describe("agent_manager tool", () => {
     expect(schema.anyOf).toBeUndefined()
     expect(schema.oneOf).toBeUndefined()
     expect(schema.allOf).toBeUndefined()
+    const action = schema.properties?.action
+    expect(action && typeof action === "object" ? action.enum : undefined).toEqual(["list", "prompt", "stop"])
     expect(Object.keys(schema.properties ?? {})).toEqual([
       "mode",
       "versions",
@@ -296,6 +298,50 @@ describe("agent_manager tool", () => {
     ])
     expect(result.output).toContain("accepted it asynchronously")
     expect(result.metadata).toEqual(expect.objectContaining({ action: "prompt", sessionID: "ses_target" }))
+    await rt.dispose()
+  })
+
+  test("stops one existing session with a separate mutation permission pattern", async () => {
+    const requests: unknown[] = []
+    const rt = makeRuntime("test", {
+      request: (input) =>
+        Effect.sync(() => {
+          requests.push(input)
+          return { operation: "stop" as const, sessionID: SessionID.make("ses_target"), stopped: true as const }
+        }),
+    })
+    const tool = await rt.runPromise(
+      Effect.gen(function* () {
+        return yield* Tool.init(yield* AgentManagerTool)
+      }),
+    )
+    const permissions: unknown[] = []
+    const result = await rt.runPromise(
+      provideTmpdirInstance(() =>
+        tool.execute(
+          { action: "stop", sessionID: SessionID.make("ses_target") },
+          { ...ctx, ask: (input: unknown) => Effect.sync(() => permissions.push(input)) },
+        ),
+      ).pipe(Effect.scoped),
+    )
+
+    expect(permissions).toEqual([
+      {
+        permission: "agent_manager",
+        patterns: ["stop"],
+        always: ["stop"],
+        metadata: { action: "stop", sessionID: "ses_target" },
+      },
+    ])
+    expect(requests).toEqual([
+      {
+        operation: "stop",
+        sessionID: ctx.sessionID,
+        targetSessionID: "ses_target",
+      },
+    ])
+    expect(result.output).toContain("removed it from Agent Manager")
+    expect(result.metadata).toEqual(expect.objectContaining({ action: "stop", sessionID: "ses_target" }))
     await rt.dispose()
   })
 

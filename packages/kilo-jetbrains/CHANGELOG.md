@@ -1,5 +1,17 @@
 # Changelog
 
+## 7.4.10
+
+### Patch Changes
+
+- [#12217](https://github.com/Kilo-Org/kilocode/pull/12217) [`d6b36a0`](https://github.com/Kilo-Org/kilocode/commit/d6b36a028cc0a4b7bfd158d75e287c110e2838f7) - Support editing custom OpenAI-compatible providers from JetBrains settings and replace their Disconnect action with Edit and Delete. Added or edited providers stay selected, and the custom provider dialog now closes after a successful save.
+
+- [#12217](https://github.com/Kilo-Org/kilocode/pull/12217) [`6077c1c`](https://github.com/Kilo-Org/kilocode/commit/6077c1c3b36d4c5cd68f206fc146ca472d841c5e) - Fix adding a Custom OpenAI-Compatible Provider silently failing. The dialog now requires at least one model and reports save errors inline so you can correct your input and retry without re-entering the form.
+
+- [#12217](https://github.com/Kilo-Org/kilocode/pull/12217) [`cae3270`](https://github.com/Kilo-Org/kilocode/commit/cae3270c9dacc4097a681539cf3e07cfadceaca7) - Match the model picker Close button styling to JetBrains dialog primary buttons.
+
+- [#12217](https://github.com/Kilo-Org/kilocode/pull/12217) [`cae3270`](https://github.com/Kilo-Org/kilocode/commit/cae3270c9dacc4097a681539cf3e07cfadceaca7) - Use a trash icon for provider delete and show provider edit/delete actions on selection, matching the other settings lists.
+
 ## 7.4.6
 
 ### Patch Changes

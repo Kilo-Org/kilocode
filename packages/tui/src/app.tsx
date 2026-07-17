@@ -6,6 +6,7 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { ExitProvider, useExit } from "./context/exit"
+import type { Exit } from "./context/exit" // kilocode_change
 import { EpilogueProvider } from "./context/epilogue"
 import * as Selection from "./util/selection"
 import { createCliRenderer, MouseButton, type CliRenderer } from "@opentui/core"
@@ -146,6 +147,7 @@ export type TuiInput = {
   headers?: RequestInit["headers"]
   events?: EventSource
   pluginHost: TuiPluginHost
+  onExit?: (exit: Exit) => void // kilocode_change - expose the extracted TUI exit to the CLI worker bridge
 }
 
 function errorMessage(error: unknown) {
@@ -239,15 +241,18 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
         const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
         if (renderer.isDestroyed) return
 
+        // kilocode_change start - expose the renderer-owned exit without moving remote RPC into the shared TUI
+        const close: Exit = (reason) => {
+          if (renderer.isDestroyed) return
+          exit.reason = reason
+          destroyRenderer(renderer)
+        }
+        input.onExit?.(close)
+        // kilocode_change end
+
         await render(() => {
           return (
-            <ExitProvider
-              exit={(reason) => {
-                if (renderer.isDestroyed) return
-                exit.reason = reason
-                destroyRenderer(renderer)
-              }}
-            >
+            <ExitProvider exit={close /* kilocode_change - reuse the externally registered renderer exit */}>
               <EpilogueProvider set={(value) => (exit.epilogue = value)}>
                 <ErrorBoundary fallback={(error, reset) => <ErrorComponent error={error} reset={reset} mode={mode} />}>
                   <TuiPathsProvider

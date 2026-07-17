@@ -148,6 +148,12 @@ class OpenApiSpecNormalizerTest {
         val balanceTypes = balanceAnyOf.map { (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content } }
         assert("null" in balanceTypes) { "balance anyOf should include null but got $balanceTypes" }
         assert(balanceAnyOf.any { it is JsonObject && "properties" in it }) { "balance anyOf should include the object schema" }
+        val balanceObject = balanceAnyOf.filterIsInstance<JsonObject>().first { "properties" in it }
+        val balanceValue = obj(obj(balanceObject["properties"])["balance"])
+        val balanceValueTypes = arr(balanceValue["anyOf"]).map {
+            (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content }
+        }
+        assert("null" in balanceValueTypes) { "inner balance value should include null but got $balanceValueTypes" }
 
         // kiloPass must be anyOf [object, null]
         val pass = obj(props["kiloPass"])
@@ -156,6 +162,11 @@ class OpenApiSpecNormalizerTest {
         val passTypes = passAnyOf.map { (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content } }
         assert("null" in passTypes) { "kiloPass anyOf should include null but got $passTypes" }
         assert(passAnyOf.any { it is JsonObject && "properties" in it }) { "kiloPass anyOf should include the object schema" }
+        val passObject = passAnyOf.filterIsInstance<JsonObject>().first { "properties" in it }
+        val passProps = obj(passObject["properties"])
+        val base = obj(passProps["currentPeriodBaseCreditsUsd"])
+        val baseTypes = arr(base["anyOf"]).map { (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content } }
+        assert("null" in baseTypes) { "inner kiloPass value should include null but got $baseTypes" }
 
         // currentOrgId must be anyOf [string, null]
         val orgId = obj(props["currentOrgId"])

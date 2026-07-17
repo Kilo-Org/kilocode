@@ -1167,8 +1167,7 @@ export function UserMessageDisplay(props: {
       <Show when={text()}>
         <>
           <div data-slot="user-message-body">
-            <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
-              {/* kilocode_change */}
+            <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>{/* kilocode_change */}
               <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
             </div>
             {/* kilocode_change start */}

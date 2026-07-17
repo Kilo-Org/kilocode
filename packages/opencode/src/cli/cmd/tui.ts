@@ -25,6 +25,8 @@ import {
   sanitizedProcessEnv,
 } from "@opencode-ai/core/util/opencode-process"
 // kilocode_change end
+import { createParentRemoteExitBridge, type RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change
+import type { Exit } from "@opencode-ai/tui/context/exit" // kilocode_change
 
 declare global {
   const KILO_WORKER_PATH: string
@@ -32,12 +34,50 @@ declare global {
 
 type RpcClient = ReturnType<typeof Rpc.client<typeof rpc>>
 
-// kilocode_change start - share the upstream TUI runner between daemon and worker paths
-async function start(input: StartInput) {
+// kilocode_change start - bridge remote exit only for the embedded worker transport
+export function embeddedRemoteExitClient<T>(external: boolean, client: T | undefined): T | undefined {
+  return external ? undefined : client
+}
+
+export async function runEmbeddedRemoteExitBridge(input: {
+  client: RemoteExitBridgeClient
+  exit: Exit
+  done: Promise<unknown>
+  timeoutMs?: number
+}) {
+  const timeoutMs = input.timeoutMs ?? 5_000
+  const bridge = createParentRemoteExitBridge(input.client, input.exit)
+  let ready = false
+  try {
+    try {
+      await withTimeout(bridge.ready(), timeoutMs, "remote exit startup timed out")
+      ready = true
+    } catch {
+      await bridge.dispose(timeoutMs).catch(() => {})
+    }
+    await input.done
+  } finally {
+    if (ready) await bridge.dispose(timeoutMs).catch(() => {})
+  }
+}
+// kilocode_change end
+
+// kilocode_change start - share the extracted TUI runner between daemon and worker paths
+async function start(input: StartInput, remoteExitClient?: RpcClient) {
   const { Effect } = await import("effect")
   const { run } = await import("../tui/layer")
   const { createLegacyTuiPluginHost } = await import("@/plugin/tui/runtime")
-  await Effect.runPromise(run({ ...input, pluginHost: createLegacyTuiPluginHost() }))
+  const pluginHost = createLegacyTuiPluginHost()
+  if (!remoteExitClient) {
+    await Effect.runPromise(run({ ...input, pluginHost }))
+    return
+  }
+
+  const ready = Promise.withResolvers<Exit>()
+  const done = Effect.runPromise(run({ ...input, pluginHost, onExit: ready.resolve }))
+  const exit = await Promise.race([ready.promise, done.then(() => undefined)])
+  if (!exit) return
+  await runEmbeddedRemoteExitBridge({ client: remoteExitClient, exit, done })
 }
 // kilocode_change end
 
@@ -336,28 +376,31 @@ export const TuiThreadCommand = cmd({
         }
 
         // kilocode_change start
-        await start({
-          // kilocode_change - shared lazy loader also supports daemon attach
-          url: transport.url,
-          async onSnapshot() {
-            const tui = writeHeapSnapshot("tui.heapsnapshot")
-            const server = await client.call("snapshot", undefined)
-            return [tui, server]
+        await start(
+          {
+            // kilocode_change - shared lazy loader also supports daemon attach
+            url: transport.url,
+            async onSnapshot() {
+              const tui = writeHeapSnapshot("tui.heapsnapshot")
+              const server = await client.call("snapshot", undefined)
+              return [tui, server]
+            },
+            config,
+            directory: cwd,
+            fetch: transport.fetch,
+            headers: transport.headers, // kilocode_change
+            events: transport.events,
+            args: {
+              continue: args.continue,
+              sessionID: args.session,
+              agent: args.agent,
+              model: args.model,
+              prompt,
+              fork: args.fork,
+            },
           },
-          config,
-          directory: cwd,
-          fetch: transport.fetch,
-          headers: transport.headers, // kilocode_change
-          events: transport.events,
-          args: {
-            continue: args.continue,
-            sessionID: args.session,
-            agent: args.agent,
-            model: args.model,
-            prompt,
-            fork: args.fork,
-          },
-        })
+          embeddedRemoteExitClient(external, client),
+        )
         // kilocode_change end
       } finally {
         await stop()

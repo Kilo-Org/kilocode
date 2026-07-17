@@ -1,6 +1,11 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test"
 import path from "path"
 import { mockEmbeddingsCreate, openAIMockFactory, setOpenAIConstructorHook } from "./embedders/__helpers__/openai-mock"
+import {
+  OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS,
+  REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+} from "../../../src/indexing/constants"
+import type { AvailableEmbedders, IEmbedder } from "../../../src/indexing/interfaces/embedder"
 
 mock.module("openai", openAIMockFactory)
 import { CodeIndexServiceFactory } from "../../../src/indexing/service-factory"
@@ -23,6 +28,20 @@ function createFactory(input?: Partial<ConstructorParameters<typeof CodeIndexCon
   return new CodeIndexServiceFactory(cfg, workspacePath, cache, cacheDirectory)
 }
 
+function createEmbedder(name: AvailableEmbedders): IEmbedder {
+  return {
+    async createEmbeddings() {
+      return { embeddings: [] }
+    },
+    async validateConfiguration() {
+      return { valid: true }
+    },
+    get embedderInfo() {
+      return { name }
+    },
+  }
+}
+
 describe("CodeIndexServiceFactory", () => {
   beforeEach(() => {
     mockEmbeddingsCreate.mockReset()
@@ -37,6 +56,55 @@ describe("CodeIndexServiceFactory", () => {
     })
 
     expect(factory.createEmbedder().embedderInfo).toEqual({ name: "openai-compatible" })
+  })
+
+  test("lets SDK-backed embedders own validation timeouts", async () => {
+    const original = globalThis.setTimeout
+    const timer = mock((...args: Parameters<typeof setTimeout>) => original(...args))
+    globalThis.setTimeout = timer
+
+    try {
+      const factory = createFactory()
+      const providers = [
+        "openai",
+        "openrouter",
+        "openai-compatible",
+        "kilo",
+        "gemini",
+        "mistral",
+        "vercel-ai-gateway",
+      ] satisfies AvailableEmbedders[]
+
+      for (const provider of providers) {
+        await expect(factory.validateEmbedder(createEmbedder(provider))).resolves.toEqual({ valid: true })
+      }
+
+      expect(timer).not.toHaveBeenCalled()
+    } finally {
+      globalThis.setTimeout = original
+    }
+  })
+
+  test("retains factory deadlines for non-SDK embedders", async () => {
+    const original = globalThis.setTimeout
+    const timer = mock((...args: Parameters<typeof setTimeout>) => original(...args))
+    globalThis.setTimeout = timer
+
+    try {
+      const factory = createFactory()
+
+      await factory.validateEmbedder(createEmbedder("voyage"))
+      await factory.validateEmbedder(createEmbedder("bedrock"))
+      await factory.validateEmbedder(createEmbedder("ollama"))
+
+      expect(timer.mock.calls.map((call) => call[1])).toEqual([
+        REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+        REMOTE_EMBEDDER_VALIDATION_TIMEOUT_MS,
+        OLLAMA_EMBEDDER_REQUEST_TIMEOUT_MS,
+      ])
+    } finally {
+      globalThis.setTimeout = original
+    }
   })
 
   test("uses default LanceDB directory when config is unset", () => {

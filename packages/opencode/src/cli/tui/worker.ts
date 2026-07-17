@@ -12,6 +12,7 @@ import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { KiloLog } from "@/kilocode/log" // kilocode_change
 import { ensureProcessMetadata } from "@opencode-ai/core/util/opencode-process" // kilocode_change
+import { createWorkerRemoteExit } from "@/kilocode/cli/cmd/tui/remote-exit-worker" // kilocode_change
 
 ensureProcessMetadata("worker") // kilocode_change - retain worker role and parent run correlation
 await KiloLog.init() // kilocode_change - keep compatibility logs off the TUI terminal
@@ -23,8 +24,17 @@ GlobalBus.on("event", (event) => {
 })
 
 let server: Awaited<ReturnType<typeof Server.listen>> | undefined
+const remoteExit = createWorkerRemoteExit(Rpc.emit) // kilocode_change
 
 export const rpc = {
+  // kilocode_change start - worker lifecycle hooks for remote exit
+  tuiReady() {
+    remoteExit.ready()
+  },
+  tuiGone() {
+    remoteExit.gone()
+  },
+  // kilocode_change end
   async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
     const headers = { ...input.headers }
     const auth = ServerAuth.header()
@@ -67,6 +77,7 @@ export const rpc = {
     )
   },
   async shutdown() {
+    remoteExit.shutdown() // kilocode_change
     await InstanceRuntime.disposeAllInstances()
     if (server) await server.stop(true)
     // kilocode_change start - Clear the Rpc message channel so the worker's event loop can drain and

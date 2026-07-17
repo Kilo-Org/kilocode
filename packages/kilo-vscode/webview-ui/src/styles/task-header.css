@@ -50,6 +50,12 @@
   white-space: nowrap;
 }
 
+@media (max-width: 360px) {
+  [data-component="task-header"] {
+    padding-inline: 8px;
+  }
+}
+
 /* ============================================
    Task Header Todos
    ============================================ */
@@ -467,7 +473,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-.task-header-memory-trigger {
+.task-header-context-trigger {
   all: unset;
   position: relative;
   display: inline-flex;
@@ -478,18 +484,10 @@
   border-radius: 3px;
   color: var(--vscode-foreground);
   cursor: pointer;
-  opacity: 0.4;
-  transition: opacity 0.15s ease;
 }
 
-.task-header-memory-trigger--enabled {
-  color: var(--vscode-foreground);
-  opacity: 1;
-}
-
-.task-header-memory-trigger:hover {
+.task-header-context-trigger:hover {
   background: var(--vscode-toolbar-hoverBackground);
-  opacity: 1;
 }
 
 [data-slot="task-header-memory-dot"] {
@@ -502,7 +500,7 @@
   background: var(--vscode-testing-iconPassed, #73c991);
 }
 
-.task-header-memory-popover {
+.task-header-context-popover {
   width: min(280px, calc(100vw - 16px));
   max-width: calc(100vw - 16px);
   white-space: normal;
@@ -515,20 +513,62 @@
   overflow-wrap: break-word;
 }
 
-[data-slot="task-header-memory-menu"] {
+[data-slot="task-header-context-tooltip-title"] {
+  margin-bottom: 4px;
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+[data-slot="task-header-context-tooltip-status"] {
+  margin-bottom: 2px;
+  color: var(--vscode-foreground);
+}
+
+[data-slot="task-header-context-menu"] {
   display: flex;
   flex-direction: column;
-  gap: 8px;
   padding: 8px;
 }
 
+[data-slot="task-header-context-title"] {
+  padding: 2px 4px 8px;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 600;
+}
+
+[data-slot="task-header-context-section"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+[data-slot="task-header-context-section"] + [data-slot="task-header-context-section"] {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+}
+
+[data-slot="task-header-context-section-title"] {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+}
+
 [data-slot="task-header-memory-status"] {
+  padding: 0 4px;
   color: var(--vscode-foreground);
   font-size: var(--kilo-font-size-11);
 }
 
 [data-slot="task-header-memory-activity"] {
   min-width: 0;
+  padding: 0 4px;
   color: var(--vscode-descriptionForeground);
   font-size: var(--kilo-font-size-11);
   white-space: normal;
@@ -558,13 +598,13 @@
   overflow-wrap: break-word;
 }
 
-[data-slot="task-header-memory-actions"] {
+[data-slot="task-header-context-actions"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 4px;
 }
 
-[data-slot="task-header-memory-action"] {
+[data-slot="task-header-context-action"] {
   border: 0;
   border-radius: 3px;
   padding: 4px 6px;
@@ -576,15 +616,15 @@
   cursor: pointer;
 }
 
-[data-slot="task-header-memory-action"]:last-child:nth-child(odd) {
+[data-slot="task-header-context-action"]:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 
-[data-slot="task-header-memory-action"]:hover:not(:disabled) {
+[data-slot="task-header-context-action"]:hover:not(:disabled) {
   background: var(--vscode-list-hoverBackground);
 }
 
-[data-slot="task-header-memory-action"]:disabled {
+[data-slot="task-header-context-action"]:disabled {
   color: var(--vscode-disabledForeground);
   cursor: default;
 }
