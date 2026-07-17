@@ -14735,6 +14735,16 @@
                 }
               }
             }
+          },
+          "500": {
+            "description": "CloudSessionImportError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CloudSessionImportError"
+                }
+              }
+            }
           }
         },
         "description": "Download a cloud-synced session and write it to local storage with fresh IDs.",
@@ -31421,6 +31431,16 @@
           }
         },
         "required": ["_tag"],
+        "additionalProperties": false
+      },
+      "CloudSessionImportError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": ["error"],
         "additionalProperties": false
       },
       "AgentRequirementResult": {

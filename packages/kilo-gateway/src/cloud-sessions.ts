@@ -6,6 +6,33 @@ export interface DrizzleDb {
   insert(table: object): { values(data: object): { onConflictDoNothing(): { run(): void } } }
 }
 
+type Export = {
+  info: Record<string, unknown> & {
+    time?: {
+      created?: number
+      updated?: number
+      compacting?: number
+      archived?: number
+    }
+  }
+  messages?: unknown
+}
+
+export interface PrepareDeps {
+  Instance: {
+    readonly directory: string
+    readonly project: { readonly id: string }
+  }
+  readonly workspaceID?: string
+  readonly path?: string
+  Identifier: {
+    ascending(prefix: "session" | "message" | "part", given?: string): string
+    descending(prefix: "session" | "message" | "part", given?: string): string
+  }
+}
+
+export class SessionImportValidationError extends Error {}
+
 const INGEST_BASE = process.env.KILO_SESSION_INGEST_URL ?? "https://ingest.kilosessions.ai"
 const TIMEOUT = 30_000
 
@@ -56,14 +83,10 @@ export async function fetchCloudSessionForImport(token: string, sessionId: strin
   return { ok: true, data }
 }
 
-export interface ImportDeps {
+export interface ImportDeps extends PrepareDeps {
   Database: {
     transaction<T>(callback: (db: DrizzleDb) => T): T
     effect(fn: () => void | Promise<unknown>): void
-  }
-  Instance: {
-    readonly directory: string
-    readonly project: { readonly id: string }
   }
   SessionTable: object
   MessageTable: object
@@ -71,28 +94,107 @@ export interface ImportDeps {
   SessionToRow: (info: any) => Record<string, unknown>
   Bus: { publish(event: { type: string; properties: unknown }, payload: unknown): void | Promise<unknown> }
   SessionCreatedEvent: { type: string; properties: unknown }
-  Identifier: {
-    ascending(prefix: "session" | "message" | "part", given?: string): string
-    descending(prefix: "session" | "message" | "part", given?: string): string
-  }
 }
 
-export function importSessionToDb(data: any, deps: ImportDeps) {
-  const {
-    Database,
-    Instance,
-    SessionTable,
-    MessageTable,
-    PartTable,
-    SessionToRow,
-    Bus,
-    SessionCreatedEvent,
-    Identifier,
-  } = deps
+function record(input: unknown): input is Record<string, unknown> {
+  return typeof input === "object" && input !== null && !Array.isArray(input)
+}
 
-  const localSessionID = Identifier.descending("session")
-  const msgMap = new Map<string, string>()
-  const projectID = Instance.project.id
+export function prepareSessionImport(data: Export, deps: PrepareDeps) {
+  if (!record(data) || !record(data.info) || typeof data.info.id !== "string")
+    throw new SessionImportValidationError("Invalid session info")
+  if (!Array.isArray(data.messages)) throw new SessionImportValidationError("Invalid session messages")
+
+  const sessionID = deps.Identifier.descending("session")
+  const ids = new Map<string, string>()
+  const pids = new Map<string, string>()
+  const items: Array<{
+    id: string
+    created: number
+    info: Record<string, unknown>
+    parent?: string
+    parts: Array<{
+      id: string
+      data: Record<string, unknown>
+      tail?: string
+      attachments?: Array<{ id: string; data: Record<string, unknown> }>
+    }>
+  }> = []
+
+  for (const msg of data.messages) {
+    if (!record(msg) || !record(msg.info) || !Array.isArray(msg.parts))
+      throw new SessionImportValidationError("Invalid message")
+    const id = msg.info.id
+    const role = msg.info.role
+    const time = msg.info.time
+    if (
+      typeof id !== "string" ||
+      msg.info.sessionID !== data.info.id ||
+      (role !== "user" && role !== "assistant") ||
+      !record(time) ||
+      typeof time.created !== "number" ||
+      !Number.isFinite(time.created)
+    )
+      throw new SessionImportValidationError("Invalid message info")
+    const parent = msg.info.parentID
+    if (parent !== undefined && typeof parent !== "string")
+      throw new SessionImportValidationError("Invalid message parent")
+    if (ids.has(id)) throw new SessionImportValidationError("Duplicate message ID")
+    ids.set(id, deps.Identifier.ascending("message"))
+
+    const parts: Array<{
+      id: string
+      data: Record<string, unknown>
+      tail?: string
+      attachments?: Array<{ id: string; data: Record<string, unknown> }>
+    }> = []
+    for (const part of msg.parts) {
+      if (
+        !record(part) ||
+        typeof part.id !== "string" ||
+        part.sessionID !== data.info.id ||
+        part.messageID !== id ||
+        typeof part.type !== "string"
+      )
+        throw new SessionImportValidationError("Invalid message part")
+      const tail = part.type === "compaction" ? part.tail_start_id : undefined
+      if (tail !== undefined && typeof tail !== "string")
+        throw new SessionImportValidationError("Invalid compaction tail")
+      if (pids.has(part.id)) throw new SessionImportValidationError("Duplicate part ID")
+      pids.set(part.id, deps.Identifier.ascending("part"))
+
+      const state =
+        part.type === "tool" && record(part.state) && part.state.status === "completed" ? part.state : undefined
+      const attachments = (() => {
+        if (!state || state.attachments === undefined) return
+        if (!Array.isArray(state.attachments)) throw new SessionImportValidationError("Invalid tool attachments")
+        const result: Array<{ id: string; data: Record<string, unknown> }> = []
+        for (const attachment of state.attachments) {
+          if (
+            !record(attachment) ||
+            typeof attachment.id !== "string" ||
+            attachment.sessionID !== data.info.id ||
+            attachment.messageID !== id ||
+            attachment.type !== "file" ||
+            typeof attachment.mime !== "string" ||
+            typeof attachment.url !== "string"
+          )
+            throw new SessionImportValidationError("Invalid tool attachment")
+          if (pids.has(attachment.id)) throw new SessionImportValidationError("Duplicate part ID")
+          pids.set(attachment.id, deps.Identifier.ascending("part"))
+          result.push({ id: attachment.id, data: attachment })
+        }
+        return result
+      })()
+      parts.push({
+        id: part.id,
+        data: part,
+        ...(tail !== undefined ? { tail } : {}),
+        ...(attachments !== undefined ? { attachments } : {}),
+      })
+    }
+    items.push({ id, created: time.created, info: msg.info, parts, ...(parent !== undefined ? { parent } : {}) })
+  }
 
   const now = Date.now()
   const time = {
@@ -102,60 +204,104 @@ export function importSessionToDb(data: any, deps: ImportDeps) {
     ...(data.info.time?.archived !== undefined && { archived: data.info.time.archived }),
   }
 
-  const info = {
+  const info: Record<string, unknown> & {
+    id: string
+    projectID: string
+    directory: string
+    time: typeof time
+  } = {
     ...data.info,
-    id: localSessionID,
-    projectID,
+    id: sessionID,
+    projectID: deps.Instance.project.id,
     slug: data.info.slug,
-    directory: Instance.directory,
+    directory: deps.Instance.directory,
     version: data.info.version,
     time,
   }
+  delete info.workspaceID
+  delete info.path
+  if (deps.workspaceID !== undefined) info.workspaceID = deps.workspaceID
+  if (deps.path !== undefined) info.path = deps.path
+  delete info.parentID
+  delete info.share
+  delete info.revert
 
-  Database.transaction((db) => {
-    db.insert(SessionTable)
-      .values(SessionToRow(info as Record<string, unknown>))
-      .onConflictDoNothing()
-      .run()
+  const messages: Array<{
+    id: string
+    session_id: string
+    time_created: number
+    data: Record<string, unknown>
+  }> = []
+  const parts: Array<{
+    id: string
+    message_id: string
+    session_id: string
+    data: Record<string, unknown>
+  }> = []
+  for (const item of items) {
+    const id = ids.get(item.id)
+    if (!id) throw new SessionImportValidationError("Missing message ID")
+    const parentID = item.parent === undefined ? undefined : ids.get(item.parent)
+    if (item.parent !== undefined && !parentID) throw new SessionImportValidationError("Dangling message parent")
+    const next = {
+      ...item.info,
+      id,
+      sessionID,
+      ...(parentID ? { parentID } : {}),
+    }
+    messages.push({ id, session_id: sessionID, time_created: item.created, data: next })
 
-    const messages = Array.isArray(data.messages) ? data.messages : []
-    for (const msg of messages.filter((m: any) => m.info)) {
-      const msgID = Identifier.ascending("message")
-      msgMap.set(msg.info.id, msgID)
-      msg.info.id = msgID
-      msg.info.sessionID = localSessionID
-      if (msg.info.parentID) msg.info.parentID = msgMap.get(msg.info.parentID) ?? msg.info.parentID
-
-      db.insert(MessageTable)
-        .values({
-          id: msgID,
-          session_id: localSessionID,
-          time_created: msg.info.time?.created ?? Date.now(),
-          data: msg.info,
-        })
-        .onConflictDoNothing()
-        .run()
-
-      for (const part of msg.parts ?? []) {
-        const partID = Identifier.ascending("part")
-        part.id = partID
-        part.messageID = msgID
-        part.sessionID = localSessionID
-
-        db.insert(PartTable)
-          .values({
-            id: partID,
-            message_id: msgID,
-            session_id: localSessionID,
-            data: part,
-          })
-          .onConflictDoNothing()
-          .run()
+    for (const part of item.parts) {
+      const partID = pids.get(part.id)
+      if (!partID) throw new SessionImportValidationError("Missing part ID")
+      const tail = part.tail === undefined ? undefined : ids.get(part.tail)
+      if (part.tail !== undefined && !tail) throw new SessionImportValidationError("Dangling compaction tail")
+      const data: Record<string, unknown> = {
+        ...part.data,
+        id: partID,
+        messageID: id,
+        sessionID,
+        ...(tail ? { tail_start_id: tail } : {}),
       }
+      if (part.attachments) {
+        const state = part.data.state
+        if (!record(state)) throw new SessionImportValidationError("Invalid tool state")
+        data.state = {
+          ...state,
+          attachments: part.attachments.map((attachment) => {
+            const attachmentID = pids.get(attachment.id)
+            if (!attachmentID) throw new SessionImportValidationError("Missing attachment ID")
+            return { ...attachment.data, id: attachmentID, messageID: id, sessionID }
+          }),
+        }
+      }
+      parts.push({
+        id: partID,
+        message_id: id,
+        session_id: sessionID,
+        data,
+      })
+    }
+  }
+
+  return { info, messages, parts }
+}
+
+export function importSessionToDb(data: Export, deps: ImportDeps) {
+  const prepared = prepareSessionImport(data, deps)
+
+  deps.Database.transaction((db) => {
+    db.insert(deps.SessionTable).values(deps.SessionToRow(prepared.info)).onConflictDoNothing().run()
+
+    for (const row of prepared.messages) {
+      db.insert(deps.MessageTable).values(row).onConflictDoNothing().run()
+    }
+    for (const row of prepared.parts) {
+      db.insert(deps.PartTable).values(row).onConflictDoNothing().run()
     }
 
-    Database.effect(() => Bus.publish(SessionCreatedEvent, { info }))
+    deps.Database.effect(() => deps.Bus.publish(deps.SessionCreatedEvent, { info: prepared.info }))
   })
 
-  return info
+  return prepared.info
 }
