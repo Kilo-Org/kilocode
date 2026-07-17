@@ -683,7 +683,7 @@ it.instance("does not derive tui path from KILO_CONFIG", () =>
   ),
 )
 
-// kilocode_change start - trusted global config substitutes; untrusted project config does not
+// kilocode_change start - trusted global config substitutes; untrusted project config allows {env:}
 it.instance("applies env and file substitutions in global tui.json", () =>
   withCleanState(
     withEnv(
@@ -707,7 +707,7 @@ it.instance("applies env and file substitutions in global tui.json", () =>
   ),
 )
 
-it.instance("does not substitute env references in untrusted project tui.json", () =>
+it.instance("substitutes env references in untrusted project tui.json", () =>
   withCleanState(
     withEnv(
       "TUI_THEME_TEST",
@@ -719,9 +719,9 @@ it.instance("does not substitute env references in untrusted project tui.json", 
           theme: "{env:TUI_THEME_TEST}",
         })
 
-        // {env:} in project config is rejected, so the file is skipped and the theme is not applied.
+        // {env:} in project config is allowed — the env reference resolves.
         const config = yield* getTuiConfig(test.directory)
-        expect(config.theme).not.toBe("env-theme")
+        expect(config.theme).toBe("env-theme")
       }),
     ),
   ),
