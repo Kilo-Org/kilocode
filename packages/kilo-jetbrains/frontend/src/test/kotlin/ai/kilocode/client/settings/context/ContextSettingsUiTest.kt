@@ -148,6 +148,25 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
         assertEquals(listOf("tmp/**", "**/dist/**"), rpc.configPatches.single().watcher?.ignore)
     }
 
+    fun `test stale config update result keeps watcher pattern visible`() {
+        val panel = requireUi()
+        rpc.configUpdateReturnStale = true
+
+        edt {
+            val patterns = components(panel).filterIsInstance<PatternList>().single()
+            patterns.input = { "**/dist/**" }
+            icon(panel, "Add pattern").doClick()
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() && !edt { panel.modified() } }
+        edt {
+            val list = patternList(panel)
+            assertEquals(listOf("**/dist/**"), list.selectedValuesList)
+            assertEquals(listOf("tmp/**", "**/dist/**"), (0 until list.model.size).map { list.model.getElementAt(it) })
+        }
+    }
+
     fun `test removing selected watcher patterns supports multi selection`() {
         val panel = requireUi()
 
