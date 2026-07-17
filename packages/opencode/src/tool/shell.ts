@@ -3,7 +3,6 @@ import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
 import path from "path"
-import * as Log from "@opencode-ai/core/util/log"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { lazy } from "@/util/lazy"
@@ -91,8 +90,6 @@ type Chunk = {
   text: string
   size: number
 }
-
-export const log = Log.create({ service: "shell-tool" })
 
 const resolveWasm = (asset: string) => {
   if (asset.startsWith("file://")) return fileURLToPath(asset)
@@ -390,7 +387,7 @@ export const ShellPermission = Effect.gen(function* () {
         const accessKind = access(cmd, node)
         for (const arg of pathArgs(command, ps, kind === "cmd")) {
           const resolved = yield* argpath(arg, cwd, ps, shell)
-          log.info("resolved path", { arg, resolved })
+          yield* Effect.logInfo("resolved path", { arg, resolved })
           if (!resolved || containsPath(resolved, instance)) continue
           const dir = (yield* fs.isDir(resolved)) ? resolved : path.dirname(resolved)
           scan.dirs.add(dir)
@@ -687,7 +684,7 @@ export const ShellTool = Tool.define(
         const name = Shell.name(shell)
         const limits = yield* trunc.limits()
         const prompt = ShellPrompt.render(name, process.platform, limits, defaultTimeoutMs)
-        log.info("shell tool using shell", { shell })
+        yield* Effect.logInfo("shell tool using shell", { shell })
 
         return {
           description: prompt.description,

@@ -8,7 +8,17 @@ const entry = path.join(root, "src/index.ts")
 test("prints the local IPv6 URL for wildcard binds", async () => {
   await using tmp = await tmpdir()
   const proc = Bun.spawn(
-    [process.execPath, "--conditions=browser", entry, "serve", "--hostname", "::", "--port", "0"],
+    [
+      process.execPath,
+      "--conditions=browser",
+      "--preload=@opentui/solid/preload",
+      entry,
+      "serve",
+      "--hostname",
+      "::",
+      "--port",
+      "0",
+    ],
     {
       cwd: tmp.path,
       env: {

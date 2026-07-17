@@ -13,7 +13,7 @@
 //         → OpenTUI split-footer renderer writes to terminal
 import type { KiloClient, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
 import type { RunInteractiveTerminalSnapshot } from "@/kilocode/cli/cmd/run/types" // kilocode_change
-import type { TuiConfig } from "@/cli/cmd/tui/config/tui"
+import type { TuiConfig } from "@opencode-ai/tui/config"
 
 export type RunFilePart = {
   type: "file"
@@ -98,6 +98,12 @@ export type FooterPatch = Partial<FooterState>
 
 export type RunDiffStyle = "auto" | "stacked"
 
+export type TurnSummary = {
+  agent: string
+  model: string
+  duration: string
+}
+
 export type ScrollbackOptions = {
   diffStyle?: RunDiffStyle
   suppressBackgrounds?: boolean
@@ -177,6 +183,7 @@ export type FooterPromptRoute =
   | { type: "subagent-menu" }
   | { type: "subagent"; sessionID: string }
   | { type: "command" }
+  | { type: "skill" }
   | { type: "model" }
   | { type: "variant" }
 
@@ -186,7 +193,7 @@ export type FooterSubagentTab = {
   callID: string
   label: string
   description: string
-  status: "running" | "completed" | "error"
+  status: "running" | "completed" | "cancelled" | "error"
   background?: boolean
   title?: string
   toolCalls?: number
@@ -300,6 +307,7 @@ export type StreamCommit = {
   text: string
   phase: StreamPhase
   source: StreamSource
+  summary?: TurnSummary
   messageID?: string
   partID?: string
   tool?: string

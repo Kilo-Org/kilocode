@@ -30,7 +30,8 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "tsc",
-    "test": "bun test --timeout 30000"
+    "test": "bun test --timeout 30000",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1005.0",
