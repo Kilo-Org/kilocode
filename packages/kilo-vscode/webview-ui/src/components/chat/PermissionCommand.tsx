@@ -10,7 +10,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 
-export const PermissionCommand: Component<{ command: string }> = (props) => {
+export const PermissionCommand: Component<{ command: string; plain?: boolean }> = (props) => {
   const language = useLanguage()
   const [copied, setCopied] = createSignal(false)
   const state = { signal: { aborted: false } }
@@ -27,6 +27,7 @@ export const PermissionCommand: Component<{ command: string }> = (props) => {
     code.textContent = command
     pre.append(code)
     ref.replaceChildren(pre)
+    if (props.plain) return
 
     const signal = { aborted: false }
     state.signal = signal
