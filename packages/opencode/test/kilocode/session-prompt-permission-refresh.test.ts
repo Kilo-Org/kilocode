@@ -913,6 +913,117 @@ symlinkIt(
   30_000,
 )
 
+symlinkIt(
+  "does not expand a directory attachment swapped to a different workspace directory",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir }) {
+        const folder = path.join(dir, "folder")
+        const moved = path.join(dir, "moved")
+        const secret = path.join(dir, "secret-dir")
+        const fs = yield* FSUtil.Service
+        yield* fs.ensureDir(folder)
+        yield* fs.ensureDir(secret)
+        yield* Effect.promise(() =>
+          Promise.all([
+            Bun.write(path.join(folder, "allowed-name.txt"), "allowed"),
+            Bun.write(path.join(secret, "secret-name.txt"), "secret"),
+          ]),
+        )
+
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const permission = yield* Permission.Service
+        const session = yield* sessions.create({})
+        const fiber = yield* prompt
+          .prompt({
+            sessionID: session.id,
+            noReply: true,
+            parts: yield* prompt.resolvePromptParts("Read @folder"),
+          })
+          .pipe(Effect.forkScoped)
+        const pending = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const requests = yield* permission.list()
+            return requests.find((request) => request.sessionID === session.id && request.permission === "read")
+          }),
+          "directory read permission was never requested",
+          "15 seconds",
+        )
+
+        yield* Effect.promise(async () => {
+          await rename(folder, moved)
+          await symlink(secret, folder)
+        })
+        yield* permission.reply({ requestID: pending.id, reply: "once" })
+        const exit = yield* Fiber.await(fiber)
+        expect(Exit.isSuccess(exit)).toBe(true)
+        if (Exit.isSuccess(exit)) {
+          const text = exit.value.parts
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("\n")
+          expect(text).not.toContain("allowed-name.txt")
+          expect(text).not.toContain("secret-name.txt")
+          expect(text).toContain("Directory attachments cannot be expanded")
+        }
+      }),
+      {
+        git: true,
+        config: (url) => ({ ...providerCfg(url), permission: { read: "ask" } }),
+      },
+    ),
+  30_000,
+)
+
+it.live(
+  "expands a workspace directory attachment instead of denying it",
+  () =>
+    provideTmpdirServer(
+      Effect.fnUntraced(function* ({ dir }) {
+        const folder = path.join(dir, "folder")
+        const fs = yield* FSUtil.Service
+        yield* fs.ensureDir(folder)
+        yield* Effect.promise(() =>
+          Promise.all([
+            Bun.write(path.join(folder, "a.txt"), "alpha"),
+            Bun.write(path.join(folder, "b.txt"), "beta"),
+          ]),
+        )
+
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const session = yield* sessions.create({})
+        const message = yield* prompt.prompt({
+          sessionID: session.id,
+          noReply: true,
+          parts: [
+            { type: "text", text: "Read @folder" },
+            {
+              type: "file",
+              mime: "text/plain",
+              filename: "folder",
+              url: pathToFileURL(folder).href,
+            },
+          ],
+        })
+        const text = message.parts
+          .filter((part) => part.type === "text")
+          .map((part) => part.text)
+          .join("\n")
+
+        expect(text).toContain("a.txt")
+        expect(text).toContain("b.txt")
+        expect(text).not.toContain("Directory attachments cannot be expanded")
+      }),
+      {
+        git: true,
+        config: (url) => ({ ...providerCfg(url), permission: { read: "allow" } }),
+      },
+    ),
+  30_000,
+)
+
 it.live(
   "checks read permission without enumerating missing-file suggestions",
   () =>

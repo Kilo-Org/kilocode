@@ -69,7 +69,7 @@ jobs:
   unit:
     name: ${{ !matrix.settings.run && 'unit (unchanged)' || matrix.settings.total > 1 && format('unit ({0}, {1}/{2})', matrix.settings.os, matrix.settings.index, matrix.settings.total) || format('unit ({0})', matrix.settings.os) }}
     needs: changes
-    strategy:
+    strategy: # kilocode_change
       fail-fast: false
       matrix:
         settings: ${{ fromJSON(needs.changes.outputs.settings) }}
@@ -236,7 +236,7 @@ jobs:
       - jetbrains
     if: always()
     steps:
-      - name: Verify upstream test jobs passed
+      - name: Verify upstream test jobs passed # kilocode_change
         run: |
           echo "unit=${{ needs.unit.result }}"
           echo "httpapi=${{ needs.httpapi.result }}"

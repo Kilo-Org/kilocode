@@ -992,7 +992,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         type: "memoryOperation",
         operation: memory.operation,
         sessionID: sid(),
-        ...(memory.operation === "auto" ? { mode: memory.mode } : {}),
+        ...(memory.operation === "auto" || memory.operation === "verbose" ? { mode: memory.mode } : {}),
         ...(memory.operation === "purge" ? { confirm: memory.confirm } : {}),
         ...(memory.operation === "remember" || memory.operation === "correct" ? { text: memory.text } : {}),
         ...(memory.operation === "forget" ? { query: memory.query } : {}),
