@@ -51,8 +51,8 @@ export async function substitute(input: SubstituteInput) {
   const missing = input.missing ?? "error"
   const escape = input.escapeJson ?? true // kilocode_change
   // kilocode_change start - untrusted (project) config cannot read files without a scope. {file:} needs a
-  // fileScope to be bounded to the project root. {env:} is stripped to prevent secret exfiltration — the file
-  // still loads successfully but env tokens become empty strings.
+  // fileScope to be bounded to the project root. {env:} tokens are preserved as literal text — the file still
+  // loads successfully without exposing secrets or breaking MCPs.
   const trusted = input.trusted ?? false
   if (!trusted && !input.fileScope) {
     const file = Array.from(input.text.matchAll(/\{file:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
@@ -63,19 +63,11 @@ export async function substitute(input: SubstituteInput) {
       })
     }
   }
-  if (!trusted) {
-    // Strip active (non-commented) {env:} tokens — the file still parses successfully but
-    // env vars are not exposed. MCPs that don't use {env:} continue to work; MCPs with
-    // {env:} get empty values instead of secrets.
-    input.text = input.text.replace(/\{env:[^}]+\}/g, (match, offset) => {
-      if (commented(input.text, offset)) return match
-      return ""
-    })
-  }
   // kilocode_change end
   let text = input.text.replace(/\{env:([^}]+)\}/g, (match, varName, offset: number) => {
-    // kilocode_change start - leave commented tokens literal; reject server credentials
+    // kilocode_change start - leave commented tokens literal; leave untrusted tokens literal (no resolve, no strip)
     if (commented(input.text, offset)) return match
+    if (!trusted) return match
     if (!ConfigVariableGuard.env(varName)) {
       throw new InvalidError({ path: source(input), message: `blocked environment reference: "{env:${varName}}"` })
     }

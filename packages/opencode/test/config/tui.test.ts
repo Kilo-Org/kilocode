@@ -707,7 +707,7 @@ it.instance("applies env and file substitutions in global tui.json", () =>
   ),
 )
 
-it.instance("strips env references in untrusted project tui.json", () =>
+it.instance("preserves env references as literal text in untrusted project tui.json", () =>
   withCleanState(
     withEnv(
       "TUI_THEME_TEST",
@@ -719,9 +719,9 @@ it.instance("strips env references in untrusted project tui.json", () =>
           theme: "{env:TUI_THEME_TEST}",
         })
 
-        // {env:} in untrusted project config is stripped to prevent secret exfiltration.
+        // {env:} in untrusted project config is left as literal text — not resolved, not stripped.
         const config = yield* getTuiConfig(test.directory)
-        expect(config.theme).toBe("")
+        expect(config.theme).toBe("{env:TUI_THEME_TEST}")
       }),
     ),
   ),
