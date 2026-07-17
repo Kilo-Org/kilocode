@@ -58,7 +58,7 @@
     "@tsconfig/node22": "catalog:",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "fast-check": "4.7.0",
+    "fast-check": "4.8.0",
     "typescript": "catalog:"
   },
   "peerDependencies": {}
