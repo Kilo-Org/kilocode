@@ -12,10 +12,8 @@ import { useDialog } from "@tui/ui/dialog"
 import { useToast } from "@tui/ui/toast"
 import { DialogAlert } from "@tui/ui/dialog-alert"
 import type { Organization } from "@kilocode/kilo-gateway"
-import type { ClawStatus } from "./claw/types.js"
 import { DialogKiloTeamSelect } from "./components/dialog-kilo-team-select.js"
 import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
-import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
 import { DialogIndexing } from "./components/dialog-indexing.js"
 import { indexingEnabled } from "./indexing-feature"
@@ -57,30 +55,22 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
         enabled: isKiloConnected(),
         hidden: !isKiloConnected(),
         run: async () => {
-          // Fetch profile (for org context) and instance status in parallel
-          const [profileRes, res] = await Promise.all([
-            sdk.client.kilo.profile().catch(() => null),
-            sdk.client.kilo.claw.status().catch(() => null),
-          ])
+          // Fetch profile (for org context)
+          const profileRes = await sdk.client.kilo.profile().catch(() => null)
           const orgId = profileRes?.data?.currentOrgId ?? null
-          const status = res?.data as ClawStatus | undefined
 
-          // No instance provisioned
-          if (!status || !status.userId || res.error) {
-            dialog.replace(() => <DialogClawSetup orgId={orgId} />)
-            return
-          }
-
-          // Instance exists — check for chat credentials
+          // Check for chat credentials — older instances provisioned before
+          // chat was enabled need an upgrade before they can connect.
           const creds = await sdk.client.kilo.claw.chatCredentials().catch(() => null)
 
           if (!creds?.data || creds.error) {
-            // Instance exists but no chat credentials — needs upgrade
             dialog.replace(() => <DialogClawUpgrade orgId={orgId} />)
             return
           }
 
-          // Everything ready — navigate to full-screen chat view
+          // Navigate to the full-screen chat view. Instance status (running,
+          // provisioning, or not yet provisioned) is polled and displayed by
+          // the view itself.
           route.navigate({ type: "kiloclaw" })
           dialog.clear()
         },
