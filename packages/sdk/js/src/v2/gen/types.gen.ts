@@ -426,6 +426,7 @@ export type Session = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -1970,6 +1971,7 @@ export type GlobalSession = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
   project: ProjectSummary | null
   worktreeName?: string
@@ -2351,6 +2353,7 @@ export type Session1 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2404,6 +2407,7 @@ export type Session2 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2479,6 +2483,7 @@ export type Session3 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2532,6 +2537,7 @@ export type Session4 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2585,6 +2591,7 @@ export type Session5 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2638,6 +2645,7 @@ export type Session6 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2691,6 +2699,7 @@ export type Session7 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2798,6 +2807,7 @@ export type Session8 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -2851,6 +2861,7 @@ export type Session9 = {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   }
 }
 
@@ -13259,6 +13270,7 @@ export type KilocodeSessionImportSessionData = {
       partID?: string
       snapshot?: string
       diff?: string
+      workspace?: "restored" | "snapshots-disabled" | "unavailable"
     }
     permission?: {
       [key: string]: unknown

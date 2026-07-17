@@ -16890,6 +16890,10 @@
                       },
                       "diff": {
                         "type": "string"
+                      },
+                      "workspace": {
+                        "type": "string",
+                        "enum": ["restored", "snapshots-disabled", "unavailable"]
                       }
                     },
                     "required": ["messageID"],
@@ -23353,6 +23357,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -27799,6 +27807,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -28967,6 +28979,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29136,6 +29152,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29343,6 +29363,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29512,6 +29536,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29681,6 +29709,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -29850,6 +29882,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -30019,6 +30055,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -30350,6 +30390,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],
@@ -30519,6 +30563,10 @@
               },
               "diff": {
                 "type": "string"
+              },
+              "workspace": {
+                "type": "string",
+                "enum": ["restored", "snapshots-disabled", "unavailable"]
               }
             },
             "required": ["messageID"],

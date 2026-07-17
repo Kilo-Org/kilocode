@@ -137,6 +137,12 @@ export const dict = {
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Samtalen blev gendannet. Filændringer blev ikke gendannet, fordi snapshots er deaktiveret.",
+  "revert.banner.workspace.unavailable":
+    "Samtalen blev gendannet. Der var intet filkontrolpunkt tilgængeligt, så ændringer i arbejdsområdet blev ikke gendannet.",
+  "revert.banner.workspace.legacy": "Samtalen blev gendannet. Status for gendannelse af arbejdsområdet er ikke tilgængelig for denne tidligere gendannelse.",
+  "revert.banner.workspace.enableSnapshots": "Aktivér snapshots",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",

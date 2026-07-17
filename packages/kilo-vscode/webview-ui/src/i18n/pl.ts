@@ -137,6 +137,12 @@ export const dict = {
   "revert.banner.redo": "Ponów",
   "revert.banner.redo.all": "Ponów wszystko",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Rozmowa została cofnięta. Zmiany w plikach nie zostały przywrócone, ponieważ migawki są wyłączone.",
+  "revert.banner.workspace.unavailable":
+    "Rozmowa została cofnięta. Żaden punkt kontrolny plików nie był dostępny, więc zmiany w obszarze roboczym nie zostały przywrócone.",
+  "revert.banner.workspace.legacy": "Konwersacja została cofnięta. Stan przywracania obszaru roboczego nie jest dostępny dla tego wcześniejszego cofnięcia.",
+  "revert.banner.workspace.enableSnapshots": "Włącz migawki",
   "revert.disabled.agentBusy": "Poczekaj aż agent zakończy",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.compact.description": "Podsumuj sesję, aby zmniejszyć rozmiar kontekstu",

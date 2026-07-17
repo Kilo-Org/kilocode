@@ -137,6 +137,12 @@ export const dict = {
   "revert.banner.redo": "Refazer",
   "revert.banner.redo.all": "Refazer Tudo",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversa revertida. As alterações nos arquivos não foram restauradas porque os snapshots estão desativados.",
+  "revert.banner.workspace.unavailable":
+    "Conversa revertida. Nenhum ponto de restauração dos arquivos estava disponível, portanto as alterações no espaço de trabalho não foram restauradas.",
+  "revert.banner.workspace.legacy": "Conversa revertida. O status da restauração do espaço de trabalho não está disponível para esta reversão anterior.",
+  "revert.banner.workspace.enableSnapshots": "Ativar snapshots",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",

@@ -140,6 +140,12 @@ export const dict = {
   "revert.banner.redo": "Gjenta",
   "revert.banner.redo.all": "Gjenta alt",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Samtalen ble tilbakestilt. Filendringer ble ikke gjenopprettet fordi øyeblikksbilder er deaktivert.",
+  "revert.banner.workspace.unavailable":
+    "Samtalen ble tilbakestilt. Ingen filkontrollpunkt var tilgjengelig, så endringer i arbeidsområdet ble ikke gjenopprettet.",
+  "revert.banner.workspace.legacy": "Samtalen er tilbakeført. Statusen for gjenoppretting av arbeidsområdet er ikke tilgjengelig for denne tidligere tilbakeføringen.",
+  "revert.banner.workspace.enableSnapshots": "Aktiver øyeblikksbilder",
   "revert.disabled.agentBusy": "Vent til agenten er ferdig",
   "command.session.compact": "Komprimer sesjon",
   "command.session.compact.description": "Oppsummer sesjonen for å redusere kontekststørrelsen",

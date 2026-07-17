@@ -137,6 +137,12 @@ export const dict = {
   "revert.banner.redo": "やり直し",
   "revert.banner.redo.all": "すべてやり直し",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "会話を元に戻しました。スナップショットが無効になっているため、ファイルの変更は復元されませんでした。",
+  "revert.banner.workspace.unavailable":
+    "会話を元に戻しました。利用可能なファイルのチェックポイントがなかったため、ワークスペースの変更は復元されませんでした。",
+  "revert.banner.workspace.legacy": "会話を元に戻しました。この以前の復元では、ワークスペースの復元状態を利用できません。",
+  "revert.banner.workspace.enableSnapshots": "スナップショットを有効にする",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
