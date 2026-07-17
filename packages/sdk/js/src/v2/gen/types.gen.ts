@@ -1267,6 +1267,7 @@ export type IndexingConfig = {
   searchMaxResults?: number
   embeddingBatchSize?: number
   scannerMaxBatchRetries?: number
+  fileExtensions?: Array<string>
 }
 
 export type PermissionActionConfig = "ask" | "allow" | "deny"
