@@ -32,9 +32,14 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
 import java.awt.event.KeyEvent
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.DefaultListCellRenderer
+import javax.swing.JList
 import javax.swing.ListSelectionModel
 import javax.swing.ScrollPaneConstants
 import javax.swing.event.DocumentEvent
@@ -232,6 +237,16 @@ internal class PatternList(
             null,
         )
     }
+    internal var editor: (String) -> String? = { value ->
+        Messages.showInputDialog(
+            this,
+            KiloBundle.message("settings.context.watcher.input.prompt"),
+            KiloBundle.message("settings.context.watcher.title"),
+            null,
+            value,
+            null,
+        )
+    }
     private val add = HoverIcon().apply {
         icon = AllIcons.General.Add
         toolTipText = KiloBundle.message("settings.context.watcher.add")
@@ -246,6 +261,7 @@ internal class PatternList(
         selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION
         isFocusable = true
         emptyText.text = KiloBundle.message("settings.context.watcher.empty")
+        cellRenderer = PatternRenderer()
     }
     private val toolbar = Stack.horizontal().next(add).next(remove)
     private val scroll = JBScrollPane(list).apply {
@@ -257,6 +273,14 @@ internal class PatternList(
     init {
         border = JBUI.Borders.empty(UiStyle.Gap.pad(), 0, UiStyle.Gap.pad(), 0)
         list.addListSelectionListener { if (!it.valueIsAdjusting) syncActions() }
+        list.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                if (e.clickCount != 2 || !UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) return
+                val idx = list.locationToIndex(e.point)
+                if (idx < 0 || list.getCellBounds(idx, idx)?.contains(e.point) != true) return
+                edit(idx)
+            }
+        })
         list.registerKeyboardAction(
             { remove() },
             javax.swing.KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0),
@@ -301,6 +325,26 @@ internal class PatternList(
         syncActions()
     }
 
+    private fun edit(idx: Int) {
+        if (!isEnabled || idx < 0 || idx >= model.size) return
+        val value = editor(model.getElementAt(idx))?.trim().orEmpty()
+        if (value.isBlank()) return
+        val values = model.items.toMutableList()
+        val found = values.indexOf(value)
+        val next = if (found >= 0 && found != idx) {
+            values.removeAt(idx)
+            if (found > idx) found - 1 else found
+        } else {
+            values[idx] = value
+            idx
+        }
+        model.replaceAll(values)
+        change(values)
+        list.selectedIndex = next
+        ScrollingUtil.ensureIndexIsVisible(list, next, 0)
+        syncActions()
+    }
+
     private fun remove() {
         val indices = list.selectedIndices.filter { it >= 0 && it < model.size }
         if (!isEnabled || indices.isEmpty()) return
@@ -316,6 +360,20 @@ internal class PatternList(
     private fun syncActions() {
         add.isEnabled = isEnabled
         remove.isEnabled = isEnabled && list.selectedIndices.isNotEmpty()
+    }
+
+    private class PatternRenderer : DefaultListCellRenderer() {
+        override fun getListCellRendererComponent(
+            list: JList<*>?,
+            value: Any?,
+            index: Int,
+            selected: Boolean,
+            focus: Boolean,
+        ): java.awt.Component {
+            val comp = super.getListCellRendererComponent(list, value, index, selected, focus) as JComponent
+            comp.border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
+            return comp
+        }
     }
 }
 

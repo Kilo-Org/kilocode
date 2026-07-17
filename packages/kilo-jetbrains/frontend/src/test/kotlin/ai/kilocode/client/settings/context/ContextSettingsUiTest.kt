@@ -23,7 +23,9 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import java.awt.Container
+import java.awt.event.MouseEvent
 import javax.swing.AbstractButton
+import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.ListSelectionModel
 import javax.swing.JTextField
@@ -164,6 +166,46 @@ class ContextSettingsUiTest : BasePlatformTestCase() {
 
         flushUntil { rpc.configPatches.isNotEmpty() }
         assertEquals(listOf("**/build/**"), rpc.configPatches.single().watcher?.ignore)
+    }
+
+    fun `test double clicking watcher pattern edits it`() {
+        val panel = requireUi()
+
+        edt {
+            val patterns = components(panel).filterIsInstance<PatternList>().single()
+            patterns.editor = { "**/edited/**" }
+            val list = patternList(panel)
+            list.setSize(400, 100)
+            list.doLayout()
+            val bounds = list.getCellBounds(0, 0)
+            val event = MouseEvent(
+                list,
+                MouseEvent.MOUSE_CLICKED,
+                System.currentTimeMillis(),
+                0,
+                bounds.x + 1,
+                bounds.y + 1,
+                2,
+                false,
+                MouseEvent.BUTTON1,
+            )
+            list.mouseListeners.forEach { it.mouseClicked(event) }
+            assertEquals(listOf("**/edited/**"), list.selectedValuesList)
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() }
+        assertEquals(listOf("**/edited/**"), rpc.configPatches.single().watcher?.ignore)
+    }
+
+    fun `test watcher pattern renderer has left inset`() {
+        val panel = requireUi()
+
+        edt {
+            val list = patternList(panel)
+            val comp = list.cellRenderer.getListCellRendererComponent(list, "tmp/**", 0, false, false) as JComponent
+            assertTrue(comp.insets.left > 0)
+        }
     }
 
     fun `test watcher section does not repeat ignored patterns row title`() {
