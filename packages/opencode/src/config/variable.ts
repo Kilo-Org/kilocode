@@ -51,8 +51,8 @@ export async function substitute(input: SubstituteInput) {
   const missing = input.missing ?? "error"
   const escape = input.escapeJson ?? true // kilocode_change
   // kilocode_change start - untrusted (project) config cannot read files without a scope. {file:} needs a
-  // fileScope to be bounded to the project root; {env:} is allowed — sensitive vars (KILO_SERVER_PASSWORD,
-  // KILO_SERVER_USERNAME) are blocked by ConfigVariableGuard.env() during substitution below.
+  // fileScope to be bounded to the project root. {env:} is stripped to prevent secret exfiltration — the file
+  // still loads successfully but env tokens become empty strings.
   const trusted = input.trusted ?? false
   if (!trusted && !input.fileScope) {
     const file = Array.from(input.text.matchAll(/\{file:[^}]+\}/g)).find((m) => !commented(input.text, m.index))
@@ -62,6 +62,15 @@ export async function substitute(input: SubstituteInput) {
         message: `file references cannot be resolved without a project scope: "${file[0]}"`,
       })
     }
+  }
+  if (!trusted) {
+    // Strip active (non-commented) {env:} tokens — the file still parses successfully but
+    // env vars are not exposed. MCPs that don't use {env:} continue to work; MCPs with
+    // {env:} get empty values instead of secrets.
+    input.text = input.text.replace(/\{env:[^}]+\}/g, (match, offset) => {
+      if (commented(input.text, offset)) return match
+      return ""
+    })
   }
   // kilocode_change end
   let text = input.text.replace(/\{env:([^}]+)\}/g, (match, varName, offset: number) => {

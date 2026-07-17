@@ -559,8 +559,8 @@ it.instance("prefers .kilo directory config over legacy .kilocode", () =>
 )
 // kilocode_change end
 
-// kilocode_change start - {env:} is allowed in project config; {file:} confined to the project root
-it.instance("substitutes environment variable in project config", () =>
+// kilocode_change start - {env:} stripped in project config; {file:} confined to the project root
+it.instance("does not leak environment variable from project config through {env:}", () =>
   withProcessEnv(
     "TEST_VAR",
     "test-user",
@@ -571,7 +571,9 @@ it.instance("substitutes environment variable in project config", () =>
         username: "{env:TEST_VAR}",
       })
       const config = yield* Config.use.get()
-      expect(config.username).toBe("test-user")
+      // {env:} is stripped in untrusted project config; the env value must NOT leak
+      expect(config.username).not.toBe("test-user")
+      // No warnings — stripping is silent, not an error
       const issues = yield* Config.Service.use((svc) => svc.warnings())
       expect(issues.length).toBe(0)
     }),
@@ -1839,8 +1841,8 @@ envIsolationWellKnown.it.instance(
       const config = yield* Config.use.get()
       // The well-known header (trusted source) resolves the auth-provided token...
       expect(envIsolationWellKnown.seen.authorization).toBe("Bearer test-token")
-    // {env:} is now allowed in project config — the auth-provided token resolves from authEnv.
-    expect(config.username).toBe("test-token")
+      // {env:} in project (untrusted) config is stripped — the token must NOT leak into username.
+      expect(config.username).not.toBe("test-token")
       // ...and the auth env used for substitution must not leak into the real process env.
       expect(process.env.TEST_TOKEN).toBe("preexisting-token")
     }),
