@@ -8,9 +8,7 @@ import { NonNegativeInt, PositiveInt } from "./schema"
 import { PtyID } from "./pty/schema"
 import { SessionSchema } from "./session/schema" // kilocode_change
 import { lazy } from "./util/lazy"
-import * as Log from "./util/log"
 
-const log = Log.create({ service: "pty" })
 const BUFFER_LIMIT = 1024 * 1024 * 2
 const BUFFER_CHUNK = 64 * 1024
 const encoder = new TextEncoder()
@@ -161,7 +159,7 @@ export const layer = Layer.effect(
       const session = sessions.get(id)
       if (!session) return false
       sessions.delete(id)
-      log.info("removing session", { id })
+      yield* Effect.logInfo("removing session", { id })
       teardown(session)
       yield* events.publish(Event.Deleted, { id: session.info.id })
       return true
@@ -182,7 +180,7 @@ export const layer = Layer.effect(
 
     const create = Effect.fn("Pty.create")(function* (input: PreparedCreate) {
       const id = PtyID.ascending()
-      log.info("creating session", { id, cmd: input.command, args: input.args, cwd: input.cwd })
+      yield* Effect.logInfo("creating session", { id, cmd: input.command, args: input.args, cwd: input.cwd })
       const { spawn } = yield* Effect.promise(() => pty())
       // kilocode_change - expose the pty id to the spawned shell so a nested `kilo tui`/`kilo run` can
       // detect it is running inside a kilo-spawned terminal (read via process.env.KILO_PTY_ID)
@@ -237,7 +235,7 @@ export const layer = Layer.effect(
           if (session.info.status === "exited") return
           runFork(
             Effect.gen(function* () {
-              log.info("session exited", { id, exitCode })
+              yield* Effect.logInfo("session exited", { id, exitCode })
               session.info.status = "exited"
               yield* events.publish(Event.Exited, { id, exitCode })
               yield* removeSession(id)
@@ -272,7 +270,7 @@ export const layer = Layer.effect(
 
     const connect = Effect.fn("Pty.connect")(function* (id: PtyID, ws: Socket, cursor?: number) {
       const session = yield* requireSession(id).pipe(Effect.tapError(() => Effect.sync(() => ws.close())))
-      log.info("client connected to session", { id, directory: location.directory })
+      yield* Effect.logInfo("client connected to session", { id, directory: location.directory })
       const sub = sock(ws)
       session.subscribers.delete(sub)
       session.subscribers.set(sub, ws)
@@ -308,7 +306,6 @@ export const layer = Layer.effect(
           session.process.write(typeof message === "string" ? message : new TextDecoder().decode(message))
         },
         onClose: () => {
-          log.info("client disconnected from session", { id })
           cleanup()
         },
       }

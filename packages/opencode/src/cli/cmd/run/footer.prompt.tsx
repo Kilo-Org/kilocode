@@ -1,13 +1,14 @@
-// Prompt textarea component and its state machine for direct interactive mode.
+// Prompt composer and its state machine for direct interactive mode.
 //
 // createPromptState() wires keymap command layers, history navigation, and
 // `@` autocomplete for files, subagents, and MCP resources.
-// It produces a PromptState that RunPromptBody renders as an OpenTUI textarea,
-// while the footer view renders the current menu state below it.
+// It produces a PromptState that RunPromptBody renders as a slim single-line
+// composer while the footer view renders any active menus below it.
 /** @jsxImportSource @opentui/solid */
 import { pathToFileURL } from "bun"
-import { StyledText, bg, fg, type KeyEvent, type TextareaRenderable } from "@opentui/core"
+import { StyledText, fg, type ColorInput, type KeyEvent, type TextareaRenderable } from "@opentui/core"
 import { useRenderer } from "@opentui/solid"
+import { normalizePromptContent } from "@opencode-ai/tui/editor"
 import fuzzysort from "fuzzysort"
 import path from "path"
 import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, type Accessor } from "solid-js"
@@ -23,7 +24,8 @@ import {
   movePromptHistory,
   pushPromptHistory,
 } from "./prompt.shared"
-import { KILO_BASE_MODE, useBindings } from "@/cli/cmd/tui/keymap"
+import { KILO_BASE_MODE, useBindings } from "@opencode-ai/tui/keymap"
+import { realignEditorPromptParts, resolveEditorSlashValue } from "./prompt.editor"
 import { FOOTER_MENU_ROWS, createFooterMenuState, type RunFooterMenuItem } from "./footer.menu"
 import type { RunFooterTheme } from "./theme"
 import type { FooterState, RunAgent, RunCommand, RunPrompt, RunPromptPart, RunResource, RunTuiConfig } from "./types"
@@ -34,13 +36,6 @@ const AUTOCOMPLETE_BOTTOM_ROWS = 1
 export const TEXTAREA_MIN_ROWS = 1
 export const TEXTAREA_MAX_ROWS = 6
 export const PROMPT_MAX_ROWS = TEXTAREA_MAX_ROWS + AUTOCOMPLETE_ROWS - 1 + AUTOCOMPLETE_BOTTOM_ROWS
-
-export const HINT_BREAKPOINTS = {
-  send: 50,
-  newline: 66,
-  history: 80,
-  command: 95,
-}
 
 type Mention = Extract<RunPromptPart, { type: "file" | "agent" }>
 
@@ -54,6 +49,7 @@ type Auto = RunFooterMenuItem & {
 type SlashOption = RunFooterMenuItem & {
   kind: "slash"
   name: string
+  action?: "skill-menu" | "editor"
 }
 
 type PromptOption = Auto | SlashOption
@@ -76,9 +72,11 @@ type PromptInput = {
   onSubmit: (input: RunPrompt) => boolean | Promise<boolean>
   onCycle: () => void
   onInterrupt: () => boolean
+  onEditorOpen: (input: { value: string }) => Promise<string | undefined>
   onInputClear: () => void
   onExitRequest?: () => boolean
   onExit: () => void
+  onSkillMenu: () => void
   onRows: (rows: number) => void
   onStatus: (text: string) => void
 }
@@ -94,6 +92,7 @@ export type PromptState = {
   requestExit: () => boolean
   onSubmit: () => void
   submitText: (text: string) => void
+  openEditor: (input?: { value?: string }) => Promise<void>
   onKeyDown: (event: KeyEvent) => void
   onContentChange: () => void
   replaceDraft: (text: string) => void
@@ -110,6 +109,7 @@ function clonePrompt(prompt: RunPrompt): RunPrompt {
     text: prompt.text,
     parts: structuredClone(prompt.parts),
     ...(prompt.mode ? { mode: prompt.mode } : {}),
+    ...(prompt.command ? { command: prompt.command } : {}),
   }
 }
 
@@ -184,17 +184,25 @@ function parseSlashCommand(text: string, commands: RunCommand[] | undefined) {
   return { type: "command" as const, command: { name: head.name, arguments: head.arguments } }
 }
 
-export function hintFlags(width: number) {
+function selectedCommand(text: string, command: RunPrompt["command"]) {
+  if (!command) {
+    return
+  }
+
+  const head = slashHead(text)
+  if (!head || head.name !== command.name) {
+    return
+  }
+
   return {
-    send: width >= HINT_BREAKPOINTS.send,
-    newline: width >= HINT_BREAKPOINTS.newline,
-    history: width >= HINT_BREAKPOINTS.history,
-    command: width >= HINT_BREAKPOINTS.command,
+    name: command.name,
+    arguments: head.arguments,
   }
 }
 
 export function RunPromptBody(props: {
   theme: () => RunFooterTheme
+  background: () => ColorInput
   placeholder: () => StyledText | string
   onSubmit: () => void
   onKeyDown: (event: KeyEvent) => void
@@ -245,7 +253,7 @@ export function RunPromptBody(props: {
 
   return (
     <box id="run-direct-footer-prompt" width="100%">
-      <box id="run-direct-footer-input-shell" paddingTop={1} paddingLeft={2} paddingRight={2}>
+      <box id="run-direct-footer-input-shell" paddingTop={1} paddingBottom={1} paddingRight={2}>
         <textarea
           id="run-direct-footer-composer"
           width="100%"
@@ -256,8 +264,8 @@ export function RunPromptBody(props: {
           placeholderColor={props.theme().muted}
           textColor={props.theme().text}
           focusedTextColor={props.theme().text}
-          backgroundColor={props.theme().surface}
-          focusedBackgroundColor={props.theme().surface}
+          backgroundColor={props.background()}
+          focusedBackgroundColor={props.background()}
           cursorColor={props.theme().text}
           onSubmit={props.onSubmit}
           onKeyDown={props.onKeyDown}
@@ -278,16 +286,14 @@ export function createPromptState(input: PromptInput): PromptState {
   const [shell, setShell] = createSignal(false)
   const placeholder = createMemo(() => {
     if (shell()) {
-      return new StyledText([bg(input.theme().surface)(fg(input.theme().muted)('Run a command... "git status"'))])
+      return new StyledText([fg(input.theme().muted)('Run a command... "git status"')])
     }
 
     if (!input.state().first) {
       return ""
     }
 
-    return new StyledText([
-      bg(input.theme().surface)(fg(input.theme().muted)('Ask anything... "Fix a TODO in the codebase"')),
-    ])
+    return new StyledText([fg(input.theme().muted)('Ask anything... "Fix a TODO in the codebase"')])
   })
 
   let history = createPromptHistory(input.history)
@@ -363,64 +369,77 @@ export function createPromptState(input: PromptInput): PromptState {
 
       const next = extractLineRange(value)
       const list = await input.findFiles(next.base)
-      return list
-        .sort((a, b) => {
-          const dir = Number(b.endsWith("/")) - Number(a.endsWith("/"))
-          if (dir !== 0) {
-            return dir
+      return list.map((item): Auto => {
+        const url = pathToFileURL(path.resolve(input.directory, item))
+        let filename = item
+        if (next.line && !item.endsWith("/")) {
+          filename = `${item}#${next.line.start}${next.line.end ? `-${next.line.end}` : ""}`
+          url.searchParams.set("start", String(next.line.start))
+          if (next.line.end !== undefined) {
+            url.searchParams.set("end", String(next.line.end))
           }
+        }
 
-          const depth = a.split("/").length - b.split("/").length
-          if (depth !== 0) {
-            return depth
-          }
-
-          return a.localeCompare(b)
-        })
-        .map((item): Auto => {
-          const url = pathToFileURL(path.resolve(input.directory, item))
-          let filename = item
-          if (next.line && !item.endsWith("/")) {
-            filename = `${item}#${next.line.start}${next.line.end ? `-${next.line.end}` : ""}`
-            url.searchParams.set("start", String(next.line.start))
-            if (next.line.end !== undefined) {
-              url.searchParams.set("end", String(next.line.end))
-            }
-          }
-
-          return {
-            kind: "mention",
-            display: Locale.truncateMiddle("@" + filename, width()),
-            value: filename,
-            directory: item.endsWith("/"),
-            part: {
+        return {
+          kind: "mention",
+          display: Locale.truncateMiddle("@" + filename, width()),
+          value: filename,
+          directory: item.endsWith("/"),
+          part: {
+            type: "file",
+            mime: item.endsWith("/") ? "application/x-directory" : "text/plain",
+            filename,
+            url: url.href,
+            source: {
               type: "file",
-              mime: item.endsWith("/") ? "application/x-directory" : "text/plain",
-              filename,
-              url: url.href,
-              source: {
-                type: "file",
-                path: item,
-                text: {
-                  start: 0,
-                  end: 0,
-                  value: "",
-                },
+              path: item,
+              text: {
+                start: 0,
+                end: 0,
+                value: "",
               },
             },
-          }
-        })
+          },
+        }
+      })
     },
     { initialValue: [] as Auto[] },
   )
   const mentionOptions = createMemo(() => [...agents(), ...files(), ...resources()])
+  const skillCommands = createMemo(() => (input.commands() ?? []).filter((item) => item.source === "skill"))
+  const hasSkillsCommand = createMemo(() =>
+    (input.commands() ?? []).some((item) => item.source !== "skill" && item.name === "skills"),
+  )
   const slashOptions = createMemo<SlashOption[]>(() => {
     const builtins = [
+      {
+        kind: "slash",
+        action: "editor" as const,
+        name: "editor",
+        display: "/editor",
+        description: "compose in your external editor",
+      } satisfies SlashOption,
       { kind: "slash", name: "new", display: "/new", description: "start a new session" } satisfies SlashOption,
-      { kind: "slash", name: "exit", display: "/exit", description: "close direct mode" } satisfies SlashOption,
+      { kind: "slash", name: "exit", display: "/exit", description: "close direct mode" } satisfies SlashOption, // kilocode_change
     ]
     const hidden = new Set(builtins.map((item) => item.name))
+    const showSkillMenu = !shell() && skillCommands().length > 0 && !hasSkillsCommand()
+    if (showSkillMenu) {
+      hidden.add("skills")
+    }
+
     return [
+      ...(showSkillMenu
+        ? [
+            {
+              kind: "slash",
+              action: "skill-menu" as const,
+              name: "skills",
+              display: "/skills",
+              description: "browse available skills",
+            } satisfies SlashOption,
+          ]
+        : []),
       ...(input.commands() ?? [])
         .filter((item) => !hidden.has(item.name)) // kilocode_change - suggest skills as slash commands
         .map(
@@ -441,8 +460,17 @@ export function createPromptState(input: PromptInput): PromptState {
       return mixed
     }
 
+    const next = removeLineRange(query())
+    if (mode() === "mention") {
+      return [
+        ...fuzzysort.go(next, agents(), { keys: ["value", "display", "description"] }).map((item) => item.obj),
+        ...files(),
+        ...fuzzysort.go(next, resources(), { keys: ["value", "display", "description"] }).map((item) => item.obj),
+      ]
+    }
+
     return fuzzysort
-      .go(removeLineRange(query()), mixed, {
+      .go(next, mixed, {
         keys: [(item) => (item.kind === "mention" ? item.value : item.name).trimEnd(), "display", "description"],
       })
       .map((item) => item.obj)
@@ -463,7 +491,7 @@ export function createPromptState(input: PromptInput): PromptState {
       return
     }
 
-    input.onRows(clamp(area.virtualLineCount || 1) + popup())
+    input.onRows(clamp(Math.max(area.lineCount, area.virtualLineCount)) + popup())
   }
 
   const scheduleRows = () => {
@@ -697,6 +725,7 @@ export function createPromptState(input: PromptInput): PromptState {
     }
 
     syncParts()
+    const command = shell() ? undefined : selectedCommand(area.plainText, draft.command)
     draft = shell()
       ? {
           text: area.plainText,
@@ -706,6 +735,7 @@ export function createPromptState(input: PromptInput): PromptState {
       : {
           text: area.plainText,
           parts: structuredClone(parts),
+          ...(command ? { command } : {}),
         }
   }
 
@@ -785,6 +815,33 @@ export function createPromptState(input: PromptInput): PromptState {
     area.focus()
   }
 
+  const openEditor = async (inputValue?: { value?: string }) => {
+    input.onInputClear()
+    syncDraft()
+    hide()
+
+    const current = clonePrompt(draft)
+    try {
+      const content = await input.onEditorOpen({
+        value: inputValue?.value ?? current.text,
+      })
+      if (content === undefined) {
+        return
+      }
+      const normalized = normalizePromptContent(content)
+
+      restore({
+        text: normalized,
+        parts: realignEditorPromptParts(normalized, current.parts),
+        ...(current.mode ? { mode: current.mode } : {}),
+        ...(current.command ? { command: current.command } : {}),
+      })
+    } catch {
+      restore(current)
+      input.onStatus("failed to open editor")
+    }
+  }
+
   const select = (item?: PromptOption) => {
     const next = item ?? options()[menu.selected()]
     if (!next || !area || area.isDestroyed) {
@@ -792,6 +849,19 @@ export function createPromptState(input: PromptInput): PromptState {
     }
 
     if (next.kind === "slash") {
+      if (next.action === "editor") {
+        void openEditor({
+          value: resolveEditorSlashValue(area.plainText),
+        })
+        return
+      }
+
+      if (next.action === "skill-menu") {
+        cancelAutocomplete()
+        input.onSkillMenu()
+        return
+      }
+
       const cursor = area.cursorOffset
       const head = slashHead(area.plainText)
       const local = !shell() && (next.name === "new" || next.name === "exit")
@@ -900,6 +970,7 @@ export function createPromptState(input: PromptInput): PromptState {
   const baseBindingsEnabled = () => {
     const current = input.view()
     if (current === "command") return false
+    if (current === "skill") return false
     if (current === "model") return false
     if (current === "variant") return false
     if (current === "queued-menu") return false
@@ -939,6 +1010,22 @@ export function createPromptState(input: PromptInput): PromptState {
       },
     ],
     bindings: input.tuiConfig.keybinds.get("session.interrupt"),
+  }))
+
+  useBindings(() => ({
+    mode: KILO_BASE_MODE,
+    enabled: input.prompt() && !visible(),
+    commands: [
+      {
+        name: "prompt.editor",
+        title: "Open editor",
+        category: "Prompt",
+        run() {
+          void openEditor()
+        },
+      },
+    ],
+    bindings: input.tuiConfig.keybinds.get("prompt.editor"),
   }))
 
   useBindings(() => ({
@@ -1070,7 +1157,11 @@ export function createPromptState(input: PromptInput): PromptState {
     ]),
   }))
 
-  const onKeyDown = (_event: KeyEvent) => {}
+  const onKeyDown = (event: KeyEvent) => {
+    if (input.state().phase === "idle" && event.name.toLowerCase() === "escape") {
+      input.onInputClear()
+    }
+  }
 
   const submitPrompt = (next: RunPrompt) => {
     if (!area || area.isDestroyed) {
@@ -1091,19 +1182,26 @@ export function createPromptState(input: PromptInput): PromptState {
       return
     }
 
-    if (next.mode !== "shell" && isExitCommand(next.text)) {
+    const command = next.mode === "shell" ? undefined : selectedCommand(next.text, next.command)
+    if (!command && next.mode !== "shell" && isExitCommand(next.text)) {
       input.onExit()
       return
     }
 
     const parsed =
-      next.mode === "shell" || isNewCommand(next.text) ? undefined : parseSlashCommand(next.text, input.commands())
+      command || next.mode === "shell" || isNewCommand(next.text)
+        ? undefined
+        : parseSlashCommand(next.text, input.commands())
     if (parsed?.type === "pending") {
       input.onStatus("loading commands")
       return
     }
 
-    const submit = parsed?.type === "command" ? { ...next, command: parsed.command } : next
+    const submit = command
+      ? { ...next, command }
+      : parsed?.type === "command"
+        ? { ...next, command: parsed.command }
+        : next
     const shellMode = next.mode === "shell"
 
     resetDraft()
@@ -1196,8 +1294,10 @@ export function createPromptState(input: PromptInput): PromptState {
     requestExit,
     onSubmit,
     submitText,
+    openEditor,
     onKeyDown,
     onContentChange: () => {
+      input.onInputClear()
       syncDraft()
       refresh()
       scheduleRows()

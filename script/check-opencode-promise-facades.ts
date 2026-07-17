@@ -24,11 +24,12 @@ const allow: Record<string, string> = {
   "cli/cmd/run/runtime.boot.ts": "direct run startup resolver runtime boundary",
   "cli/cmd/run/stream.transport.ts": "per-subscription direct run transport runtime boundary",
   "cli/cmd/run/variant.shared.ts": "direct run variant persistence runtime boundary with test filesystem injection",
-  "cli/cmd/tui/config/tui.ts": "separately tracked TUI config facade",
+  "config/tui.ts": "separately tracked TUI config facade moved by the upstream TUI extraction",
   "installation/index.ts": "existing installation facade outside #10655",
 }
 
 const testAllow: Record<string, { count: number; reason: string }> = {
+  "preload.ts": { count: 2, reason: "global test-suite AppRuntime cleanup boundary" },
   "kilocode/config-resilience.test.ts": { count: 4, reason: "existing runtime integration test" },
   "kilocode/config-validation.test.ts": { count: 2, reason: "existing runtime integration test" },
   "kilocode/cli-shutdown.test.ts": { count: 1, reason: "mocked runtime boundary for shutdown unit tests" },

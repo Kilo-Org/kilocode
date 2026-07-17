@@ -6,6 +6,8 @@ import { Config } from "../config/config"
 import { Auth } from "../auth"
 import type { Provider } from "@opencode-ai/core/models-dev"
 import * as Log from "@opencode-ai/core/util/log"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -330,5 +332,8 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Config.defaultLayer),
   Layer.provide(kiloModelsLayer),
 )
+
+const kiloModels = LayerNode.make(kiloModelsLayer, [])
+export const node = LayerNode.make(layer, [Auth.node, Config.node, kiloModels, httpClient])
 
 export * as ModelCache from "./model-cache"

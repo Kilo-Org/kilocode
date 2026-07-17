@@ -1,5 +1,5 @@
 import type { Hooks, PluginInput } from "@kilocode/plugin"
-import * as Log from "@opencode-ai/core/util/log"
+import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { OAUTH_DUMMY_KEY } from "../../auth"
 import os from "os"
@@ -8,7 +8,7 @@ import { createServer } from "http"
 import { refreshCodexAuth } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { OpenAIWebSocketPool } from "./ws-pool"
 
-const log = Log.create({ service: "plugin.codex" })
+const log = Log.create({ service: "plugin.codex" }) // kilocode_change
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const ISSUER = "https://auth.openai.com"
@@ -28,9 +28,7 @@ const ALLOWED_MODELS = new Set([
   // kilocode_change end
 ])
 // kilocode_change start
-const DISALLOWED_MODELS = new Set([
-  "gpt-5.5-pro",
-])
+const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
 // kilocode_change end
 
 interface PkceCodes {
@@ -332,7 +330,6 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
 
   await new Promise<void>((resolve, reject) => {
     oauthServer!.listen(OAUTH_PORT, () => {
-      log.info("codex oauth server started", { port: OAUTH_PORT })
       resolve()
     })
     oauthServer!.on("error", reject)
@@ -343,9 +340,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
 
 function stopOAuthServer() {
   if (oauthServer) {
-    oauthServer.close(() => {
-      log.info("codex oauth server stopped")
-    })
+    oauthServer.close(() => {})
     oauthServer = undefined
   }
 }

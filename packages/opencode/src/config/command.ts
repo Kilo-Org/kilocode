@@ -17,7 +17,6 @@ import type { ConfigVariable } from "./variable"
 // kilocode_change end
 
 const log = Log.create({ service: "config" })
-
 const decodeInfo = Schema.decodeUnknownExit(ConfigCommandV1.Info)
 
 // kilocode_change start
