@@ -131,7 +131,7 @@ export function ProviderUsageBody(props: { data: ProviderUsage }) {
               {(auto) => (
                 <text fg={theme.text}>
                   Auto-top-up: {auto().enabled ? "On" : "Off"} - ${(auto().amountCents / 100).toFixed(2)} at $
-                  {(auto().thresholdCents / 100).toFixed(2)}
+                  {auto().thresholdDollars.toFixed(2)}
                   {auto().paymentLast4
                     ? ` - ${auto().paymentBrand ?? auto().paymentType ?? "payment method"} ending ${auto().paymentLast4}`
                     : ""}

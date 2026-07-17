@@ -88,7 +88,7 @@ const usage: ProviderUsageData = {
     autoTopUp: {
       enabled: true,
       amountCents: 5000,
-      thresholdCents: 500,
+      thresholdDollars: 5,
       paymentType: "card",
       paymentBrand: "Visa",
       paymentLast4: "4242",

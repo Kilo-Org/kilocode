@@ -31837,7 +31837,7 @@
           "amountCents": {
             "type": "number"
           },
-          "thresholdCents": {
+          "thresholdDollars": {
             "type": "number"
           },
           "paymentType": {
@@ -31850,7 +31850,7 @@
             "type": "string"
           }
         },
-        "required": ["enabled", "amountCents", "thresholdCents"],
+        "required": ["enabled", "amountCents", "thresholdDollars"],
         "additionalProperties": false
       },
       "ProviderUsageKiloBilling": {
