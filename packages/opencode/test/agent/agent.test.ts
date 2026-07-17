@@ -91,6 +91,29 @@ it.instance("plan agent denies edits except .opencode/plans/*", () =>
   }),
 )
 
+it.instance(
+  "ask agent keeps Bash read-only when global config allows sed",
+  () =>
+    Effect.gen(function* () {
+      const ask = yield* load((svc) => svc.get("ask"))
+      const code = yield* load((svc) => svc.get("code"))
+      const command = "sed -i -e 's/hello/TEST/' README.md"
+
+      expect(Permission.evaluate("bash", command, ask!.permission).action).toBe("deny")
+      expect(Permission.evaluate("bash", command, code!.permission).action).toBe("allow")
+    }),
+  {
+    config: {
+      permission: {
+        bash: {
+          "*": "ask",
+          "sed *": "allow",
+        },
+      },
+    },
+  },
+)
+
 it.instance("explore agent denies edit and write", () =>
   Effect.gen(function* () {
     const explore = yield* load((svc) => svc.get("explore"))
