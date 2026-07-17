@@ -15,6 +15,7 @@ import {
   select,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
+import { ModelRow, UsageRow } from "@/kilocode/plugins/sidebar-usage-row"
 
 const id = "internal:kilo-sidebar-usage"
 
@@ -44,10 +45,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     return provider?.models[current.modelID]?.terminalBench
   })
   const Row = (props: { label: string; value: string }) => (
-    <box flexDirection="row" justifyContent="space-between">
-      <text fg={theme().textMuted}>{props.label}</text>
-      <text fg={theme().textMuted}>{props.value}</text>
-    </box>
+    <UsageRow label={props.label} value={props.value} color={theme().textMuted} />
   )
   const toggle = (key: string) =>
     setExpanded((current) => {
@@ -148,27 +146,18 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                               const key = `${props.session_id}/${model.providerID}/${model.modelID}`
                               return (
                                 <box>
-                                  <box flexDirection="row" gap={1} onMouseDown={() => toggle(key)}>
-                                    <text fg={theme().text} flexShrink={0}>
-                                      {expanded().has(key) ? "▼" : "▶"}
-                                    </text>
-                                    <box flexGrow={1} minWidth={0} overflow="hidden">
-                                      <text fg={theme().text} wrapMode="none">
-                                        <b>
-                                          {Locale.truncate(
-                                            RoutedModelMeta.label(providers(), model) ?? model.modelID,
-                                            19,
-                                          )}
-                                        </b>
-                                      </text>
-                                    </box>
-                                    <box width={5} flexDirection="row" flexShrink={0} justifyContent="flex-end">
-                                      <text fg={theme().textMuted}>{formatCount(model.steps)}</text>
-                                    </box>
-                                    <box width={9} flexDirection="row" flexShrink={0} justifyContent="flex-end">
-                                      <text fg={theme().textMuted}>{formatCost(model.cost)}</text>
-                                    </box>
-                                  </box>
+                                  <ModelRow
+                                    label={Locale.truncate(
+                                      RoutedModelMeta.label(providers(), model) ?? model.modelID,
+                                      19,
+                                    )}
+                                    steps={formatCount(model.steps)}
+                                    cost={formatCost(model.cost)}
+                                    expanded={expanded().has(key)}
+                                    text={theme().text}
+                                    muted={theme().textMuted}
+                                    toggle={() => toggle(key)}
+                                  />
                                   <Show when={expanded().has(key)}>
                                     <box paddingLeft={2}>
                                       <Row label="Input" value={formatCount(model.tokens.input)} />
