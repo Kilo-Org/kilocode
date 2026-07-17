@@ -68,6 +68,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { RipgrepBinary } from "@opencode-ai/core/ripgrep/binary" // kilocode_change
 import { AppProcess } from "@opencode-ai/core/process" // kilocode_change
+import { webSearchFlags } from "@/kilocode/tool/websearch" // kilocode_change
 
 export function webSearchEnabled(
   providerID: ProviderV2.ID,
@@ -337,12 +338,7 @@ export const layer = Layer.effect(
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
-          // kilocode_change start
-          return webSearchEnabled(input.providerID, {
-            exa: flags.enableExa || cfg.experimental?.enable_exa === true,
-            parallel: flags.enableParallel,
-          })
-          // kilocode_change end
+          return webSearchEnabled(input.providerID, webSearchFlags(flags, cfg)) // kilocode_change
         }
 
         const usePatch = KiloToolRegistry.usePatch(input) // kilocode_change

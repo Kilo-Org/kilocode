@@ -7,6 +7,7 @@ import { checksum } from "@opencode-ai/core/util/encode"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Config } from "@/config/config" // kilocode_change
+import { webSearchFlags } from "@/kilocode/tool/websearch" // kilocode_change
 
 export const Parameters = Schema.Struct({
   query: Schema.String.annotate({ description: "Websearch query" }),
@@ -113,10 +114,7 @@ export const WebSearchTool = Tool.define(
         Effect.gen(function* () {
           // kilocode_change start
           const cfg = yield* config.get()
-          const provider = selectWebSearchProvider(ctx.sessionID, {
-            exa: flags.enableExa || cfg.experimental?.enable_exa === true,
-            parallel: flags.enableParallel,
-          })
+          const provider = selectWebSearchProvider(ctx.sessionID, webSearchFlags(flags, cfg))
           // kilocode_change end
           const title = webSearchProviderLabel(provider)
           yield* ctx.metadata({ title: `${title} "${params.query}"`, metadata: { provider } })
