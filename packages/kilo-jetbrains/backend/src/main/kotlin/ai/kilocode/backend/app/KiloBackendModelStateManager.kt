@@ -6,7 +6,6 @@ import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
-import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
@@ -76,14 +75,6 @@ class KiloBackendModelStateManager(
         val raw = read()
         val state = KiloCliDataParser.parseModelState(raw.orEmpty())
         val updated = state.copy(model = state.model - agent)
-        write(KiloCliDataParser.buildModelStateJson(raw, updated))
-        updated
-    }
-
-    suspend fun variant(update: ModelVariantUpdateDto): ModelStateDto = mutex.withLock {
-        val raw = read()
-        val state = KiloCliDataParser.parseModelState(raw.orEmpty())
-        val updated = state.copy(variant = state.variant + (update.key to update.value))
         write(KiloCliDataParser.buildModelStateJson(raw, updated))
         updated
     }

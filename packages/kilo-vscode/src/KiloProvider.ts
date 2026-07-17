@@ -91,6 +91,7 @@ import {
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as ModelState from "./kilo-provider/model-state"
+import { VariantMigration } from "./kilo-provider/variant-migration"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
 import {
@@ -322,6 +323,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private contextSessionID: string | undefined
   private connectionState: "connecting" | "connected" | "disconnected" | "error" = "connecting"
   private connectionGeneration = 0
+  private reconnecting = false
   private loginAttempt = 0
   private isWebviewReady = false
   private readonly extensionVersion =
@@ -1362,6 +1364,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             message.projectUnset,
             message.globalBindingId,
             message.projectBindingId,
+            message.requestID,
           )
           break
         case "openSettingsTab":
@@ -1474,17 +1477,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "telemetry":
           TelemetryProxy.capture(message.event, message.properties)
           break
-        case "persistVariant": {
-          const stored = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
-          stored[message.key] = message.value
-          await this.extensionContext?.globalState.update("variantSelections", stored)
-          break
-        }
-        case "requestVariants": {
-          const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
-          this.postMessage({ type: "variantsLoaded", variants })
-          break
-        }
         case "persistRecents":
           await this.extensionContext?.globalState.update("recentModels", validateRecents(message.recents))
           break
@@ -1656,6 +1648,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Connect the shared service (no-op if already connected)
       await this.connectionService.connect(workspaceDir)
+      try {
+        await VariantMigration.run(this.extensionContext?.globalState, this.client, workspaceDir)
+      } catch (error) {
+        console.error("[Kilo New] KiloProvider: Failed to migrate saved variant selections:", error)
+      }
       this.flushPendingKiloModel()
 
       // Subscribe to SSE events for this webview (filtered by tracked sessions)
@@ -1703,11 +1700,17 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Subscribe to connection state changes
       this.unsubscribeState = this.connectionService.onStateChange(async (state, error) => {
+        if (this.connectionState === "connected" && state !== "connected") this.reconnecting = true
+        const reconnect = this.reconnecting && state === "connected"
         if (this.connectionState !== state) {
           this.connectionGeneration++
           this.configBindings.clear()
         }
         this.connectionState = state
+        if (reconnect) {
+          this.reconnecting = false
+          this.postMessage({ type: "configBindingExpired", reason: "reconnected" })
+        }
         this.postConnectionState(error)
 
         if (state === "connected") {
@@ -3051,9 +3054,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     projectUnset: string[][] = [],
     globalBindingId?: string,
     projectBindingId?: string,
+    requestID?: string,
   ): Promise<void> {
     if (!this.client || this.connectionState !== "connected") {
-      this.postMessage({ type: "configUpdateFailed", message: "Not connected to CLI backend" })
+      this.postMessage({ type: "configUpdateFailed", requestID, message: "Not connected to CLI backend" })
       return
     }
 
@@ -3082,7 +3086,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         )
       : undefined
     if ((hasGlobal && !globalBinding) || (hasProject && !projectBinding)) {
-      this.postMessage({ type: "configUpdateFailed", message: "Settings changed or expired. Reload before saving." })
+      this.postMessage({
+        type: "configUpdateFailed",
+        requestID,
+        message: "Settings changed or expired. Reload before saving.",
+      })
       return
     }
 
@@ -3132,7 +3140,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         if (globalBinding) this.configBindings.consume(globalBinding.id)
         if (projectBinding) this.configBindings.consume(projectBinding.id)
       }
-      this.postConfigFailure(error, completed, snapshot, dir)
+      this.postConfigFailure(error, completed, snapshot, dir, requestID)
       this.pending--
       return
     }
@@ -3156,6 +3164,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       this.postMessage({
         type: "configUpdated",
+        requestID,
         config: snapshot.effective,
         globalConfig: global,
         projectConfig,
@@ -3169,7 +3178,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         refreshAgents ? this.fetchAndSendAgents() : Promise.resolve(),
       ]).catch((error) => console.error("[Kilo New] KiloProvider: Post-config refresh failed:", error))
     } catch (error) {
-      this.postConfigFailure(error, completed, snapshot, dir)
+      this.postConfigFailure(error, completed, snapshot, dir, requestID)
     } finally {
       this.pending--
     }
@@ -3207,11 +3216,13 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     completed: Array<"global" | "project"> = [],
     snapshot?: ConfigSnapshot,
     directory?: string,
+    requestID?: string,
   ): void {
     console.error("[Kilo New] KiloProvider: Failed to update config:", error)
     const bindings = snapshot && directory ? this.bindingsFor(directory, snapshot.targets) : undefined
     this.postMessage({
       type: "configUpdateFailed",
+      requestID,
       message: getErrorMessage(error) || "Failed to update config",
       details: getConfigErrorDetails(error),
       completedScopes: completed,
@@ -4033,8 +4044,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Clear globalState items that are not part of the configuration
-    await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
+    await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
     await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", undefined)
     await this.extensionContext?.globalState.update("kilo.marketplace.dismissedSuggestions", undefined)
@@ -4050,7 +4061,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
-    this.postMessage({ type: "variantsLoaded", variants: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
 
     // Re-fetch notifications to reflect cleared dismissed IDs

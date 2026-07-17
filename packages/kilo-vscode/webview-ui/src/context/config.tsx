@@ -8,7 +8,7 @@
  * changes into a single write (which triggers disposeAll on the CLI).
  */
 
-import { createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
+import { createComponent, createContext, useContext, createSignal, createMemo, onCleanup } from "solid-js"
 import type { ParentComponent, Accessor } from "solid-js"
 import { useVSCode } from "./vscode"
 import type {
@@ -37,6 +37,10 @@ export interface SaveError {
   details?: string
 }
 
+type ConfigSnapshotMessage = Extract<ExtensionMessage, { type: "configLoaded" | "configUpdated" }>
+type ConfigUpdatedMessage = Extract<ExtensionMessage, { type: "configUpdated" }>
+type ConfigFailureMessage = Extract<ExtensionMessage, { type: "configUpdateFailed" }>
+
 interface ConfigContextValue {
   config: Accessor<Config>
   globalConfig: Accessor<Config>
@@ -51,6 +55,7 @@ interface ConfigContextValue {
   saveError: Accessor<SaveError | null>
   updateConfig: (partial: Partial<Config>) => void
   updateGlobalConfig: (partial: Partial<Config>) => void
+  applyGlobalConfig: (partial: Partial<Config>) => void
   updateProjectConfig: (partial: Partial<Config>) => void
   updateSetting: (key: string, value: unknown) => void
   applySetting: (key: string, value: unknown, writeKey?: string) => void
@@ -109,6 +114,8 @@ export const ConfigProvider: ParentComponent = (props) => {
   // True while a saveConfig() write is in-flight — used to clear draft on success
   // and to guard against stale configLoaded messages overwriting optimistic state.
   const [saving, setSaving] = createSignal(false)
+  const [applying, setApplying] = createSignal<{ config: Partial<Config>; requestID: string }>()
+  const [queued, setQueued] = createSignal<Partial<Config>>()
   // Error from the most recent saveConfig() attempt, or null if no error.
   // Cleared when the user edits the draft again or starts a new save.
   const [saveError, setSaveError] = createSignal<SaveError | null>(null)
@@ -116,93 +123,82 @@ export const ConfigProvider: ParentComponent = (props) => {
     if (next !== undefined) setCollections(next)
   }
 
-  // Register handler immediately (not in onMount) so we never miss
-  // a configLoaded message that arrives before the DOM mount.
-  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
-    const patch = loadedSettings(message)
-    if (patch) return mergeSettings(patch)
-    if (message.type === "configLoaded") {
-      // Skip if a save is in-flight — a stale configLoaded must not overwrite
-      // the optimistically-updated state while the write is being confirmed.
-      if (saving()) return
-      // Re-apply the draft on top so pending changes (e.g. a toggled switch the
-      // user hasn't saved yet) stay visible instead of snapping back.
-      setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
-      setFeatures(message.features)
-      setSaved(message.config)
-      setBindings(message.bindings ?? bindings())
-      if (message.settings) mergeSettings(message.settings)
-      if (message.globalConfig !== undefined) {
-        setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
-        setSavedGlobal(message.globalConfig)
-      }
-      if (message.projectConfig !== undefined) {
-        setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
-        setSavedProject(message.projectConfig)
-      }
-      updateCollections(message.collections)
-      setLoading(false)
-      return
+  function sync(message: ConfigSnapshotMessage, draft = true) {
+    if (message.globalConfig !== undefined) {
+      setGlobalConfig(mergeScopedConfig(message.globalConfig, draft ? globalDraft() : {}))
+      setSavedGlobal(message.globalConfig)
     }
-    if (message.type === "globalConfigLoaded") {
-      if (saving()) return
-      setGlobalConfig(mergeScopedConfig(message.config, globalDraft()))
-      setSavedGlobal(message.config)
-      return
+    if (message.projectConfig !== undefined) {
+      setProjectConfig(draft ? mergeScopedConfig(message.projectConfig, projectDraft()) : message.projectConfig)
+      setSavedProject(message.projectConfig)
     }
-    if (message.type === "configUpdated") {
-      if (saving()) {
-        // This configUpdated is the confirmation of our saveConfig() write.
-        // Clear the draft now that the server has confirmed the write.
-        setSaving(false)
-        setDraft({})
-        setGlobalDraft({})
-        setProjectDraft({})
-        setSaveError(null)
-        setConfig(message.config)
-        if (message.globalConfig !== undefined) {
-          setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
-          setSavedGlobal(message.globalConfig)
-        }
-        if (message.projectConfig !== undefined) {
-          setProjectConfig(message.projectConfig)
-          setSavedProject(message.projectConfig)
-        }
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      } else {
-        // configUpdated from a different source (e.g. PermissionDock save).
-        // Re-apply the draft on top so pending settings changes are preserved.
-        setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
-        if (message.globalConfig !== undefined) {
-          setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
-          setSavedGlobal(message.globalConfig)
-        }
-        if (message.projectConfig !== undefined) {
-          setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
-          setSavedProject(message.projectConfig)
-        }
-        updateCollections(message.collections)
-        setFeatures(message.features)
-        setBindings(message.bindings ?? bindings())
-      }
-      if (message.settings) mergeSettings(message.settings)
-      setSaved(message.config)
-      return
+    updateCollections(message.collections)
+    setFeatures(message.features)
+    setBindings(message.bindings ?? bindings())
+  }
+
+  function merge(message: ConfigSnapshotMessage) {
+    setConfig(resolveConfig(message.config, draft(), has(draft() as Record<string, unknown>)))
+    sync(message)
+  }
+
+  function receipt(message: ConfigSnapshotMessage) {
+    if (message.settings) mergeSettings(message.settings)
+    setSaved(message.config)
+  }
+
+  function loaded(message: ConfigSnapshotMessage) {
+    if (saving() || applying()) return
+    merge(message)
+    receipt(message)
+    setLoading(false)
+  }
+
+  function updated(message: ConfigUpdatedMessage) {
+    const direct = applying()
+    if (direct && message.requestID !== direct.requestID) return
+    if (direct) {
+      setApplying(undefined)
+      merge(message)
+      setSaveError(null)
+    } else if (saving()) {
+      setSaving(false)
+      setDraft({})
+      setGlobalDraft({})
+      setProjectDraft({})
+      setSaveError(null)
+      setConfig(message.config)
+      sync(message, false)
+    } else {
+      merge(message)
     }
-  })
-  const unsubscribeExpired = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "configBindingExpired") return
-    setBindings({})
-    if (isDirty()) {
-      setSaveError({ message: "The Settings project changed. Discard or reload before saving." })
-      return
+    receipt(message)
+    if (!direct) return
+    const next = queued()
+    setQueued(undefined)
+    if (next) applyGlobalConfig(next)
+  }
+
+  function directFailure(message: ConfigFailureMessage) {
+    setApplying(undefined)
+    setQueued(undefined)
+    const config = message.config ?? saved()
+    setConfig(resolveConfig(config, draft(), has(draft() as Record<string, unknown>)))
+    setSaved(config)
+    if (message.globalConfig !== undefined) {
+      setGlobalConfig(mergeScopedConfig(message.globalConfig, globalDraft()))
+      setSavedGlobal(message.globalConfig)
     }
-    vscode.postMessage({ type: "requestConfig" })
-  })
-  const unsubscribeFailure = vscode.onMessage((message: ExtensionMessage) => {
-    if (message.type !== "configUpdateFailed") return
+    if (message.projectConfig !== undefined) {
+      setProjectConfig(mergeScopedConfig(message.projectConfig, projectDraft()))
+      setSavedProject(message.projectConfig)
+    }
+    if (message.bindings) setBindings(message.bindings)
+    if (!message.config) vscode.postMessage({ type: "requestConfig" })
+    setSaveError({ message: message.message, details: message.details })
+  }
+
+  function savedFailure(message: ConfigFailureMessage) {
     setSaving(false)
     if (message.completedScopes?.length) {
       const split = splitConfigByScope(draft())
@@ -233,6 +229,41 @@ export const ConfigProvider: ParentComponent = (props) => {
     }
     if (message.bindings) setBindings(message.bindings)
     setSaveError({ message: message.message, details: message.details })
+  }
+
+  function failed(message: ConfigFailureMessage) {
+    const direct = applying()
+    if (direct && message.requestID !== direct.requestID) return
+    if (direct) return directFailure(message)
+    savedFailure(message)
+  }
+
+  // Register handler immediately (not in onMount) so we never miss
+  // a configLoaded message that arrives before the DOM mount.
+  const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
+    const patch = loadedSettings(message)
+    if (patch) return mergeSettings(patch)
+    if (message.type === "configLoaded") return loaded(message)
+    if (message.type === "globalConfigLoaded") {
+      if (saving() || applying()) return
+      setGlobalConfig(mergeScopedConfig(message.config, globalDraft()))
+      setSavedGlobal(message.config)
+      return
+    }
+    if (message.type === "configUpdated") return updated(message)
+  })
+  const unsubscribeExpired = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "configBindingExpired") return
+    setBindings({})
+    if (isDirty()) {
+      setSaveError({ message: "The Settings project changed. Discard or reload before saving." })
+      return
+    }
+    vscode.postMessage({ type: "requestConfig" })
+  })
+  const unsubscribeFailure = vscode.onMessage((message: ExtensionMessage) => {
+    if (message.type !== "configUpdateFailed") return
+    failed(message)
   })
   const unsubscribeIndexing = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type !== "indexingSettingsLoaded") return
@@ -310,6 +341,29 @@ export const ConfigProvider: ParentComponent = (props) => {
     setSaveError(null)
   }
 
+  function applyGlobalConfig(partial: Partial<Config>) {
+    if (saving()) {
+      setSaveError({ message: "Settings are saving. Retry after the current save completes." })
+      return
+    }
+    const current = applying()
+    if (current) {
+      const next = deepMerge((queued() ?? {}) as Config, partial)
+      setQueued(next)
+      setConfig((prev) => stripNulls(deepMerge(prev, next)))
+      return
+    }
+    const binding = bindings().global?.id
+    if (!binding) {
+      setSaveError({ message: "Settings changed or expired. Reload before saving." })
+      return
+    }
+    const requestID = crypto.randomUUID()
+    setApplying({ config: partial, requestID })
+    setConfig((prev) => stripNulls(deepMerge(prev, partial)))
+    vscode.postMessage({ type: "updateConfig", config: partial, globalBindingId: binding, requestID })
+  }
+
   function updateProjectConfig(partial: Partial<Config>) {
     setProjectConfig((prev) => mergeScopedConfig(prev, partial))
     setProjectDraft((prev) => deepMerge(prev as Config, partial))
@@ -342,6 +396,10 @@ export const ConfigProvider: ParentComponent = (props) => {
   }
 
   function saveConfig() {
+    if (applying()) {
+      setSaveError({ message: "A model variant is saving. Retry after it completes." })
+      return
+    }
     const changes = draft()
     const globals = globalDraft()
     const projects = projectDraft()
@@ -409,6 +467,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     saveError,
     updateConfig,
     updateGlobalConfig,
+    applyGlobalConfig,
     updateProjectConfig,
     updateSetting,
     applySetting,
@@ -416,7 +475,12 @@ export const ConfigProvider: ParentComponent = (props) => {
     discardConfig,
   }
 
-  return <ConfigContext.Provider value={value}>{props.children}</ConfigContext.Provider>
+  return createComponent(ConfigContext.Provider, {
+    value,
+    get children() {
+      return props.children
+    },
+  })
 }
 
 export function useConfig(): ConfigContextValue {

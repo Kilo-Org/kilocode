@@ -867,7 +867,7 @@ describe("ACP service sessions", () => {
     expect(calls).toEqual({ providers: 1, agents: 1, commands: 1, skills: 1 })
   })
 
-  it("reuses the warm directory snapshot for a second new session in the same cwd", async () => {
+  it("refreshes the directory snapshot for a second new session in the same cwd", async () => { // kilocode_change
     const calls = {
       providers: 0,
       config: 0,
@@ -931,11 +931,11 @@ describe("ACP service sessions", () => {
     expect(first.sessionId).toBe("ses_warm_1")
     expect(second.sessionId).toBe("ses_warm_2")
     expect(calls).toEqual({
-      providers: 1,
-      config: 1,
-      agents: 1,
-      commands: 1,
-      skills: 1,
+      providers: 2, // kilocode_change
+      config: 2, // kilocode_change
+      agents: 2, // kilocode_change
+      commands: 2, // kilocode_change
+      skills: 2, // kilocode_change
       sessionList: 0,
       messages: 0,
       creates: 2,
@@ -948,15 +948,19 @@ describe("ACP service sessions", () => {
     await Effect.runPromise(
       service.setSessionConfigOption({
         sessionId: session.sessionId,
-        configId: "effort",
-        value: "high",
+        // kilocode_change start - use configured variant on mode switch
+        configId: "mode",
+        value: "plan",
+        // kilocode_change end
       }),
     )
     await Effect.runPromise(
       service.setSessionConfigOption({
         sessionId: session.sessionId,
-        configId: "mode",
-        value: "plan",
+        // kilocode_change start - use configured variant on mode switch
+        configId: "effort",
+        value: "high",
+        // kilocode_change end
       }),
     )
 

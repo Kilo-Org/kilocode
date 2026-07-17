@@ -25,32 +25,44 @@ const mockProviders = [
         providerID: "anthropic",
         name: "Claude Sonnet",
         capabilities: {},
+        variants: { max: {}, high: {} },
       },
       "claude-opus": {
         id: "claude-opus",
         providerID: "anthropic",
         name: "Claude Opus",
         capabilities: {},
+        variants: { high: {} },
       },
     },
   },
 ]
 
-let mockAgents = [
+type MockAgent = {
+  name: string
+  mode: "primary"
+  hidden: boolean
+  model: { providerID: string; modelID: string } | undefined
+  variant?: string
+  color: string | undefined
+  permission: Record<string, unknown>
+}
+
+let mockAgents: MockAgent[] = [
   {
     name: "code",
     mode: "primary" as const,
     hidden: false,
-    model: undefined as any,
-    color: undefined as any,
+    model: undefined,
+    color: undefined,
     permission: {},
   },
   {
     name: "plan",
     mode: "primary" as const,
     hidden: false,
-    model: undefined as any,
-    color: undefined as any,
+    model: undefined,
+    color: undefined,
     permission: {},
   },
 ]
@@ -60,6 +72,12 @@ let mockArgs: { model?: string } = {}
 let mockWorkspace: string | undefined
 let mockDirectory = "mock-project"
 let toastMessages: Array<{ variant: string; message: string }> = []
+let globalConfigUpdates: unknown[] = []
+let globalConfigUpdateOptions: unknown[] = []
+let globalConfigUpdateError: Error | undefined
+let globalConfigReturnError = false
+let globalConfigResponses: Array<() => Promise<unknown>> = []
+let tasks: Promise<unknown>[] = []
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 // Bun's mock.module() is process-wide and permanent — it replaces the module
@@ -126,6 +144,28 @@ mock.module("@tui/context/sdk", () => ({
   ...realSdk,
   useSDK: () => ({
     client: {
+      global: {
+        config: {
+          update: (input: unknown, options?: unknown) => {
+            const task = (async () => {
+              if (globalConfigUpdateError) throw globalConfigUpdateError
+              globalConfigUpdateOptions.push(options)
+              globalConfigUpdates.push(input)
+              const response = globalConfigResponses.shift()
+              if (response) return response()
+              if (globalConfigReturnError) {
+                const throwOnError =
+                  typeof options === "object" && options !== null && "throwOnError" in options && options.throwOnError === true
+                if (throwOnError) throw new Error("simulated sdk error")
+                return { error: { message: "simulated sdk error" } }
+              }
+              return { data: input }
+            })()
+            tasks.push(task)
+            return task
+          },
+        },
+      },
       mcp: {
         disconnect: async () => {},
         connect: async () => {},
@@ -199,6 +239,12 @@ function resetMockState() {
   mockWorkspace = undefined
   mockDirectory = "mock-project"
   toastMessages = []
+  globalConfigUpdates = []
+  globalConfigUpdateOptions = []
+  globalConfigUpdateError = undefined
+  globalConfigReturnError = false
+  globalConfigResponses = []
+  tasks = []
 }
 
 function runInRoot(): { local: any; dispose: () => void } {
@@ -251,6 +297,31 @@ async function readModelJsonMaybe(): Promise<any | undefined> {
     const code = err && typeof err === "object" && "code" in err ? err.code : undefined
     if (code === "ENOENT") return undefined
     throw err
+  }
+}
+
+async function waitForGlobalConfigUpdates(count: number) {
+  const until = Date.now() + 2000
+  while (globalConfigUpdates.length < count && Date.now() < until) {
+    await Bun.sleep(10)
+  }
+  if (globalConfigUpdates.length < count) {
+    throw new Error(`expected ${count} global config update(s), got ${globalConfigUpdates.length}`)
+  }
+}
+
+async function settle() {
+  await Promise.allSettled(tasks)
+  await Promise.resolve()
+}
+
+async function waitForToast(text: string) {
+  const until = Date.now() + 2000
+  while (!toastMessages.some((item) => item.message.includes(text)) && Date.now() < until) {
+    await Bun.sleep(10)
+  }
+  if (!toastMessages.some((item) => item.message.includes(text))) {
+    throw new Error(`expected toast containing ${text}`)
   }
 }
 
@@ -642,6 +713,310 @@ describe("#9050: configured agent defaults beat stale persisted picks", () => {
       expect(local.model.saved("plan")).toBeUndefined()
       const data = await readModelJsonMaybe()
       expect(data?.model?.plan).toBeUndefined()
+    } finally {
+      dispose()
+    }
+  })
+
+  test("17: configured agent variant applies without a configured agent model", async () => {
+    mockAgents = [
+      {
+        name: "code",
+        mode: "primary",
+        hidden: false,
+        model: undefined,
+        variant: "max",
+        color: undefined,
+        permission: {},
+      },
+      { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      expect(local.model.current()).toEqual(SONNET)
+      expect(local.model.variant.selected()).toBe("max")
+      expect(local.model.variant.current()).toBe("max")
+    } finally {
+      dispose()
+    }
+  })
+
+  test("18: runtime variant override beats config variant without persisting to model.json", async () => {
+    mockAgents = [
+      {
+        name: "code",
+        mode: "primary",
+        hidden: false,
+        model: undefined,
+        variant: "max",
+        color: undefined,
+        permission: {},
+      },
+      { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      local.model.variant.set("high")
+      await local.model.flush()
+
+      expect(local.model.variant.selected()).toBe("high")
+      expect(local.model.variant.current()).toBe("high")
+      expect(globalConfigUpdates).toEqual([{ config: { agent: { code: { variant: "high" } } } }])
+      const data = await readModelJsonMaybe()
+      expect(data?.variant).toBeUndefined()
+    } finally {
+      dispose()
+    }
+  })
+
+  test("variant.set treats sdk error results as failed writes", async () => {
+    globalConfigReturnError = true
+    const { local, dispose } = await initLocal()
+    try {
+      local.model.variant.sync("max")
+      local.model.variant.set("high")
+      await waitForGlobalConfigUpdates(1)
+      await waitForToast("Failed to save variant for code")
+
+      expect(globalConfigUpdateOptions).toEqual([{ throwOnError: true }])
+      expect(local.model.variant.selected()).toBe("max")
+      expect(local.model.variant.current()).toBe("max")
+    } finally {
+      dispose()
+    }
+  })
+
+  test("variant.set ignores rollback from an older failed write", async () => {
+    const first = Promise.withResolvers<unknown>()
+    globalConfigResponses = [() => first.promise, async () => ({ data: {} })]
+    const { local, dispose } = await initLocal()
+    try {
+      local.model.variant.sync("max")
+      local.model.variant.set("high")
+      local.model.variant.set(undefined)
+      await waitForGlobalConfigUpdates(2)
+      first.reject(new Error("simulated stale failure"))
+      await settle()
+
+      expect(globalConfigUpdates).toEqual([
+        { config: { agent: { code: { variant: "high" } } } },
+        { config: { agent: { code: { variant: "default" } } } },
+      ])
+      expect(local.model.variant.selected()).toBe("default")
+      expect(local.model.variant.current()).toBeUndefined()
+      expect(toastMessages).toEqual([])
+    } finally {
+      dispose()
+    }
+  })
+
+  test("variant.sync preserves a newer selection after a pending write rejects", async () => {
+    const pending = Promise.withResolvers<unknown>()
+    globalConfigResponses = [() => pending.promise]
+    const { local, dispose } = await initLocal()
+    try {
+      local.model.variant.sync("high")
+      local.model.variant.set(undefined)
+      await waitForGlobalConfigUpdates(1)
+      local.model.variant.sync("max")
+      pending.reject(new Error("simulated stale failure"))
+      await settle()
+
+      expect(local.model.variant.selected()).toBe("max")
+      expect(local.model.variant.current()).toBe("max")
+      expect(toastMessages).toEqual([])
+    } finally {
+      dispose()
+    }
+  })
+
+  test("preserves model-keyed variants without startup config migration", async () => {
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        favorite: [],
+        variant: { "anthropic/claude-sonnet": "high" },
+      },
+    })
+    try {
+      expect(local.model.current()).toEqual(SONNET)
+      expect(local.model.variant.selected()).toBeUndefined()
+      expect(globalConfigUpdates).toEqual([])
+
+      await local.model.flush()
+      const data = await readModelJson()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
+    } finally {
+      dispose()
+    }
+  })
+
+  test("preserves model-keyed variants after model changes", async () => {
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        favorite: [],
+        variant: { "anthropic/claude-sonnet": "high" },
+      },
+    })
+    try {
+      local.model.set(OPUS, { recent: true })
+      await local.model.flush()
+
+      const data = await readModelJson()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
+    } finally {
+      dispose()
+    }
+  })
+
+  test("does not expand stale persisted variants when a configured model wins", async () => {
+    mockAgents = [
+      {
+        name: "code",
+        mode: "primary",
+        hidden: false,
+        model: OPUS,
+        color: undefined,
+        permission: {},
+      },
+      { name: "plan", mode: "primary", hidden: false, model: OPUS, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        model: { code: SONNET },
+        recent: [SONNET],
+        favorite: [],
+        variant: { "anthropic/claude-sonnet": "max" },
+      },
+    })
+    try {
+      expect(local.model.current()).toEqual(OPUS)
+      expect(globalConfigUpdates).toEqual([])
+
+      local.model.set(OPUS, { recent: true })
+      await local.model.flush()
+      const data = await readModelJson()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "max" })
+    } finally {
+      dispose()
+    }
+  })
+
+  test("preserves model-keyed variants when persisted model is invalid", async () => {
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        model: { code: { providerID: "missing", modelID: "missing" } },
+        recent: [SONNET],
+        favorite: [],
+        variant: { "anthropic/claude-sonnet": "high" },
+      },
+    })
+    try {
+      expect(local.model.current()).toEqual(SONNET)
+      expect(local.model.variant.current()).toBeUndefined()
+      expect(globalConfigUpdates).toEqual([])
+
+      await local.model.flush()
+      const data = await readModelJson()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
+    } finally {
+      dispose()
+    }
+  })
+
+  test("19: persisted model.json variant is ignored in favor of config variant", async () => {
+    mockAgents = [
+      {
+        name: "code",
+        mode: "primary",
+        hidden: false,
+        model: undefined,
+        variant: "max",
+        color: undefined,
+        permission: {},
+      },
+      { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal({
+      prewrite: {
+        recent: [SONNET],
+        model: { code: SONNET },
+        favorite: [],
+        variant: { "anthropic/claude-sonnet": "high" },
+      },
+    })
+    try {
+      expect(local.model.variant.selected()).toBe("max")
+      expect(local.model.variant.current()).toBe("max")
+
+      local.model.set(OPUS, { recent: true })
+      await local.model.flush()
+      const data = await readModelJson()
+      expect(data.variant).toEqual({ "anthropic/claude-sonnet": "high" })
+    } finally {
+      dispose()
+    }
+  })
+
+  test("20: runtime override stays per-agent when switching models", async () => {
+    mockAgents = [
+      {
+        name: "code",
+        mode: "primary",
+        hidden: false,
+        model: undefined,
+        variant: "max",
+        color: undefined,
+        permission: {},
+      },
+      { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      local.model.variant.set("high")
+      local.model.set(OPUS, { recent: true })
+      local.model.variant.set(undefined)
+
+      expect(local.model.variant.selected()).toBe("default")
+
+      local.model.set(SONNET, { recent: true })
+      expect(local.model.variant.selected()).toBe("default")
+      expect(globalConfigUpdates.at(-1)).toEqual({ config: { agent: { code: { variant: "default" } } } })
+    } finally {
+      dispose()
+    }
+  })
+
+  test("21: synced session variant updates local override without persisting config", async () => {
+    const { local, dispose } = await initLocal()
+    try {
+      local.model.variant.sync("high")
+
+      expect(local.model.variant.selected()).toBe("high")
+      expect(globalConfigUpdates).toEqual([])
+    } finally {
+      dispose()
+    }
+  })
+
+  test("22: persisted config default sentinel round-trips into selected state", async () => {
+    mockAgents = [
+      {
+        name: "code",
+        mode: "primary",
+        hidden: false,
+        model: undefined,
+        variant: "default",
+        color: undefined,
+        permission: {},
+      },
+      { name: "plan", mode: "primary", hidden: false, model: undefined, color: undefined, permission: {} },
+    ]
+    const { local, dispose } = await initLocal()
+    try {
+      expect(local.model.variant.selected()).toBe("default")
+      expect(local.model.variant.current()).toBeUndefined()
     } finally {
       dispose()
     }

@@ -5,6 +5,7 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.MessageErrorDto
@@ -364,7 +365,7 @@ class TurnLifecycleTest : SessionControllerTestBase() {
 
         appRpc.state.value = KiloAppStateDto(
             KiloAppStatusDto.READY,
-            config = ConfigDto(model = "kilo/gpt-5"),
+            config = ConfigDto(model = "kilo/gpt-5", agent = mapOf("code" to AgentConfigDto(variant = "default"))),
             profile = ProfileDto(email = "user@example.com"),
         )
         flush()
@@ -380,6 +381,20 @@ class TurnLifecycleTest : SessionControllerTestBase() {
 
     fun `test login resumes paid model prompt`() {
         val (m, _, _) = prompted()
+        projectRpc.state.value = workspaceReady(
+            providers = listOf(
+                ai.kilocode.rpc.dto.ProviderDto(
+                    id = "kilo",
+                    name = "Kilo",
+                    models = mapOf("gpt-5" to ai.kilocode.rpc.dto.ModelDto(
+                        id = "gpt-5",
+                        name = "GPT-5",
+                        variants = listOf("low", "high"),
+                    )),
+                ),
+            ),
+        )
+        flush()
         val msg = MessageDto(
             id = "msg_user",
             sessionID = "ses_test",
@@ -403,7 +418,7 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         ))
         appRpc.state.value = KiloAppStateDto(
             KiloAppStatusDto.READY,
-            config = ConfigDto(model = "kilo/gpt-5"),
+            config = ConfigDto(model = "kilo/gpt-5", agent = mapOf("code" to AgentConfigDto(variant = "default"))),
             profile = ProfileDto(email = "user@example.com"),
         )
         flush()
@@ -415,6 +430,7 @@ class TurnLifecycleTest : SessionControllerTestBase() {
         assertEquals("code", prompt.agent)
         assertEquals("kilo/openai", prompt.providerID)
         assertEquals("gpt-5.5", prompt.modelID)
+        assertEquals("default", prompt.variant)
         assertTrue(m.model.state is SessionState.Busy)
     }
 

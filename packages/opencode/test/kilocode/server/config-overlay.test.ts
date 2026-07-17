@@ -4,6 +4,7 @@ import { chmod, rm, stat, symlink } from "fs/promises"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { Server } from "../../../src/server/server"
+import { GlobalBus, type GlobalEvent } from "../../../src/bus/global"
 import { Config } from "../../../src/config/config"
 import { ConfigParse } from "../../../src/config/parse"
 import { KilocodeConfigOverlay } from "../../../src/kilocode/config/overlay"
@@ -30,6 +31,7 @@ type Overlay = {
 type Agent = {
   name: string
   permission: Permission.Ruleset
+  variant?: string
 }
 
 afterEach(async () => {
@@ -87,6 +89,18 @@ async function setGlobal(dir: string, value: Config.Info) {
       body: JSON.stringify({ scope: "global", set: value }),
     }),
   )
+}
+
+async function capture(fn: () => Promise<void>) {
+  const events: GlobalEvent[] = []
+  const handler = (event: GlobalEvent) => events.push(event)
+  GlobalBus.on("event", handler)
+  try {
+    await fn()
+  } finally {
+    GlobalBus.off("event", handler)
+  }
+  return events
 }
 
 describe("config overlay routes", () => {
@@ -736,6 +750,115 @@ describe("config overlay routes", () => {
     expect(Permission.evaluate("edit", "*", after.find((item) => item.name === "code")?.permission ?? []).action).toBe(
       "ask",
     )
+  })
+
+  test.serial("keeps global config variant updates hot through global config route", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+
+    const before = await json<Agent[]>(await request(Server.Default().app, project.path, "/agent"))
+    expect(before.find((item) => item.name === "code")?.variant).toBeUndefined()
+
+    const events = await capture(async () => {
+      await json(
+        await request(Server.Default().app, undefined, "/global/config", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ agent: { code: { variant: "high" } } }),
+        }),
+      )
+    })
+    const after = await json<Agent[]>(await request(Server.Default().app, project.path, "/agent"))
+
+    expect(events.some((event) => event.payload?.type === "global.config.updated")).toBe(true)
+    expect(events.some((event) => event.payload?.type === "global.disposed")).toBe(false)
+    expect(after.find((item) => item.name === "code")?.variant).toBe("high")
+  })
+
+  test.serial("refreshes hot global variants in every cached project directory", async () => {
+    await using global = await tmpdir()
+    await using first = await tmpdir()
+    await using second = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    const server = Server.Default().app
+
+    const before = await Promise.all(
+      [first.path, second.path].map(async (dir) => json<Agent[]>(await request(server, dir, "/agent"))),
+    )
+    expect(before.map((agents) => agents.find((item) => item.name === "code")?.variant)).toEqual([
+      undefined,
+      undefined,
+    ])
+
+    const events = await capture(async () => {
+      await json(
+        await request(server, first.path, "/global/config", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ agent: { code: { variant: "high" } } }),
+        }),
+      )
+    })
+
+    const one = await json<Agent[]>(await request(server, first.path, "/agent"))
+    const two = await json<Agent[]>(await request(server, second.path, "/agent"))
+    expect(one.find((item) => item.name === "code")?.variant).toBe("high")
+    expect(two.find((item) => item.name === "code")?.variant).toBe("high")
+    expect(events.some((event) => event.payload?.type === "global.disposed")).toBe(false)
+  })
+
+  test.serial("keeps global config variant updates hot through overlay route", async () => {
+    await using global = await tmpdir()
+    await using first = await tmpdir()
+    await using second = await tmpdir()
+    ;(Global.Path as { config: string }).config = global.path
+    const server = Server.Default().app
+
+    const before = await Promise.all(
+      [first.path, second.path].map(async (dir) => json<Agent[]>(await request(server, dir, "/agent"))),
+    )
+    expect(before.map((agents) => agents.find((item) => item.name === "code")?.variant)).toEqual([undefined, undefined])
+
+    const events = await capture(async () => {
+      await json(
+        await request(server, undefined, "/config/overlay", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ scope: "global", set: { agent: { code: { variant: "medium" } } } }),
+        }),
+      )
+    })
+    const after = await Promise.all(
+      [first.path, second.path].map(async (dir) => json<Agent[]>(await request(server, dir, "/agent"))),
+    )
+
+    expect(events.some((event) => event.payload?.type === "global.config.updated")).toBe(true)
+    expect(events.some((event) => event.payload?.type === "global.disposed")).toBe(false)
+    expect(after.map((agents) => agents.find((item) => item.name === "code")?.variant)).toEqual(["medium", "medium"])
+  })
+
+  test.serial("preserves commented kilo.json when refreshing a hot overlay update", async () => {
+    await using global = await tmpdir()
+    await using project = await tmpdir()
+    const file = path.join(global.path, "kilo.json")
+    const content =
+      '{\n  // Preserve comments in the authoritative file.\n  "$schema": "https://app.kilo.ai/config.json",\n  "permission": { "bash": "allow" },\n  "agent": { "code": { "variant": "low" } }\n}\n'
+    await Filesystem.write(file, content)
+    ;(Global.Path as { config: string }).config = global.path
+    const server = Server.Default().app
+
+    await json(await request(server, project.path, "/agent"))
+    expect(await Bun.file(file).text()).toContain("// Preserve comments in the authoritative file.")
+    await json(
+      await request(server, undefined, "/config/overlay", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ scope: "global", set: { agent: { code: { variant: "medium" } } } }),
+      }),
+    )
+
+    expect(await Bun.file(file).text()).toContain("// Preserve comments in the authoritative file.")
   })
 
   terminal("preserves active terminals after updating global console preferences", async () => {

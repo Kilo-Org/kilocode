@@ -12,16 +12,19 @@ import { validateModelSelections } from "../provider-actions"
 
 type PostMessage = (msg: unknown) => void
 
-let cached: string | undefined
+const cached = new WeakMap<KiloClient, string>()
 let queue: Promise<void> = Promise.resolve()
 
 async function resolve(client: KiloClient | null): Promise<string | undefined> {
-  if (cached) return cached
+  if (!client) return undefined
+  const existing = cached.get(client)
+  if (existing) return existing
   try {
-    const resp = await client?.path.get()
+    const resp = await client.path.get()
     if (!resp?.data?.state) return undefined
-    cached = path.join(resp.data.state, "model.json")
-    return cached
+    const target = path.join(resp.data.state, "model.json")
+    cached.set(client, target)
+    return target
   } catch {
     return undefined
   }
@@ -39,6 +42,11 @@ async function read(client: KiloClient | null): Promise<Record<string, unknown>>
   } catch {
     return {}
   }
+}
+
+export async function selections(client: KiloClient | null) {
+  const data = await read(client)
+  return validateModelSelections(data.model)
 }
 
 function write(client: KiloClient | null, key: string, value: unknown): Promise<void> {

@@ -718,7 +718,6 @@ object KiloCliDataParser {
         return ModelStateDto(
             favorite = parseModelFavorites(obj["favorite"]),
             model = parseModelSelections(obj["model"]),
-            variant = parseModelVariants(obj["variant"]),
             recent = parseModelFavorites(obj["recent"]),
         )
     }
@@ -736,7 +735,6 @@ object KiloCliDataParser {
             ?: mutableMapOf()
         data["favorite"] = JsonArray(state.favorite.map(::modelSelection))
         data["model"] = JsonObject(state.model.mapValues { (_, value) -> modelSelection(value) })
-        data["variant"] = JsonObject(state.variant.mapValues { (_, value) -> JsonPrimitive(value) })
         data["recent"] = JsonArray(state.recent.map(::modelSelection))
         return pretty.encodeToString(JsonObject.serializer(), JsonObject(data))
     }
@@ -1298,19 +1296,6 @@ object KiloCliDataParser {
             val pid = item.str("providerID") ?: return@mapNotNull null
             val mid = item.str("modelID") ?: return@mapNotNull null
             name to ModelSelectionDto(pid, mid)
-        }.toMap()
-    }
-
-    internal fun parseModelVariants(raw: JsonElement?): Map<String, String> {
-        val obj = runCatching { raw?.jsonObject }.getOrNull() ?: return emptyMap()
-        return obj.entries.mapNotNull { (key, elem) ->
-            if (key.isBlank()) return@mapNotNull null
-            val prim = runCatching { elem.jsonPrimitive }.getOrNull() ?: return@mapNotNull null
-            if (!prim.isString) return@mapNotNull null
-            val value = prim.contentOrNull
-                ?.takeIf { it.isNotBlank() }
-                ?: return@mapNotNull null
-            key to value
         }.toMap()
     }
 

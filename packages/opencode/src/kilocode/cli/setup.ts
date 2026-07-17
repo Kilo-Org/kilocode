@@ -86,8 +86,17 @@ export namespace KiloCli {
 
     const { AppRuntime } = await import("@/effect/app-runtime")
     const { Config } = await import("@/config/config")
-    const cfg = await AppRuntime.runPromise(Config.Service.use((c) => c.getGlobal()))
-
+    const { Effect } = await import("effect")
+    const { KilocodeModelVariantMigration } = await import("@/kilocode/config/model-variant-migration")
+    const cfg = await AppRuntime.runPromise(
+      Config.Service.use((svc) =>
+        Effect.gen(function* () {
+          const cfg = yield* svc.getGlobal()
+          yield* KilocodeModelVariantMigration.run({ config: cfg, update: svc.updateGlobal })
+          return cfg
+        }),
+      ),
+    )
     const { Global } = await import("@opencode-ai/core/global")
     const { Telemetry } = await import("@kilocode/kilo-telemetry")
     await Telemetry.init({

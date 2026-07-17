@@ -31,13 +31,15 @@ export class ConfigBindings {
   private readonly bindings = new Map<string, ConfigBinding>()
 
   create(input: Omit<ConfigBinding, "id">): ConfigBinding {
-    const binding = { ...input, id: randomUUID() }
     // Only the newest binding per scope+directory can still be saved against,
     // so drop the superseded ones instead of growing forever on read-only
     // refreshes (external config edits re-issue bindings without consuming).
     for (const [id, existing] of this.bindings) {
-      if (existing.scope === binding.scope && existing.directory === binding.directory) this.bindings.delete(id)
+      if (existing.scope !== input.scope || existing.directory !== input.directory) continue
+      if (same(existing, input)) return existing
+      this.bindings.delete(id)
     }
+    const binding = { ...input, id: randomUUID() }
     this.bindings.set(binding.id, binding)
     return binding
   }
@@ -61,4 +63,16 @@ export class ConfigBindings {
   clear(): void {
     this.bindings.clear()
   }
+}
+
+function same(existing: ConfigBinding, input: Omit<ConfigBinding, "id">) {
+  return (
+    existing.connection === input.connection &&
+    existing.target.path === input.target.path &&
+    existing.target.revision === input.target.revision &&
+    existing.project?.id === input.project?.id &&
+    existing.project?.root === input.project?.root &&
+    existing.project?.generation === input.project?.generation &&
+    existing.project?.pinned === input.project?.pinned
+  )
 }

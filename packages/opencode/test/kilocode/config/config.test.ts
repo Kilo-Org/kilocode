@@ -511,6 +511,40 @@ describe("unset propagation across layered config files", () => {
     }
   })
 
+  test("preserves comments in kilo.json while saving an agent variant", async () => {
+    await using globalTmp = await tmpdir()
+    const json = path.join(globalTmp.path, "kilo.json")
+    const prev = Global.Path.config
+    ;(Global.Path as { config: string }).config = globalTmp.path
+    await clear()
+    await disposeAllInstances()
+
+    try {
+      await Filesystem.write(
+        json,
+        [
+          "{",
+          "  // Preserve this comment while migrating a variant.",
+          '  "$schema": "https://app.kilo.ai/config.json",',
+          '  "permission": { "bash": "allow" },',
+          '  "agent": { "code": { "variant": "low" } }',
+          "}",
+          "",
+        ].join("\n"),
+      )
+
+      await saveGlobal(decode({ agent: { code: { variant: "medium" } } }))
+
+      const written = await Bun.file(json).text()
+      expect(written).toContain("// Preserve this comment while migrating a variant.")
+      expect(written).toContain('"variant": "medium"')
+    } finally {
+      ;(Global.Path as { config: string }).config = prev
+      await clear()
+      await disposeAllInstances()
+    }
+  })
+
   test("removes nested sentinels from jsonc siblings while preserving comments", async () => {
     await using globalTmp = await tmpdir()
     const opencode = path.join(globalTmp.path, "opencode.jsonc")

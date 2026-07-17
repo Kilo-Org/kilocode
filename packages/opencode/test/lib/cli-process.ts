@@ -31,10 +31,11 @@ import { TestCli } from "../../script/kilocode/test-cli" // kilocode_change
 
 const opencodeRoot = path.resolve(import.meta.dir, "../../")
 const cliEntry = path.join(opencodeRoot, "src/index.ts")
+const tuiPreload = import.meta.resolve("@opentui/solid/preload") // kilocode_change - resolve before test children change CWD
 // kilocode_change start - reuse the runner's once-built CLI graph instead of transpiling it in every child
 const cliArgs = process.env[TestCli.ENV]
   ? ["run", process.env[TestCli.ENV]]
-  : ["run", "--conditions=browser", "--preload=@opentui/solid/preload", cliEntry]
+  : ["run", "--conditions=browser", `--preload=${tuiPreload}`, cliEntry]
 // kilocode_change end
 
 export const testModelID = "test/test-model"

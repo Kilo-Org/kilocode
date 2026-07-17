@@ -24,7 +24,6 @@ import ai.kilocode.rpc.dto.LoadProgressDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
-import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileBalanceDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileKiloPassDto
@@ -81,11 +80,6 @@ class KiloAppRpcApiImpl : KiloAppRpcApi {
     override suspend fun clearModelSelection(agent: String): ModelStateDto {
         app.requireReady()
         return app.models.clear(agent)
-    }
-
-    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
-        app.requireReady()
-        return app.models.variant(update)
     }
 
     override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {

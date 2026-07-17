@@ -7,7 +7,6 @@ import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
-import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
 import com.intellij.platform.rpc.RemoteApiProviderService
@@ -65,9 +64,6 @@ interface KiloAppRpcApi : RemoteApi<Unit> {
 
     /** Clear a persisted per-agent model selection. */
     suspend fun clearModelSelection(agent: String): ModelStateDto
-
-    /** Persist a per-model reasoning variant selection. */
-    suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto
 
     /** Patch global CLI config values. */
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto

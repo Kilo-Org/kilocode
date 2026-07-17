@@ -51,6 +51,23 @@ test("config writes include the selected directory", async () => {
   })
 })
 
+test("agent variant writes use config overlay", async () => {
+  const calls = setup()
+  const client = await import("./client")
+  const query = { url: "http://kilo:secret@127.0.0.1:4097", dir: "/tmp/project", scope: "project" as const }
+
+  await client.saveAgentVariant(query, "code", "high")
+  await client.saveAgentVariant(query, "code", "default")
+  await client.saveAgentVariant(query, "code", "")
+
+  expect(calls).toHaveLength(3)
+  expect(calls[0]?.method).toBe("PATCH")
+  expect(new URL(calls[0]!.url).searchParams.get("directory")).toBe("/tmp/project")
+  expect(calls[0]?.body).toEqual({ scope: "project", set: { agent: { code: { variant: "high" } } } })
+  expect(calls[1]?.body).toEqual({ scope: "project", set: { agent: { code: { variant: "default" } } } })
+  expect(calls[2]?.body).toEqual({ scope: "project", unset: [["agent", "code", "variant"]] })
+})
+
 test("viewed snapshots post the presence payload against the selected directory", async () => {
   const calls = setup()
   const client = await import("./client")

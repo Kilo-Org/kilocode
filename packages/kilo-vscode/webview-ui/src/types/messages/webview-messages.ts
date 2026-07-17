@@ -532,6 +532,7 @@ export interface UpdateConfigMessage {
   projectUnset?: string[][]
   globalBindingId?: string
   projectBindingId?: string
+  requestID?: string
 }
 
 export interface RequestNotificationSettingsMessage {
@@ -987,18 +988,6 @@ export interface RevertWorktreeFileMessage {
   sessionId: string
   file: string
   scope?: string
-}
-
-// Variant persistence (webview → extension)
-export interface PersistVariantRequest {
-  type: "persistVariant"
-  key: string
-  value: string
-}
-
-// Request stored variants from extension (webview → extension)
-export interface RequestVariantsMessage {
-  type: "requestVariants"
 }
 
 // Enhance prompt request (webview → extension)
@@ -1489,8 +1478,6 @@ export type WebviewMessage =
   | SetSidebarCollapsedRequest
   | SetReviewDiffStyleRequest
   | SetReviewMarkdownRenderRequest
-  | PersistVariantRequest
-  | RequestVariantsMessage
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage

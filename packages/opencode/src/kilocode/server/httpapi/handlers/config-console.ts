@@ -2,6 +2,7 @@ import { Account } from "@/account/account"
 import { Auth } from "@/auth"
 import { Config } from "@/config/config"
 import * as InstanceState from "@/effect/instance-state"
+import { KilocodeConfigHotUpdate } from "@/kilocode/config/hot-update"
 import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
 import { KilocodeConfigWriter } from "@/kilocode/config/writer"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
@@ -13,9 +14,11 @@ import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecy
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { markInstanceForDisposal } from "@/server/routes/instance/httpapi/lifecycle"
 import { InvalidRequestError } from "@/server/routes/instance/httpapi/errors"
+import { Global } from "@opencode-ai/core/global"
 import { Effect, Option } from "effect"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
+import path from "path"
 import {
   ConfigModelStatePatch,
   ConfigOverlayConflictError,
@@ -89,7 +92,9 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
               expected,
             }),
           ),
-          `config:${body.scope}:${expected?.path ?? "target"}`,
+          body.scope === "global"
+            ? `config:global:${path.resolve(Global.Path.config)}`
+            : `config:project:${expected?.path ?? "target"}`,
         )
         .pipe(Effect.orDie)
       if (!result.ok) {
@@ -103,9 +108,11 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         )
       }
       const patch = KilocodeConfigOverlay.patch(body)
-      const hot = body.scope === "global" && Object.keys(patch).every((key) => key === "console")
+      const changed = Object.keys(patch).length > 0
+      const hot = body.scope === "global" && KilocodeConfigHotUpdate.hot(patch)
       if (body.scope === "global") {
-        yield* config.invalidate()
+        if (hot) yield* config.updateGlobal({}, { dispose: false })
+        if (!hot) yield* config.invalidate()
       } else {
         yield* config.update({})
         yield* markInstanceForDisposal(instance)
@@ -140,7 +147,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
           sources: sources.sources,
         }),
       )
-      if (body.scope === "global" && !hot) {
+      if (body.scope === "global" && changed && !hot) {
         yield* disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(
           Effect.catchCause(() => Effect.void),
         )

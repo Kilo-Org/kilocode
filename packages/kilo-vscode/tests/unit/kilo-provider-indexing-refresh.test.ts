@@ -117,12 +117,12 @@ describe("KiloProvider indexing refresh", () => {
     // Save against the binding the latest config load issued, like the webview
     // does: each load supersedes older bindings for the same scope+directory.
     const issued = (sent[sent.length - 1]!.bindings as { global: { id: string } }).global.id
-    await internal.handleUpdateConfig({ model: "test/global" }, {}, [], [], issued)
+    await internal.handleUpdateConfig({ model: "test/global" }, {}, [], [], issued, undefined, "config-write")
 
     // bindings carry fresh per-load revision state, so compare the payload
     // without them; each message still must carry a bindings object.
     const strip = (m: Record<string, unknown>) => {
-      const { bindings, ...rest } = m
+      const { bindings, collections: _collections, requestID: _requestID, ...rest } = m
       expect(bindings).toMatchObject({ global: expect.anything() })
       return rest
     }
@@ -138,6 +138,7 @@ describe("KiloProvider indexing refresh", () => {
       { type: "configUpdated", ...payload },
       { type: "configUpdated", ...payload },
     ])
+    expect(sent.at(-1)?.requestID).toBe("config-write")
   })
 
   it("reloadAfterAuthChange fetches config first, then indexing status", async () => {
@@ -278,9 +279,11 @@ describe("KiloProvider indexing refresh", () => {
       [],
       global.id,
       project.id,
+      "failed-write",
     )
 
     expect(messages.find((message) => message.type === "configUpdateFailed")).toMatchObject({
+      requestID: "failed-write",
       completedScopes: ["global"],
       config: snapshot.effective,
       bindings: { global: { target: snapshot.targets.global }, project: { target: snapshot.targets.project } },

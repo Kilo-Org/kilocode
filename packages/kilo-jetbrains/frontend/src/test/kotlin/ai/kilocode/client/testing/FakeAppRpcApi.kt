@@ -13,7 +13,6 @@ import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
-import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
@@ -33,6 +32,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
  */
 class FakeAppRpcApi : KiloAppRpcApi {
 
+    data class ConfigUpdateOperation(
+        val gate: CompletableDeferred<Unit>? = null,
+        val error: Exception? = null,
+    ) {
+        val started = CompletableDeferred<Unit>()
+    }
+
     val state = MutableStateFlow(KiloAppStateDto(KiloAppStatusDto.DISCONNECTED))
     var health = HealthDto(healthy = true, version = "1.0.0")
     var cliVersion = "1.0.0"
@@ -46,8 +52,8 @@ class FakeAppRpcApi : KiloAppRpcApi {
     var models = ModelStateDto()
     val selections = mutableListOf<ModelSelectionUpdateDto>()
     val cleared = mutableListOf<String>()
-    val variants = mutableListOf<ModelVariantUpdateDto>()
     val configPatches = mutableListOf<ConfigPatchDto>()
+    val configUpdates = mutableListOf<ConfigUpdateOperation>()
     var configUpdateAttempts = 0
         private set
     var configUpdateGate: CompletableDeferred<Unit>? = null
@@ -144,17 +150,12 @@ class FakeAppRpcApi : KiloAppRpcApi {
         return models
     }
 
-    override suspend fun updateModelVariant(update: ModelVariantUpdateDto): ModelStateDto {
-        assertNotEdt("updateModelVariant")
-        variants.add(update)
-        models = models.copy(variant = models.variant + (update.key to update.value))
-        return models
-    }
-
     override suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto {
         assertNotEdt("updateConfig")
-        configUpdateAttempts += 1
-        configUpdateGate?.await()
+        val update = configUpdates.getOrNull(configUpdateAttempts++)
+        update?.started?.complete(Unit)
+        update?.gate?.await() ?: configUpdateGate?.await()
+        update?.error?.let { throw it }
         configUpdateError?.let { throw it }
         configPatches.add(patch)
         afterConfig?.invoke(patch)

@@ -41,6 +41,25 @@ describe("ConfigBindings", () => {
     expect(bindings.get(binding.id, 1, () => true)).toBeUndefined()
   })
 
+  it("reuses the current binding when a refresh returns the same target revision", () => {
+    const bindings = new ConfigBindings()
+    const first = bindings.create({
+      connection: 1,
+      scope: "global",
+      directory: "/repo",
+      target: { ...target, scope: "global" },
+    })
+    const second = bindings.create({
+      connection: 1,
+      scope: "global",
+      directory: "/repo",
+      target: { ...target, scope: "global" },
+    })
+
+    expect(second.id).toBe(first.id)
+    expect(bindings.get(first.id, 1, () => true)).toBeDefined()
+  })
+
   it("expires retained-panel bindings when the selected project changes", () => {
     const provider = new KiloProvider({} as never, {} as never, undefined, { projectDirectory: "/repo/a" })
     const internal = provider as unknown as { configBindings: ConfigBindings; connectionGeneration: number }

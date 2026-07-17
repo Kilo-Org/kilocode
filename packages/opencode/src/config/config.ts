@@ -23,6 +23,7 @@ import type { ConsoleState } from "@opencode-ai/core/v1/config/console-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
+import { ScopedCache } from "effect" // kilocode_change - refresh cached worktree configs after hot global updates
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
@@ -1019,6 +1020,22 @@ export const layer = Layer.effect(
     const updateGlobal = Effect.fn("Config.updateGlobal")(function* (config: Info, options?: { dispose?: boolean }) {
       const dispose = options?.dispose ?? true
       // kilocode_change end
+      // kilocode_change start - refresh after an external writer without reserializing its target
+      if (!dispose && Object.keys(config).length === 0) {
+        yield* invalidateGlobal
+        yield* ScopedCache.invalidateAll(state.cache).pipe(Effect.catchCause(() => Effect.void))
+        yield* Effect.sync(() =>
+          GlobalBus.emit("event", {
+            directory: "global",
+            payload: {
+              type: Event.ConfigUpdated.type,
+              properties: {},
+            },
+          }),
+        ).pipe(Effect.catchCause(() => Effect.void))
+        return { info: yield* getGlobal(), changed: false }
+      }
+      // kilocode_change end
       const file = globalConfigFile()
       // kilocode_change start - serialize read-merge-write so concurrent approvals cannot lose rules
       const result = yield* flock
@@ -1034,15 +1051,6 @@ export const layer = Layer.effect(
               exclude: file,
               patch,
             })
-
-            if (!file.endsWith(".jsonc")) {
-              const existing = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(before, file), file)
-              const next = KilocodeConfig.mergeConfig(writable(existing), patch)
-              const serialized = JSON.stringify(next, null, 2)
-              const changed = serialized !== before || propagated
-              if (serialized !== before) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
-              return { next, changed }
-            }
 
             const updated = patchJsonc(before, patch)
             const next = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(updated, file), file)
@@ -1060,7 +1068,7 @@ export const layer = Layer.effect(
       // kilocode_change start - skip dispose when caller opts out
       if (!dispose) {
         yield* invalidateGlobal
-        yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+        yield* ScopedCache.invalidateAll(state.cache).pipe(Effect.catchCause(() => Effect.void)) // kilocode_change
         yield* Effect.sync(() =>
           GlobalBus.emit("event", {
             directory: "global",

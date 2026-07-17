@@ -7,6 +7,7 @@ import type {
   AgentManagerBranchesMessage,
   AgentManagerImportResultMessage,
   BranchInfo,
+  ModelSelection,
   EnhancePromptResultMessage,
   EnhancePromptErrorMessage,
 } from "../src/types/messages"
@@ -22,7 +23,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
-import { cycleVariant } from "../src/context/session-variant-store"
+import { cycleVariant, promptVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -47,6 +48,7 @@ import { BranchSelect, BranchSelectPopover } from "../src/components/shared/Bran
 import { tracker } from "./telemetry"
 import { cycleAgent } from "../src/context/session-agent"
 import type { ModeRouter } from "./mode-router"
+import { agentConfigSelection, agentConfigVariant } from "./agent-config-selection"
 
 type VersionCount = 1 | 2 | 3 | 4
 const VERSION_OPTIONS: VersionCount[] = [1, 2, 3, 4]
@@ -107,9 +109,22 @@ export const NewWorktreeDialog: Component<{
   const cached = vscode.getState<Record<string, unknown>>()
   const [prompt, setPrompt] = createSignal((cached?.advancedDialogPrompt as string) ?? "")
   const [versions, setVersions] = createSignal<VersionCount>(1)
+  const modelExists = (sel: ModelSelection) => !!provider.findModel(sel)
+  const variantsFor = (sel: ModelSelection | null) => {
+    if (!sel) return []
+    const found = provider.findModel(sel)
+    if (!found?.variants) return []
+    return Object.keys(found.variants)
+  }
   const initialAgent = session.selectedAgent()
-  const initialModel = session.modelForAgent(initialAgent)
-  const [model, setModel] = createSignal<{ providerID: string; modelID: string } | null>(initialModel)
+  const initial = agentConfigSelection({
+    config: config(),
+    agent: initialAgent,
+    fallback: session.modelForAgent(initialAgent),
+    exists: modelExists,
+    variants: variantsFor,
+  })
+  const [model, setModel] = createSignal<ModelSelection | null>(initial.model)
   const [compareMode, setCompareMode] = createSignal(false)
   const [modelAllocations, setModelAllocations] = createSignal<ModelAllocations>(new Map())
   const [agent, setAgent] = createSignal(initialAgent)
@@ -121,7 +136,7 @@ export const NewWorktreeDialog: Component<{
   const [baseBranchOpen, setBaseBranchOpen] = createSignal(false)
   const [compareOpen, setCompareOpen] = createSignal(false)
   const [highlightedIndex, setHighlightedIndex] = createSignal(0)
-  const [variant, setVariant] = createSignal<string | undefined>(session.variantForAgent(initialAgent, initialModel))
+  const [variant, setVariant] = createSignal<string | undefined>(initial.variant)
   const [sandbox, setSandbox] = createSignal<boolean | undefined>()
   const [sandboxDefault, setSandboxDefault] = createSignal<boolean | undefined>()
   const [sandboxOverride, setSandboxOverride] = createSignal<boolean | undefined>()
@@ -133,6 +148,18 @@ export const NewWorktreeDialog: Component<{
   const speech = useSpeechToText(vscode, server, { t })
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())
+  const selectionFor = (key: string, fallback = session.modelForAgent(key)) =>
+    agentConfigSelection({ config: config(), agent: key, fallback, exists: modelExists, variants: variantsFor })
+  const applyAgent = (key: string) => {
+    const next = selectionFor(key)
+    setAgent(key)
+    setModel(next.model)
+    setVariant(next.variant)
+  }
+  const applyModel = (sel: ModelSelection) => {
+    setModel(sel)
+    setVariant(agentConfigVariant({ config: config(), agent: agent(), model: sel, variants: variantsFor(sel) }))
+  }
   let prior: string | null = null
   let request: string | undefined
   const cancel = () => {
@@ -141,25 +168,12 @@ export const NewWorktreeDialog: Component<{
     setEnhancing(false)
   }
 
-  const selectAgent = (name: string) => {
-    setAgent(name)
-    const sel = session.modelForAgent(name)
-    setModel(sel)
-    setVariant(session.variantForAgent(name, sel))
-  }
-
-  const resetModel = () => {
-    const sel = session.configModelForAgent(agent())
-    setModel(sel)
-    setVariant(session.variantForAgent(agent(), sel))
-  }
-
   const cycle = (direction: 1 | -1) => {
     cycleAgent({
       agents: session.agents(),
       direction,
       selected: () => agent(),
-      select: selectAgent,
+      select: applyAgent,
     })
   }
 
@@ -171,19 +185,14 @@ export const NewWorktreeDialog: Component<{
 
   // Variant list for the currently selected model
   const variants = createMemo(() => {
-    const sel = model()
-    if (!sel) return []
-    const found = provider.findModel(sel)
-    if (!found?.variants) return []
-    return Object.keys(found.variants)
+    return variantsFor(model())
   })
 
-  // Current effective variant — falls back to first available if stored value is invalid
   const effectiveVariant = createMemo(() => {
     const list = variants()
     if (list.length === 0) return undefined
     const stored = variant()
-    return stored && list.includes(stored) ? stored : list[0]
+    return stored && list.includes(stored) ? stored : undefined
   })
 
   // True when the user has changed the model from the session/config default
@@ -194,15 +203,15 @@ export const NewWorktreeDialog: Component<{
     return sel.providerID !== cfg.providerID || sel.modelID !== cfg.modelID
   })
 
-  // Reset variant when model changes and stored variant is not in new list
   createEffect(() => {
+    if (variant() === "default") return
     const list = variants()
     if (list.length === 0) {
       setVariant(undefined)
       return
     }
     const stored = variant()
-    if (!stored || !list.includes(stored)) setVariant(list[0])
+    if (stored && !list.includes(stored)) setVariant(undefined)
   })
 
   createEffect(() => {
@@ -347,7 +356,7 @@ export const NewWorktreeDialog: Component<{
       providerID: sel?.providerID,
       modelID: sel?.modelID,
       agent: selectedAgent,
-      variant: isCompare ? undefined : effectiveVariant(),
+      variant: isCompare ? undefined : promptVariant(variant(), variants()),
       baseBranch: advanced ? (baseBranch() ?? undefined) : undefined,
       branchName: customBranch,
       modelAllocations: allocations,
@@ -639,7 +648,7 @@ export const NewWorktreeDialog: Component<{
                     <ModeSwitcherBase
                       agents={session.agents()}
                       value={agent()}
-                      onSelect={selectAgent}
+                      onSelect={applyAgent}
                       portal={false}
                       deferDismiss
                     />
@@ -648,7 +657,7 @@ export const NewWorktreeDialog: Component<{
                     <ModelSelectorBase
                       value={model()}
                       onSelect={(pid, mid) => {
-                        if (pid && mid) setModel({ providerID: pid, modelID: mid })
+                        if (pid && mid) applyModel({ providerID: pid, modelID: mid })
                       }}
                       placement="top-start"
                       portal={false}
@@ -658,6 +667,9 @@ export const NewWorktreeDialog: Component<{
                       variants={variants()}
                       value={effectiveVariant()}
                       onSelect={setVariant}
+                      onClear={() => setVariant("default")}
+                      allowClear
+                      clearLabel={t("common.default")}
                       portal={false}
                       deferDismiss
                       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
@@ -667,7 +679,11 @@ export const NewWorktreeDialog: Component<{
                         <Button
                           variant="ghost"
                           size="small"
-                          onClick={resetModel}
+                          onClick={() => {
+                            const next = selectionFor(agent(), session.configModelForAgent(agent()))
+                            setModel(next.model)
+                            setVariant(next.variant)
+                          }}
                           aria-label={t("prompt.action.resetModel")}
                         >
                           <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">

@@ -146,10 +146,12 @@ export interface Interface {
     blocking?: boolean // kilocode_change
     tool?: Tool
   }) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
+  // kilocode_change start
   readonly reply: (input: {
     requestID: QuestionID
     answers: ReadonlyArray<Answer>
   }) => Effect.Effect<void, NotFoundError>
+  // kilocode_change end
   readonly reject: (requestID: QuestionID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   readonly dismissAll: (sessionID: SessionID) => Effect.Effect<void> // kilocode_change

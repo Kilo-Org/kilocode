@@ -1,6 +1,7 @@
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
+import { Flock } from "@opencode-ai/core/util/flock"
 import z from "zod"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
@@ -18,7 +19,6 @@ export namespace KilocodeModelState {
     model: z.record(z.string(), Ref),
     recent: Ref.array(),
     favorite: Ref.array(),
-    variant: z.record(z.string(), z.string()),
   })
   export type State = z.infer<typeof State>
 
@@ -38,21 +38,30 @@ export namespace KilocodeModelState {
   }
 
   export async function update(input: Patch): Promise<State> {
-    const state = await get()
-    const next = {
-      ...state,
-      favorite: input.favorite ? refs(input.favorite) : state.favorite,
-    }
-    await Filesystem.writeJson(target(), next)
-    return next
+    const file = target()
+    return Flock.withLock(lock(file), async () => {
+      const raw = (await Bun.file(file).exists()) ? await Filesystem.readJson(file) : {}
+      if (!isRecord(raw)) throw new Error("Model state must be an object.")
+      const state = clean(raw)
+      const next = {
+        ...state,
+        favorite: input.favorite ? refs(input.favorite) : state.favorite,
+      }
+      await Filesystem.writeJson(file, { ...raw, ...next })
+      return next
+    })
   }
 
   function target() {
     return path.join(Global.Path.state, "model.json")
   }
 
+  function lock(file: string) {
+    return `model-state:${file}`
+  }
+
   function empty(): State {
-    return { model: {}, recent: [], favorite: [], variant: {} }
+    return { model: {}, recent: [], favorite: [] }
   }
 
   function clean(input: unknown): State {
@@ -61,7 +70,6 @@ export namespace KilocodeModelState {
       model: record(input.model),
       recent: refs(input.recent),
       favorite: refs(input.favorite),
-      variant: variant(input.variant),
     }
   }
 
@@ -85,13 +93,6 @@ export namespace KilocodeModelState {
         if (!parsed.success) return []
         return [[key, parsed.data]]
       }),
-    )
-  }
-
-  function variant(input: unknown) {
-    if (!isRecord(input)) return {}
-    return Object.fromEntries(
-      Object.entries(input).filter((item): item is [string, string] => typeof item[1] === "string"),
     )
   }
 }

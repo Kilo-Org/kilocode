@@ -19,6 +19,13 @@ export type ModeOption = {
   readonly id: string
   readonly name: string
   readonly description?: string
+  // kilocode_change start - ACP needs agent model/variant metadata to resolve configured variants.
+  readonly model?: {
+    readonly providerID: ProviderV2.ID
+    readonly modelID: ModelV2.ID
+  }
+  readonly variant?: string
+  // kilocode_change end
 }
 
 export type ModelVariants = NonNullable<Provider.Model["variants"]>
@@ -128,6 +135,10 @@ export const loaderLayer = Layer.effect(
                 id: item.name,
                 name: item.name,
                 ...(item.description ? { description: item.description } : {}),
+                // kilocode_change start - preserve agent model/variant for ACP variant resolution
+                ...(item.model ? { model: item.model } : {}),
+                ...(item.variant ? { variant: item.variant } : {}),
+                // kilocode_change end
               })),
             defaultModeID: defaultAgent.name,
             commands: commands.toSorted((a, b) => a.name.localeCompare(b.name)),

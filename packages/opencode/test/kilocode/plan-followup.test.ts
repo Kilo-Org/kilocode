@@ -846,7 +846,7 @@ describe("plan follow-up", () => {
       }
     }))
 
-  test("ask - prefers saved code variant over configured code variant", () =>
+  test("ask - applies configured code variant to saved code model even when code model is unset", () =>
     withInstance(async () => {
       await writeState({
         model: { code: saved },
@@ -859,7 +859,7 @@ describe("plan follow-up", () => {
             mode: "primary",
             permission: [],
             options: {},
-            model: config,
+            model: undefined,
             variant: configVar,
           } as any
         }
@@ -867,7 +867,7 @@ describe("plan follow-up", () => {
       })
       const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(
         async (providerID: string, modelID: string) => {
-          if (providerID === saved.providerID && modelID === saved.modelID) return savedFull
+          if (providerID === saved.providerID && modelID === saved.modelID) return savedConfigFull
           if (providerID === config.providerID && modelID === config.modelID) return configFull
           throw new Error(`unexpected model lookup ${providerID}/${modelID}`)
         },
@@ -900,7 +900,64 @@ describe("plan follow-up", () => {
       expect(user?.info.role).toBe("user")
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
-      expect(user.info.model).toEqual({ ...saved, variant: savedVar })
+      expect(user.info.model).toEqual({ ...saved, variant: configVar })
+    }))
+
+  test("ask - does not apply configured code variant when a different code model is pinned", () =>
+    withInstance(async () => {
+      await writeState({
+        model: { code: saved },
+        variant: { [savedKey]: savedVar },
+      })
+      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+        if (name === "code") {
+          return {
+            name: "code",
+            mode: "primary",
+            permission: [],
+            options: {},
+            model: config,
+            variant: configVar,
+          } as any
+        }
+        return undefined as any
+      })
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(
+        async (providerID: string, modelID: string) => {
+          if (providerID === saved.providerID && modelID === saved.modelID) return savedConfigFull
+          if (providerID === config.providerID && modelID === config.modelID) return configFull
+          throw new Error(`unexpected model lookup ${providerID}/${modelID}`)
+        },
+      )
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const pending = PlanFollowup.ask({
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+        question,
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_CONTINUE]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+
+      const user = await latestUser(seeded.sessionID)
+      expect(user?.info.role).toBe("user")
+      if (!user || user.info.role !== "user") return
+      expect(user.info.agent).toBe("code")
+      expect(user.info.model).toEqual({ ...saved, variant: undefined })
     }))
 
   test("ask - falls back to configured code model when saved CLI code model is unavailable", () =>
@@ -992,6 +1049,58 @@ describe("plan follow-up", () => {
       if (!user || user.info.role !== "user") return
       expect(user.info.agent).toBe("code")
       expect(user.info.model).toEqual({ ...model, variant: planVar })
+    }))
+
+  test("ask - applies configured code variant to planning model when no code model exists", () =>
+    withInstance(async () => {
+      const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
+        if (name === "code") {
+          return {
+            name: "code",
+            mode: "primary",
+            permission: [],
+            options: {},
+            model: undefined,
+            variant: configVar,
+          } as any
+        }
+        return undefined as any
+      })
+      const modelSpy = spyOn(PlanFollowupRuntime, "model").mockImplementation(
+        async (providerID: string, modelID: string) => {
+          if (providerID === model.providerID && modelID === model.modelID) return full(model, [configVar, "low"])
+          throw new Error(`unexpected model lookup ${providerID}/${modelID}`)
+        },
+      )
+      using _ = {
+        [Symbol.dispose]() {
+          get.mockRestore()
+          modelSpy.mockRestore()
+        },
+      }
+      const seeded = await seed({ text: "1. Build\n2. Test" })
+      const pending = PlanFollowup.ask({
+        question,
+        sessionID: seeded.sessionID,
+        messages: seeded.messages,
+        abort: AbortSignal.any([]),
+      })
+
+      const item = await waitQuestion(seeded.sessionID)
+      expect(item).toBeDefined()
+      if (!item) return
+      await question.reply({
+        requestID: item.id,
+        answers: [[PlanFollowup.ANSWER_CONTINUE]],
+      })
+
+      await expect(pending).resolves.toBe("continue")
+
+      const user = await latestUser(seeded.sessionID)
+      expect(user?.info.role).toBe("user")
+      if (!user || user.info.role !== "user") return
+      expect(user.info.agent).toBe("code")
+      expect(user.info.model).toEqual({ ...model, variant: configVar })
     }))
 
   test("ask - new session omits handover section when LLM returns empty", () =>

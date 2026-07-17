@@ -362,6 +362,7 @@ const ConfigWrapper: ParentComponent<{
         })
         setDirty(true)
       },
+      applyGlobalConfig: noop,
       updateGlobalConfig: (partial: Partial<Config>) => {
         const update = (prev: Config) => {
           const next = merge(prev as Record<string, unknown>, partial as Record<string, unknown>) as Config

@@ -23,7 +23,6 @@ const allow: Record<string, string> = {
   "bus/index.ts": "core bus callback and synchronous runtime boundary",
   "cli/cmd/run/runtime.boot.ts": "direct run startup resolver runtime boundary",
   "cli/cmd/run/stream.transport.ts": "per-subscription direct run transport runtime boundary",
-  "cli/cmd/run/variant.shared.ts": "direct run variant persistence runtime boundary with test filesystem injection",
   "config/tui.ts": "separately tracked TUI config facade moved by the upstream TUI extraction",
   "installation/index.ts": "existing installation facade outside #10655",
 }

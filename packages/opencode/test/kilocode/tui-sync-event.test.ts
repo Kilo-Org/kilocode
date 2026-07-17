@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import { describe, expect, test } from "bun:test"
-import type { BackgroundProcessInfo, GlobalEvent, Session } from "@kilocode/sdk/v2"
+import type { Agent, BackgroundProcessInfo, GlobalEvent, Session } from "@kilocode/sdk/v2"
 import { normalizeSyncEvent } from "@tui/context/event"
 import { json, mount, wait } from "../../../tui/test/cli/cmd/tui/sync-fixture"
 
@@ -387,6 +387,75 @@ describe("TUI sync event wire format", () => {
       await wait(() => sync.data.message[sessionID]?.some((item) => item.id === freshID) === true)
       expect(sync.session.get(sessionID)?.revert).toBeUndefined()
       expect(sync.data.message[sessionID]?.at(-1)?.id).toBe(freshID)
+    } finally {
+      app.renderer.destroy()
+    }
+  })
+
+  test("refreshes global config and active workspace stores after a global config update", async () => {
+    const workspace = "ws_global_config"
+    const initial = {
+      config: { model: "workspace/initial" },
+      agents: [{ name: "workspace-initial-agent", mode: "primary", permission: [], options: {} }] satisfies Agent[],
+    }
+    const unscoped = {
+      config: { model: "unscoped/initial" },
+      agents: [{ name: "unscoped-initial-agent", mode: "primary", permission: [], options: {} }] satisfies Agent[],
+    }
+    const refreshed = {
+      global: { model: "global/refreshed" },
+      config: { model: "workspace/refreshed" },
+      agents: [{ name: "workspace-agent", mode: "primary", permission: [], options: {} }] satisfies Agent[],
+    }
+    const calls: URL[] = []
+    let refreshing = false
+    const { app, emit, project, sync } = await mount((url) => {
+      if (url.pathname === "/experimental/workspace") return json([{ id: workspace }])
+      if (url.pathname === "/global/config") {
+        if (refreshing) calls.push(url)
+        return json(refreshing ? refreshed.global : { model: "global/initial" })
+      }
+      if (url.pathname === "/config") {
+        if (refreshing) calls.push(url)
+        return json(refreshing ? refreshed.config : url.searchParams.get("workspace") === workspace ? initial.config : unscoped.config)
+      }
+      if (url.pathname === "/agent") {
+        if (refreshing) calls.push(url)
+        return json(refreshing ? refreshed.agents : url.searchParams.get("workspace") === workspace ? initial.agents : unscoped.agents)
+      }
+    })
+
+    try {
+      project.workspace.set(workspace)
+      await wait(
+        () =>
+          project.workspace.current() === workspace &&
+          sync.data.config.model === initial.config.model &&
+          sync.data.agent[0]?.name === initial.agents[0]?.name,
+      )
+
+      refreshing = true
+      emit({
+        directory: "global",
+        payload: { type: "global.config.updated", properties: {} },
+      } as unknown as GlobalEvent)
+
+      await wait(
+        () =>
+          sync.data.globalConfig.model === refreshed.global.model &&
+          sync.data.config.model === refreshed.config.model &&
+          sync.data.agent[0]?.name === refreshed.agents[0]?.name,
+      )
+
+      expect(sync.data.globalConfig).toEqual(refreshed.global)
+      expect(sync.data.config).toEqual(refreshed.config)
+      expect(sync.data.agent).toEqual(refreshed.agents)
+      expect(calls.filter((url) => url.pathname === "/global/config")).toHaveLength(1)
+      expect(calls.filter((url) => url.pathname === "/global/config")[0]?.searchParams.get("workspace")).toBeNull()
+      expect(calls.filter((url) => url.pathname === "/config")).toHaveLength(1)
+      expect(calls.filter((url) => url.pathname === "/config")[0]?.searchParams.get("workspace")).toBe(workspace)
+      expect(calls.filter((url) => url.pathname === "/agent")).toHaveLength(1)
+      expect(calls.filter((url) => url.pathname === "/agent")[0]?.searchParams.get("workspace")).toBe(workspace)
     } finally {
       app.renderer.destroy()
     }

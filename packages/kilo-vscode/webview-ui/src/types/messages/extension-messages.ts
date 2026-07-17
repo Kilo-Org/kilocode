@@ -606,6 +606,7 @@ export interface ConfigLoadedMessage {
 
 export interface ConfigUpdatedMessage {
   type: "configUpdated"
+  requestID?: string
   config: Config
   globalConfig?: Config
   projectConfig?: Config
@@ -617,6 +618,7 @@ export interface ConfigUpdatedMessage {
 
 export interface ConfigUpdateFailedMessage {
   type: "configUpdateFailed"
+  requestID?: string
   message: string
   details?: string
   completedScopes?: Array<"global" | "project">
@@ -898,12 +900,6 @@ export interface AgentManagerMultiVersionProgressMessage {
   total: number
   completed: number
   groupId?: string
-}
-
-// Stored variant selections loaded from extension globalState (extension → webview)
-export interface VariantsLoadedMessage {
-  type: "variantsLoaded"
-  variants: Record<string, string>
 }
 
 export interface RecentsLoadedMessage {
@@ -1365,7 +1361,6 @@ export type ExtensionMessage =
   | AppendReviewCommentsMessage
   | AppendReviewCommentsToTerminalMessage
   | TriggerTaskMessage
-  | VariantsLoadedMessage
   | CloudSessionDataLoadedMessage
   | CloudSessionImportedMessage
   | CloudSessionImportFailedMessage

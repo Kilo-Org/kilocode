@@ -696,6 +696,12 @@ export async function saveModelState(input: Query, favorite: ModelRef[]) {
   return demand("Update model state", result)
 }
 
+export async function saveAgentVariant(input: Query, id: string, variant: string) {
+  const next = value(variant)
+  if (!next) return unsetConfig(input, [["agent", id, "variant"]])
+  return saveConfig(input, { agent: { [id]: { variant: next } } })
+}
+
 export async function connectProvider(input: Query, id: string, key: string, metadata?: Record<string, string>) {
   const sdk = client(input)
   const auth: Auth = metadata ? { type: "api", key, metadata } : { type: "api", key }
