@@ -645,6 +645,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "Pretraga koda",
   "ui.permission.toggleWrap": "Prebaci prelamanje teksta",
   "ui.permission.copyCommand": "Kopiraj",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "Pitanje",
   "notification.question.description": "{{sessionTitle}} u {{projectName}} ima pitanje",
   "notification.action.goToSession": "Idi na sesiju",

@@ -627,6 +627,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "程式碼搜尋",
   "ui.permission.toggleWrap": "切換自動換行",
   "ui.permission.copyCommand": "複製",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "問題",
   "notification.question.description": "{{sessionTitle}}（{{projectName}}）有一個問題",
   "notification.action.goToSession": "前往工作階段",

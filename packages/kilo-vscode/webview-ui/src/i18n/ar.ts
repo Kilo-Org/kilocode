@@ -635,6 +635,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "بحث الكود",
   "ui.permission.toggleWrap": "تبديل التفاف الكلمات",
   "ui.permission.copyCommand": "نسخ",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "سؤال",
   "notification.question.description": "{{sessionTitle}} في {{projectName}} لديه سؤال",
   "notification.action.goToSession": "انتقل إلى الجلسة",

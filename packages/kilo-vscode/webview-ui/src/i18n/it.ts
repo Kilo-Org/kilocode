@@ -520,6 +520,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "Ricerca codice",
   "ui.permission.toggleWrap": "Attiva/disattiva ritorno a capo",
   "ui.permission.copyCommand": "Copia",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "Domanda",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} ha una domanda",
   "notification.action.goToSession": "Vai alla sessione",

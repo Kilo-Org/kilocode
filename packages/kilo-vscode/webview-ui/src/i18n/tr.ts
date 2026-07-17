@@ -644,6 +644,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "Kod Araması",
   "ui.permission.toggleWrap": "Sözcük kaydırmayı aç/kapat",
   "ui.permission.copyCommand": "Kopyala",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "Soru",
   "notification.question.description": "{{projectName}} içindeki {{sessionTitle}} bir soru soruyor",
   "notification.action.goToSession": "Oturuma git",

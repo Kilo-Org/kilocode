@@ -640,6 +640,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "코드 검색",
   "ui.permission.toggleWrap": "줄 바꿈 전환",
   "ui.permission.copyCommand": "복사",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "질문",
   "notification.question.description": "{{projectName}}의 {{sessionTitle}}에서 질문이 있습니다",
   "notification.action.goToSession": "세션으로 이동",

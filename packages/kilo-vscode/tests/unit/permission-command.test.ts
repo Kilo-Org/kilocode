@@ -83,4 +83,44 @@ describe("parseHeredoc", () => {
   it("does not match << inside a string or other context", () => {
     expect(parseHeredoc('echo "this << is not a heredoc"')).toBeNull()
   })
+
+  it("detects heredoc with <<- (indent-strip / tab-remove)", () => {
+    const result = parseHeredoc("cat <<- EOF\n\thello\nEOF")
+    expect(result).not.toBeNull()
+    expect(result!.head).toBe("cat <<- EOF\nEOF")
+    expect(result!.body).toBe("\thello")
+    expect(result!.count).toBe(1)
+  })
+
+  it("detects heredoc with <<- and quoted delimiter", () => {
+    const result = parseHeredoc("python3 <<- 'EOF'\nprint('hi')\nEOF")
+    expect(result).not.toBeNull()
+    expect(result!.head).toBe("python3 <<- 'EOF'\nEOF")
+    expect(result!.body).toBe("print('hi')")
+    expect(result!.count).toBe(1)
+  })
+
+  it("detects heredoc with double-quoted delimiter", () => {
+    const result = parseHeredoc("cat << \"EOF\"\nhello\nEOF")
+    expect(result).not.toBeNull()
+    expect(result!.head).toBe('cat << "EOF"\nEOF')
+    expect(result!.body).toBe("hello")
+    expect(result!.count).toBe(1)
+  })
+
+  it("detects heredoc with delimiter containing hyphens", () => {
+    const result = parseHeredoc("cat << \"my-delim\"\nhello world\nmy-delim")
+    expect(result).not.toBeNull()
+    expect(result!.head).toBe('cat << "my-delim"\nmy-delim')
+    expect(result!.body).toBe("hello world")
+    expect(result!.count).toBe(1)
+  })
+
+  it("detects heredoc with <<- and double-quoted delimiter with hyphens", () => {
+    const result = parseHeredoc("python3 <<- \"my-script\"\nprint('hi')\nmy-script")
+    expect(result).not.toBeNull()
+    expect(result!.head).toBe('python3 <<- "my-script"\nmy-script')
+    expect(result!.body).toBe("print('hi')")
+    expect(result!.count).toBe(1)
+  })
 })

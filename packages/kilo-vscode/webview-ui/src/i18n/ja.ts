@@ -640,6 +640,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "コード検索",
   "ui.permission.toggleWrap": "折り返しを切り替え",
   "ui.permission.copyCommand": "コピー",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "質問",
   "notification.question.description": "{{projectName}} の {{sessionTitle}} から質問があります",
   "notification.action.goToSession": "セッションへ移動",

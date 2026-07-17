@@ -647,6 +647,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "Kodesøk",
   "ui.permission.toggleWrap": "Veksle tekstbryting",
   "ui.permission.copyCommand": "Kopier",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "Spørsmål",
   "notification.question.description": "{{sessionTitle}} i {{projectName}} har et spørsmål",
   "notification.action.goToSession": "Gå til sesjon",

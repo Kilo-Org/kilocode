@@ -14,10 +14,10 @@ export function parseHeredoc(raw: string): HeredocPart | null {
   let start = -1
   let delim = ""
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/<<\s*'?(\w+)'?\s*$/)
+    const m = lines[i].match(/<<-?\s*(["']?)([\w-]+)\1\s*$/)
     if (m) {
       start = i
-      delim = m[1]
+      delim = m[2]
       break
     }
   }

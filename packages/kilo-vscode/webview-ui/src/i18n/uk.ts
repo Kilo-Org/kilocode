@@ -646,6 +646,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "Пошук коду",
   "ui.permission.toggleWrap": "Перемкнути перенос рядків",
   "ui.permission.copyCommand": "Копіювати",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "Питання",
   "notification.question.description": "{{sessionTitle}} у {{projectName}} задає питання",
   "notification.action.goToSession": "Перейти до сесії",

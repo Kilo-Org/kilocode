@@ -647,6 +647,7 @@ export const dict = {
   "ui.permission.toolLabel.codeSearch": "Code Zoeken",
   "ui.permission.toggleWrap": "Regelterugloop in-/uitschakelen",
   "ui.permission.copyCommand": "Kopiëren",
+  "ui.permission.heredocContent": "File content — {{count}} lines",
   "notification.question.title": "Vraag",
   "notification.question.description": "{{sessionTitle}} in {{projectName}} heeft een vraag",
   "notification.action.goToSession": "Ga naar sessie",
