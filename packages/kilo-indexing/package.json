@@ -19,6 +19,7 @@
     "./detect": "./src/detect.ts",
     "./embedding-models": "./src/kilo-embedding-models.ts",
     "./engine": "./src/indexing/index.ts",
+    "./file-extensions": "./src/file-extensions.ts",
     "./server": "./src/server/routes.ts",
     "./status": "./src/status.ts"
   },

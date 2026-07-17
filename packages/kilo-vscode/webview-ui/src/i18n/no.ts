@@ -1465,6 +1465,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-nøkkel",
   "settings.indexing.qdrantApiKey.description": "Valgfri API-nøkkel for Qdrant-instansen.",
   "settings.indexing.qdrantApiKey.placeholder": "Valgfri API-nøkkel",
+  "settings.indexing.fileExtensions.title": "Filutvidelser",
+  "settings.indexing.fileExtensions.description":
+    "Kommaseparert tillatelsesliste. La stå tomt for å bruke de innebygde standardinnstillingene.",
+  "settings.indexing.fileExtensions.invalid": "Ugyldig filutvidelse: {{extension}}",
   "settings.indexing.dimension.title": "Vektordimensjon",
   "settings.indexing.dimension.description": "La stå tom for automatisk å oppdage embedding-dimensjonen fra modellen.",
   "settings.indexing.dimension.placeholder": "Auto",

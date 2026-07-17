@@ -924,6 +924,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "API-ключ Qdrant",
   "settings.indexing.qdrantApiKey.description": "Необязательный API-ключ для экземпляра Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Необязательный API-ключ",
+  "settings.indexing.fileExtensions.title": "Расширения файлов",
+  "settings.indexing.fileExtensions.description":
+    "Список разрешённых значений, разделённых запятыми. Оставьте пустым, чтобы использовать встроенные значения по умолчанию.",
+  "settings.indexing.fileExtensions.invalid": "Недопустимое расширение: {{extension}}",
   "settings.indexing.providerField.description": "Настройка подключения, специфичная для провайдера.",
   "settings.indexing.tuning.description": "Параметры расширенного поиска и пакетной обработки.",
 

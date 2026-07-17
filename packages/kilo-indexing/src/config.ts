@@ -3,8 +3,10 @@ import z from "zod"
 import type { IndexingConfigInput } from "./indexing/config-manager"
 import { DEFAULT_VECTOR_STORE } from "./indexing/constants"
 import type { EmbedderProvider } from "./indexing/interfaces/manager"
+import { FILE_EXTENSION_PATTERN, normalizeFileExtensions } from "./file-extensions"
 
 export { DEFAULT_VECTOR_STORE } from "./indexing/constants"
+export { isFileExtension, normalizeFileExtensions, parseFileExtensions } from "./file-extensions"
 
 const providers = [
   "kilo",
@@ -128,6 +130,11 @@ export const IndexingConfig = z
       .positive()
       .optional()
       .describe("Maximum retry attempts for failed embedding batches (default: 3)"),
+    fileExtensions: z
+      .array(z.string().trim().regex(FILE_EXTENSION_PATTERN))
+      .min(1)
+      .optional()
+      .describe("File extension allowlist for codebase indexing (uses built-in defaults if omitted)"),
   })
   .strict()
   .meta({ ref: "IndexingConfig" })
@@ -229,6 +236,15 @@ export const IndexingSchema = Schema.Struct({
   scannerMaxBatchRetries: Schema.optional(PositiveInt).annotate({
     description: "Maximum retry attempts for failed embedding batches (default: 3)",
   }),
+  fileExtensions: Schema.optional(
+    Schema.mutable(
+      Schema.Array(Schema.String.check(Schema.isPattern(/^\s*\.?[A-Za-z0-9][A-Za-z0-9_+-]*\s*$/))).check(
+        Schema.isMinLength(1),
+      ),
+    ),
+  ).annotate({
+    description: "File extension allowlist for codebase indexing (uses built-in defaults if omitted)",
+  }),
 }).annotate({
   identifier: "IndexingConfig",
   description: "Codebase indexing configuration",
@@ -250,6 +266,7 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     searchMaxResults: cfg?.searchMaxResults,
     embeddingBatchSize: cfg?.embeddingBatchSize,
     scannerMaxBatchRetries: cfg?.scannerMaxBatchRetries,
+    fileExtensions: normalizeFileExtensions(cfg?.fileExtensions),
     kiloApiKey: cfg?.kilo?.apiKey,
     kiloBaseUrl: cfg?.kilo?.baseUrl,
     kiloOrganizationId: cfg?.kilo?.organizationId,

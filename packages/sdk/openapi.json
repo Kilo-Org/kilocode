@@ -25844,6 +25844,14 @@
           "scannerMaxBatchRetries": {
             "type": "integer",
             "exclusiveMinimum": 0
+          },
+          "fileExtensions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^\\s*\\.?[A-Za-z0-9][A-Za-z0-9_+-]*\\s*$"
+            },
+            "minItems": 1
           }
         },
         "additionalProperties": false
