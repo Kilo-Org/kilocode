@@ -76,7 +76,9 @@ it.effect("only includes managed plans with an installed managed key", () =>
 
     expect(Cloud.plans(state())).toEqual([])
     expect(Cloud.plans(state({ management_source: "user", is_enabled: true }))).toEqual([])
-    expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: false }))).toEqual([subscription])
+    expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: false }))).toEqual([])
+    expect(Cloud.plans(state({ management_source: "coding_plan", is_enabled: true }))).toEqual([subscription])
+    expect(Cloud.plans({ ...state(), byok: { ok: false } })).toEqual([])
   }),
 )
 

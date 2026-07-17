@@ -62,7 +62,7 @@ const managed: ProviderUsageAdapter = {
     return {
       items: await Promise.all(
         detected.map((subscription) =>
-          ctx.source(`kilo-managed-minimax:${subscription.id}`, () => Cloud.managed(token, subscription, state.byok)),
+          ctx.source(`kilo-managed-minimax:${subscription.id}`, () => Cloud.managed(token, subscription)),
         ),
       ),
     }

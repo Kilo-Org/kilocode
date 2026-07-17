@@ -65,36 +65,30 @@ export function billing(state: CloudState): KiloBilling {
   }
 }
 
-function route(subscription: CodingPlanSubscription, state: Result<ByokEntry[]>): UsageSnapshot["routingState"] {
-  if (!state.ok) return "unknown"
-  const entry = state.value.find((item) => item.provider_id === subscription.providerId)
-  if (!subscription.hasInstalledByokKey) return entry ? "replaced" : "missing"
-  if (!entry || entry.management_source !== "coding_plan") return "missing"
-  return entry.is_enabled ? "active" : "disabled"
+function installed(subscription: CodingPlanSubscription, state: Result<ByokEntry[]>) {
+  if (!state.ok || !subscription.hasInstalledByokKey) return false
+  return state.value.some(
+    (item) => item.provider_id === subscription.providerId && item.management_source === "coding_plan" && item.is_enabled,
+  )
 }
 
 export function plans(state: CloudState) {
   if (!state.plans.ok) return []
   return state.plans.value
-    .filter((item) => {
-      const routing = route(item, state.byok)
-      return (
+    .filter(
+      (item) =>
         item.planId.startsWith("minimax-token-plan-") &&
         item.providerId === "minimax" &&
         (item.status === "active" || item.status === "past_due") &&
-        routing !== "missing" &&
-        routing !== "replaced"
-      )
-    })
+        installed(item, state.byok),
+    )
     .sort((a, b) => a.id.localeCompare(b.id))
 }
 
 export async function managed(
   token: string,
   subscription: CodingPlanSubscription,
-  state: Result<ByokEntry[]>,
 ): Promise<UsageSnapshot> {
-  const routingState = route(subscription, state)
   const fetchedAt = new Date().toISOString()
   const planState = subscription.cancelAtPeriodEnd
     ? "canceling"
@@ -118,7 +112,7 @@ export async function managed(
         managementUrl,
         fetchedAt: usage.fetchedAt,
         planID: subscription.planId,
-        routingState,
+        routingState: "active",
         planState,
       })
     })
@@ -131,7 +125,7 @@ export async function managed(
       sourceLabel: "via Kilo",
       fetchState: "unavailable",
       planState,
-      routingState,
+      routingState: "active",
       availabilityState: "unavailable",
       fetchedAt,
       confidence: "high",
