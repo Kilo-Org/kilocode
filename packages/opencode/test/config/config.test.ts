@@ -1353,15 +1353,17 @@ it.instance(
   { config: { autoupdate: true, disabled_providers: [] } },
 )
 
-it.instance("managed jsonc settings override managed json settings", () =>
+// kilocode_change start - merge order fix: kilo.json now wins over opencode.jsonc
+it.instance("managed kilo.json takes priority over managed opencode.jsonc", () =>
   Effect.gen(function* () {
     yield* writeManagedSettingsEffect({ model: "managed/json" })
     yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "opencode.jsonc")
 
     const config = yield* Config.use.get()
-    expect(config.model).toBe("managed/jsonc")
+    expect(config.model).toBe("managed/json")
   }),
 )
+// kilocode_change end
 
 it.instance(
   "missing managed settings file is not an error",
