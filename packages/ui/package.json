@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.4.8",
+  "version": "7.4.11",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -41,6 +41,7 @@
     "@types/bun": "catalog:",
     "@types/katex": "0.16.7",
     "@typescript/native-preview": "catalog:",
+    "happy-dom": "20.8.9",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

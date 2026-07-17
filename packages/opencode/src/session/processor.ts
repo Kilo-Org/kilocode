@@ -169,12 +169,21 @@ export const layer = Layer.effect(
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
       const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
+      let attempt = KiloSessionProcessor.attempt() // kilocode_change
 
+      // kilocode_change start
       const parse = (e: unknown) =>
-        MessageV2.fromError(e, {
+        KiloSessionProcessor.parseError(e, {
           providerID: input.model.providerID,
           aborted,
         })
+      const retryParse = (e: unknown) => {
+        const error = parse(e)
+        if (e instanceof KiloSessionProcessor.IncompleteResponseError) return KiloSessionProcessor.blockRetry(error)
+        if (attempt.text || attempt.reasoning || attempt.tool) return KiloSessionProcessor.blockRetry(error)
+        return error
+      }
+      // kilocode_change end
 
       const settleToolCall = Effect.fn("SessionProcessor.settleToolCall")(function* (toolCallID: string) {
         const done = ctx.toolcalls[toolCallID]?.done
@@ -466,10 +475,10 @@ export const layer = Layer.effect(
       }
 
       const handleEvent = Effect.fnUntraced(function* (value: StreamEvent) {
+        KiloSessionProcessor.observe(attempt, value) // kilocode_change
         switch (value.type) {
           case "reasoning-start":
             if (value.id in ctx.reasoningMap) return
-            ctx.step.reasoning = true // kilocode_change
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
             if (mirrorAssistant) {
               yield* events.publish(SessionEvent.Reasoning.Started, {
@@ -496,6 +505,7 @@ export const layer = Layer.effect(
             // Match dev: silently drop orphan deltas (no preceding reasoning-start).
             if (!(value.id in ctx.reasoningMap)) return
             ctx.reasoningMap[value.id].text += value.text
+            if (value.text.trim()) ctx.step.reasoning = true // kilocode_change
             if (value.providerMetadata) ctx.reasoningMap[value.id].metadata = value.providerMetadata
             if (mirrorAssistant) {
               yield* events.publish(SessionEvent.Reasoning.Delta, {
@@ -526,7 +536,9 @@ export const layer = Layer.effect(
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.name}`)
             }
-            ctx.step.tool = true // kilocode_change
+            // kilocode_change start
+            ctx.step.tool = true
+            // kilocode_change end
             yield* ensureToolCall(value)
             return
 
@@ -568,9 +580,7 @@ export const layer = Layer.effect(
             if (ctx.assistantMessage.summary) {
               throw new Error(`Tool call not allowed while generating summary: ${value.name}`)
             }
-            // kilocode_change start
-            ctx.step.tool = true
-            // kilocode_change end
+            ctx.step.tool = true // kilocode_change
             const toolCall = yield* ensureToolCall(value)
             const input = isRecord(value.input) ? value.input : { value: value.input }
             if (!toolCall.call.inputEnded) {
@@ -817,6 +827,19 @@ export const layer = Layer.effect(
             return
 
           case "step-finish": {
+            // kilocode_change start - retry only terminally incomplete attempts before settlement
+            if (
+              !mirrorAssistant &&
+              KiloSessionProcessor.replayable({
+                finish: attempt.finish,
+                text: attempt.text,
+                reasoning: attempt.reasoning,
+                tool: attempt.tool,
+                usage: attempt.usage,
+              })
+            )
+              return yield* Effect.fail(new KiloSessionProcessor.IncompleteResponseError())
+            // kilocode_change end
             // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
               sessionID: ctx.sessionID,
@@ -1005,7 +1028,10 @@ export const layer = Layer.effect(
               },
               { text: ctx.currentText.text },
             )).text
-            if (ctx.currentText.text.trim()) ctx.step.text = true // kilocode_change
+            if (ctx.currentText.text.trim()) {
+              attempt.text = true // kilocode_change
+              ctx.step.text = true
+            } // kilocode_change
             if (!ctx.assistantMessage.summary) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
               if (mirrorAssistant) {
@@ -1124,6 +1150,7 @@ export const layer = Layer.effect(
         slog.error("process", { error: errorMessage(e), stack: e instanceof Error ? e.stack : undefined })
         const error = parse(e)
         // kilocode_change start
+        if (e instanceof KiloSessionProcessor.IncompleteResponseError) ctx.assistantMessage.finish = "unknown"
         ctx.compactionError = MessageV2.ContextOverflowError.isInstance(error) ? error : ctx.compactionError
         // kilocode_change end
         yield* flushV2Fragments()
@@ -1182,76 +1209,142 @@ export const layer = Layer.effect(
         ctx.shouldBreak = (yield* config.get()).experimental?.continue_loop_on_deny !== true
 
         return yield* Effect.gen(function* () {
-          yield* Effect.gen(function* () {
+          // kilocode_change start - publish retry state consistently for provider and empty-response retries
+          const retries = { provider: 0 }
+          const setRetry = (info: {
+            attempt: number
+            message: string
+            action?: SessionRetry.Retryable["action"]
+            next: number
+          }) => {
+            const event = mirrorAssistant
+              ? events.publish(SessionEvent.Retried, {
+                  sessionID: ctx.sessionID,
+                  attempt: info.attempt,
+                  error: {
+                    message: info.message,
+                    isRetryable: true,
+                  },
+                  timestamp: DateTime.makeUnsafe(Date.now()),
+                })
+              : Effect.void
+            return flushV2Fragments().pipe(
+              Effect.andThen(event),
+              Effect.andThen(
+                status.set(ctx.sessionID, {
+                  type: "retry",
+                  attempt: info.attempt,
+                  message: info.message,
+                  action: info.action,
+                  next: info.next,
+                }),
+              ),
+            )
+          }
+
+          const request = () =>
+            Effect.gen(function* () {
+              ctx.currentText = undefined
+              ctx.currentTextID = undefined
+              ctx.reasoningMap = {}
+              yield* status.set(ctx.sessionID, { type: "busy" })
+              ctx.step = { reasoning: false, text: false, tool: false }
+              const stream = llm.stream({
+                ...streamInput,
+                preflight: !ctx.assistantMessage.summary,
+              })
+
+              yield* stream.pipe(
+                Stream.tap((event) => handleEvent(event)),
+                Stream.takeUntil(() => ctx.needsCompaction),
+                Stream.runDrain,
+              )
+            }).pipe(
+              Effect.onInterrupt(() =>
+                Effect.gen(function* () {
+                  aborted = true
+                  ac.abort() // kilocode_change — also abort offline handler
+                  if (!ctx.assistantMessage.error) {
+                    yield* halt(new DOMException("Aborted", "AbortError"))
+                  }
+                }),
+              ),
+              Effect.catchCauseIf(
+                (cause) => !Cause.hasInterruptsOnly(cause),
+                (cause) => Effect.fail(Cause.squash(cause)),
+              ),
+              Effect.retry(
+                SessionRetry.policy({
+                  provider: input.model.providerID,
+                  parse: retryParse,
+                  ...KiloSessionProcessor.retryOpts({
+                    sessionID: ctx.sessionID,
+                    abort: ac.signal,
+                    set: status.set,
+                    used: retries.provider,
+                  }),
+                  set: (info) => {
+                    if (info.attempt > 0) retries.provider += 1
+                    return setRetry(info)
+                  },
+                }),
+              ),
+            )
+
+          const discard = Effect.fn("SessionProcessor.discardIncomplete")(function* (baseline: Set<string>) {
+            yield* Effect.forEach(
+              Object.values(ctx.toolcalls),
+              (call) => Deferred.succeed(call.done, undefined).pipe(Effect.ignore),
+              { concurrency: "unbounded" },
+            )
+            const parts = yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+              Effect.provideService(Database.Service, database),
+            )
+            yield* Effect.forEach(
+              parts.filter((part) => !baseline.has(part.id)),
+              (part) =>
+                session.removePart({ sessionID: ctx.sessionID, messageID: ctx.assistantMessage.id, partID: part.id }),
+              { concurrency: 1 },
+            )
             ctx.currentText = undefined
             ctx.currentTextID = undefined
             ctx.reasoningMap = {}
-            yield* status.set(ctx.sessionID, { type: "busy" })
-            // kilocode_change start
-            ctx.step = { reasoning: false, text: false, tool: false }
-            const stream = llm.stream({
-              ...streamInput,
-              preflight: !ctx.assistantMessage.summary,
-            })
-            // kilocode_change end
+            ctx.toolcalls = {}
+            ctx.toolmeta = {}
+            ctx.assistantMessage.finish = undefined
+          })
 
-            yield* stream.pipe(
-              Stream.tap((event) => handleEvent(event)),
-              Stream.takeUntil(() => ctx.needsCompaction),
-              Stream.runDrain,
-            )
-          }).pipe(
-            Effect.onInterrupt(() =>
-              Effect.gen(function* () {
-                aborted = true
-                ac.abort() // kilocode_change — also abort offline handler
-                if (!ctx.assistantMessage.error) {
-                  yield* halt(new DOMException("Aborted", "AbortError"))
-                }
+          const recover = () => {
+            const baseline = new Set<string>()
+            return KiloSessionProcessor.recover({
+              run: Effect.fn("SessionProcessor.incompleteAttempt")(function* () {
+                baseline.clear()
+                for (const part of yield* MessageV2.parts(ctx.assistantMessage.id).pipe(
+                  Effect.provideService(Database.Service, database),
+                ))
+                  baseline.add(part.id)
+                attempt = KiloSessionProcessor.attempt()
+                yield* request()
               }),
-            ),
-            Effect.catchCauseIf(
-              (cause) => !Cause.hasInterruptsOnly(cause),
-              (cause) => Effect.fail(Cause.squash(cause)),
-            ),
-            Effect.retry(
-              SessionRetry.policy({
-                provider: input.model.providerID,
-                parse,
-                // kilocode_change start
-                ...KiloSessionProcessor.retryOpts({ sessionID: ctx.sessionID, abort: ac.signal, set: status.set }),
-                // kilocode_change end
-                set: (info) => {
-                  // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
-                  const event = mirrorAssistant
-                    ? events.publish(SessionEvent.Retried, {
-                        sessionID: ctx.sessionID,
-                        attempt: info.attempt,
-                        error: {
-                          message: info.message,
-                          isRetryable: true,
-                        },
-                        timestamp: DateTime.makeUnsafe(Date.now()),
-                      })
-                    : Effect.void
-                  return flushV2Fragments().pipe(
-                    Effect.andThen(event),
-                    Effect.andThen(
-                      status.set(ctx.sessionID, {
-                        type: "retry",
-                        attempt: info.attempt,
-                        message: info.message,
-                        action: info.action,
-                        next: info.next,
-                      }),
-                    ),
-                  )
-                },
-              }),
-            ),
+              replayable: () =>
+                !mirrorAssistant &&
+                KiloSessionProcessor.replayable({
+                  finish: attempt.finish,
+                  text: attempt.text,
+                  reasoning: attempt.reasoning,
+                  tool: attempt.tool,
+                  usage: attempt.usage,
+                }),
+              discard: () => discard(baseline),
+              set: setRetry,
+            })
+          }
+
+          yield* recover().pipe(
             Effect.catch(halt),
             Effect.ensuring(cleanup()),
           )
+          // kilocode_change end
 
           if (ctx.needsCompaction) return "compact"
           if (ctx.blocked || ctx.assistantMessage.error) return "stop"

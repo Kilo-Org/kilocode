@@ -1,6 +1,6 @@
 import type { TuiPlugin } from "@kilocode/plugin/tui"
 import type { InternalTuiPlugin } from "@/cli/cmd/tui/plugin/internal"
-import { MemorySidebar } from "@/kilocode/cli/cmd/tui/component/memory-sidebar"
+import { MemorySidebar } from "@/kilocode/cli/cmd/tui/component/memory-status"
 
 const id = "internal:kilo-sidebar-memory"
 

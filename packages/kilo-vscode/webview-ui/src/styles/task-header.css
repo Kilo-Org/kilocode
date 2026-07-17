@@ -50,6 +50,12 @@
   white-space: nowrap;
 }
 
+@media (max-width: 360px) {
+  [data-component="task-header"] {
+    padding-inline: 8px;
+  }
+}
+
 /* ============================================
    Task Header Todos
    ============================================ */
@@ -467,40 +473,170 @@
   font-variant-numeric: tabular-nums;
 }
 
-[data-slot="task-header-memory"] {
-  display: flex;
+.task-header-context-trigger {
+  all: unset;
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  font-size: var(--kilo-font-size-11);
-  color: var(--vscode-descriptionForeground);
-  min-width: 0;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  color: var(--vscode-foreground);
+  cursor: pointer;
 }
 
-/* Passed to the shared Tooltip via its `class` prop (no data-slot API), so the trigger stretches. */
+.task-header-context-trigger:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+[data-slot="task-header-memory-dot"] {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.task-header-context-popover {
+  width: min(280px, calc(100vw - 16px));
+  max-width: calc(100vw - 16px);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
 .task-header-memory-tooltip {
-  display: inline-flex;
-  flex: 1;
-  min-width: 0;
+  max-width: min(320px, calc(100vw - 16px));
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
-[data-slot="task-header-memory-status"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+[data-slot="task-header-context-tooltip-title"] {
+  margin-bottom: 4px;
+  color: var(--vscode-foreground);
+  font-weight: 600;
+}
+
+[data-slot="task-header-context-tooltip-status"] {
+  margin-bottom: 2px;
   color: var(--vscode-foreground);
 }
 
-[data-slot="task-header-memory-actions"] {
-  display: inline-flex;
+[data-slot="task-header-context-menu"] {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+[data-slot="task-header-context-title"] {
+  padding: 2px 4px 8px;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 600;
+}
+
+[data-slot="task-header-context-section"] {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+[data-slot="task-header-context-section"] + [data-slot="task-header-context-section"] {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+}
+
+[data-slot="task-header-context-section-title"] {
+  display: flex;
   align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+}
+
+[data-slot="task-header-memory-status"] {
+  padding: 0 4px;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
+}
+
+[data-slot="task-header-memory-activity"] {
+  min-width: 0;
+  padding: 0 4px;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+[data-slot="task-header-memory-activity-summary"] {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
-  flex-shrink: 0;
+}
+
+[data-slot="task-header-memory-activity-list"] {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  min-width: 0;
+  color: var(--vscode-foreground);
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+[data-slot="task-header-memory-activity-list"] > div {
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+[data-slot="task-header-context-actions"] {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+[data-slot="task-header-context-action"] {
+  border: 0;
+  border-radius: 3px;
+  padding: 4px 6px;
+  color: var(--vscode-foreground);
+  background: transparent;
+  font: inherit;
+  font-size: var(--kilo-font-size-11);
+  text-align: left;
+  cursor: pointer;
+}
+
+[data-slot="task-header-context-action"]:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+[data-slot="task-header-context-action"]:hover:not(:disabled) {
+  background: var(--vscode-list-hoverBackground);
+}
+
+[data-slot="task-header-context-action"]:disabled {
+  color: var(--vscode-disabledForeground);
+  cursor: default;
+}
+
+[data-slot="task-header-memory-verbose"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6px;
+  border-top: 1px solid var(--vscode-widget-border, var(--vscode-editorWidget-border));
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-11);
 }
 
 /* Expand toggle */

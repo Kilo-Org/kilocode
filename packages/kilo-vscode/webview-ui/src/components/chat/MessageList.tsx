@@ -27,7 +27,9 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useServer } from "../../context/server"
 import { useLanguage } from "../../context/language"
+import { useI18n } from "@kilocode/kilo-ui/context/i18n"
 import { useProvider } from "../../context/provider"
+import { useWorktreeMode } from "../../context/worktree-mode"
 import { WelcomeEmptyState } from "./WelcomeEmptyState"
 import { TranscriptRowView } from "./TranscriptRow"
 import type { ErrorDisplayProps } from "./ErrorDisplay"
@@ -55,6 +57,11 @@ import {
   stableMessageTurns,
   type MessageTurn,
 } from "../../context/session-queue"
+import { childID } from "../../context/session-utils"
+import { taskResult } from "./task-tool-state"
+import { activeQuestionTab, tr } from "./question-dock-utils"
+import { useData } from "@kilocode/kilo-ui/context/data"
+import { getDirectory as getRawDirectory, getFilename } from "@opencode-ai/core/util/path"
 import {
   partitionRows,
   retainTurn,
@@ -97,6 +104,32 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const provider = useProvider()
+  const i18n = useI18n()
+  const data = useData()
+  // Only present inside Agent Manager (see worktree-mode.tsx). Agent Manager
+  // never calls registerExpandedTaskTool(), so its "task" cards always fall
+  // back to kilo-ui's default hideDetails renderer, which never shows a
+  // task's result text — indexing it there would produce a phantom match.
+  const inAgentManager = !!useWorktreeMode()
+
+  // Mirrors message-part.tsx's own (unexported) relativizeProjectPath/
+  // getDirectory exactly, so the directory text indexed here matches what
+  // ToolMetaLine/ToolFileAccordion actually put on screen.
+  function relativizeProjectPath(path: string, directory?: string) {
+    if (!path) return ""
+    if (!directory) return path
+    if (directory === "/") return path
+    if (directory === "\\") return path
+    if (path === directory) return ""
+    const separator = directory.includes("\\") ? "\\" : "/"
+    const prefix = directory.endsWith(separator) ? directory : directory + separator
+    if (!path.startsWith(prefix)) return path
+    return path.slice(directory.length)
+  }
+
+  function getDirectory(path: string | undefined) {
+    return relativizeProjectPath(getRawDirectory(path), data.directory)
+  }
 
   const autoScroll = createAutoScroll({
     working: () => session.status() !== "idle",
@@ -164,9 +197,27 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const search = useTranscriptSearch()
 
-  function rowText(row: TranscriptRow): string {
-    if (row.type === "error") return errorText(row.error)
-    if (row.type === "diff") return ""
+  interface RowTextRange {
+    start: number
+    end: number
+    partId: string
+    /** For a multi-file apply_patch chunk, the file this range belongs to. */
+    file?: string
+  }
+
+  /** A tool-text chunk, optionally attributed to a specific file within a
+   * multi-file tool part (currently only apply_patch's per-file chunks). */
+  type ToolChunk = string | { text: string; file: string }
+
+  // Returns the row's full searchable text plus, for every chunk that came
+  // from a specific part (tool call/reasoning/text/file), the character
+  // range it occupies within that text. Lets a match's character index be
+  // attributed back to the part it came from, so navigation can force that
+  // exact collapsed tool/reasoning block open instead of just scrolling to
+  // the row.
+  function rowText(row: TranscriptRow): { text: string; ranges: RowTextRange[] } {
+    if (row.type === "error") return { text: errorText(row.error), ranges: [] }
+    if (row.type === "diff") return { text: "", ranges: [] }
     // User message text is rendered by UserMessageDisplay/HighlightedText
     // (message-part.tsx), which never parses markdown at all — [label](url)
     // always shows literally, brackets and all, unlike assistant text/
@@ -175,13 +226,22 @@ export const MessageList: Component<MessageListProps> = (props) => {
     // visible occurrences (the literal label and the literal URL) into one.
     const markdown = row.type !== "user"
     const chunks: string[] = []
+    const ranges: RowTextRange[] = []
+    let pos = 0
+    const push = (text: string, partId: string, file?: string) => {
+      if (!text) return
+      if (chunks.length > 0) pos += 1 // account for the "\n" chunk joiner below
+      chunks.push(text)
+      ranges.push({ start: pos, end: pos + text.length, partId, file })
+      pos += text.length
+    }
     for (const part of row.parts) {
       switch (part.type) {
         case "text":
-          if (!part.synthetic) chunks.push(markdown ? stripMarkdownLinkUrls(part.text) : part.text)
+          if (!part.synthetic) push(markdown ? stripMarkdownLinkUrls(part.text) : part.text, part.id)
           break
         case "reasoning":
-          chunks.push(stripMarkdownLinkUrls(part.text))
+          push(stripMarkdownLinkUrls(part.text), part.id)
           break
         case "tool":
           // Bash output is rendered via escapeHtml + syntax highlighting
@@ -191,14 +251,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
           // Stripping it here would search text that no longer matches the
           // literal characters on screen, the same class of mismatch this
           // rewrite fixes elsewhere.
-          chunks.push(...toolText(part))
+          for (const chunk of toolText(part)) {
+            if (typeof chunk === "string") push(chunk, part.id)
+            else push(chunk.text, part.id, chunk.file)
+          }
           break
         case "file":
-          if (part.filename) chunks.push(part.filename)
+          if (part.filename) push(part.filename, part.id)
           break
       }
     }
-    return chunks.join("\n")
+    return { text: chunks.join("\n"), ranges }
+  }
+
+  function rangeAt(ranges: RowTextRange[], index: number): RowTextRange | undefined {
+    return ranges.find((r) => index >= r.start && index < r.end)
   }
 
   // Markdown link/image URLs are part of the raw source text but are never
@@ -274,18 +341,267 @@ export const MessageList: Component<MessageListProps> = (props) => {
   // the same class of bug this rewrite fixes for every other tool.
   const CONTEXT_GROUP_TOOLS = new Set(["read", "glob", "grep", "list"])
 
-  function toolText(part: Part & { type: "tool" }): string[] {
+  // edit/write/apply_patch render their actual diff content through
+  // @pierre/diffs inside a shadow-DOM <diffs-container> (packages/ui/src/
+  // pierre/file-runtime.ts's getViewerRoot()), which a light-DOM text scan
+  // can never reach — and diff-mode rendering is virtualized by default, so
+  // even piercing the shadow root wouldn't guarantee off-screen lines are
+  // mounted. state.input/state.metadata also duplicate the full before/
+  // after file content and the path itself several times over (a unified
+  // patch string with the path repeated in its `---`/`+++` headers, a
+  // separate raw `metadata.diff` copy, write's extra top-level
+  // `metadata.filepath`), none of which corresponds 1:1 with what's on
+  // screen. Rather than collect+dedupe those redundant fields, mirror the
+  // renderer's fixed, known layout directly: edit/write always show one
+  // file's path in exactly two places (the BasicTool trigger's
+  // ToolMetaLine and that file's own accordion header); apply_patch's
+  // trigger only adds a third, single-file ToolMetaLine when there's
+  // exactly one file (message-part.tsx's `single()`) — for a multi-file
+  // patch each file's name only appears once, in its own accordion header.
+  const DIFF_TOOLS = new Set(["edit", "write"])
+  // todowrite's renderer resolves the shown list from a fallback chain
+  // (metadata.view.todos, else metadata.todos, else input.todos) —
+  // packages/opencode/src/tool/todo.ts sets metadata.todos to the exact
+  // same array as input.todos, and metadata.view.todos to the exact same
+  // content again whenever the view is in "full" mode (the common case,
+  // see packages/opencode/src/kilocode/todo-view.ts). Recursively collecting
+  // both input and metadata would count every todo's text 2-3x even though
+  // shown() only ever renders it once.
+  // todoread is deliberately excluded: AssistantMessage.tsx's isRenderable()
+  // only shows a completed part from UPSTREAM_SUPPRESSED_TOOLS when
+  // ToolRegistry has a renderer for it, and only "todowrite" is registered —
+  // a completed todoread never reaches the DOM, so indexing it would count
+  // matches with nothing to highlight or navigate to.
+  const TODO_TOOLS = new Set(["todowrite"])
+
+  function toolText(part: Part & { type: "tool" }): ToolChunk[] {
     const state = part.state
-    if (state.status === "running") return state.title ? [state.title] : []
     if (state.status === "error") return state.error ? [state.error] : []
-    if (state.status !== "completed") return []
+    // task's trigger (title "{type} Agent" + input.description subtitle) and
+    // question's dock (question text + full option list) render the same
+    // way whether the call is still pending/running or already completed —
+    // unlike every other tool, where only a bare title shows until
+    // completion — so both need handling before the completed-only gate
+    // below, or an in-progress task/question would index nothing at all.
+    if (part.tool === "task") return taskText(part, state)
+    if (part.tool === "question") return questionText(part, state)
+    if (state.status !== "completed") return "title" in state && state.title ? [state.title] : []
     if (CONTEXT_GROUP_TOOLS.has(part.tool)) return state.title ? [state.title] : []
     if (part.tool === "bash") return bashText(state)
+    if (part.tool === "apply_patch") return applyPatchText(state)
+    if (DIFF_TOOLS.has(part.tool)) return editWriteText(part.tool, state)
+    if (TODO_TOOLS.has(part.tool)) return todoText(state)
     const chunks: string[] = []
     if (state.title) chunks.push(state.title)
     collectStrings(state.input, chunks)
     collectStrings(state.metadata, chunks)
     if (typeof state.output === "string" && state.output) chunks.push(mcpOutputText(state.output))
+    return chunks
+  }
+
+  // transcript-search-highlight.ts's scanScope() walks the whole [data-part-
+  // id] subtree for this tool, which includes the ToolTriggerRow's title
+  // ("To-dos") and "completed/total" subtitle alongside each item's content
+  // — indexing only item content undercounts what's actually scanned there,
+  // shifting which range resolveSearchScopes/scanScope picks as "active".
+  function todoText(state: Extract<ToolState, { status: "completed" }>): string[] {
+    const metadata = state.metadata as { todos?: unknown; view?: unknown } | undefined
+    const input = state.input as { todos?: unknown } | undefined
+    const view = metadata?.view
+    const viewTodos = isTodoView(view) ? view.todos : undefined
+    // Matches the renderer's own `todos()` memo (used for the "N/M"
+    // subtitle): metadata.todos, else input.todos — never the (possibly
+    // view-truncated) compact list.
+    const full =
+      (Array.isArray(metadata?.todos) ? metadata.todos : undefined) ??
+      (Array.isArray(input?.todos) ? input.todos : undefined) ??
+      []
+    const shown = viewTodos ?? full
+    const chunks: string[] = [i18n.t("ui.tool.todos")]
+    if (full.length > 0) {
+      const completed = (full as { status?: unknown }[]).filter((t) => t?.status === "completed").length
+      chunks.push(`${completed}/${full.length}`)
+    }
+    for (const content of (shown as { content?: unknown }[]).map((todo) => todo?.content)) {
+      if (typeof content === "string" && content.length > 0) chunks.push(content)
+    }
+    return chunks
+  }
+
+  function isTodoView(value: unknown): value is { todos?: { content?: unknown }[] } {
+    return !!value && typeof value === "object" && Array.isArray((value as { todos?: unknown }).todos)
+  }
+
+  // Matches TaskToolExpanded.tsx (the renderer this webview actually
+  // registers for "task", overriding kilo-ui's default) exactly: title is
+  // always `i18n.t("ui.tool.agent", { type })` regardless of status — the
+  // "capitalize" CSS class only changes how it *looks*, the DOM text node
+  // itself is the raw, lowercase subagent_type. The "(N)" child-tool-count
+  // suffix shown there is a live value from session.getSessionToolCount(),
+  // not stored on the part at all, so it can't be indexed from a snapshot —
+  // searching for that count isn't meaningful content anyway.
+  function taskText(part: Part & { type: "tool" }, state: ToolState): string[] {
+    const input = state.input as { subagent_type?: string; description?: string } | undefined
+    const type = input?.subagent_type || part.tool
+    const chunks = [i18n.t("ui.tool.agent", { type })]
+    if (input?.description) chunks.push(input.description)
+    // TaskToolExpanded.tsx only shows the raw <task_result> body when there's
+    // no live child session to display instead (result() there resolves to
+    // undefined once a child session exists) — mirror that exactly so a
+    // completed task with no child session stays searchable, without
+    // indexing text that's actually replaced by the child tool list. Agent
+    // Manager never registers TaskToolExpanded at all (it always uses
+    // kilo-ui's default hideDetails task card, which never shows result
+    // text there), so skip this entirely in that surface.
+    if (state.status === "completed" && !inAgentManager) {
+      const child = childID({
+        type: "tool",
+        tool: part.tool,
+        metadata: part.metadata as { sessionId?: string } | undefined,
+        state: { metadata: state.metadata },
+      })
+      const result = taskResult(state.output, child)
+      if (result) chunks.push(stripMarkdownLinkUrls(result))
+    }
+    return chunks
+  }
+
+  // QuestionDock renders very different content depending on whether the
+  // question is still awaiting an answer or already resolved: while
+  // pending/running it shows the full clickable option list (label +
+  // description per option); once completed it only shows the question
+  // text plus whichever answer was actually given (dismissed questions show
+  // neither the options nor a real answer, just a static "dismissed"
+  // label that isn't meaningful content to index).
+  type QuestionOption = { label?: string; description?: string; labelKey?: string; descriptionKey?: string }
+  type QuestionInfo = { question?: string; questionKey?: string; options?: QuestionOption[] }
+
+  // Correlates a "question" tool part to its live QuestionRequest the same
+  // way AssistantMessage.tsx's matchToolRequest does (by callID/messageID),
+  // so the pending branch below can read which page QuestionDock actually
+  // has mounted (question-dock-utils.ts's activeQuestionTab) instead of
+  // assuming it's always the first one.
+  function liveQuestionRequestId(part: Part & { type: "tool" }): string | undefined {
+    return session.questions().find((r) => r.tool?.callID === part.callID && r.tool?.messageID === part.messageID)?.id
+  }
+
+  function questionText(part: Part & { type: "tool" }, state: ToolState): string[] {
+    const input = state.input as { questions?: QuestionInfo[] } | undefined
+    const questions = input?.questions ?? []
+    const done = state.status === "completed"
+    const metadata = done ? (state.metadata as { answers?: unknown; dismissed?: unknown } | undefined) : undefined
+    const answers = Array.isArray(metadata?.answers) ? (metadata!.answers as unknown[][]) : undefined
+    const dismissed = metadata?.dismissed === true
+    const requestId = done ? undefined : liveQuestionRequestId(part)
+    const mountedTab = requestId ? activeQuestionTab(requestId) : 0
+    const chunks: string[] = []
+    questions.forEach((q, i) => {
+      // The pending QuestionDock renders localized text via questionKey/
+      // labelKey/descriptionKey (see question-dock-utils.ts's tr()), with
+      // the raw wire strings kept only as untranslated fallbacks/reply
+      // values. Once completed, kilo-ui's question renderer instead shows
+      // the raw `q.question` directly (no questionKey lookup) — index
+      // whichever one that surface actually displays.
+      const questionLabel = done ? (q.question ?? "") : tr(language.t, q.questionKey, q.question ?? "")
+      if (questionLabel) chunks.push(questionLabel)
+      if (!done) {
+        // QuestionDock only ever mounts one page (store.tab) of a pending
+        // multi-question at a time — limit to the page it has published as
+        // mounted (question-dock-utils.ts), which stays correct as the user
+        // navigates instead of freezing on page 0.
+        if (i !== mountedTab) return
+        for (const option of q.options ?? []) {
+          const label = tr(language.t, option.labelKey, option.label ?? "")
+          if (label) chunks.push(label)
+          const description = option.description ? tr(language.t, option.descriptionKey, option.description) : ""
+          if (description) chunks.push(description)
+        }
+        return
+      }
+      if (dismissed) return
+      for (const value of answers?.[i] ?? []) {
+        if (typeof value === "string" && value) chunks.push(value)
+      }
+    })
+    return chunks
+  }
+
+  type Diagnostic = { severity: number; range: { start: { line: number; character: number } }; message: string }
+
+  // Mirrors getDiagnostics()/DiagnosticsDisplay in message-part.tsx: up to 3
+  // severity-1 diagnostics for the file, each shown as an "Error" label, a
+  // "[line:char]" location, and the diagnostic message.
+  function editWriteDiagnostics(metadata: unknown, filePath: string | undefined): string[] {
+    const byFile = (metadata as { diagnostics?: Record<string, Diagnostic[]> } | undefined)?.diagnostics
+    if (!byFile || !filePath) return []
+    const diagnostics = (byFile[filePath] ?? []).filter((d) => d.severity === 1).slice(0, 3)
+    const chunks: string[] = []
+    for (const d of diagnostics) {
+      chunks.push(i18n.t("ui.messagePart.diagnostic.error"))
+      chunks.push(`[${d.range.start.line + 1}:${d.range.start.character + 1}]`)
+      if (d.message) chunks.push(d.message)
+    }
+    return chunks
+  }
+
+  // edit/write show a file's path in two places with different layouts:
+  // the BasicTool trigger's ToolMetaLine (filename, then — only when the raw
+  // input path has a directory — the directory, bidi-isolated) and that
+  // file's own accordion header (directory-then-filename, same bidi
+  // wrapper). edit's accordion can source a different path than the
+  // trigger (metadata.filediff.file falls back to input.filePath); write
+  // uses input.filePath for both. Mirror both occurrences exactly rather
+  // than indexing the raw path string, which never appears in the DOM as a
+  // single contiguous run.
+  function editWriteText(tool: string, state: Extract<ToolState, { status: "completed" }>): string[] {
+    const input = state.input as { filePath?: string } | undefined
+    const metadata = state.metadata as
+      | { filepath?: string; filediff?: { file?: string }; diagnostics?: Record<string, Diagnostic[]> }
+      | undefined
+    const triggerPath = input?.filePath
+    const accordionPath = tool === "edit" ? (metadata?.filediff?.file ?? triggerPath) : triggerPath
+    const chunks: string[] = []
+    if (triggerPath) {
+      chunks.push(getFilename(triggerPath))
+      if (triggerPath.includes("/")) chunks.push(`\u2066${getDirectory(triggerPath)}\u2069`)
+    }
+    if (accordionPath) {
+      if (accordionPath.includes("/")) chunks.push(`\u2066${getDirectory(accordionPath)}\u2069`)
+      chunks.push(getFilename(accordionPath))
+    }
+    chunks.push(...editWriteDiagnostics(metadata, triggerPath))
+    return chunks
+  }
+
+  function applyPatchText(state: Extract<ToolState, { status: "completed" }>): ToolChunk[] {
+    const files = ((state.metadata as { files?: { filePath?: string; relativePath?: string }[] } | undefined)?.files ??
+      []) as { filePath?: string; relativePath?: string }[]
+    // Only when there's exactly one file does the trigger also show a
+    // ToolMetaLine for it (filename, then bidi-isolated directory), ON TOP
+    // OF that file's own ToolFileAccordion header (bidi-isolated directory,
+    // then filename) — both are rendered simultaneously for a single-file
+    // patch, same as edit/write's two-location layout in editWriteText.
+    // For a multi-file patch each file's name only appears once, in its own
+    // accordion header. Multi-file chunks are tagged with the file's
+    // `filePath` (matching the accordion's item key) so a match can force
+    // just that one nested item open instead of every file.
+    const single = files.length === 1
+    const chunks: ToolChunk[] = []
+    for (const file of files) {
+      const path = file.relativePath ?? file.filePath
+      if (!path || !file.filePath) continue
+      const dir = path.includes("/") ? `\u2066${getDirectory(path)}\u2069` : undefined
+      if (single) {
+        chunks.push(getFilename(path))
+        if (dir) chunks.push(dir)
+        if (dir) chunks.push(dir)
+        chunks.push(getFilename(path))
+        continue
+      }
+      const tag = (text: string): ToolChunk => ({ text, file: file.filePath! })
+      if (dir) chunks.push(tag(dir))
+      chunks.push(tag(getFilename(path)))
+    }
     return chunks
   }
 
@@ -410,7 +726,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const list = rows()
     const result: SearchMatch[] = []
     for (const row of list) {
-      const text = rowText(row)
+      const { text, ranges } = rowText(row)
       p.lastIndex = 0
       let occurrence = 0
       let hit = p.exec(text)
@@ -420,7 +736,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
           hit = p.exec(text)
           continue
         }
-        result.push({ key: row.key, messageId: row.message.id, occurrence })
+        const range = rangeAt(ranges, hit.index)
+        result.push({ key: row.key, occurrence, partId: range?.partId, partFile: range?.file })
         occurrence += 1
         hit = p.exec(text)
       }
@@ -483,6 +800,26 @@ export const MessageList: Component<MessageListProps> = (props) => {
 
   const activeMatch = createMemo(() => matches()[search.index()])
 
+  // Maps a row's key to the part ids the data model could attribute matches
+  // to there. A row with NO entry here has zero data-level matches, so the
+  // highlighter must scan nothing in it at all — otherwise unindexed text (a
+  // static button label, a sibling part that didn't match) could get
+  // highlighted despite never being counted. An entry always exists for
+  // every row that has at least one match, even with an empty part-id set
+  // (a match that couldn't be attributed to a specific part, e.g. error/diff
+  // rows) — the highlighter treats "entry exists" as "this row has a real
+  // match" and falls back to scanning the whole row whenever the part-id
+  // lookup doesn't resolve to a mounted element.
+  const matchedPartsByRow = createMemo(() => {
+    const map = new Map<string, Set<string>>()
+    for (const match of matches()) {
+      const set = map.get(match.key) ?? new Set<string>()
+      if (match.partId) set.add(match.partId)
+      map.set(match.key, set)
+    }
+    return map
+  })
+
   // Highlights every rendered occurrence of the query (not just matching
   // rows) via the CSS Custom Highlight API, and returns the precise Range of
   // the current occurrence so navigation can judge whether it needs to
@@ -497,7 +834,12 @@ export const MessageList: Component<MessageListProps> = (props) => {
       return
     }
     const active = activeMatch()
-    const range = applyTranscriptHighlights(el, pattern(), active && { key: active.key, occurrence: active.occurrence })
+    const range = applyTranscriptHighlights(
+      el,
+      pattern(),
+      active && { key: active.key, occurrence: active.occurrence },
+      matchedPartsByRow(),
+    )
     if (!pendingCenter) return
     pendingCenter = false
     if (!range) return
@@ -827,6 +1169,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                         onForkMessage={props.onForkMessage}
                         highlight={highlight}
                         activeSearch={activeKey() === row.key}
+                        activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
+                        activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
                       />
                     )}
                   </Virtualizer>
@@ -838,6 +1182,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
                       onForkMessage={props.onForkMessage}
                       highlight={highlight}
                       activeSearch={activeKey() === key}
+                      activeSearchPartID={activeKey() === key ? activeMatch()?.partId : undefined}
+                      activeSearchPartFile={activeKey() === key ? activeMatch()?.partFile : undefined}
                     />
                   )}
                 </For>
@@ -847,7 +1193,14 @@ export const MessageList: Component<MessageListProps> = (props) => {
               <RevertBanner />
             </Show>
             <For each={partition().queued}>
-              {(row) => <TranscriptRowView row={row} activeSearch={activeKey() === row.key} />}
+              {(row) => (
+                <TranscriptRowView
+                  row={row}
+                  activeSearch={activeKey() === row.key}
+                  activeSearchPartID={activeKey() === row.key ? activeMatch()?.partId : undefined}
+                  activeSearchPartFile={activeKey() === row.key ? activeMatch()?.partFile : undefined}
+                />
+              )}
             </For>
             <WorkingIndicator />
             <TurnOutcome />

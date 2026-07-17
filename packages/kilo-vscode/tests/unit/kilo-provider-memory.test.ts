@@ -180,11 +180,12 @@ describe("KiloProviderMemory", () => {
     )
   })
 
-  it("routes auto-save and purge operations with explicit payloads", async () => {
+  it("routes auto-save, verbose, and purge operations with explicit payloads", async () => {
     const calls: unknown[] = []
     const state = status("/repo")
     const view = show("/repo")
     state.state.autoConsolidate = false
+    state.state.verbose = true
     const item = subject({
       memory: {
         configure: async (input: unknown) => {
@@ -201,12 +202,14 @@ describe("KiloProviderMemory", () => {
     } as unknown as KiloClient)
 
     await item.memory.run({ operation: "auto", mode: "off", sessionID: "ses_memory" })
+    await item.memory.run({ operation: "verbose", mode: "on", sessionID: "ses_memory" })
     await item.memory.run({ operation: "purge", confirm: true, sessionID: "ses_memory" })
 
     expect(calls).toEqual([
       ["configure", { directory: "/repo", autoConsolidate: false }],
+      ["configure", { directory: "/repo", verbose: true }],
       ["purge", { directory: "/repo", confirm: true }],
     ])
-    expect(item.posts.filter((post) => (post as { type?: string }).type === "memoryOperationResult")).toHaveLength(2)
+    expect(item.posts.filter((post) => (post as { type?: string }).type === "memoryOperationResult")).toHaveLength(3)
   })
 })

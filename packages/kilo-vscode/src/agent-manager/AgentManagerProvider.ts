@@ -194,6 +194,11 @@ export class AgentManagerProvider implements Disposable {
       },
       stats: (refresh) => this.statsPoller.snapshot(refresh),
       prs: () => this.prBridge.snapshot(),
+      managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
+      close: async (id) => {
+        await this.onCloseSession(id)
+        this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id })
+      },
       log: (...args) => this.log(...args),
     })
     this.unsubTool = this.connectionService.onEventFiltered(
@@ -1773,6 +1778,13 @@ export class AgentManagerProvider implements Disposable {
 
   private waitForPanelActive(panel: PanelContext): Promise<boolean> {
     return this.waitForPanel(panel, panel.waitForActive())
+  }
+
+  /** Wait for the current panel's webview to be ready before posting to it. False if there is no panel or it closed while waiting. */
+  public waitForReady(): Promise<boolean> {
+    const panel = this.panel
+    if (!panel) return Promise.resolve(false)
+    return this.waitForPanelReady(panel)
   }
 
   public async showMemory(): Promise<void> {

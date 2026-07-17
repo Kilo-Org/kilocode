@@ -653,6 +653,7 @@ export namespace BackgroundProcess {
     if (!pid || !token) return "unknown"
     const out = await Process.text(["ps", "eww", "-axo", "pid=,pgid=,command="], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0) return "unknown"
@@ -672,6 +673,7 @@ export namespace BackgroundProcess {
     const query = `$p=Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"; if ($p) { [Console]::Out.Write($p.CommandLine) }`
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0) return "unknown"

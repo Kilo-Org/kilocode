@@ -28,8 +28,6 @@ import {
 } from "./services/telemetry"
 import {
   sessionToWebview,
-  applySessionPatch,
-  sessionPatchToWebview,
   indexProvidersById,
   filterVisibleAgents,
   mapSSEEventToWebviewMessage,
@@ -141,6 +139,7 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { parseReview, reviewMetadata, type ReviewMessageData } from "./shared/review-comments"
+import { completesWithoutStatus } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
 import {
@@ -3415,6 +3414,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           messageID,
         ),
       )
+      if (messageID && completesWithoutStatus(command)) {
+        this.postMessage({ type: "sessionCommandCompleted", messageID })
+      }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send command:", error)
       this.postMessage({
@@ -3842,10 +3844,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       case "session.updated":
         return {
           type: "sessionUpdated" as const,
-          session:
-            this.currentSession?.id === event.properties.sessionID
-              ? this.sessionToWebview(this.currentSession)
-              : sessionPatchToWebview(event.properties.sessionID, event.properties.info),
+          session: this.sessionToWebview(event.properties.info),
         }
       case "session.deleted":
         return {
@@ -4080,7 +4079,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.trackedSessionIds.add(event.properties.info.id)
     }
     if (event.type === "session.updated" && this.currentSession?.id === event.properties.sessionID) {
-      this.setCurrentSession(applySessionPatch(this.currentSession, event.properties.info))
+      this.setCurrentSession(event.properties.info)
       this.contextSessionID = event.properties.sessionID
     }
     if (event.type === "session.deleted") {

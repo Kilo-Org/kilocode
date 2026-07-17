@@ -56,7 +56,6 @@ import { ThemeProvider } from "@kilocode/kilo-ui/theme"
 import { DialogProvider, useDialog } from "@kilocode/kilo-ui/context/dialog"
 import { Dialog } from "@kilocode/kilo-ui/dialog"
 import { DropdownMenu } from "@kilocode/kilo-ui/dropdown-menu"
-import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -92,7 +91,6 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { DataBridge, MermaidDownloadBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
 import { useLanguage } from "../src/context/language"
-import { formatRelativeDate } from "../src/utils/date"
 import { createTabFocus } from "../src/utils/tab-navigation"
 import {
   canOpenRootSession,
@@ -100,6 +98,7 @@ import {
   nextSelectionAfterDelete,
   adjacentHint,
   filterUnassignedSessions,
+  focusChatSearch,
   LOCAL,
 } from "./navigate"
 import {
@@ -136,6 +135,7 @@ import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
+import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
 import SectionHeader from "./SectionHeader"
 import { randomColor } from "./section-colors"
 import { createNewTaskDrafts } from "./new-task-drafts"
@@ -203,7 +203,7 @@ const defaultBindings: Record<string, string> = {
   newTab: isMac ? "⌘T" : "Ctrl+T",
   closeTab: isMac ? "⌘W" : "Ctrl+W",
   newWorktree: isMac ? "⌘N" : "Ctrl+N",
-  advancedWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
+  quickWorktree: isMac ? "⌘⇧N" : "Ctrl+Shift+N",
   closeWorktree: isMac ? "⌘⇧W" : "Ctrl+Shift+W",
   openWorktree: isMac ? "⌘⇧O" : "Ctrl+Shift+O",
   openPR: isMac ? "⌘⇧R" : "Ctrl+Shift+R",
@@ -255,6 +255,11 @@ const AgentManagerContent: Component = () => {
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
   const [sessionsCollapsed, setSessionsCollapsed] = createSignal(true)
+  const toggleSessions = () => {
+    const collapsed = !sessionsCollapsed()
+    setSessionsCollapsed(collapsed)
+    vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed })
+  }
   const sidebar = createSidebarCollapse(vscode)
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
@@ -924,15 +929,17 @@ const AgentManagerContent: Component = () => {
 
   const scrollIntoView = (el: HTMLElement) => el.scrollIntoView({ block: "nearest", behavior: "smooth" })
 
+  const selectUnassigned = (id: string) => {
+    saveTabMemory()
+    setSelection(null)
+    setReviewActive(false)
+    session.selectSession(id)
+  }
+
   const focusSidebarItem = (item: { type: string; id: string }) => {
     if (item.type === "local") selectLocal()
     else if (item.type === "wt") selectWorktree(item.id)
-    else {
-      saveTabMemory()
-      setSelection(null)
-      setReviewActive(false)
-      session.selectSession(item.id)
-    }
+    else selectUnassigned(item.id)
     const el = document.querySelector(`[data-sidebar-id="${item.id}"]`)
     if (el instanceof HTMLElement) scrollIntoView(el)
   }
@@ -1099,14 +1106,17 @@ const AgentManagerContent: Component = () => {
         } else setSidePanel((prev) => (prev === "diff" ? null : "diff"))
       } else if (msg.action === "newTab") handleNewTabForCurrentSelection()
       else if (msg.action === "closeTab") closeActiveTab()
-      else if (msg.action === "newWorktree") handleNewWorktreeOrPromote()
+      else if (msg.action === "newWorktree") showNewWorktreeDialog()
+      else if (msg.action === "quickWorktree") handleCreateWorktree()
       else if (msg.action === "openWorktree") openWorktreeDirectory()
       else if (msg.action === "openPR") openSelectedPR()
       else if (msg.action === "runScript") runSelected()
-      else if (msg.action === "advancedWorktree") showAdvancedWorktreeDialog()
+      else if (msg.action === "advancedWorktree") showNewWorktreeDialog()
       else if (msg.action === "closeWorktree") closeSelectedWorktree()
       else if (msg.action === "showShortcuts") handleShowKeyboardShortcuts()
       else if (msg.action === "focusInput") window.dispatchEvent(new Event("focusPrompt"))
+      else if (msg.action === "focusSearch")
+        focusChatSearch({ history: setHistory, review: setReviewActive, terminal: () => terms.setActiveId(undefined) })
       else if (msg.action === "newTerminal") termHandlers.requestNew()
       else if (msg.action === "cycleAgentMode" && document.hasFocus()) cycleAgent(1)
       else if (msg.action === "cyclePreviousAgentMode" && document.hasFocus()) cycleAgent(-1)
@@ -1212,8 +1222,8 @@ const AgentManagerContent: Component = () => {
     // Mark sessions loaded as soon as the session context receives data (even if empty)
     const unsubSessions = vscode.onMessage((msg) => {
       if (msg.type === "sessionsLoaded" && !sessionsLoaded()) setSessionsLoaded(true)
+      if (msg.type === "agentManager.sessionClosed") handleCloseTab(msg.sessionId, false)
     })
-
     const unsubRun = vscode.onMessage((msg) => {
       if (msg.type !== "agentManager.runStatus") return
       const ev = msg as RunStatus
@@ -1841,8 +1851,7 @@ const AgentManagerContent: Component = () => {
   }
   const createWorktree = metrics.click("new_worktree", "worktrees", handleCreateWorktree)
 
-  // Advanced worktree dialog — opens a full dialog with prompt, versions, model, mode
-  const showAdvancedWorktreeDialog = () => {
+  const showNewWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
     dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
@@ -1931,8 +1940,7 @@ const AgentManagerContent: Component = () => {
     confirmDeleteWorktree(worktreeId)
   }
 
-  const handlePromote = (sessionId: string, e: MouseEvent) => {
-    e.stopPropagation()
+  const promoteSession = (sessionId: string) => {
     if (!loaded()) return
     metrics.track("promote_session", "unassigned_session")
     vscode.postMessage({ type: "agentManager.promoteSession", sessionId })
@@ -1948,6 +1956,11 @@ const AgentManagerContent: Component = () => {
     setReviewActive(false)
     session.selectSession(sid)
     vscode.postMessage({ type: "agentManager.openLocally", sessionId: sid })
+  }
+
+  const openUnassigned = (id: string) => {
+    metrics.track("open_session_locally", "unassigned_session_menu")
+    openLocally(id)
   }
 
   const handleAddSession = () => {
@@ -1966,7 +1979,7 @@ const AgentManagerContent: Component = () => {
     if (!sel || sel === LOCAL) return vscode.postMessage(msg)
     vscode.postMessage({ ...msg, worktreeId: sel })
   }
-  const handleCloseTab = (sessionId: string) => {
+  const handleCloseTab = (sessionId: string, notify = true) => {
     freezeTabs()
     const pending = isPending(sessionId)
     const isActive = pending ? sessionId === activePendingId() : session.currentSessionID() === sessionId
@@ -1996,7 +2009,7 @@ const AgentManagerContent: Component = () => {
       if (session.isSubmitting(sessionId) || isPendingSend(sessionId)) discardPendingDraft(sessionId)
       queueMicrotask(() => deletePendingDraft(sessionId))
     }
-    vscode.postMessage({ type: "agentManager.closeSession", sessionId })
+    if (notify) vscode.postMessage({ type: "agentManager.closeSession", sessionId })
     tabFocus.restore()
   }
 
@@ -2171,18 +2184,6 @@ const AgentManagerContent: Component = () => {
     }
   }
 
-  // Cmd+N: if an unassigned session is selected, promote it; otherwise create a new worktree
-  const handleNewWorktreeOrPromote = () => {
-    if (!loaded()) return
-    const sel = selection()
-    const sid = session.currentSessionID()
-    if (sel === null && sid && !worktreeSessionIds().has(sid)) {
-      vscode.postMessage({ type: "agentManager.promoteSession", sessionId: sid })
-      return
-    }
-    handleCreateWorktree()
-  }
-
   // Close the currently selected worktree with a confirmation dialog
   const closeSelectedWorktree = () => {
     const sel = selection()
@@ -2309,7 +2310,7 @@ const AgentManagerContent: Component = () => {
               onRef={(value) => (sidebarSearchMenu = value)}
               onSelect={focusSidebarSearchItem}
               onCreate={createWorktree}
-              onAdvanced={showAdvancedWorktreeDialog}
+              onNew={showNewWorktreeDialog}
               onSection={newSection}
               onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
               onSetup={setupScript}
@@ -2546,7 +2547,7 @@ const AgentManagerContent: Component = () => {
                   )
                 })()}
                 <Show when={worktrees().length === 0}>
-                  <button class="am-worktree-create" onClick={createWorktree}>
+                  <button class="am-worktree-create" onClick={showNewWorktreeDialog}>
                     <Icon name="plus" size="small" />
                     <span>{t("agentManager.worktree.new")}</span>
                   </button>
@@ -2556,102 +2557,16 @@ const AgentManagerContent: Component = () => {
           </div>
         </div>
 
-        {/* SESSIONS section (unassigned) — collapsible */}
-        <div class={`am-section ${sessionsCollapsed() ? "" : "am-section-grow"}`}>
-          <button
-            class="am-section-header am-section-toggle"
-            onClick={() => {
-              const next = !sessionsCollapsed()
-              setSessionsCollapsed(next)
-              vscode.postMessage({ type: "agentManager.setSessionsCollapsed", collapsed: next })
-            }}
-          >
-            <span class="am-section-label">
-              <Icon
-                name={sessionsCollapsed() ? "chevron-right" : "chevron-down"}
-                size="small"
-                class="am-section-chevron"
-              />
-              {t("agentManager.section.sessions")}
-            </span>
-          </button>
-          <Show when={!sessionsCollapsed()}>
-            <div class="am-list">
-              <Show
-                when={sessionsLoaded()}
-                fallback={
-                  <div class="am-skeleton-list">
-                    <div class="am-skeleton-session">
-                      <div class="am-skeleton-session-title" style={{ width: "70%" }} />
-                      <div class="am-skeleton-session-time" />
-                    </div>
-                    <div class="am-skeleton-session">
-                      <div class="am-skeleton-session-title" style={{ width: "55%" }} />
-                      <div class="am-skeleton-session-time" />
-                    </div>
-                    <div class="am-skeleton-session">
-                      <div class="am-skeleton-session-title" style={{ width: "65%" }} />
-                      <div class="am-skeleton-session-time" />
-                    </div>
-                  </div>
-                }
-              >
-                <For each={unassignedSessions()}>
-                  {(s) => (
-                    <ContextMenu>
-                      <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-                        <button
-                          class={`am-item ${s.id === session.currentSessionID() && selection() === null ? "am-item-active" : ""}`}
-                          data-sidebar-id={s.id}
-                          onClick={() => {
-                            saveTabMemory()
-                            setSelection(null)
-                            setReviewActive(false)
-                            session.selectSession(s.id)
-                          }}
-                        >
-                          <span class="am-item-title">{s.title || t("agentManager.session.untitled")}</span>
-                          <span class="am-item-time">{formatRelativeDate(s.updatedAt)}</span>
-                          <div class="am-item-promote">
-                            <TooltipKeybind
-                              title={t("agentManager.session.openInWorktree")}
-                              keybind={kb().newWorktree ?? ""}
-                              placement="right"
-                            >
-                              <IconButton
-                                icon="branch"
-                                size="small"
-                                variant="ghost"
-                                label={t("agentManager.session.openInWorktree")}
-                                onClick={(e: MouseEvent) => handlePromote(s.id, e)}
-                              />
-                            </TooltipKeybind>
-                          </div>
-                        </button>
-                      </ContextMenu.Trigger>
-                      <ContextMenu.Portal>
-                        <ContextMenu.Content class="am-ctx-menu">
-                          <ContextMenu.Item onSelect={() => handlePromote(s.id, new MouseEvent("click"))}>
-                            <Icon name="branch" size="small" />
-                            <ContextMenu.ItemLabel>{t("agentManager.session.openInWorktree")}</ContextMenu.ItemLabel>
-                          </ContextMenu.Item>
-                          <ContextMenu.Item
-                            onSelect={metrics.click("open_session_locally", "unassigned_session_menu", () =>
-                              openLocally(s.id),
-                            )}
-                          >
-                            <Icon name="folder" size="small" />
-                            <ContextMenu.ItemLabel>{t("agentManager.session.openLocally")}</ContextMenu.ItemLabel>
-                          </ContextMenu.Item>
-                        </ContextMenu.Content>
-                      </ContextMenu.Portal>
-                    </ContextMenu>
-                  )}
-                </For>
-              </Show>
-            </div>
-          </Show>
-        </div>
+        <UnassignedSessionsSection
+          sessions={unassignedSessions}
+          loaded={sessionsLoaded}
+          collapsed={sessionsCollapsed}
+          active={() => (selection() === null ? session.currentSessionID() : undefined)}
+          onToggle={toggleSessions}
+          onSelect={selectUnassigned}
+          onPromote={promoteSession}
+          onOpen={openUnassigned}
+        />
       </div>
 
       <div class="am-detail">

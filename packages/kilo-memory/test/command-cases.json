@@ -95,6 +95,26 @@
     "mode": "off"
   },
   {
+    "name": "verbose mode usage",
+    "input": "/memory verbose",
+    "result": "usage",
+    "reason": "Missing verbose mode"
+  },
+  {
+    "name": "verbose on operation",
+    "input": "/memory verbose on",
+    "result": "operation",
+    "operation": "verbose",
+    "mode": "on"
+  },
+  {
+    "name": "verbose off operation",
+    "input": "/memory verbose off",
+    "result": "operation",
+    "operation": "verbose",
+    "mode": "off"
+  },
+  {
     "name": "remember operation keeps text",
     "input": "/memory remember use bun test from packages/opencode",
     "result": "operation",

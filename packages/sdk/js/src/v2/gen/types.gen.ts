@@ -273,7 +273,14 @@ export type AgentManagerPromptRequest = {
   prompt: string
 }
 
-export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest
+export type AgentManagerStopRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "stop"
+  targetSessionID: string
+}
+
+export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest | AgentManagerStopRequest
 
 export type NotebookRequestId = string
 
@@ -3311,7 +3318,13 @@ export type AgentManagerPromptResult = {
   delivered: true
 }
 
-export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult
+export type AgentManagerStopResult = {
+  operation: "stop"
+  sessionID: string
+  stopped: true
+}
+
+export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult | AgentManagerStopResult
 
 export type AgentManagerFailure = {
   code:
@@ -3743,6 +3756,8 @@ export type EventMemoryStatus = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      added?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      removed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       sources?: Array<string>
       files?: Array<string>
@@ -3778,6 +3793,8 @@ export type EventMemoryUpdated = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      added?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      removed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       sources?: Array<string>
       files?: Array<string>
@@ -3813,6 +3830,8 @@ export type EventMemoryError = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      added?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      removed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
       sources?: Array<string>
       files?: Array<string>
@@ -6118,6 +6137,8 @@ export type EventMemoryStatus1 = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      added?: number | "NaN" | "Infinity" | "-Infinity"
+      removed?: number | "NaN" | "Infinity" | "-Infinity"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
       sources?: Array<string>
       files?: Array<string>
@@ -6153,6 +6174,8 @@ export type EventMemoryUpdated1 = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      added?: number | "NaN" | "Infinity" | "-Infinity"
+      removed?: number | "NaN" | "Infinity" | "-Infinity"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
       sources?: Array<string>
       files?: Array<string>
@@ -6188,6 +6211,8 @@ export type EventMemoryError1 = {
       duplicateOf?: string
       tokens?: number | "NaN" | "Infinity" | "-Infinity"
       operationCount?: number | "NaN" | "Infinity" | "-Infinity"
+      added?: number | "NaN" | "Infinity" | "-Infinity"
+      removed?: number | "NaN" | "Infinity" | "-Infinity"
       skippedCount?: number | "NaN" | "Infinity" | "-Infinity"
       sources?: Array<string>
       files?: Array<string>
@@ -13671,6 +13696,7 @@ export type MemoryStatusResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13751,6 +13777,7 @@ export type MemoryShowResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13831,6 +13858,7 @@ export type MemoryEnableResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13908,6 +13936,7 @@ export type MemoryDisableResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -13947,6 +13976,7 @@ export type MemoryDisableResponse = MemoryDisableResponses[keyof MemoryDisableRe
 export type MemoryConfigureData = {
   body?: {
     autoConsolidate?: boolean
+    verbose?: boolean
   }
   path?: never
   query?: {
@@ -13981,6 +14011,7 @@ export type MemoryConfigureResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean
@@ -14052,6 +14083,7 @@ export type MemoryRebuildResponses = {
       scope: "project"
       autoInject: boolean
       autoConsolidate: boolean
+      verbose: boolean
       capture: {
         mode: "selective"
         turnClose: boolean

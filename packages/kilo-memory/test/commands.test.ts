@@ -29,7 +29,7 @@ function expected(item: Case): ParsedMemoryCommand | undefined {
     if (!item.query) throw new Error(`Missing query for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, query: item.query }
   }
-  if (item.operation === "auto") {
+  if (item.operation === "auto" || item.operation === "verbose") {
     if (!item.mode) throw new Error(`Missing mode for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, mode: item.mode }
   }
