@@ -273,7 +273,14 @@ export type AgentManagerPromptRequest = {
   prompt: string
 }
 
-export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest
+export type AgentManagerStopRequest = {
+  id: AgentManagerRequestId
+  sessionID: string
+  operation: "stop"
+  targetSessionID: string
+}
+
+export type AgentManagerRequest = AgentManagerOverviewRequest | AgentManagerPromptRequest | AgentManagerStopRequest
 
 export type NotebookRequestId = string
 
@@ -3311,7 +3318,13 @@ export type AgentManagerPromptResult = {
   delivered: true
 }
 
-export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult
+export type AgentManagerStopResult = {
+  operation: "stop"
+  sessionID: string
+  stopped: true
+}
+
+export type AgentManagerResult = AgentManagerOverviewResult | AgentManagerPromptResult | AgentManagerStopResult
 
 export type AgentManagerFailure = {
   code:

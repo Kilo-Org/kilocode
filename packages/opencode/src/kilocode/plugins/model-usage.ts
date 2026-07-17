@@ -52,8 +52,6 @@ const count = new Intl.NumberFormat("en-US")
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 6,
 })
 
 export function formatCount(value: number) {
@@ -68,6 +66,5 @@ export function formatRate(tokens: SessionModelUsage["totals"]["tokens"]) {
 
 export function formatCost(input: number) {
   const value = Math.max(0, Number.isFinite(input) ? input : 0)
-  if (value > 0 && value < 0.000001) return "<$0.000001"
   return currency.format(value)
 }
