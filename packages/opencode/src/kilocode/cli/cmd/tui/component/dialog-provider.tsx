@@ -9,7 +9,15 @@ import type { JSX } from "solid-js"
 import type { RGBA } from "@opentui/core"
 import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
 import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method"
-export { selectProvider } from "@/kilocode/anaconda-desktop/tui/setup"
+import { selectProvider as selectAnacondaDesktop } from "@/kilocode/anaconda-desktop/tui/setup"
+import { selectProvider as selectAimlapi } from "@/kilocode/aimlapi/tui/setup"
+
+/** Providers with a fully custom connect flow intercept selection here. */
+export function selectProvider(input: Parameters<typeof selectAnacondaDesktop>[0]) {
+  if (selectAnacondaDesktop(input)) return true
+  if (selectAimlapi(input)) return true
+  return false
+}
 
 // ---------------------------------------------------------------------------
 // Failed-state gutter/description helpers
