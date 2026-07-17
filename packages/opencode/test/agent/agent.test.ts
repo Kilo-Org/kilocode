@@ -91,6 +91,7 @@ it.instance("plan agent denies edits except .opencode/plans/*", () =>
   }),
 )
 
+// kilocode_change start
 it.instance(
   "ask agent keeps Bash read-only when global config allows sed",
   () =>
@@ -113,6 +114,7 @@ it.instance(
     },
   },
 )
+// kilocode_change end
 
 it.instance("explore agent denies edit and write", () =>
   Effect.gen(function* () {
