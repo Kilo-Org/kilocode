@@ -19,7 +19,9 @@ import {
 const id = "internal:kilo-sidebar-usage"
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
+  const [usageOpen, setUsageOpen] = createSignal(true)
   const [modelsOpen, setModelsOpen] = createSignal(true)
+  const [benchOpen, setBenchOpen] = createSignal(true)
   const [expanded, setExpanded] = createSignal(new Set<string>())
   const theme = () => props.api.theme.current
   const local = useLocal()
@@ -85,37 +87,31 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   return (
     <box gap={1}>
       <box>
-        <text fg={theme().text}>
-          <b>Token Usage</b>
-        </text>
-        <Show
-          when={usage()}
-          fallback={<text fg={theme().textMuted}>{unavailable() ? "Usage unavailable" : "Loading usage..."}</text>}
-        >
-          {(data) => (
-            <>
-              <Row label="Input" value={formatCount(data().totals.tokens.input)} />
-              <Row label="Output" value={formatCount(data().totals.tokens.output)} />
-              <Row label="Reasoning" value={formatCount(data().totals.tokens.reasoning)} />
-              <Row label="Cache read" value={formatCount(data().totals.tokens.cache.read)} />
-              <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
-              <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
-              <Row label="Cost" value={formatCost(data().totals.cost)} />
-            </>
-          )}
+        <box flexDirection="row" gap={1} onMouseDown={() => setUsageOpen((open) => !open)}>
+          <text fg={theme().text}>{usageOpen() ? "▼" : "▶"}</text>
+          <text fg={theme().text}>
+            <b>Token Usage</b>
+          </text>
+        </box>
+        <Show when={usageOpen()}>
+          <Show
+            when={usage()}
+            fallback={<text fg={theme().textMuted}>{unavailable() ? "Usage unavailable" : "Loading usage..."}</text>}
+          >
+            {(data) => (
+              <>
+                <Row label="Input" value={formatCount(data().totals.tokens.input)} />
+                <Row label="Output" value={formatCount(data().totals.tokens.output)} />
+                <Row label="Reasoning" value={formatCount(data().totals.tokens.reasoning)} />
+                <Row label="Cache read" value={formatCount(data().totals.tokens.cache.read)} />
+                <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
+                <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
+                <Row label="Cost" value={formatCost(data().totals.cost)} />
+              </>
+            )}
+          </Show>
         </Show>
       </box>
-      <Show when={bench()}>
-        {(value) => (
-          <box>
-            <text fg={theme().text}>
-              <b>Terminal Bench 2.0</b>
-            </text>
-            <Row label="Completion" value={fmtScore(value().overallScore)} />
-            <Row label="Cost / attempt" value={fmtAttemptCost(value().avgAttemptCostUsd)} />
-          </box>
-        )}
-      </Show>
       <Show when={usage()}>
         {(data) => (
           <box>
@@ -140,10 +136,10 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                             <text fg={theme().textMuted} flexGrow={1} minWidth={0} wrapMode="none">
                               Model
                             </text>
-                            <box width={5} flexShrink={0} justifyContent="flex-end">
+                            <box width={5} flexDirection="row" flexShrink={0} justifyContent="flex-end">
                               <text fg={theme().textMuted}>Steps</text>
                             </box>
-                            <box width={9} flexShrink={0} justifyContent="flex-end">
+                            <box width={9} flexDirection="row" flexShrink={0} justifyContent="flex-end">
                               <text fg={theme().textMuted}>Cost</text>
                             </box>
                           </box>
@@ -166,10 +162,10 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                                         </b>
                                       </text>
                                     </box>
-                                    <box width={5} flexShrink={0} justifyContent="flex-end">
+                                    <box width={5} flexDirection="row" flexShrink={0} justifyContent="flex-end">
                                       <text fg={theme().textMuted}>{formatCount(model.steps)}</text>
                                     </box>
-                                    <box width={9} flexShrink={0} justifyContent="flex-end">
+                                    <box width={9} flexDirection="row" flexShrink={0} justifyContent="flex-end">
                                       <text fg={theme().textMuted}>{formatCost(model.cost)}</text>
                                     </box>
                                   </box>
@@ -193,6 +189,22 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                   </For>
                 </box>
               </Show>
+            </Show>
+          </box>
+        )}
+      </Show>
+      <Show when={bench()}>
+        {(value) => (
+          <box>
+            <box flexDirection="row" gap={1} onMouseDown={() => setBenchOpen((open) => !open)}>
+              <text fg={theme().text}>{benchOpen() ? "▼" : "▶"}</text>
+              <text fg={theme().text}>
+                <b>Terminal Bench 2.0</b>
+              </text>
+            </box>
+            <Show when={benchOpen()}>
+              <Row label="Completion" value={fmtScore(value().overallScore)} />
+              <Row label="Cost / attempt" value={fmtAttemptCost(value().avgAttemptCostUsd)} />
             </Show>
           </box>
         )}
