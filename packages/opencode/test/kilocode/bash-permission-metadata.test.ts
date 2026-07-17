@@ -66,7 +66,7 @@ describe("bash permission metadata.command", () => {
     })
   })
 
-  test.each([
+  test.skipIf(process.platform === "win32").each([
     ["single quoted", "cat << 'EOF'\n$HOME\nEOF"],
     ["double quoted", 'cat << "EOF"\n$HOME\nEOF'],
     ["escaped", "cat << \\EOF\n$HOME\nEOF"],

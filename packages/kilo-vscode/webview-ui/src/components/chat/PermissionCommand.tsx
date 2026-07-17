@@ -23,7 +23,7 @@ export const PermissionCommand: Component<{ command: string; plain?: boolean }> 
 
     const pre = document.createElement("pre")
     const code = document.createElement("code")
-    code.dataset.lang = "shellscript"
+    if (!props.plain) code.dataset.lang = "shellscript"
     code.textContent = command
     pre.append(code)
     ref.replaceChildren(pre)
