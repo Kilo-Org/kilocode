@@ -15,6 +15,33 @@ import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
 
+type RequestBody = Record<string, unknown>
+type RequestTransform = (body: RequestBody) => RequestBody
+
+const isRequestBody = (value: unknown): value is RequestBody =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+
+const isRequestTransform = (value: unknown): value is RequestTransform => typeof value === "function"
+
+export function patchOpenAICompatibleOptions(npm: string, options: Record<string, unknown>) {
+  if (!npm.includes("@ai-sdk/openai-compatible")) return
+  const previous = isRequestTransform(options.transformRequestBody) ? options.transformRequestBody : undefined
+  options.transformRequestBody = (body: RequestBody) => {
+    const transformed = previous?.(body) ?? body
+    if (!Array.isArray(transformed.messages)) return transformed
+    return {
+      ...transformed,
+      messages: transformed.messages.map((message) => {
+        if (!isRequestBody(message)) return message
+        if (message.role !== "assistant") return message
+        if (message.content !== null) return message
+        if (!Array.isArray(message.tool_calls) || message.tool_calls.length === 0) return message
+        return { ...message, content: "" }
+      }),
+    }
+  }
+}
+
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
 
