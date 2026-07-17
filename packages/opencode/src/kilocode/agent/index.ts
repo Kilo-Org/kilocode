@@ -501,7 +501,16 @@ export function patchAgents(
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
+    // Native Ask filesystem restrictions are a hard boundary. User/global
+    // auto-approve rules may narrow them, but must never re-enable Bash writes.
+    permission: Permission.merge(
+      defaults,
+      askGuard(kilo.mcpRules),
+      user,
+      Permission.fromConfig({ bash: readOnlyBash }),
+      askEditGuard(),
+      denies(user),
+    ),
     mode: "primary",
     native: true,
   }
