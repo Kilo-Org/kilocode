@@ -327,7 +327,7 @@ const BillingCard: Component<{
           <p class="provider-usage-meta">
             {props.language.t("profile.usage.topups.rule", {
               amount: (auto().amountCents / 100).toFixed(2),
-              threshold: auto().thresholdDollars.toFixed(2),
+              threshold: (auto().thresholdCents / 100).toFixed(2),
             })}
             {auto().paymentLast4
               ? ` | ${props.language.t("profile.usage.topups.payment", {

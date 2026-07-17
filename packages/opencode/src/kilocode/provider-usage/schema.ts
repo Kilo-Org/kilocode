@@ -71,7 +71,7 @@ export type UsageSnapshot = typeof UsageSnapshot.Type
 export const AutoTopUp = Schema.Struct({
   enabled: Schema.Boolean,
   amountCents: Schema.Finite,
-  thresholdDollars: Schema.Finite,
+  thresholdCents: Schema.Finite,
   paymentType: Schema.optional(Schema.String),
   paymentBrand: Schema.optional(Schema.String),
   paymentLast4: Schema.optional(Schema.String),

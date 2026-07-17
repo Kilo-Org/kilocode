@@ -3212,7 +3212,7 @@ export type ProviderUsageSnapshot = {
 export type ProviderUsageAutoTopUp = {
   enabled: boolean
   amountCents: number
-  thresholdDollars: number
+  thresholdCents: number
   paymentType?: string
   paymentBrand?: string
   paymentLast4?: string
