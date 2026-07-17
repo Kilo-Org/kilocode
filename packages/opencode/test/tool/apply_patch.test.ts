@@ -8,7 +8,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Format } from "../../src/format"
 import { Agent } from "../../src/agent/agent"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
-import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission" // kilocode_change
 import { Truncate } from "@/tool/truncate"
 import { TestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -112,6 +112,7 @@ describe("tool.apply_patch freeform", () => {
     }),
   )
 
+  // kilocode_change start
   it.instance(
     "applies add/update/delete in one patch",
     () =>
@@ -210,6 +211,7 @@ describe("tool.apply_patch freeform", () => {
       }),
     { git: true },
   )
+  // kilocode_change end
 
   it.instance("applies multiple hunks to one file", () =>
     Effect.gen(function* () {

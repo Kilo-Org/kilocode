@@ -95,6 +95,7 @@ const onceBus = Effect.fn("EditToolTest.onceBus")(function* (def: typeof Watcher
 
 describe("tool.edit", () => {
   describe("creating new files", () => {
+    // kilocode_change start
     it.instance("does not read or edit ignored files", () =>
       Effect.gen(function* () {
         const test = yield* TestInstance
@@ -118,6 +119,7 @@ describe("tool.edit", () => {
         expect(yield* load(filepath)).toBe("KILO_11637_SECRET")
       }),
     )
+    // kilocode_change end
 
     it.instance("creates new file when oldString is empty", () =>
       Effect.gen(function* () {

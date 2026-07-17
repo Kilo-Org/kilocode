@@ -304,6 +304,7 @@ describe("tool.read external_directory permission", () => {
 })
 
 describe("tool.read env file permissions", () => {
+  // kilocode_change start
   it.live("does not append an ignored nearby instruction", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped()
@@ -332,6 +333,7 @@ describe("tool.read env file permissions", () => {
       expect(err.message).not.toContain("KILO_11637_SECRET")
     }),
   )
+  // kilocode_change end
 
   const cases: [string, boolean][] = [
     [".env", true],
