@@ -67,6 +67,9 @@ const openRouterModelsResponseSchema = z.object({
 
 type OpenRouterModel = z.infer<typeof openRouterModelSchema>
 
+/** Multimodal chat routers that also advertise image output but are valid coding models. */
+const CHAT_IMAGE_OUTPUT_ALLOW = new Set(["openrouter/auto", "openrouter/auto-beta"])
+
 /**
  * Parse API price string to number, converting from per-token to per-million-tokens.
  * The API returns prices in $/token, but downstream cost calculation (getUsage)
@@ -97,8 +100,8 @@ export async function fetchKiloModels(options?: {
   const models: Record<string, any> = {}
 
   for (const model of raw.data) {
-    // Skip image generation models
-    if (model.architecture?.output_modalities?.includes("image")) {
+    // Skip image generation models (allowlisted multimodal routers still appear in chat)
+    if (model.architecture?.output_modalities?.includes("image") && !CHAT_IMAGE_OUTPUT_ALLOW.has(model.id)) {
       continue
     }
 
