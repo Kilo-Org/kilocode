@@ -39,6 +39,7 @@ export interface WatcherConfig {
 
 export interface ExperimentalConfig {
   batch_tool?: boolean
+  websearch?: boolean
   codebase_search?: boolean
   image_generation?: boolean
   image_generation_model?: string

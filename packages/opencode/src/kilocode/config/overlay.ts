@@ -88,6 +88,7 @@ export namespace KilocodeConfigOverlay {
     ["disabled_providers"],
     ["watcher", "ignore"],
     ["instructions"],
+    ["experimental", "websearch"],
     ["indexing", "enabled"],
     ["indexing", "provider"],
     ["indexing", "model"],

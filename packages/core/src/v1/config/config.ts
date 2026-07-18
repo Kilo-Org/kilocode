@@ -278,6 +278,9 @@ export const Info = Schema.Struct({
       batch_tool: Schema.optional(Schema.Boolean).annotate({ description: "Enable the batch tool" }),
       // kilocode_change start
       codebase_search: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI-powered codebase search" }),
+      websearch: Schema.optional(Schema.Boolean).annotate({
+        description: "Enable web search for all model providers",
+      }),
       image_generation: Schema.optional(Schema.Boolean).annotate({ description: "Enable AI image generation" }),
       image_generation_model: Schema.optional(Schema.String).annotate({
         description: "Model ID to use for image generation (default: openrouter/auto)",
