@@ -1709,8 +1709,9 @@ export const layer = Layer.effect(
         yield* Effect.all(
           Object.entries(discoveryLoaders).map(([providerID, loader]) =>
             Effect.gen(function* () {
-              if (!providers[providerID]) return
-              if (!isProviderAllowed(providerID)) return
+              const id = ProviderV2.ID.make(providerID) as ProviderV2.ID
+              if (!providers[id]) return
+              if (!isProviderAllowed(id)) return
 
               const discovered = yield* Effect.tryPromise(() => loader()).pipe(
                 Effect.catch((err) =>
@@ -1720,14 +1721,13 @@ export const layer = Layer.effect(
                 ),
               )
               for (const [modelID, model] of Object.entries(discovered)) {
-                if (!providers[providerID].models[modelID]) {
-                  providers[providerID].models[modelID] = model
+                if (!providers[id].models[modelID]) {
+                  providers[id].models[modelID] = model
                 }
               }
             }),
           ),
           { concurrency: "unbounded" },
-        )
 
         for (const [id, provider] of Object.entries(providers)) {
           const providerID = ProviderV2.ID.make(id)
