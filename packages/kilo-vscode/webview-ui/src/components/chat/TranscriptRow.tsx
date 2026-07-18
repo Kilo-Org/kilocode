@@ -67,9 +67,7 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
                 props.onForkMessage ? () => props.onForkMessage?.(row().message.sessionID, row().message.id) : undefined
               }
               onDelete={
-                row().queued
-                  ? () => session.deleteQueuedMessage(row().message.sessionID, row().message.id)
-                  : undefined
+                row().queued ? () => session.deleteQueuedMessage(row().message.sessionID, row().message.id) : undefined
               }
               onRevert={
                 row().answered
