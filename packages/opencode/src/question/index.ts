@@ -1,13 +1,11 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID, MessageID } from "@/session/schema"
-import * as Log from "@opencode-ai/core/util/log"
 import { QuestionID } from "./schema"
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
-
-const log = Log.create({ service: "question" })
 
 // Schemas — these are pure data; nothing checks class identity (see PR
 // description) so they're plain `Schema.Struct` + type alias. That lets
@@ -193,7 +191,7 @@ export const layer = Layer.effect(
     }) {
       const pending = (yield* InstanceState.get(state)).pending
       const id = QuestionID.ascending()
-      log.info("asking", { id, questions: input.questions.length })
+      yield* Effect.logInfo("asking", { id, questions: input.questions.length })
 
       const deferred = yield* Deferred.make<ReadonlyArray<Answer>, RejectedError>()
       const info: Request = {
@@ -230,11 +228,11 @@ export const layer = Layer.effect(
       const pending = (yield* InstanceState.get(state)).pending
       const existing = pending.get(input.requestID)
       if (!existing) {
-        log.warn("reply for unknown request", { requestID: input.requestID })
+        yield* Effect.logWarning("reply for unknown request", { requestID: input.requestID })
         return yield* new NotFoundError({ requestID: input.requestID })
       }
       pending.delete(input.requestID)
-      log.info("replied", { requestID: input.requestID, answers: input.answers })
+      yield* Effect.logInfo("replied", { requestID: input.requestID, answers: input.answers })
       yield* events.publish(Event.Replied, {
         sessionID: existing.info.sessionID,
         requestID: existing.info.id,
@@ -247,11 +245,11 @@ export const layer = Layer.effect(
       const pending = (yield* InstanceState.get(state)).pending
       const existing = pending.get(requestID)
       if (!existing) {
-        log.warn("reject for unknown request", { requestID })
+        yield* Effect.logWarning("reject for unknown request", { requestID })
         return yield* new NotFoundError({ requestID })
       }
       pending.delete(requestID)
-      log.info("rejected", { requestID })
+      yield* Effect.logInfo("rejected", { requestID })
       yield* events.publish(Event.Rejected, {
         sessionID: existing.info.sessionID,
         requestID: existing.info.id,
@@ -278,5 +276,7 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(EventV2Bridge.defaultLayer))
+
+export const node = LayerNode.make(layer, [EventV2Bridge.node])
 
 export * as Question from "."

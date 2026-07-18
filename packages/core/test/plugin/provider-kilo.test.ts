@@ -1,6 +1,7 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
+import { Credential } from "@opencode-ai/core/credential"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { ProviderPlugins } from "@opencode-ai/core/plugin/provider"
 import { KiloPlugin } from "@opencode-ai/core/plugin/provider/kilo"
@@ -150,7 +151,7 @@ describe("KiloPlugin", () => {
         const transform = yield* catalog.transform()
         yield* transform((catalog) => {
           const item = provider("kilo", {
-            enabled: { via: "account", service: "kilo" },
+            enabled: { via: "credential", credentialID: Credential.ID.make("cred_kilo") },
             request: {
               headers: {},
               body: { apiKey: "authenticated-token", kilocodeOrganizationId: "authenticated-org" },
@@ -163,7 +164,7 @@ describe("KiloPlugin", () => {
         })
         const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
 
-        expect(result.enabled).toEqual({ via: "account", service: "kilo" })
+        expect(result.enabled).toEqual({ via: "credential", credentialID: Credential.ID.make("cred_kilo") })
         expect(result.request.body.kilocodeToken).toBe("authenticated-token")
         expect(result.request.body.kilocodeOrganizationId).toBe("environment-org")
       }),

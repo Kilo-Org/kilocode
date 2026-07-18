@@ -1243,6 +1243,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "مفتاح API لـ Qdrant",
   "settings.indexing.qdrantApiKey.description": "مفتاح API اختياري لمثيل Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "مفتاح API اختياري",
+  "settings.indexing.fileExtensions.title": "امتدادات الملفات",
+  "settings.indexing.fileExtensions.description":
+    "قائمة سماح مفصولة بفواصل. اتركها فارغة لاستخدام الإعدادات الافتراضية المضمنة.",
+  "settings.indexing.fileExtensions.invalid": "امتداد غير صالح: {{extension}}",
   "settings.indexing.status.title": "الحالة",
   "settings.indexing.tuning.description": "معامل متقدم للبحث والدفعات.",
   "settings.indexing.providerField.description": "إعداد اتصال خاص بالموفر.",

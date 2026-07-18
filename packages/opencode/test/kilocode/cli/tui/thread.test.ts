@@ -6,8 +6,7 @@ import {
   embeddedRemoteExitClient,
   resolveThreadDirectory,
   runEmbeddedRemoteExitBridge,
-} from "../../../../src/cli/cmd/tui/thread"
-import { createExit } from "../../../../src/cli/cmd/tui/context/exit"
+} from "../../../../src/cli/cmd/tui"
 import { KiloTuiThreadDaemon } from "../../../../src/kilocode/cli/cmd/tui/thread"
 import { DaemonClient } from "../../../../src/kilocode/daemon/client"
 
@@ -71,7 +70,7 @@ describe("kilo tui thread", () => {
           await new Promise(() => {})
         },
       },
-      exit: createExit(async () => {}),
+      exit: () => {},
       done,
       timeoutMs: 5,
     })
@@ -152,12 +151,12 @@ describe("kilo tui thread", () => {
         },
       }),
     }))
-    mock.module("@/cli/cmd/tui/validate-session", () => ({
+    mock.module("@/cli/tui/validate-session", () => ({
       validateSession: async (input: { sessionID?: string }) => {
         seen.push(input.sessionID ?? "")
       },
     }))
-    mock.module("@/cli/cmd/tui/config/tui", () => ({
+    mock.module("@/config/tui", () => ({
       TuiConfig: {
         get: async () => ({}),
       },

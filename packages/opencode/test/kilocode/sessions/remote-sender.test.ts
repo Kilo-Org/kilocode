@@ -17,7 +17,6 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "../../../src/session/schema"
 import { Session } from "../../../src/session/session"
 import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
-import { createExit } from "../../../src/cli/cmd/tui/context/exit"
 
 function fakeConn() {
   const sent: any[] = []
@@ -2301,10 +2300,12 @@ describe("RemoteSender slash commands", () => {
     const { conn, sent } = fakeConn()
     const completed = Promise.withResolvers<void>()
     const calls: string[] = []
-    const exit = createExit(async () => {
-      calls.push("cleanup")
-      completed.resolve()
-    })
+    let task: Promise<void> | undefined
+    const exit = () =>
+      (task ??= Promise.resolve().then(() => {
+        calls.push("cleanup")
+        completed.resolve()
+      }))
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",

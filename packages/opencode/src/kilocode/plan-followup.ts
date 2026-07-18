@@ -1,6 +1,6 @@
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
-import { TuiEvent } from "@/cli/cmd/tui/event"
+import { TuiEvent } from "@/server/tui-event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"

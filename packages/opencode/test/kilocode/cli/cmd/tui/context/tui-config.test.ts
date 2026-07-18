@@ -6,8 +6,8 @@
 import { describe, expect, test } from "bun:test"
 import { createEffect, createRoot } from "solid-js"
 import { createBindingLookup } from "@opentui/keymap/extras"
-import { TuiKeybind } from "@/cli/cmd/tui/config/keybind"
-import { TuiConfig } from "@/cli/cmd/tui/config/tui"
+import { TuiKeybind } from "@tui/config/keybind"
+import { TuiConfig } from "@tui/config"
 import { KiloTuiConfig } from "@/kilocode/cli/cmd/tui/context/tui-config"
 import { KiloTerminalTitle } from "@/kilocode/cli/cmd/tui/terminal-title"
 
@@ -33,6 +33,7 @@ function resolve(input: TuiConfig.Info): TuiConfig.Resolved {
       bindingDefaults: TuiKeybind.bindingDefaults(),
     }),
     leader_timeout: input.leader_timeout ?? 1_000,
+    mouse: input.mouse ?? true,
   }
 }
 
