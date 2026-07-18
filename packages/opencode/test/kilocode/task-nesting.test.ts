@@ -354,7 +354,9 @@ describe("Kilo task nesting", () => {
             KiloSessionPrompt.guardPermissions({ agent: validator, session: child }),
           )
           expect(child.permission).not.toContainEqual({ permission: "bash", pattern: "*", action: "ask" })
-          expect(child.permission).toContainEqual({ permission: "bash", pattern: "rm -rf *", action: "deny" })
+          // The calling agent's own bash policy is no longer projected onto the subagent as a
+          // ceiling (#11523); the subagent's own `*: deny` policy is what keeps `rm -rf` denied.
+          expect(child.permission).not.toContainEqual({ permission: "bash", pattern: "rm -rf *", action: "deny" })
           expect({
             allowed: Permission.evaluate("bash", "ansible-lint --version", effective).action,
             denied: Permission.evaluate("bash", "rm -rf build", effective).action,
