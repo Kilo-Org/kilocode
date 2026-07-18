@@ -15,8 +15,7 @@ import type { ProjectSummary, WorktreeState, ManagedSessionState } from "../src/
 export interface ProjectActions {
   addProject: () => void
   toggleProjectCollapsed: (projectId: string) => void
-  removeProject: (projectId: string) => void
-  addProjectToWorkspace: (projectId: string) => void
+  addFolderToWorkspace: (projectId: string) => void
 }
 
 export interface ProjectCounters {
@@ -46,7 +45,6 @@ export const useProjectView = (
     countSessionsFor,
     onAddProject: actions.addProject,
     onToggleProjectCollapsed: actions.toggleProjectCollapsed,
-    onRemoveProject: actions.removeProject,
-    onAddProjectToWorkspace: actions.addProjectToWorkspace,
+    onAddProjectToWorkspace: actions.addFolderToWorkspace,
   }
 }

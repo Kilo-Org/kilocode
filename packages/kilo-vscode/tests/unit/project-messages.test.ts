@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test"
 import {
   handleAddProject,
   handleAddProjectToWorkspace,
-  handleRemoveProject,
   handleToggleProjectCollapsed,
 } from "../../src/agent-manager/project-messages"
 import { ProjectRouting } from "../../src/agent-manager/project-routing"
@@ -137,26 +136,6 @@ describe("project-messages handlers", () => {
     expect(captured.statePushes).toBe(0)
   })
 
-  test("handleRemoveProject removes the project and pushes state", async () => {
-    const captured = await makeDeps()
-    // Add a project first so removal has work to do.
-    await captured.routing.addProject("/Users/me/code/cloud")
-    const project = captured.routing.snapshot().projects[0]
-    expect(project).toBeDefined()
-
-    const deps = buildDeps(captured)
-    await handleRemoveProject(project!.id, deps)
-    expect(captured.routing.snapshot().projects).toHaveLength(0)
-    expect(captured.statePushes).toBe(1)
-  })
-
-  test("handleRemoveProject is a no-op when the project id does not resolve", async () => {
-    const captured = await makeDeps()
-    const deps = buildDeps(captured)
-    await handleRemoveProject("missing-id", deps)
-    expect(captured.statePushes).toBe(0)
-  })
-
   test("handleToggleProjectCollapsed flips the flag and pushes state", async () => {
     const captured = await makeDeps()
     await captured.routing.addProject("/Users/me/code/cloud")
@@ -166,6 +145,13 @@ describe("project-messages handlers", () => {
     await handleToggleProjectCollapsed(project.id, true, deps)
     expect(captured.routing.getProject(project.id)?.collapsed).toBe(true)
     expect(captured.statePushes).toBe(1)
+  })
+
+  test("handleToggleProjectCollapsed is a no-op when the project id does not resolve", async () => {
+    const captured = await makeDeps()
+    const deps = buildDeps(captured)
+    await handleToggleProjectCollapsed("missing-id", true, deps)
+    expect(captured.statePushes).toBe(0)
   })
 
   test("handleAddProjectToWorkspace forwards the canonical root to the host", async () => {

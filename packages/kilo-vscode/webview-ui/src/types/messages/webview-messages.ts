@@ -598,12 +598,6 @@ export interface AddProjectRequest {
   type: "agentManager.addProject"
 }
 
-// Remove a registered project from the catalog (ticket #12353).
-export interface RemoveProjectRequest {
-  type: "agentManager.removeProject"
-  projectId: string
-}
-
 // Toggle (or set) the collapsed flag on a project's accordion header.
 export interface ToggleProjectCollapsedRequest {
   type: "agentManager.toggleProjectCollapsed"
@@ -1327,7 +1321,6 @@ export type WebviewMessage =
   | OpenLocallyRequest
   | AddSessionToWorktreeRequest
   | AddProjectRequest
-  | RemoveProjectRequest
   | ToggleProjectCollapsedRequest
   | AddProjectToWorkspaceRequest
   | ForkSessionRequest

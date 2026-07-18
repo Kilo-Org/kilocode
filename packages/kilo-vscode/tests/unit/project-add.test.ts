@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test"
 import {
   addProjectToRegistry,
   parseFolderInput,
-  removeProjectFromRegistry,
   setProjectCollapsed,
   validateScheme,
   ProjectAddInvalidInputError,
@@ -94,9 +93,10 @@ describe("validateScheme", () => {
     expect(() => validateScheme(folder)).toThrow(ProjectUnsupportedSchemeError)
   })
 
-  test("rejects vscode-remote today (follow-up ticket scopes remote to a later slice)", () => {
+  test("accepts vscode-remote schemes (canonical-root helper surfaces unreachable authority later)", () => {
     const folder = parseFolderInput({ scheme: "vscode-remote", authority: "ssh-remote+host", path: "/home/me/repo" })
-    expect(() => validateScheme(folder)).toThrow(ProjectUnsupportedSchemeError)
+    const validated = validateScheme(folder)
+    expect(validated.candidate).toBe("/home/me/repo")
   })
 
   test("rejects a file scheme without a path", () => {
@@ -220,28 +220,6 @@ describe("addProjectToRegistry", () => {
     })
     expect(result.ok).toBe(true)
     expect(commits[0]?.activeProjectId).toBe("existing-active")
-  })
-})
-
-describe("removeProjectFromRegistry", () => {
-  test("removes the project with the matching id", () => {
-    const a = makeProject({ id: "a", root: "/a" })
-    const b = makeProject({ id: "b", root: "/b" })
-    const next = removeProjectFromRegistry({ version: 1, projects: [a, b] }, "a")
-    expect(next.projects.map((p) => p.id)).toEqual(["b"])
-  })
-
-  test("clears activeProjectId when the active project is removed", () => {
-    const a = makeProject({ id: "a", root: "/a" })
-    const next = removeProjectFromRegistry({ version: 1, projects: [a], activeProjectId: "a" }, "a")
-    expect(next.activeProjectId).toBeUndefined()
-  })
-
-  test("preserves activeProjectId when a different project is removed", () => {
-    const a = makeProject({ id: "a", root: "/a" })
-    const b = makeProject({ id: "b", root: "/b" })
-    const next = removeProjectFromRegistry({ version: 1, projects: [a, b], activeProjectId: "b" }, "a")
-    expect(next.activeProjectId).toBe("b")
   })
 })
 

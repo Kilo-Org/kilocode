@@ -39,12 +39,7 @@ import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
 import { ProjectRouting } from "./project-routing"
 import { ProjectUnknownError } from "./project-router"
-import {
-  handleAddProject,
-  handleAddProjectToWorkspace,
-  handleRemoveProject,
-  handleToggleProjectCollapsed,
-} from "./project-messages"
+import { handleAddProject, handleAddProjectToWorkspace, handleToggleProjectCollapsed } from "./project-messages"
 import { runSetupScriptForWorktree, sendRepoInfo } from "./setup-orchestration"
 import { openWorktreeDirectory, openWorktreeFile } from "./worktree-file-ops"
 import { startSession } from "./mcp-warmup"
@@ -54,7 +49,7 @@ import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from 
 import { ensureSandbox } from "./sandbox-bootstrap"
 import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
-import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
+import type { AgentManagerOutMessage, AgentManagerInMessage, ProjectSummary } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
@@ -629,10 +624,6 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.addProject") {
       void handleAddProject(this.buildProjectDeps())
-      return null
-    }
-    if (m.type === "agentManager.removeProject") {
-      void handleRemoveProject(m.projectId, this.buildProjectDeps())
       return null
     }
     if (m.type === "agentManager.toggleProjectCollapsed") {
@@ -1622,8 +1613,6 @@ export class AgentManagerProvider implements Disposable {
     const staleWorktreeIds = this.staleWorktreesForState(worktrees)
     const run = this.run.state()
     void this.projects?.loaded().then(() => {
-      const projects = this.projects?.snapshot().projects ?? []
-      const legacyRoot = this.getRoot()
       this.postToWebview({
         type: "agentManager.state",
         worktrees,
@@ -1639,16 +1628,7 @@ export class AgentManagerProvider implements Disposable {
         isGitRepo: true,
         defaultBaseBranch: state.getDefaultBaseBranch(),
         ...run,
-        projects: projects.map((p) => ({
-          id: p.id,
-          root: p.root,
-          ...(p.label !== undefined ? { label: p.label } : {}),
-          order: p.order,
-          collapsed: p.collapsed,
-          trusted: p.trusted,
-          isLegacyRoot: legacyRoot !== undefined && legacyRoot === p.root,
-        })),
-        activeProjectId: this.projects?.snapshot().activeProjectId,
+        ...this.projectStateProjection(),
       })
     })
 
@@ -1663,8 +1643,6 @@ export class AgentManagerProvider implements Disposable {
   private pushEmptyState(): void {
     this.staleWorktreeIds.clear()
     void this.projects?.loaded().then(() => {
-      const projects = this.projects?.snapshot().projects ?? []
-      const legacyRoot = this.getRoot()
       this.postToWebview({
         type: "agentManager.state",
         worktrees: [],
@@ -1675,18 +1653,31 @@ export class AgentManagerProvider implements Disposable {
         isGitRepo: false,
         runStatuses: [],
         runScriptConfigured: false,
-        projects: projects.map((p) => ({
-          id: p.id,
-          root: p.root,
-          ...(p.label !== undefined ? { label: p.label } : {}),
-          order: p.order,
-          collapsed: p.collapsed,
-          trusted: p.trusted,
-          isLegacyRoot: legacyRoot !== undefined && legacyRoot === p.root,
-        })),
-        activeProjectId: this.projects?.snapshot().activeProjectId,
+        ...this.projectStateProjection(),
       })
     })
+  }
+
+  /** Build the `projects` + `activeProjectId` projection of the registry so
+   *  both `pushState` and `pushEmptyState` stay in sync. */
+  private projectStateProjection(): {
+    projects: ProjectSummary[]
+    activeProjectId: string | undefined
+  } {
+    const projects = this.projects?.snapshot().projects ?? []
+    const legacyRoot = this.getRoot()
+    return {
+      projects: projects.map((p) => ({
+        id: p.id,
+        root: p.root,
+        ...(p.label !== undefined ? { label: p.label } : {}),
+        order: p.order,
+        collapsed: p.collapsed,
+        trusted: p.trusted,
+        isLegacyRoot: legacyRoot !== undefined && legacyRoot === p.root,
+      })),
+      activeProjectId: this.projects?.snapshot().activeProjectId,
+    }
   }
 
   // Manager accessors

@@ -21,10 +21,6 @@ export interface ProjectMessageDeps {
   pushState: () => void
 }
 
-/**
- * Open a folder picker and register the selection as a new project. Posts a
- * toast on dedup and an error on rejection.
- */
 export async function handleAddProject(deps: ProjectMessageDeps): Promise<void> {
   const picked = await deps.pickFolder({
     title: "Add project to Agent Manager",
@@ -49,15 +45,6 @@ export async function handleAddProject(deps: ProjectMessageDeps): Promise<void> 
   deps.pushState()
 }
 
-/** Remove a registered project from the catalog. */
-export async function handleRemoveProject(projectId: string, deps: ProjectMessageDeps): Promise<void> {
-  if (!deps.routing.getProject(projectId)) return
-  await deps.routing.removeProject(projectId)
-  deps.log(`Removed project ${projectId}`)
-  deps.pushState()
-}
-
-/** Toggle the project's accordion collapsed state. */
 export async function handleToggleProjectCollapsed(
   projectId: string,
   collapsed: boolean | undefined,
@@ -68,7 +55,6 @@ export async function handleToggleProjectCollapsed(
   deps.pushState()
 }
 
-/** Add the registered project's canonical root to VS Code `workspaceFolders`. */
 export function handleAddProjectToWorkspace(projectId: string, deps: ProjectMessageDeps): void {
   const project = deps.routing.getProject(projectId)
   if (!project) return

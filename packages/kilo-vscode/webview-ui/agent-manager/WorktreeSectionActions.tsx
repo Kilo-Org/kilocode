@@ -27,6 +27,10 @@ interface WorktreeSectionActionsProps {
   onShortcuts: () => void
   onSetup: () => void
   onBranch: () => void
+  /** When supplied, render an "Add project" item in the settings menu —
+   *  used to expose the global Add Project action for users with 0 or 1
+   *  registered projects where the global toolbar is hidden. */
+  onAddProject?: () => void
 }
 
 export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (props) => (
@@ -118,6 +122,13 @@ export const WorktreeSectionActions: Component<WorktreeSectionActionsProps> = (p
         />
         <DropdownMenu.Portal>
           <DropdownMenu.Content class="am-split-menu">
+            <Show when={props.onAddProject}>
+              <DropdownMenu.Item onSelect={() => props.onAddProject?.()}>
+                <Icon name="repo" size="small" />
+                <DropdownMenu.ItemLabel>{props.t("agentManager.project.add")}</DropdownMenu.ItemLabel>
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+            </Show>
             <DropdownMenu.Item onSelect={props.onSetup}>
               <DropdownMenu.ItemLabel>{props.t("agentManager.worktree.setupScript")}</DropdownMenu.ItemLabel>
             </DropdownMenu.Item>

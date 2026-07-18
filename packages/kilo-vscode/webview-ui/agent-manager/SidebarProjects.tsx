@@ -17,7 +17,6 @@ export interface SidebarProjectsProps {
   onToggleProjectCollapsed: (projectId: string) => void
   onAddWorktree?: (project: ProjectSummary) => void
   onAddProjectToWorkspace: (projectId: string) => void
-  onRemoveProject: (projectId: string) => void
 }
 
 /**
@@ -45,7 +44,6 @@ export const SidebarProjects: Component<SidebarProjectsProps> = (props) => {
             onToggleCollapsed={() => props.onToggleProjectCollapsed(project.id)}
             onAddWorktree={project.isLegacyRoot ? () => props.onAddWorktree?.(project) : undefined}
             onAddToWorkspace={() => props.onAddProjectToWorkspace(project.id)}
-            onRemove={() => props.onRemoveProject(project.id)}
           >
             <Show
               when={project.isLegacyRoot}

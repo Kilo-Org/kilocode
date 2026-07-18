@@ -402,11 +402,6 @@ interface AddProjectIn {
   type: "agentManager.addProject"
 }
 
-interface RemoveProjectIn {
-  type: "agentManager.removeProject"
-  projectId: string
-}
-
 interface ToggleProjectCollapsedIn {
   type: "agentManager.toggleProjectCollapsed"
   projectId: string
@@ -834,7 +829,6 @@ export type AgentManagerInMessage =
   | PersistSessionIn
   | ForgetSessionIn
   | AddProjectIn
-  | RemoveProjectIn
   | ToggleProjectCollapsedIn
   | AddProjectToWorkspaceIn
   | ForkSessionIn

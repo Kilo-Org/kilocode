@@ -1,7 +1,7 @@
 /** @jsxImportSource solid-js */
 
 import { Show, type Component, type JSX } from "solid-js"
-import type { ProjectSummary, WorktreeState, ManagedSessionState } from "../src/types/messages"
+import type { ProjectSummary } from "../src/types/messages"
 
 /**
  * Renders a single registered project as a collapsible accordion header
@@ -12,7 +12,7 @@ import type { ProjectSummary, WorktreeState, ManagedSessionState } from "../src/
  * header is rendered without the project-label affordances so the
  * single-project UX is observationally identical to today's Agent Manager.
  * When the project is not the legacy root (i.e. an external repo), the
- * full header is rendered with label, count, `[+]`, and overflow menu.
+ * full header is rendered with label, count, and overflow menu.
  */
 
 export interface ProjectAccordionProps {
@@ -33,8 +33,6 @@ export interface ProjectAccordionProps {
   onAddWorktree?: () => void
   /** Triggered when the user picks "Add to VS Code workspace". */
   onAddToWorkspace?: () => void
-  /** Triggered when the user picks "Remove project". */
-  onRemove?: () => void
   /** When true, render the project-label header (i.e. multi-project UI). */
   showLabel: boolean
   /** Content rendered inside the body when expanded. */
@@ -102,7 +100,7 @@ export const ProjectAccordion: Component<ProjectAccordionProps> = (props) => {
                 +
               </button>
             </Show>
-            <Show when={props.onAddToWorkspace || props.onRemove}>
+            <Show when={props.onAddToWorkspace}>
               <details class="am-project-menu">
                 <summary
                   class="am-project-action"
@@ -113,34 +111,18 @@ export const ProjectAccordion: Component<ProjectAccordionProps> = (props) => {
                   …
                 </summary>
                 <div class="am-project-menu-popover" role="menu">
-                  <Show when={props.onAddToWorkspace}>
-                    <button
-                      type="button"
-                      class="am-project-menu-item"
-                      role="menuitem"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        ;(document.activeElement as HTMLElement | null)?.blur()
-                        props.onAddToWorkspace?.()
-                      }}
-                    >
-                      Add to VS Code workspace
-                    </button>
-                  </Show>
-                  <Show when={props.onRemove}>
-                    <button
-                      type="button"
-                      class="am-project-menu-item"
-                      role="menuitem"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        ;(document.activeElement as HTMLElement | null)?.blur()
-                        props.onRemove?.()
-                      }}
-                    >
-                      Remove project
-                    </button>
-                  </Show>
+                  <button
+                    type="button"
+                    class="am-project-menu-item"
+                    role="menuitem"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      ;(document.activeElement as HTMLElement | null)?.blur()
+                      props.onAddToWorkspace?.()
+                    }}
+                  >
+                    Add to VS Code workspace
+                  </button>
                 </div>
               </details>
             </Show>
@@ -154,49 +136,4 @@ export const ProjectAccordion: Component<ProjectAccordionProps> = (props) => {
       </Show>
     </section>
   )
-}
-
-/**
- * Group sessions by the project they belong to. A session belongs to a
- * project when its worktree's path is inside the project's canonical root,
- * or when it has no worktree and the project is the active project.
- *
- * Today, sessions are scoped to the single legacy project, so this helper
- * simply returns the supplied list unchanged for the legacy project and
- * empty arrays for any other project. Once `git ops / terminals / diffs /
- * worktree imports` are migrated (#12354-#12357), this helper will
- * partition sessions by their owning project.
- */
-export function partitionByProject(
-  sessions: ManagedSessionState[],
-  worktrees: WorktreeState[],
-  projects: ProjectSummary[],
-  legacyProjectId: string | undefined,
-): Record<string, ManagedSessionState[]> {
-  const buckets: Record<string, ManagedSessionState[]> = {}
-  for (const project of projects) buckets[project.id] = []
-  if (legacyProjectId) buckets[legacyProjectId] = []
-  // Worktree sessions are routed by the worktree's owning project; without
-  // project metadata on the worktree yet, we attribute all current
-  // worktrees to the legacy project so today's behavior is preserved.
-  const wtByProject = new Map<string, ManagedSessionState[]>()
-  for (const wt of worktrees) {
-    const projectId = legacyProjectId ?? projects[0]?.id
-    if (!projectId) continue
-    const list = wtByProject.get(projectId) ?? []
-    for (const s of sessions) {
-      if (s.worktreeId === wt.id) list.push(s)
-    }
-    wtByProject.set(projectId, list)
-  }
-  for (const [projectId, list] of wtByProject) {
-    buckets[projectId] = list
-  }
-  return buckets
-}
-
-export function countWorktreesForProject(worktrees: WorktreeState[], _projectId: string, _projectRoot: string): number {
-  // Until worktrees carry a projectId (#12357), all known worktrees belong
-  // to the legacy project. External projects start with zero worktrees.
-  return worktrees.length
 }

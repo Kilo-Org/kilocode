@@ -5,7 +5,6 @@ import { ProjectUnknownError, type ProjectResolution } from "./project-router"
 import type { MementoLike } from "./host"
 import {
   addProjectToRegistry,
-  removeProjectFromRegistry,
   setProjectCollapsed,
   type AddProjectResult,
   type ParsedFolder,
@@ -175,15 +174,6 @@ export class ProjectRouting {
     return result
   }
 
-  /** Remove a project from the registry and dispose its cached context. */
-  async removeProject(id: string): Promise<ProjectRegistry> {
-    const next = removeProjectFromRegistry(this.registry, id)
-    await this.persist(next)
-    this.registry = next
-    this.disposeProject(id)
-    return next
-  }
-
   /** Toggle the collapsed flag on a project's accordion header. */
   async toggleProjectCollapsed(id: string, collapsed?: boolean): Promise<ProjectRegistry> {
     const current = this.getProject(id)
@@ -205,7 +195,8 @@ export class ProjectRouting {
     const store = new ProjectRegistryStore(this.memento)
     try {
       return await store.load()
-    } catch {
+    } catch (err) {
+      this.log(`Project registry re-read failed: ${String(err)}`)
       return EMPTY_REGISTRY
     }
   }

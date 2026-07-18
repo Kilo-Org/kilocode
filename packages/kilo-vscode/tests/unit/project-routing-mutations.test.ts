@@ -106,43 +106,6 @@ describe("ProjectRouting — add/remove/toggle mutations", () => {
     expect(result.error.code).toBe("not_a_git_repo")
   })
 
-  test("removeProject drops the entry from the registry and disposes its cached context", async () => {
-    const project = makeProject({ id: "abc123456789def0" })
-    const memento = seededMemento({ version: 1, projects: [project] })
-    const routing = new ProjectRouting(memento, () => factoryDeps())
-    await routing.load()
-
-    routing.projectFor("abc123456789def0")
-    expect(routing.snapshot().projects).toHaveLength(1)
-
-    await routing.removeProject("abc123456789def0")
-    expect(routing.snapshot().projects).toHaveLength(0)
-    // Re-adding via projectFor should construct a fresh context.
-    const ctx = routing.projectFor("abc123456789def0")
-    expect(ctx).toBeUndefined()
-  })
-
-  test("removeProject clears activeProjectId when removing the active project", async () => {
-    const project = makeProject({ id: "abc123456789def0" })
-    const memento = seededMemento({ version: 1, projects: [project], activeProjectId: "abc123456789def0" })
-    const routing = new ProjectRouting(memento, () => factoryDeps())
-    await routing.load()
-
-    await routing.removeProject("abc123456789def0")
-    expect(routing.snapshot().activeProjectId).toBeUndefined()
-  })
-
-  test("removeProject preserves the activeProjectId when removing a different project", async () => {
-    const a = makeProject({ id: "a", root: "/canonical/a" })
-    const b = makeProject({ id: "b", root: "/canonical/b" })
-    const memento = seededMemento({ version: 1, projects: [a, b], activeProjectId: "b" })
-    const routing = new ProjectRouting(memento, () => factoryDeps())
-    await routing.load()
-
-    await routing.removeProject("a")
-    expect(routing.snapshot().activeProjectId).toBe("b")
-  })
-
   test("toggleProjectCollapsed flips the collapsed flag and persists", async () => {
     const project = makeProject({ id: "abc123456789def0", collapsed: false })
     const memento = seededMemento({ version: 1, projects: [project] })

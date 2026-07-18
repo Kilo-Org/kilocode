@@ -107,10 +107,11 @@ export function validateScheme(folder: ParsedFolder): ValidateSchemeResult {
   if (UNSUPPORTED_SCHEMES.has(folder.scheme)) {
     throw new ProjectUnsupportedSchemeError(folder.scheme, folder.path)
   }
-  // Only `file` and `vscode-remote` (ssh/dev-container/codespaces) are
-  // resolvable today; `vscode-remote` is left as a follow-up to ship the file
-  // scheme path first.
-  if (folder.scheme !== "file") {
+  // Accept `file` URIs. Remote schemes (vscode-remote, ssh-remote,
+  // dev-container, codespaces, …) are also acceptable here; the canonical-root
+  // helper will surface a structured error if the authority is inaccessible.
+  const accepted = folder.scheme === "file" || folder.scheme.startsWith("vscode-remote")
+  if (!accepted) {
     throw new ProjectUnsupportedSchemeError(folder.scheme, folder.path)
   }
   if (!folder.path) {
@@ -286,16 +287,8 @@ function deriveLabel(canonicalRoot: string): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
-// Pure registry mutation helpers (exported for tests and future remove flow)
+// Pure registry mutation helpers
 // ---------------------------------------------------------------------------
-
-export function removeProjectFromRegistry(registry: ProjectRegistry, id: string): ProjectRegistry {
-  return {
-    version: PROJECT_REGISTRY_VERSION,
-    projects: registry.projects.filter((p) => p.id !== id),
-    activeProjectId: registry.activeProjectId === id ? undefined : registry.activeProjectId,
-  }
-}
 
 export function setProjectCollapsed(registry: ProjectRegistry, id: string, collapsed: boolean): ProjectRegistry {
   return {

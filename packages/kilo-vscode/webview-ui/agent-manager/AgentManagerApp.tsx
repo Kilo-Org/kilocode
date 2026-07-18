@@ -1966,6 +1966,7 @@ const AgentManagerContent: Component = () => {
             onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
             onSetup={setupScript}
             onBranch={handleChangeDefaultBaseBranch}
+            onAddProject={!projectView.showMultiProject() ? addProject : undefined}
           />
         </div>
         <div class="am-worktree-list">
@@ -2238,10 +2239,6 @@ const AgentManagerContent: Component = () => {
     })
   }
 
-  const handleRemoveProject = (projectId: string) => {
-    vscode.postMessage({ type: "agentManager.removeProject", projectId })
-  }
-
   const handleAddProjectToWorkspace = (projectId: string) => {
     vscode.postMessage({ type: "agentManager.addProjectToWorkspace", projectId })
   }
@@ -2252,8 +2249,7 @@ const AgentManagerContent: Component = () => {
     {
       addProject,
       toggleProjectCollapsed: (id) => handleToggleProjectCollapsed(id),
-      removeProject: handleRemoveProject,
-      addProjectToWorkspace: handleAddProjectToWorkspace,
+      addFolderToWorkspace: handleAddProjectToWorkspace,
     },
   )
 
@@ -2624,16 +2620,19 @@ const AgentManagerContent: Component = () => {
             }
           }}
         />
-        {/* Global projects toolbar (always visible) */}
-        <div class="am-project-toolbar">
-          <span class="am-project-toolbar-label">{t("agentManager.project.toolbarLabel")}</span>
-          <Tooltip value={t("agentManager.project.addTooltip")} placement="bottom">
-            <button type="button" class="am-project-add" onClick={addProject}>
-              <Icon name="plus" size="small" />
-              <span>{t("agentManager.project.add")}</span>
-            </button>
-          </Tooltip>
-        </div>
+        {/* Global projects toolbar (hidden when the single-project UX must remain
+             indistinguishable from today's Agent Manager — see #12353 AC6). */}
+        <Show when={projectView.showMultiProject()}>
+          <div class="am-project-toolbar">
+            <span class="am-project-toolbar-label">{t("agentManager.project.toolbarLabel")}</span>
+            <Tooltip value={t("agentManager.project.addTooltip")} placement="bottom">
+              <button type="button" class="am-project-add" onClick={addProject}>
+                <Icon name="plus" size="small" />
+                <span>{t("agentManager.project.add")}</span>
+              </button>
+            </Tooltip>
+          </div>
+        </Show>
         <SidebarProjects
           projects={projects}
           showMultiProject={projectView.showMultiProject}
@@ -2644,7 +2643,6 @@ const AgentManagerContent: Component = () => {
           onToggleProjectCollapsed={(id) => handleToggleProjectCollapsed(id)}
           onAddWorktree={() => showNewWorktreeDialog()}
           onAddProjectToWorkspace={(id) => handleAddProjectToWorkspace(id)}
-          onRemoveProject={(id) => handleRemoveProject(id)}
         />
       </div>
 
