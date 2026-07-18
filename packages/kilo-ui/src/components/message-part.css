@@ -403,6 +403,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="user-message-queued-indicator"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-top: 6px;
     margin-right: 2px;
     font-size: var(--font-size-small);

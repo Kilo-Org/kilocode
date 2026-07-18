@@ -22,6 +22,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { disposeTestRuntime, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { remove as cleanup } from "./cleanup"
+import { pollWithTimeout } from "../lib/effect"
 
 Log.init({ print: false })
 
@@ -97,6 +98,19 @@ function reply(input: { text: string; ready?: () => void; wait?: Promise<unknown
       done()
     },
   })
+}
+
+function providerCfg(url: string, agent: Record<string, unknown> = { code: { model: "alibaba/qwen-plus" } }) {
+  return {
+    $schema: "https://opencode.ai/config.json",
+    enabled_providers: ["alibaba"],
+    provider: {
+      alibaba: {
+        options: { apiKey: "test-key", baseURL: `${url}/v1` },
+      },
+    },
+    agent,
+  }
 }
 
 function hasText(msg: MessageV2.WithParts, text: string) {
@@ -446,26 +460,7 @@ describe("session prompt queue", () => {
       await using tmp = await tmpdir({
         git: true,
         init: async (dir) => {
-          await Bun.write(
-            path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://opencode.ai/config.json",
-              enabled_providers: ["alibaba"],
-              provider: {
-                alibaba: {
-                  options: {
-                    apiKey: "test-key",
-                    baseURL: `${server.url.origin}/v1`,
-                  },
-                },
-              },
-              agent: {
-                code: {
-                  model: "alibaba/qwen-plus",
-                },
-              },
-            }),
-          )
+          await Bun.write(path.join(dir, "opencode.json"), JSON.stringify(providerCfg(server.url.origin)))
         },
       })
 
@@ -576,16 +571,7 @@ describe("session prompt queue", () => {
         init: async (dir) => {
           await Bun.write(
             path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://opencode.ai/config.json",
-              enabled_providers: ["alibaba"],
-              provider: {
-                alibaba: {
-                  options: { apiKey: "test-key", baseURL: `${server.url.origin}/v1` },
-                },
-              },
-              agent: { plan: { model: "alibaba/qwen-plus" } },
-            }),
+            JSON.stringify(providerCfg(server.url.origin, { plan: { model: "alibaba/qwen-plus" } })),
           )
         },
       })
@@ -667,16 +653,7 @@ describe("session prompt queue", () => {
         init: async (dir) => {
           await Bun.write(
             path.join(dir, "opencode.json"),
-            JSON.stringify({
-              $schema: "https://opencode.ai/config.json",
-              enabled_providers: ["alibaba"],
-              provider: {
-                alibaba: {
-                  options: { apiKey: "test-key", baseURL: `${server.url.origin}/v1` },
-                },
-              },
-              agent: { code: { model: "alibaba/qwen-plus" } },
-            }),
+            JSON.stringify(providerCfg(server.url.origin)),
           )
         },
       })
@@ -853,5 +830,209 @@ describe("session prompt queue", () => {
         expect(await second).toBe("second")
       },
     })
+  })
+
+  test("drop cancels a queued prompt while preserving the active prompt", async () => {
+    const ready = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const calls: number[] = []
+    const server = Bun.serve({
+      port: 0,
+      fetch(req) {
+        const url = new URL(req.url)
+        if (!url.pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 })
+        calls.push(Date.now())
+        const wait = calls.length === 1 ? release.promise : undefined
+        return new Response(reply({ text: "reply", ready: calls.length === 1 ? ready.resolve : undefined, wait }), {
+          status: 200,
+          headers: { "Content-Type": "text/event-stream" },
+        })
+      },
+    })
+
+    try {
+      await using tmp = await tmpdir({
+        git: true,
+        init: async (dir) => {
+          await Bun.write(
+            path.join(dir, "opencode.json"),
+            JSON.stringify(providerCfg(server.url.origin)),
+          )
+        },
+      })
+
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () =>
+          scoped(tmp.path, async (prompt) => {
+            const session = await sessions.create({ title: "Queued drop" })
+            const activeID = MessageID.make("msg_active")
+            const queuedID = MessageID.make("msg_queued")
+
+            const first = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                messageID: activeID,
+                parts: [{ type: "text", text: "active prompt" }],
+              }),
+            )
+            await ready.promise
+
+            const second = Effect.runPromise(
+              prompt.prompt({
+                sessionID: session.id,
+                agent: "code",
+                messageID: queuedID,
+                parts: [{ type: "text", text: "queued prompt" }],
+              }),
+            )
+
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() => (KiloSessionPromptQueue.hasFollowup(session.id) ? true : undefined)),
+                "Timed out waiting for queued prompt",
+              ),
+            )
+            expect(await Effect.runPromise(KiloSessionPromptQueue.drop(session.id, queuedID))).toBe(true)
+            expect(await Effect.runPromise(KiloSessionPromptQueue.drop(session.id, activeID))).toBe(false)
+
+            release.resolve()
+            await Promise.all([first, second])
+
+            expect(calls).toHaveLength(1)
+            const msgs = await sessions.messages({ sessionID: session.id })
+            expect(msgs.filter((m) => m.info.role === "assistant")).toHaveLength(1)
+            expect(msgs.filter((m) => m.info.role === "assistant" && m.info.parentID === queuedID)).toHaveLength(0)
+          }),
+      })
+    } finally {
+      server.stop(true)
+    }
+  }, 10_000)
+
+  test("drop returns false for the actively running prompt", async () => {
+    const sessionID = SessionID.make("session_drop_active")
+    const ready = Promise.withResolvers<void>()
+    const done = Promise.withResolvers<void>()
+    const id = MessageID.make("msg_drop_active")
+
+    const first = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        id,
+        Effect.promise(async () => {
+          ready.resolve()
+          await done.promise
+          return "first"
+        }),
+        Effect.succeed("first-cancelled"),
+      ),
+    )
+    await ready.promise
+    expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, id))).toBe(false)
+    done.resolve()
+    await first
+  })
+
+  test("drop returns false for an unknown message", async () => {
+    const sessionID = SessionID.make("session_drop_unknown")
+    expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, MessageID.make("msg_missing")))).toBe(false)
+  })
+
+  test("drop cancels a queued prompt and is idempotent", async () => {
+    const sessionID = SessionID.make("session_drop_queued")
+    const ready = Promise.withResolvers<void>()
+    const done = Promise.withResolvers<void>()
+    const firstID = MessageID.make("msg_drop_first")
+    const secondID = MessageID.make("msg_drop_second")
+
+    const first = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        firstID,
+        Effect.promise(async () => {
+          ready.resolve()
+          await done.promise
+          return "first"
+        }),
+        Effect.succeed("first-cancelled"),
+      ),
+    )
+    await ready.promise
+
+    const second = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        secondID,
+        Effect.sync(() => "second"),
+        Effect.succeed("second-cancelled"),
+      ),
+    )
+
+    expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, secondID))).toBe(true)
+    expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, secondID))).toBe(false)
+    done.resolve()
+
+    expect(await first).toBe("first")
+    expect(await second).toBe("second-cancelled")
+  })
+
+  test("drop on a middle prompt preserves later queued prompts", async () => {
+    const sessionID = SessionID.make("session_drop_middle")
+    const ready = Promise.withResolvers<void>()
+    const done = Promise.withResolvers<void>()
+    const calls: string[] = []
+    const firstID = MessageID.make("msg_drop_1")
+    const secondID = MessageID.make("msg_drop_2")
+    const thirdID = MessageID.make("msg_drop_3")
+
+    const first = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        firstID,
+        Effect.promise(async () => {
+          calls.push("first")
+          ready.resolve()
+          await done.promise
+          return "first"
+        }),
+        Effect.succeed("first-cancelled"),
+      ),
+    )
+    await ready.promise
+
+    const second = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        secondID,
+        Effect.sync(() => {
+          calls.push("second")
+          return "second"
+        }),
+        Effect.succeed("second-cancelled"),
+      ),
+    )
+    const third = Effect.runPromise(
+      KiloSessionPromptQueue.enqueue(
+        sessionID,
+        thirdID,
+        Effect.sync(() => {
+          calls.push("third")
+          return "third"
+        }),
+        Effect.succeed("third-cancelled"),
+      ),
+    )
+
+    expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, secondID))).toBe(true)
+    expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(true)
+    done.resolve()
+
+    expect(await first).toBe("first")
+    expect(await second).toBe("second-cancelled")
+    expect(await third).toBe("third")
+    expect(calls).toEqual(["first", "third"])
+    expect(KiloSessionPromptQueue._hasInternalState(sessionID)).toBe(false)
   })
 })

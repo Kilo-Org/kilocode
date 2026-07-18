@@ -5,6 +5,7 @@ import { MessageID, SessionID } from "@/session/schema"
 type Slot = {
   readonly seq: number
   readonly version: number
+  readonly target: MessageID
   readonly previous: Promise<void>
   readonly done: PromiseWithResolvers<void>
   readonly tail: Promise<void>
@@ -19,6 +20,10 @@ export namespace KiloSessionPromptQueue {
   const tails = new Map<SessionID, Promise<void>>()
   const versions = new Map<SessionID, number>()
   const targets = new Map<SessionID, Target>()
+  // Message IDs still waiting to start (queued behind the active turn).
+  const queued = new Map<SessionID, Set<MessageID>>()
+  // Message IDs whose queued slot was cancelled via drop().
+  const dropped = new Map<SessionID, Set<MessageID>>()
   // Monotonic arrival counter per session. latest holds the seq of the most
   // recently enqueued slot; activeSince snapshots latest at the moment the
   // currently running slot actually started. hasFollowup returns true only when
@@ -29,10 +34,26 @@ export namespace KiloSessionPromptQueue {
 
   /** @internal - test-only helper */
   export function _hasInternalState(sessionID: SessionID): boolean {
-    return versions.has(sessionID) || targets.has(sessionID) || latest.has(sessionID) || activeSince.has(sessionID)
+    return (
+      versions.has(sessionID) ||
+      targets.has(sessionID) ||
+      queued.has(sessionID) ||
+      dropped.has(sessionID) ||
+      latest.has(sessionID) ||
+      activeSince.has(sessionID)
+    )
   }
 
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
+  // A slot should be skipped when the queue was reset after it was enqueued
+  // (superseded turn) or its message was explicitly dropped by the user.
+  const isCancelled = (sessionID: SessionID, slot: Slot) =>
+    slot.version !== version(sessionID) || dropped.get(sessionID)?.has(slot.target)
+  const add = (sessionID: SessionID, messageID: MessageID) => {
+    const values = queued.get(sessionID) ?? new Set<MessageID>()
+    values.add(messageID)
+    queued.set(sessionID, values)
+  }
   const settle = (promise: Promise<void>) =>
     promise.then(
       () => undefined,
@@ -44,11 +65,28 @@ export namespace KiloSessionPromptQueue {
       if (!tails.has(sessionID)) {
         versions.delete(sessionID)
         targets.delete(sessionID)
+        queued.delete(sessionID)
+        dropped.delete(sessionID)
         latest.delete(sessionID)
         activeSince.delete(sessionID)
         return
       }
       versions.set(sessionID, version(sessionID) + 1)
+      queued.delete(sessionID)
+      dropped.delete(sessionID)
+    })
+  }
+
+  export function drop(sessionID: SessionID, messageID: MessageID) {
+    return Effect.sync(() => {
+      const values = queued.get(sessionID)
+      if (!values?.has(messageID)) return false
+      values.delete(messageID)
+      if (values.size === 0) queued.delete(sessionID)
+      const cancelled = dropped.get(sessionID) ?? new Set<MessageID>()
+      cancelled.add(messageID)
+      dropped.set(sessionID, cancelled)
+      return true
     })
   }
 
@@ -78,7 +116,7 @@ export namespace KiloSessionPromptQueue {
   export function hasFollowup(sessionID: SessionID): boolean {
     const l = latest.get(sessionID) ?? 0
     const a = activeSince.get(sessionID) ?? 0
-    return l > a
+    return l > a && (queued.get(sessionID)?.size ?? 0) > 0
   }
 
   export function scope(sessionID: SessionID, messages: MessageV2.WithParts[]) {
@@ -128,17 +166,20 @@ export namespace KiloSessionPromptQueue {
       Effect.sync(() => {
         const mine = ++seq
         latest.set(sessionID, mine)
-        const previous = tails.get(sessionID) ?? Promise.resolve()
+        const current = tails.get(sessionID)
+        const previous = current ?? Promise.resolve()
         const done = Promise.withResolvers<void>()
         // Keep later queued prompts moving; each caller still observes its own failure.
         const tail = settle(previous).then(() => done.promise)
+        if (current) add(sessionID, target)
         tails.set(sessionID, tail)
-        return { seq: mine, version: version(sessionID), previous, done, tail } satisfies Slot
+        return { seq: mine, version: version(sessionID), target, previous, done, tail } satisfies Slot
       }),
       (slot) =>
         Effect.promise(() => settle(slot.previous)).pipe(
           Effect.flatMap(() => {
-            if (slot.version !== version(sessionID)) return cancelled
+            queued.get(sessionID)?.delete(slot.target)
+            if (isCancelled(sessionID, slot)) return cancelled
             // Snapshot the latest seq at the moment this slot actually starts
             // running. hasFollowup compares against this value so the slot only
             // breaks when something newer than itself arrives.
@@ -162,6 +203,8 @@ export namespace KiloSessionPromptQueue {
           tails.delete(sessionID)
           versions.delete(sessionID)
           targets.delete(sessionID)
+          queued.delete(sessionID)
+          dropped.delete(sessionID)
           latest.delete(sessionID)
           activeSince.delete(sessionID)
         }),

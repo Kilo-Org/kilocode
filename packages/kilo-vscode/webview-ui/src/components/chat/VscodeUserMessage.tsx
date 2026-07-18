@@ -9,6 +9,7 @@ interface VscodeUserMessageProps {
   parts: Part[]
   interrupted?: boolean
   queued?: boolean
+  onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
 }
@@ -35,6 +36,7 @@ export const VscodeUserMessage: Component<VscodeUserMessageProps> = (props) => {
       }
       interrupted={props.interrupted}
       queued={props.queued}
+      onDelete={props.onDelete}
       onFork={props.onFork}
       onRevert={props.onRevert}
     />
