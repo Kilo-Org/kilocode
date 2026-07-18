@@ -28,6 +28,10 @@ function basename(p: string): string {
   return parts[parts.length - 1] ?? p
 }
 
+export function gitProjectId(projects: ProjectSummary[]): string | undefined {
+  return projects.find((project) => project.isLegacyRoot)?.id ?? (projects.length === 1 ? projects[0]?.id : undefined)
+}
+
 export const useProjectView = (
   projects: Accessor<ProjectSummary[]>,
   counters: ProjectCounters,

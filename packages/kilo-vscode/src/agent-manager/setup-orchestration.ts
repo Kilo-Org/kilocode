@@ -66,6 +66,7 @@ export async function runSetupScriptForWorktree(
 }
 
 export interface RepoInfoDeps {
+  projectId?: string
   worktreeManager: () => WorktreeManager | undefined
   postToWebview: (msg: unknown) => void
   log: (msg: string) => void
@@ -77,7 +78,12 @@ export async function sendRepoInfo(deps: RepoInfoDeps): Promise<void> {
   try {
     const branch = await manager.currentBranch()
     const defaultBranch = await manager.defaultBranch()
-    deps.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch })
+    deps.postToWebview({
+      type: "agentManager.repoInfo",
+      ...(deps.projectId ? { projectId: deps.projectId } : {}),
+      branch,
+      defaultBranch,
+    })
   } catch (error) {
     deps.log(`Failed to get current branch: ${error}`)
   }

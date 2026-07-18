@@ -12,7 +12,9 @@ import { PRStatusPoller } from "./PRStatusPoller"
 
 interface PRBridgeHost {
   getWorktrees(): Worktree[]
-  getWorkspaceRoot(): string | undefined
+  projectId?: string
+  resolveWorkspaceRoot?: (projectId?: string) => string | undefined
+  getWorkspaceRoot?: () => string | undefined
   postToWebview(msg: AgentManagerOutMessage): void
   updateWorktreePR(id: string, number?: number, url?: string, state?: string): void
   hasPersistedPR(id: string): boolean
@@ -39,7 +41,9 @@ export class PRStatusBridge {
 
   static create(opts: {
     getWorktrees: () => Worktree[]
-    getWorkspaceRoot: () => string | undefined
+    projectId?: string
+    resolveWorkspaceRoot?: (projectId?: string) => string | undefined
+    getWorkspaceRoot?: () => string | undefined
     postToWebview: (msg: AgentManagerOutMessage) => void
     updateWorktreePR: (id: string, n?: number, u?: string, s?: string) => void
     hasPersistedPR: (id: string) => boolean
@@ -73,6 +77,7 @@ export class PRStatusBridge {
 
   /** Handle an incoming webview message. Returns true if handled. */
   handleMessage(m: Record<string, unknown>): boolean {
+    if (m.projectId !== undefined && m.projectId !== this.host.projectId) return false
     if (m.type === "agentManager.refreshPR") {
       this.poller.refresh(m.worktreeId as string)
       return true
@@ -95,7 +100,9 @@ export class PRStatusBridge {
 function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
   return {
     getWorktrees: () => host.getWorktrees(),
-    getWorkspaceRoot: () => host.getWorkspaceRoot(),
+    projectId: host.projectId,
+    resolveWorkspaceRoot: host.resolveWorkspaceRoot,
+    getWorkspaceRoot: host.getWorkspaceRoot,
     semaphore: host.semaphore,
     onStatus: (id: string, pr: PRStatus | null, err?: "gh_missing" | "gh_auth" | "fetch_failed") => {
       if (err) {
@@ -106,13 +113,20 @@ function bridgePollerOpts(bridge: PRStatusBridge, host: PRBridgeHost) {
         if (!bridge["cache"].has(id) && !host.hasPersistedPR(id))
           host.postToWebview({
             type: "agentManager.prStatus",
+            projectId: host.projectId,
             worktreeId: id,
             pr: null,
             error: err,
           } as AgentManagerOutMessage)
         return
       }
-      const msg = { type: "agentManager.prStatus", worktreeId: id, pr, error: err } as AgentManagerOutMessage
+      const msg = {
+        type: "agentManager.prStatus",
+        projectId: host.projectId,
+        worktreeId: id,
+        pr,
+        error: err,
+      } as AgentManagerOutMessage
       bridge["cache"].set(id, msg)
       host.postToWebview(msg)
       host.updateWorktreePR(id, pr?.number, pr?.url, pr?.state)

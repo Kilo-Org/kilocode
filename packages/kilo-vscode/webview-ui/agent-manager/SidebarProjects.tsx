@@ -3,9 +3,12 @@
 import { For, Show, type Component } from "solid-js"
 import type { ProjectSummary } from "../src/types/messages"
 import { ProjectAccordion } from "./ProjectAccordion"
+import { ProjectGitBody, type ProjectGitLabels, type ProjectGitView } from "./ProjectGitBody"
 
 export interface SidebarProjectsProps {
   projects: () => ProjectSummary[]
+  git: () => Record<string, ProjectGitView>
+  labels: ProjectGitLabels
   /** When true, render the multi-project accordion layout. When false, the
    *  caller should render the legacy sidebar body instead. */
   showMultiProject: () => boolean
@@ -47,12 +50,7 @@ export const SidebarProjects: Component<SidebarProjectsProps> = (props) => {
           >
             <Show
               when={project.isLegacyRoot}
-              fallback={
-                <div class="am-project-empty">
-                  <span>{props.displayLabel(project)}</span>
-                  <span>{"\u2014"}</span>
-                </div>
-              }
+              fallback={<ProjectGitBody value={props.git()[project.id]} labels={props.labels} />}
             >
               {props.renderLegacyBody() as never}
             </Show>

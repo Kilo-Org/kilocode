@@ -97,11 +97,13 @@ export interface PRStatus {
 
 interface WorktreeStatsMessage {
   type: "agentManager.worktreeStats"
+  projectId?: string
   stats: WorktreeStats[]
 }
 
 interface LocalStatsMessage {
   type: "agentManager.localStats"
+  projectId?: string
   stats: LocalStats
 }
 
@@ -126,6 +128,7 @@ interface SessionMetaMessage {
 
 interface StateMessage {
   type: "agentManager.state"
+  projectId?: string
   worktrees: Worktree[]
   sessions: ManagedSession[]
   sections?: Section[]
@@ -137,6 +140,8 @@ interface StateMessage {
   reviewDiffStyle?: "unified" | "split"
   reviewMarkdownRender?: boolean
   isGitRepo?: boolean
+  branch?: string
+  defaultBranch?: string
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
@@ -244,6 +249,7 @@ interface SendInitialMessage {
 
 interface BranchesMessage {
   type: "agentManager.branches"
+  projectId?: string
   branches: (BranchListItem & { isCheckedOut?: boolean })[]
   defaultBranch: string
 }
@@ -267,6 +273,7 @@ interface KeybindingsMessage {
 
 interface RepoInfoMessage {
   type: "agentManager.repoInfo"
+  projectId?: string
   branch: string
   defaultBranch?: string
 }
@@ -308,6 +315,7 @@ interface RevertWorktreeFileResultMessage {
 
 interface PRStatusOutMessage {
   type: "agentManager.prStatus"
+  projectId?: string
   worktreeId: string
   pr: PRStatus | null
   error?: "gh_missing" | "gh_auth" | "fetch_failed"
@@ -474,6 +482,7 @@ interface ShowExistingLocalTerminalIn {
 
 interface RequestRepoInfoIn {
   type: "agentManager.requestRepoInfo"
+  projectId?: string
 }
 
 interface CreateMultiVersionIn {
@@ -505,6 +514,7 @@ interface RequestStateIn {
 
 interface RequestBranchesIn {
   type: "agentManager.requestBranches"
+  projectId?: string
 }
 
 interface SetTabOrderIn {
@@ -601,11 +611,13 @@ interface RevertWorktreeFileIn {
 
 interface RefreshPRIn {
   type: "agentManager.refreshPR"
+  projectId?: string
   worktreeId: string
 }
 
 interface OpenPRIn {
   type: "agentManager.openPR"
+  projectId?: string
   worktreeId: string
 }
 

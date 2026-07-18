@@ -2,4 +2,4 @@
 "kilo-code": minor
 ---
 
-Add an **Add project** flow to the Agent Manager sidebar and a multi-project accordion layout. Users can now register an external repository (or any local Git folder) as a project, and the sidebar renders one collapsible accordion per registered project with a header showing the project label, worktree count, and per-project actions (new worktree, add to VS Code workspace, remove project). Unsupported filesystem schemes and non-Git folders are rejected with a clear error; registering the same canonical root twice is a no-op. The single-project UX is preserved unchanged when zero or one project is registered.
+Add an **Add project** flow and multi-project accordion layout to Agent Manager. Register local Git repositories as separate projects, view each project's isolated branch, worktree Git stats, and pull request status, and pause polling for collapsed projects without an active session. Unsupported folders are rejected, duplicate canonical roots are ignored, and the existing single-project experience remains unchanged.

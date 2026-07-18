@@ -618,6 +618,7 @@ export interface AgentManagerSessionMetaMessage {
 // Agent Manager repo info (current branch of the main workspace)
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
+  projectId?: string
   branch: string
   defaultBranch?: string
 }
@@ -656,6 +657,7 @@ export interface AgentManagerSessionClosedMessage {
 // Full state push from extension to webview
 export interface AgentManagerStateMessage {
   type: "agentManager.state"
+  projectId?: string
   worktrees: WorktreeState[]
   sessions: ManagedSessionState[]
   sections?: SectionState[]
@@ -667,6 +669,8 @@ export interface AgentManagerStateMessage {
   reviewDiffStyle?: "unified" | "split"
   reviewMarkdownRender?: boolean
   isGitRepo?: boolean
+  branch?: string
+  defaultBranch?: string
   defaultBaseBranch?: string
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
@@ -812,6 +816,7 @@ export interface ModelSelectionsLoadedMessage {
 
 export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
+  projectId?: string
   branches: BranchInfo[]
   defaultBranch: string
 }
@@ -870,18 +875,21 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
 // Agent Manager: Worktree git stats push (extension → webview)
 export interface AgentManagerWorktreeStatsMessage {
   type: "agentManager.worktreeStats"
+  projectId?: string
   stats: WorktreeGitStats[]
 }
 
 // Agent Manager: Local workspace git stats push (extension → webview)
 export interface AgentManagerLocalStatsMessage {
   type: "agentManager.localStats"
+  projectId?: string
   stats: LocalGitStats
 }
 
 // Agent Manager: PR status push (extension → webview)
 export interface AgentManagerPRStatusMessage {
   type: "agentManager.prStatus"
+  projectId?: string
   worktreeId: string
   pr: PRStatus | null
   error?: "gh_missing" | "gh_auth" | "fetch_failed"

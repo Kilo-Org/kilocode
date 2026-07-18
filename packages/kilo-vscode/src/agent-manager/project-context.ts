@@ -1,4 +1,7 @@
 import type { Project } from "./project-registry"
+import type { GitOps } from "./GitOps"
+import { WorktreeManager } from "./WorktreeManager"
+import { WorktreeStateManager } from "./WorktreeStateManager"
 
 /**
  * Service contracts the project context owns. The exact implementations are
@@ -12,6 +15,18 @@ import type { Project } from "./project-registry"
  */
 export interface ProjectContextDeps {
   buildWorktreeManager(): unknown
+  buildStateManager?(): unknown
+}
+
+export function projectContextDeps(
+  project: Pick<Project, "root">,
+  git: GitOps,
+  log: (scope: "WorktreeManager" | "StateManager", message: string) => void,
+): ProjectContextDeps {
+  return {
+    buildWorktreeManager: () => new WorktreeManager(project.root, (message) => log("WorktreeManager", message), git),
+    buildStateManager: () => new WorktreeStateManager(project.root, (message) => log("StateManager", message)),
+  }
 }
 
 export interface ProjectContext {
@@ -19,6 +34,8 @@ export interface ProjectContext {
   readonly root: string
   readonly trusted: boolean
   getWorktreeManager(): unknown
+  getStateManager(): unknown
+  getGitScope(build: () => unknown): unknown
   dispose(): void
 }
 
@@ -30,6 +47,8 @@ export interface ProjectContext {
  */
 export function createProjectContext(project: Project, deps: ProjectContextDeps): ProjectContext {
   let worktreeManager: unknown
+  let stateManager: unknown
+  let gitScope: unknown
   let disposed = false
 
   return {
@@ -41,10 +60,22 @@ export function createProjectContext(project: Project, deps: ProjectContextDeps)
       if (worktreeManager === undefined) worktreeManager = deps.buildWorktreeManager()
       return worktreeManager
     },
+    getStateManager() {
+      if (disposed || !deps.buildStateManager) return undefined
+      if (stateManager === undefined) stateManager = deps.buildStateManager()
+      return stateManager
+    },
+    getGitScope(build) {
+      if (disposed) return undefined
+      if (gitScope === undefined) gitScope = build()
+      return gitScope
+    },
     dispose() {
       if (disposed) return
       disposed = true
       worktreeManager = undefined
+      stateManager = undefined
+      gitScope = undefined
     },
   }
 }

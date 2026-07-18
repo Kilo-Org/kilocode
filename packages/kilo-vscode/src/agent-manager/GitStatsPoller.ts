@@ -36,9 +36,11 @@ export interface WorktreePresenceResult {
   degraded: boolean
 }
 
-interface GitStatsPollerOptions {
+export interface GitStatsPollerOptions {
   getWorktrees: () => Worktree[]
-  getWorkspaceRoot: () => string | undefined
+  projectId?: string
+  resolveWorkspaceRoot?: (projectId?: string) => string | undefined
+  getWorkspaceRoot?: () => string | undefined
   /**
    * Compute diff summaries locally (in the extension host) rather than over
    * HTTP to `kilo serve`. Keeps git spawning out of the Bun process, which
@@ -231,8 +233,13 @@ export class GitStatsPoller {
       .join("|")
   }
 
+  private workspaceRoot(): string | undefined {
+    if (this.options.resolveWorkspaceRoot) return this.options.resolveWorkspaceRoot(this.options.projectId)
+    return this.options.getWorkspaceRoot?.()
+  }
+
   private async probeWorktreePresence(worktrees: Worktree[]): Promise<WorktreePresenceResult> {
-    const root = this.options.getWorkspaceRoot()
+    const root = this.workspaceRoot()
     if (!root) {
       return { worktrees: [], degraded: true }
     }
@@ -263,7 +270,7 @@ export class GitStatsPoller {
   }
 
   private async fetchLocalStats(): Promise<void> {
-    const root = this.options.getWorkspaceRoot()
+    const root = this.workspaceRoot()
     if (!root) return
 
     try {

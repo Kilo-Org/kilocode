@@ -1,14 +1,7 @@
-import {
-  parseProjectRegistry,
-  serializeProjectRegistry,
-  type ProjectRegistry,
-} from "./project-registry"
+import { parseProjectRegistry, serializeProjectRegistry, type ProjectRegistry } from "./project-registry"
 import type { MementoLike } from "./host"
 
 export const PROJECT_REGISTRY_STORAGE_KEY = "kilo.agentManager.projectRegistry.v1"
-
-/** Alias kept for tests. */
-export type ProjectRegistryState = MementoLike
 
 export class ProjectRegistryStoreCorrupt extends Error {
   override name = "ProjectRegistryStoreCorrupt"

@@ -136,7 +136,8 @@ import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
 import { ProjectAccordion } from "./ProjectAccordion"
 import { SidebarProjects } from "./SidebarProjects"
-import { useProjectView } from "./project-view"
+import { reduceProjectGit, type ProjectGitMessage, type ProjectGitView } from "./project-git-view"
+import { gitProjectId, useProjectView } from "./project-view"
 import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
@@ -298,11 +299,15 @@ const AgentManagerContent: Component = () => {
 
   const [runStatuses, setRunStatuses] = createSignal<Record<string, RunStatus>>({})
   const [runScriptConfigured, setRunScriptConfigured] = createSignal(false)
-  // Registered projects for the multi-project accordion sidebar.
   const [projects, setProjects] = createSignal<ProjectSummary[]>([])
+  const [projectGit, setProjectGit] = createSignal<Record<string, ProjectGitView>>({})
+  const projectMessage = (message: ProjectGitMessage) => {
+    if (!message.projectId) return false
+    setProjectGit((prev) => reduceProjectGit(prev, message))
+    return true
+  }
   const [activeProjectId, setActiveProjectId] = createSignal<string | undefined>()
 
-  // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
 
   // Per-worktree apply-to-local status
@@ -543,7 +548,7 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (!sel || sel === LOCAL || !prStatuses()[sel]) return
     metrics.track("open_pull_request", "keyboard_shortcut")
-    vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel })
+    vscode.postMessage({ type: "agentManager.openPR", projectId: gitProjectId(projects()), worktreeId: sel })
   }
 
   const runWorktree = (id: string) => {
@@ -962,13 +967,11 @@ const AgentManagerContent: Component = () => {
     focusSidebarItem(flat[next]!)
   }
 
-  // Jump to sidebar item by 0-based index into sidebarOrder (⌘1 = index 0 = LOCAL, ⌘2 = index 1, etc.)
   const jumpToItem = (index: number) => {
     const item = sidebarOrder()[index]
     if (item) focusSidebarItem(item)
   }
 
-  // Navigate tabs with Cmd+Alt+Left/Right
   const navigateTab = (direction: "left" | "right") => {
     const ids = tabIds()
     if (ids.length === 0) return
@@ -983,7 +986,7 @@ const AgentManagerContent: Component = () => {
     saveTabMemory()
     setReviewActive(false)
     setSelection(LOCAL)
-    vscode.postMessage({ type: "agentManager.requestRepoInfo" })
+    vscode.postMessage({ type: "agentManager.requestRepoInfo", projectId: gitProjectId(projects()) })
     const locals = localSessions()
     const remembered = tabMemory()[LOCAL]
     if (terms.hasRemembered(LOCAL, remembered)) return termHandlers.activate(remembered!)
@@ -1296,6 +1299,7 @@ const AgentManagerContent: Component = () => {
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
+        if (projectMessage(info)) return
         setRepoBranch(info.branch)
         if (info.defaultBranch) setRepoDetectedBranch(info.defaultBranch)
       }
@@ -1340,6 +1344,7 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.state") {
         const state = msg as AgentManagerStateMessage
+        if (projectMessage(state)) return
         setWorktrees(state.worktrees)
         setManagedSessions(state.sessions)
         setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
@@ -1531,6 +1536,7 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.worktreeStats") {
         const ev = msg as AgentManagerWorktreeStatsMessage
+        if (projectMessage(ev)) return
         const map: Record<string, WorktreeGitStats> = {}
         for (const s of ev.stats) map[s.worktreeId] = s
         setWorktreeStats(map)
@@ -1538,12 +1544,14 @@ const AgentManagerContent: Component = () => {
 
       if (msg.type === "agentManager.localStats") {
         const ev = msg as AgentManagerLocalStatsMessage
+        if (projectMessage(ev)) return
         setLocalStats(ev.stats)
         setRepoBranch(ev.stats.branch)
       }
 
       if (msg.type === "agentManager.prStatus") {
         const ev = msg as AgentManagerPRStatusMessage
+        if (projectMessage(ev)) return
         setPrStatuses((prev) => ({ ...prev, [ev.worktreeId]: ev.pr }))
       }
     })
@@ -1750,7 +1758,7 @@ const AgentManagerContent: Component = () => {
       }
     })
 
-    vscode.postMessage({ type: "agentManager.requestBranches" })
+    vscode.postMessage({ type: "agentManager.requestBranches", projectId: gitProjectId(projects()) })
 
     const filtered = createMemo(() => {
       const s = search().toLowerCase()
@@ -1766,7 +1774,6 @@ const AgentManagerContent: Component = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const items = filtered()
-      // offset by 1 for auto-detect option (-1 = auto-detect)
       const total = items.length + 1
       if (e.key === "ArrowDown") {
         e.preventDefault()
@@ -1864,10 +1871,6 @@ const AgentManagerContent: Component = () => {
 
   const loaded = () => worktreesLoaded() && sessionsLoaded()
 
-  // Render the today's single-project sidebar body (Local item + Worktrees
-  // section + Unassigned sessions). Used directly when 0–1 projects are
-  // registered, and inside the legacy project's accordion when 2+ projects
-  // are registered.
   const renderSidebarBody = (): JSX.Element => (
     <>
       <button
@@ -1946,7 +1949,6 @@ const AgentManagerContent: Component = () => {
         <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
       </button>
 
-      {/* WORKTREES section */}
       <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
         <div class="am-section-header">
           <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
@@ -2105,7 +2107,11 @@ const AgentManagerContent: Component = () => {
                                 pr={prStatuses()[wt.id] !== undefined ? (prStatuses()[wt.id] ?? undefined) : undefined}
                                 runStatus={runStatuses()[wt.id]}
                                 onOpenPR={metrics.click("open_pull_request", "worktree_menu", () =>
-                                  vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id }),
+                                  vscode.postMessage({
+                                    type: "agentManager.openPR",
+                                    projectId: gitProjectId(projects()),
+                                    worktreeId: wt.id,
+                                  }),
                                 )}
                                 sections={sections()}
                                 currentSectionId={wt.sectionId}
@@ -2225,7 +2231,6 @@ const AgentManagerContent: Component = () => {
   }
   const createWorktree = metrics.click("new_worktree", "worktrees", handleCreateWorktree)
 
-  // Project management (ticket #12353)
   const handleAddProject = () => {
     vscode.postMessage({ type: "agentManager.addProject" })
   }
@@ -2256,14 +2261,19 @@ const AgentManagerContent: Component = () => {
   const showNewWorktreeDialog = () => {
     if (!loaded()) return
     expandSidebar()
-    dialog.show(() => <NewWorktreeDialog onClose={() => dialog.close()} defaultBaseBranch={repoDefaultBranch()} />)
+    dialog.show(() => (
+      <NewWorktreeDialog
+        onClose={() => dialog.close()}
+        defaultBaseBranch={repoDefaultBranch()}
+        projectId={projects().find((project) => project.isLegacyRoot)?.id}
+      />
+    ))
   }
 
   const confirmDeleteWorktree = (worktreeId: string) => {
     const wt = worktrees().find((w) => w.id === worktreeId)
     if (!wt) return
 
-    // Second press/click: execute the delete
     if (pendingDelete() === worktreeId) {
       cancelPendingDelete()
       setBusyWorktrees((prev) => new Map([...prev, [wt.id, { reason: "deleting" as const }]]))
@@ -2281,7 +2291,6 @@ const AgentManagerContent: Component = () => {
       return
     }
 
-    // First press/click: enter pending-delete state
     clearTimeout(pendingDeleteTimer)
     setPendingDelete(worktreeId)
     pendingDeleteTimer = setTimeout(() => setPendingDelete(null), 2500)
@@ -2460,7 +2469,6 @@ const AgentManagerContent: Component = () => {
     closeReviewTab()
   }
 
-  // Drag-and-drop handlers for tab reordering
   const tabLookup = createMemo(() => new Map(activeTabs().map((s) => [s.id, s])))
   const tabIds = createMemo(() => {
     const ids = activeTabs().map((s) => s.id)
@@ -2469,9 +2477,6 @@ const AgentManagerContent: Component = () => {
     const withReview = reviewOpen() ? [...ids, REVIEW_TAB_ID] : ids
     const terminalIds = terms.current().map((t) => t.id)
     const base = [...withReview, ...terminalIds]
-    // `worktreeTabOrder` stores the per-context mixed order. Applied
-    // for every context (LOCAL too) and persisted server-side via
-    // `setTabOrder`; unknown IDs are filtered by `applyTabOrder`.
     const key = sel === LOCAL ? LOCAL : sel
     return applyTabOrder(
       base.map((id) => ({ id })),
@@ -2620,8 +2625,6 @@ const AgentManagerContent: Component = () => {
             }
           }}
         />
-        {/* Global projects toolbar (hidden when the single-project UX must remain
-             indistinguishable from today's Agent Manager — see #12353 AC6). */}
         <Show when={projectView.showMultiProject()}>
           <div class="am-project-toolbar">
             <span class="am-project-toolbar-label">{t("agentManager.project.toolbarLabel")}</span>
@@ -2635,6 +2638,13 @@ const AgentManagerContent: Component = () => {
         </Show>
         <SidebarProjects
           projects={projects}
+          git={projectGit}
+          labels={{
+            local: t("agentManager.local"),
+            worktrees: t("agentManager.section.worktrees"),
+            loading: t("agentManager.import.loading"),
+            notGit: t("agentManager.notGitRepo"),
+          }}
           showMultiProject={projectView.showMultiProject}
           renderLegacyBody={renderSidebarBody}
           displayLabel={projectView.displayLabel}

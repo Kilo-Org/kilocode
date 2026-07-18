@@ -163,16 +163,6 @@ export class ProjectUnsupportedSchemeError extends ProjectAddError {
   }
 }
 
-export class ProjectDuplicateRootError extends ProjectAddError {
-  override name = "ProjectDuplicateRootError"
-  constructor(
-    public readonly root: string,
-    public readonly existingProjectId: string,
-  ) {
-    super("duplicate_root", `Project already registered for ${root}`, { root, existingProjectId })
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Core add helper
 // ---------------------------------------------------------------------------

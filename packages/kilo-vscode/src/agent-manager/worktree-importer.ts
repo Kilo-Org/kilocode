@@ -7,8 +7,8 @@ import { classifyWorktreeError, normalizePath } from "./git-import"
 type Worktree = ReturnType<WorktreeStateManager["addWorktree"]>
 
 export interface WorktreeImporterHost {
-  manager(): WorktreeManager | undefined
-  state(): WorktreeStateManager | undefined
+  manager(projectId?: string): WorktreeManager | undefined
+  state(projectId?: string): WorktreeStateManager | undefined
   post(msg: AgentManagerOutMessage): void
   push(): void
   setup(path: string, branch?: string, worktreeId?: string): Promise<void>
@@ -23,10 +23,15 @@ export class WorktreeImporter {
 
   constructor(private readonly host: WorktreeImporterHost) {}
 
-  async branches(): Promise<void> {
-    const manager = this.host.manager()
+  async branches(projectId?: string): Promise<void> {
+    const manager = this.host.manager(projectId)
     if (!manager) {
-      this.host.post({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
+      this.host.post({
+        type: "agentManager.branches",
+        ...(projectId ? { projectId } : {}),
+        branches: [],
+        defaultBranch: "main",
+      })
       return
     }
 
@@ -38,7 +43,7 @@ export class WorktreeImporter {
         isCheckedOut: checked.has(branch.name),
       }))
 
-      const state = this.host.state()
+      const state = this.host.state(projectId)
       const configured = state?.getDefaultBaseBranch()
       if (state && configured && !branches.some((branch) => branch.name === configured)) {
         this.host.log(`Default base branch "${configured}" no longer exists, clearing`)
@@ -48,12 +53,18 @@ export class WorktreeImporter {
 
       this.host.post({
         type: "agentManager.branches",
+        ...(projectId ? { projectId } : {}),
         branches,
         defaultBranch: result.defaultBranch,
       })
     } catch (error) {
       this.host.log(`Failed to list branches: ${error}`)
-      this.host.post({ type: "agentManager.branches", branches: [], defaultBranch: "main" })
+      this.host.post({
+        type: "agentManager.branches",
+        ...(projectId ? { projectId } : {}),
+        branches: [],
+        defaultBranch: "main",
+      })
     }
   }
 

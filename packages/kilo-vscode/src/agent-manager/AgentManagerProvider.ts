@@ -38,7 +38,7 @@ import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
 import { ProjectRouting } from "./project-routing"
-import { ProjectUnknownError } from "./project-router"
+import { projectContextDeps } from "./project-context"
 import { handleAddProject, handleAddProjectToWorkspace, handleToggleProjectCollapsed } from "./project-messages"
 import { runSetupScriptForWorktree, sendRepoInfo } from "./setup-orchestration"
 import { openWorktreeDirectory, openWorktreeFile } from "./worktree-file-ops"
@@ -49,6 +49,7 @@ import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from 
 import { ensureSandbox } from "./sandbox-bootstrap"
 import { Semaphore } from "./semaphore"
 import { PLATFORM } from "./constants"
+import { ProjectGitCoordinator, shouldPollProject } from "./project-git"
 import type { AgentManagerOutMessage, AgentManagerInMessage, ProjectSummary } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
 export class AgentManagerProvider implements Disposable {
@@ -66,6 +67,7 @@ export class AgentManagerProvider implements Disposable {
   private statsPoller: GitStatsPoller
   private prBridge!: PRStatusBridge
   private orchestration: AgentManagerOrchestrationBridge
+  private semaphore = new Semaphore(3)
   private gitOps: GitOps
   private diffs: WorktreeDiffController
   private naming: BranchNamingController
@@ -79,6 +81,7 @@ export class AgentManagerProvider implements Disposable {
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   private projects?: ProjectRouting
+  private projectGit?: ProjectGitCoordinator
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
 
@@ -121,8 +124,8 @@ export class AgentManagerProvider implements Disposable {
       refresh: () => this.pushState(),
     })
     this.importer = new WorktreeImporter({
-      manager: () => this.getWorktreeManager(),
-      state: () => this.getStateManager(),
+      manager: (projectId) => this.projectManager(projectId),
+      state: (projectId) => this.projectStateManager(projectId),
       post: (msg) => this.postToWebview(msg),
       push: () => this.pushState(),
       setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
@@ -131,7 +134,7 @@ export class AgentManagerProvider implements Disposable {
       ready: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
       log: (...args) => this.log(...args),
     })
-    const semaphore = new Semaphore(3)
+    const semaphore = this.semaphore
     this.gitOps = new GitOps({ log: (...args) => this.log(...args), semaphore })
     this.naming = new BranchNamingController({
       state: () => this.getStateManager(),
@@ -210,9 +213,24 @@ export class AgentManagerProvider implements Disposable {
     )
     this.projects = new ProjectRouting(
       this.host.globalState(),
-      () => this.buildDeps(),
+      (project) =>
+        projectContextDeps(project, this.gitOps, (scope, message) =>
+          this.outputChannel.appendLine(`[${scope}] ${message}`),
+        ),
       (...args) => this.log(...args),
     )
+    this.projectGit = new ProjectGitCoordinator(this.projects, {
+      git: this.gitOps,
+      localDiff: (dir, base) => localDiffSummary(this.gitOps, dir, base, (...args) => this.log(...args)),
+      post: (message) => this.postToWebview(message),
+      openExternal: (url) => this.host.openExternal(url),
+      log: (...args) => this.log(...args),
+      semaphore: this.semaphore,
+      visible: () => this.panel?.visible ?? false,
+      active: () => this.activeSessionId,
+      poll: (project) => project.root !== this.getRoot(),
+      error: (error) => this.host.showError(error.message),
+    })
     void this.projects.load()
   }
 
@@ -283,6 +301,7 @@ export class AgentManagerProvider implements Disposable {
     this.onVisibilityChange?.(ctx.visible)
     ctx.onDidChangeVisibility((visible) => {
       this.statsPoller.setVisible(visible)
+      void this.projectGit?.refresh()
       this.visiblePresence.flush()
     })
 
@@ -305,6 +324,7 @@ export class AgentManagerProvider implements Disposable {
         void ctx.sessions.abortSessions(ids).catch((err) => this.log("Failed to abort sessions on panel close:", err))
         this.statsPoller.stop()
         this.prBridge.poller.stop()
+        this.projectGit?.stop()
         this.diffs.stop()
         this.activeSessionId = undefined
         this.visiblePresence.clear()
@@ -387,6 +407,10 @@ export class AgentManagerProvider implements Disposable {
   // Message interceptor
 
   private async onMessage(msg: Record<string, unknown>): Promise<Record<string, unknown> | null> {
+    const id = typeof msg.projectId === "string" ? msg.projectId : undefined
+    const legacy = id !== undefined && this.projects?.getProject(id)?.root === this.getRoot()
+    if (legacy && this.prBridge.handleMessage({ ...msg, projectId: undefined })) return null
+    if (this.projectGit?.handlePR(msg)) return null
     if (this.prBridge.handleMessage(msg)) return null
     if (msg.type === "requestFileSearch" && typeof msg.sessionID !== "string" && this.activeSessionId) {
       return { ...msg, sessionID: this.activeSessionId }
@@ -543,6 +567,7 @@ export class AgentManagerProvider implements Disposable {
       this.activeSessionId = m.sessionID
       this.terminalManager.syncOnSessionSwitch(m.sessionID)
       this.prBridge.poller.setActiveWorktreeId(this.state?.getSession(m.sessionID)?.worktreeId ?? undefined)
+      this.projectGit?.activate(m.sessionID)
       return msg
     }
 
@@ -607,7 +632,7 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
     if (m.type === "agentManager.requestRepoInfo") {
-      void this.sendRepoInfo()
+      void this.sendRepoInfo(m.projectId)
       return null
     }
     if (m.type === "agentManager.createMultiVersion") {
@@ -689,7 +714,8 @@ export class AgentManagerProvider implements Disposable {
 
   private onImportMessage(m: AgentManagerInMessage): Record<string, unknown> | null | undefined {
     if (m.type === "agentManager.requestBranches") {
-      void this.importer.branches()
+      if (this.projectGit && !this.projectGit.requireProject(m.projectId)) return null
+      void this.importer.branches(m.projectId)
       return null
     }
     if (m.type === "agentManager.requestExternalWorktrees") {
@@ -790,8 +816,6 @@ export class AgentManagerProvider implements Disposable {
         this.pushState()
       })
   }
-
-  // Shared helpers
 
   /** Create a git worktree on disk and register it in state. Returns null on failure. */
   private async createWorktreeOnDisk(opts?: CreateWorktreeOnDiskOptions): Promise<CreateWorktreeOnDiskResult | null> {
@@ -1490,15 +1514,15 @@ export class AgentManagerProvider implements Disposable {
     })
   }
 
-  private async sendRepoInfo(): Promise<void> {
+  private async sendRepoInfo(projectId?: string): Promise<void> {
+    if (this.projectGit && !this.projectGit.requireProject(projectId)) return
     await sendRepoInfo({
-      worktreeManager: () => this.getWorktreeManager(),
+      projectId,
+      worktreeManager: () => this.projectManager(projectId),
       postToWebview: (msg) => this.postToWebview(msg as never),
       log: (msg) => this.log(msg),
     })
   }
-
-  // State helpers
 
   private registerWorktreeSession(sessionId: string, directory: string): void {
     const worktree = this.state?.findWorktreeByPath(directory)
@@ -1634,9 +1658,13 @@ export class AgentManagerProvider implements Disposable {
 
     // Sync skip set before enabling the poller so the first poll cycle
     // already excludes worktrees in collapsed sections.
+    const project = this.projects?.snapshot().projects.find((item) => item.root === this.getRoot())
+    const active = this.activeSessionId !== undefined && state.getSession(this.activeSessionId) !== undefined
+    const poll = shouldPollProject(project, active)
     this.syncPollerSkips()
-    this.statsPoller.setEnabled(worktrees.length > 0 || this.panel !== undefined)
-    this.prBridge.poller.setEnabled(worktrees.length > 0)
+    this.statsPoller.setEnabled(poll && (worktrees.length > 0 || this.panel !== undefined))
+    this.prBridge.poller.setEnabled(poll && worktrees.length > 0)
+    void this.projectGit?.refresh()
   }
 
   /** Push empty state when the folder is not a git repo or has no folder open. */
@@ -1656,10 +1684,9 @@ export class AgentManagerProvider implements Disposable {
         ...this.projectStateProjection(),
       })
     })
+    void this.projectGit?.refresh()
   }
 
-  /** Build the `projects` + `activeProjectId` projection of the registry so
-   *  both `pushState` and `pushEmptyState` stay in sync. */
   private projectStateProjection(): {
     projects: ProjectSummary[]
     activeProjectId: string | undefined
@@ -1680,50 +1707,18 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  // Manager accessors
+  private projectManager(id?: string): WorktreeManager | undefined {
+    if (!id || this.projects?.getProject(id)?.root === this.getRoot()) return this.getWorktreeManager()
+    return this.projectGit?.manager(id)
+  }
+
+  private projectStateManager(id?: string): WorktreeStateManager | undefined {
+    if (!id || this.projects?.getProject(id)?.root === this.getRoot()) return this.getStateManager()
+    return this.projectGit?.state(id)
+  }
 
   private getRoot(): string | undefined {
     return this.host.workspacePath()
-  }
-
-  /**
-   * Resolve the canonical root for a repository operation.
-   *
-   * - When `projectId` is supplied and matches a registered project, the
-   *   project's canonical root is returned (the webview cannot influence
-   *   this by passing an arbitrary filesystem path).
-   * - When `projectId` is absent, the legacy `workspaceFolders[0]` root is
-   *   used unchanged so today's single-project users see no behavior change.
-   * - When `projectId` is supplied but does not resolve, this surfaces a
-   *   structured error — the webview cannot down-grade an unknown-id
-   *   rejection by piggybacking on the legacy fallback.
-   *
-   * Returns `undefined` only when neither path yields a root (the legacy
-   * path is unavailable AND no `projectId` was supplied). All other cases
-   * throw or resolve.
-   */
-  private resolveProjectRootFor(projectId: string | undefined): string | undefined {
-    try {
-      const resolved = this.projects!.resolveRoot(projectId, this.getRoot())
-      return resolved.root
-    } catch (err) {
-      if (err instanceof ProjectUnknownError) {
-        if (err.projectId) this.host.showError(`Unknown project: ${err.projectId}`)
-        return undefined
-      }
-      throw err
-    }
-  }
-
-  private buildDeps() {
-    return {
-      // Lazy per-project manager placeholder. The full instantiation is
-      // deferred to ticket #12357 (worktree create & import migration)
-      // once it knows how to draw per-project state from the
-      // ProjectContext. Returning an opaque object gives handlers something
-      // to fetch on demand without locking the type in prematurely.
-      buildWorktreeManager: () => ({ placeholder: true }) as unknown,
-    }
   }
 
   private getWorktreeManager(): WorktreeManager | undefined {
@@ -1967,6 +1962,7 @@ export class AgentManagerProvider implements Disposable {
   private async disposeAsync(): Promise<void> {
     await this.stateReady?.catch((err) => this.log("dispose: stateReady rejected:", err))
     await this.state?.flush().catch((err) => this.log("dispose: state flush failed:", err))
+    await this.projectGit?.flush().catch((err) => this.log("dispose: project state flush failed:", err))
     this.unsubTool?.()
     this.unsubStatus?.()
     this.unsubFont?.()
@@ -1977,6 +1973,7 @@ export class AgentManagerProvider implements Disposable {
     this.statsPoller.stop()
     this.gitOps.dispose()
     this.prBridge.poller.stop()
+    this.projectGit?.stop()
     this.run.dispose()
     this.terminalManager.dispose()
     this.projects?.disposeAll()

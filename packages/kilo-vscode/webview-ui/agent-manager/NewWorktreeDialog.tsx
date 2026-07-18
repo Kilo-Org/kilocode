@@ -73,7 +73,9 @@ function sanitizeBranchName(name: string): string {
     .join("/")
 }
 
-export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string }> = (props) => {
+export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBranch?: string; projectId?: string }> = (
+  props,
+) => {
   const { t } = useLanguage()
   const vscode = useVSCode()
   const server = useServer()
@@ -248,7 +250,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
 
   onMount(() => {
     setBranchesLoading(true)
-    vscode.postMessage({ type: "agentManager.requestBranches" })
+    vscode.postMessage({ type: "agentManager.requestBranches", projectId: props.projectId })
     // Resize textarea if restoring a cached prompt
     if (prompt()) adjustHeight()
     const focus = () => {
@@ -401,6 +403,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const importUnsub = vscode.onMessage((msg) => {
     if (msg.type === "agentManager.branches") {
       const ev = msg as AgentManagerBranchesMessage
+      if (ev.projectId !== props.projectId) return
       setBranches(ev.branches)
       if (!props.defaultBaseBranch) setDefaultBranch(ev.defaultBranch)
       setBranchesLoading(false)

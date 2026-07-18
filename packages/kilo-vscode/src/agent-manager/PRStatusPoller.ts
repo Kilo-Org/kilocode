@@ -5,9 +5,16 @@ import { execWithShellEnv } from "./shell-env"
 import { classifyPRError } from "./git-import"
 import type { Semaphore } from "./semaphore"
 
-interface PRStatusPollerOptions {
+export interface PRStatusPollerOptions {
   getWorktrees: () => Worktree[]
-  getWorkspaceRoot: () => string | undefined
+  projectId?: string
+  resolveWorkspaceRoot?: (projectId?: string) => string | undefined
+  getWorkspaceRoot?: () => string | undefined
+  run?: (
+    cmd: string,
+    args: string[],
+    options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
+  ) => Promise<{ stdout: string; stderr: string }>
   onStatus: (worktreeId: string, pr: PRStatus | null, error?: "gh_missing" | "gh_auth" | "fetch_failed") => void
   log: (...args: unknown[]) => void
   intervalMs?: number
@@ -50,7 +57,7 @@ export class PRStatusPoller {
     args: string[],
     options?: Omit<ExecFileOptionsWithStringEncoding, "encoding">,
   ): Promise<{ stdout: string; stderr: string }> {
-    const invoke = () => execWithShellEnv(cmd, args, options)
+    const invoke = () => this.options.run?.(cmd, args, options) ?? execWithShellEnv(cmd, args, options)
     return this.semaphore ? this.semaphore.run(invoke) : invoke()
   }
 
@@ -117,6 +124,11 @@ export class PRStatusPoller {
     // When switching to a different worktree, fetch it immediately so the
     // badge updates without waiting for the next poll cycle.
     if (id && id !== prev && this.active) void this.fetchOne(id)
+  }
+
+  private workspaceRoot(): string | undefined {
+    if (this.options.resolveWorkspaceRoot) return this.options.resolveWorkspaceRoot(this.options.projectId)
+    return this.options.getWorkspaceRoot?.()
   }
 
   private start(): void {
@@ -213,7 +225,7 @@ export class PRStatusPoller {
     const wt = worktrees.find((w) => w.id === worktreeId)
     if (!wt) return
 
-    if (!this.options.getWorkspaceRoot()) return
+    if (!this.workspaceRoot()) return
 
     try {
       const pr = await this.cachedFetchPR(wt.branch, wt.path)

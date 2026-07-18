@@ -1,8 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import {
-  createProjectContext,
-  type ProjectContextDeps,
-} from "../../src/agent-manager/project-context"
+import { createProjectContext, type ProjectContextDeps } from "../../src/agent-manager/project-context"
 import type { Project } from "../../src/agent-manager/project-registry"
 
 function makeProject(overrides: Partial<Project> = {}): Project {
@@ -65,6 +62,29 @@ describe("ProjectContext", () => {
     expect(ctx.getWorktreeManager()).toBeUndefined()
     expect(ctx.id).toBe("f64e3a9b8c1d2705")
     expect(ctx.root).toBe("/Users/me/code/kilocode")
+  })
+
+  test("constructs and reuses project state independently", () => {
+    const deps = makeDeps()
+    let calls = 0
+    deps.buildStateManager = () => ({ tag: ++calls })
+    const ctx = createProjectContext(makeProject(), deps)
+
+    expect(ctx.getStateManager()).toBe(ctx.getStateManager())
+    expect(calls).toBe(1)
+    ctx.dispose()
+    expect(ctx.getStateManager()).toBeUndefined()
+  })
+
+  test("owns the project Git scope lifecycle", () => {
+    const ctx = createProjectContext(makeProject(), makeDeps())
+    let calls = 0
+    const build = () => ({ tag: ++calls })
+
+    expect(ctx.getGitScope(build)).toBe(ctx.getGitScope(build))
+    expect(calls).toBe(1)
+    ctx.dispose()
+    expect(ctx.getGitScope(build)).toBeUndefined()
   })
 })
 

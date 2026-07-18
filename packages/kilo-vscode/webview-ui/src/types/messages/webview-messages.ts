@@ -653,6 +653,7 @@ export interface RenameWorktreeRequest {
 
 export interface RequestRepoInfoMessage {
   type: "agentManager.requestRepoInfo"
+  projectId?: string
 }
 
 export interface RequestStateMessage {
@@ -796,6 +797,7 @@ export interface SetReviewMarkdownRenderRequest {
 
 export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
+  projectId?: string
 }
 
 export interface RequestExternalWorktreesMessage {
@@ -848,11 +850,13 @@ export interface StopDiffWatchMessage {
 // Agent Manager: PR messages (webview → extension)
 export interface RefreshPRMessage {
   type: "agentManager.refreshPR"
+  projectId?: string
   worktreeId: string
 }
 
 export interface OpenPRMessage {
   type: "agentManager.openPR"
+  projectId?: string
   worktreeId: string
 }
 
