@@ -2,6 +2,7 @@ import { Component, createSignal, createEffect, createMemo, on, Show } from "sol
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tabs } from "@kilocode/kilo-ui/tabs"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { showToast } from "@kilocode/kilo-ui/toast"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
@@ -38,11 +39,11 @@ const Settings: Component<SettingsProps> = (props) => {
   const server = useServer()
   const language = useLanguage()
   const vscode = useVSCode()
-  const { config, loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
+  const { loading, isDirty, saving, saveError, saveConfig, discardConfig, features } = useConfig()
   const session = useSession()
   const [active, setActive] = createSignal(props.tab ?? "models")
   const [errorExpanded, setErrorExpanded] = createSignal(false)
-  const sandboxing = createMemo(() => Sandboxing.visible(features(), config()))
+  const sandboxing = createMemo(() => Sandboxing.visible(features()))
 
   const busyCount = () => Object.values(session.allStatusMap()).filter((s) => s.type === "busy").length
 
@@ -143,6 +144,12 @@ const Settings: Component<SettingsProps> = (props) => {
         <Button variant="secondary" size="small" icon="edit" onClick={() => open("global")}>
           {language.t("settings.openGlobalConfig")}
         </Button>
+        <Tooltip value={language.t("common.reloadDescription")} placement="bottom">
+          <Button variant="secondary" size="small" onClick={() => vscode.postMessage({ type: "reload" })}>
+            <Icon name="reload" size="small" />
+            {language.t("common.reload")}
+          </Button>
+        </Tooltip>
       </div>
 
       {/* Settings tabs */}
@@ -201,7 +208,7 @@ const Settings: Component<SettingsProps> = (props) => {
           </Tabs.Trigger>
           <Show when={features().indexing}>
             <Tabs.Trigger value="indexing" aria-label={language.t("settings.indexing.title")}>
-              <Icon name="server" />
+              <Icon name="database" />
               <span class="label">{language.t("settings.indexing.title")}</span>
             </Tabs.Trigger>
           </Show>

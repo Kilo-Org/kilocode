@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.3.54",
+  "version": "7.4.11",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -196,6 +196,16 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.showMemory",
+        "title": "Show Project Memory",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.toggleMemory",
+        "title": "Toggle Project Memory",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.autocomplete.generateSuggestions",
         "title": "Generate Suggested Edits",
         "category": "Kilo Code"
@@ -281,6 +291,11 @@
       },
       {
         "command": "kilo-code.new.agentManager.newWorktree",
+        "title": "Agent Manager: Configure New Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.quickWorktree",
         "title": "Agent Manager: New Worktree",
         "category": "Kilo Code"
       },
@@ -301,7 +316,7 @@
       },
       {
         "command": "kilo-code.new.agentManager.advancedWorktree",
-        "title": "Agent Manager: Advanced New Worktree",
+        "title": "Agent Manager: Configure New Worktree",
         "category": "Kilo Code"
       },
       {
@@ -399,6 +414,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.cycleAgentMode",
         "title": "Cycle Agent Mode",
         "category": "Kilo Code"
@@ -421,6 +441,11 @@
       {
         "command": "kilo-code.new.takeHeapSnapshot",
         "title": "Take Heap Snapshot",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.reload",
+        "title": "Reload Config and Skills",
         "category": "Kilo Code"
       }
     ],
@@ -450,6 +475,10 @@
         },
         {
           "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.agentManager.advancedWorktree",
           "when": "false"
         },
         {
@@ -694,6 +723,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.quickWorktree",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
         "command": "kilo-code.new.agentManager.openWorktree",
         "key": "ctrl+shift+o",
         "mac": "cmd+shift+o",
@@ -709,12 +744,6 @@
         "command": "kilo-code.new.agentManager.closeWorktree",
         "key": "ctrl+shift+w",
         "mac": "cmd+shift+w",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
-      },
-      {
-        "command": "kilo-code.new.agentManager.advancedWorktree",
-        "key": "ctrl+shift+n",
-        "mac": "cmd+shift+n",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -865,6 +894,57 @@
             "Italiano"
           ]
         },
+        "kilo-code.new.languageCommitMessage": {
+          "type": "string",
+          "default": "sync",
+          "description": "Language used for AI-generated commit messages. Choose 'sync' to follow the Kilo Code UI language, or select a specific language.",
+          "enum": [
+            "sync",
+            "en",
+            "zh",
+            "zht",
+            "ko",
+            "de",
+            "es",
+            "fr",
+            "da",
+            "ja",
+            "pl",
+            "ru",
+            "ar",
+            "no",
+            "br",
+            "th",
+            "bs",
+            "tr",
+            "nl",
+            "uk",
+            "it"
+          ],
+          "enumDescriptions": [
+            "跟随界面语言 (Sync with UI language)",
+            "English",
+            "简体中文",
+            "繁體中文",
+            "한국어",
+            "Deutsch",
+            "Español",
+            "Français",
+            "Dansk",
+            "日本語",
+            "Polski",
+            "Русский",
+            "العربية",
+            "Norsk",
+            "Português (Brasil)",
+            "ภาษาไทย",
+            "Bosanski",
+            "Türkçe",
+            "Nederlands",
+            "Українська",
+            "Italiano"
+          ]
+        },
         "kilo-code.new.model.providerID": {
           "type": "string",
           "default": "kilo",
@@ -924,6 +1004,18 @@
           "default": false,
           "description": "Enable chat textarea autocomplete"
         },
+        "kilo-code.new.agentManager.autoBranchNaming": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Automatically name new Agent Manager branches when the conversation describes a clear task. Explicitly named and published branches are never renamed."
+        },
+        "kilo-code.new.agentManager.branchPrefix": {
+          "type": "string",
+          "default": "",
+          "scope": "application",
+          "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
+        },
         "kilo-code.new.indexing.showButtonWhenDisabled": {
           "type": "boolean",
           "default": true,
@@ -944,6 +1036,12 @@
           "type": "boolean",
           "default": false,
           "description": "Start Kilo Code with the main auto-approve toggle enabled. When enabled, permission prompts are approved automatically."
+        },
+        "kilo-code.new.maxCost": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "description": "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; set to 0 to disable."
         },
         "kilo-code.new.fontSize": {
           "type": "number",
@@ -1070,8 +1168,7 @@
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
     "check-types:webview": "bun script/typecheck.ts --project webview-ui/tsconfig.json",
-    "typecheck": "bun run check-types:extension && bun run check-types:webview",
-    "check-types:extension": "bun script/typecheck.ts",
+    "typecheck": "bun run check-types && bun run check-types:webview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",
@@ -1115,7 +1212,7 @@
     "ts-morph": "27.0.2",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0",
-    "vite": "7.3.2",
+    "vite": "7.3.5",
     "vite-plugin-solid": "2.11.10"
   },
   "dependencies": {
@@ -1124,9 +1221,11 @@
     "@kilocode/kilo-gateway": "workspace:*",
     "@kilocode/kilo-i18n": "workspace:*",
     "@kilocode/kilo-indexing": "workspace:*",
+    "@kilocode/kilo-memory": "workspace:*",
     "@kilocode/kilo-ui": "workspace:*",
     "@kilocode/plugin": "workspace:*",
     "@kilocode/sdk": "workspace:*",
+    "@opencode-ai/core": "workspace:*",
     "@opencode-ai/ui": "workspace:*",
     "@pierre/diffs": "catalog:",
     "@thisbeyond/solid-dnd": "0.7.5",

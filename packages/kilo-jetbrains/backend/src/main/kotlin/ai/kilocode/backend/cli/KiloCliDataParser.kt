@@ -1,13 +1,23 @@
 package ai.kilocode.backend.cli
 
 import ai.kilocode.backend.workspace.CommandInfo
+import ai.kilocode.backend.workspace.ModelAutoRoutingInfo
+import ai.kilocode.backend.workspace.ModelCacheCostInfo
+import ai.kilocode.backend.workspace.ModelCapabilitiesInfo
+import ai.kilocode.backend.workspace.ModelCostInfo
 import ai.kilocode.backend.workspace.ModelInfo
+import ai.kilocode.backend.workspace.ModelInputCapabilitiesInfo
 import ai.kilocode.backend.workspace.ModelLimitInfo
+import ai.kilocode.backend.workspace.ModelOptionsInfo
+import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
+import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
+import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
 import ai.kilocode.rpc.dto.CustomModelDto
@@ -18,10 +28,19 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageErrorDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
+import ai.kilocode.rpc.dto.McpConfigDto
+import ai.kilocode.rpc.dto.McpStatusDto
+import ai.kilocode.rpc.dto.ModelAutoRoutingDto
+import ai.kilocode.rpc.dto.ModelCacheCostDto
+import ai.kilocode.rpc.dto.ModelCapabilitiesDto
+import ai.kilocode.rpc.dto.ModelCostDto
 import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ModelInputCapabilitiesDto
 import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.ModelOptionsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelStateDto
+import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartSourceTextDto
@@ -29,12 +48,14 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionFileDiffDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PermissionConfigDto
 import ai.kilocode.rpc.dto.ProviderAuthMethodDto
 import ai.kilocode.rpc.dto.ProviderAuthOptionDto
 import ai.kilocode.rpc.dto.ProviderAuthPromptDto
 import ai.kilocode.rpc.dto.ProviderMetadataDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import ai.kilocode.rpc.dto.PartTimeDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
@@ -42,9 +63,12 @@ import ai.kilocode.rpc.dto.QuestionOptionDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import ai.kilocode.rpc.dto.SessionSummaryDto
 import ai.kilocode.rpc.dto.SessionTimeDto
+import ai.kilocode.rpc.dto.SkillDto
+import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
@@ -485,6 +509,95 @@ object KiloCliDataParser {
     }
 
     /**
+     * Parse the `/global/config` response body into a [ConfigDto]. Tolerant of
+     * the discriminated MCP union and the `env`/`environment` alias. Never
+     * throws on malformed input so a bad config cannot block startup.
+     */
+    fun parseConfig(raw: String): ConfigDto = runCatching {
+        val obj = tryParseObject(raw) ?: return ConfigDto()
+        ConfigDto(
+            model = obj.str("model"),
+            smallModel = obj.str("small_model"),
+            subagentModel = obj.str("subagent_model"),
+            subagentVariant = obj.str("subagent_variant"),
+            defaultAgent = obj.str("default_agent"),
+            instructions = obj["instructions"].arr()
+                ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                ?: emptyList(),
+            skills = parseSkillsConfig(obj["skills"].obj()),
+            mcp = parseMcpConfig(obj["mcp"].obj()),
+            agent = parseAgentConfig(obj["agent"].obj()),
+        )
+    }.getOrDefault(ConfigDto())
+
+    private fun parseSkillsConfig(obj: JsonObject?): SkillsConfigDto? {
+        if (obj == null) return null
+        return SkillsConfigDto(
+            paths = obj["paths"].arr()
+                ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                ?: emptyList(),
+            urls = obj["urls"].arr()
+                ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                ?: emptyList(),
+        )
+    }
+
+    private fun parseMcpConfig(obj: JsonObject?): Map<String, McpConfigDto> {
+        if (obj == null) return emptyMap()
+        return obj.entries.mapNotNull { (name, elem) ->
+            val item = elem.obj() ?: return@mapNotNull null
+            name to McpConfigDto(
+                type = item.str("type"),
+                command = item["command"].arr()
+                    ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                    ?.takeIf { it.isNotEmpty() },
+                url = item.str("url"),
+                environment = item.map("environment").takeIf { it.isNotEmpty() }
+                    ?: item.map("env").takeIf { it.isNotEmpty() },
+                headers = item.map("headers").takeIf { it.isNotEmpty() },
+                enabled = item.flagOrNull("enabled"),
+                timeout = item.long("timeout"),
+            )
+        }.toMap()
+    }
+
+    private fun parseAgentConfig(obj: JsonObject?): Map<String, AgentConfigDto> {
+        if (obj == null) return emptyMap()
+        return obj.entries.mapNotNull { (name, elem) ->
+            val item = elem.obj() ?: return@mapNotNull null
+            name to AgentConfigDto(
+                model = item.str("model"),
+                variant = item.str("variant"),
+                prompt = item.str("prompt"),
+                description = item.str("description"),
+                mode = item.str("mode"),
+                hidden = item.flagOrNull("hidden"),
+                disable = item.flagOrNull("disable"),
+                temperature = item.num("temperature"),
+                top_p = item.num("top_p"),
+                steps = item.long("steps"),
+                permission = parsePermissionConfig(item["permission"].obj()),
+            )
+        }.toMap()
+    }
+
+    private fun parsePermissionConfig(obj: JsonObject?): PermissionConfigDto? {
+        if (obj == null) return null
+        return obj.entries.mapNotNull { (tool, rule) ->
+            val value = when (rule) {
+                is JsonNull -> PermissionRuleDto.Level(null)
+                is JsonObject -> PermissionRuleDto.Patterns(
+                    rule.entries.mapNotNull { (pattern, level) ->
+                        pattern to level.scalar()
+                    }.toMap()
+                )
+                else -> PermissionRuleDto.Level(rule.scalar())
+            }
+            tool to value
+        }.toMap().takeIf { it.isNotEmpty() }
+    }
+
+    /**
      * Parse a command list response (`GET /command`) into a list of [CommandInfo].
      * The `template` field is intentionally ignored — CLI commands can return lazy
      * promise objects (`{}`) for that field, which must not crash JetBrains startup.
@@ -499,6 +612,70 @@ object KiloCliDataParser {
                 hints = obj["hints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
             )
         }
+
+    fun parseAgentRemovable(raw: String): Map<String, Boolean> =
+        raw.array().mapNotNull { item ->
+            val obj = item.obj() ?: return@mapNotNull null
+            val name = obj.str("name") ?: return@mapNotNull null
+            name to removable(obj)
+        }.toMap()
+
+    fun parseAgentBehaviorSkills(raw: String): List<SkillDto> =
+        raw.array().mapNotNull { item ->
+            val obj = item.obj() ?: return@mapNotNull null
+            val name = obj.str("name") ?: return@mapNotNull null
+            val location = obj.str("location") ?: return@mapNotNull null
+            SkillDto(name = name, description = obj.str("description"), location = location)
+        }
+
+    fun parseAgentBehaviorCommands(raw: String): List<CommandDto> =
+        raw.array().mapNotNull { item ->
+            val obj = item.obj() ?: return@mapNotNull null
+            val name = obj.str("name") ?: return@mapNotNull null
+            CommandDto(
+                name = name,
+                description = obj.str("description"),
+                source = obj.str("source"),
+                hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
+                template = obj.str("template"),
+            )
+        }
+
+    fun parseMcpStatus(raw: String): List<McpStatusDto> {
+        val root = runCatching { json.parseToJsonElement(raw) }.getOrNull() ?: return emptyList()
+        return when (root) {
+            is JsonArray -> root.mapNotNull { mcpStatus(it) }
+            is JsonObject -> root.mapNotNull { (name, item) -> mcpStatus(item, name) }
+            else -> emptyList()
+        }
+    }
+
+    private fun String.array(): JsonArray {
+        val root = runCatching { json.parseToJsonElement(this) }.getOrNull()
+        return when (root) {
+            is JsonArray -> root
+            is JsonObject -> root["data"] as? JsonArray ?: JsonArray(emptyList())
+            else -> JsonArray(emptyList())
+        }
+    }
+
+    private fun mcpStatus(item: JsonElement, fallback: String? = null): McpStatusDto? {
+        val obj = item.obj() ?: return null
+        val name = obj.str("name") ?: fallback ?: return null
+        return McpStatusDto(
+            name = name,
+            status = obj.str("status") ?: obj.str("state") ?: "unknown",
+            error = obj.str("error"),
+        )
+    }
+
+    private fun removable(obj: JsonObject): Boolean {
+        if (obj.flagOrNull("native") == true) return false
+        val opts = obj["options"].obj()
+        if (obj.str("source") == "organization" || opts?.str("source") == "organization") return false
+        if (opts?.containsKey("reference") == true || opts?.containsKey("resolved") == true) return false
+        return true
+    }
 
     /**
      * Extract the `state` directory path from a `/path` response.
@@ -601,6 +778,12 @@ object KiloCliDataParser {
     fun buildSummarizeJson(model: ModelSelectionDto): String =
         """{"providerID":${escape(model.providerID)},"modelID":${escape(model.modelID)}}"""
 
+    fun buildRevertJson(messageID: String, partID: String?): String {
+        val fields = mutableListOf("\"messageID\":${escape(messageID)}")
+        partID?.let { fields += "\"partID\":${escape(it)}" }
+        return "{${fields.joinToString(",")}}"
+    }
+
     fun buildCommandJson(command: String, args: String, prompt: PromptDto): String {
         val fields = mutableListOf(
             "\"command\":${escape(command)}",
@@ -645,28 +828,85 @@ object KiloCliDataParser {
     }
 
     fun buildConfigPatch(patch: ConfigPatchDto): String {
-        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant")
-        val sb = StringBuilder("{")
-        var first = true
-        fun sep() { if (!first) sb.append(","); first = false }
-        fun value(value: String?) = value?.let(::escape) ?: "null"
-
-        for ((key, value) in patch.values) {
-            if (key !in allowed) continue
-            sep(); sb.append("\"$key\":${value(value)}")
-        }
-
-        if (patch.agents.isNotEmpty()) {
-            sep(); sb.append("\"agent\":{")
-            patch.agents.entries.forEachIndexed { idx, (name, agent) ->
-                if (idx > 0) sb.append(",")
-                sb.append("${escape(name)}:{\"model\":${value(agent.model)}}")
+        val allowed = setOf("model", "small_model", "subagent_model", "subagent_variant", "default_agent")
+        val obj = buildJsonObject {
+            for ((key, value) in patch.values) {
+                if (key !in allowed) continue
+                put(key, value?.let(::JsonPrimitive) ?: JsonNull)
             }
-            sb.append("}")
+
+            val instructions = patch.instructions
+            if (instructions != null) put("instructions", JsonArray(instructions.map(::JsonPrimitive)))
+
+            val skills = patch.skills
+            if (skills != null) {
+                put("skills", buildJsonObject {
+                    val paths = skills.paths
+                    if (paths != null) put("paths", JsonArray(paths.map(::JsonPrimitive)))
+                    val urls = skills.urls
+                    if (urls != null) put("urls", JsonArray(urls.map(::JsonPrimitive)))
+                })
+            }
+
+            val mcp = patch.mcp
+            if (mcp != null) {
+                put("mcp", buildJsonObject {
+                    for ((name, cfg) in mcp) put(name, cfg?.let {
+                        buildJsonObject {
+                            if (it.type != null) put("type", it.type)
+                            val command = it.command
+                            if (command != null) put("command", JsonArray(command.map(::JsonPrimitive)))
+                            if (it.url != null) put("url", it.url)
+                            if (it.environment != null) {
+                                put("environment", buildJsonObject {
+                                    for ((key, value) in it.environment) put(key, value)
+                                })
+                            }
+                            if (it.headers != null) {
+                                put("headers", buildJsonObject {
+                                    for ((key, value) in it.headers) put(key, value)
+                                })
+                            }
+                            if (it.enabled != null) put("enabled", it.enabled)
+                            if (it.timeout != null) put("timeout", it.timeout)
+                        }
+                    } ?: JsonNull)
+                })
+            }
+
+            if (patch.agents.isNotEmpty()) {
+                put("agent", buildJsonObject {
+                    for ((name, agent) in patch.agents) put(name, buildJsonObject {
+                        for (field in agent.clear) put(field, JsonNull)
+                        if (agent.model != null) put("model", agent.model)
+                        if (agent.variant != null) put("variant", agent.variant)
+                        if (agent.prompt != null) put("prompt", agent.prompt)
+                        if (agent.description != null) put("description", agent.description)
+                        if (agent.mode != null) put("mode", agent.mode)
+                        if (agent.hidden != null) put("hidden", agent.hidden)
+                        if (agent.disable != null) put("disable", agent.disable)
+                        if (agent.temperature != null) put("temperature", agent.temperature)
+                        if (agent.top_p != null) put("top_p", agent.top_p)
+                        if (agent.steps != null) put("steps", agent.steps)
+                        val permission = agent.permission
+                        if (permission != null) put("permission", buildPermission(permission))
+                    })
+                })
+            }
         }
 
-        sb.append("}")
-        return sb.toString()
+        return json.encodeToString(JsonObject.serializer(), obj)
+    }
+
+    private fun buildPermission(permission: Map<String, PermissionRuleDto>) = buildJsonObject {
+        for ((tool, rule) in permission) {
+            when (rule) {
+                is PermissionRuleDto.Level -> put(tool, rule.value?.let(::JsonPrimitive) ?: JsonNull)
+                is PermissionRuleDto.Patterns -> put(tool, buildJsonObject {
+                    for ((pattern, level) in rule.map) put(pattern, level?.let(::JsonPrimitive) ?: JsonNull)
+                })
+            }
+        }
     }
 
     fun buildProviderAuthJson(key: String, metadata: Map<String, String>): String {
@@ -1039,6 +1279,11 @@ object KiloCliDataParser {
         return ModelDto(
             id = model.id,
             name = model.name,
+            inputPrice = model.inputPrice,
+            outputPrice = model.outputPrice,
+            contextLength = model.contextLength,
+            releaseDate = model.releaseDate,
+            latest = model.latest,
             attachment = model.attachment,
             reasoning = model.reasoning,
             temperature = model.temperature,
@@ -1049,16 +1294,38 @@ object KiloCliDataParser {
             recommendedIndex = model.recommendedIndex,
             variants = model.variants,
             limit = model.limit?.let { ModelLimitDto(it.context, it.input, it.output) },
+            cost = model.cost?.let { cost ->
+                ModelCostDto(
+                    input = cost.input,
+                    output = cost.output,
+                    cache = cost.cache?.let { ModelCacheCostDto(it.read, it.write) },
+                )
+            },
+            capabilities = model.capabilities?.let { cap ->
+                ModelCapabilitiesDto(
+                    reasoning = cap.reasoning,
+                    input = cap.input?.let { ModelInputCapabilitiesDto(it.text, it.image, it.audio, it.video, it.pdf) },
+                )
+            },
+            options = model.options?.let { ModelOptionsDto(it.description) },
+            autoRouting = model.autoRouting?.let { ModelAutoRoutingDto(it.models) },
+            terminalBench = model.terminalBench?.let { ModelTerminalBenchDto(it.overallScore, it.avgAttemptCostUsd) },
             mayTrainOnYourPrompts = model.mayTrainOnYourPrompts,
         )
     }
 
     private fun parseModel(id: String, obj: JsonObject): ModelInfo {
-        val cap = obj["capabilities"]?.jsonObject
-        val limit = obj["limit"]?.jsonObject
+        val cap = obj["capabilities"].obj()
+        val limit = obj["limit"].obj()
+        val input = cap?.get("input").obj()
         return ModelInfo(
             id = obj.str("id") ?: id,
             name = obj.str("name") ?: id,
+            inputPrice = obj.num("inputPrice"),
+            outputPrice = obj.num("outputPrice"),
+            contextLength = obj.long("contextLength"),
+            releaseDate = obj.str("release_date"),
+            latest = null,
             attachment = cap.bool("attachment"),
             reasoning = cap.bool("reasoning"),
             temperature = cap.bool("temperature"),
@@ -1075,8 +1342,45 @@ object KiloCliDataParser {
                     output = it.long("output") ?: 0,
                 )
             },
+            cost = parseModelCost(obj["cost"]),
+            capabilities = ModelCapabilitiesInfo(
+                reasoning = cap.bool("reasoning"),
+                input = input?.let {
+                    ModelInputCapabilitiesInfo(
+                        text = it.bool("text"),
+                        image = it.bool("image"),
+                        audio = it.bool("audio"),
+                        video = it.bool("video"),
+                        pdf = it.bool("pdf"),
+                    )
+                },
+            ).takeUnless { !it.reasoning && it.input == null },
+            options = obj["options"].obj()?.str("description")?.let { ModelOptionsInfo(it) },
+            autoRouting = obj["autoRouting"].obj()?.get("models")?.arr()?.mapNotNull { it.jsonPrimitive.contentOrNull }?.let {
+                ModelAutoRoutingInfo(it)
+            },
+            terminalBench = parseTerminalBench(obj["terminalBench"]),
             mayTrainOnYourPrompts = obj.bool("mayTrainOnYourPrompts"),
         )
+    }
+
+    private fun parseModelCost(raw: JsonElement?): ModelCostInfo? {
+        val obj = raw.obj() ?: return null
+        val input = obj.num("input") ?: return null
+        val output = obj.num("output") ?: return null
+        val cache = obj["cache"].obj()?.let { cache ->
+            val read = cache.num("read") ?: return@let null
+            val write = cache.num("write") ?: return@let null
+            ModelCacheCostInfo(read, write)
+        }
+        return ModelCostInfo(input, output, cache)
+    }
+
+    private fun parseTerminalBench(raw: JsonElement?): ModelTerminalBenchInfo? {
+        val obj = raw.obj() ?: return null
+        val score = obj.num("overallScore") ?: return null
+        val cost = obj.num("avgAttemptCostUsd") ?: return null
+        return ModelTerminalBenchInfo(score, cost)
     }
 
     private fun parseVariants(obj: JsonObject): List<String> {
@@ -1135,6 +1439,18 @@ object KiloCliDataParser {
                     files = it.long("files")?.safeInt() ?: 0,
                 )
             },
+            revert = parseRevert(obj["revert"].obj()),
+        )
+    }
+
+    private fun parseRevert(obj: JsonObject?): SessionRevertDto? {
+        if (obj == null) return null
+        val message = obj.str("messageID") ?: return null
+        return SessionRevertDto(
+            messageID = message,
+            partID = obj.str("partID"),
+            snapshot = obj.str("snapshot"),
+            diff = obj.str("diff"),
         )
     }
 

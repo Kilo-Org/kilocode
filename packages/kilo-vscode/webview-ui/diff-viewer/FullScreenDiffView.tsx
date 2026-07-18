@@ -39,6 +39,7 @@ import {
   reviewComposerEdit,
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
+  sendReviewComments,
   type AnnotationLabels,
   type AnnotationMeta,
   type ReviewComposer,
@@ -59,7 +60,8 @@ import { DiffEndMarker } from "./DiffEndMarker"
 import { VirtualDiffList } from "./VirtualDiffList"
 import { isMarkdownFile, MarkdownDiffView } from "./MarkdownDiffView"
 import { ImageDiffView } from "./ImageDiffView"
-import { createDiffRows, diffToken } from "./diff-state"
+import { createDiffRows } from "./diff-state"
+import { createDiffRequests } from "./diff-requests"
 
 type DiffStyle = "unified" | "split"
 
@@ -108,6 +110,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     placeholder: t("agentManager.review.commentPlaceholder"),
     cancel: t("common.cancel"),
     comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
     save: t("common.save"),
     sendToChat: t("agentManager.review.sendToChat"),
     edit: t("common.edit"),
@@ -142,7 +145,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   // collapse state while adding and removing files from live summaries.
   let initializedKey: string | undefined
   let known = new Set<string>()
-  const requested = new Map<string, string>()
   let rootRef: HTMLDivElement | undefined
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
@@ -173,7 +175,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
 
   const preserveScroll = (fn: () => void) => {
     const handle = virtualizer()
-    const index = handle?.findStartIndex()
+    const index = handle?.findItemIndex(handle.scrollOffset)
     const file = index === undefined ? undefined : rows()[index]?.file
     const offset = index === undefined ? 0 : (handle?.scrollOffset ?? 0) - (handle?.getItemOffset(index) ?? 0)
     fn()
@@ -244,7 +246,6 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     on(
       () => props.sessionKey,
       () => {
-        requested.clear()
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -255,32 +256,13 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     ),
   )
 
-  const request = (diff: WorktreeFileDiff) => {
-    if (!props.onRequestDiff || props.loadingFiles?.has(diff.file)) return
-    if (!isDiffExpandable(diff) || diff.summarized !== true) return
-    const value = diffToken(diff)
-    if (requested.get(diff.file) === value) return
-    requested.set(diff.file, value)
-    props.onRequestDiff(diff.file)
-  }
-
-  createEffect(
-    on(
-      () => [open(), props.diffs] as const,
-      ([next]) => {
-        const files = new Set(next)
-        for (const file of requested.keys()) {
-          if (!files.has(file)) requested.delete(file)
-        }
-        for (const file of next) {
-          const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || diff.kind === "image") continue
-          request(diff)
-        }
-      },
-      { defer: true },
-    ),
-  )
+  const request = createDiffRequests({
+    key: () => props.sessionKey,
+    diffs: () => props.diffs,
+    open,
+    loading: () => props.loadingFiles,
+    send: () => props.onRequestDiff,
+  })
 
   // --- CRUD ---
 
@@ -292,6 +274,18 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       draftMeta = null
       composer().draft = null
     })
+    focusRoot()
+  }
+
+  const sendComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+    const comment = { id: `c-${++nextId}-${Date.now()}`, file, side, line, comment: text, selectedText }
+    sendReviewComments([comment], props.activeTerminalId)
+    preserveScroll(() => {
+      setDraft(null)
+      draftMeta = null
+      composer().draft = null
+    })
+    props.onSendClick?.()
     focusRoot()
   }
 
@@ -411,6 +405,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
       editing: editing(),
       setEditing: setEditState,
       addComment,
+      sendComment,
       updateComment,
       deleteComment,
       cancelDraft,
@@ -473,7 +468,8 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
     requestAnimationFrame(() => {
       const index = rows().findIndex((diff) => diff.file === path)
       if (index < 0) return
-      const current = virtualizer()?.findStartIndex() ?? index
+      const handle = virtualizer()
+      const current = handle?.findItemIndex(handle.scrollOffset) ?? index
       virtualizer()?.scrollToIndex(index, { offset: -8, smooth: Math.abs(index - current) <= 8 })
     })
   }
@@ -485,7 +481,7 @@ export const FullScreenDiffView: Component<FullScreenDiffViewProps> = (props) =>
   const syncActiveFileFromScroll = () => {
     const handle = virtualizer()
     if (!handle) return
-    const file = rows()[handle.findStartIndex()]?.file
+    const file = rows()[handle.findItemIndex(handle.scrollOffset)]?.file
     if (file) setActiveFile(file)
   }
 

@@ -1,13 +1,16 @@
 import path from "path"
-import { describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { Effect } from "effect"
+import fs from "fs/promises"
+import os from "os"
 import { Bus } from "../../src/bus"
 import { AppRuntime } from "../../src/effect/app-runtime"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Suggestion } from "../../src/kilocode/suggestion"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { InstanceStore } from "../../src/project/instance-store"
 import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
@@ -16,9 +19,26 @@ import { SessionCompaction } from "../../src/session/compaction"
 import { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, SessionID } from "../../src/session/schema"
 import * as Log from "@opencode-ai/core/util/log"
-import { provideInstance, tmpdir } from "../fixture/fixture"
+import { disposeTestRuntime, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { remove as cleanup } from "./cleanup"
 
 Log.init({ print: false })
+
+const previous = Flag.KILO_DB
+const dbfile = path.join(os.tmpdir(), `kilo-prompt-queue-${process.pid}-${crypto.randomUUID()}.db`)
+
+beforeAll(async () => {
+  await fs.rm(dbfile, { force: true })
+  Flag.KILO_DB = dbfile
+})
+
+afterAll(async () => {
+  await AppRuntime.dispose()
+  await disposeTestRuntime()
+  Flag.KILO_DB = previous
+  await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
+})
 
 const store = {
   updateMessage: <T extends MessageV2.Info>(msg: T) => Effect.promise(() => sessions.updateMessage(msg)),
@@ -88,6 +108,7 @@ function scoped<T>(dir: string, fn: (prompt: SessionPrompt.Interface) => Promise
     SessionPrompt.Service.use((prompt) => Effect.promise(() => fn(prompt))).pipe(
       Effect.provide(SessionPrompt.defaultLayer),
       provideInstance(dir),
+      Effect.provide(testInstanceStoreLayer),
       Effect.scoped,
     ),
   )
@@ -116,7 +137,7 @@ function user(sessionID: SessionID, id: MessageID): MessageV2.WithParts {
       role: "user",
       time: { created: 1 },
       agent: "code",
-      model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
+      model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("model") },
     },
     parts: [],
   }
@@ -130,8 +151,8 @@ function assistant(sessionID: SessionID, id: MessageID, parentID: MessageID): Me
       role: "assistant",
       time: { created: 1, completed: 2 },
       parentID,
-      modelID: ModelID.make("model"),
-      providerID: ProviderID.make("test"),
+      modelID: ModelV2.ID.make("model"),
+      providerID: ProviderV2.ID.make("test"),
       mode: "code",
       agent: "code",
       path: { cwd: "/tmp", root: "/tmp" },
@@ -301,7 +322,7 @@ describe("session prompt queue", () => {
                   session: store,
                   sessionID: session.id,
                   agent: "code",
-                  model: { providerID: ProviderID.make("test"), modelID: ModelID.make("model") },
+                  model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("model") },
                   auto: true,
                   overflow: true,
                 }),
@@ -741,8 +762,8 @@ describe("session prompt queue", () => {
           try {
             const base = Suggestion.show({
               sessionID: session.id,
-              text: "Run review?",
-              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+              text: "Continue with the task?",
+              actions: [{ label: "Continue", prompt: "Continue with the task" }],
             }).catch((err) => {
               if (err instanceof Suggestion.DismissedError) return "dismissed"
               throw err
@@ -817,8 +838,8 @@ describe("session prompt queue", () => {
           await expect(
             Suggestion.show({
               sessionID,
-              text: "Run review?",
-              actions: [{ label: "Review", prompt: "/local-review-uncommitted" }],
+              text: "Continue with the task?",
+              actions: [{ label: "Continue", prompt: "Continue with the task" }],
             }),
           ).rejects.toBeInstanceOf(Suggestion.DismissedError)
         } finally {

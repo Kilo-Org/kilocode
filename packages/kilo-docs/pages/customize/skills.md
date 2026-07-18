@@ -232,7 +232,7 @@ Skills are discovered when a session starts. The CLI scans all configured skill 
 - In the **CLI**: Skills are loaded when you start a new session or run `kilo run`
 - In the **VS Code extension**: Skills are loaded when the extension connects to the CLI server
 
-Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
+Skills are re-scanned at the start of each new session. To pick up newly added or modified skills without starting a new session, use `/reload`.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -242,7 +242,7 @@ Skills are discovered when a session starts. The CLI scans all configured skill 
 - In the **CLI**: Skills are loaded when you start a new session or run `kilo run`
 - In the **VS Code extension**: Skills are loaded when the extension connects to the CLI server
 
-Skills are re-scanned at the start of each new session. To pick up newly added or modified skills, start a new session.
+Skills are re-scanned at the start of each new session. To pick up newly added or modified skills without starting a new session, use `/reload`.
 
 {% /tab %}
 {% /tabs %}
@@ -430,7 +430,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 
 1. **Verify frontmatter**: Ensure `name` and `description` are present in the YAML frontmatter. The `name` does not need to match the directory name but should be unique across all loaded skills.
 
-2. **Start a new session**: Skills are scanned at session start. Begin a new session to pick up changes.
+2. **Reload or start a new session**: Use `/reload` to pick up changes without losing your current session, or start a new session.
 
 3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.kilo/skills/my-skill/SKILL.md`), not nested further.
 
@@ -441,7 +441,7 @@ The new platform does not have a marketplace UI yet. You can find and share skil
 
 1. **Verify frontmatter**: Ensure `name` and `description` are present in the YAML frontmatter. The `name` does not need to match the directory name but should be unique across all loaded skills.
 
-2. **Start a new session**: Skills are scanned at session start. Begin a new session to pick up changes.
+2. **Reload or start a new session**: Use `/reload` to pick up changes without losing your current session, or start a new session.
 
 3. **Check file location**: Ensure `SKILL.md` is directly inside the skill directory (e.g., `.kilo/skills/my-skill/SKILL.md`), not nested further.
 

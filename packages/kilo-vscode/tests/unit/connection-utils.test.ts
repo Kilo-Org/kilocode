@@ -1,10 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import type { GlobalEvent } from "@kilocode/sdk/v2/client"
 import { resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
+import type { SSEPayload as Payload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 const noLookup = (_: string) => undefined
-
-type Payload = GlobalEvent["payload"]
 
 const message = {
   id: "m1",

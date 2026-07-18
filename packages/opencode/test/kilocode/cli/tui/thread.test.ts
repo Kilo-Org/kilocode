@@ -1,10 +1,18 @@
-import { describe, expect, spyOn, test } from "bun:test"
+import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "../../../fixture/fixture"
-import { resolveThreadDirectory } from "../../../../src/cli/cmd/tui/thread"
+import {
+  embeddedRemoteExitClient,
+  resolveThreadDirectory,
+  runEmbeddedRemoteExitBridge,
+} from "../../../../src/cli/cmd/tui"
 import { KiloTuiThreadDaemon } from "../../../../src/kilocode/cli/cmd/tui/thread"
 import { DaemonClient } from "../../../../src/kilocode/daemon/client"
+
+afterEach(() => {
+  mock.restore()
+})
 
 describe("kilo tui thread", () => {
   test("ignores stale PWD after cwd is changed by a process wrapper", async () => {
@@ -31,7 +39,48 @@ describe("kilo tui thread", () => {
     }
   })
 
-  test("skips local validation before importing cloud sessions", async () => {
+  test("enables remote exit only for the embedded worker transport", () => {
+    const client = { marker: "worker" }
+
+    expect(embeddedRemoteExitClient(false, client)).toBe(client)
+    expect(embeddedRemoteExitClient(true, client)).toBeUndefined()
+    expect(embeddedRemoteExitClient(false, undefined)).toBeUndefined()
+  })
+
+  test("continues TUI startup when remote-exit readiness and cleanup never reply", async () => {
+    const calls: string[] = []
+    let handler: (() => void) | undefined
+    let tuiContinued = false
+    const done = Promise.resolve().then(() => {
+      tuiContinued = true
+    })
+
+    await runEmbeddedRemoteExitBridge({
+      client: {
+        on(_event, next) {
+          calls.push("subscribe")
+          handler = next
+          return () => {
+            calls.push("unsubscribe")
+            handler = undefined
+          }
+        },
+        async call(method) {
+          calls.push(method)
+          await new Promise(() => {})
+        },
+      },
+      exit: () => {},
+      done,
+      timeoutMs: 5,
+    })
+
+    expect(tuiContinued).toBe(true)
+    expect(calls).toEqual(["subscribe", "tuiReady", "tuiGone", "unsubscribe"])
+    expect(handler).toBeUndefined()
+  })
+
+  test("validates imported daemon session over HTTP after importing from cloud", async () => {
     await using root = await tmpdir()
     const cloud = "ses_cloud"
     const local = "ses_local"
@@ -43,6 +92,7 @@ describe("kilo tui thread", () => {
         const route = `${request.method} ${new URL(request.url).pathname}`
         calls.push(route)
         if (route === "POST /kilo/cloud/session/import") return Response.json({ id: local })
+        if (route === `GET /session/${local}`) return Response.json({ id: local })
         return new Response(null, { status: 404 })
       },
     })
@@ -76,10 +126,67 @@ describe("kilo tui thread", () => {
         start,
       })
 
-      expect(calls).toEqual(["POST /kilo/cloud/session/import"])
+      expect(calls).toEqual(["POST /kilo/cloud/session/import", `GET /session/${local}`])
       expect(opened).toEqual([local])
     } finally {
       daemon.mockRestore()
     }
+  })
+
+  test("imports cloud fork before validating daemon session", async () => {
+    const seen: string[] = []
+    const started: string[] = []
+
+    mock.module("@kilocode/sdk/v2", () => ({
+      createKiloClient: () => ({
+        kilo: {
+          cloud: {
+            session: {
+              import: async (input: { sessionId: string }) => {
+                expect(input.sessionId).toBe("ses_cloud")
+                return { data: { id: "ses_local" } }
+              },
+            },
+          },
+        },
+      }),
+    }))
+    mock.module("@/cli/tui/validate-session", () => ({
+      validateSession: async (input: { sessionID?: string }) => {
+        seen.push(input.sessionID ?? "")
+      },
+    }))
+    mock.module("@/config/tui", () => ({
+      TuiConfig: {
+        get: async () => ({}),
+      },
+    }))
+    mock.module("@/kilocode/daemon/client", () => ({
+      DaemonClient: {
+        maybe: async () => ({ url: "http://127.0.0.1:4096", headers: {} }),
+      },
+    }))
+    mock.module("@/cli/ui", () => ({
+      UI: {
+        println: () => {},
+        error: () => {},
+      },
+    }))
+
+    const key = JSON.stringify({ time: Date.now(), rand: Math.random() })
+    const mod = await import(`../../../../src/kilocode/cli/cmd/tui/thread?${key}`)
+
+    const handled = await mod.KiloTuiThreadDaemon.attach({
+      args: { session: "ses_cloud", cloudFork: true },
+      cwd: "/tmp/project",
+      input: async () => undefined,
+      start: async (input: { args: { sessionID?: string } }) => {
+        started.push(input.args.sessionID ?? "")
+      },
+    })
+
+    expect(handled).toBe(true)
+    expect(seen).toEqual(["ses_local"])
+    expect(started).toEqual(["ses_local"])
   })
 })

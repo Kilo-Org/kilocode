@@ -29,6 +29,8 @@ You can edit MCP settings from the Kilo Code settings UI:
 
 From here you can add, edit, enable/disable, and delete MCP servers. Changes are written directly to the appropriate config file.
 
+If the UI cannot add a server, edit a Kilo config file directly and add the server under the top-level `mcp` key. For project-specific servers, edit `./kilo.json` or `./kilo.jsonc` if your project already has one; otherwise use `./.kilo/kilo.json` or `./.kilo/kilo.jsonc` for a cleaner setup. For servers you want in every workspace, use `~/.config/kilo/kilo.json` or `~/.config/kilo/kilo.jsonc`.
+
 ### Config Format
 
 MCP servers are configured under the `mcp` key in `kilo.jsonc`:

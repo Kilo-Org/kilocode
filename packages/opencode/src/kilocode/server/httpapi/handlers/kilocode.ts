@@ -4,9 +4,10 @@ import * as KiloAgent from "@/kilocode/agent"
 import * as KiloSkill from "@/kilocode/skill-remove"
 import { Agent } from "@/agent/agent"
 import { Config } from "@/config/config"
-import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { HeapSnapshot } from "@/kilocode/cli/heap-snapshot"
+import type { RequestID as AgentManagerRequestID } from "@/kilocode/agent-manager/protocol"
+import { AgentManager } from "@/kilocode/agent-manager/service"
 import type { RequestID as NotebookRequestID } from "@/kilocode/notebook/protocol"
 import { Notebook } from "@/kilocode/notebook/service"
 import { ModelUsage } from "@/kilocode/session/model-usage"
@@ -14,7 +15,14 @@ import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
 import type { SessionID } from "@/session/schema"
-import { NotebookRejectPayload, NotebookReplyPayload, RemoveAgentPayload, RemoveSkillPayload } from "../groups/kilocode"
+import {
+  AgentManagerRejectPayload,
+  AgentManagerReplyPayload,
+  NotebookRejectPayload,
+  NotebookReplyPayload,
+  RemoveAgentPayload,
+  RemoveSkillPayload,
+} from "../groups/kilocode"
 
 export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode", (handlers) =>
   Effect.gen(function* () {
@@ -22,6 +30,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const skills = yield* Skill.Service
     const config = yield* Config.Service
     const store = yield* InstanceStore.Service
+    const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
 
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
@@ -53,8 +62,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const instance = yield* InstanceState.context
       const agent = yield* agents.get(ctx.payload.name)
       const dirs = yield* config.directories()
-      yield* EffectBridge.fromPromise(() =>
-        KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+      yield* Effect.tryPromise({
+        try: () => KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+        catch: (err) => err,
+      }).pipe(
+        Effect.catch((err) => {
+          if (KiloAgent.RemoveError.isInstance(err)) return Effect.fail(new HttpApiError.BadRequest({}))
+          return Effect.die(err)
+        }),
       )
       yield* store.dispose(instance)
       return true
@@ -85,6 +100,31 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       return true
     })
 
+    const agentManagerList = Effect.fn("KilocodeHttpApi.agentManagerList")(function* () {
+      return yield* manager.list()
+    })
+
+    const agentManagerReply = Effect.fn("KilocodeHttpApi.agentManagerReply")(function* (ctx: {
+      params: { requestID: AgentManagerRequestID }
+      payload: typeof AgentManagerReplyPayload.Type
+    }) {
+      yield* manager.reply({ requestID: ctx.params.requestID, result: ctx.payload.result }).pipe(
+        Effect.catchTag("AgentManager.NotFoundError", () => Effect.fail(new HttpApiError.NotFound({}))),
+        Effect.catchTag("AgentManager.InvalidReplyError", () => Effect.fail(new HttpApiError.BadRequest({}))),
+      )
+      return true
+    })
+
+    const agentManagerReject = Effect.fn("KilocodeHttpApi.agentManagerReject")(function* (ctx: {
+      params: { requestID: AgentManagerRequestID }
+      payload: typeof AgentManagerRejectPayload.Type
+    }) {
+      yield* manager
+        .reject({ requestID: ctx.params.requestID, error: ctx.payload.error })
+        .pipe(Effect.catchTag("AgentManager.NotFoundError", () => Effect.fail(new HttpApiError.NotFound({}))))
+      return true
+    })
+
     const sessionModelUsage = Effect.fn("KilocodeHttpApi.sessionModelUsage")(function* (ctx: {
       params: { sessionID: SessionID }
     }) {
@@ -101,6 +141,9 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("notebookList", notebookList)
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)
+      .handle("agentManagerList", agentManagerList)
+      .handle("agentManagerReply", agentManagerReply)
+      .handle("agentManagerReject", agentManagerReject)
       .handle("sessionModelUsage", sessionModelUsage)
   }),
 )

@@ -14,6 +14,12 @@ export type SplitReasoningValue = undefined | boolean
 export type ReasoningEffortValue = undefined | "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
 export type OutputEffortValue = undefined | "low" | "medium" | "high" | "xhigh" | "max"
 export type ChatTemplateArgsValue = undefined | boolean
+export type Modality = "text" | "audio" | "image" | "video" | "pdf"
+
+export type Modalities = {
+  input?: Modality[]
+  output?: Modality[]
+}
 
 export type VariantEntry = {
   name: string
@@ -29,6 +35,8 @@ export type ModelEntry = {
   id: string
   name: string
   reasoning: boolean
+  supportsImages: boolean
+  modalities: Modalities
   variants: VariantEntry[]
 }
 
@@ -296,6 +304,7 @@ type ModelCardProps = {
   onChangeId: (val: string) => void
   onChangeName: (val: string) => void
   onChangeReasoning: (val: boolean) => void
+  onChangeSupportsImages: (val: boolean) => void
   onRemove: () => void
   onAddVariant: () => void
   onRemoveVariant: (vi: number) => void
@@ -370,6 +379,24 @@ export function ModelCard(props: ModelCardProps) {
           onChange={(e) => props.onChangeReasoning(e.currentTarget.checked)}
         />
         {props.t("provider.custom.models.reasoning.label")}
+      </label>
+
+      <label
+        style={{
+          display: "flex",
+          "align-items": "center",
+          gap: "8px",
+          cursor: "pointer",
+          "font-size": "var(--kilo-font-size-13)",
+          color: "var(--vscode-foreground)",
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={props.m.supportsImages}
+          onChange={(e) => props.onChangeSupportsImages(e.currentTarget.checked)}
+        />
+        {props.t("provider.custom.models.modalities.image")}
       </label>
 
       {/* Variants — only available when reasoning is enabled */}

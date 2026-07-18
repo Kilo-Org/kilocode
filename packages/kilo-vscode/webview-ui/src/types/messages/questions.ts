@@ -32,6 +32,10 @@ export interface QuestionRequest {
   sessionID: string
   questions: QuestionInfo[]
   blocking?: boolean
+  autoSubmit?: boolean
+  dismissResponse?: "continue"
+  rejectLabel?: string
+  tone?: "warning"
   tool?: {
     messageID: string
     callID: string

@@ -1,19 +1,33 @@
 package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.app.KiloProviderService
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.settings.base.SettingsListConfig
+import ai.kilocode.client.settings.base.SettingsListItem
+import ai.kilocode.client.settings.base.SettingsListRenderer
+import ai.kilocode.client.settings.base.SettingsListActionCell
+import ai.kilocode.client.settings.base.settingsListCellAt
+import ai.kilocode.client.settings.base.settingsListCellBounds
+import ai.kilocode.client.settings.base.settingsListSectionTitle
+import ai.kilocode.client.settings.base.settingsListVisibleCells
 import ai.kilocode.client.testing.FakeProviderRpcApi
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.rpc.dto.CustomModelFetchResultDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.ModelDto
+import ai.kilocode.rpc.dto.ProviderActionResultDto
 import ai.kilocode.rpc.dto.ProviderAuthMethodDto
 import ai.kilocode.rpc.dto.ProviderDisconnectDto
 import ai.kilocode.rpc.dto.ProviderMetadataDto
 import ai.kilocode.rpc.dto.ProviderOAuthReadyDto
 import ai.kilocode.rpc.dto.ProviderSettingsDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.ValidationInfo
 import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.CollectionListModel
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBList
@@ -41,6 +55,7 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JScrollPane
 import javax.swing.KeyStroke
+import javax.swing.JList
 import javax.swing.JTextField
 import javax.swing.UIManager
 
@@ -58,6 +73,230 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             scope = null
         } finally {
             super.tearDown()
+        }
+    }
+
+    fun `test custom save error surfaces backend error`() {
+        val result = ProviderActionResultDto(ProviderSettingsDto(), error = "boom")
+        assertEquals("boom", customSaveError("my-openai", result))
+    }
+
+    fun `test custom save error reports dropped provider`() {
+        val result = ProviderActionResultDto(ProviderSettingsDto())
+        assertEquals(KiloBundle.message("settings.providers.customNotUsable"), customSaveError("my-openai", result))
+    }
+
+    fun `test custom save error passes when provider present`() {
+        val result = ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI")))
+        assertNull(customSaveError("my-openai", result))
+    }
+
+    fun `test custom dialog toggles model ids`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o")) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+        }
+
+        edt {
+            val field = components(center(dialog)).filterIsInstance<JTextField>()[5]
+            dialog.toggleModel("gpt-4o", listOf("gpt-4o", "gpt-4o-mini"))
+            assertEquals("gpt-4o", field.text)
+            dialog.toggleModel("gpt-4o", listOf("gpt-4o", "gpt-4o-mini"))
+            assertEquals("", field.text)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog selects and clears model ids`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o")) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+        }
+
+        edt {
+            val field = components(center(dialog)).filterIsInstance<JTextField>()[5]
+            dialog.selectAllModels(listOf("gpt-4o", "gpt-4o-mini"))
+            assertEquals("gpt-4o, gpt-4o-mini", field.text)
+            assertTrue(dialog.isOKActionEnabled)
+            dialog.clearModels()
+            assertEquals("", field.text)
+            assertFalse(dialog.isOKActionEnabled)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog add is disabled until model list exists`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o")) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            dialog
+        }
+
+        edt {
+            assertFalse(dialog.isOKActionEnabled)
+            components(center(dialog)).filterIsInstance<JTextField>()[5].text = "gpt-4o"
+            assertTrue(dialog.isOKActionEnabled)
+            components(center(dialog)).filterIsInstance<JTextField>()[5].text = ""
+            assertFalse(dialog.isOKActionEnabled)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog cancels model fetch and ignores late result`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val gate = CompletableDeferred<CustomModelFetchResultDto>()
+        lateinit var pick: JButton
+        lateinit var field: JTextField
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { gate.await() },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val panel = center(dialog)
+            val fields = components(panel).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "http://127.0.0.1:8080"
+            pick = components(panel).filterIsInstance<JButton>().first()
+            field = fields[5]
+            pick.doClick()
+            dialog
+        }
+
+        edt {
+            assertEquals(KiloBundle.message("settings.providers.customFetchingModels"), field.text)
+            assertEquals(KiloBundle.message("settings.providers.customCancelModels"), pick.text)
+            assertFalse(field.isEditable)
+            assertFalse(dialog.isOKActionEnabled)
+            assertNull(validation(dialog))
+
+            pick.doClick()
+            assertEquals("", field.text)
+            assertEquals(KiloBundle.message("settings.providers.customSelectModels"), pick.text)
+            assertTrue(field.isEditable)
+        }
+
+        gate.complete(CustomModelFetchResultDto(listOf("gpt-4o")))
+        flushUntil { edt { field.isEditable } }
+
+        edt {
+            assertEquals("", field.text)
+            assertEquals(KiloBundle.message("settings.providers.customSelectModels"), pick.text)
+            assertFalse(dialog.isOKActionEnabled)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog save error stays until next add`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val next = CompletableDeferred<ProviderActionResultDto>()
+        var calls = 0
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o")) },
+                {
+                    calls++
+                    if (calls == 1) ProviderActionResultDto(ProviderSettingsDto(), error = "boom") else next.await()
+                },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            fields[5].text = "gpt-4o"
+            submit(dialog)
+            dialog
+        }
+
+        flushUntil { edt { validation(dialog) == "boom" } }
+
+        edt {
+            assertEquals("boom", validation(dialog))
+            submit(dialog)
+            assertNull(validation(dialog))
+        }
+
+        next.complete(ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))))
+        flushUntil { edt { dialog.outcome != null } }
+        edt { dispose(dialog) }
+    }
+
+    fun `test custom dialog closes on save success`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            val dialog = CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o")) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+            )
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            fields[0].text = "my-openai"
+            fields[2].text = "https://example.com/v1"
+            fields[5].text = "gpt-4o"
+            submit(dialog)
+            dialog
+        }
+
+        flushUntil { edt { dialog.outcome != null } }
+
+        edt {
+            assertEquals("my-openai", dialog.savedId)
+            assertTrue(dialog.isOKActionEnabled)
+            dispose(dialog)
+        }
+    }
+
+    fun `test custom dialog edit prefill locks id and leaves key blank`() {
+        val cs = CoroutineScope(SupervisorJob())
+        scope = cs
+        val dialog = edt {
+            CustomProviderDialog(
+                cs,
+                "/tmp",
+                { CustomModelFetchResultDto(listOf("gpt-4o")) },
+                { ProviderActionResultDto(providerState(provider("my-openai", "My OpenAI"))) },
+                CustomProviderEdit("my-openai", "My OpenAI", "https://example.com/v1", null, listOf("gpt-4o")),
+            )
+        }
+
+        edt {
+            val fields = components(center(dialog)).filterIsInstance<JTextField>()
+            assertEquals("my-openai", fields[0].text)
+            assertFalse(fields[0].isEditable)
+            assertEquals("My OpenAI", fields[1].text)
+            assertEquals("https://example.com/v1", fields[2].text)
+            assertEquals("", fields[3].text)
+            assertEquals("", fields[4].text)
+            assertEquals("gpt-4o", fields[5].text)
+            assertEquals(KiloBundle.message("settings.providers.customSave"), dialog.okText())
+            dispose(dialog)
         }
     }
 
@@ -108,6 +347,37 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test provider content uses preferred row heights`() {
+        val content = content()
+
+        edt {
+            content.update(
+                ProviderSettingsDto(
+                    providers = listOf(
+                        provider(
+                            "openai",
+                            "OpenAI",
+                            metadata = ProviderMetadataDto(noteKey = "settings.providers.note.openai"),
+                        ),
+                        provider("plain", "Plain"),
+                    ),
+                ),
+            )
+            val list = list(content)
+            list.size = Dimension(420, 240)
+            list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            val noted = rows(content).indexOfFirst { it.key == "openai" }
+            val plain = rows(content).indexOfFirst { it.key == "plain" }
+            val notedBounds = list.getCellBounds(noted, noted)
+            val plainBounds = list.getCellBounds(plain, plain)
+
+            assertEquals(-1, list.fixedCellHeight)
+            assertTrue(notedBounds.height > plainBounds.height)
+        }
+    }
+
     fun `test toolbar and search are outside scrollable provider content`() {
         installProvider(ProviderSettingsDto())
         val panel = edt { createUi() }
@@ -127,7 +397,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test configured custom provider exposes only disconnect`() {
+    fun `test configured custom provider exposes edit and delete`() {
         val content = content()
 
         edt {
@@ -140,7 +410,51 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             )
         }
 
-        edt { assertEquals(listOf(ProviderListAction.DISCONNECT), rows(content).single().actions) }
+        edt {
+            val row = rows(content).single()
+            assertEquals(listOf(ProviderListAction.EDIT, ProviderListAction.DELETE), row.actions)
+            assertTrue(row.badges.isEmpty())
+        }
+    }
+
+    fun `test editable custom provider edit cell is primary`() {
+        val state = ProviderSettingsDto(
+            providers = listOf(provider("local-openai", "Local OpenAI", source = "custom")),
+            config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = CUSTOM_PROVIDER_PACKAGE)),
+        )
+
+        val row = providerListRows(state, "").single()
+
+        assertEquals(listOf(ProviderListAction.EDIT, ProviderListAction.DELETE), row.actions)
+        assertTrue(row.cells.first { it.id == "EDIT" }.primary)
+    }
+
+    fun `test connected non custom provider still exposes only disconnect`() {
+        val rows = providerListRows(
+            ProviderSettingsDto(
+                providers = listOf(provider("anthropic", "Anthropic")),
+                connected = listOf("anthropic"),
+            ),
+            "",
+        )
+
+        assertEquals(listOf(ProviderListAction.DISCONNECT), rows.single().actions)
+    }
+
+    fun `test custom providers have no badge while env providers keep env badge`() {
+        val rows = providerListRows(
+            ProviderSettingsDto(
+                providers = listOf(
+                    provider("local-openai", "Local OpenAI", source = "custom"),
+                    provider("env-provider", "Env Provider", source = "env"),
+                ),
+                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = "@ai-sdk/openai-compatible")),
+            ),
+            "",
+        )
+
+        assertTrue(rows.single { it.key == "local-openai" }.badges.isEmpty())
+        assertEquals(listOf("env"), rows.single { it.key == "env-provider" }.badges.map { it.text })
     }
 
     fun `test popular rows use vscode order including kilo`() {
@@ -160,7 +474,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("kilo", "anthropic", "deepseek", "openai", "google", "openrouter", "vercel"), rows.map { it.key })
-        assertEquals("Popular providers", providerListSectionTitle(rows, 0))
+        assertEquals("Popular providers", settingsListSectionTitle(rows, 0))
     }
 
     fun `test popular rows use fallback order without metadata`() {
@@ -176,8 +490,8 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("anthropic", "openai", "unknown"), rows.map { it.key })
-        assertEquals("Popular providers", providerListSectionTitle(rows, 0))
-        assertEquals("All providers", providerListSectionTitle(rows, 2))
+        assertEquals("Popular providers", settingsListSectionTitle(rows, 0))
+        assertEquals("All providers", settingsListSectionTitle(rows, 2))
     }
 
     fun `test connected providers appear first and are not duplicated in popular section`() {
@@ -190,10 +504,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("anthropic", "openai"), rows.map { it.key })
-        assertEquals("Connected providers", providerListSectionTitle(rows, 0))
-        assertEquals("Popular providers", providerListSectionTitle(rows, 1))
+        assertEquals("Connected providers", settingsListSectionTitle(rows, 0))
+        assertEquals("Popular providers", settingsListSectionTitle(rows, 1))
         assertEquals(listOf(ProviderListAction.DISCONNECT), rows[0].actions)
-        assertTrue(rows[0].connected)
     }
 
     fun `test source custom catalog providers remain visible while configured custom providers are connected`() {
@@ -210,10 +523,49 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("local-openai", "anthropic", "available-custom"), rows.map { it.key })
-        assertEquals("Connected providers", providerListSectionTitle(rows, 0))
-        assertEquals("Popular providers", providerListSectionTitle(rows, 1))
-        assertEquals("All providers", providerListSectionTitle(rows, 2))
-        assertEquals(listOf(ProviderListAction.DISCONNECT), rows[0].actions)
+        assertEquals("Connected providers", settingsListSectionTitle(rows, 0))
+        assertEquals("Popular providers", settingsListSectionTitle(rows, 1))
+        assertEquals("All providers", settingsListSectionTitle(rows, 2))
+        assertEquals(listOf(ProviderListAction.EDIT, ProviderListAction.DELETE), rows[0].actions)
+    }
+
+    fun `test edit callback fires instead of delete on primary`() {
+        var edited: ProviderSettingsProviderDto? = null
+        var deleted: ProviderSettingsProviderDto? = null
+        val content = edt { ProvidersContent({}, {}, { deleted = it }, {}, { edited = it }) }
+        val state = ProviderSettingsDto(
+            providers = listOf(provider("local-openai", "Local OpenAI", source = "custom")),
+            config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = CUSTOM_PROVIDER_PACKAGE)),
+        )
+
+        edt {
+            content.update(state)
+            triggerPrimary(content)
+        }
+
+        assertEquals("local-openai", edited?.id)
+        assertNull(deleted)
+    }
+
+    fun `test provider content update selects saved provider`() {
+        val content = content()
+        val state = ProviderSettingsDto(
+            providers = listOf(
+                provider("aaa-openai", "AAA OpenAI", source = "custom"),
+                provider("local-openai", "Local OpenAI", source = "custom"),
+            ),
+            config = mapOf(
+                "aaa-openai" to CustomProviderConfigDto("aaa-openai", npm = CUSTOM_PROVIDER_PACKAGE),
+                "local-openai" to CustomProviderConfigDto("local-openai", npm = CUSTOM_PROVIDER_PACKAGE),
+            ),
+        )
+
+        edt { content.update(state, select = "local-openai") }
+
+        edt {
+            assertEquals(listOf("aaa-openai", "local-openai"), rows(content).map { it.key })
+            assertEquals("local-openai", list(content).selectedValue.key)
+        }
     }
 
     fun `test unconfigured openai compatible template provider is hidden`() {
@@ -237,7 +589,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("kilo"), rows.map { it.key })
-        assertEquals("Connected providers", providerListSectionTitle(rows, 0))
+        assertEquals("Connected providers", settingsListSectionTitle(rows, 0))
         assertTrue(rows.single().actions.isEmpty())
     }
 
@@ -251,7 +603,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("openai", "anthropic"), rows.map { it.key })
-        assertEquals("All providers", providerListSectionTitle(rows, 1))
+        assertEquals("All providers", settingsListSectionTitle(rows, 1))
         assertEquals(listOf(ProviderListAction.ENABLE), rows[1].actions)
     }
 
@@ -268,7 +620,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("openai", "alpha", "zeta"), rows.map { it.key })
-        assertEquals("All providers", providerListSectionTitle(rows, 1))
+        assertEquals("All providers", settingsListSectionTitle(rows, 1))
     }
 
     fun `test filtering by provider name updates rows and sections`() {
@@ -288,7 +640,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
             val rows = rows(content)
             assertEquals(listOf("openai"), rows.map { it.key })
-            assertEquals("Popular providers", providerListSectionTitle(rows, 0))
+            assertEquals("Popular providers", settingsListSectionTitle(rows, 0))
         }
     }
 
@@ -306,36 +658,48 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     fun `test renderer hit test maps actions`() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val areas = ProviderListRenderer.actionBounds(list, bounds, row, selected = true)
+            val list = hitList(row)
+            val areas = actionBounds(list, selected = true)
 
-            assertEquals(ProviderListAction.CONNECT, ProviderListRenderer.actionAt(list, bounds, center(areas.getValue(ProviderListAction.CONNECT)), row, selected = true))
-            assertEquals(ProviderListAction.OAUTH, ProviderListRenderer.actionAt(list, bounds, center(areas.getValue(ProviderListAction.OAUTH)), row, selected = true))
-            assertNull(ProviderListRenderer.actionAt(list, bounds, Point(4, 4), row, selected = true))
-            assertTrue(ProviderListRenderer.actionBounds(list, bounds, row, selected = false).isEmpty())
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, center(areas.getValue(ProviderListAction.CONNECT)), selected = true))
+            assertEquals(ProviderListAction.OAUTH, actionAt(list, center(areas.getValue(ProviderListAction.OAUTH)), selected = true))
+            assertNull(actionAt(list, Point(4, 4), selected = true))
+            assertTrue(actionBounds(list, selected = false).isEmpty())
         }
     }
 
-    fun `test renderer keeps connected disconnect action visible when unselected`() {
+    fun `test connected actions only appear on selection`() {
         edt {
-            val row = ProviderListRow(provider("openai", "OpenAI"), "Connected providers", listOf(ProviderListAction.DISCONNECT), connected = true)
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val area = ProviderListRenderer.actionBounds(list, bounds, row, selected = false).getValue(ProviderListAction.DISCONNECT)
+            val row = ProviderListRow(provider("openai", "OpenAI"), "Connected providers", listOf(ProviderListAction.DISCONNECT))
+            val list = hitList(row)
 
-            assertEquals(ProviderListAction.DISCONNECT, ProviderListRenderer.actionAt(list, bounds, center(area), row, selected = false))
+            assertTrue(actionBounds(list, selected = false).isEmpty())
+            val area = actionBounds(list, selected = true).getValue(ProviderListAction.DISCONNECT)
+            assertEquals(ProviderListAction.DISCONNECT, actionAt(list, center(area), selected = true))
         }
+    }
+
+    fun `test delete action uses trash icon and no label`() {
+        val row = providerListRows(
+            ProviderSettingsDto(
+                providers = listOf(provider("local-openai", "Local OpenAI", source = "custom")),
+                config = mapOf("local-openai" to CustomProviderConfigDto("local-openai", npm = CUSTOM_PROVIDER_PACKAGE)),
+            ),
+            "",
+        ).single()
+
+        val delete = row.cells.single { it.id == ProviderListAction.DELETE.name }
+        assertEquals(AllIcons.Actions.GC, delete.icon)
+        assertTrue(delete.iconOnly)
     }
 
     fun `test renderer ignores disabled env disconnect action`() {
         edt {
             val row = ProviderListRow(provider("env", "Env", source = "env"), "All providers", listOf(ProviderListAction.DISCONNECT))
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val area = ProviderListRenderer.actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.DISCONNECT)
+            val list = hitList(row)
+            val area = actionBounds(list, selected = true).getValue(ProviderListAction.DISCONNECT)
 
-            assertNull(ProviderListRenderer.actionAt(list, bounds, center(area), row, selected = true))
+            assertNull(actionAt(list, center(area), selected = true))
         }
     }
 
@@ -343,11 +707,11 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertEquals(listOf("OAuth", "Connect"), renderer.actionTexts())
+            assertEquals(listOf("OAuth", "Connect"), actionTexts(renderer))
         }
     }
 
@@ -355,9 +719,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
             renderer.setSize(320, renderer.preferredSize.height)
             renderer.doLayout()
             components(renderer).filterIsInstance<Container>().forEach { it.doLayout() }
@@ -373,27 +737,26 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            render(renderer, list, row, selected = false)
 
-            assertTrue(renderer.actionTexts().isEmpty())
+            assertTrue(actionTexts(renderer).isEmpty())
         }
     }
 
     fun `test disabled provider rows hide action labels and hit targets`() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT), disabled = true)
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 0, 320, 48)
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val list = hitList(row)
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertTrue(ProviderListRenderer.visibleActions(row, selected = true).isEmpty())
-            assertTrue(ProviderListRenderer.actionBounds(list, bounds, row, selected = true).isEmpty())
-            assertNull(ProviderListRenderer.actionAt(list, bounds, Point(300, 24), row, selected = true))
-            assertTrue(renderer.actionTexts().isEmpty())
+            assertTrue(visibleActions(row, selected = true).isEmpty())
+            assertTrue(actionBounds(list, selected = true).isEmpty())
+            assertNull(actionAt(list, Point(300, 24), selected = true))
+            assertTrue(actionTexts(renderer).isEmpty())
         }
     }
 
@@ -401,9 +764,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.OAUTH, ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
             val fg = UIManager.getColor("Button.foreground") ?: UIUtil.getLabelForeground()
             val labels = components(renderer).filterIsInstance<JBLabel>().filter { it.text in listOf("OAuth", "Connect") }
@@ -426,13 +789,12 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
                 listOf(ProviderListAction.CONNECT),
             )
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertTrue(renderer.providerIconVisible())
-            assertEquals(Dimension(JBUI.scale(20), JBUI.scale(20)), renderer.providerIconSize())
-            assertEquals("GPT and Codex models with API key or ChatGPT login", renderer.descriptionText())
+            assertEquals(Dimension(JBUI.scale(20), JBUI.scale(20)), iconSizes(renderer).single())
+            assertEquals("GPT and Codex models with API key or ChatGPT login", descriptions(renderer).single())
             assertTrue(renderer.preferredSize.height > JBUI.scale(44))
         }
     }
@@ -450,11 +812,11 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
                 listOf(ProviderListAction.CONNECT),
             )
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertEquals("Build with OpenAI models", renderer.descriptionText())
+            assertEquals("Build with OpenAI models", descriptions(renderer).single())
         }
     }
 
@@ -462,23 +824,30 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            render(renderer, list, row, selected = true)
 
-            assertEquals("", renderer.descriptionText())
+            assertTrue(descriptions(renderer).isEmpty())
         }
     }
 
-    fun `test action bounds are vertically centered`() {
+    fun `test action hit target spans the full rendered button`() {
         edt {
             val row = ProviderListRow(provider("openai", "OpenAI"), "Popular providers", listOf(ProviderListAction.CONNECT))
-            val list = JBList(listOf(row))
-            val bounds = Rectangle(0, 10, 320, 80)
-            val area = ProviderListRenderer.actionBounds(list, bounds, row, selected = true).getValue(ProviderListAction.CONNECT)
+            val list = hitList(row)
+            val bounds = list.getCellBounds(0, 0)
+            val area = actionBounds(list, selected = true).getValue(ProviderListAction.CONNECT)
 
-            assertTrue(kotlin.math.abs((bounds.y + bounds.height / 2) - (area.y + area.height / 2)) <= 1)
             assertTrue(bounds.contains(area))
+            // The button is right-aligned within the row.
+            assertTrue(area.x >= bounds.x + bounds.width / 2)
+            // Every horizontal slice of the drawn button resolves to the action, including the left
+            // edge that regressed when hit-testing ignored the New UI selection insets.
+            val y = area.y + area.height / 2
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, Point(area.x + 1, y), selected = true))
+            assertEquals(ProviderListAction.CONNECT, actionAt(list, Point(area.x + area.width - 1, y), selected = true))
+            assertNull(actionAt(list, Point(area.x - 2, y), selected = true))
         }
     }
 
@@ -486,9 +855,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt {
             val row = ProviderListRow(provider("cloudflare", "Cloudflare"), "All providers", listOf(ProviderListAction.CONNECT))
             val list = JBList(listOf(row))
-            val renderer = ProviderListRenderer(com.intellij.ui.CollectionListModel(listOf(row)))
+            val renderer = renderer(row)
 
-            renderer.getListCellRendererComponent(list, row, 0, false, false)
+            render(renderer, list, row, selected = false)
             renderer.setSize(320, 64)
             renderer.doLayout()
 
@@ -536,7 +905,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
             assertEquals(UiStyle.Components.actionBackground(), cancel.background)
             assertEquals(requireNotNull(UiStyle.Components.actionBorder()).getBorderInsets(cancel), requireNotNull(cancel.border).getBorderInsets(cancel))
             assertTrue(rows(panel).single().disabled)
-            assertTrue(ProviderListRenderer.visibleActions(rows(panel).single(), selected = true).isEmpty())
+            assertTrue(visibleActions(rows(panel).single(), selected = true).isEmpty())
             panel.reload()
         }
 
@@ -764,7 +1133,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         edt { assertTrue(rows(panel).isEmpty()) }
     }
 
-    private fun content() = edt { ProvidersContent({}, {}, {}, {}) }
+    private fun content() = edt { ProvidersContent({}, {}, {}, {}, {}) }
 
     private fun content(panel: ProvidersSettingsUi) = components(panel).filterIsInstance<ProvidersContent>().single()
 
@@ -816,7 +1185,79 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
     private fun fieldsByName(root: Container, name: String): List<JTextField> = components(root).filterIsInstance<JTextField>().filter { it.name == name }
 
+    private fun center(dialog: CustomProviderDialog) = call(dialog, "createCenterPanel") as JComponent
+
+    private fun submit(dialog: CustomProviderDialog) {
+        call(dialog, "doOKAction")
+    }
+
+    private fun validation(dialog: CustomProviderDialog) = (call(dialog, "doValidate") as ValidationInfo?)?.message
+
+    private fun dispose(dialog: CustomProviderDialog) {
+        call(dialog, "dispose")
+    }
+
+    private fun CustomProviderDialog.okText(): String {
+        val method = com.intellij.openapi.ui.DialogWrapper::class.java.getDeclaredMethod("getOKAction")
+        method.isAccessible = true
+        return (method.invoke(this) as javax.swing.Action).getValue(javax.swing.Action.NAME) as String
+    }
+
+    private fun call(dialog: CustomProviderDialog, name: String): Any? {
+        val method = dialog.javaClass.getDeclaredMethod(name)
+        method.isAccessible = true
+        return method.invoke(dialog)
+    }
+
     private fun center(rect: Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
+
+    private fun renderer(row: ProviderListRow) = SettingsListRenderer(CollectionListModel<SettingsListItem>(listOf(row)))
+
+    private fun render(renderer: SettingsListRenderer, list: JBList<ProviderListRow>, row: ProviderListRow, selected: Boolean) {
+        @Suppress("UNCHECKED_CAST")
+        renderer.getListCellRendererComponent(list as JList<out SettingsListItem>, row, 0, selected, false)
+    }
+
+    private fun actionTexts(renderer: SettingsListRenderer): List<String> = components(renderer)
+        .filterIsInstance<SettingsListActionCell>()
+        .filter { it.isVisible }
+        .mapNotNull { it.text.takeIf(String::isNotBlank) }
+
+    private fun descriptions(renderer: SettingsListRenderer): List<String> = components(renderer)
+        .filterIsInstance<JBLabel>()
+        .filter { it.isVisible && it !is SettingsListActionCell }
+        .mapNotNull { it.text.takeIf(String::isNotBlank) }
+
+    private fun iconSizes(renderer: SettingsListRenderer): List<Dimension> = components(renderer)
+        .filterIsInstance<JBLabel>()
+        .mapNotNull { it.icon }
+        .filter { it.iconWidth == JBUI.scale(20) && it.iconHeight == JBUI.scale(20) }
+        .map { Dimension(it.iconWidth, it.iconHeight) }
+
+    /** Builds a list wired with the real [SettingsListRenderer] and laid out, so hit-testing matches what is drawn. */
+    private fun hitList(row: ProviderListRow): JBList<ProviderListRow> {
+        val model = CollectionListModel<ProviderListRow>(listOf(row))
+        val list = JBList(model)
+        list.cellRenderer = SettingsListRenderer(model as CollectionListModel<SettingsListItem>, SettingsListConfig.Preferred)
+        list.size = Dimension(320, 200)
+        list.doLayout()
+        UIUtil.dispatchAllInvocationEvents()
+        return list
+    }
+
+    private fun actionAt(list: JBList<ProviderListRow>, point: Point, selected: Boolean): ProviderListAction? {
+        val id = settingsListCellAt(list, 0, point, selected) ?: return null
+        return ProviderListAction.entries.firstOrNull { it.name == id }
+    }
+
+    private fun actionBounds(list: JBList<ProviderListRow>, selected: Boolean): Map<ProviderListAction, Rectangle> {
+        val cells = settingsListCellBounds(list, 0, selected)
+        return cells.mapNotNull { (id, rect) -> ProviderListAction.entries.firstOrNull { it.name == id }?.let { it to rect } }.toMap()
+    }
+
+    private fun visibleActions(row: ProviderListRow, selected: Boolean): List<ProviderListAction> {
+        return settingsListVisibleCells(row, selected).mapNotNull { cell -> ProviderListAction.entries.firstOrNull { it.name == cell.id } }
+    }
 
     private fun triggerPrimary(component: JComponent) {
         val list = list(component)
@@ -856,8 +1297,8 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun flushUntil(done: () -> Boolean) = runBlocking {
-        repeat(20) {
-            delay(100)
+        repeat(200) {
+            delay(10)
             edt { UIUtil.dispatchAllInvocationEvents() }
             if (done()) return@runBlocking
         }

@@ -135,7 +135,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} messages reverted",
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
-  "revert.banner.hint": "Send a new message to make this permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Wait for agent to finish",
   "command.session.compact": "Compact session",
   "command.session.compact.description": "Summarize the session to reduce context size",
@@ -384,7 +384,8 @@ export const dict = {
   "prompt.action.enhanceDescription":
     "The 'Enhance Prompt' button helps improve your prompt by providing additional context, clarification, or rephrasing. Try typing a prompt in here and clicking the button again to see how it works.",
   "speechToText.tooltip.start": "Start voice input with Kilo Gateway",
-  "speechToText.tooltip.stop": "Stop capturing",
+  "speechToText.tooltip.starting": "Starting microphone... Wait to speak.",
+  "speechToText.tooltip.stop": "Recording. Click to stop.",
   "speechToText.tooltip.transcribing": "Transcribing... Click to cancel.",
   "speechToText.tooltip.error": "Speech input failed. Click to clear.",
   "speechToText.error.title": "Speech input failed",
@@ -629,7 +630,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep Search",
   "ui.permission.toolLabel.webSearch": "Web Search",
   "ui.permission.toolLabel.list": "List",
-  "ui.permission.toolLabel.externalDirectory": "Read External Directory",
+  "ui.permission.toolLabel.externalDirectory": "Access External Directory",
   "ui.permission.toolLabel.webFetch": "Web Fetch",
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
@@ -912,6 +913,7 @@ export const dict = {
   "provider.custom.models.name.label": "Name",
   "provider.custom.models.name.placeholder": "Display Name",
   "provider.custom.models.reasoning.label": "Reasoning",
+  "provider.custom.models.modalities.image": "Image",
   "provider.custom.models.variants.label": "Variants",
   "provider.custom.models.variants.add": "Add variant",
   "provider.custom.models.variants.remove": "Remove variant",
@@ -1156,6 +1158,8 @@ export const dict = {
 
   "common.retry": "Retry",
   "common.refresh": "Refresh",
+  "common.reload": "Reload",
+  "common.reloadDescription": "Reload config, skills, agents, and commands from disk",
 
   "profile.title": "Profile",
   "profile.notLoggedIn": "Not logged in",
@@ -1163,6 +1167,10 @@ export const dict = {
   "profile.balance.title": "Balance",
   "profile.balance.refresh": "Refresh balance",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Top up",
+  "profile.pass.subscribe": "Get Kilo Pass to add credits and earn bonuses",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Renews",
   "profile.action.logout": "Log Out",
 
   "settings.section.configuration": "Configuration",
@@ -1208,6 +1216,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API key",
   "settings.indexing.qdrantApiKey.description": "Optional API key for the Qdrant instance.",
   "settings.indexing.qdrantApiKey.placeholder": "Optional API key",
+  "settings.indexing.fileExtensions.title": "File Extensions",
+  "settings.indexing.fileExtensions.description":
+    "Comma-separated allowlist. Leave empty to use the built-in defaults.",
+  "settings.indexing.fileExtensions.invalid": "Invalid extension: {{extension}}",
   "settings.indexing.tuning.description": "Advanced search and batching parameter.",
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Language",
@@ -1232,6 +1244,11 @@ export const dict = {
   "session.outcome.interrupted": "Turn interrupted.",
   "session.outcome.error": "Turn failed.",
   "session.outcome.finish": "Technical finish reason: {{reason}}",
+  "session.costAlert.header": "Session Cost Alert",
+  "session.costAlert.continue": "Continue",
+  "session.costAlert.question":
+    "This session just went above your {{limit}} per-session alert threshold and cost {{cost}}. Keep going?",
+  "session.costAlert.stop": "Stop",
   "sidebar.session.newSession": "New Session",
   "sidebar.session.newSession.tooltip": "Start a fresh conversation while keeping the current session intact.",
   "sidebar.session.newSession.disabled": "This session is already new. Start chatting or create a worktree instead.",
@@ -1394,6 +1411,12 @@ export const dict = {
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
+  "settings.experimental.imageGeneration.title": "Image Generation",
+  "settings.experimental.imageGeneration.description": "Enable AI image generation",
+  "settings.experimental.imageGenerationModel.title": "Image Model",
+  "settings.experimental.imageGenerationModel.description": "Image Generation Model",
+  "settings.experimental.imageGenerationModel.placeholder": "Default (Auto Router)",
+
   "settings.experimental.speechToText.title": "Speech to Text",
   "settings.experimental.speechToText.description":
     "Enable voice input in prompt fields using your Kilo account through Kilo Gateway.",
@@ -1406,13 +1429,25 @@ export const dict = {
     "Enable experimental tools for reading, editing, and executing VS Code notebooks",
   "settings.experimental.continueOnDeny.title": "Continue on Deny",
   "settings.experimental.continueOnDeny.description": "Continue the agent loop when a permission is denied",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Run agent shell commands inside an OS-level sandbox that restricts writes to the project and Kilo state directories",
   "settings.sandboxing.title": "Sandboxing",
   "settings.sandboxing.network.title": "Restrict Network Access",
   "settings.sandboxing.network.description":
-    "Block outbound network access from model-originated commands and HTTP tools. Local MCP servers and plugin hooks run outside this restriction. Provider and model inference traffic remains available.",
+    "Block direct outbound access from model-originated commands and HTTP tools. Local and remote MCP tools are unavailable while restricted. Provider traffic and trusted plugin hooks remain outside this restriction.",
+  "settings.sandboxing.allowedHosts.title": "Allowed Network Destinations",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS host and port destinations for sandboxed HTTP and HTTPS proxy traffic. GitHub CLI and HTTPS Git commonly need github.com:443 and api.github.com:443. Changes apply to new sessions.",
+  "settings.sandboxing.writablePaths.title": "Additional Writable Paths",
+  "settings.sandboxing.writablePaths.description":
+    "Extra filesystem paths the sandbox allows writes to (e.g. /tmp, /var/log). These are merged with the default writable paths when the sandbox is active.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Enable SWE-Pruner: task-aware pruning of large read, search, and shell tool outputs, guided by a focus question from the agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner Model",
+  "settings.experimental.swePrunerModel.description":
+    "Model used to skim tool outputs; defaults to the configured small model",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP server requests in milliseconds",
   "settings.experimental.remote.title": "Remote Control",
@@ -1438,11 +1473,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Custom Prompt",
   "settings.agentBehaviour.prompt.description": "Additional system prompt for this agent",
   "settings.agentBehaviour.temperature.title": "Temperature",
-  "settings.agentBehaviour.temperature.description": "Sampling temperature (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controls how random AI responses are (0–2). Lower values (e.g. 0.2) produce focused, consistent output. Higher values (e.g. 1.0) produce more varied, creative responses. Leave empty to use the model default.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus sampling parameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Nucleus sampling threshold (0–1). Limits token choices to the smallest set whose cumulative probability reaches P. Lower values make output more focused; higher values allow more diversity. Leave empty to use the model default.",
   "settings.agentBehaviour.maxSteps.title": "Max Steps",
-  "settings.agentBehaviour.maxSteps.description": "Maximum agentic iterations",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximum number of agent steps. At the limit, the agent is instructed to stop using tools and provide a final response. Increase for complex multi-step tasks; lower to keep responses shorter and more predictable.",
   "settings.agentBehaviour.hidden.title": "Hidden",
   "settings.agentBehaviour.hidden.description": "Hide this agent from the mode switcher in the chat input",
   "settings.agentBehaviour.disable.title": "Disabled",
@@ -1549,6 +1587,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Define how tools are allowed to run. Most tools default to Allow. doom_loop and external_directory default to Ask.",
+  "settings.autoApprove.maxCost.title": "Session Cost Alert",
+  "settings.autoApprove.maxCost.description":
+    "Show a non-blocking alert when a session exceeds this USD amount. Use whole dollars; leave empty to disable.",
   "settings.autoApprove.level.allow": "Allow",
   "settings.autoApprove.level.ask": "Ask",
   "settings.autoApprove.level.deny": "Deny",
@@ -1584,6 +1625,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Auto Compaction",
   "settings.context.autoCompaction.description": "Automatically compact context before it reaches the limit",
+  "settings.context.compaction.title": "Compaction",
   "settings.context.compactionLimit.title": "Auto Compaction Limit",
   "settings.context.compactionLimit.description":
     "Compact when context reaches this percentage of the model window. Leave blank to use the safety buffer only.",
@@ -1591,6 +1633,41 @@ export const dict = {
   "settings.context.prune.description": "Remove old tool outputs during compaction",
   "settings.context.watcherPatterns": "File Watcher Ignore Patterns",
   "settings.context.watcherPatterns.description": "Glob patterns for files the watcher should ignore",
+  "settings.context.memory.title": "Memory",
+  "settings.context.memory.project.title": "Project memory",
+  "settings.context.memory.autoSave.title": "Auto-save project memory",
+  "settings.context.memory.autoSave.description":
+    "Automatically save durable project facts from completed turns when memory is enabled.",
+  "settings.context.memory.index.title": "Memory index",
+  "settings.context.memory.status.notLoaded": "Not loaded",
+  "settings.context.memory.status.disabled": "Disabled",
+  "settings.context.memory.status.enabledTokensOps":
+    "Enabled - ~{{session}} startup tokens this session - ~{{tokens}} stored index tokens - last op {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Enable memory to create project memory files.",
+  "settings.context.memory.inspect": "Inspect",
+  "settings.context.memory.rebuild": "Rebuild memory index",
+  "chat.memory.status.loading": "Memory status loading",
+  "chat.memory.status.active": "Memory active this session",
+  "chat.memory.project.enabled": "Project memory enabled",
+  "chat.memory.project.disabled": "Project memory disabled",
+  "chat.memory.command.failed": "Memory command failed",
+  "chat.memory.inspect": "Inspect memory",
+  "chat.memory.remember": "Remember",
+  "chat.memory.forget": "Forget",
+  "chat.memory.rebuild": "Rebuild index",
+  "chat.memory.disable": "Disable memory",
+  "chat.memory.enable": "Enable memory",
+  "chat.memory.verbose": "Verbose",
+  "chat.memory.activity.idle": "No memory activity this session",
+  "chat.memory.activity.loaded": "loaded {{tokens}} tokens",
+  "chat.memory.activity.recalled": "recalled {{count}}",
+  "chat.memory.activity.saved": "saved {{count}}",
+  "chat.memory.activity.loaded.item": "loaded: {{item}}",
+  "chat.memory.activity.recalled.item": "recalled: {{item}}",
+  "chat.memory.activity.saved.item": "saved: {{item}}",
+  "chat.memory.badge.recalled": "Memory recalled",
+  "chat.memory.badge.items": "{{count}} items",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Use Custom Prompt",
@@ -1601,6 +1678,10 @@ export const dict = {
     "System prompt sent to the AI when generating commit messages. This replaces the default prompt entirely.",
   "settings.commitMessage.prompt.placeholder":
     "e.g. Generate commit messages in Spanish following conventional commits format. Return ONLY the commit message.",
+
+  "settings.commitMessage.language.sync": "Sync with UI language",
+  "settings.commitMessage.language.title": "Language",
+  "settings.commitMessage.language.description": "Choose which language to use for AI-generated commit messages:",
 
   "settings.display.username.title": "Username",
   "settings.display.username.description": "Custom username displayed in conversations",
@@ -1789,4 +1870,15 @@ export const dict = {
   "diffViewer.baseBranch.none": "—",
 
   "plan.exit.ready": "Plan is ready:",
+  "chat.search.placeholder": "Search chat…",
+  "chat.search.toggle": "Search chat",
+  "chat.search.matchCase": "Match Case",
+  "chat.search.matchWholeWord": "Match Whole Word",
+  "chat.search.useRegex": "Use Regular Expression",
+  "chat.search.previousMatch": "Previous match",
+  "chat.search.nextMatch": "Next match",
+  "chat.search.close": "Close search",
+  "chat.search.invalidRegex": "Invalid regular expression",
+  "chat.search.noResults": "No results",
+  "chat.search.searchingHistory": "Searching earlier messages…",
 }

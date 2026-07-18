@@ -33,7 +33,7 @@ data class MdCodeBlockOptions(
     val editorOnly: Boolean = false,
 )
 
-enum class MdCodeBlockBorder { All, Horizontal, Bottom }
+enum class MdCodeBlockBorder { All, Horizontal, Bottom, None }
 
 data class MdCodeBlockFactory(val opts: MdCodeBlockOptions = MdCodeBlockOptions()) {
     companion object {

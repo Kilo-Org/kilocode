@@ -65,7 +65,7 @@ export function modelUsageName(model: SessionModelUsage["models"][number], provi
   const id = model.modelID.replace(DATE_SUFFIX, "")
   const name = provider?.models[model.modelID]?.name ?? provider?.models[id]?.name ?? id
   return name
-    .replace(/^[^:]+:\s*/, "")
+    .replace(/^[^:]+:\s+/, "")
     .replace(/^[^/]+\//, "")
     .replace(/\s*\([^)]*%\s*off[^)]*\)\s*$/i, "")
     .replace(/^qwen(?=\d)/i, "Qwen ")

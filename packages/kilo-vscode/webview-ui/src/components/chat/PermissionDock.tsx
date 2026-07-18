@@ -309,7 +309,7 @@ export const PermissionDock: Component<{
             }}
             disabled={props.responding}
           >
-            {language.t("ui.permission.run")}
+            {language.t("ui.permission.allowOnce")}
           </Button>
           <Button
             variant="ghost"

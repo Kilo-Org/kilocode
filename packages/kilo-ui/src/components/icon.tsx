@@ -2,6 +2,14 @@ import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
 import { splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
+  memory: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="2"/>`,
+  },
+  database: {
+    viewBox: "0 0 24 24",
+    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="2"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  },
   "book-open-check": {
     viewBox: "0 0 24 24",
     path: `<path d="M12 21V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -41,6 +49,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   "files-collapse": {
     viewBox: "0 0 16 16",
     path: `<path d="M14 4.27051C14.5999 4.62053 15 5.26009 15 6V11C15 13.21 13.21 15 11 15H6C5.26009 15 4.62053 14.5999 4.27051 14H11C12.65 14 14 12.65 14 11V4.27051Z" fill="currentColor"/><path d="M9.5 7C9.776 7 10 7.224 10 7.5C10 7.776 9.776 8 9.5 8H5.5C5.224 8 5 7.776 5 7.5C5 7.224 5.224 7 5.5 7H9.5Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2C12.103 2 13 2.897 13 4V11C13 12.103 12.103 13 11 13H4C2.897 13 2 12.103 2 11V4C2 2.897 2.897 2 4 2H11ZM4 3C3.449 3 3 3.449 3 4V11C3 11.552 3.449 12 4 12H11C11.551 12 12 11.552 12 11V4C12 3.449 11.551 3 11 3H4Z" fill="currentColor"/>`,
+  },
+  reload: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21v-5h5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
 }
 

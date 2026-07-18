@@ -43,7 +43,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         super.setUp()
         parent = Disposer.newDisposable("test")
         model = SessionModel()
-        panel = SessionMessageListPanel(model, parent, openFile = {})
+        panel = SessionMessageListPanel(model, parent, openFile = { _, _ -> })
     }
 
     override fun tearDown() {
@@ -160,6 +160,24 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
         assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
     }
 
+    fun `test user compaction marker renders without prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", PartDto("cp1", "ses", "u1", "compaction"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.Default, mv.sessionViewKind)
+        assertEquals(listOf("cp1"), mv.partIds())
+        assertTrue(mv.part("cp1") is ai.kilocode.client.session.views.CompactionView)
+    }
+
+    fun `test user text message keeps prompt chrome`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        val mv = panel.findMessage("u1")!!
+        assertEquals(SessionView.Kind.UserPrompt, mv.sessionViewKind)
+    }
+
     // ------ generic fallback ------
 
     fun `test unknown part type falls back to GenericView`() {
@@ -220,7 +238,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     fun `test user text and attachments share one prompt container`() {
         val opened = mutableListOf<String>()
-        val item = SessionMessageListPanel(model, parent, openFile = {}, openAttachment = { _, it -> opened.add(it.url) })
+        val item = SessionMessageListPanel(model, parent, openFile = { _, _ -> }, openAttachment = { _, it -> opened.add(it.url) })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent("u1", part("p1", "u1", "text", text = "look at this"))
         model.updateContent(
@@ -464,7 +482,7 @@ class SessionUiUpdateTest : BasePlatformTestCase() {
 
     fun `test transcript attachment click delegates to attachment opener`() {
         val opened = mutableListOf<Pair<String, String>>()
-        val item = SessionMessageListPanel(model, parent, openFile = {}, openAttachment = { msg, it -> opened.add(msg to it.url) })
+        val item = SessionMessageListPanel(model, parent, openFile = { _, _ -> }, openAttachment = { msg, it -> opened.add(msg to it.url) })
         model.upsertMessage(msg("u1", "user"))
         model.updateContent(
             "u1",

@@ -56,7 +56,8 @@ export namespace BackgroundProcessRunner {
       !source || path.basename(script ?? "") === "index.ts"
         ? self.args
         : [path.resolve(import.meta.dirname, "../../index.ts")]
-    return [self.command, ...args, MARKER, input.token, encode(input)]
+    const cwd = source && self.cwd ? ["--cwd", self.cwd] : []
+    return [self.command, ...cwd, ...args, MARKER, input.token, encode(input)]
   }
 
   async function writer(input: Input) {
@@ -64,23 +65,23 @@ export namespace BackgroundProcessRunner {
     let size = (await file.stat()).size
     let queue = Promise.resolve()
     const append = (chunk: Buffer) => {
-      if (!process.stdout.destroyed) process.stdout.write(chunk)
       queue = queue.then(async () => {
         if (size + chunk.length <= MAX) {
           await file.write(chunk)
           size += chunk.length
-          return
+        } else {
+          await file.close()
+          const source = Bun.file(input.log)
+          const old = size
+            ? Buffer.from(await source.slice(Math.max(0, size - KEEP), size).arrayBuffer())
+            : Buffer.alloc(0)
+          const next = Buffer.concat([old, chunk])
+          const tail = next.subarray(Math.max(0, next.length - KEEP))
+          await Filesystem.write(input.log, tail, MODE)
+          file = await open(input.log, "a", MODE)
+          size = tail.length
         }
-        await file.close()
-        const source = Bun.file(input.log)
-        const old = size
-          ? Buffer.from(await source.slice(Math.max(0, size - KEEP), size).arrayBuffer())
-          : Buffer.alloc(0)
-        const next = Buffer.concat([old, chunk])
-        const tail = next.subarray(Math.max(0, next.length - KEEP))
-        await Filesystem.write(input.log, tail, MODE)
-        file = await open(input.log, "a", MODE)
-        size = tail.length
+        if (!process.stdout.destroyed) process.stdout.write(chunk)
       })
     }
     return {
@@ -97,6 +98,7 @@ export namespace BackgroundProcessRunner {
       "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,CreationDate | ConvertTo-Json -Compress"
     const out = await Process.text(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", query], {
       nothrow: true,
+      abort: AbortSignal.timeout(2_000),
       timeout: 2_000,
     })
     if (out.code !== 0 || !out.text.trim()) return seen

@@ -115,6 +115,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "Реалізувати в новій сесії з чистим контекстом",
   "plan.followup.answer.continue": "Продовжити тут",
   "plan.followup.answer.continue.description": "Реалізувати план у цій сесії",
+  "plan.followup.answer.keepRefining": "Продовжити уточнення",
+  "plan.followup.answer.keepRefining.description": "Продовжити планування без реалізації наразі",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "Знімок виконується повільно",

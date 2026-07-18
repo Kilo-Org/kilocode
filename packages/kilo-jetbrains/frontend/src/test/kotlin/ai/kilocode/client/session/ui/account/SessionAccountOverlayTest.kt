@@ -42,10 +42,12 @@ class SessionAccountOverlayTest : SessionControllerTestBase() {
         organizations: List<ProfileOrganizationDto> = emptyList(),
         balance: ProfileBalanceDto? = null,
         currentOrgId: String? = null,
+        hasPersonalAccount: Boolean = true,
     ) = ProfileDto(
         email = email,
         name = name,
         organizations = organizations,
+        hasPersonalAccount = hasPersonalAccount,
         balance = balance,
         currentOrgId = currentOrgId,
     )
@@ -103,6 +105,22 @@ class SessionAccountOverlayTest : SessionControllerTestBase() {
             assertEquals(2, panel.choiceCount())
             // selected index is 1 (org_1 is the second item)
             assertEquals(1, panel.selectedIndex())
+        }
+    }
+
+    fun `test profile without personal account hides personal choice`() {
+        val acme = org("org_1", "Acme", "MEMBER")
+        val prof = profile(
+            email = "user@example.com",
+            organizations = listOf(acme),
+            currentOrgId = "org_1",
+            hasPersonalAccount = false,
+        )
+        show(snap(prof))
+        edt {
+            assertEquals("Acme", panel.accountTitle())
+            assertEquals(1, panel.choiceCount())
+            assertEquals(0, panel.selectedIndex())
         }
     }
 

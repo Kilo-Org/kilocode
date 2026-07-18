@@ -113,6 +113,8 @@ export const dict = {
   "plan.followup.answer.newSession.description": "ดำเนินการในเซสชันใหม่ที่มีบริบทว่างเปล่า",
   "plan.followup.answer.continue": "ดำเนินการต่อที่นี่",
   "plan.followup.answer.continue.description": "ดำเนินการตามแผนในเซสชันนี้",
+  "plan.followup.answer.keepRefining": "ปรับแผนต่อ",
+  "plan.followup.answer.keepRefining.description": "วางแผนต่อโดยยังไม่ดำเนินการ",
 
   // Slow-repo snapshot prompt
   "snapshot.slowRepo.header": "สแน็ปช็อตช้า",

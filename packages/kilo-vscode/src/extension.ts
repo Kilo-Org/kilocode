@@ -398,6 +398,26 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.openIndexingSettings", () => {
       settingsEditorProvider.openPanel("settings", "indexing")
     }),
+    vscode.commands.registerCommand("kilo-code.new.showMemory", async () => {
+      if (agentManagerProvider.isActive()) {
+        await agentManagerProvider.showMemory()
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      if (target === provider) await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await target.waitForReady()
+      await target.showMemory()
+    }),
+    vscode.commands.registerCommand("kilo-code.new.toggleMemory", async () => {
+      if (agentManagerProvider.isActive()) {
+        await agentManagerProvider.toggleMemory()
+        return
+      }
+      const target = activeTabProvider() ?? provider
+      if (target === provider) await vscode.commands.executeCommand("kilo-code.SidebarProvider.focus")
+      await target.waitForReady()
+      await target.toggleMemory()
+    }),
     // legacy-migration start
     vscode.commands.registerCommand("kilo-code.new.openMigrationWizard", () => {
       provider.postMessage({ type: "migrationState", needed: true, source: "legacy" })
@@ -478,6 +498,9 @@ export function activate(context: vscode.ExtensionContext) {
     vscode.commands.registerCommand("kilo-code.new.agentManager.newWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "newWorktree" })
     }),
+    vscode.commands.registerCommand("kilo-code.new.agentManager.quickWorktree", () => {
+      agentManagerProvider.postMessage({ type: "action", action: "quickWorktree" })
+    }),
     vscode.commands.registerCommand("kilo-code.new.agentManager.openWorktree", () => {
       agentManagerProvider.postMessage({ type: "action", action: "openWorktree" })
     }),
@@ -530,8 +553,14 @@ export function activate(context: vscode.ExtensionContext) {
 
   registerHeapSnapshot(context, connectionService)
 
+  context.subscriptions.push(
+    vscode.commands.registerCommand("kilo-code.new.reload", () => {
+      provider.reload().catch((e) => console.error("[Kilo New] reload command failed:", e))
+    }),
+  )
+
   // Register code actions (editor context menus, terminal context menus, keyboard shortcuts)
-  registerCodeActions(context, provider, agentManagerProvider)
+  registerCodeActions(context, provider, agentManagerProvider, activeTabProvider)
   registerTerminalActions(context, provider, agentManagerProvider)
 
   // Register CodeActionProvider (lightbulb quick fixes)

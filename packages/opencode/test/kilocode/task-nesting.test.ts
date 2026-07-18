@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test"
 import { Effect, Exit, Layer } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
@@ -15,7 +16,8 @@ import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { BackgroundProcess } from "../../src/kilocode/background-process"
 import { Shell } from "../../src/shell/shell"
 import path from "path"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "../../src/provider/provider"
 import { Permission } from "../../src/permission"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
@@ -27,8 +29,8 @@ import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 const it = testEffect(
@@ -45,6 +47,7 @@ const it = testEffect(
     Truncate.defaultLayer,
     Provider.defaultLayer,
     ToolRegistry.defaultLayer,
+    Database.defaultLayer,
   ),
 )
 
@@ -226,7 +229,7 @@ describe("Kilo task nesting", () => {
     ),
   )
 
-  it.live("disables nested task and question tools even when global permissions allow them", () =>
+  it.live("disables nested and human-driven tools even when global permissions allow them", () =>
     provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
@@ -258,6 +261,7 @@ describe("Kilo task nesting", () => {
           const child = yield* sessions.get(result.metadata.sessionId)
           expect(seen?.tools?.task).toBe(false)
           expect(seen?.tools?.question).toBe(false)
+          expect(seen?.tools?.interactive_terminal).toBe(false)
           expect(child.permission).toEqual(
             expect.arrayContaining([
               {
@@ -270,6 +274,11 @@ describe("Kilo task nesting", () => {
                 pattern: "*",
                 action: "deny",
               },
+              {
+                permission: "interactive_terminal",
+                pattern: "*",
+                action: "deny",
+              },
             ]),
           )
         }),
@@ -278,6 +287,7 @@ describe("Kilo task nesting", () => {
           permission: {
             task: "allow",
             question: "allow",
+            interactive_terminal: "allow",
           },
         },
       },
@@ -377,56 +387,58 @@ describe("Kilo task nesting", () => {
   )
 
   it.live("refreshes inherited restrictions when resuming a task child", () =>
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const { chat, assistant } = yield* seed()
-        const support = yield* SandboxPolicy.status(chat.id)
-        yield* sessions.setPermission({
-          sessionID: chat.id,
-          permission: [{ permission: "bash", pattern: "*", action: "deny" }],
-        })
-        const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
-        if (support.available) {
-          yield* SandboxPolicy.toggle(child.id)
-          expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
-        }
-        const tool = yield* TaskTool
-        const def = yield* tool.init()
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const sessions = yield* Session.Service
+          const { chat, assistant } = yield* seed()
+          const support = yield* SandboxPolicy.status(chat.id)
+          yield* sessions.setPermission({
+            sessionID: chat.id,
+            permission: [{ permission: "bash", pattern: "*", action: "deny" }],
+          })
+          const child = yield* sessions.create({ parentID: chat.id, title: "Existing child" })
+          if (support.available) {
+            yield* SandboxPolicy.toggle(child.id)
+            expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(false)
+          }
+          const tool = yield* TaskTool
+          const def = yield* tool.init()
 
-        const exec = () =>
-          def.execute(
-            {
-              description: "inspect bug",
-              prompt: "look into the cache key path",
-              subagent_type: "explore",
-              task_id: child.id,
-            },
-            {
-              sessionID: chat.id,
-              messageID: assistant.id,
-              agent: "build",
-              abort: new AbortController().signal,
-              extra: { promptOps: stubOps() },
-              messages: [],
-              metadata: () => Effect.void,
-              ask: () => Effect.void,
-            },
+          const exec = () =>
+            def.execute(
+              {
+                description: "inspect bug",
+                prompt: "look into the cache key path",
+                subagent_type: "explore",
+                task_id: child.id,
+              },
+              {
+                sessionID: chat.id,
+                messageID: assistant.id,
+                agent: "build",
+                abort: new AbortController().signal,
+                extra: { promptOps: stubOps() },
+                messages: [],
+                metadata: () => Effect.void,
+                ask: () => Effect.void,
+              },
+            )
+
+          yield* exec()
+          const first = yield* sessions.get(child.id)
+          if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
+          const count = first.permission?.filter((rule) => rule.permission === "bash").length
+          yield* exec()
+
+          const resumed = yield* sessions.get(child.id)
+          expect(resumed.permission).toEqual(
+            expect.arrayContaining([{ permission: "bash", pattern: "*", action: "deny" }]),
           )
-
-        yield* exec()
-        const first = yield* sessions.get(child.id)
-        if (support.available) expect((yield* SandboxPolicy.status(child.id)).enabled).toBe(true)
-        const count = first.permission?.filter((rule) => rule.permission === "bash").length
-        yield* exec()
-
-        const resumed = yield* sessions.get(child.id)
-        expect(resumed.permission).toEqual(
-          expect.arrayContaining([{ permission: "bash", pattern: "*", action: "deny" }]),
-        )
-        expect(count).toBeGreaterThan(0)
-        expect(resumed.permission?.filter((rule) => rule.permission === "bash")).toHaveLength(count ?? 0)
-      }),
+          expect(count).toBeGreaterThan(0)
+          expect(resumed.permission?.filter((rule) => rule.permission === "bash")).toHaveLength(count ?? 0)
+        }),
+      { config: { sandbox: { enabled: true } } },
     ),
   )
 

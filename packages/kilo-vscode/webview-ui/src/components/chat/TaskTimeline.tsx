@@ -1,3 +1,4 @@
+/** @jsxImportSource solid-js */
 /**
  * Horizontal session activity timeline rendered as color-grouped SVG paths.
  * Pointer and keyboard interaction use the same pure bar geometry.
@@ -5,10 +6,14 @@
 
 import { Component, For, Show, createMemo, createEffect, createSignal, on, onCleanup } from "solid-js"
 import { Portal } from "solid-js/web"
+import type { AssistantMessage as SDKAssistantMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { useSession } from "../../context/session"
+import { visibleParts } from "../../context/session-queue"
 import { color, label } from "../../utils/timeline/colors"
 import { geometry, hit, navigate } from "../../utils/timeline/geometry"
+import { dispatchTimelineHighlight, same, type TimelineHighlight } from "../../utils/timeline/highlight"
 import { sizes, pinned, MAX_HEIGHT } from "../../utils/timeline/sizes"
+import { isRenderable } from "../../utils/transcript-parts"
 import type { Part, Message } from "../../types/messages"
 
 export interface TimelineBar {
@@ -17,6 +22,8 @@ export interface TimelineBar {
   width: number
   height: number
   idx: number
+  msgId: string
+  partId: string
 }
 
 function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBar[] {
@@ -39,6 +46,8 @@ function collect(messages: Message[], parts: Record<string, Part[]>): TimelineBa
     width: sz[i]!.width,
     height: sz[i]!.height,
     idx: i,
+    msgId: item.msg.id,
+    partId: item.part.id,
   }))
 }
 
@@ -46,6 +55,7 @@ export const TaskTimeline: Component = () => {
   const session = useSession()
   let ref: HTMLDivElement | undefined
   let dragging = false
+  let dragMoved = false
   let startX = 0
   let startScroll = 0
   const [hover, setHover] = createSignal(-1)
@@ -55,9 +65,18 @@ export const TaskTimeline: Component = () => {
   const messages = () => session.visibleMessages()
   const allParts = () => {
     const msgs = messages()
+    const revert = session.revert() ?? undefined
+    const qs = session.questions()
     const result: Record<string, Part[]> = {}
     for (const m of msgs) {
-      const p = session.getParts(m.id)
+      if (m.role === "user") continue
+      const p = visibleParts(m.id, session.getParts(m.id), revert).filter((part) => {
+        if (!isRenderable(part as SDKPart, m as SDKAssistantMessage)) return false
+        if (part.type !== "tool" || part.tool !== "question") return true
+        if (part.state.status !== "pending" && part.state.status !== "running") return true
+        const call = (part as SDKPart & { callID: string }).callID
+        return qs.some((item) => item.tool?.callID === call && item.tool?.messageID === m.id)
+      })
       if (p.length > 0) result[m.id] = p
     }
     return result
@@ -74,9 +93,10 @@ export const TaskTimeline: Component = () => {
   const aria = () => {
     const idx = selected()
     const bar = bars()[idx]
-    if (!bar) return "Session activity timeline, no activity"
-    return `Session activity timeline, bar ${idx + 1} of ${bars().length}: ${bar.tip}`
+    if (!bar) return "No activity"
+    return `Bar ${idx + 1} of ${bars().length}: ${bar.tip}`
   }
+  const value = () => Math.max(0, selected() + 1)
 
   let prev = 0
   let frame: number | undefined
@@ -109,7 +129,29 @@ export const TaskTimeline: Component = () => {
     setTip(undefined)
   }
 
-  createEffect(on(bars, hideTip, { defer: true }))
+  createEffect(
+    on(
+      bars,
+      (next, previous) => {
+        const idx = hover()
+        if (idx < 0 || same(previous?.[idx], next[idx])) return
+        hideTip()
+      },
+      { defer: true },
+    ),
+  )
+
+  // Highlight the chat part behind the hovered/focused bar, using its own
+  // color, so it's easy to follow which bar belongs to which tool call.
+  createEffect<TimelineHighlight | undefined>((previous) => {
+    const idx = hover()
+    const bar = idx >= 0 ? bars()[idx] : undefined
+    const next = bar ? { msgId: bar.msgId, partId: bar.partId } : undefined
+    if (same(previous, next)) return previous
+    dispatchTimelineHighlight(next)
+    return next
+  })
+  onCleanup(() => dispatchTimelineHighlight(undefined))
 
   const showTip = (idx: number) => {
     const item = layout().items[idx]
@@ -135,11 +177,20 @@ export const TaskTimeline: Component = () => {
     hideTip()
     if (!ref) return
     dragging = true
+    dragMoved = false
     startX = e.clientX
     startScroll = ref.scrollLeft
     ref.setPointerCapture(e.pointerId)
     ref.style.cursor = "grabbing"
     ref.style.userSelect = "none"
+  }
+
+  const select = (idx: number) => {
+    const bar = bars()[idx]
+    if (!bar) return
+    setActive(idx)
+    window.dispatchEvent(new CustomEvent("scrollToMessage", { detail: { id: bar.msgId, partId: bar.partId } }))
+    showTip(idx)
   }
 
   const onPointerMove = (e: PointerEvent) => {
@@ -150,15 +201,20 @@ export const TaskTimeline: Component = () => {
       if (idx < 0) return hideTip()
       return showTip(idx)
     }
+    if (Math.abs(e.clientX - startX) > 3) dragMoved = true
     ref.scrollLeft = startScroll - (e.clientX - startX)
   }
 
   const onPointerUp = (e: PointerEvent) => {
     if (!ref) return
+    const wasDragging = dragging
     dragging = false
     if (ref.hasPointerCapture(e.pointerId)) ref.releasePointerCapture(e.pointerId)
     ref.style.cursor = "grab"
     ref.style.userSelect = ""
+    if (!wasDragging || dragMoved) return
+    const idx = pointerIndex(e)
+    select(idx)
   }
 
   const onWheel = (e: WheelEvent) => {
@@ -169,6 +225,11 @@ export const TaskTimeline: Component = () => {
   }
 
   const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault()
+      select(selected())
+      return
+    }
     if (!ref || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return
     e.preventDefault()
     const idx = navigate(selected(), bars().length, e.key)
@@ -214,9 +275,14 @@ export const TaskTimeline: Component = () => {
           ref={ref}
           class="task-timeline"
           data-timeline-count={bars().length}
-          role="img"
+          role="slider"
           tabIndex={0}
-          aria-label={aria()}
+          aria-label="Session activity timeline"
+          aria-keyshortcuts="ArrowLeft ArrowRight Home End Enter Space"
+          aria-valuemin={bars().length > 0 ? 1 : 0}
+          aria-valuemax={bars().length}
+          aria-valuenow={value()}
+          aria-valuetext={aria()}
           style={{ height: `${MAX_HEIGHT}px` }}
           onKeyDown={onKeyDown}
           onBlur={hideTip}

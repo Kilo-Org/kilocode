@@ -144,6 +144,26 @@ describe("config overlay routes", () => {
     expect(body.targets.project).toBe(path.join(project.path, ".kilo", "kilo.json"))
   })
 
+  test.serial("tolerates unsafe project config instead of failing the overlay", async () => {
+    await using project = await tmpdir()
+    // A project config that references a file outside the project root throws during substitution.
+    // The overlay must skip it and still resolve, rather than rejecting the whole request.
+    await Filesystem.write(
+      path.join(project.path, ".kilo", "kilo.json"),
+      JSON.stringify({ username: "{file:/etc/passwd}" }),
+    )
+
+    const body = await KilocodeConfigOverlay.resolve({
+      directory: project.path,
+      scope: "project",
+      effective: {},
+      global: {},
+      sources: [],
+    })
+
+    expect(body.project.username ?? "").not.toContain("root:")
+  })
+
   test.serial("marks global values inherited in project scope", async () => {
     await using global = await tmpdir()
     await using project = await tmpdir()
@@ -188,6 +208,7 @@ describe("config overlay routes", () => {
       indexing: {
         enabled: true,
         provider: "ollama",
+        fileExtensions: [".php", ".js"],
         ollama: { baseUrl: "http://localhost:11434" },
       },
     })
@@ -196,6 +217,11 @@ describe("config overlay routes", () => {
 
     expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", inherited: true, value: true })
     expect(body.fields["indexing.provider"]).toMatchObject({ source: "global", inherited: true, value: "ollama" })
+    expect(body.fields["indexing.fileExtensions"]).toMatchObject({
+      source: "global",
+      inherited: true,
+      value: [".php", ".js"],
+    })
     expect(body.fields["indexing.ollama.baseUrl"]).toMatchObject({
       source: "global",
       inherited: true,

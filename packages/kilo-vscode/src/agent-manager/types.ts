@@ -190,6 +190,11 @@ interface SessionForkedMessage {
   worktreeId?: string
 }
 
+interface SessionClosedMessage {
+  type: "agentManager.sessionClosed"
+  sessionId: string
+}
+
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
   status: "creating" | "done"
@@ -307,6 +312,7 @@ export type AgentManagerOutMessage =
   | ErrorOutMessage
   | SessionAddedMessage
   | SessionForkedMessage
+  | SessionClosedMessage
   | MultiVersionProgressMessage
   | SetSessionModelMessage
   | SendInitialMessage
@@ -373,6 +379,7 @@ interface CloseSessionIn {
 interface PersistSessionIn {
   type: "agentManager.persistSession"
   sessionId: string
+  draftID?: string
 }
 
 /** Remove a non-worktree session from agent-manager.json. */
@@ -564,6 +571,11 @@ interface OpenSessionsIn {
   sessionIDs: string[]
 }
 
+interface VisibleSessionIn {
+  type: "agentManager.visibleSession"
+  sessionID: string | null
+}
+
 interface OpenFileIn {
   type: "agentManager.openFile"
   sessionId: string
@@ -639,6 +651,13 @@ interface SendCommandIn {
   files?: Array<{ mime: string; url: string; filename?: string; source?: FileSourceIn }>
   agentManagerContext?: string
   contextDirectory?: string
+}
+
+interface QuestionReplyIn {
+  type: "questionReply"
+  requestID: string
+  sessionID?: string
+  answers: string[][]
 }
 
 interface RequestSandboxDefaultIn {
@@ -802,6 +821,7 @@ export type AgentManagerInMessage =
   | RefreshPRIn
   | OpenPRIn
   | OpenSessionsIn
+  | VisibleSessionIn
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn
@@ -809,6 +829,7 @@ export type AgentManagerInMessage =
   | LoadMessagesIn
   | SendMessageIn
   | SendCommandIn
+  | QuestionReplyIn
   | RequestSandboxDefaultIn
   | SetSandboxDefaultIn
   | ToggleSandboxIn

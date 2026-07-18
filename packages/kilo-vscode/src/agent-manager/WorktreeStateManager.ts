@@ -32,9 +32,14 @@ export interface Worktree {
   prUrl?: string
   /** Cached PR state for correct badge color on reload (open/merged/closed/draft). */
   prState?: string
-  /** Original branch created with the worktree, used for cleanup on deletion.
-   *  Set automatically when `branch` is updated via live sync. */
+  /** Original branch created with the worktree, used for cleanup after a manual branch change. */
   originalBranch?: string
+  /** Whether Agent Manager created and may safely clean up this branch. Undefined preserves legacy behavior. */
+  branchOwned?: boolean
+  /** Initial session whose prompts may name this placeholder branch once. */
+  autoNameSessionId?: string
+  /** Number of prompts observed for the armed session; bounds rename attempts. */
+  autoNamePromptCount?: number
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
 }
@@ -176,6 +181,7 @@ export class WorktreeStateManager {
     remote?: string
     groupId?: string
     label?: string
+    branchOwned?: boolean
   }): Worktree {
     const id = generateId("wt")
     const wt: Worktree = {
@@ -188,6 +194,7 @@ export class WorktreeStateManager {
     if (params.remote) wt.remote = params.remote
     if (params.groupId) wt.groupId = params.groupId
     if (params.label) wt.label = params.label
+    if (params.branchOwned !== undefined) wt.branchOwned = params.branchOwned
     this.worktrees.set(id, wt)
     this.setNormalizedWorktreeOrder(this.worktreeOrder)
     this.log(
@@ -225,9 +232,49 @@ export class WorktreeStateManager {
   updateWorktreeBranch(id: string, branch: string): boolean {
     const wt = this.worktrees.get(id)
     if (!wt || wt.branch === branch) return false
-    if (!wt.originalBranch) wt.originalBranch = wt.branch
+    if (!wt.originalBranch && wt.branchOwned !== false) wt.originalBranch = wt.branch
     this.log(`Updated worktree ${id} branch: ${wt.branch} → ${branch}`)
     wt.branch = branch
+    wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
+    void this.save()
+    return true
+  }
+
+  armAutoName(id: string, sessionId: string): void {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.branchOwned !== true) return
+    wt.autoNameSessionId = sessionId
+    wt.autoNamePromptCount = 0
+    void this.save()
+  }
+
+  clearAutoName(id: string): void {
+    const wt = this.worktrees.get(id)
+    if (!wt?.autoNameSessionId) return
+    wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
+    void this.save()
+  }
+
+  /** Increment the prompt counter for an armed worktree and return the new
+   *  count, or undefined when the worktree is no longer armed. */
+  incrementAutoNameCount(id: string): number | undefined {
+    const wt = this.worktrees.get(id)
+    if (!wt?.autoNameSessionId) return undefined
+    wt.autoNamePromptCount = (wt.autoNamePromptCount ?? 0) + 1
+    void this.save()
+    return wt.autoNamePromptCount
+  }
+
+  renameOwnedBranch(id: string, current: string, branch: string): boolean {
+    const wt = this.worktrees.get(id)
+    if (!wt || wt.branch !== current || wt.branchOwned !== true) return false
+    wt.branch = branch
+    wt.originalBranch = undefined
+    wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
+    this.log(`Automatically renamed worktree ${id} branch: ${current} → ${branch}`)
     void this.save()
     return true
   }
@@ -276,6 +323,11 @@ export class WorktreeStateManager {
   addSession(sessionId: string, worktreeId: string | null): ManagedSession {
     const session: ManagedSession = { id: sessionId, worktreeId, createdAt: new Date().toISOString() }
     this.sessions.set(sessionId, session)
+    const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
+    if (worktree?.autoNameSessionId && worktreeId && this.getSessions(worktreeId).length > 1) {
+      worktree.autoNameSessionId = undefined
+      worktree.autoNamePromptCount = undefined
+    }
     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
     void this.save()
     return session
@@ -285,7 +337,17 @@ export class WorktreeStateManager {
   moveSession(sessionId: string, worktreeId: string | null): void {
     const session = this.sessions.get(sessionId)
     if (!session) return
+    const previous = session.worktreeId ? this.worktrees.get(session.worktreeId) : undefined
+    if (previous?.autoNameSessionId === sessionId) {
+      previous.autoNameSessionId = undefined
+      previous.autoNamePromptCount = undefined
+    }
     session.worktreeId = worktreeId
+    const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
+    if (worktree?.autoNameSessionId) {
+      worktree.autoNameSessionId = undefined
+      worktree.autoNamePromptCount = undefined
+    }
     this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
     void this.save()
   }

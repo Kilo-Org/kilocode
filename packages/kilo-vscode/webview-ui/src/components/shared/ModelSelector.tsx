@@ -30,6 +30,7 @@ import { useProvider } from "../../context/provider"
 import type { EnrichedModel } from "../../context/provider"
 import { useSession, SessionContext } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 import type { ModelSelection } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import {
@@ -138,6 +139,7 @@ export interface ModelSelectorBaseProps {
 export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   const { connected, models, findModel } = useProvider()
   const language = useLanguage()
+  const vscode = useVSCode()
   // Session context is optional — ModelSelectorBase is also used in Settings
   // where SessionProvider may not be mounted.
   const session = useContext(SessionContext)
@@ -153,7 +155,9 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
   })
 
   const [open, setOpen] = createSignal(false)
-  const [expanded, setExpanded] = createSignal(true)
+  // Shared, host-persisted expand/collapse preference (see VSCodeProvider).
+  const expanded = vscode.getModelSelectorExpanded
+  const setExpanded = vscode.setModelSelectorExpanded
   const [search, setSearch] = createSignal("")
   const [debouncedSearch, setDebouncedSearch] = createSignal("")
   const [selectedKey, setSelectedKey] = createSignal(CLEAR_KEY)
@@ -824,13 +828,11 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                     aria-expanded={expanded()}
                     aria-controls={previewID}
                     onClick={() => {
-                      setExpanded((v) => {
-                        if (v) {
-                          setPreActiveKey(null)
-                          setPreviewKey(null)
-                        }
-                        return !v
-                      })
+                      if (expanded()) {
+                        setPreActiveKey(null)
+                        setPreviewKey(null)
+                      }
+                      setExpanded(!expanded())
                       requestAnimationFrame(() => {
                         searchRef?.focus()
                         scrollRow(preActiveKey() ?? selectedKey(), "nearest")
@@ -848,7 +850,13 @@ export const ModelSelectorBase: Component<ModelSelectorBaseProps> = (props) => {
                 </Show>
 
                 <Show when={nodes().length > 0}>
-                  <Virtualizer ref={setVirtualizer} data={nodes()} keepMounted={mounted()} overscan={4} itemSize={30}>
+                  <Virtualizer
+                    ref={setVirtualizer}
+                    data={nodes()}
+                    keepMounted={mounted()}
+                    bufferSize={120}
+                    itemSize={30}
+                  >
                     {
                       // eslint-disable-next-line complexity
                       (node) => {

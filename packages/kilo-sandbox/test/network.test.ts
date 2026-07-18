@@ -4,6 +4,7 @@ import { FetchHttpClient, HttpClient } from "effect/unstable/http"
 import { run } from "../src/context"
 import { assertNetwork, decorateHttpClient } from "../src/network"
 import type { Profile } from "../src/profile"
+import { CurrentProxyFactory, startProxy, type ProxyFactory } from "../src/proxy"
 
 function profile(mode: Profile["network"]["mode"]): Profile {
   return {
@@ -78,38 +79,45 @@ describe("sandbox in-process network capability", () => {
       )
       expect(Result.isFailure(result)).toBe(true)
       if (Result.isFailure(result)) {
-        expect(result.failure.message).toContain("proxy network mode and allowedHosts are not supported")
+        expect(result.failure.message).toContain("allowedHosts require proxy network mode")
       }
     }
   })
 
-  test("fails closed with a clear unsupported result for proxy mode", async () => {
+  test("routes supported HTTP requests through proxy mode and denies opaque capability", async () => {
     const http = server()
     try {
+      const port = http.server.port!
+      const factory: ProxyFactory = (hosts) =>
+        startProxy(hosts, process.platform, async () => ({ address: "127.0.0.1", family: 4 }))
+      const input = {
+        ...profile("proxy"),
+        network: { mode: "proxy" as const, allowedHosts: [`allowed.test:${port}`] },
+      }
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const raw = yield* HttpClient.HttpClient
           const guarded = decorateHttpClient(raw)
           return yield* Effect.all({
-            capability: run(profile("proxy"), assertNetwork("https://example.com/path", "testRequest")).pipe(
+            capability: run(input, assertNetwork("https://allowed.test/path", "testRequest")).pipe(
               Effect.result,
             ),
-            request: run(profile("proxy"), guarded.get(new URL("/proxy", http.server.url))).pipe(Effect.result),
+            request: run(
+              input,
+              Effect.flatMap(guarded.get(`http://allowed.test:${port}/proxy`), (response) => response.text),
+            ).pipe(Effect.result),
           })
-        }).pipe(Effect.provide(FetchHttpClient.layer)),
+        }).pipe(Effect.provide(FetchHttpClient.layer), Effect.provideService(CurrentProxyFactory, factory)),
       )
       expect(Result.isFailure(result.capability)).toBe(true)
       if (Result.isFailure(result.capability)) {
-        expect(result.capability.failure.reason._tag).toBe("BadResource")
-        expect(result.capability.failure.message).toContain("proxy network mode and allowedHosts are not supported")
-        expect(result.capability.failure.message).toContain("https://example.com")
+        expect(result.capability.failure.reason._tag).toBe("PermissionDenied")
+        expect(result.capability.failure.message).toContain("Sandbox denied outbound network access")
+        expect(result.capability.failure.message).toContain("https://allowed.test")
         expect(result.capability.failure.message).not.toContain("/path")
       }
-      expect(Result.isFailure(result.request)).toBe(true)
-      if (Result.isFailure(result.request)) {
-        expect(result.request.failure.message).toContain("proxy network mode and allowedHosts are not supported")
-      }
-      expect(http.paths).toEqual([])
+      expect(result.request).toEqual(Result.succeed("/proxy"))
+      expect(http.paths).toEqual(["/proxy"])
     } finally {
       await http.server.stop(true)
     }

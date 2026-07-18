@@ -1,4 +1,4 @@
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Process } from "@/util/process"
 import { arch, homedir } from "node:os"
 import path from "path"
@@ -156,7 +156,7 @@ export function makeLayer(info: Info) {
   return Layer.effect(
     Service,
     Effect.gen(function* () {
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
 
       const dataDir = Effect.fn("AnacondaDesktopPlatform.dataDir")(function* () {
         const dir = directory(info)
@@ -208,4 +208,4 @@ export function makeLayer(info: Info) {
 }
 
 export const layer = makeLayer(current())
-export const defaultLayer = layer.pipe(Layer.provide(AppFileSystem.defaultLayer))
+export const defaultLayer = layer.pipe(Layer.provide(FSUtil.defaultLayer))

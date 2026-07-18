@@ -25,6 +25,8 @@ import { ModelCard } from "./CustomProviderModelCard"
 import type {
   ChatTemplateArgsValue,
   EnableThinkingValue,
+  Modalities,
+  Modality,
   ModelEntry,
   OutputEffortValue,
   ReasoningEffortValue,
@@ -54,7 +56,35 @@ function fuzzy(query: string, target: string) {
 }
 
 type FetchedModel = { id: string; name: string }
-type RawModel = { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
+type RawModel = {
+  name?: string
+  reasoning?: boolean
+  modalities?: { input?: unknown; output?: unknown }
+  variants?: Record<string, Record<string, unknown>>
+}
+
+// Keep this aligned with the CLI provider schema; the UI only exposes image.
+const MODES = new Set<Modality>(["text", "audio", "image", "video", "pdf"])
+
+function list(raw: unknown): Modality[] | undefined {
+  if (!Array.isArray(raw)) return
+  const set = new Set<Modality>()
+  raw.forEach((item) => {
+    if (typeof item === "string" && MODES.has(item as Modality)) set.add(item as Modality)
+  })
+  return set.size ? [...set] : undefined
+}
+
+function modes(raw: unknown): Modalities {
+  if (!raw || typeof raw !== "object") return {}
+  const obj = raw as { input?: unknown; output?: unknown }
+  const input = list(obj.input)
+  const output = list(obj.output)
+  return {
+    ...(input ? { input } : {}),
+    ...(output ? { output } : {}),
+  }
+}
 
 function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEntry {
   return {
@@ -76,15 +106,20 @@ function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEn
 }
 
 function initModels(cfg: ProviderConfig | undefined): ModelEntry[] {
-  if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
+  const empty = { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] }
+  if (!cfg?.models || typeof cfg.models !== "object") return [{ ...empty }]
   const entries = Object.entries(cfg.models)
-  if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
+  if (entries.length === 0) return [{ ...empty }]
   return entries.map(([id, model]) => {
     const raw = model as RawModel
+    const modalities = modes(raw.modalities)
+    const input = modalities.input ?? []
     return {
       id,
       name: raw.name ?? id,
       reasoning: raw.reasoning ?? false,
+      supportsImages: input.includes("image"),
+      modalities,
       variants: Object.entries(raw.variants ?? {}).map(parseVariant),
     }
   })
@@ -229,7 +264,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // fetch with the stored key (#10139). Anything typed into the field
     // (a key or {env:VAR} syntax) takes precedence.
     const providerID = !raw && props.existing ? props.existing.providerID : undefined
-    const existing = new Set(form.models.map((m) => m.id.trim()).filter(Boolean))
+    const existing = new Set(form.models.map((m) => m.id.trim().toLowerCase()).filter(Boolean))
 
     const hdrs = form.headers
       .map((h) => ({ key: h.key.trim(), value: h.value.trim() }))
@@ -269,8 +304,8 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
         return
       }
 
-      // Filter using the snapshot taken at fetch time
-      const fresh = models.filter((m) => !existing.has(m.id))
+      // Filter using the snapshot taken at fetch time (trimmed, case-insensitive)
+      const fresh = models.filter((m) => !existing.has(m.id.trim().toLowerCase()))
 
       if (fresh.length === 0) {
         setFetchStatus(language.t("provider.custom.models.fetch.allExist"))
@@ -327,20 +362,55 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
-    const merged = empty ? picked.map(defaults) : [...form.models, ...picked.map(defaults)]
+    // Dedup against models already in the form (trimmed, case-insensitive). The
+    // picker is built from a fetch-time snapshot, so a model the user typed
+    // manually after fetching hasn't been filtered out yet.
+    const existing = new Set(form.models.map((m) => m.id.trim().toLowerCase()).filter(Boolean))
+    const toAdd = picked.filter((m) => {
+      const key = m.id.trim().toLowerCase()
+      if (!key || existing.has(key)) {
+        return false
+      }
+      existing.add(key)
+      return true
+    })
 
-    setForm("models", merged)
-    setErrors(
-      "models",
-      merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
-    )
-    setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(picked.length) }))
+    const defaults = (m: FetchedModel): ModelEntry => ({
+      ...m,
+      reasoning: false,
+      supportsImages: false,
+      modalities: {},
+      variants: [],
+    })
+    const merged = empty ? toAdd.map(defaults) : [...form.models, ...toAdd.map(defaults)]
+
+    if (toAdd.length > 0) {
+      setForm("models", merged)
+      setErrors(
+        "models",
+        merged.map((m) => ({ variants: m.variants.map(() => ({})) })),
+      )
+    }
 
     // Keep the picker open with the un-picked models so the user can keep adding.
-    // Only close the picker when every fetched model has been added.
+    // Remove every selected model, including ones skipped as duplicates, so the
+    // user isn't re-prompted to add them. Only close when nothing is left.
     const pickedIds = new Set(picked.map((m) => m.id))
     const remaining = models.filter((m) => !pickedIds.has(m.id))
+
+    if (toAdd.length > 0) {
+      // Count only models actually added, not duplicates that were skipped.
+      setFetchStatus(language.t("provider.custom.models.fetch.added", { count: String(toAdd.length) }))
+    } else if (remaining.length === 0) {
+      // Nothing added and nothing left in the picker; every fetched model exists.
+      setFetchStatus(language.t("provider.custom.models.fetch.allExist"))
+    } else {
+      // The selected models already existed but other fetched models remain;
+      // avoid implying everything was added. Dropping them from the picker is
+      // the feedback. Clear any stale status from a prior add.
+      setFetchStatus(undefined)
+    }
+
     if (remaining.length === 0) {
       setFetchedModels(undefined)
       setSearch("")
@@ -366,7 +436,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, variants: [] }])
+    setForm("models", (v) => [
+      ...v,
+      { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
+    ])
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
@@ -607,6 +680,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeId={(v) => setForm("models", i(), "id", v)}
                   onChangeName={(v) => setForm("models", i(), "name", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                  onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
                   onRemove={() => removeModel(i())}
                   onAddVariant={() => addVariant(i())}
                   onRemoveVariant={(vi) => removeVariant(i(), vi)}

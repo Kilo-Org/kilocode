@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} berichten teruggedraaid",
   "revert.banner.redo": "Opnieuw uitvoeren",
   "revert.banner.redo.all": "Alles opnieuw uitvoeren",
-  "revert.banner.hint": "Stuur een nieuw bericht om dit definitief te maken",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
   "command.session.compact": "Sessie comprimeren",
   "command.session.compact.description": "De sessie samenvatten om de contextgrootte te verkleinen",
@@ -390,6 +390,7 @@ export const dict = {
     "Klik om schrijfbewerkingen in het bestandssysteem te beperken. Netwerktoegang blijft toegestaan volgens je sandboxinstellingen.",
 
   "speechToText.tooltip.start": "Spraakinvoer starten met Kilo Gateway",
+  "speechToText.tooltip.starting": "Microfoon wordt gestart... Wacht nog even met spreken.",
   "speechToText.tooltip.stop": "Audio vastleggen stoppen",
   "speechToText.tooltip.transcribing": "Transcriberen... Klik om te annuleren.",
   "speechToText.tooltip.error": "Spraakinvoer mislukt. Klik om te wissen.",
@@ -635,7 +636,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep Zoeken",
   "ui.permission.toolLabel.webSearch": "Web Zoeken",
   "ui.permission.toolLabel.list": "Lijst",
-  "ui.permission.toolLabel.externalDirectory": "Externe map lezen",
+  "ui.permission.toolLabel.externalDirectory": "Externe map openen",
   "ui.permission.toolLabel.webFetch": "Web Ophalen",
   "ui.permission.toolLabel.task": "Taak",
   "ui.permission.toolLabel.skill": "Vaardigheid",
@@ -949,6 +950,7 @@ export const dict = {
   "provider.custom.models.name.label": "Naam",
   "provider.custom.models.name.placeholder": "Weergavenaam",
   "provider.custom.models.reasoning.label": "Redeneren",
+  "provider.custom.models.modalities.image": "Afbeelding",
   "provider.custom.models.variants.label": "Varianten",
   "provider.custom.models.variants.add": "Variant toevoegen",
   "provider.custom.models.variants.remove": "Variant verwijderen",
@@ -1198,6 +1200,8 @@ export const dict = {
 
   "common.retry": "Opnieuw proberen",
   "common.refresh": "Vernieuwen",
+  "common.reload": "Herladen",
+  "common.reloadDescription": "Herlaad configuratie, vaardigheden, agents en opdrachten vanaf schijf",
 
   "profile.title": "Profiel",
   "profile.notLoggedIn": "Niet ingelogd",
@@ -1205,6 +1209,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Saldo vernieuwen",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Opwaarderen",
+  "profile.pass.subscribe": "Schaf Kilo Pass aan om tegoed toe te voegen en bonussen te verdienen",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Vernieuwt",
   "profile.action.logout": "Uitloggen",
 
   "settings.section.configuration": "Configuratie",
@@ -1252,6 +1260,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-sleutel",
   "settings.indexing.qdrantApiKey.description": "Optionele API-sleutel voor de Qdrant-instantie.",
   "settings.indexing.qdrantApiKey.placeholder": "Optionele API-sleutel",
+  "settings.indexing.fileExtensions.title": "Bestandsextensies",
+  "settings.indexing.fileExtensions.description":
+    "Door komma's gescheiden lijst met toegestane items. Laat leeg om de ingebouwde standaardwaarden te gebruiken.",
+  "settings.indexing.fileExtensions.invalid": "Ongeldige extensie: {{extension}}",
   "settings.indexing.tuning.description": "Geavanceerde parameter voor zoeken en batching.",
 
   "settings.experimental.title": "Experimenteel",
@@ -1277,6 +1289,11 @@ export const dict = {
   "session.outcome.interrupted": "Beurt onderbroken",
   "session.outcome.error": "Beurt mislukt",
   "session.outcome.finish": "Voltooiingsreden: {{reason}}",
+  "session.costAlert.header": "Sessiekostenwaarschuwing",
+  "session.costAlert.continue": "Doorgaan",
+  "session.costAlert.question":
+    "Deze sessie is net boven je waarschuwingsdrempel per sessie van {{limit}} gekomen en kost {{cost}}. Doorgaan?",
+  "session.costAlert.stop": "Stoppen",
 
   "ui.sessionTurn.cancel": "Annuleren",
   "ui.sessionTurn.status.thinking": "Denken...",
@@ -1415,6 +1432,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
+  "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
+  "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
+  "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
+  "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
@@ -1431,7 +1454,20 @@ export const dict = {
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Netwerktoegang beperken",
   "settings.sandboxing.network.description":
-    "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
+    "Blokkeer directe uitgaande toegang vanuit opdrachten die door het model zijn geïnitieerd en HTTP-hulpprogramma's. Lokale en externe MCP-hulpprogramma's zijn niet beschikbaar zolang deze beperking actief is. Verkeer van providers en hooks van vertrouwde plug-ins vallen buiten deze beperking.",
+
+  "settings.sandboxing.allowedHosts.title": "Toegestane netwerkbestemmingen",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-host- en poortbestemmingen voor HTTP- en HTTPS-proxyverkeer in een sandbox. GitHub CLI en HTTPS Git hebben doorgaans github.com:443 en api.github.com:443 nodig. Wijzigingen gelden voor nieuwe sessies.",
+  "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
+  "settings.sandboxing.writablePaths.description":
+    "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner inschakelen: taakgericht snoeien van grote uitvoer van lees-, zoek- en shelltools, gestuurd door een focusvraag van de agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
+  "settings.experimental.swePrunerModel.description":
+    "Model dat wordt gebruikt om tooluitvoer te snoeien; standaard het geconfigureerde kleine model",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1443,8 +1479,8 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
 
   "settings.agentBehaviour.defaultAgent.title": "Standaard Agent",
@@ -1460,11 +1496,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",
-  "settings.agentBehaviour.temperature.description": "Sampling temperatuur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Bepaalt hoe willekeurig AI-antwoorden zijn (0–2). Lagere waarden (bijv. 0.2) leveren gerichte, consistente uitvoer op. Hogere waarden (bijv. 1.0) leveren gevarieerdere, creatievere antwoorden op. Laat leeg om de standaardwaarde van het model te gebruiken.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Drempel voor nucleus-sampling (0–1). Beperkt de tokenkeuze tot de kleinste verzameling waarvan de cumulatieve waarschijnlijkheid P bereikt. Lagere waarden maken de uitvoer gerichter; hogere waarden laten meer variatie toe. Laat leeg om de standaardwaarde van het model te gebruiken.",
   "settings.agentBehaviour.maxSteps.title": "Max Stappen",
-  "settings.agentBehaviour.maxSteps.description": "Maximale agent iteraties",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximaal aantal agentstappen. Bij het bereiken van de limiet krijgt de agent de instructie om geen tools meer te gebruiken en een definitief antwoord te geven. Verhoog dit voor complexe taken met meerdere stappen; verlaag het om antwoorden korter en voorspelbaarder te houden.",
   "settings.agentBehaviour.hidden.title": "Verborgen",
   "settings.agentBehaviour.hidden.description": "Verberg deze agent uit de modusschakelaar in de chatinvoer",
   "settings.agentBehaviour.disable.title": "Uitgeschakeld",
@@ -1538,6 +1577,9 @@ export const dict = {
 
   "settings.autoApprove.description":
     "Definieer hoe tools mogen worden uitgevoerd. De meeste tools staan standaard op Toestaan. doom_loop en external_directory staan standaard op Vragen.",
+  "settings.autoApprove.maxCost.title": "Sessiekostenwaarschuwing",
+  "settings.autoApprove.maxCost.description":
+    "Waarschuw voordat een sessie doorgaat nadat de kosten dit USD-bedrag overschrijden. Gebruik hele dollars; laat leeg om uit te schakelen.",
   "settings.autoApprove.level.allow": "Toestaan",
   "settings.autoApprove.level.ask": "Vragen",
   "settings.autoApprove.level.deny": "Weigeren",
@@ -1579,6 +1621,7 @@ export const dict = {
 
   "settings.context.autoCompaction.title": "Automatische Compactie",
   "settings.context.autoCompaction.description": "Context automatisch compacteren voordat deze de limiet bereikt",
+  "settings.context.compaction.title": "Compactie",
   "settings.context.compactionLimit.title": "Limiet voor automatisch compacteren",
   "settings.context.compactionLimit.description":
     "Compacteer wanneer de context dit percentage van het modelvenster bereikt. Laat leeg om alleen de veiligheidsbuffer te gebruiken.",
@@ -1586,6 +1629,42 @@ export const dict = {
   "settings.context.prune.description": "Verwijder oude tool uitvoer tijdens compactie",
   "settings.context.watcherPatterns": "File Watcher Negeer Patronen",
   "settings.context.watcherPatterns.description": "Glob-patronen voor bestanden die de watcher moet negeren",
+
+  "settings.context.memory.title": "Geheugen",
+  "settings.context.memory.project.title": "Projectgeheugen",
+  "settings.context.memory.autoSave.title": "Projectgeheugen automatisch opslaan",
+  "settings.context.memory.autoSave.description":
+    "Sla duurzame projectfeiten automatisch op uit voltooide beurten wanneer geheugen is ingeschakeld.",
+  "settings.context.memory.index.title": "Geheugenindex",
+  "settings.context.memory.status.notLoaded": "Niet geladen",
+  "settings.context.memory.status.disabled": "Uitgeschakeld",
+  "settings.context.memory.status.enabledTokensOps":
+    "Ingeschakeld - ~{{session}} startcontexttokens in deze sessie - ~{{tokens}} tokens in opgeslagen index - laatste bewerking {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Schakel geheugen in om projectgeheugenbestanden te maken.",
+  "settings.context.memory.inspect": "Inspecteren",
+  "settings.context.memory.rebuild": "Geheugenindex opnieuw opbouwen",
+  "chat.memory.status.loading": "Geheugenstatus laden",
+  "chat.memory.status.active": "Geheugen actief in deze sessie",
+  "chat.memory.project.enabled": "Projectgeheugen ingeschakeld",
+  "chat.memory.project.disabled": "Projectgeheugen uitgeschakeld",
+  "chat.memory.command.failed": "Geheugenopdracht mislukt",
+  "chat.memory.inspect": "Geheugen inspecteren",
+  "chat.memory.remember": "Onthouden",
+  "chat.memory.forget": "Vergeten",
+  "chat.memory.rebuild": "Index opnieuw opbouwen",
+  "chat.memory.disable": "Geheugen uitschakelen",
+  "chat.memory.enable": "Geheugen inschakelen",
+  "chat.memory.verbose": "Uitgebreid",
+  "chat.memory.activity.idle": "Geen geheugenactiviteit in deze sessie",
+  "chat.memory.activity.loaded": "{{tokens}} tokens geladen",
+  "chat.memory.activity.recalled": "{{count}} opgehaald",
+  "chat.memory.activity.saved": "{{count}} opgeslagen",
+  "chat.memory.activity.loaded.item": "geladen: {{item}}",
+  "chat.memory.activity.recalled.item": "opgehaald: {{item}}",
+  "chat.memory.activity.saved.item": "opgeslagen: {{item}}",
+  "chat.memory.badge.recalled": "Geheugen opgehaald",
+  "chat.memory.badge.items": "{{count}} items",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
@@ -1596,6 +1675,11 @@ export const dict = {
     "Systeem prompt die naar de AI wordt gestuurd bij het genereren van commit messages. Dit vervangt de standaard prompt volledig.",
   "settings.commitMessage.prompt.placeholder":
     "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
+
+  "settings.commitMessage.language.sync": "Synchroniseren met UI taal",
+  "settings.commitMessage.language.title": "Taal",
+  "settings.commitMessage.language.description":
+    "Kies welke taal je wilt gebruiken voor AI-gegenereerde commitberichten:",
 
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
@@ -1826,4 +1910,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan is klaar:",
+  "chat.search.placeholder": "Chat doorzoeken…",
+  "chat.search.toggle": "Chat doorzoeken",
+  "chat.search.matchCase": "Hoofdlettergevoelig",
+  "chat.search.matchWholeWord": "Heel woord",
+  "chat.search.useRegex": "Reguliere expressie gebruiken",
+  "chat.search.previousMatch": "Vorige overeenkomst",
+  "chat.search.nextMatch": "Volgende overeenkomst",
+  "chat.search.close": "Zoeken sluiten",
+  "chat.search.invalidRegex": "Ongeldige reguliere expressie",
+  "chat.search.noResults": "Geen resultaten",
+  "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
 }

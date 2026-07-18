@@ -121,6 +121,16 @@ describe("Ask agent bash permissions", () => {
       "sort names.txt --output=names.txt",
       "echo ok\ntouch ask-bypass.txt",
       "cat <(touch ask-bypass.txt)",
+      // Exec-via-flag escapes on otherwise read-only commands
+      'sort -S 1b --compress-program "sh" names.txt',
+      "sort --compress-program=sh names.txt",
+      "sort --files0-from=list names.txt",
+      "rg --pre sh -e . names.txt",
+      "rg --pre=sh -e . names.txt",
+      "ag --pager sh foo",
+      "man -P sh ls",
+      "man -Psh ls",
+      "man --pager=sh ls",
     ]
 
     for (const cmd of denied) {

@@ -5,11 +5,14 @@ import type { SessionID } from "@/session/schema"
 import type { SessionStatus } from "@/session/status"
 import { MessageV2 } from "@/session/message-v2"
 import { isRecord } from "@/util/record"
-import { isReviewCommand, parseReviewCommand } from "@/kilocode/review/command"
+import { parseReviewCommand, reviewCommandName } from "@/kilocode/review/command"
 import * as Log from "@opencode-ai/core/util/log"
-import { Effect } from "effect"
+import { Cause, Effect, Exit } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EffectBridge } from "@/effect/bridge"
+import type { LLMEvent, Usage } from "@opencode-ai/llm"
+import type { ProviderV2 } from "@opencode-ai/core/provider"
+import { SessionRetry } from "@/session/retry"
 
 export type ReviewTelemetry = {
   mode: "review"
@@ -20,6 +23,23 @@ export type ReviewTelemetry = {
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
+  export const INCOMPLETE_RESPONSE_RETRIES = 2
+  export const INCOMPLETE_RESPONSE_MESSAGE =
+    "The provider repeatedly ended the response before returning usable output."
+  export class IncompleteResponseError extends Error {
+    constructor() {
+      super(INCOMPLETE_RESPONSE_MESSAGE)
+      this.name = "IncompleteResponseError"
+    }
+  }
+  export type Attempt = {
+    text: boolean
+    reasoning: boolean
+    tool: boolean
+    usage: boolean
+    finished: boolean
+    finish?: string
+  }
   export const OUTPUT_LENGTH_WARNING = "The model hit its output limit, so this response may be incomplete."
   export const REASONING_LENGTH_WARNING =
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
@@ -27,8 +47,9 @@ export namespace KiloSessionProcessor {
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
-    if (!isReviewCommand(command)) return
-    return { mode: "review", feature: "code_reviews", command }
+    const cmd = reviewCommandName(command)
+    if (!cmd) return
+    return { mode: "review", feature: "code_reviews", command: cmd }
   }
 
   /**
@@ -171,9 +192,11 @@ export namespace KiloSessionProcessor {
     sessionID: SessionID
     abort: AbortSignal
     set: (sessionID: SessionID, status: SessionStatus.Info) => Effect.Effect<void>
+    used?: number
   }) {
+    const limit = Flag.KILO_SESSION_RETRY_LIMIT
     return {
-      limit: Flag.KILO_SESSION_RETRY_LIMIT,
+      limit: limit === undefined ? undefined : Math.max(0, limit - (input.used ?? 0)),
       offline: (info: { error: unknown; message: string }) =>
         handleOffline({
           error: info.error,
@@ -182,6 +205,85 @@ export namespace KiloSessionProcessor {
           set: input.set,
         }),
     }
+  }
+
+  export function hasUsage(usage: Usage | undefined) {
+    if (!usage) return false
+    return [
+      usage.inputTokens,
+      usage.outputTokens,
+      usage.nonCachedInputTokens,
+      usage.cacheReadInputTokens,
+      usage.cacheWriteInputTokens,
+      usage.reasoningTokens,
+      usage.totalTokens,
+    ].some((value) => value !== undefined && value !== 0)
+  }
+
+  export function attempt(): Attempt {
+    return { text: false, reasoning: false, tool: false, usage: false, finished: false }
+  }
+
+  export function observe(attempt: Attempt, event: LLMEvent) {
+    if (event.type === "text-delta" && event.text.trim()) attempt.text = true
+    if (event.type === "reasoning-delta" && event.text.trim()) attempt.reasoning = true
+    if (event.type === "tool-call" || event.type === "tool-result" || event.type === "tool-error") attempt.tool = true
+    if (event.type === "step-finish") {
+      attempt.finished = true
+      attempt.finish = event.reason
+      attempt.usage ||= hasUsage(event.usage)
+    }
+    if (event.type === "finish" && !attempt.finished) {
+      attempt.finish = event.reason
+      attempt.usage ||= hasUsage(event.usage)
+    }
+  }
+
+  export function replayable(input: {
+    finish?: string
+    text: boolean
+    reasoning: boolean
+    tool: boolean
+    usage: boolean
+  }) {
+    if (input.finish !== undefined && input.finish !== "unknown") return false
+    return !input.text && !input.reasoning && !input.tool && !input.usage
+  }
+
+  export function blockRetry(error: ReturnType<typeof MessageV2.fromError>) {
+    const message = MessageV2.APIError.isInstance(error) ? error.data.message : "Response interrupted after output"
+    return new MessageV2.APIError({ message, isRetryable: false }).toObject()
+  }
+
+  export function recover(input: {
+    run: () => Effect.Effect<void, unknown>
+    replayable: () => boolean
+    discard: () => Effect.Effect<void>
+    set: (info: { attempt: number; message: string; next: number }) => Effect.Effect<void>
+  }) {
+    return Effect.gen(function* () {
+      for (const index of Array.from({ length: INCOMPLETE_RESPONSE_RETRIES + 1 }, (_, index) => index)) {
+        const result = yield* input.run().pipe(Effect.exit)
+        if (Exit.isFailure(result)) {
+          const error = Cause.squash(result.cause)
+          if (!(error instanceof IncompleteResponseError)) return yield* Effect.fail(error)
+        } else if (!input.replayable()) return
+
+        yield* input.discard()
+        if (index === INCOMPLETE_RESPONSE_RETRIES) return yield* Effect.fail(new IncompleteResponseError())
+        const wait = SessionRetry.delay(index + 1)
+        yield* input.set({ attempt: index + 1, message: INCOMPLETE_RESPONSE_MESSAGE, next: Date.now() + wait })
+        yield* Effect.sleep(`${wait} millis`)
+      }
+    })
+  }
+
+  export function parseError(error: unknown, input: { providerID: ProviderV2.ID; aborted: boolean }) {
+    if (!(error instanceof IncompleteResponseError)) return MessageV2.fromError(error, input)
+    return new MessageV2.APIError({
+      message: error.message,
+      isRetryable: true,
+    }).toObject()
   }
 
   /**
