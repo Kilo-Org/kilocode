@@ -240,5 +240,26 @@ export class VscodeHost implements Host {
     return this.context.globalState
   }
 
+  async pickFolder(opts?: { title?: string; openLabel?: string }): Promise<unknown | undefined> {
+    const selection = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: opts?.openLabel,
+      title: opts?.title,
+    })
+    return selection?.[0]
+  }
+
+  addFolderToWorkspace(path: string): void {
+    const uri = vscode.Uri.file(path)
+    const existing = vscode.workspace.workspaceFolders ?? []
+    if (existing.some((f) => f.uri.fsPath === uri.fsPath)) return
+    void vscode.workspace.updateWorkspaceFolders(existing.length, 0, {
+      uri,
+      name: uri.fsPath.split(/[\\/]/).filter(Boolean).pop() ?? uri.fsPath,
+    })
+  }
+
   dispose(): void {}
 }

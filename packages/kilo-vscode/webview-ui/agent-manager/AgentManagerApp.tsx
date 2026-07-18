@@ -41,6 +41,7 @@ import type {
   SessionInfo,
   SessionCreatedMessage,
   BranchInfo,
+  ProjectSummary,
 } from "../src/types/messages"
 import { IndexingProvider } from "../src/context/indexing"
 import {
@@ -133,6 +134,9 @@ import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
 import { createSidebarSearch, type SidebarSearchItem } from "./sidebar-search"
 import { WorktreeSectionActions } from "./WorktreeSectionActions"
+import { ProjectAccordion } from "./ProjectAccordion"
+import { SidebarProjects } from "./SidebarProjects"
+import { useProjectView } from "./project-view"
 import { BranchSelect } from "../src/components/shared/BranchSelect"
 import { WorktreeItem } from "./WorktreeItem"
 import { UnassignedSessionsSection } from "./UnassignedSessionsSection"
@@ -294,6 +298,9 @@ const AgentManagerContent: Component = () => {
 
   const [runStatuses, setRunStatuses] = createSignal<Record<string, RunStatus>>({})
   const [runScriptConfigured, setRunScriptConfigured] = createSignal(false)
+  // Registered projects for the multi-project accordion sidebar.
+  const [projects, setProjects] = createSignal<ProjectSummary[]>([])
+  const [activeProjectId, setActiveProjectId] = createSignal<string | undefined>()
 
   // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
@@ -1229,6 +1236,13 @@ const AgentManagerContent: Component = () => {
       const ev = msg as RunStatus
       setRunStatuses((prev) => ({ ...prev, [ev.worktreeId]: ev }))
     })
+    const unsubProjectToast = vscode.onMessage((msg) => {
+      if ((msg as { type?: string }).type !== "agentManager.projectToast") return
+      const ev = msg as { level?: "info" | "warn" | "error"; message?: string }
+      if (!ev.message) return
+      const variant = ev.level === "error" ? "error" : "default"
+      showToast({ variant, title: t("agentManager.project.addFailed"), description: ev.message })
+    })
 
     // Terminal messages have their own subscription to keep main-handler complexity in check.
     const terminalDispatch = createTerminalMessageHandler({
@@ -1244,6 +1258,41 @@ const AgentManagerContent: Component = () => {
       terminalDispatch(msg)
     })
 
+    const handleWorktreeSetup = (ev: AgentManagerWorktreeSetupMessage) => {
+      if (ev.status === "ready" || ev.status === "error") {
+        const error = ev.status === "error"
+        if (ev.worktreeId) setBusyWorktrees((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
+        setSetup({
+          active: true,
+          message: ev.message,
+          branch: ev.branch,
+          error,
+          worktreeId: ev.worktreeId,
+          errorCode: ev.errorCode,
+        })
+        globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
+        if (!error && ev.sessionId) {
+          session.selectSession(ev.sessionId)
+          const ms = managedSessions().find((s) => s.id === ev.sessionId)
+          if (ms?.worktreeId) setSelection(ms.worktreeId)
+          evictLocal(ev.sessionId)
+        }
+      } else {
+        // Track this worktree as setting up and auto-select it in the sidebar
+        if (ev.worktreeId) {
+          setBusyWorktrees(
+            (prev) =>
+              new Map([...prev, [ev.worktreeId!, { reason: "setting-up", message: ev.message, branch: ev.branch }]]),
+          )
+          setSelection(ev.worktreeId)
+        }
+        // Close diff/review panels — nothing to show during setup
+        setSidePanel(null)
+        setReviewActive(false)
+        setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
+      }
+    }
+
     const unsub = vscode.onMessage((msg) => {
       if (msg.type === "agentManager.repoInfo") {
         const info = msg as AgentManagerRepoInfoMessage
@@ -1252,39 +1301,7 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.worktreeSetup") {
-        const ev = msg as AgentManagerWorktreeSetupMessage
-        if (ev.status === "ready" || ev.status === "error") {
-          const error = ev.status === "error"
-          if (ev.worktreeId) setBusyWorktrees((prev) => new Map([...prev].filter(([k]) => k !== ev.worktreeId)))
-          setSetup({
-            active: true,
-            message: ev.message,
-            branch: ev.branch,
-            error,
-            worktreeId: ev.worktreeId,
-            errorCode: ev.errorCode,
-          })
-          globalThis.setTimeout(() => setSetup({ active: false, message: "" }), error ? 3000 : 500)
-          if (!error && ev.sessionId) {
-            session.selectSession(ev.sessionId)
-            const ms = managedSessions().find((s) => s.id === ev.sessionId)
-            if (ms?.worktreeId) setSelection(ms.worktreeId)
-            evictLocal(ev.sessionId)
-          }
-        } else {
-          // Track this worktree as setting up and auto-select it in the sidebar
-          if (ev.worktreeId) {
-            setBusyWorktrees(
-              (prev) =>
-                new Map([...prev, [ev.worktreeId!, { reason: "setting-up", message: ev.message, branch: ev.branch }]]),
-            )
-            setSelection(ev.worktreeId)
-          }
-          // Close diff/review panels — nothing to show during setup
-          setSidePanel(null)
-          setReviewActive(false)
-          setSetup({ active: true, message: ev.message, branch: ev.branch, worktreeId: ev.worktreeId })
-        }
+        handleWorktreeSetup(msg as AgentManagerWorktreeSetupMessage)
       }
 
       if (msg.type === "agentManager.sessionAdded") {
@@ -1375,6 +1392,8 @@ const AgentManagerContent: Component = () => {
         setRunStatuses((prev) =>
           Object.fromEntries(Object.entries(prev).filter(([id]) => id === "local" || ids.has(id))),
         )
+        if (state.projects !== undefined) setProjects(state.projects)
+        if ("activeProjectId" in state) setActiveProjectId(state.activeProjectId)
       }
 
       // When a multi-version progress update arrives, mark newly created worktrees as loading
@@ -1539,6 +1558,7 @@ const AgentManagerContent: Component = () => {
       unsubCreate()
       unsubSessions()
       unsubRun()
+      unsubProjectToast()
       unsubTerminals()
       unsub()
     })
@@ -1844,12 +1864,398 @@ const AgentManagerContent: Component = () => {
 
   const loaded = () => worktreesLoaded() && sessionsLoaded()
 
+  // Render the today's single-project sidebar body (Local item + Worktrees
+  // section + Unassigned sessions). Used directly when 0–1 projects are
+  // registered, and inside the legacy project's accordion when 2+ projects
+  // are registered.
+  const renderSidebarBody = (): JSX.Element => (
+    <>
+      <button
+        class={`am-local-item ${selection() === LOCAL ? "am-local-item-active" : ""}`}
+        data-sidebar-id="local"
+        onClick={() => selectLocal()}
+      >
+        <Show when={!isLocalBusy()} fallback={<Spinner class="am-worktree-spinner" />}>
+          <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
+            <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
+            <path d="M10 13.5V16.5" stroke="currentColor" />
+          </svg>
+        </Show>
+        <div class="am-local-text">
+          <span class="am-local-label">{t("agentManager.local")}</span>
+          <Show when={repoBranch()}>
+            <span class="am-local-branch">{repoBranch()}</span>
+          </Show>
+        </div>
+        <Show when={localStats() === undefined}>
+          <div class="am-worktree-stats-skeleton">
+            <div class="am-worktree-stats-skeleton-row" />
+            <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
+          </div>
+        </Show>
+        <Show
+          when={
+            localStats() &&
+            (localStats()!.files > 0 ||
+              localStats()!.additions > 0 ||
+              localStats()!.deletions > 0 ||
+              localStats()!.ahead > 0 ||
+              localStats()!.behind > 0)
+          }
+        >
+          <div class="am-worktree-stats">
+            <Show
+              when={localStats()!.additions > 0 || localStats()!.deletions > 0}
+              fallback={
+                <Show when={localStats()!.files > 0}>
+                  <span class="am-stat-files">{localStats()!.files}f</span>
+                </Show>
+              }
+            >
+              <div class="am-worktree-stats-row">
+                <Show when={localStats()!.additions > 0}>
+                  <span class="am-stat-additions">+{localStats()!.additions}</span>
+                </Show>
+                <Show when={localStats()!.deletions > 0}>
+                  <span class="am-stat-deletions">
+                    {"\u2212"}
+                    {localStats()!.deletions}
+                  </span>
+                </Show>
+              </div>
+            </Show>
+            <Show when={localStats()!.ahead > 0 || localStats()!.behind > 0}>
+              <div class="am-worktree-stats-row">
+                <Show when={localStats()!.ahead > 0}>
+                  <span class="am-worktree-commits">
+                    {"↑"}
+                    {localStats()!.ahead}
+                  </span>
+                </Show>
+                <Show when={localStats()!.behind > 0}>
+                  <span class="am-worktree-behind">
+                    {"↓"}
+                    {localStats()!.behind}
+                  </span>
+                </Show>
+              </div>
+            </Show>
+          </div>
+        </Show>
+        <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
+      </button>
+
+      {/* WORKTREES section */}
+      <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
+        <div class="am-section-header">
+          <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
+          <WorktreeSectionActions
+            items={sidebarSearch.items}
+            current={sidebarSearch.current}
+            bindings={kb()}
+            branch={repoDefaultBranch()}
+            git={isGitRepo()}
+            loaded={loaded()}
+            t={t}
+            onRef={(value) => (sidebarSearchMenu = value)}
+            onSelect={focusSidebarSearchItem}
+            onCreate={createWorktree}
+            onNew={showNewWorktreeDialog}
+            onSection={newSection}
+            onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
+            onSetup={setupScript}
+            onBranch={handleChangeDefaultBaseBranch}
+          />
+        </div>
+        <div class="am-worktree-list">
+          <Show
+            when={worktreesLoaded() && sessionsLoaded()}
+            fallback={
+              <div class="am-skeleton-list">
+                <div class="am-skeleton-wt">
+                  <div class="am-skeleton-wt-icon" />
+                  <div class="am-skeleton-wt-text" style={{ width: "60%" }} />
+                </div>
+              </div>
+            }
+          >
+            <Show when={!isGitRepo()}>
+              <div class="am-not-git-notice">
+                <Icon name="warning" size="small" />
+                <span>{t("agentManager.notGitRepo")}</span>
+              </div>
+            </Show>
+            <Show when={isGitRepo()}>
+              {(() => {
+                const [renamingWt, setRenamingWt] = createSignal<string | null>(null)
+                const [renameValue, setRenameValue] = createSignal("")
+
+                const startRename = (wtId: string, current: string) => {
+                  setRenamingWt(wtId)
+                  setRenameValue(current)
+                }
+
+                let cancelled = false
+
+                const commitRename = (wtId: string) => {
+                  if (cancelled) {
+                    cancelled = false
+                    return
+                  }
+                  const value = renameValue().trim()
+                  setRenamingWt(null)
+                  if (!value) return
+                  vscode.postMessage({ type: "agentManager.renameWorktree", worktreeId: wtId, label: value })
+                }
+
+                const cancelRename = () => {
+                  cancelled = true
+                  setRenamingWt(null)
+                }
+
+                const hasSections = createMemo(() => sections().length > 0)
+                const wtIds = createMemo(() => sortedWorktrees().map((wt) => wt.id))
+                const secIds = createMemo(() => new Set(sections().map((s) => s.id)))
+                const home = () => new Map(sortedWorktrees().map((w) => [w.id, w.sectionId] as const))
+                const sectionAware = sectionAwareDetector(secIds, home)
+
+                const onWtDragStart = (event: DragEvent) => {
+                  const id = event.draggable?.id
+                  if (typeof id === "string") setDraggingWorktree(id)
+                  document.body.classList.add("am-wt-dragging-active")
+                }
+                const onWtDragOver = (event: DragEvent) => {
+                  const from = event.draggable?.id
+                  const to = event.droppable?.id
+                  if (typeof from !== "string" || typeof to !== "string") return
+                  if (secIds().has(to)) return
+                  setSidebarWorktreeOrder((prev) => {
+                    const cur = applyTabOrder(
+                      sortedWorktrees().map((w) => ({ id: w.id })),
+                      prev,
+                    ).map((i) => i.id)
+                    return reorderTabs(cur, from, to) ?? prev
+                  })
+                }
+                const onWtDragEnd = (event: DragEvent) => {
+                  const from = event.draggable?.id
+                  const to = event.droppable?.id
+                  setDraggingWorktree(undefined)
+                  document.body.classList.remove("am-wt-dragging-active")
+                  if (typeof from === "string" && typeof to === "string" && secIds().has(to)) {
+                    moveToSection([from], to)
+                    return
+                  }
+                  vscode.postMessage({ type: "agentManager.setWorktreeOrder", order: sidebarWorktreeOrder() })
+                }
+
+                return (
+                  <DragDropProvider
+                    onDragStart={onWtDragStart}
+                    onDragEnd={onWtDragEnd}
+                    onDragOver={onWtDragOver}
+                    collisionDetector={sectionAware}
+                  >
+                    <DragDropSensors />
+                    <ConstrainDragXAxis />
+                    <SortableProvider ids={wtIds()}>
+                      {(() => {
+                        const renderWt = (wt: WorktreeState, idx: () => number, list?: WorktreeState[]) => {
+                          const wtSessions = createMemo(() => managedSessions().filter((ms) => ms.worktreeId === wt.id))
+                          const navHint = () =>
+                            adjacentHint(
+                              wt.id,
+                              selection() ?? session.currentSessionID() ?? "",
+                              sidebarOrder().map((f) => f.id),
+                              kb().previousSession ?? "",
+                              kb().nextSession ?? "",
+                            )
+                          const groupSize = () =>
+                            !wt.groupId ? 0 : sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
+                          const sortable = createSortable(wt.id)
+                          void sortable
+                          return (
+                            <div
+                              use:sortable
+                              class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}
+                            >
+                              <WorktreeItem
+                                worktree={wt}
+                                label={worktreeLabel(wt)}
+                                subtitle={worktreeSubtitle(wt)}
+                                active={selection() === wt.id}
+                                pendingDelete={pendingDelete() === wt.id}
+                                busy={busyWorktrees().has(wt.id)}
+                                working={isAgentBusy(wt.id)}
+                                stale={isStaleWorktree(wt.id)}
+                                shortcut={shortcutMap().get(wt.id)}
+                                stats={worktreeStats()[wt.id]}
+                                navHint={navHint()}
+                                sessions={wtSessions().length}
+                                grouped={isGrouped(wt)}
+                                groupStart={isGroupStart(wt, idx(), list ?? sortedWorktrees())}
+                                groupEnd={isGroupEnd(wt, idx(), list ?? sortedWorktrees())}
+                                groupSize={groupSize()}
+                                renaming={renamingWt() === wt.id}
+                                renameValue={renameValue()}
+                                closeKeybind={kb().closeWorktree ?? ""}
+                                openKeybind={kb().openWorktree ?? ""}
+                                pr={prStatuses()[wt.id] !== undefined ? (prStatuses()[wt.id] ?? undefined) : undefined}
+                                runStatus={runStatuses()[wt.id]}
+                                onOpenPR={metrics.click("open_pull_request", "worktree_menu", () =>
+                                  vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id }),
+                                )}
+                                sections={sections()}
+                                currentSectionId={wt.sectionId}
+                                onMoveToSection={(secId) => moveToSection([wt.id], secId)}
+                                onMoveToNewSection={metrics.click("new_section", "worktree_menu", () => newSection())}
+                                onClick={() => {
+                                  if (pendingDelete() === wt.id) {
+                                    confirmDeleteWorktree(wt.id)
+                                    return
+                                  }
+                                  selectWorktree(wt.id)
+                                }}
+                                onDelete={(e) => handleDeleteWorktree(wt.id, e)}
+                                onStartRename={(current) => startRename(wt.id, current)}
+                                onRenameInput={(v) => setRenameValue(v)}
+                                onCommitRename={() => commitRename(wt.id)}
+                                onCancelRename={cancelRename}
+                                onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
+                                onCopyPath={() => navigator.clipboard.writeText(wt.path)}
+                                onOpen={metrics.click("open_worktree_window", "worktree_menu", () =>
+                                  vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id }),
+                                )}
+                              />
+                            </div>
+                          )
+                        }
+                        if (hasSections()) {
+                          const post = vscode.postMessage.bind(vscode)
+                          return (
+                            <For each={topLevelItems()}>
+                              {(item, idx) => {
+                                if (item.kind === "section") {
+                                  const sec = item.section
+                                  const members = createMemo(() => worktreesInSection(sec.id))
+                                  return (
+                                    <SectionHeader
+                                      section={sec}
+                                      count={members().length}
+                                      autoRename={renamingSection() === sec.id}
+                                      onRenameEnd={() => setRenamingSection(null)}
+                                      onToggle={() =>
+                                        post({ type: "agentManager.toggleSectionCollapsed", sectionId: sec.id })
+                                      }
+                                      onRename={(name) =>
+                                        post({ type: "agentManager.renameSection", sectionId: sec.id, name })
+                                      }
+                                      onDelete={() => post({ type: "agentManager.deleteSection", sectionId: sec.id })}
+                                      onSetColor={(color) =>
+                                        post({ type: "agentManager.setSectionColor", sectionId: sec.id, color })
+                                      }
+                                      isFirst={idx() === 0}
+                                      isLast={idx() === topLevelItems().length - 1}
+                                      onMoveUp={() => moveSection(sec.id, -1)}
+                                      onMoveDown={() => moveSection(sec.id, 1)}
+                                    >
+                                      <Show when={!sec.collapsed}>
+                                        <div class="am-section-group-body">
+                                          <For each={members()}>{(wt, wtIdx) => renderWt(wt, wtIdx, members())}</For>
+                                        </div>
+                                      </Show>
+                                    </SectionHeader>
+                                  )
+                                }
+                                const ug = ungrouped()
+                                const wtIdx = () => ug.indexOf(item.wt)
+                                return renderWt(item.wt, wtIdx, ug)
+                              }}
+                            </For>
+                          )
+                        }
+                        return <For each={sortedWorktrees()}>{(wt, idx) => renderWt(wt, idx)}</For>
+                      })()}
+                    </SortableProvider>
+                    <DragOverlay>
+                      {(() => {
+                        const wt = sortedWorktrees().find((w) => w.id === draggingWorktree())
+                        if (!wt) return null
+                        return (
+                          <div class="am-wt-overlay">
+                            <Icon name="branch" size="small" />
+                            <span>{worktreeLabel(wt)}</span>
+                          </div>
+                        )
+                      })()}
+                    </DragOverlay>
+                  </DragDropProvider>
+                )
+              })()}
+              <Show when={worktrees().length === 0}>
+                <button class="am-worktree-create" onClick={showNewWorktreeDialog}>
+                  <Icon name="plus" size="small" />
+                  <span>{t("agentManager.worktree.new")}</span>
+                </button>
+              </Show>
+            </Show>
+          </Show>
+        </div>
+      </div>
+
+      <UnassignedSessionsSection
+        sessions={unassignedSessions}
+        loaded={sessionsLoaded}
+        collapsed={sessionsCollapsed}
+        active={() => (selection() === null ? session.currentSessionID() : undefined)}
+        onToggle={toggleSessions}
+        onSelect={selectUnassigned}
+        onPromote={promoteSession}
+        onOpen={openUnassigned}
+      />
+    </>
+  )
+
   const handleCreateWorktree = () => {
     if (!loaded()) return
     expandSidebar()
     vscode.postMessage({ type: "agentManager.createWorktree" })
   }
   const createWorktree = metrics.click("new_worktree", "worktrees", handleCreateWorktree)
+
+  // Project management (ticket #12353)
+  const handleAddProject = () => {
+    vscode.postMessage({ type: "agentManager.addProject" })
+  }
+  const addProject = metrics.click("add_project", "sidebar_toolbar", handleAddProject)
+
+  const handleToggleProjectCollapsed = (projectId: string, collapsed?: boolean) => {
+    void collapsed
+    vscode.postMessage({
+      type: "agentManager.toggleProjectCollapsed",
+      projectId,
+    })
+  }
+
+  const handleRemoveProject = (projectId: string) => {
+    vscode.postMessage({ type: "agentManager.removeProject", projectId })
+  }
+
+  const handleAddProjectToWorkspace = (projectId: string) => {
+    vscode.postMessage({ type: "agentManager.addProjectToWorkspace", projectId })
+  }
+
+  const projectView = useProjectView(
+    projects,
+    { worktrees, managedSessions },
+    {
+      addProject,
+      toggleProjectCollapsed: (id) => handleToggleProjectCollapsed(id),
+      removeProject: handleRemoveProject,
+      addProjectToWorkspace: handleAddProjectToWorkspace,
+    },
+  )
 
   const showNewWorktreeDialog = () => {
     if (!loaded()) return
@@ -2218,354 +2624,27 @@ const AgentManagerContent: Component = () => {
             }
           }}
         />
-        {/* Local repo item */}
-        <button
-          class={`am-local-item ${selection() === LOCAL ? "am-local-item-active" : ""}`}
-          data-sidebar-id="local"
-          onClick={() => selectLocal()}
-        >
-          <Show when={!isLocalBusy()} fallback={<Spinner class="am-worktree-spinner" />}>
-            <svg class="am-local-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect x="2.5" y="3.5" width="15" height="10" rx="1" stroke="currentColor" />
-              <path d="M6 16.5H14" stroke="currentColor" stroke-linecap="square" />
-              <path d="M10 13.5V16.5" stroke="currentColor" />
-            </svg>
-          </Show>
-          <div class="am-local-text">
-            <span class="am-local-label">{t("agentManager.local")}</span>
-            <Show when={repoBranch()}>
-              <span class="am-local-branch">{repoBranch()}</span>
-            </Show>
-          </div>
-          <Show when={localStats() === undefined}>
-            <div class="am-worktree-stats-skeleton">
-              <div class="am-worktree-stats-skeleton-row" />
-              <div class="am-worktree-stats-skeleton-row" style={{ width: "70%" }} />
-            </div>
-          </Show>
-          <Show
-            when={
-              localStats() &&
-              (localStats()!.files > 0 ||
-                localStats()!.additions > 0 ||
-                localStats()!.deletions > 0 ||
-                localStats()!.ahead > 0 ||
-                localStats()!.behind > 0)
-            }
-          >
-            <div class="am-worktree-stats">
-              <Show
-                when={localStats()!.additions > 0 || localStats()!.deletions > 0}
-                fallback={
-                  <Show when={localStats()!.files > 0}>
-                    <span class="am-stat-files">{localStats()!.files}f</span>
-                  </Show>
-                }
-              >
-                <div class="am-worktree-stats-row">
-                  <Show when={localStats()!.additions > 0}>
-                    <span class="am-stat-additions">+{localStats()!.additions}</span>
-                  </Show>
-                  <Show when={localStats()!.deletions > 0}>
-                    <span class="am-stat-deletions">
-                      {"\u2212"}
-                      {localStats()!.deletions}
-                    </span>
-                  </Show>
-                </div>
-              </Show>
-              <Show when={localStats()!.ahead > 0 || localStats()!.behind > 0}>
-                <div class="am-worktree-stats-row">
-                  <Show when={localStats()!.ahead > 0}>
-                    <span class="am-worktree-commits">
-                      {"↑"}
-                      {localStats()!.ahead}
-                    </span>
-                  </Show>
-                  <Show when={localStats()!.behind > 0}>
-                    <span class="am-worktree-behind">
-                      {"↓"}
-                      {localStats()!.behind}
-                    </span>
-                  </Show>
-                </div>
-              </Show>
-            </div>
-          </Show>
-          <span class="am-shortcut-badge">{isMac ? "⌘" : "Ctrl+"}1</span>
-        </button>
-
-        {/* WORKTREES section */}
-        <div class={`am-section ${sessionsCollapsed() ? "am-section-grow" : ""}`}>
-          <div class="am-section-header">
-            <span class="am-section-label">{t("agentManager.section.worktrees")}</span>
-            <WorktreeSectionActions
-              items={sidebarSearch.items}
-              current={sidebarSearch.current}
-              bindings={kb()}
-              branch={repoDefaultBranch()}
-              git={isGitRepo()}
-              loaded={loaded()}
-              t={t}
-              onRef={(value) => (sidebarSearchMenu = value)}
-              onSelect={focusSidebarSearchItem}
-              onCreate={createWorktree}
-              onNew={showNewWorktreeDialog}
-              onSection={newSection}
-              onShortcuts={metrics.click("keyboard_shortcuts", "worktrees_header", handleShowKeyboardShortcuts)}
-              onSetup={setupScript}
-              onBranch={handleChangeDefaultBaseBranch}
-            />
-          </div>
-          <div class="am-worktree-list">
-            <Show
-              when={worktreesLoaded() && sessionsLoaded()}
-              fallback={
-                <div class="am-skeleton-list">
-                  <div class="am-skeleton-wt">
-                    <div class="am-skeleton-wt-icon" />
-                    <div class="am-skeleton-wt-text" style={{ width: "60%" }} />
-                  </div>
-                </div>
-              }
-            >
-              <Show when={!isGitRepo()}>
-                <div class="am-not-git-notice">
-                  <Icon name="warning" size="small" />
-                  <span>{t("agentManager.notGitRepo")}</span>
-                </div>
-              </Show>
-              <Show when={isGitRepo()}>
-                {(() => {
-                  const [renamingWt, setRenamingWt] = createSignal<string | null>(null)
-                  const [renameValue, setRenameValue] = createSignal("")
-
-                  const startRename = (wtId: string, current: string) => {
-                    setRenamingWt(wtId)
-                    setRenameValue(current)
-                  }
-
-                  let cancelled = false
-
-                  const commitRename = (wtId: string) => {
-                    if (cancelled) {
-                      cancelled = false
-                      return
-                    }
-                    const value = renameValue().trim()
-                    setRenamingWt(null)
-                    if (!value) return
-                    vscode.postMessage({ type: "agentManager.renameWorktree", worktreeId: wtId, label: value })
-                  }
-
-                  const cancelRename = () => {
-                    cancelled = true
-                    setRenamingWt(null)
-                  }
-
-                  const hasSections = createMemo(() => sections().length > 0)
-                  const wtIds = createMemo(() => sortedWorktrees().map((wt) => wt.id))
-                  const secIds = createMemo(() => new Set(sections().map((s) => s.id)))
-                  const home = () => new Map(sortedWorktrees().map((w) => [w.id, w.sectionId] as const))
-                  const sectionAware = sectionAwareDetector(secIds, home)
-
-                  const onWtDragStart = (event: DragEvent) => {
-                    const id = event.draggable?.id
-                    if (typeof id === "string") setDraggingWorktree(id)
-                    document.body.classList.add("am-wt-dragging-active")
-                  }
-                  const onWtDragOver = (event: DragEvent) => {
-                    const from = event.draggable?.id
-                    const to = event.droppable?.id
-                    if (typeof from !== "string" || typeof to !== "string") return
-                    if (secIds().has(to)) return
-                    setSidebarWorktreeOrder((prev) => {
-                      const cur = applyTabOrder(
-                        sortedWorktrees().map((w) => ({ id: w.id })),
-                        prev,
-                      ).map((i) => i.id)
-                      return reorderTabs(cur, from, to) ?? prev
-                    })
-                  }
-                  const onWtDragEnd = (event: DragEvent) => {
-                    const from = event.draggable?.id
-                    const to = event.droppable?.id
-                    setDraggingWorktree(undefined)
-                    document.body.classList.remove("am-wt-dragging-active")
-                    if (typeof from === "string" && typeof to === "string" && secIds().has(to)) {
-                      moveToSection([from], to)
-                      return
-                    }
-                    vscode.postMessage({ type: "agentManager.setWorktreeOrder", order: sidebarWorktreeOrder() })
-                  }
-
-                  return (
-                    <DragDropProvider
-                      onDragStart={onWtDragStart}
-                      onDragEnd={onWtDragEnd}
-                      onDragOver={onWtDragOver}
-                      collisionDetector={sectionAware}
-                    >
-                      <DragDropSensors />
-                      <ConstrainDragXAxis />
-                      <SortableProvider ids={wtIds()}>
-                        {(() => {
-                          const renderWt = (wt: WorktreeState, idx: () => number, list?: WorktreeState[]) => {
-                            const wtSessions = createMemo(() =>
-                              managedSessions().filter((ms) => ms.worktreeId === wt.id),
-                            )
-                            const navHint = () =>
-                              adjacentHint(
-                                wt.id,
-                                selection() ?? session.currentSessionID() ?? "",
-                                sidebarOrder().map((f) => f.id),
-                                kb().previousSession ?? "",
-                                kb().nextSession ?? "",
-                              )
-                            const groupSize = () =>
-                              !wt.groupId ? 0 : sortedWorktrees().filter((w) => w.groupId === wt.groupId).length
-                            const sortable = createSortable(wt.id)
-                            void sortable
-                            return (
-                              <div
-                                use:sortable
-                                class={`am-wt-sortable ${sortable.isActiveDraggable ? "am-wt-dragging" : ""}`}
-                              >
-                                <WorktreeItem
-                                  worktree={wt}
-                                  label={worktreeLabel(wt)}
-                                  subtitle={worktreeSubtitle(wt)}
-                                  active={selection() === wt.id}
-                                  pendingDelete={pendingDelete() === wt.id}
-                                  busy={busyWorktrees().has(wt.id)}
-                                  working={isAgentBusy(wt.id)}
-                                  stale={isStaleWorktree(wt.id)}
-                                  shortcut={shortcutMap().get(wt.id)}
-                                  stats={worktreeStats()[wt.id]}
-                                  navHint={navHint()}
-                                  sessions={wtSessions().length}
-                                  grouped={isGrouped(wt)}
-                                  groupStart={isGroupStart(wt, idx(), list ?? sortedWorktrees())}
-                                  groupEnd={isGroupEnd(wt, idx(), list ?? sortedWorktrees())}
-                                  groupSize={groupSize()}
-                                  renaming={renamingWt() === wt.id}
-                                  renameValue={renameValue()}
-                                  closeKeybind={kb().closeWorktree ?? ""}
-                                  openKeybind={kb().openWorktree ?? ""}
-                                  pr={
-                                    prStatuses()[wt.id] !== undefined ? (prStatuses()[wt.id] ?? undefined) : undefined
-                                  }
-                                  runStatus={runStatuses()[wt.id]}
-                                  onOpenPR={metrics.click("open_pull_request", "worktree_menu", () =>
-                                    vscode.postMessage({ type: "agentManager.openPR", worktreeId: wt.id }),
-                                  )}
-                                  sections={sections()}
-                                  currentSectionId={wt.sectionId}
-                                  onMoveToSection={(secId) => moveToSection([wt.id], secId)}
-                                  onMoveToNewSection={metrics.click("new_section", "worktree_menu", () => newSection())}
-                                  onClick={() => {
-                                    if (pendingDelete() === wt.id) {
-                                      confirmDeleteWorktree(wt.id)
-                                      return
-                                    }
-                                    selectWorktree(wt.id)
-                                  }}
-                                  onDelete={(e) => handleDeleteWorktree(wt.id, e)}
-                                  onStartRename={(current) => startRename(wt.id, current)}
-                                  onRenameInput={(v) => setRenameValue(v)}
-                                  onCommitRename={() => commitRename(wt.id)}
-                                  onCancelRename={cancelRename}
-                                  onRemoveStale={() => confirmRemoveStaleWorktree(wt.id)}
-                                  onCopyPath={() => navigator.clipboard.writeText(wt.path)}
-                                  onOpen={metrics.click("open_worktree_window", "worktree_menu", () =>
-                                    vscode.postMessage({ type: "agentManager.openWorktree", worktreeId: wt.id }),
-                                  )}
-                                />
-                              </div>
-                            )
-                          }
-                          if (hasSections()) {
-                            const post = vscode.postMessage.bind(vscode)
-                            return (
-                              <For each={topLevelItems()}>
-                                {(item, idx) => {
-                                  if (item.kind === "section") {
-                                    const sec = item.section
-                                    const members = createMemo(() => worktreesInSection(sec.id))
-                                    return (
-                                      <SectionHeader
-                                        section={sec}
-                                        count={members().length}
-                                        autoRename={renamingSection() === sec.id}
-                                        onRenameEnd={() => setRenamingSection(null)}
-                                        onToggle={() =>
-                                          post({ type: "agentManager.toggleSectionCollapsed", sectionId: sec.id })
-                                        }
-                                        onRename={(name) =>
-                                          post({ type: "agentManager.renameSection", sectionId: sec.id, name })
-                                        }
-                                        onDelete={() => post({ type: "agentManager.deleteSection", sectionId: sec.id })}
-                                        onSetColor={(color) =>
-                                          post({ type: "agentManager.setSectionColor", sectionId: sec.id, color })
-                                        }
-                                        isFirst={idx() === 0}
-                                        isLast={idx() === topLevelItems().length - 1}
-                                        onMoveUp={() => moveSection(sec.id, -1)}
-                                        onMoveDown={() => moveSection(sec.id, 1)}
-                                      >
-                                        <Show when={!sec.collapsed}>
-                                          <div class="am-section-group-body">
-                                            <For each={members()}>{(wt, wtIdx) => renderWt(wt, wtIdx, members())}</For>
-                                          </div>
-                                        </Show>
-                                      </SectionHeader>
-                                    )
-                                  }
-                                  const ug = ungrouped()
-                                  const wtIdx = () => ug.indexOf(item.wt)
-                                  return renderWt(item.wt, wtIdx, ug)
-                                }}
-                              </For>
-                            )
-                          }
-                          return <For each={sortedWorktrees()}>{(wt, idx) => renderWt(wt, idx)}</For>
-                        })()}
-                      </SortableProvider>
-                      <DragOverlay>
-                        {(() => {
-                          const wt = sortedWorktrees().find((w) => w.id === draggingWorktree())
-                          if (!wt) return null
-                          return (
-                            <div class="am-wt-overlay">
-                              <Icon name="branch" size="small" />
-                              <span>{worktreeLabel(wt)}</span>
-                            </div>
-                          )
-                        })()}
-                      </DragOverlay>
-                    </DragDropProvider>
-                  )
-                })()}
-                <Show when={worktrees().length === 0}>
-                  <button class="am-worktree-create" onClick={showNewWorktreeDialog}>
-                    <Icon name="plus" size="small" />
-                    <span>{t("agentManager.worktree.new")}</span>
-                  </button>
-                </Show>
-              </Show>
-            </Show>
-          </div>
+        {/* Global projects toolbar (always visible) */}
+        <div class="am-project-toolbar">
+          <span class="am-project-toolbar-label">{t("agentManager.project.toolbarLabel")}</span>
+          <Tooltip value={t("agentManager.project.addTooltip")} placement="bottom">
+            <button type="button" class="am-project-add" onClick={addProject}>
+              <Icon name="plus" size="small" />
+              <span>{t("agentManager.project.add")}</span>
+            </button>
+          </Tooltip>
         </div>
-
-        <UnassignedSessionsSection
-          sessions={unassignedSessions}
-          loaded={sessionsLoaded}
-          collapsed={sessionsCollapsed}
-          active={() => (selection() === null ? session.currentSessionID() : undefined)}
-          onToggle={toggleSessions}
-          onSelect={selectUnassigned}
-          onPromote={promoteSession}
-          onOpen={openUnassigned}
+        <SidebarProjects
+          projects={projects}
+          showMultiProject={projectView.showMultiProject}
+          renderLegacyBody={renderSidebarBody}
+          displayLabel={projectView.displayLabel}
+          countWorktreesFor={projectView.countWorktreesFor}
+          countSessionsFor={projectView.countSessionsFor}
+          onToggleProjectCollapsed={(id) => handleToggleProjectCollapsed(id)}
+          onAddWorktree={() => showNewWorktreeDialog()}
+          onAddProjectToWorkspace={(id) => handleAddProjectToWorkspace(id)}
+          onRemoveProject={(id) => handleRemoveProject(id)}
         />
       </div>
 

@@ -208,4 +208,21 @@ export const dict = {
   "agentManager.import.noBranchesFound": "No branches found.",
   "agentManager.import.noBranchesHint": "Paste a PR URL above or create a new worktree.",
   "agentManager.import.failed": "Import failed",
+
+  "agentManager.project.add": "Add project",
+  "agentManager.project.addTooltip": "Register another repository as a project",
+  "agentManager.project.toolbarLabel": "Projects",
+  "agentManager.project.remove": "Remove project",
+  "agentManager.project.removeTooltip": "Remove this project from Agent Manager (data on disk is kept)",
+  "agentManager.project.addToWorkspace": "Add to VS Code workspace",
+  "agentManager.project.addToWorkspaceTooltip": "Add this project's folder to the current VS Code workspace",
+  "agentManager.project.worktreeCount": "{{count}} worktrees",
+  "agentManager.project.sessionCount": "{{count}} sessions",
+  "agentManager.project.untrustedTooltip":
+    "Untrusted — setup, run, and .env scripts are disabled until you trust this project",
+  "agentManager.project.notGit": "Not a git repository",
+  "agentManager.project.unsupportedScheme": "Unsupported folder scheme: {{scheme}}",
+  "agentManager.project.duplicate": "This repository is already registered as a project",
+  "agentManager.project.addFailed": "Could not add project",
+  "agentManager.project.unavailable": "Unavailable — repository is missing on disk",
 }

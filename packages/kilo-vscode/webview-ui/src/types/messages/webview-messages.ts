@@ -592,6 +592,31 @@ export interface AddSessionToWorktreeRequest {
   sessionId?: string
 }
 
+// Open the VS Code folder picker and register the selection as a new
+// Agent Manager project (ticket #12353).
+export interface AddProjectRequest {
+  type: "agentManager.addProject"
+}
+
+// Remove a registered project from the catalog (ticket #12353).
+export interface RemoveProjectRequest {
+  type: "agentManager.removeProject"
+  projectId: string
+}
+
+// Toggle (or set) the collapsed flag on a project's accordion header.
+export interface ToggleProjectCollapsedRequest {
+  type: "agentManager.toggleProjectCollapsed"
+  projectId: string
+  collapsed?: boolean
+}
+
+// Add the registered project's canonical root to VS Code's `workspaceFolders`.
+export interface AddProjectToWorkspaceRequest {
+  type: "agentManager.addProjectToWorkspace"
+  projectId: string
+}
+
 // Fork an existing session (copies conversation history)
 export interface ForkSessionRequest {
   type: "agentManager.forkSession"
@@ -1301,6 +1326,10 @@ export type WebviewMessage =
   | PromoteSessionRequest
   | OpenLocallyRequest
   | AddSessionToWorktreeRequest
+  | AddProjectRequest
+  | RemoveProjectRequest
+  | ToggleProjectCollapsedRequest
+  | AddProjectToWorkspaceRequest
   | ForkSessionRequest
   | SidebarForkSessionRequest
   | CloseSessionRequest

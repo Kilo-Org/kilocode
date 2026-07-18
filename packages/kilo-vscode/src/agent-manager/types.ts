@@ -16,6 +16,7 @@ import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
+import type { Project } from "./project-registry"
 
 export type { TerminalFont }
 
@@ -140,6 +141,25 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  /** Registered projects for the multi-project accordion sidebar.
+   *  Empty/absent means today's single-project layout is preserved. */
+  projects?: ProjectSummary[]
+  activeProjectId?: string
+}
+
+/** Lightweight projection of a registered `Project` for the webview. */
+export interface ProjectSummary {
+  id: string
+  root: string
+  label?: string
+  order: number
+  collapsed: boolean
+  trusted: boolean
+  /** Whether this project's canonical root equals the legacy
+   *  `workspaceFolders[0]` root. When true the single-project UI is rendered
+   *  inside the project accordion body and the header is observationally
+   *  invisible. */
+  isLegacyRoot: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -302,6 +322,13 @@ interface RunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
 }
 
+interface ProjectToastMessage {
+  type: "agentManager.projectToast"
+  level: "info" | "warn" | "error"
+  message: string
+  projectId?: string
+}
+
 /** All messages the Agent Manager extension sends to the webview. */
 export type AgentManagerOutMessage =
   | WorktreeStatsMessage
@@ -329,6 +356,7 @@ export type AgentManagerOutMessage =
   | PRStatusOutMessage
   | ActionOutMessage
   | RunStatusMessage
+  | ProjectToastMessage
   | TerminalCreatedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
@@ -368,6 +396,26 @@ interface AddSessionToWorktreeIn {
   type: "agentManager.addSessionToWorktree"
   worktreeId: string
   sessionId?: string
+}
+
+interface AddProjectIn {
+  type: "agentManager.addProject"
+}
+
+interface RemoveProjectIn {
+  type: "agentManager.removeProject"
+  projectId: string
+}
+
+interface ToggleProjectCollapsedIn {
+  type: "agentManager.toggleProjectCollapsed"
+  projectId: string
+  collapsed?: boolean
+}
+
+interface AddProjectToWorkspaceIn {
+  type: "agentManager.addProjectToWorkspace"
+  projectId: string
 }
 
 interface CloseSessionIn {
@@ -785,6 +833,10 @@ export type AgentManagerInMessage =
   | CloseSessionIn
   | PersistSessionIn
   | ForgetSessionIn
+  | AddProjectIn
+  | RemoveProjectIn
+  | ToggleProjectCollapsedIn
+  | AddProjectToWorkspaceIn
   | ForkSessionIn
   | ConfigureSetupScriptIn
   | ConfigureRunScriptIn

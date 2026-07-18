@@ -173,6 +173,202 @@ html[data-theme="kilo-vscode"]
   white-space: nowrap;
 }
 
+/* Project accordion (ticket #12353) */
+
+.am-project-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-weak-base);
+  flex-shrink: 0;
+}
+
+.am-project-toolbar-label {
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-weak);
+}
+
+.am-project-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: var(--font-size-small);
+  color: var(--text-base);
+  cursor: pointer;
+}
+
+.am-project-add:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-project {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.am-project-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  color: var(--text-weaker);
+  font-size: var(--font-size-small);
+}
+
+.am-project-multi {
+  border-bottom: 1px solid var(--border-weak-base);
+}
+
+.am-project-header {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.am-project-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+  color: var(--text-base);
+  font-family: inherit;
+  font-size: var(--font-size-base);
+  text-align: left;
+}
+
+.am-project-chevron {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-weak);
+  flex-shrink: 0;
+}
+
+.am-project-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.am-project-count {
+  font-size: var(--kilo-font-size-10);
+  color: var(--text-weaker);
+  background: var(--surface-inset-base);
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.am-project-trust-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface-warning-base, var(--surface-inset-base));
+  color: var(--text-on-warning-base, var(--text-base));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--kilo-font-size-10);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.am-project-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.am-project-action {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--text-base);
+  font-size: var(--font-size-base);
+  line-height: 1;
+}
+
+.am-project-action:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-project-menu {
+  position: relative;
+}
+
+.am-project-menu[open] .am-project-menu-popover {
+  display: block;
+}
+
+.am-project-menu-popover {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 10;
+  min-width: 180px;
+  background: var(--surface-base);
+  border: 1px solid var(--border-weak-base);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.am-project-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 6px 10px;
+  font-size: var(--font-size-base);
+  color: var(--text-base);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.am-project-menu-item:hover {
+  background: var(--surface-inset-base-hover);
+}
+
+.am-project-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.am-project-single .am-project-body {
+  /* When the project is the legacy root, the body replaces today's sidebar
+     layout and inherits its padding rhythm. */
+}
+
 /* Sections */
 
 .am-section {

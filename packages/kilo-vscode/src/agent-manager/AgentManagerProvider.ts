@@ -1,11 +1,8 @@
-import * as fs from "fs"
-import * as path from "path"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { getErrorMessage } from "../kilo-provider-utils"
 import { resolveLocalDiffTarget } from "../diff/shared/target"
 import { getDiffMarkdownRender, setDiffMarkdownRender } from "../review-settings"
-import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
 import { handleSection } from "./section-handler"
@@ -16,12 +13,9 @@ import { GitOps } from "./GitOps"
 import { versionedName } from "./branch-name"
 import { BranchNamingController } from "./branch-naming"
 import { SetupScriptService } from "./SetupScriptService"
-import { SetupScriptRunner } from "./SetupScriptRunner"
-import { copyEnvFiles } from "./env-copy"
 import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
-import { executeVscodeTask } from "./task-runner"
 import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
@@ -45,7 +39,14 @@ import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
 import { ProjectRouting } from "./project-routing"
 import { ProjectUnknownError } from "./project-router"
-
+import {
+  handleAddProject,
+  handleAddProjectToWorkspace,
+  handleRemoveProject,
+  handleToggleProjectCollapsed,
+} from "./project-messages"
+import { runSetupScriptForWorktree, sendRepoInfo } from "./setup-orchestration"
+import { openWorktreeDirectory, openWorktreeFile } from "./worktree-file-ops"
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { buildKeybindingMap } from "./format-keybinding"
@@ -212,7 +213,11 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "session.status",
       (event) => this.onSessionStatus(event),
     )
-    this.projects = new ProjectRouting(this.host.globalState(), () => this.buildDeps(), (...args) => this.log(...args))
+    this.projects = new ProjectRouting(
+      this.host.globalState(),
+      () => this.buildDeps(),
+      (...args) => this.log(...args),
+    )
     void this.projects.load()
   }
 
@@ -621,6 +626,36 @@ export class AgentManagerProvider implements Disposable {
         this.pushState()
       }
       return null
+    }
+    if (m.type === "agentManager.addProject") {
+      void handleAddProject(this.buildProjectDeps())
+      return null
+    }
+    if (m.type === "agentManager.removeProject") {
+      void handleRemoveProject(m.projectId, this.buildProjectDeps())
+      return null
+    }
+    if (m.type === "agentManager.toggleProjectCollapsed") {
+      void handleToggleProjectCollapsed(m.projectId, m.collapsed, this.buildProjectDeps())
+      return null
+    }
+    if (m.type === "agentManager.addProjectToWorkspace") {
+      handleAddProjectToWorkspace(m.projectId, this.buildProjectDeps())
+      return null
+    }
+  }
+
+  private buildProjectDeps() {
+    const routing = this.projects
+    if (!routing) throw new Error("Project routing not initialized")
+    return {
+      routing,
+      postToWebview: (msg: unknown) => this.postToWebview(msg as never),
+      showError: (msg: string) => this.host.showError(msg),
+      log: (...args: unknown[]) => this.log(...args),
+      pickFolder: (opts?: { title?: string; openLabel?: string }) => this.host.pickFolder(opts),
+      addFolderToWorkspace: (path: string) => this.host.addFolderToWorkspace(path),
+      pushState: () => this.pushState(),
     }
   }
 
@@ -1451,55 +1486,25 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Copy .env files and run the worktree setup script. Blocks until complete. Shows progress in overlay. */
+  /** Thin wrapper preserving the public-ish call signature; delegates to the
+   *  extracted helper. Kept inline because the helper needs provider-scoped
+   *  dependencies that the helper module accepts via a struct. */
   private async runSetupScriptForWorktree(worktreePath: string, branch?: string, worktreeId?: string): Promise<void> {
-    const root = this.getRoot()
-    if (!root) return
-
-    // Always copy .env files from the main repo (before the setup script so it can override)
-    await copyEnvFiles(root, worktreePath, (msg) => this.outputChannel.appendLine(`[EnvCopy] ${msg}`))
-
-    try {
-      const service = this.getSetupScriptService()
-      if (!service || !service.hasScript()) return
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "creating",
-        message: "Running setup script...",
-        branch,
-        worktreeId,
-      })
-      const runner = new SetupScriptRunner(
-        (msg) => this.outputChannel.appendLine(`[SetupScriptRunner] ${msg}`),
-        service,
-        executeVscodeTask,
-      )
-      await runner.runIfConfigured({ worktreePath, repoPath: root })
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      this.outputChannel.appendLine(`[AgentManager] Setup script error: ${msg}`)
-      this.postToWebview({
-        type: "agentManager.worktreeSetup",
-        status: "error",
-        message: `Setup script failed: ${msg}`,
-        branch,
-        worktreeId,
-      })
-    }
+    await runSetupScriptForWorktree(worktreePath, branch, worktreeId, {
+      root: () => this.getRoot(),
+      service: () => this.getSetupScriptService(),
+      postToWebview: (msg) => this.postToWebview(msg as never),
+      log: (msg) => this.log(msg),
+      output: this.outputChannel,
+    })
   }
 
-  // Repo info
-
   private async sendRepoInfo(): Promise<void> {
-    const manager = this.getWorktreeManager()
-    if (!manager) return
-    try {
-      const branch = await manager.currentBranch()
-      const defaultBranch = await manager.defaultBranch()
-      this.postToWebview({ type: "agentManager.repoInfo", branch, defaultBranch })
-    } catch (error) {
-      this.log(`Failed to get current branch: ${error}`)
-    }
+    await sendRepoInfo({
+      worktreeManager: () => this.getWorktreeManager(),
+      postToWebview: (msg) => this.postToWebview(msg as never),
+      log: (msg) => this.log(msg),
+    })
   }
 
   // State helpers
@@ -1616,21 +1621,35 @@ export class AgentManagerProvider implements Disposable {
     const worktrees = state.getWorktrees()
     const staleWorktreeIds = this.staleWorktreesForState(worktrees)
     const run = this.run.state()
-    this.postToWebview({
-      type: "agentManager.state",
-      worktrees,
-      sessions: state.getSessions(),
-      sections: state.getSections(),
-      staleWorktreeIds,
-      tabOrder: state.getTabOrder(),
-      worktreeOrder: state.getWorktreeOrder(),
-      sessionsCollapsed: state.getSessionsCollapsed(),
-      sidebarCollapsed: state.getSidebarCollapsed(),
-      reviewDiffStyle: state.getReviewDiffStyle(),
-      reviewMarkdownRender: getDiffMarkdownRender(),
-      isGitRepo: true,
-      defaultBaseBranch: state.getDefaultBaseBranch(),
-      ...run,
+    void this.projects?.loaded().then(() => {
+      const projects = this.projects?.snapshot().projects ?? []
+      const legacyRoot = this.getRoot()
+      this.postToWebview({
+        type: "agentManager.state",
+        worktrees,
+        sessions: state.getSessions(),
+        sections: state.getSections(),
+        staleWorktreeIds,
+        tabOrder: state.getTabOrder(),
+        worktreeOrder: state.getWorktreeOrder(),
+        sessionsCollapsed: state.getSessionsCollapsed(),
+        sidebarCollapsed: state.getSidebarCollapsed(),
+        reviewDiffStyle: state.getReviewDiffStyle(),
+        reviewMarkdownRender: getDiffMarkdownRender(),
+        isGitRepo: true,
+        defaultBaseBranch: state.getDefaultBaseBranch(),
+        ...run,
+        projects: projects.map((p) => ({
+          id: p.id,
+          root: p.root,
+          ...(p.label !== undefined ? { label: p.label } : {}),
+          order: p.order,
+          collapsed: p.collapsed,
+          trusted: p.trusted,
+          isLegacyRoot: legacyRoot !== undefined && legacyRoot === p.root,
+        })),
+        activeProjectId: this.projects?.snapshot().activeProjectId,
+      })
     })
 
     // Sync skip set before enabling the poller so the first poll cycle
@@ -1643,16 +1662,30 @@ export class AgentManagerProvider implements Disposable {
   /** Push empty state when the folder is not a git repo or has no folder open. */
   private pushEmptyState(): void {
     this.staleWorktreeIds.clear()
-    this.postToWebview({
-      type: "agentManager.state",
-      worktrees: [],
-      sessions: [],
-      staleWorktreeIds: [],
-      reviewDiffStyle: "unified",
-      reviewMarkdownRender: getDiffMarkdownRender(),
-      isGitRepo: false,
-      runStatuses: [],
-      runScriptConfigured: false,
+    void this.projects?.loaded().then(() => {
+      const projects = this.projects?.snapshot().projects ?? []
+      const legacyRoot = this.getRoot()
+      this.postToWebview({
+        type: "agentManager.state",
+        worktrees: [],
+        sessions: [],
+        staleWorktreeIds: [],
+        reviewDiffStyle: "unified",
+        reviewMarkdownRender: getDiffMarkdownRender(),
+        isGitRepo: false,
+        runStatuses: [],
+        runScriptConfigured: false,
+        projects: projects.map((p) => ({
+          id: p.id,
+          root: p.root,
+          ...(p.label !== undefined ? { label: p.label } : {}),
+          order: p.order,
+          collapsed: p.collapsed,
+          trusted: p.trusted,
+          isLegacyRoot: legacyRoot !== undefined && legacyRoot === p.root,
+        })),
+        activeProjectId: this.projects?.snapshot().activeProjectId,
+      })
     })
   }
 
@@ -1741,48 +1774,27 @@ export class AgentManagerProvider implements Disposable {
 
   // Worktree file helpers
 
+  private worktreeFileDeps() {
+    return {
+      getState: () => this.getStateManager(),
+      getRoot: () => this.getRoot(),
+      openFolder: (path: string, newWindow: boolean) => this.host.openFolder(path, newWindow),
+      openFile: (path: string, line?: number, column?: number) => this.host.openFile(path, line, column),
+      showError: (msg: string) => this.host.showError(msg),
+      log: (msg: string) => this.log(msg),
+    }
+  }
+
   /** Open a worktree directory directly in VS Code. */
   private openWorktreeDirectory(worktreeId: string): void {
-    const state = this.getStateManager()
-    if (!state) return
-    const worktree = state.getWorktree(worktreeId)
-    if (!worktree) return
-    const target = path.normalize(worktree.path)
-    if (!fs.existsSync(target)) {
-      this.log(`openWorktreeDirectory: missing path ${target}`)
-      this.host.showError("Worktree folder does not exist on disk.")
-      return
-    }
-    this.host.openFolder(target, true)
+    openWorktreeDirectory(worktreeId, this.worktreeFileDeps())
   }
 
   /** Open a file from a worktree or local session in the VS Code editor.
-   * Absolute paths (Unix `/…` or Windows `C:\…`) are opened directly.
-   * Relative paths are resolved against the session's worktree directory
-   * (or repo root for local sessions) with symlink-traversal protection. */
+   * Absolute paths are opened directly. Relative paths are resolved against
+   * the session's worktree directory (or repo root for local sessions). */
   private openWorktreeFile(sessionId: string, filePath: string, line?: number, column?: number): void {
-    if (isAbsolutePath(filePath)) {
-      this.host.openFile(filePath, line, column)
-      return
-    }
-    const state = this.getStateManager()
-    if (!state) return
-    const session = state.getSession(sessionId)
-    const base = session?.worktreeId ? state.getWorktree(session.worktreeId)?.path : this.getRoot()
-    if (!base) return
-    // Resolve real paths to prevent symlink traversal and normalize for
-    // consistent comparison on both Unix and Windows.
-    let resolved: string
-    try {
-      const root = fs.realpathSync(base)
-      resolved = fs.realpathSync(path.resolve(base, filePath))
-      // Directory-boundary check: append path.sep so "/foo/bar" won't match "/foo/bar2/..."
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) return
-    } catch (err) {
-      console.error("[Kilo New] AgentManagerProvider: Cannot resolve file path:", err)
-      return
-    }
-    this.host.openFile(resolved, line, column)
+    openWorktreeFile(sessionId, filePath, line, column, this.worktreeFileDeps())
   }
 
   private postToWebview(message: AgentManagerOutMessage): void {

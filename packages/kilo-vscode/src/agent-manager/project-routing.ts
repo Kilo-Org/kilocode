@@ -1,12 +1,18 @@
 import { ProjectRegistryStore } from "./project-registry-store"
 import { type Project, type ProjectRegistry } from "./project-registry"
-import {
-  createProjectContext,
-  type ProjectContext,
-  type ProjectContextDeps,
-} from "./project-context"
+import { createProjectContext, type ProjectContext, type ProjectContextDeps } from "./project-context"
 import { ProjectUnknownError, type ProjectResolution } from "./project-router"
 import type { MementoLike } from "./host"
+import {
+  addProjectToRegistry,
+  removeProjectFromRegistry,
+  setProjectCollapsed,
+  type AddProjectResult,
+  type ParsedFolder,
+  parseFolderInput,
+  validateScheme,
+} from "./project-add"
+import { canonicalRoot as defaultCanonicalRoot } from "./project-canonical-root"
 
 const EMPTY_REGISTRY: ProjectRegistry = { version: 1, projects: [] }
 
@@ -36,6 +42,12 @@ export class ProjectRouting {
     private readonly memento: MementoLike,
     private readonly factory: (project: Project) => ProjectContextDeps,
     private readonly log: (msg: string) => void = () => {},
+    /**
+     * Optional override for the canonical-root resolver used by
+     * `addProject`. Production wiring passes nothing; tests inject a stub to
+     * avoid touching the filesystem or `git`.
+     */
+    private readonly canonicalRootOverride: (input: string) => Promise<string> = defaultCanonicalRoot,
   ) {}
 
   /** Lazily load the persisted registry from `globalState`.
@@ -58,6 +70,11 @@ export class ProjectRouting {
       }
     })()
     return this.loadPromise
+  }
+
+  /** Resolve once `load()` has settled. Safe to call repeatedly. */
+  loaded(): Promise<void> {
+    return this.load() ?? Promise.resolve()
   }
 
   /** Eager snapshot accessor (used during construction before `load()` resolves). */
@@ -115,5 +132,81 @@ export class ProjectRouting {
     }
     if (legacyRoot === undefined) throw new ProjectUnknownError("")
     return { kind: "legacy", root: legacyRoot }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Mutations (ticket #12353 — Add project flow + accordion sidebar)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Validate the user-supplied folder input and return the parsed pieces
+   * before canonicalization. Exposed so the host can preview the candidate
+   * and surface an "unsupported scheme" error before the git invocation.
+   */
+  parseFolderInput(input: unknown): ParsedFolder {
+    return parseFolderInput(input)
+  }
+
+  /** Same as {@link validateScheme} but re-exported through the routing seam. */
+  validateFolder(folder: ParsedFolder) {
+    return validateScheme(folder)
+  }
+
+  /**
+   * Register a new project, dedup against the live registry by canonical
+   * root, persist via `ProjectRegistryStore`, and dispose the previously
+   * cached context if the registry already contained an entry under the
+   * same root (idempotent dedup). Returns the resolved entry — either the
+   * freshly added one or the pre-existing one.
+   */
+  async addProject(input: unknown): Promise<AddProjectResult> {
+    const result = await addProjectToRegistry(input, {
+      registry: this.registry,
+      canonicalRoot: this.canonicalRootOverride,
+      commit: async (next) => {
+        await this.persist(next)
+      },
+    })
+    if (result.ok && !result.deduplicated) {
+      // Sync the in-memory snapshot so subsequent getProject() calls see the
+      // new entry without waiting for a reload.
+      this.registry = await this.readPersisted()
+    }
+    return result
+  }
+
+  /** Remove a project from the registry and dispose its cached context. */
+  async removeProject(id: string): Promise<ProjectRegistry> {
+    const next = removeProjectFromRegistry(this.registry, id)
+    await this.persist(next)
+    this.registry = next
+    this.disposeProject(id)
+    return next
+  }
+
+  /** Toggle the collapsed flag on a project's accordion header. */
+  async toggleProjectCollapsed(id: string, collapsed?: boolean): Promise<ProjectRegistry> {
+    const current = this.getProject(id)
+    if (!current) return this.registry
+    const next = setProjectCollapsed(this.registry, id, collapsed ?? !current.collapsed)
+    await this.persist(next)
+    this.registry = next
+    return next
+  }
+
+  /** Persist the supplied registry through the store. */
+  async persist(registry: ProjectRegistry): Promise<void> {
+    const store = new ProjectRegistryStore(this.memento)
+    await store.save(registry)
+  }
+
+  /** Re-read the registry from disk. Used by `addProject` after a fresh save. */
+  private async readPersisted(): Promise<ProjectRegistry> {
+    const store = new ProjectRegistryStore(this.memento)
+    try {
+      return await store.load()
+    } catch {
+      return EMPTY_REGISTRY
+    }
   }
 }

@@ -671,6 +671,23 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  projects?: ProjectSummary[]
+  activeProjectId?: string
+}
+
+// Lightweight projection of a registered project for the multi-project
+// accordion sidebar. Mirrors `ProjectSummary` on the extension side.
+export interface ProjectSummary {
+  id: string
+  root: string
+  label?: string
+  order: number
+  collapsed: boolean
+  trusted: boolean
+  /** True when this project's canonical root equals the legacy
+   *  `workspaceFolders[0]` root. The single-project UI is rendered inside
+   *  the project accordion body and the header is observationally invisible. */
+  isLegacyRoot: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -705,6 +722,13 @@ export interface AgentManagerTerminalErrorMessage {
 
 export interface AgentManagerRunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
+}
+
+export interface AgentManagerProjectToastMessage {
+  type: "agentManager.projectToast"
+  level: "info" | "warn" | "error"
+  message: string
+  projectId?: string
 }
 
 // Resolved keybindings for agent manager actions
@@ -1176,6 +1200,7 @@ export type ExtensionMessage =
   | AgentManagerSessionClosedMessage
   | AgentManagerStateMessage
   | AgentManagerRunStatusMessage
+  | AgentManagerProjectToastMessage
   | AgentManagerKeybindingsMessage
   | AutoApproveStateMessage
   | SandboxStatusMessage

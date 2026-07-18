@@ -153,6 +153,20 @@ export interface Host {
   /** VS Code `globalState` Memento used for machine-local project-registry persistence. */
   globalState(): MementoLike
 
+  /**
+   * Show a folder picker and return the user's selection (URI-like object
+   * or `undefined` when the user cancels). Implementations must not throw
+   * on cancel — returning `undefined` is the cancellation signal.
+   */
+  pickFolder(opts?: { title?: string; openLabel?: string }): Promise<unknown | undefined>
+
+  /**
+   * Open the supplied folder path in the current VS Code workspace
+   * (`workbench.action.addRootFolder`). No-op on hosts that cannot mutate
+   * `workspaceFolders`.
+   */
+  addFolderToWorkspace(path: string): void
+
   /** Dispose all host resources. */
   dispose(): void
 }
