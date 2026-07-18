@@ -43,6 +43,34 @@ Kilo Code routes requests through the Kilo Gateway for model access, usage track
 - [Models & Providers](/docs/gateway/models-and-providers)
 - [Authentication & BYOK](/docs/gateway/authentication)
 
+### Provider Routing
+
+The same model can be served by several upstream inference providers that differ in quantization, context window, speed, and price. By default the gateway picks one automatically. To pin a model to a specific provider, use the routing dropdown next to the model picker in the chat input, or the **Provider Routing** row in **Settings → Models** (shown when the default model is a Kilo Gateway or OpenRouter model).
+
+The selection is stored in your global `kilo.json` as OpenRouter-style [`provider` routing preferences](https://openrouter.ai/docs/guides/routing/provider-selection) under the model's `options`:
+
+```jsonc
+{
+  "provider": {
+    "kilo": {
+      "models": {
+        "z-ai/glm-4.6": {
+          "options": {
+            "provider": {
+              "order": ["gmicloud/fp8"],
+              "only": ["gmicloud/fp8"],
+              "allow_fallbacks": false,
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+Editing the config directly also works — any field from the OpenRouter provider routing docs can be used, exactly like the [OpenRouter provider passthrough](/docs/ai-providers/openrouter#provider-routing). Note that the UI writes only the global `kilo.json`: a `provider` block set in a project-level `kilo.json` takes precedence when configs merge and will shadow selections made from the UI.
+
 ## Configuration in Kilo Code
 
 Once you've completed the registration process, Kilo Code is automatically configured:
