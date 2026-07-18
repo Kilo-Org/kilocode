@@ -153,6 +153,11 @@ export interface OpenContentRequest {
 export interface ValidateFilesRequest {
   type: "validateFiles"
   id: string
+  // Explicit session id the candidates were rendered for — the extension
+  // resolves the workspace directory from this instead of its own live
+  // `currentSession`, so a session switch mid-request can't validate paths
+  // against the wrong worktree.
+  sessionID: string
   paths: string[]
 }
 

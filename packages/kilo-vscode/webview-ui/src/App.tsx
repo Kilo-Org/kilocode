@@ -157,17 +157,23 @@ export const DataBridge: Component<{ children: any }> = (props) => {
   // File existence validation for code span candidates
   const pending = new Map<string, (existing: string[]) => void>()
   const counter = { n: 0 }
-  const validateFiles = (paths: string[]): Promise<string[]> => {
+  const validateFiles = (sessionID: string, paths: string[]): Promise<string[]> => {
     const id = `vf-${++counter.n}`
-    return new Promise((resolve) => {
-      pending.set(id, resolve)
-      vscode.postMessage({ type: "validateFiles", id, paths })
-      setTimeout(() => {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
         if (pending.has(id)) {
           pending.delete(id)
-          resolve([])
+          // A timeout is not the same as "checked and none exist" — reject so
+          // callers don't cache a false negative for real files on a slow
+          // filesystem (see file-link-validator.ts).
+          reject(new Error("validateFiles timed out"))
         }
       }, 3000)
+      pending.set(id, (existing) => {
+        clearTimeout(timer)
+        resolve(existing)
+      })
+      vscode.postMessage({ type: "validateFiles", id, sessionID, paths })
     })
   }
   const handler = (event: MessageEvent) => {

@@ -29,6 +29,7 @@ import {
   QuestionInfo,
 } from "@kilocode/sdk/v2"
 import { useData } from "../context"
+import { checkFile } from "../file-link-validator"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { type UiI18n, useI18n } from "../context/i18n"
@@ -1354,11 +1355,12 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   // Post-render: validate file-link candidates against the filesystem.
-  // Candidates that exist as files get promoted to .file-link; others stay plain code.
-  // Results are cached (capped at 500 entries) so morphdom re-renders resolve immediately.
+  // Candidates that exist as files get promoted to .file-link; others stay
+  // plain code. Caching, in-flight de-duplication, and cross-request batching
+  // all live in file-link-validator.ts's module-level singleton rather than
+  // here — a per-component cache would be discarded every time virtualization
+  // unmounts and remounts this row.
   let bodyRef: HTMLDivElement | undefined
-  const cache = new Map<string, boolean>()
-  const MAX_CACHE = 500
 
   const promote = (el: HTMLElement, path: string, exists: boolean) => {
     if (!exists) {
@@ -1376,42 +1378,31 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     el.classList.remove("file-link-candidate")
     el.classList.add("file-link")
     el.setAttribute("data-file-path", clean)
+    el.removeAttribute("data-file-candidate")
   }
 
   const validate = () => {
     if (!bodyRef || !data.validateFiles) return
-    const pending: string[] = []
-    const elements = new Map<string, HTMLElement[]>()
+    const validateFiles = data.validateFiles
+    const sessionID = props.message.sessionID
     for (const el of bodyRef.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
       const p = el.getAttribute("data-file-candidate") ?? ""
       if (!p) continue
-      // If already cached, apply immediately (no round-trip)
-      if (cache.has(p)) {
-        promote(el, p, cache.get(p)!)
-        continue
-      }
-      if (!elements.has(p)) {
-        elements.set(p, [])
-        pending.push(p)
-      }
-      elements.get(p)!.push(el)
+      void checkFile(sessionID, p, validateFiles).then((exists) => {
+        // `undefined` means validation could not be confirmed (e.g. every
+        // retry timed out) — leave the candidate untouched so a later pass
+        // can retry it instead of demoting a possibly-real file to plain text.
+        if (exists === undefined) return
+        // Guard against a stale response racing a newer candidate: morphdom
+        // can rewrite this same <code> node in place during streaming (e.g.
+        // "src/fo" -> "src/foo.ts"), so only apply the result if the element
+        // is still mounted and still represents the path we validated.
+        if (!el.isConnected) return
+        if (!el.classList.contains("file-link-candidate")) return
+        if (el.getAttribute("data-file-candidate") !== p) return
+        promote(el, p, exists)
+      })
     }
-    if (!pending.length) return
-    data
-      .validateFiles(pending)
-      .then((existing) => {
-        const set = new Set(existing)
-        for (const p of pending) {
-          if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value!)
-          cache.set(p, set.has(p))
-        }
-        for (const [p, els] of elements) {
-          for (const el of els) promote(el, p, set.has(p))
-        }
-      })
-      .catch(() => {
-        /* validateFiles timed out or failed — candidates stay as plain code */
-      })
   }
 
   // The Markdown component writes its DOM asynchronously (rAF-coalesced

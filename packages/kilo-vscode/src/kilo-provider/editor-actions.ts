@@ -11,6 +11,7 @@ type EditorOpenMessage = {
   column?: number
   content?: string
   language?: string
+  sessionID?: string
 }
 
 function openExternal(url: unknown): void {
@@ -73,7 +74,7 @@ export function handleEditorAction(
     paths?: string[]
   },
   opts: {
-    dir: () => string
+    dir: (sessionID?: string) => string
     diff?: DiffVirtualProvider
     storage?: vscode.Uri
     post?: (msg: unknown) => void
@@ -92,7 +93,11 @@ export function handleEditorAction(
     const paths = message.paths
     if (id && paths && opts.post) {
       const post = opts.post
-      validateFiles(opts.dir(), paths).then(
+      // Resolve the directory from the session id the webview validated the
+      // candidates against, not whatever session happens to be current when
+      // this message is processed (avoids validating against the wrong
+      // worktree during an Agent Manager session switch).
+      validateFiles(opts.dir(message.sessionID), paths).then(
         (existing) => post({ type: "validateFilesResult", id, existing }),
         (err) => console.error("[Kilo New] KiloProvider: validateFiles failed:", err),
       )
