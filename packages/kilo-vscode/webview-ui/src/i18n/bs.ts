@@ -252,6 +252,17 @@ export const dict = {
 
   "model.tag.free": "Besplatno",
   "model.tag.dataCollected": "Podaci se mogu koristiti za obuku",
+  "model.routing.label": "Usmjeravanje provajdera",
+  "model.routing.auto": "Automatski",
+  "model.routing.loading": "Učitavanje provajdera…",
+  "model.routing.empty": "Lista provajdera nije dostupna za ovaj model",
+  "model.routing.preview.quantization": "Kvantizacija",
+  "model.routing.preview.maxOutput": "Maks. izlaz",
+  "model.routing.preview.cacheRead": "Čitanje keša",
+  "model.routing.preview.cacheWrite": "Pisanje keša",
+  "model.routing.preview.uptime": "Dostupnost (30 min)",
+  "model.routing.preview.autoDescription": "Gateway dinamički bira provajdera prilikom slanja svakog zahtjeva.",
+  "model.routing.unavailable": "Trenutno nedostupno",
   "model.tag.latest": "Najnovije",
   "model.group.auto": "Automatski modeli",
   "model.group.recommended": "Preporučeno",
@@ -977,6 +988,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Sakrij modele koji treniraju na promptovima",
   "settings.models.hidePromptTraining.description":
     "Sakrij Kilo Gateway modele čiji pružaoci mogu koristiti vaše promptove za treniranje.",
+  "settings.models.providerRouting.title": "Usmjeravanje provajdera",
+  "settings.models.providerRouting.description":
+    "Pri usmjeravanju kroz Kilo Gateway vežite zadani model za određenog provajdera. U automatskom načinu Kilo Gateway bira provajdera.",
   "settings.providers.modeModels": "Model po režimu",
   "settings.providers.custom.note": "Dodajte prilagođenog provajdera putem osnovnog URL-a.",
   "settings.providers.modeModels.description":

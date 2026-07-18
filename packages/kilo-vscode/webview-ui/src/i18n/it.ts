@@ -203,6 +203,18 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "I modelli {{provider}} non sono più disponibili.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "I dati possono essere utilizzati per l'addestramento",
+  "model.routing.label": "Routing dei provider",
+  "model.routing.auto": "Automatico",
+  "model.routing.loading": "Caricamento dei provider…",
+  "model.routing.empty": "Nessun elenco di provider disponibile per questo modello",
+  "model.routing.preview.quantization": "Quantizzazione",
+  "model.routing.preview.maxOutput": "Output massimo",
+  "model.routing.preview.cacheRead": "Lettura cache",
+  "model.routing.preview.cacheWrite": "Scrittura cache",
+  "model.routing.preview.uptime": "Disponibilità (30 min)",
+  "model.routing.preview.autoDescription":
+    "Il gateway seleziona dinamicamente un provider al momento dell’invio di ogni richiesta.",
+  "model.routing.unavailable": "Attualmente non disponibile",
   "model.tag.latest": "Più recente",
   "model.group.auto": "Modelli automatici",
   "model.group.recommended": "Consigliati",
@@ -1715,6 +1727,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Nascondi i modelli che usano i prompt per l'addestramento",
   "settings.models.hidePromptTraining.description":
     "Nascondi i modelli Kilo Gateway i cui provider potrebbero usare i tuoi prompt per l'addestramento.",
+  "settings.models.providerRouting.title": "Routing dei provider",
+  "settings.models.providerRouting.description":
+    "Associa il modello predefinito a uno specifico provider di inferenza quando viene instradato tramite Kilo Gateway. Selezionando Automatico, la scelta spetta al gateway.",
 
   // Autocomplete hint
   "settings.autocomplete.modelsHint":

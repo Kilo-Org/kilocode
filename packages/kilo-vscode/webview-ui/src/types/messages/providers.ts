@@ -53,6 +53,23 @@ export interface ModelSelection {
   modelID: string
 }
 
+// One upstream endpoint (inference provider) serving a model; `provider` is the
+// routing slug (e.g. "gmicloud/fp8") usable in OpenRouter-style provider routing.
+export interface ModelEndpoint {
+  provider: string
+  name: string
+  quantization?: string
+  context?: number
+  output?: number
+  pricing?: {
+    input?: number
+    output?: number
+    cacheRead?: number
+    cacheWrite?: number
+  }
+  uptime?: number
+}
+
 export type ProviderAuthState = "api" | "oauth" | "wellknown"
 
 export interface ProviderConfig {

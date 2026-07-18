@@ -624,6 +624,88 @@
 }
 
 /* ============================================
+   Routing Selector (provider routing dropdown)
+   ============================================ */
+
+.routing-selector-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.routing-selector-popover {
+  transition:
+    width 0.2s ease,
+    max-width 0.2s ease;
+}
+
+.routing-selector-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.routing-selector-preview {
+  flex: 0 0 200px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.routing-selector-divider {
+  flex-shrink: 0;
+  border-top: 1px solid var(--border-base, var(--vscode-panel-border));
+}
+
+.routing-selector-list {
+  flex: 1;
+  min-width: 180px;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.routing-selector-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: var(--kilo-font-size-12);
+}
+
+.routing-selector-item:hover {
+  background: var(--surface-interactive-hover, var(--vscode-list-hoverBackground));
+}
+
+.routing-selector-item.selected {
+  background: var(
+    --surface-interactive-active,
+    var(--vscode-list-activeSelectionBackground, var(--vscode-list-hoverBackground))
+  );
+  color: var(--text-on-interactive-base, var(--vscode-list-activeSelectionForeground));
+}
+
+.routing-selector-item-name {
+  min-width: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.routing-selector-item-unavailable {
+  margin-left: auto;
+  padding-left: 8px;
+  flex-shrink: 0;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+.routing-selector-note {
+  padding: 8px 12px;
+  font-size: var(--kilo-font-size-11);
+  color: var(--text-weak, var(--vscode-descriptionForeground));
+}
+
+/* ============================================
    Mode Switcher (uses kilo-ui Popover)
    ============================================ */
 

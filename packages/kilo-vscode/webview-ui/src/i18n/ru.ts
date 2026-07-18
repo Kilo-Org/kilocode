@@ -251,6 +251,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Модели {{provider}} больше недоступны.",
   "model.tag.free": "Бесплатно",
   "model.tag.dataCollected": "Данные могут использоваться для обучения",
+  "model.routing.label": "Маршрутизация провайдера",
+  "model.routing.auto": "Авто",
+  "model.routing.loading": "Загрузка провайдеров…",
+  "model.routing.empty": "Список провайдеров недоступен для этой модели",
+  "model.routing.preview.quantization": "Квантизация",
+  "model.routing.preview.maxOutput": "Макс. вывод",
+  "model.routing.preview.cacheRead": "Чтение кэша",
+  "model.routing.preview.cacheWrite": "Запись кэша",
+  "model.routing.preview.uptime": "Доступность (30 мин)",
+  "model.routing.preview.autoDescription": "Шлюз динамически выбирает провайдера при отправке каждого запроса.",
+  "model.routing.unavailable": "Сейчас недоступен",
   "model.tag.latest": "Последняя",
   "model.group.auto": "Автоматические модели",
   "model.group.recommended": "Рекомендуемые",
@@ -974,6 +985,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Скрывать модели, обучающиеся на запросах",
   "settings.models.hidePromptTraining.description":
     "Скрывать модели Kilo Gateway, поставщики которых могут использовать ваши запросы для обучения.",
+  "settings.models.providerRouting.title": "Маршрутизация провайдера",
+  "settings.models.providerRouting.description":
+    "Закрепить модель по умолчанию за конкретным провайдером инференса при работе через Kilo Gateway. «Авто» — выбор за шлюзом.",
   "settings.providers.modeModels": "Модель для режима",
   "settings.providers.custom.note": "Добавьте пользовательского провайдера по базовому URL.",
   "settings.providers.modeModels.description":

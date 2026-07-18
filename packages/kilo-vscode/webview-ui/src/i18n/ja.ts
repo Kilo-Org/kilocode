@@ -250,6 +250,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}}のモデルは利用できなくなりました。",
   "model.tag.free": "無料",
   "model.tag.dataCollected": "データがトレーニングに使用される場合があります",
+  "model.routing.label": "プロバイダーのルーティング",
+  "model.routing.auto": "自動",
+  "model.routing.loading": "プロバイダーを読み込み中…",
+  "model.routing.empty": "このモデルで利用できるプロバイダーリストがありません",
+  "model.routing.preview.quantization": "量子化",
+  "model.routing.preview.maxOutput": "最大出力",
+  "model.routing.preview.cacheRead": "キャッシュ読み取り",
+  "model.routing.preview.cacheWrite": "キャッシュ書き込み",
+  "model.routing.preview.uptime": "稼働率（30分）",
+  "model.routing.preview.autoDescription": "ゲートウェイは、各リクエストの送信時にプロバイダーを動的に選択します。",
+  "model.routing.unavailable": "現在は利用できません",
   "model.tag.latest": "最新",
   "model.group.auto": "自動モデル",
   "model.group.recommended": "推奨",
@@ -968,6 +979,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "プロンプトを学習に使用するモデルを非表示",
   "settings.models.hidePromptTraining.description":
     "プロバイダーがプロンプトを学習に使用する可能性のある Kilo Gateway モデルを非表示にします。",
+  "settings.models.providerRouting.title": "プロバイダーのルーティング",
+  "settings.models.providerRouting.description":
+    "Kilo Gateway 経由でルーティングする際、デフォルトモデルを特定のアップストリーム推論プロバイダーに固定します。「自動」ではゲートウェイが選択します。",
   "settings.providers.modeModels": "モードごとのモデル",
   "settings.providers.custom.note": "Base URL でカスタムプロバイダーを追加します。",
   "settings.providers.modeModels.description":

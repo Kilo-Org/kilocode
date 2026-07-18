@@ -18,6 +18,8 @@ import { ChatTextAreaAutocomplete } from "./services/autocomplete/chat-autocompl
 import { notebookUri } from "./services/autocomplete/continuedev/core/autocomplete/notebook"
 import { buildWebviewHtml, getWebviewFontSize } from "./utils"
 import { saveImage } from "./kilo-provider/save-image"
+import { routingUnsetPaths, routingValue } from "./shared/provider-routing"
+import { KILO_PROVIDER_ID } from "./shared/provider-model"
 import { handleEditorAction } from "./kilo-provider/editor-actions"
 import { exportTranscript } from "./kilo-provider/export-transcript"
 import {
@@ -1401,6 +1403,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           this.postMessage({ type: "variantsLoaded", variants })
           break
         }
+        case "requestModelEndpoints":
+          this.handleRequestModelEndpoints(message.providerID, message.modelID, message.requestID)
+          break
+        case "persistModelRouting":
+          await this.handlePersistModelRouting(message.providerID, message.modelID, message.provider)
+          break
         case "persistRecents":
           await this.extensionContext?.globalState.update("recentModels", validateRecents(message.recents))
           break
@@ -2932,6 +2940,46 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       }
       throw error
     }
+  }
+
+  private handleRequestModelEndpoints(providerID: string, modelID: string, requestID: number): void {
+    const sdkClient = this.client
+    if (!sdkClient) {
+      this.postMessage({ type: "modelEndpointsLoaded", providerID, modelID, requestID, endpoints: [], error: true })
+      return
+    }
+    // Kilo Gateway models may expose gateway-specific endpoints; models configured
+    // against OpenRouter directly must only see the public catalog.
+    const catalog = providerID === KILO_PROVIDER_ID ? "kilo" : "public"
+    void sdkClient.kilo.models
+      .endpoints({ model: modelID, catalog }, { throwOnError: true })
+      .then(({ data }) => {
+        this.postMessage({ type: "modelEndpointsLoaded", providerID, modelID, requestID, endpoints: [...data] })
+      })
+      .catch((err: unknown) => {
+        console.error("[Kilo New] KiloProvider: Failed to fetch model endpoints:", err)
+        this.postMessage({ type: "modelEndpointsLoaded", providerID, modelID, requestID, endpoints: [], error: true })
+      })
+  }
+
+  private async handlePersistModelRouting(providerID: string, modelID: string, provider: string | null): Promise<void> {
+    if (provider === null) {
+      // Unset only the fields this UI owns — sibling routing preferences the
+      // user configured by hand (e.g. data_collection, sort) stay untouched.
+      await this.handleUpdateConfig({}, {}, routingUnsetPaths(providerID, modelID))
+      return
+    }
+    await this.handleUpdateConfig({
+      provider: {
+        [providerID]: {
+          models: {
+            [modelID]: {
+              options: { provider: routingValue(provider) },
+            },
+          },
+        },
+      },
+    })
   }
 
   private async handleUpdateConfig(

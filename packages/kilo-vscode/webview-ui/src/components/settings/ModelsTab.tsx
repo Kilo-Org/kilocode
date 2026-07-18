@@ -10,6 +10,13 @@ import { useSession } from "../../context/session"
 import { parseModelString } from "../../../../src/shared/provider-model"
 import { ModelSelectorBase } from "../shared/ModelSelector"
 import { ThinkingSelectorBase } from "../shared/ThinkingSelector"
+import {
+  RoutingSelectorBase,
+  modelRouting,
+  routable,
+  routingPartial,
+  useModelEndpoints,
+} from "../shared/RoutingSelector"
 import SettingsRow from "./SettingsRow"
 import { DEFAULT_SPEECH_TO_TEXT_MODEL } from "../../../../src/speech-to-text/models"
 import { hasSpeechToTextAccess, selectedSpeechToTextModel } from "../speech-to-text/availability"
@@ -76,6 +83,19 @@ const ModelsTab: Component = () => {
     })
   }
 
+  const routed = createMemo(() => {
+    const model = parseModelString(config().model ?? undefined)
+    if (!model || !routable(model.providerID, model.modelID)) return null
+    return model
+  })
+  const routingEndpoints = useModelEndpoints(() => routed() ?? undefined)
+
+  function updateRouting(provider: string | null) {
+    const model = routed()
+    if (!model) return
+    updateConfig(routingPartial(model.providerID, model.modelID, provider))
+  }
+
   const allAgents = createMemo(() => session.agents())
 
   function handleModeModelSelect(agentName: string) {
@@ -117,6 +137,23 @@ const ModelsTab: Component = () => {
             description={language.t("settings.providers.defaultModel.description")}
           />
         </SettingsRow>
+        <Show when={routed()}>
+          {(model) => (
+            <SettingsRow
+              title={language.t("settings.models.providerRouting.title")}
+              description={language.t("settings.models.providerRouting.description")}
+            >
+              <RoutingSelectorBase
+                endpoints={routingEndpoints.endpoints()}
+                value={modelRouting(config(), model().providerID, model().modelID)}
+                onSelect={(provider) => updateRouting(provider)}
+                onClear={() => updateRouting(null)}
+                onOpen={routingEndpoints.load}
+                placement="bottom-start"
+              />
+            </SettingsRow>
+          )}
+        </Show>
         <SettingsRow
           title={language.t("settings.providers.smallModel.title")}
           description={language.t("settings.providers.smallModel.description")}

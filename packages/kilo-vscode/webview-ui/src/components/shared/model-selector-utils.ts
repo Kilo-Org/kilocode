@@ -23,6 +23,15 @@ export function isAuto(model: Pick<EnrichedModel, "providerID" | "id">): boolean
   )
 }
 
+// Providers whose backends understand OpenRouter-style provider routing preferences.
+const ROUTED = new Set<string>([KILO_GATEWAY_ID, "openrouter"])
+
+/** Whether a model can be pinned to a specific upstream inference provider. */
+export function routable(providerID: string, modelID: string): boolean {
+  // Auto routing (kilo-auto/* and the legacy auto-small) has no single upstream to pin.
+  return ROUTED.has(providerID) && !modelID.startsWith("kilo-auto/") && !KILO_AUTO_SMALL_IDS.has(modelID)
+}
+
 export function isAutoEfficient(model: Pick<EnrichedModel, "providerID" | "id">): boolean {
   return model.providerID === KILO_GATEWAY_ID && model.id === KILO_AUTO_EFFICIENT_ID
 }

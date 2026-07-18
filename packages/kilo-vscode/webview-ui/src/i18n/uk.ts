@@ -252,6 +252,17 @@ export const dict = {
 
   "model.tag.free": "Безкоштовно",
   "model.tag.dataCollected": "Дані можуть використовуватися для навчання",
+  "model.routing.label": "Маршрутизація провайдерів",
+  "model.routing.auto": "Автоматично",
+  "model.routing.loading": "Завантаження провайдерів…",
+  "model.routing.empty": "Для цієї моделі немає доступного списку провайдерів",
+  "model.routing.preview.quantization": "Квантизація",
+  "model.routing.preview.maxOutput": "Макс. виведення",
+  "model.routing.preview.cacheRead": "Читання кешу",
+  "model.routing.preview.cacheWrite": "Запис кешу",
+  "model.routing.preview.uptime": "Доступність (30 хв)",
+  "model.routing.preview.autoDescription": "Шлюз динамічно вибирає провайдера під час надсилання кожного запиту.",
+  "model.routing.unavailable": "Наразі недоступний",
   "model.tag.latest": "Остання",
   "model.group.auto": "Автоматичні моделі",
   "model.group.recommended": "Рекомендовані",
@@ -1693,6 +1704,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Приховувати моделі, що навчаються на запитах",
   "settings.models.hidePromptTraining.description":
     "Приховувати моделі Kilo Gateway, постачальники яких можуть використовувати ваші запити для навчання.",
+  "settings.models.providerRouting.title": "Маршрутизація провайдерів",
+  "settings.models.providerRouting.description":
+    "Під час маршрутизації через Kilo Gateway закріпіть модель за замовчуванням за конкретним провайдером інференсу. В автоматичному режимі провайдера вибирає шлюз.",
   "settings.providers.modeModels": "Модель для кожного режиму",
   "settings.providers.modeModels.description":
     "Перевизначити стандартну модель для певних режимів. Якщо не встановлено, використовується загальна стандартна модель.",
