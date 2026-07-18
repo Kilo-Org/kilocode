@@ -259,6 +259,29 @@ export const CloudSessionData = Schema.Struct({
   messages: Schema.Array(CloudMessage),
 })
 
+export const ModelEndpoint = Schema.Struct({
+  provider: Schema.String,
+  name: Schema.String,
+  quantization: Schema.optional(Schema.String),
+  context: Schema.optional(Schema.Finite),
+  output: Schema.optional(Schema.Finite),
+  pricing: Schema.optional(
+    Schema.Struct({
+      input: Schema.optional(Schema.Finite),
+      output: Schema.optional(Schema.Finite),
+      cacheRead: Schema.optional(Schema.Finite),
+      cacheWrite: Schema.optional(Schema.Finite),
+    }),
+  ),
+  uptime: Schema.optional(Schema.Finite),
+})
+
+export const ModelEndpointsQuery = Schema.Struct({
+  ...WorkspaceRoutingQueryFields,
+  model: Schema.String,
+  catalog: Schema.optional(Schema.Literals(["kilo", "public"])),
+})
+
 export const KiloGatewayPaths = {
   modes: `${root}/modes`,
   profile: `${root}/profile`,
@@ -267,6 +290,7 @@ export const KiloGatewayPaths = {
   edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
   imageModels: `${root}/models/images`,
+  modelEndpoints: `${root}/models/endpoints`,
   notifications: `${root}/notifications`,
   organization: `${root}/organization`,
   clawStatus: `${root}/claw/status`,
@@ -359,6 +383,19 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             identifier: "kilo.models.images",
             summary: "Image generation models",
             description: "List image-capable models from the Kilo Gateway OpenRouter passthrough",
+          }),
+        ),
+        HttpApiEndpoint.get("modelEndpoints", KiloGatewayPaths.modelEndpoints, {
+          query: ModelEndpointsQuery,
+          success: described(Schema.Array(ModelEndpoint), "Upstream endpoints serving a model"),
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.models.endpoints",
+            summary: "Model endpoints",
+            description:
+              "List the upstream endpoints (inference providers) serving a model, " +
+              "usable as provider routing preferences for Kilo Gateway requests",
           }),
         ),
         HttpApiEndpoint.get("notifications", KiloGatewayPaths.notifications, {

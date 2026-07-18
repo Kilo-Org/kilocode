@@ -12210,6 +12210,49 @@ export type KiloModelsImagesResponses = {
 
 export type KiloModelsImagesResponse = KiloModelsImagesResponses[keyof KiloModelsImagesResponses]
 
+export type KiloModelsEndpointsData = {
+  body?: never
+  path?: never
+  query: {
+    directory?: string
+    workspace?: string
+    model: string
+    catalog?: "kilo" | "public"
+  }
+  url: "/kilo/models/endpoints"
+}
+
+export type KiloModelsEndpointsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type KiloModelsEndpointsError = KiloModelsEndpointsErrors[keyof KiloModelsEndpointsErrors]
+
+export type KiloModelsEndpointsResponses = {
+  /**
+   * Upstream endpoints serving a model
+   */
+  200: Array<{
+    provider: string
+    name: string
+    quantization?: string
+    context?: number
+    output?: number
+    pricing?: {
+      input?: number
+      output?: number
+      cacheRead?: number
+      cacheWrite?: number
+    }
+    uptime?: number
+  }>
+}
+
+export type KiloModelsEndpointsResponse = KiloModelsEndpointsResponses[keyof KiloModelsEndpointsResponses]
+
 export type KiloNotificationsData = {
   body?: never
   path?: never

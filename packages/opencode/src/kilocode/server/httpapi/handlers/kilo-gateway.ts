@@ -3,6 +3,7 @@ import {
   fetchCloudSession,
   fetchCloudSessionForImport,
   fetchKiloImageModels,
+  fetchKiloModelEndpoints,
   getCloudSessions,
   getOrganizationId,
   getToken,
@@ -554,6 +555,28 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       return result.models
     })
 
+    const modelEndpoints = Effect.fn("KiloGatewayHttpApi.modelEndpoints")(function* (ctx) {
+      const info = yield* auth.get("kilo").pipe(Effect.catch(() => Effect.succeed(undefined)))
+
+      const result = yield* Effect.tryPromise({
+        try: () =>
+          fetchKiloModelEndpoints(ctx.query.model, {
+            kilocodeToken: getToken(info),
+            kilocodeOrganizationId: getOrganizationId(info),
+            catalog: ctx.query.catalog,
+          }),
+        catch: () => new HttpApiError.BadRequest({}),
+      })
+
+      if (result.error && result.endpoints.length === 0) {
+        const err =
+          result.error.kind === "unauthorized" ? new HttpApiError.Unauthorized({}) : new HttpApiError.BadRequest({})
+        return yield* Effect.fail(err)
+      }
+
+      return result.endpoints
+    })
+
     return handlers
       .handle("profile", profile)
       .handle("authStatus", authStatus)
@@ -562,6 +585,7 @@ export const kiloGatewayHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilo",
       .handle("edit", edit)
       .handle("audioTranscriptions", audioTranscriptions)
       .handle("imageModels", imageModels)
+      .handle("modelEndpoints", modelEndpoints)
       .handle("notifications", notifications)
       .handle("organization", organization)
       .handle("clawStatus", clawStatus)

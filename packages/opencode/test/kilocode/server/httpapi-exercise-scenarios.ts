@@ -384,6 +384,9 @@ export const kiloScenarios: Scenario[] = [
     .status(401),
   http.protected.get("/kilo/notifications", "kilo.notifications").json(200, array),
   http.protected.get("/kilo/models/images", "kilo.models.images").probe({ path: "/path" }).status(401),
+  // Requesting without the required `model` query keeps the scenario deterministic:
+  // validation fails before the handler would reach the network.
+  http.protected.get("/kilo/models/endpoints", "kilo.models.endpoints").probe({ path: "/path" }).status(400),
   http.protected
     .post("/kilo/organization", "kilo.organization.set")
     .at((ctx) => ({ path: "/kilo/organization", headers: ctx.headers(), body: { organizationId: null } }))
