@@ -43,6 +43,8 @@ import { stopSessionProcesses } from "../kilo-provider/background-process"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
+import { ProjectRouting } from "./project-routing"
+import { ProjectUnknownError } from "./project-router"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
@@ -80,6 +82,7 @@ export class AgentManagerProvider implements Disposable {
   private unsubFont: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
+  private projects?: ProjectRouting
   // Tracks sessions owned by this panel until they are explicitly closed.
   private panelSessions = new Set<string>()
 
@@ -209,6 +212,8 @@ export class AgentManagerProvider implements Disposable {
       (event) => (event as { type?: string }).type === "session.status",
       (event) => this.onSessionStatus(event),
     )
+    this.projects = new ProjectRouting(this.host.globalState(), () => this.buildDeps(), (...args) => this.log(...args))
+    void this.projects.load()
   }
 
   private onSessionStatus(event: unknown): void {
@@ -1657,6 +1662,46 @@ export class AgentManagerProvider implements Disposable {
     return this.host.workspacePath()
   }
 
+  /**
+   * Resolve the canonical root for a repository operation.
+   *
+   * - When `projectId` is supplied and matches a registered project, the
+   *   project's canonical root is returned (the webview cannot influence
+   *   this by passing an arbitrary filesystem path).
+   * - When `projectId` is absent, the legacy `workspaceFolders[0]` root is
+   *   used unchanged so today's single-project users see no behavior change.
+   * - When `projectId` is supplied but does not resolve, this surfaces a
+   *   structured error — the webview cannot down-grade an unknown-id
+   *   rejection by piggybacking on the legacy fallback.
+   *
+   * Returns `undefined` only when neither path yields a root (the legacy
+   * path is unavailable AND no `projectId` was supplied). All other cases
+   * throw or resolve.
+   */
+  private resolveProjectRootFor(projectId: string | undefined): string | undefined {
+    try {
+      const resolved = this.projects!.resolveRoot(projectId, this.getRoot())
+      return resolved.root
+    } catch (err) {
+      if (err instanceof ProjectUnknownError) {
+        if (err.projectId) this.host.showError(`Unknown project: ${err.projectId}`)
+        return undefined
+      }
+      throw err
+    }
+  }
+
+  private buildDeps() {
+    return {
+      // Lazy per-project manager placeholder. The full instantiation is
+      // deferred to ticket #12357 (worktree create & import migration)
+      // once it knows how to draw per-project state from the
+      // ProjectContext. Returning an opaque object gives handlers something
+      // to fetch on demand without locking the type in prematurely.
+      buildWorktreeManager: () => ({ placeholder: true }) as unknown,
+    }
+  }
+
   private getWorktreeManager(): WorktreeManager | undefined {
     if (this.worktrees) return this.worktrees
     const root = this.getRoot()
@@ -1931,6 +1976,7 @@ export class AgentManagerProvider implements Disposable {
     this.prBridge.poller.stop()
     this.run.dispose()
     this.terminalManager.dispose()
+    this.projects?.disposeAll()
     await this.terminalRouter.dispose()
     const panel = this.panel
     this.panel = undefined

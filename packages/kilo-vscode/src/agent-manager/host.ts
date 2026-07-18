@@ -10,6 +10,16 @@
 
 import type { Session } from "@kilocode/sdk/v2/client"
 
+/**
+ * Minimal `Memento` projection. Lives here (the host interface) so the
+ * project-registry, project-routing, and project-context modules can share
+ * one definition without each declaring its own copy.
+ */
+export interface MementoLike {
+  get<T>(key: string): T | undefined
+  update(key: string, value: unknown): Thenable<void>
+}
+
 // ---------------------------------------------------------------------------
 // Primitives
 // ---------------------------------------------------------------------------
@@ -139,6 +149,9 @@ export interface Host {
 
   /** Ask VS Code's git extension to re-scan repositories (e.g. after worktree ref migration). */
   refreshGit(): void
+
+  /** VS Code `globalState` Memento used for machine-local project-registry persistence. */
+  globalState(): MementoLike
 
   /** Dispose all host resources. */
   dispose(): void

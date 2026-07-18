@@ -236,5 +236,9 @@ export class VscodeHost implements Host {
     void vscode.commands.executeCommand("git.refresh")
   }
 
+  globalState(): Pick<vscode.Memento, "get" | "update"> {
+    return this.context.globalState
+  }
+
   dispose(): void {}
 }
