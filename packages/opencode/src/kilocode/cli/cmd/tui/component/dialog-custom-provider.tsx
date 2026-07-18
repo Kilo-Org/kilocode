@@ -10,9 +10,10 @@
  * Kilo-owned file (path contains `kilocode`) — no upstream merge markers.
  */
 
-import { createEffect, createSignal, Match, Show, Switch, type JSX } from "solid-js"
-import { createStore, produce } from "solid-js/store"
+import { createEffect, createSignal, Match, Switch, type JSX } from "solid-js"
+import { createStore, produce, unwrap } from "solid-js/store"
 import type { Config, ProviderConfig } from "@kilocode/sdk/v2"
+import { TextAttributes } from "@opentui/core"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
 import { DialogSelect, type DialogSelectOption } from "@tui/ui/dialog-select"
 import { useDialog } from "@tui/ui/dialog"
@@ -51,6 +52,23 @@ type WizardStore = {
   selected: string[]
   manual: CustomProviderModel[]
   fetchError?: string
+}
+
+/** Plain snapshot of a WizardStore — used to pass across dialog.replace
+ *  boundaries so the next mount's createStore gets a real object, not a
+ *  reactive proxy from the previous (unmounting) component. */
+function snapshot(store: WizardStore): WizardStore {
+  return {
+    mode: store.mode,
+    providerID: store.providerID,
+    name: store.name,
+    baseURL: store.baseURL,
+    key: store.key,
+    fetched: store.fetched.slice(),
+    selected: store.selected.slice(),
+    manual: store.manual.slice(),
+    fetchError: store.fetchError,
+  }
 }
 
 /**
@@ -191,7 +209,7 @@ function Wizard(props: { initial: WizardStore }) {
   const dialog = useDialog()
   const sync = useSync()
   const toast = useToast()
-  const [state, setState] = createStore<WizardStore>(props.initial)
+  const [state, setState] = createStore<WizardStore>(unwrap(props.initial))
   const replace = (el: () => JSX.Element) => dialog.replace(el)
 
   // Prefill from existing config on first mount in edit mode.
@@ -250,7 +268,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState({ providerID: id, name: id })
-          replace(() => <Wizard initial={state} />)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -271,7 +289,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("name", name)
-          replace(() => <Wizard initial={state} />)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -292,7 +310,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("baseURL", value.trim())
-          replace(() => <Wizard initial={state} />)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -321,7 +339,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("key", parsed.kind === "key" ? parsed.key : `{env:${parsed.name}}`)
-          replace(() => <Wizard initial={state} />)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -344,7 +362,7 @@ function Wizard(props: { initial: WizardStore }) {
         onConfirm={(value) => {
           const trimmed = value.trim()
           if (!trimmed) {
-            replace(() => <Wizard initial={state} />)
+            replace(() => <Wizard initial={snapshot(state)} />)
             return
           }
           const parsed = parseSecret(trimmed)
@@ -354,7 +372,7 @@ function Wizard(props: { initial: WizardStore }) {
           }
           if (parsed.kind === "key") setState("key", parsed.key)
           else if (parsed.kind === "env") setState("key", `{env:${parsed.name}}`)
-          replace(() => <Wizard initial={state} />)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -524,29 +542,52 @@ const secretForFetch = (): string | undefined => {
   }
 
   return (
-    <Show when={true}>
-      <Switch>
-        <Match when={phase() === "fetching"}>
-          <DialogPrompt
-            title={`Custom provider — fetching models…`}
-            placeholder=""
-            value=""
-            busy
-            busyText={`Contacting ${props.state.baseURL.replace(/\/+$/, "")}/models`}
-            description={() => (
-              <text fg={theme.textMuted} wrapMode="word">
-                Fetching the model list from your provider…
+    <Switch>
+      <Match when={phase() === "fetching"}>
+        <FetchingView baseURL={props.state.baseURL} onCancel={props.onCancel} />
+      </Match>
+      <Match when={phase() !== "fetching"}>
+        <DialogSelect
+          title={titleForPhase()}
+          titleView={
+            <box flexDirection="row" justifyContent="space-between">
+              <text fg={theme.text} attributes={TextAttributes.BOLD}>
+                {titleForPhase()}
               </text>
-            )}
-            onCancel={props.onCancel}
-            onConfirm={() => undefined}
-          />
-        </Match>
-        <Match when={phase() !== "fetching"}>
-          <DialogSelect title={titleForPhase()} options={options()} />
-        </Match>
-      </Switch>
-    </Show>
+              <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+                esc
+              </text>
+            </box>
+          }
+          options={options()}
+        />
+      </Match>
+    </Switch>
+  )
+}
+
+function FetchingView(props: { baseURL: string; onCancel: () => void }) {
+  const dialog = useDialog()
+  const { theme } = useTheme()
+  return (
+    <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
+      <box flexDirection="row" justifyContent="space-between">
+        <text attributes={TextAttributes.BOLD} fg={theme.text}>
+          Custom provider — fetching models…
+        </text>
+        <text fg={theme.textMuted} onMouseUp={dialog.clear}>
+          esc
+        </text>
+      </box>
+      <box gap={1}>
+        <text fg={theme.textMuted} wrapMode="word">
+          Contacting {props.baseURL.replace(/\/+$/, "")}/models …
+        </text>
+        <text fg={theme.textMuted} wrapMode="word">
+          This may take a few seconds. Press esc to cancel.
+        </text>
+      </box>
+    </box>
   )
 }
 
