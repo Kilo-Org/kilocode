@@ -1701,18 +1701,25 @@ export const layer = Layer.effect(
         yield* Effect.promise(async () => {
           await Promise.all(
             Object.entries(discoveryLoaders).map(async ([providerID, loader]) => {
-              if (!providers[providerID]) return
-              if (!isProviderAllowed(providerID)) return
+              const id = ProviderV2.ID.make(providerID) as ProviderV2.ID
+              if (!providers[id]) return
+              if (!isProviderAllowed(id)) return
 
-              try {
-                const discovered = await loader()
-                for (const [modelID, model] of Object.entries(discovered)) {
-                  if (!providers[providerID].models[modelID]) {
-                    providers[providerID].models[modelID] = model
-                  }
+              const discovered = await Effect.runPromise(
+                Effect.tryPromise(() => loader()).pipe(
+                  Effect.catch((error) =>
+                    Effect.sync(() => {
+                      log.warn("state discovery error", { id, error })
+                      return {} as Record<string, Model>
+                    }),
+                  ),
+                ),
+              )
+
+              for (const [modelID, model] of Object.entries(discovered)) {
+                if (!providers[id].models[modelID]) {
+                  providers[id].models[modelID] = model
                 }
-              } catch (error) {
-                log.warn("state discovery error", { id: providerID, error })
               }
             }),
           )
