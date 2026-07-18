@@ -80,7 +80,7 @@ export interface IndexingConfig {
   provider?: IndexingProvider
   model?: string | null
   dimension?: number | null
-  vectorStore?: "lancedb" | "qdrant"
+  vectorStore?: "lancedb" | "qdrant" | "milvus"
   kilo?: { apiKey?: string; baseUrl?: string; organizationId?: string }
   openai?: { apiKey?: string }
   ollama?: { baseUrl?: string }
@@ -92,6 +92,7 @@ export interface IndexingConfig {
   openrouter?: { apiKey?: string; specificProvider?: string }
   voyage?: { apiKey?: string }
   qdrant?: { url?: string; apiKey?: string }
+  milvus?: { address?: string; token?: string; database?: string }
   lancedb?: { directory?: string }
   searchMinScore?: number
   searchMaxResults?: number

@@ -10,7 +10,7 @@ import type { EmbedderProvider } from "./manager"
 export interface CodeIndexConfig {
   isConfigured: boolean
   embedderProvider: EmbedderProvider
-  vectorStoreProvider?: "lancedb" | "qdrant"
+  vectorStoreProvider?: "lancedb" | "qdrant" | "milvus"
   lancedbVectorStoreDirectoryPlaceholder?: string
   modelId?: string
   modelDimension?: number
@@ -26,6 +26,9 @@ export interface CodeIndexConfig {
   voyageOptions?: { apiKey: string }
   qdrantUrl?: string
   qdrantApiKey?: string
+  milvusAddress?: string
+  milvusToken?: string
+  milvusDatabase?: string
   searchMinScore?: number
   searchMaxResults?: number
   embeddingBatchSize?: number
@@ -37,7 +40,7 @@ export type PreviousConfigSnapshot = {
   enabled: boolean
   configured: boolean
   embedderProvider: EmbedderProvider
-  vectorStoreProvider?: "lancedb" | "qdrant"
+  vectorStoreProvider?: "lancedb" | "qdrant" | "milvus"
   lancedbVectorStoreDirectory?: string
   modelId?: string
   modelDimension?: number
@@ -58,5 +61,8 @@ export type PreviousConfigSnapshot = {
   voyageApiKey?: string
   qdrantUrl?: string
   qdrantApiKey?: string
+  milvusAddress?: string
+  milvusToken?: string
+  milvusDatabase?: string
   fileExtensions: string[]
 }

@@ -20,7 +20,7 @@ const providers = [
   "openrouter",
   "voyage",
 ] as const satisfies readonly EmbedderProvider[]
-const stores = ["lancedb", "qdrant"] as const
+const stores = ["lancedb", "qdrant", "milvus"] as const
 
 export const IndexingConfig = z
   .object({
@@ -106,6 +106,15 @@ export const IndexingConfig = z
       .strict()
       .optional()
       .describe("Qdrant vector store connection options"),
+    milvus: z
+      .object({
+        address: z.string().optional(),
+        token: z.string().optional(),
+        database: z.string().optional(),
+      })
+      .strict()
+      .optional()
+      .describe("Milvus vector store connection options"),
     lancedb: z
       .object({ directory: z.string().optional() })
       .strict()
@@ -219,6 +228,13 @@ export const IndexingSchema = Schema.Struct({
       apiKey: Schema.optional(Schema.String),
     }),
   ).annotate({ description: "Qdrant vector store connection options" }),
+  milvus: Schema.optional(
+    Schema.Struct({
+      address: Schema.optional(Schema.String),
+      token: Schema.optional(Schema.String),
+      database: Schema.optional(Schema.String),
+    }),
+  ).annotate({ description: "Milvus vector store connection options" }),
   lancedb: Schema.optional(
     Schema.Struct({
       directory: Schema.optional(Schema.String),
@@ -237,9 +253,9 @@ export const IndexingSchema = Schema.Struct({
     description: "Maximum retry attempts for failed embedding batches (default: 3)",
   }),
   fileExtensions: Schema.optional(
-    Schema.mutable(
-      Schema.Array(Schema.String.check(Schema.isPattern(/^\s*\.?[A-Za-z0-9][A-Za-z0-9_+-]*\s*$/))),
-    ).check(Schema.isMinLength(1)),
+    Schema.mutable(Schema.Array(Schema.String.check(Schema.isPattern(/^\s*\.?[A-Za-z0-9][A-Za-z0-9_+-]*\s*$/)))).check(
+      Schema.isMinLength(1),
+    ),
   ).annotate({
     description: "File extension allowlist for codebase indexing (uses built-in defaults if omitted)",
   }),
@@ -260,6 +276,9 @@ export function toIndexingConfigInput(cfg: IndexingConfig | undefined): Indexing
     lancedbVectorStoreDirectory: cfg?.lancedb?.directory,
     qdrantUrl: cfg?.qdrant?.url,
     qdrantApiKey: cfg?.qdrant?.apiKey,
+    milvusAddress: cfg?.milvus?.address,
+    milvusToken: cfg?.milvus?.token,
+    milvusDatabase: cfg?.milvus?.database,
     searchMinScore: cfg?.searchMinScore,
     searchMaxResults: cfg?.searchMaxResults,
     embeddingBatchSize: cfg?.embeddingBatchSize,

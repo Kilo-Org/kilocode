@@ -3,7 +3,7 @@ import type { EmbedderProvider } from "./manager"
 export type IndexingTelemetryTrigger = "background" | "manual"
 export type IndexingTelemetryMode = "full" | "incremental"
 export type IndexingTelemetrySource = "scan" | "watcher"
-export type IndexingVectorStore = "lancedb" | "qdrant"
+export type IndexingVectorStore = "lancedb" | "qdrant" | "milvus"
 
 export type IndexingTelemetryMeta = {
   provider: EmbedderProvider
