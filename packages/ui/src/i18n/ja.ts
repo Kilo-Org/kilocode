@@ -156,6 +156,7 @@ export const dict = {
   "ui.message.collapse": "メッセージを折りたたむ",
   "ui.message.copy": "コピー",
   "ui.message.copyMessage": "メッセージをコピー",
+  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
   "ui.message.forkMessage": "新しいセッションにフォーク",
   "ui.message.revertMessage": "この時点までリセット",
   "ui.message.copyResponse": "応答をコピー",

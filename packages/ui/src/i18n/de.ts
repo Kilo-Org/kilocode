@@ -162,6 +162,7 @@ export const dict = {
   "ui.message.collapse": "Nachricht reduzieren",
   "ui.message.copy": "Kopieren",
   "ui.message.copyMessage": "Nachricht kopieren",
+  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
   "ui.message.forkMessage": "In neue Sitzung abzweigen",
   "ui.message.revertMessage": "Auf diesen Punkt zurücksetzen",
   "ui.message.copyResponse": "Antwort kopieren",

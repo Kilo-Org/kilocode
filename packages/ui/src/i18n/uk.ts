@@ -182,6 +182,7 @@ export const dict: Record<string, string> = {
   "ui.message.collapse": "Згорнути повідомлення",
   "ui.message.copy": "Копіювати",
   "ui.message.copyMessage": "Копіювати повідомлення",
+  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
   "ui.message.forkMessage": "Відгалузити в нову сесію",
   "ui.message.revertMessage": "Скинути до цього моменту",
   "ui.message.copyResponse": "Копіювати відповідь",

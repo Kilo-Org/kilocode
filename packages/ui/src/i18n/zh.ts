@@ -160,6 +160,7 @@ export const dict = {
   "ui.message.collapse": "收起消息",
   "ui.message.copy": "复制",
   "ui.message.copyMessage": "复制消息",
+  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
   "ui.message.forkMessage": "分叉到新会话",
   "ui.message.revertMessage": "重置到此点",
   "ui.message.copyResponse": "复制回复",
