@@ -48,7 +48,7 @@ describe("LanceDBRuntime", () => {
 
     try {
       await expect(LanceDBRuntime.ensure("lancedb")).rejects.toThrow(
-        'LanceDB is not supported on Intel Macs. Set "indexing.vectorStore" to "qdrant" and configure a Qdrant server.',
+        'LanceDB is not supported on Intel Macs. Set "indexing.vectorStore" to "qdrant" or "milvus" and configure an external vector database.',
       )
       expect(add).not.toHaveBeenCalled()
     } finally {

@@ -8,6 +8,11 @@ import {
 import type { AvailableEmbedders, IEmbedder } from "../../../src/indexing/interfaces/embedder"
 
 mock.module("openai", openAIMockFactory)
+mock.module("@zilliz/milvus2-sdk-node", () => ({
+  HttpClient: class {
+    constructor(public readonly config: Record<string, unknown>) {}
+  },
+}))
 import { CodeIndexServiceFactory } from "../../../src/indexing/service-factory"
 import { CodeIndexConfigManager } from "../../../src/indexing/config-manager"
 import { CacheManager } from "../../../src/indexing/cache-manager"
@@ -123,6 +128,28 @@ describe("CodeIndexServiceFactory", () => {
     const store = factory.createVectorStore() as unknown as { dbPath: string }
 
     expect(store.dbPath).toContain(dir)
+  })
+
+  test("creates a Milvus vector store with configured connection settings", () => {
+    const factory = createFactory({
+      vectorStoreProvider: "milvus",
+      milvusAddress: "https://cluster.example.com",
+      milvusToken: "token",
+      milvusDatabase: "code",
+    })
+
+    const store = factory.createVectorStore() as unknown as {
+      address: string
+      token?: string
+      database?: string
+      vectorSize: number
+    }
+
+    expect(store).toBeDefined()
+    expect(store.address).toBe("https://cluster.example.com")
+    expect(store.token).toBe("token")
+    expect(store.database).toBe("code")
+    expect(store.vectorSize).toBe(1536)
   })
 
   test("passes configured dimension to Ollama embed requests", async () => {

@@ -27,7 +27,7 @@ export namespace LanceDBRuntime {
     if (process.env[env]) return
     if (process.platform === "darwin" && process.arch === "x64") {
       throw new Error(
-        'LanceDB is not supported on Intel Macs. Set "indexing.vectorStore" to "qdrant" and configure a Qdrant server.',
+        'LanceDB is not supported on Intel Macs. Set "indexing.vectorStore" to "qdrant" or "milvus" and configure an external vector database.',
       )
     }
     if (box.ready) return box.ready
