@@ -3,14 +3,10 @@
 "@kilocode/sdk": minor
 ---
 
-Add `outputBudget` config for compaction preflight to prevent early auto-compaction.
+Auto-compaction now triggers at the configured threshold instead of ~15% earlier.
 
-Preflight compaction was using the full model output limit (65k) to calculate usable context, even though compaction summary generation only needs ~8k tokens. This caused auto-compaction to trigger ~15% earlier than configured (at ~79% instead of 90% threshold).
+Previously, preflight compaction reserved the full model output limit (65k tokens) even though compaction summary generation only needs ~8k. This caused auto-compaction to fire at ~79% context instead of the configured 90% (e.g., 314k vs 371k on a 396k model).
 
-Changes:
-- Added `outputBudget` field to compaction config schema (default: 8192)
-- Added `compactionUsable()` function that uses compaction summary budget instead of full output limit
-- Preflight now uses `compactionUsable()` instead of shared `usable()`
-- Gains ~57k usable context (~15%) before auto-compaction triggers
+Now conversations can use ~15% more context before auto-compaction kicks in.
 
 Fixes #12196 (HY3 compaction stopping at 73% context).
