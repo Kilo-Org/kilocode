@@ -1251,6 +1251,56 @@ describe("RemoteWS", () => {
     })
   })
 
+  test("AC4a: degraded heartbeat preserves the last known-good non-empty session list", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let mode: "fresh" | "wedge" = "fresh"
+      const knownGoodSessions = [
+        { id: "s1", status: "active" as const, title: "One" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () =>
+        mode === "fresh"
+          ? Promise.resolve({ sessions: knownGoodSessions })
+          : new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: fresh gather establishes a non-empty last-known-good list.
+      fireHeartbeat()
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      const payload1 = JSON.parse(socket.sent[0])
+      expect(payload1.type).toBe("heartbeat")
+      expect(payload1.sessions).toEqual(knownGoodSessions)
+
+      // Cycle 2: wedged gather times out → degraded send carries the same list.
+      mode = "wedge"
+      fireHeartbeat()
+      clock.advance(1000)
+      await flushLong()
+      expect(socket.sent.length).toBe(2)
+      const payload2 = JSON.parse(socket.sent[1])
+      expect(payload2.type).toBe("heartbeat")
+      expect(payload2.sessions).toEqual(knownGoodSessions)
+
+      // Connection still live
+      expect(conn.connected).toBe(true)
+    })
+  })
+
   test("AC4b: a gather that settles after its deadline is discarded", async () => {
     await withFakeWebSocket(async (clock) => {
       let lateResolve!: (v: { sessions: RemoteWS.SessionInfo[] }) => void
@@ -1715,6 +1765,141 @@ describe("RemoteWS", () => {
       conn.close()
       conn = undefined
       await flush()
+      expect(resolved).toBe(false)
+      expect(rejected).toBe(true)
+      expect(String(rejectionError)).toContain("remote-ws connection closed")
+    })
+  })
+
+  // AC6d: id-containment fence. A fresh heartbeat that LEGITIMATELY OMITS
+  // the announced id (e.g. an upstream `get(id)` was filtered by
+  // `Effect.orElseSucceed`) must NOT resolve an announce waiter that
+  // required that id. The waiter stays pending and is re-evaluated on
+  // the next fresh cycle whose payload actually contains the id.
+  test("AC6d: heartbeat({ requireSessionId }) stays pending on a fresh send that omits the id and resolves on the next fresh send containing it", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let mode: "without" | "with" = "without"
+      const otherSession = { id: "other", status: "active" as const, title: "Other" }
+      const targetSession = { id: "target", status: "active" as const, title: "Target" }
+      const listWithout = [otherSession] as RemoteWS.SessionInfo[]
+      const listWith = [otherSession, targetSession] as RemoteWS.SessionInfo[]
+      const getSessions = () =>
+        Promise.resolve({ sessions: mode === "without" ? listWithout : listWith })
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: fresh gather EXCLUDES "target". A heartbeat with
+      // requireSessionId="target" must stay pending even though a fresh
+      // heartbeat was sent over the live socket.
+      const idPromise = conn.heartbeat({ requireSessionId: "target" })
+      let idResolved = false
+      let idRejected = false
+      void idPromise.then(
+        () => {
+          idResolved = true
+        },
+        () => {
+          idRejected = true
+        },
+      )
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      const firstPayload = JSON.parse(socket.sent[0])
+      expect(firstPayload.type).toBe("heartbeat")
+      expect(firstPayload.sessions.map((s: { id: string }) => s.id)).toEqual(["other"])
+      expect(idResolved).toBe(false)
+      expect(idRejected).toBe(false)
+
+      // Cycle 2: switch the gather to INCLUDE "target" and drive another
+      // cycle. The id-gated waiter now resolves.
+      mode = "with"
+      // A no-id heartbeat() call drives the next cycle. It is allowed to
+      // resolve on any fresh send (it does not require a specific id) —
+      // the assertion below checks that this no-id call resolves, which
+      // guards against regressing AC6a.
+      const noIdPromise = conn.heartbeat()
+      let noIdResolved = false
+      void noIdPromise.then(
+        () => {
+          noIdResolved = true
+        },
+        () => {},
+      )
+      await flushLong()
+      expect(socket.sent.length).toBe(2)
+      const secondPayload = JSON.parse(socket.sent[1])
+      expect(secondPayload.type).toBe("heartbeat")
+      expect(secondPayload.sessions.map((s: { id: string }) => s.id).sort()).toEqual(["other", "target"])
+      // The id-gated waiter resolved on this fresh send that includes the id.
+      expect(idResolved).toBe(true)
+      expect(idRejected).toBe(false)
+      // The no-id waiter also resolved (it is satisfied by any fresh send).
+      expect(noIdResolved).toBe(true)
+    })
+  })
+
+  test("AC6e: pending heartbeat({ requireSessionId }) rejects when permanent close arrives during an in-flight gather cycle", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+
+      let c: RemoteWS.Connection | undefined
+      c = conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+        onClose: () => {
+          c?.close()
+        },
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle is in gatherOnce; the waiter has been moved into the in-flight
+      // cycleWaiters, so waiters is momentarily empty.
+      const promise = c.heartbeat({ requireSessionId: "target" })
+      let resolved = false
+      let rejected = false
+      let rejectionError: unknown
+      void promise.then(
+        () => {
+          resolved = true
+        },
+        (err) => {
+          rejected = true
+          rejectionError = err
+        },
+      )
+      await flush()
+      expect(resolved).toBe(false)
+      expect(rejected).toBe(false)
+
+      // Permanent close mirrors production: onClose calls close(), which sets
+      // the terminal closed flag. The bounded gather then times out, and the
+      // in-flight cycleWaiters must be rejected (not orphaned).
+      socket.disconnect(4403, "permanent")
+      clock.advance(1000)
+      await flushLong()
       expect(resolved).toBe(false)
       expect(rejected).toBe(true)
       expect(String(rejectionError)).toContain("remote-ws connection closed")

@@ -47,7 +47,18 @@ export namespace RemoteWS {
   export type Connection = {
     readonly connectionId: string
     send(msg: RemoteProtocol.Outbound): void
-    heartbeat(): Promise<void>
+    /**
+     * Resolves when a heartbeat built from a FRESH gather has actually been
+     * sent over a live socket. Degraded sends and non-live buffered sends
+     * leave the returned promise pending; `close()` rejects it.
+     *
+     * When `opts.requireSessionId` is provided, the promise only resolves
+     * when the sent fresh payload's session list contains that id. This
+     * fences attach-announce waiters so a fresh heartbeat that legitimately
+     * omits the announced id (e.g. the gather's `Effect.orElseSucceed`
+     * filtered it out) does not falsely report the session as attached.
+     */
+    heartbeat(opts?: { requireSessionId?: string }): Promise<void>
     close(): void
     readonly connected: boolean
   }
@@ -92,12 +103,23 @@ export namespace RemoteWS {
     // keep failing, session membership/status/title/gitUrl/gitBranch can be
     // stale indefinitely, and sessions created or closed during degradation are
     // reflected only after the first fresh gather succeeds.
+    //
+    // Attach-announce fencing (AC6): a waiter registered with
+    // `requireSessionId` stays pending until a fresh heartbeat whose
+    // payload contains that id is sent over a live socket. A fresh
+    // gather whose session list omits the required id (e.g. the
+    // upstream `get(id)` was filtered by `Effect.orElseSucceed`) does
+    // NOT resolve the waiter — it is requeued and re-evaluated on the
+    // next fresh cycle. The periodic interval keeps calling
+    // `requestCycle`, so recovery is automatic once a fresh gather
+    // includes the id. Permanent close (Connection.close) rejects the
+    // waiter.
     const gatherTimeout = options.gatherTimeout ?? 15_000
     const maxOutstandingGathers = options.maxOutstandingGathers ?? 4
     let lastGood: SessionInfo[] | undefined
     let outstanding = 0
     let degradedCount = 0
-    type Waiter = { resolve: () => void; reject: (err: unknown) => void }
+    type Waiter = { resolve: () => void; reject: (err: unknown) => void; requireSessionId?: string }
     let waiters: Waiter[] = []
 
     function makeWaiter(): { promise: Promise<void>; waiter: Waiter } {
@@ -179,9 +201,10 @@ export namespace RemoteWS {
       return undefined
     }
 
-    function heartbeat(): Promise<void> {
+    function heartbeat(opts?: { requireSessionId?: string }): Promise<void> {
       if (closed) return Promise.reject(new Error("remote-ws connection closed"))
       const { promise, waiter } = makeWaiter()
+      waiter.requireSessionId = opts?.requireSessionId
       waiters.push(waiter)
       requestCycle()
       return promise
@@ -212,7 +235,27 @@ export namespace RemoteWS {
               const sentLive = ws?.readyState === WebSocket.OPEN
               send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: fresh })
               if (sentLive) {
-                for (const w of cycleWaiters) w.resolve()
+                // A waiter requiring a specific id is satisfied only when
+                // the sent payload contains that id. Unsatisfied waiters
+                // are requeued so the periodic interval keeps evaluating
+                // them; they resolve on a future fresh send whose payload
+                // includes their required id (or reject on close).
+                const satisfied: Waiter[] = []
+                const unsatisfied: Waiter[] = []
+                for (const w of cycleWaiters) {
+                  if (
+                    w.requireSessionId === undefined ||
+                    fresh.some((s) => s.id === w.requireSessionId)
+                  ) {
+                    satisfied.push(w)
+                  } else {
+                    unsatisfied.push(w)
+                  }
+                }
+                for (const w of satisfied) w.resolve()
+                if (unsatisfied.length > 0) {
+                  waiters = unsatisfied.concat(waiters)
+                }
               } else {
                 // Buffered because the socket is not open; resolve on the next
                 // fresh send over the (re)connected socket.
