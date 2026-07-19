@@ -1,5 +1,5 @@
 import { cmd } from "../cmd"
-import { Log } from "@opencode-ai/core/util/log"
+import { Log } from "@opencode-ai/core/util/log" // kilocode_change
 import { UI } from "@/cli/ui"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
@@ -9,7 +9,7 @@ import { errorMessage } from "@/util/error"
 import { validateSession } from "./validate-session"
 import { ServerAuth } from "@/server/auth"
 
-const log = Log.create({ service: "tui.attach" })
+const log = Log.create({ service: "tui.attach" }) // kilocode_change
 
 export const AttachCommand = cmd({
   command: "attach <url>",

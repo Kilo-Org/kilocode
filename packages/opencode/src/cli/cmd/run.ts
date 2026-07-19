@@ -32,14 +32,14 @@ import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
 import { event as normalizeEvent } from "./run/event"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { errorMessage } from "@/util/error"
-import { Log } from "@opencode-ai/core/util/log"
+import { errorMessage } from "@/util/error" // kilocode_change
+import { Log } from "@opencode-ai/core/util/log" // kilocode_change
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
 import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
 
 const runtimeTask = import("./run/runtime")
-const log = Log.create({ service: "cli.run" })
+const log = Log.create({ service: "cli.run" }) // kilocode_change
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
 function pick(value: string | undefined): ModelInput | undefined {
