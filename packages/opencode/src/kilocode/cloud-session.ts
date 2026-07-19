@@ -1,4 +1,8 @@
 import { errorMessage } from "@/util/error"
+import { Log } from "@opencode-ai/core/util/log"
+import { UI } from "@/cli/ui"
+
+const log = Log.create({ service: "kilocode.cloud-session" })
 
 /**
  * Validate --cloud-fork flag combinations and return an error message if invalid.
@@ -45,4 +49,16 @@ export async function importCloudSession(
   const id = (result.data as Record<string, unknown>)?.id
   if (typeof id !== "string") throw new Error("cloud session import returned no session id")
   return id
+}
+
+/**
+ * Report a failed cloud-session import: log the cause at DEBUG and surface a
+ * human-readable message via `UI.error`. Returns `void` on purpose — it does
+ * not throw, so each caller keeps its own deterministic exit semantics
+ * (`process.exit` / `exitCode` / `shutdownAndExit` / typed `return`). The
+ * caller must still perform that exit after calling this.
+ */
+export function reportCloudImportError(err: unknown): void {
+  log.debug("failed to import cloud session", { err })
+  UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
 }

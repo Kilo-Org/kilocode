@@ -29,14 +29,10 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
 import { event as normalizeEvent } from "./run/event"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { errorMessage } from "@opencode-ai/tui/util/error" // kilocode_change
-import { Log } from "@opencode-ai/core/util/log" // kilocode_change
+import { importCloudSession, reportCloudImportError, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
 import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
-
-const log = Log.create({ service: "cli.run" }) // kilocode_change
 
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
@@ -462,8 +458,7 @@ export const RunCommand = effectCmd({
               model: current.data.model,
             }
           } catch (err) {
-            log.debug("failed to import cloud session", { err })
-            UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
+            reportCloudImportError(err)
             process.exit(1)
           }
         }

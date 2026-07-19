@@ -1,13 +1,10 @@
 import { cmd } from "./cmd"
-import { Log } from "@opencode-ai/core/util/log" // kilocode_change
 import { UI } from "@/cli/ui"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, reportCloudImportError, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { validateSession } from "../tui/validate-session"
 import { ServerAuth } from "@/server/auth"
-
-const log = Log.create({ service: "tui.attach" }) // kilocode_change
 
 export const AttachCommand = cmd({
   command: "attach <url>",
@@ -92,8 +89,7 @@ export const AttachCommand = cmd({
         args.session = id
         args.cloudFork = false
       } catch (err) {
-        log.debug("failed to import cloud session", { err })
-        UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
+        reportCloudImportError(err)
         process.exitCode = 1
         return
       }

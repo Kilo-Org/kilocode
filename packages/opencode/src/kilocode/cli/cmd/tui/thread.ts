@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto"
-import { Log } from "@opencode-ai/core/util/log"
 import { UI } from "@/cli/ui"
 import type { NetworkOptions } from "@/cli/network"
 import { ServerAuth } from "@/server/auth"
@@ -7,11 +6,9 @@ import { Flag } from "@opencode-ai/core/flag/flag"
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { TuiConfig } from "@/config/tui"
 import { validateSession } from "@/cli/tui/validate-session"
-import { importCloudSession } from "@/kilocode/cloud-session"
+import { importCloudSession, reportCloudImportError } from "@/kilocode/cloud-session"
 import { DaemonClient } from "@/kilocode/daemon/client"
 import { createKiloClient } from "@kilocode/sdk/v2"
-
-const log = Log.create({ service: "kilo.tui.thread" })
 
 type TuiInput = import("@opencode-ai/tui").TuiInput
 export type StartInput = Omit<TuiInput, "pluginHost">
@@ -46,8 +43,7 @@ async function session(input: Input, daemon: DaemonClient.Connection) {
     const id = await importCloudSession(client, input.args.session)
     return { ok: true as const, id }
   } catch (err) {
-    log.debug("failed to import cloud session", { err })
-    UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
+    reportCloudImportError(err)
     process.exitCode = 1
     return { ok: false as const }
   }

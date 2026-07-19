@@ -5,14 +5,13 @@ import path from "path"
 import { text as streamText } from "node:stream/consumers"
 import { fileURLToPath } from "url"
 import { UI } from "@/cli/ui"
-import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { withTimeout } from "@/util/timeout"
 import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network"
 import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "@opencode-ai/tui/context/sdk"
-import { importCloudSession, localSessionID, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, localSessionID, reportCloudImportError, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
@@ -356,8 +355,7 @@ export const TuiThreadCommand = cmd({
             args.session = id
             args.cloudFork = false
           } catch (err) {
-            Log.Default.debug("failed to import cloud session", { err })
-            UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
+            reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
             return
           }

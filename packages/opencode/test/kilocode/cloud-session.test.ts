@@ -1,5 +1,8 @@
-import { describe, expect, test } from "bun:test"
-import { importCloudSession } from "../../src/kilocode/cloud-session"
+import { describe, expect, test, mock } from "bun:test"
+import { importCloudSession, reportCloudImportError } from "../../src/kilocode/cloud-session"
+
+const errorMock = mock()
+mock.module("@/cli/ui", () => ({ UI: { error: errorMock } }))
 
 type ImportResult = { data?: unknown; error?: unknown }
 
@@ -31,5 +34,13 @@ describe("importCloudSession", () => {
       throw new Error("network down")
     })
     await expect(importCloudSession(c, "ses_cloud")).rejects.toThrow("network down")
+  })
+})
+
+describe("reportCloudImportError", () => {
+  test("surfaces the reason via UI.error and does not throw", () => {
+    const err = new Error("session not found")
+    expect(() => reportCloudImportError(err)).not.toThrow()
+    expect(errorMock).toHaveBeenCalledWith("Failed to import session from cloud: session not found")
   })
 })
