@@ -12,15 +12,15 @@ description: "Complete reference for all Kilo CLI commands and subcommands"
 ```
 start ACP (Agent Client Protocol) server
 
-Опции:
-  --help         Показать помощь  [булевый тип]
-  --version      Показать номер версии  [булевый тип]
-  --port         port to listen on  [число] [по умолчанию: 0]
-  --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-  --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
-  --cwd          working directory  [строковой тип] [по умолчанию: "."]
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
+  --cwd          working directory  [string] [default: "."]
 ```
 
 ## kilo mcp
@@ -28,16 +28,16 @@ start ACP (Agent Client Protocol) server
 ```
 manage MCP (Model Context Protocol) servers
 
-Команды:
-  kilo mcp add            add an MCP server
-  kilo mcp list           list MCP servers and their status  [алиасы: ls]
+Commands:
+  kilo mcp add [name]     add an MCP server
+  kilo mcp list           list MCP servers and their status  [aliases: ls]
   kilo mcp auth [name]    authenticate with an OAuth-enabled MCP server
   kilo mcp logout [name]  remove OAuth credentials for an MCP server
   kilo mcp debug <name>   debug OAuth connection for an MCP server
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo mcp add
@@ -45,9 +45,15 @@ manage MCP (Model Context Protocol) servers
 ```
 add an MCP server
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Positionals:
+  name  name of the MCP server  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --url      URL for a remote MCP server  [string]
+  --env      environment variable for a local MCP server (KEY=VALUE)  [array]
+  --header   HTTP header for a remote MCP server (KEY=VALUE)  [array]
 ```
 
 ### kilo mcp list
@@ -55,9 +61,9 @@ add an MCP server
 ```
 list MCP servers and their status
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo mcp auth
@@ -65,15 +71,15 @@ list MCP servers and their status
 ```
 authenticate with an OAuth-enabled MCP server
 
-Команды:
-  kilo mcp auth list  list OAuth-capable MCP servers and their auth status  [алиасы: ls]
+Commands:
+  kilo mcp auth list  list OAuth-capable MCP servers and their auth status  [aliases: ls]
 
 Positionals:
-  --name  name of the MCP server  [строковой тип]
+  name  name of the MCP server  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo mcp auth list
@@ -81,9 +87,9 @@ Positionals:
 ```
 list OAuth-capable MCP servers and their auth status
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo mcp logout
@@ -92,11 +98,11 @@ list OAuth-capable MCP servers and their auth status
 remove OAuth credentials for an MCP server
 
 Positionals:
-  --name  name of the MCP server  [строковой тип]
+  name  name of the MCP server  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo mcp debug
@@ -105,11 +111,11 @@ Positionals:
 debug OAuth connection for an MCP server
 
 Positionals:
-  --name  name of the MCP server  [строковой тип]
+  name  name of the MCP server  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo [project]
@@ -118,23 +124,23 @@ Positionals:
 start kilo tui
 
 Positionals:
-      --project  path to start kilo in  [строковой тип]
+  project  path to start kilo in  [string]
 
-Опции:
-      --help         Показать помощь  [булевый тип]
-      --version      Показать номер версии  [булевый тип]
-      --port         port to listen on  [число] [по умолчанию: 0]
-      --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-      --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
-  -m, --model        model to use in the format of provider/model  [строковой тип]
-  -c, --continue     continue the last session  [булевый тип]
-  -s, --session      session id to continue  [строковой тип]
-      --fork         fork the session when continuing (use with --continue or --session)  [булевый тип]
-      --cloud-fork   fetch session from cloud and continue locally (use with --session)  [булевый тип]
-      --prompt       prompt to use  [строковой тип]
-      --agent        agent to use  [строковой тип]
+Options:
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+      --port         port to listen on  [number] [default: 0]
+      --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --cors         additional domains to allow for CORS  [array] [default: []]
+  -m, --model        model to use in the format of provider/model  [string]
+  -c, --continue     continue the last session  [boolean]
+  -s, --session      session id to continue  [string]
+      --fork         fork the session when continuing (use with --continue or --session)  [boolean]
+      --cloud-fork   fetch session from cloud and continue locally (use with --session)  [boolean]
+      --prompt       prompt to use  [string]
+      --agent        agent to use  [string]
 ```
 
 ## kilo attach
@@ -143,18 +149,18 @@ Positionals:
 attach to a running kilo server
 
 Positionals:
-      --url  http://localhost:4096  [строковой тип]
+  url  http://localhost:4096  [string]
 
-Опции:
-      --help        Показать помощь  [булевый тип]
-      --version     Показать номер версии  [булевый тип]
-      --dir         directory to run in  [строковой тип]
-  -c, --continue    continue the last session  [булевый тип]
-  -s, --session     session id to continue  [строковой тип]
-      --fork        fork the session when continuing (use with --continue or --session)  [булевый тип]
-      --cloud-fork  fetch session from cloud and continue locally (use with --session)  [булевый тип]
-  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [строковой тип]
-  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [строковой тип]
+Options:
+      --help        Show help  [boolean]
+      --version     Show version number  [boolean]
+      --dir         directory to run in  [string]
+  -c, --continue    continue the last session  [boolean]
+  -s, --session     session id to continue  [string]
+      --fork        fork the session when continuing (use with --continue or --session)  [boolean]
+      --cloud-fork  fetch session from cloud and continue locally (use with --session)  [boolean]
+  -p, --password    basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username    basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
 ```
 
 ## kilo run
@@ -163,35 +169,35 @@ Positionals:
 run kilo with a message
 
 Positionals:
-      --message  message to send  [строковой тип] [по умолчанию: []]
+  message  message to send  [string] [default: []]
 
-Опции:
-      --help                          Показать помощь  [булевый тип]
-      --version                       Показать номер версии  [булевый тип]
-      --command                       the command to run, use message for args  [строковой тип]
-  -c, --continue                      continue the last session  [булевый тип]
-  -s, --session                       session id to continue  [строковой тип]
-      --fork                          fork the session before continuing (requires --continue or --session)  [булевый тип]
-      --cloud-fork                    fetch session from cloud and continue locally (use with --session)  [булевый тип]
-      --share                         share the session  [булевый тип]
-  -m, --model                         model to use in the format of provider/model  [строковой тип]
-      --agent                         agent to use  [строковой тип]
-      --format                        format: default (formatted) or json (raw JSON events)  [строковой тип] [возможности: "default", "json"] [по умолчанию: "default"]
-  -f, --file                          file(s) to attach to message  [массив]
-      --title                         title for the session (uses truncated prompt if no value provided)  [строковой тип]
-      --attach                        attach to a running kilo server (e.g., http://localhost:4096)  [строковой тип]
-  -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [строковой тип]
-  -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [строковой тип]
-      --dir                           directory to run in, path on remote server if attaching  [строковой тип]
-      --port                          port for the local server (defaults to random port if no value provided)  [число]
-      --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [строковой тип]
-      --thinking                      show thinking blocks  [булевый тип]
-      --replay                        replay interactive session history on resume and after resize (use --no-replay to disable)  [булевый тип] [по умолчанию: true]
-      --replay-limit                  cap visible interactive replay to the newest N messages  [число]
-  -i, --interactive                   run in direct interactive split-footer mode  [булевый тип] [по умолчанию: false]
-      --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [булевый тип] [по умолчанию: false]
-      --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [булевый тип] [по умолчанию: false]
-      --demo                          enable direct interactive demo slash commands; pass one as the message to run it immediately  [булевый тип] [по умолчанию: false]
+Options:
+      --help                          Show help  [boolean]
+      --version                       Show version number  [boolean]
+      --command                       the command to run, use message for args  [string]
+  -c, --continue                      continue the last session  [boolean]
+  -s, --session                       session id to continue  [string]
+      --fork                          fork the session before continuing (requires --continue or --session)  [boolean]
+      --cloud-fork                    fetch session from cloud and continue locally (use with --session)  [boolean]
+      --share                         share the session  [boolean]
+  -m, --model                         model to use in the format of provider/model  [string]
+      --agent                         agent to use  [string]
+      --format                        format: default (formatted) or json (raw JSON events)  [string] [choices: "default", "json"] [default: "default"]
+  -f, --file                          file(s) to attach to message  [array]
+      --title                         title for the session (uses truncated prompt if no value provided)  [string]
+      --attach                        attach to a running kilo server (e.g., http://localhost:4096)  [string]
+  -p, --password                      basic auth password (defaults to KILO_SERVER_PASSWORD)  [string]
+  -u, --username                      basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')  [string]
+      --dir                           directory to run in, path on remote server if attaching  [string]
+      --port                          port for the local server (defaults to random port if no value provided)  [number]
+      --variant                       model variant (provider-specific reasoning effort, e.g., high, max, minimal)  [string]
+      --thinking                      show thinking blocks  [boolean]
+      --replay                        replay interactive session history on resume and after resize (use --no-replay to disable)  [boolean] [default: true]
+      --replay-limit                  cap visible interactive replay to the newest N messages  [number]
+  -i, --interactive                   run in direct interactive split-footer mode  [boolean] [default: false]
+      --dangerously-skip-permissions  auto-approve permissions that are not explicitly denied (dangerous!)  [boolean] [default: false]
+      --auto                          auto-approve all permissions (for autonomous/pipeline usage)  [boolean] [default: false]
+      --demo                          enable direct interactive demo slash commands; pass one as the message to run it immediately  [boolean] [default: false]
 ```
 
 ## kilo debug
@@ -199,7 +205,7 @@ Positionals:
 ```
 debugging and troubleshooting tools
 
-Команды:
+Commands:
   kilo debug config        show resolved configuration
   kilo debug lsp           LSP debugging utilities
   kilo debug rg            ripgrep debugging utilities
@@ -214,9 +220,9 @@ debugging and troubleshooting tools
   kilo debug paths         show global paths (data, config, cache, state)
   kilo debug wait          wait indefinitely (for debugging)
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug config
@@ -224,9 +230,9 @@ debugging and troubleshooting tools
 ```
 show resolved configuration
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug lsp
@@ -234,14 +240,14 @@ show resolved configuration
 ```
 LSP debugging utilities
 
-Команды:
+Commands:
   kilo debug lsp diagnostics <file>      get diagnostics for a file
   kilo debug lsp symbols <query>         search workspace symbols
   kilo debug lsp document-symbols <uri>  get symbols from a document
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug lsp diagnostics
@@ -250,11 +256,11 @@ LSP debugging utilities
 get diagnostics for a file
 
 Positionals:
-  --file  [строковой тип]
+  file  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug lsp symbols
@@ -263,11 +269,11 @@ Positionals:
 search workspace symbols
 
 Positionals:
-  --query  [строковой тип]
+  query  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug lsp document-symbols
@@ -276,11 +282,11 @@ Positionals:
 get symbols from a document
 
 Positionals:
-  --uri  [строковой тип]
+  uri  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug rg
@@ -288,25 +294,13 @@ Positionals:
 ```
 ripgrep debugging utilities
 
-Команды:
-  kilo debug rg tree              show file tree using ripgrep
+Commands:
   kilo debug rg files             list files using ripgrep
   kilo debug rg search <pattern>  search file contents using ripgrep
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-```
-
-### kilo debug rg tree
-
-```
-show file tree using ripgrep
-
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --limit  [число]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug rg files
@@ -314,12 +308,12 @@ show file tree using ripgrep
 ```
 list files using ripgrep
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --query    Filter files by query  [строковой тип]
-  --glob     Glob pattern to match files  [строковой тип]
-  --limit    Limit number of results  [число]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --query    Filter files by query  [string]
+  --glob     Glob pattern to match files  [string]
+  --limit    Limit number of results  [number]
 ```
 
 ### kilo debug rg search
@@ -328,13 +322,13 @@ list files using ripgrep
 search file contents using ripgrep
 
 Positionals:
-  --pattern  Search pattern  [строковой тип]
+  pattern  Search pattern  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --glob     File glob patterns  [массив]
-  --limit    Limit number of results  [число]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --glob     File glob patterns  [array]
+  --limit    Limit number of results  [number]
 ```
 
 ### kilo debug file
@@ -342,15 +336,14 @@ Positionals:
 ```
 file system debugging utilities
 
-Команды:
+Commands:
   kilo debug file read <path>     read file contents as JSON
   kilo debug file list <path>     list files in a directory
   kilo debug file search <query>  search files by query
-  kilo debug file tree [dir]      show directory tree
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug file read
@@ -359,11 +352,11 @@ file system debugging utilities
 read file contents as JSON
 
 Positionals:
-  --path  File path to read  [строковой тип]
+  path  File path to read  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug file list
@@ -372,11 +365,11 @@ Positionals:
 list files in a directory
 
 Positionals:
-  --path  File path to list  [строковой тип]
+  path  File path to list  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug file search
@@ -385,24 +378,11 @@ Positionals:
 search files by query
 
 Positionals:
-  --query  Search query  [строковой тип]
+  query  Search query  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-```
-
-### kilo debug file tree
-
-```
-show directory tree
-
-Positionals:
-  --dir  Directory to tree  [строковой тип] [по умолчанию: "."]
-
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug scrap
@@ -410,9 +390,9 @@ Positionals:
 ```
 list all known projects
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug skill
@@ -420,9 +400,9 @@ list all known projects
 ```
 list all available skills
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug snapshot
@@ -430,14 +410,14 @@ list all available skills
 ```
 snapshot debugging utilities
 
-Команды:
+Commands:
   kilo debug snapshot track         track current snapshot state
   kilo debug snapshot patch <hash>  show patch for a snapshot hash
   kilo debug snapshot diff <hash>   show diff for a snapshot hash
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug snapshot track
@@ -445,9 +425,9 @@ snapshot debugging utilities
 ```
 track current snapshot state
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug snapshot patch
@@ -456,11 +436,11 @@ track current snapshot state
 show patch for a snapshot hash
 
 Positionals:
-  --hash  hash  [строковой тип]
+  hash  hash  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug snapshot diff
@@ -469,11 +449,11 @@ Positionals:
 show diff for a snapshot hash
 
 Positionals:
-  --hash  hash  [строковой тип]
+  hash  hash  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug startup
@@ -481,9 +461,9 @@ Positionals:
 ```
 print startup timing
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug agent
@@ -492,13 +472,13 @@ print startup timing
 show agent configuration details
 
 Positionals:
-  --name  Agent name  [строковой тип]
+  name  Agent name  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --tool     Tool id to execute  [строковой тип]
-  --params   Tool params as JSON or a JS object literal  [строковой тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --tool     Tool id to execute  [string]
+  --params   Tool params as JSON or a JS object literal  [string]
 ```
 
 ### kilo debug v2
@@ -506,9 +486,9 @@ Positionals:
 ```
 debug v2 catalog and built-in plugins
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug info
@@ -516,9 +496,9 @@ debug v2 catalog and built-in plugins
 ```
 show debug information
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug paths
@@ -526,9 +506,9 @@ show debug information
 ```
 show global paths (data, config, cache, state)
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo debug wait
@@ -536,9 +516,9 @@ show global paths (data, config, cache, state)
 ```
 wait indefinitely (for debugging)
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo auth
@@ -546,14 +526,14 @@ wait indefinitely (for debugging)
 ```
 manage AI providers and credentials
 
-Команды:
-  kilo auth list         list providers and credentials  [алиасы: ls]
-  kilo auth login [url]  log in to a provider
-  kilo auth logout       log out from a configured provider
+Commands:
+  kilo auth list               list providers and credentials  [aliases: ls]
+  kilo auth login [url]        log in to a provider
+  kilo auth logout [provider]  log out from a configured provider
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo auth list
@@ -561,9 +541,9 @@ manage AI providers and credentials
 ```
 list providers and credentials
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo auth login
@@ -572,13 +552,13 @@ list providers and credentials
 log in to a provider
 
 Positionals:
-      --url  kilo auth provider  [строковой тип]
+  url  kilo auth provider  [string]
 
-Опции:
-      --help      Показать помощь  [булевый тип]
-      --version   Показать номер версии  [булевый тип]
-  -p, --provider  provider id or name to log in to (skips provider selection)  [строковой тип]
-  -m, --method    login method label (skips method selection)  [строковой тип]
+Options:
+      --help      Show help  [boolean]
+      --version   Show version number  [boolean]
+  -p, --provider  provider id or name to log in to (skips provider selection)  [string]
+  -m, --method    login method label (skips method selection)  [string]
 ```
 
 ### kilo auth logout
@@ -586,9 +566,12 @@ Positionals:
 ```
 log out from a configured provider
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Positionals:
+  provider  provider id or name to log out from  [string]
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo agent
@@ -596,13 +579,13 @@ log out from a configured provider
 ```
 manage agents
 
-Команды:
+Commands:
   kilo agent create  create a new agent
   kilo agent list    list all available agents
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo agent create
@@ -610,14 +593,14 @@ manage agents
 ```
 create a new agent
 
-Опции:
-      --help                  Показать помощь  [булевый тип]
-      --version               Показать номер версии  [булевый тип]
-      --path                  directory path to generate the agent file  [строковой тип]
-      --description           what the agent should do  [строковой тип]
-      --mode                  agent mode  [строковой тип] [возможности: "all", "primary", "subagent"]
-      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, lsp, skill"  [строковой тип]
-  -m, --model                 model to use in the format of provider/model  [строковой тип]
+Options:
+      --help                  Show help  [boolean]
+      --version               Show version number  [boolean]
+      --path                  directory path to generate the agent file  [string]
+      --description           what the agent should do  [string]
+      --mode                  agent mode  [string] [choices: "all", "primary", "subagent"]
+      --permissions, --tools  comma-separated list of permissions to allow (default: all). Available: "bash, read, edit, glob, grep, webfetch, task, todowrite, websearch, lsp, skill"  [string]
+  -m, --model                 model to use in the format of provider/model  [string]
 ```
 
 ### kilo agent list
@@ -625,9 +608,9 @@ create a new agent
 ```
 list all available agents
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo upgrade
@@ -636,12 +619,12 @@ list all available agents
 upgrade kilo to the latest or a specific version
 
 Positionals:
-      --target  version to upgrade to, for ex '0.1.48' or 'v0.1.48'  [строковой тип]
+  target  version to upgrade to, for ex '0.1.48' or 'v0.1.48'  [string]
 
-Опции:
-      --help     Показать помощь  [булевый тип]
-      --version  Показать номер версии  [булевый тип]
-  -m, --method   installation method to use  [строковой тип] [возможности: "curl", "npm", "yarn", "pnpm", "bun", "brew", "choco", "scoop"]
+Options:
+      --help     Show help  [boolean]
+      --version  Show version number  [boolean]
+  -m, --method   installation method to use  [string] [choices: "curl", "npm", "yarn", "pnpm", "bun", "brew", "choco", "scoop"]
 ```
 
 ## kilo uninstall
@@ -649,13 +632,13 @@ Positionals:
 ```
 uninstall kilo and remove all related files
 
-Опции:
-      --help         Показать помощь  [булевый тип]
-      --version      Показать номер версии  [булевый тип]
-  -c, --keep-config  keep configuration files  [булевый тип] [по умолчанию: false]
-  -d, --keep-data    keep session data and snapshots  [булевый тип] [по умолчанию: false]
-      --dry-run      show what would be removed without removing  [булевый тип] [по умолчанию: false]
-  -f, --force        skip confirmation prompts  [булевый тип] [по умолчанию: false]
+Options:
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+  -c, --keep-config  keep configuration files  [boolean] [default: false]
+  -d, --keep-data    keep session data and snapshots  [boolean] [default: false]
+      --dry-run      show what would be removed without removing  [boolean] [default: false]
+  -f, --force        skip confirmation prompts  [boolean] [default: false]
 ```
 
 ## kilo serve
@@ -663,14 +646,14 @@ uninstall kilo and remove all related files
 ```
 starts a headless kilo server
 
-Опции:
-  --help         Показать помощь  [булевый тип]
-  --version      Показать номер версии  [булевый тип]
-  --port         port to listen on  [число] [по умолчанию: 0]
-  --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-  --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
 ```
 
 ## kilo web
@@ -678,14 +661,14 @@ starts a headless kilo server
 ```
 start kilo server and open web interface
 
-Опции:
-  --help         Показать помощь  [булевый тип]
-  --version      Показать номер версии  [булевый тип]
-  --port         port to listen on  [число] [по умолчанию: 0]
-  --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-  --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
+Options:
+  --help         Show help  [boolean]
+  --version      Show version number  [boolean]
+  --port         port to listen on  [number] [default: 0]
+  --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+  --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+  --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+  --cors         additional domains to allow for CORS  [array] [default: []]
 ```
 
 ## kilo models
@@ -694,13 +677,13 @@ start kilo server and open web interface
 list all available models
 
 Positionals:
-  --provider  provider ID to filter models by  [строковой тип]
+  provider  provider ID to filter models by  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --verbose  use more verbose model output (includes metadata like costs)  [булевый тип]
-  --refresh  refresh the models cache from models.dev  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --verbose  use more verbose model output (includes metadata like costs)  [boolean]
+  --refresh  refresh the models cache from models.dev  [boolean]
 ```
 
 ## kilo roll-call
@@ -709,17 +692,17 @@ Positionals:
 batch-test text models matching a filter for connectivity and latency
 
 Positionals:
-  --filter  regex to filter models by provider/modelID (required)  [строковой тип]
+  filter  regex to filter models by provider/modelID (required)  [string]
 
-Опции:
-  --help      Показать помощь  [булевый тип]
-  --version   Показать номер версии  [булевый тип]
-  --prompt    Prompt to send to each model  [строковой тип] [по умолчанию: "Hello"]
-  --timeout   Timeout for each model call in milliseconds  [число] [по умолчанию: 25000]
-  --parallel  Number of parallel model calls  [число] [по умолчанию: 5]
-  --verbose   Show verbose output  [булевый тип] [по умолчанию: false]
-  --quiet     Suppress progress and decoration  [булевый тип] [по умолчанию: false]
-  --output    Output format (table, json, or md)  [строковой тип] [возможности: "table", "json", "md"] [по умолчанию: "table"]
+Options:
+  --help      Show help  [boolean]
+  --version   Show version number  [boolean]
+  --prompt    Prompt to send to each model  [string] [default: "Hello"]
+  --timeout   Timeout for each model call in milliseconds  [number] [default: 25000]
+  --parallel  Number of parallel model calls  [number] [default: 5]
+  --verbose   Show verbose output  [boolean] [default: false]
+  --quiet     Suppress progress and decoration  [boolean] [default: false]
+  --output    Output format (table, json, or md)  [string] [choices: "table", "json", "md"] [default: "table"]
 ```
 
 ## kilo profile
@@ -727,10 +710,10 @@ Positionals:
 ```
 show Kilo account profile
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --json     output profile as JSON  [булевый тип] [по умолчанию: false]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     output profile as JSON  [boolean] [default: false]
 ```
 
 ## kilo stats
@@ -738,13 +721,13 @@ show Kilo account profile
 ```
 show token usage and cost statistics
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --days     show stats for the last N days (default: all time)  [число]
-  --tools    number of tools to show (default: all)  [число]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --days     show stats for the last N days (default: all time)  [number]
+  --tools    number of tools to show (default: all)  [number]
   --models   show model statistics (default: hidden). Pass a number to show top N, otherwise shows all
-  --project  filter by project (default: all projects, empty string: current project)  [строковой тип]
+  --project  filter by project (default: all projects, empty string: current project)  [string]
 ```
 
 ## kilo export
@@ -753,12 +736,12 @@ show token usage and cost statistics
 export session data as JSON
 
 Positionals:
-  --sessionID  session id to export  [строковой тип]
+  sessionID  session id to export  [string]
 
-Опции:
-  --help      Показать помощь  [булевый тип]
-  --version   Показать номер версии  [булевый тип]
-  --sanitize  redact sensitive transcript and file data  [булевый тип]
+Options:
+  --help      Show help  [boolean]
+  --version   Show version number  [boolean]
+  --sanitize  redact sensitive transcript and file data  [boolean]
 ```
 
 ## kilo import
@@ -767,11 +750,11 @@ Positionals:
 import session data from JSON file or URL
 
 Positionals:
-  --file  path to JSON file or share URL  [строковой тип]
+  file  path to JSON file or share URL  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo github
@@ -779,13 +762,13 @@ Positionals:
 ```
 manage GitHub agent
 
-Команды:
+Commands:
   kilo github install  install the GitHub agent
   kilo github run      run the GitHub agent
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo github install
@@ -793,9 +776,9 @@ manage GitHub agent
 ```
 install the GitHub agent
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo github run
@@ -803,11 +786,11 @@ install the GitHub agent
 ```
 run the GitHub agent
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --event    GitHub mock event to run the agent for  [строковой тип]
-  --token    GitHub personal access token (github_pat_********)  [строковой тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --event    GitHub mock event to run the agent for  [string]
+  --token    GitHub personal access token (github_pat_********)  [string]
 ```
 
 ## kilo pr
@@ -816,11 +799,11 @@ run the GitHub agent
 fetch and checkout a GitHub PR branch, then run kilo
 
 Positionals:
-  --number  PR number to checkout  [число]
+  number  PR number to checkout  [number]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo session
@@ -828,13 +811,13 @@ Positionals:
 ```
 manage sessions
 
-Команды:
+Commands:
   kilo session list                list sessions
   kilo session delete <sessionID>  delete a session
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo session list
@@ -842,13 +825,13 @@ manage sessions
 ```
 list sessions
 
-Опции:
-      --help       Показать помощь  [булевый тип]
-      --version    Показать номер версии  [булевый тип]
-  -n, --max-count  limit to N most recent sessions  [число]
-      --format     output format  [строковой тип] [возможности: "table", "json"] [по умолчанию: "table"]
-  -a, --all        list sessions from all projects  [булевый тип] [по умолчанию: false]
-  -s, --search     filter sessions by title  [строковой тип]
+Options:
+      --help       Show help  [boolean]
+      --version    Show version number  [boolean]
+  -n, --max-count  limit to N most recent sessions  [number]
+      --format     output format  [string] [choices: "table", "json"] [default: "table"]
+  -a, --all        list sessions from all projects  [boolean] [default: false]
+  -s, --search     filter sessions by title  [string]
 ```
 
 ### kilo session delete
@@ -857,11 +840,11 @@ list sessions
 delete a session
 
 Positionals:
-  --sessionID  session ID to delete  [строковой тип]
+  sessionID  session ID to delete  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo remote
@@ -869,9 +852,9 @@ Positionals:
 ```
 enable remote connection for real-time session relay
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo daemon
@@ -879,23 +862,23 @@ enable remote connection for real-time session relay
 ```
 manage the local kilo daemon
 
-Команды:
-  kilo daemon          start the local kilo daemon  [по умолчанию]
+Commands:
+  kilo daemon          start the local kilo daemon  [default]
   kilo daemon start    start the local kilo daemon
   kilo daemon status   show local kilo daemon status
   kilo daemon stop     stop the local kilo daemon
   kilo daemon restart  restart the local kilo daemon
 
-Опции:
-      --help         Показать помощь  [булевый тип]
-      --version      Показать номер версии  [булевый тип]
-      --port         port to listen on  [число] [по умолчанию: 0]
-      --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-      --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
-      --json         print daemon details as JSON  [булевый тип]
-  -f, --foreground   keep the command active until interrupted  [булевый тип]
+Options:
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+      --port         port to listen on  [number] [default: 0]
+      --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --cors         additional domains to allow for CORS  [array] [default: []]
+      --json         print daemon details as JSON  [boolean]
+  -f, --foreground   keep the command active until interrupted  [boolean]
 ```
 
 ### kilo daemon start
@@ -903,16 +886,16 @@ manage the local kilo daemon
 ```
 start the local kilo daemon
 
-Опции:
-      --help         Показать помощь  [булевый тип]
-      --version      Показать номер версии  [булевый тип]
-      --port         port to listen on  [число] [по умолчанию: 0]
-      --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-      --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
-      --json         print daemon details as JSON  [булевый тип]
-  -f, --foreground   keep the command active until interrupted  [булевый тип]
+Options:
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+      --port         port to listen on  [number] [default: 0]
+      --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --cors         additional domains to allow for CORS  [array] [default: []]
+      --json         print daemon details as JSON  [boolean]
+  -f, --foreground   keep the command active until interrupted  [boolean]
 ```
 
 ### kilo daemon status
@@ -920,10 +903,10 @@ start the local kilo daemon
 ```
 show local kilo daemon status
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --json     print daemon details as JSON  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     print daemon details as JSON  [boolean]
 ```
 
 ### kilo daemon stop
@@ -931,10 +914,10 @@ show local kilo daemon status
 ```
 stop the local kilo daemon
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --json     print daemon details as JSON  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     print daemon details as JSON  [boolean]
 ```
 
 ### kilo daemon restart
@@ -942,16 +925,16 @@ stop the local kilo daemon
 ```
 restart the local kilo daemon
 
-Опции:
-      --help         Показать помощь  [булевый тип]
-      --version      Показать номер версии  [булевый тип]
-      --port         port to listen on  [число] [по умолчанию: 0]
-      --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-      --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
-      --json         print daemon details as JSON  [булевый тип]
-  -f, --foreground   keep the command active until interrupted  [булевый тип]
+Options:
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+      --port         port to listen on  [number] [default: 0]
+      --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --cors         additional domains to allow for CORS  [array] [default: []]
+      --json         print daemon details as JSON  [boolean]
+  -f, --foreground   keep the command active until interrupted  [boolean]
 ```
 
 ## kilo console
@@ -959,19 +942,19 @@ restart the local kilo daemon
 ```
 open or stop the local Kilo Console
 
-Команды:
-  kilo console       open the local Kilo Console  [по умолчанию]
+Commands:
+  kilo console       open the local Kilo Console  [default]
   kilo console stop  stop the local kilo daemon
 
-Опции:
-      --help         Показать помощь  [булевый тип]
-      --version      Показать номер версии  [булевый тип]
-      --port         port to listen on  [число] [по умолчанию: 0]
-      --hostname     hostname to listen on  [строковой тип] [по умолчанию: "127.0.0.1"]
-      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [булевый тип] [по умолчанию: false]
-      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [строковой тип] [по умолчанию: "kilo.local"]
-      --cors         additional domains to allow for CORS  [массив] [по умолчанию: []]
-  -f, --foreground   keep the command active until interrupted  [булевый тип]
+Options:
+      --help         Show help  [boolean]
+      --version      Show version number  [boolean]
+      --port         port to listen on  [number] [default: 0]
+      --hostname     hostname to listen on  [string] [default: "127.0.0.1"]
+      --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)  [boolean] [default: false]
+      --mdns-domain  custom domain name for mDNS service (default: kilo.local)  [string] [default: "kilo.local"]
+      --cors         additional domains to allow for CORS  [array] [default: []]
+  -f, --foreground   keep the command active until interrupted  [boolean]
 ```
 
 ### kilo console stop
@@ -979,10 +962,10 @@ open or stop the local Kilo Console
 ```
 stop the local kilo daemon
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --json     print daemon details as JSON  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --json     print daemon details as JSON  [boolean]
 ```
 
 ## kilo db
@@ -990,17 +973,17 @@ stop the local kilo daemon
 ```
 database tools
 
-Команды:
-  kilo db [query]     open an interactive sqlite3 shell or run a query  [по умолчанию]
+Commands:
+  kilo db [query]     open an interactive sqlite3 shell or run a query  [default]
   kilo db path        print the database path
 
-Позиционные аргументы:
-  query  SQL query to execute  [строковой тип]
+Positionals:
+  query  SQL query to execute  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --format   Output format  [строковой тип] [возможности: "json", "tsv"] [по умолчанию: "tsv"]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --format   Output format  [string] [choices: "json", "tsv"] [default: "tsv"]
 ```
 
 ### kilo db path
@@ -1008,9 +991,9 @@ database tools
 ```
 print the database path
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo config
@@ -1018,12 +1001,12 @@ print the database path
 ```
 configuration tools
 
-Команды:
+Commands:
   kilo config check  check configuration for warnings and errors
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ### kilo config check
@@ -1031,9 +1014,9 @@ configuration tools
 ```
 check configuration for warnings and errors
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
 
 ## kilo plugin
@@ -1042,13 +1025,13 @@ check configuration for warnings and errors
 install plugin and update config
 
 Positionals:
-      --module  npm module name  [строковой тип]
+  module  npm module name  [string]
 
-Опции:
-      --help     Показать помощь  [булевый тип]
-      --version  Показать номер версии  [булевый тип]
-  -g, --global   install in global config  [булевый тип] [по умолчанию: false]
-  -f, --force    replace existing plugin version  [булевый тип] [по умолчанию: false]
+Options:
+      --help     Show help  [boolean]
+      --version  Show version number  [boolean]
+  -g, --global   install in global config  [boolean] [default: false]
+  -f, --force    replace existing plugin version  [boolean] [default: false]
 ```
 
 ## kilo help
@@ -1057,13 +1040,13 @@ Positionals:
 show full CLI reference
 
 Positionals:
-  --command  command to show help for  [строковой тип]
+  command  command to show help for  [string]
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
-  --all      show help for all commands  [булевый тип] [по умолчанию: false]
-  --format   output format  [строковой тип] [возможности: "md", "text"] [по умолчанию: "md"]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+  --all      show help for all commands  [boolean] [default: false]
+  --format   output format  [string] [choices: "md", "text"] [default: "md"]
 ```
 
 ## kilo completion
@@ -1071,7 +1054,7 @@ Positionals:
 ```
 generate shell completion script
 
-Опции:
-  --help     Показать помощь  [булевый тип]
-  --version  Показать номер версии  [булевый тип]
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
 ```
