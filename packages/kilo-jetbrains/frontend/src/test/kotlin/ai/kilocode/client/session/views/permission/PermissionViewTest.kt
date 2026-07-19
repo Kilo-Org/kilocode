@@ -468,7 +468,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         view.rulesForTest().toggle()
         view.rulesForTest().approveButtonsForTest()[1].doClick()
 
-        assertEquals("Allow once and Save", view.runButtonForTest().text)
+        assertEquals("Allow and Save", view.runButtonForTest().text)
         assertEquals("Reject and Save", view.denyButtonForTest().text)
         view.runButtonForTest().doClick()
 

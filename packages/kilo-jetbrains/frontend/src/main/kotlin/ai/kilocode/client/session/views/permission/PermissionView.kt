@@ -372,9 +372,14 @@ class PermissionView(
     @RequiresEdt
     private fun syncPrimaryText() {
         val changed = rules.anyDecided()
+        val key = when {
+            !changed -> "session.permission.allow.once"
+            rules.denied().isEmpty() && rules.approved().isNotEmpty() -> "session.permission.allow.save"
+            else -> "session.permission.allow.once.save"
+        }
         card.setActionText(
             ID_RUN,
-            KiloBundle.message(if (changed) "session.permission.allow.once.save" else "session.permission.allow.once"),
+            KiloBundle.message(key),
         )
         card.setActionText(
             ID_DENY,
@@ -413,7 +418,7 @@ class PermissionView(
     }
 
     // Test helpers
-    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.allow.once.save") }
+    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.allow.save") || it.text == KiloBundle.message("session.permission.allow.once.save") }
     internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") || it.text == KiloBundle.message("session.permission.reject.save") }
     internal fun codeLabelsForTest() = codeEditors()
     internal fun diffViewsForTest() = diffViews.toList()
