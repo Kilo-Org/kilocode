@@ -59,7 +59,7 @@ export namespace RemoteWS {
     clearInterval: (t) => clearInterval(t as ReturnType<typeof setInterval>),
   }
 
-  type Gen = { id: number; settled: boolean }
+  type Gen = { id: number; settled: boolean; opened: boolean }
 
   export function connect(options: Options): Connection {
     const interval = options.heartbeat ?? 10_000
@@ -135,16 +135,18 @@ export namespace RemoteWS {
       // Free the slot on ANY settle — success, rejection, or a late settle after
       // this cycle abandoned it on timeout. A late result is never read below,
       // so an abandoned gather's eventual value is discarded, never emitted.
-      const normalized = options.getSessions().then(
-        (r) => {
-          release()
-          return { ok: true as const, sessions: r.sessions }
-        },
-        (err) => {
-          release()
-          return { ok: false as const, error: err }
-        },
-      )
+      const normalized = Promise.resolve()
+        .then(() => options.getSessions())
+        .then(
+          (r) => {
+            release()
+            return { ok: true as const, sessions: r.sessions }
+          },
+          (err) => {
+            release()
+            return { ok: false as const, error: err }
+          },
+        )
       const outcome = await new Promise<
         { kind: "ok"; sessions: SessionInfo[] } | { kind: "err"; error: unknown } | { kind: "timeout" }
       >((resolve) => {
@@ -224,10 +226,12 @@ export namespace RemoteWS {
             }
           }
         }),
-      ).finally(() => {
-        beating = undefined
-        if (queued && !closed) runLoop()
-      })
+      )
+        .catch((err) => options.log.error("remote-ws heartbeat loop failed", { error: String(err) }))
+        .finally(() => {
+          beating = undefined
+          if (queued && !closed) runLoop()
+        })
     }
 
     function startHeartbeat() {
@@ -318,7 +322,7 @@ export namespace RemoteWS {
 
     async function open() {
       if (closed) return
-      const g: Gen = { id: ++currentGen, settled: false }
+      const g: Gen = { id: ++currentGen, settled: false, opened: false }
       startConnectDeadline(g)
       try {
         let token: string | undefined
@@ -354,6 +358,7 @@ export namespace RemoteWS {
             socket.close()
             return
           }
+          g.opened = true
           stopConnectDeadline()
           options.log.info("remote-ws connected", { gen: g.id, buffered: buffer.length })
           void withContext(() => options.onOpen?.())
@@ -400,10 +405,13 @@ export namespace RemoteWS {
               code: event.code,
               reason: event.reason,
             })
+            const pending = waiters
+            waiters = []
+            rejectWaiters(pending, new Error("remote-ws connection permanently closed"))
             void withContext(() => options.onClose?.(event.code, event.reason))
             return
           }
-          void withContext(() => options.onDisconnect?.())
+          if (g.opened) void withContext(() => options.onDisconnect?.())
           scheduleRetry(g)
         }
 

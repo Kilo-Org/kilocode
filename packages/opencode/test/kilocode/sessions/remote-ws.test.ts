@@ -947,6 +947,49 @@ describe("RemoteWS", () => {
     })
   })
 
+  test("AC3f: connect-attempt deadline close does not invoke onDisconnect; post-open transient close does", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let disconnects = 0
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+        onDisconnect: () => disconnects++,
+      })
+
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      // Connect deadline fires, closing the socket before it opened.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+      expect(disconnects).toBe(0)
+
+      // Retry fires after backoff; a new socket is created.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+
+      // Open the replacement socket and then close it transiently.
+      const socket = FakeWebSocket.instances[1]
+      socket.open()
+      expect(conn.connected).toBe(true)
+
+      socket.disconnect(1000, "transient")
+      await flush()
+      expect(disconnects).toBe(1)
+      expect(conn.connected).toBe(false)
+    })
+  })
+
   // -------------------------------------------------------------------------
   // AC5: regression guard for permanent close codes and backoff reset
   //
@@ -958,6 +1001,7 @@ describe("RemoteWS", () => {
   // - Activity timeout: "force-reconnects on activity timeout" / "resets activity timer...".
   // Missing and added below:
   // - 4403 and 4409 permanent close (no reconnect, onClose fired).
+  // - Pending heartbeat() waiters reject on permanent close.
   // - Backoff resets to the initial value after a successful onopen.
   // -------------------------------------------------------------------------
 
@@ -993,6 +1037,62 @@ describe("RemoteWS", () => {
         clock.advance(120_000)
         await flush()
         expect(FakeWebSocket.instances.length).toBe(1)
+      }
+    })
+  })
+
+  test("AC5b: pending heartbeat() rejects on permanent close codes 4403 and 4409", async () => {
+    await withFakeWebSocket(async (clock) => {
+      for (const code of [4403, 4409]) {
+        conn?.close()
+        const closed: Array<{ code: number; reason: string }> = []
+        FakeWebSocket.reset()
+
+        conn = RemoteWS.connect({
+          url: "ws://example.test",
+          getToken: async () => "tok",
+          getSessions: () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {}),
+          log: nolog(),
+          heartbeat: 60_000,
+          timers: clock,
+          now: () => clock.now,
+          timeout: 300_000,
+          gatherTimeout: 1000,
+          onClose: (c, r) => closed.push({ code: c, reason: r }),
+        })
+
+        await flush()
+        const socket = FakeWebSocket.instances[0]
+        socket.open()
+
+        // Wedge the gather so heartbeat() stays pending.
+        const promise = conn.heartbeat()
+        let resolved = false
+        let rejected = false
+        let rejectionError: unknown
+        void promise.then(
+          () => {
+            resolved = true
+          },
+          (err) => {
+            rejected = true
+            rejectionError = err
+          },
+        )
+        clock.advance(1000)
+        await flushLong()
+        expect(socket.sent.length).toBe(1)
+        expect(resolved).toBe(false)
+        expect(rejected).toBe(false)
+
+        // Permanent close: pending waiter must reject, and onClose fires.
+        socket.disconnect(code, "permanent")
+        await flush()
+        expect(resolved).toBe(false)
+        expect(rejected).toBe(true)
+        expect(String(rejectionError)).toContain("remote-ws connection permanently closed")
+        expect(closed).toEqual([{ code, reason: "permanent" }])
+        expect(conn.connected).toBe(false)
       }
     })
   })
@@ -1307,6 +1407,74 @@ describe("RemoteWS", () => {
       expect(calls).toBe(3)
       expect(socket.sent.length).toBe(3)
       expect(JSON.parse(socket.sent[2]).sessions).toEqual(freshSessions)
+    })
+  })
+
+  test("AC4g: synchronously-throwing getSessions releases slot and recovers", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let calls = 0
+      let mode: "throw" | "fresh" = "throw"
+      const freshSessions = [
+        { id: "fresh", status: "active" as const, title: "Fresh" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () => {
+        calls++
+        if (mode === "throw") {
+          throw new Error("gather sync throw")
+        }
+        return Promise.resolve({ sessions: freshSessions })
+      }
+
+      const unhandled: unknown[] = []
+      const onUnhandled = (reason: unknown) => unhandled.push(reason)
+      process.on("unhandledRejection", onUnhandled)
+
+      try {
+        conn = RemoteWS.connect({
+          url: "ws://example.test",
+          getToken: async () => "tok",
+          getSessions,
+          log: nolog(),
+          heartbeat: 60_000,
+          timers: clock,
+          now: () => clock.now,
+          timeout: 300_000,
+          gatherTimeout: 1000,
+          maxOutstandingGathers: 1,
+        })
+
+        await flush()
+        const socket = FakeWebSocket.instances[0]
+        socket.open()
+
+        // Cycle 1: synchronous throw → degraded (cold start → empty)
+        fireHeartbeat()
+        await flushLong()
+        expect(calls).toBe(1)
+        expect(socket.sent.length).toBe(1)
+        expect(JSON.parse(socket.sent[0]).sessions).toEqual([])
+        expect(conn.connected).toBe(true)
+
+        // Cycle 2: with maxOutstandingGathers=1, a leaked slot would hit the cap
+        // and skip getSessions. The call proves the slot was released.
+        fireHeartbeat()
+        await flushLong()
+        expect(calls).toBe(2)
+        expect(socket.sent.length).toBe(2)
+        expect(JSON.parse(socket.sent[1]).sessions).toEqual([])
+
+        // Switch to fresh → recovers to fresh payloads
+        mode = "fresh"
+        fireHeartbeat()
+        await flushLong()
+        expect(calls).toBe(3)
+        expect(socket.sent.length).toBe(3)
+        expect(JSON.parse(socket.sent[2]).sessions).toEqual(freshSessions)
+
+        expect(unhandled).toEqual([])
+      } finally {
+        process.off("unhandledRejection", onUnhandled)
+      }
     })
   })
 
