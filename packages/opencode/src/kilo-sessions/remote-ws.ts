@@ -38,6 +38,10 @@ export namespace RemoteWS {
     tokenTimeout?: number
     /** Connection-attempt deadline (token acquisition through onopen) in ms. Defaults to 30_000. */
     connectTimeout?: number
+    /** Session-gather deadline in ms. Defaults to 15_000. */
+    gatherTimeout?: number
+    /** Max unresolved gather operations before cycles send degraded heartbeats. Defaults to 4. */
+    maxOutstandingGathers?: number
   }
 
   export type Connection = {
@@ -73,39 +77,162 @@ export namespace RemoteWS {
     const buffer: string[] = []
     let beating: Promise<void> | undefined
     let queued = false
+    // --- Bounded heartbeat gather with freshness-fenced attach (Path D fix) ---
+    // A single never-settling getSessions() must not permanently kill heartbeats.
+    // Each cycle bounds the gather with a deadline; on failure it sends a
+    // "degraded" heartbeat carrying the last known-good session list so
+    // server-side liveness is preserved even when metadata is stale. Callers
+    // awaiting heartbeat() (session attach announcements) resolve ONLY when a
+    // heartbeat built from a FRESH gather is actually sent over a live socket;
+    // degraded sends leave them pending, a transient reconnect keeps them
+    // pending (they resolve on the next fresh send over the new socket), and
+    // Connection.close() rejects them.
+    //
+    // Degraded-mode limitation (deliberate, bounded by recovery): while gathers
+    // keep failing, session membership/status/title/gitUrl/gitBranch can be
+    // stale indefinitely, and sessions created or closed during degradation are
+    // reflected only after the first fresh gather succeeds.
+    const gatherTimeout = options.gatherTimeout ?? 15_000
+    const maxOutstandingGathers = options.maxOutstandingGathers ?? 4
+    let lastGood: SessionInfo[] | undefined
+    let outstanding = 0
+    let degradedCount = 0
+    type Waiter = { resolve: () => void; reject: (err: unknown) => void }
+    let waiters: Waiter[] = []
+
+    function makeWaiter(): { promise: Promise<void>; waiter: Waiter } {
+      let resolve!: () => void
+      let reject!: (err: unknown) => void
+      const promise = new Promise<void>((res, rej) => {
+        resolve = res
+        reject = rej
+      })
+      return { promise, waiter: { resolve, reject } }
+    }
+
+    function rejectWaiters(list: Waiter[], err: unknown) {
+      for (const w of list) w.reject(err)
+    }
+
+    // One bounded gather. Never throws. Returns the fresh session list, or
+    // undefined to signal a degraded cycle (caller sends last known-good).
+    async function gatherOnce(): Promise<SessionInfo[] | undefined> {
+      if (outstanding >= maxOutstandingGathers) {
+        degradedCount++
+        options.log.warn("remote-ws heartbeat gather cap reached, degraded heartbeat", {
+          outstanding,
+          degraded: degradedCount,
+        })
+        return undefined
+      }
+      outstanding++
+      let released = false
+      const release = () => {
+        if (released) return
+        released = true
+        outstanding--
+      }
+      // Free the slot on ANY settle — success, rejection, or a late settle after
+      // this cycle abandoned it on timeout. A late result is never read below,
+      // so an abandoned gather's eventual value is discarded, never emitted.
+      const normalized = options.getSessions().then(
+        (r) => {
+          release()
+          return { ok: true as const, sessions: r.sessions }
+        },
+        (err) => {
+          release()
+          return { ok: false as const, error: err }
+        },
+      )
+      const outcome = await new Promise<
+        { kind: "ok"; sessions: SessionInfo[] } | { kind: "err"; error: unknown } | { kind: "timeout" }
+      >((resolve) => {
+        let done = false
+        const t = timers.setTimeout(() => {
+          if (done) return
+          done = true
+          resolve({ kind: "timeout" })
+        }, gatherTimeout)
+        void normalized.then((res) => {
+          if (done) return
+          done = true
+          timers.clearTimeout(t)
+          resolve(res.ok ? { kind: "ok", sessions: res.sessions } : { kind: "err", error: res.error })
+        })
+      })
+      if (outcome.kind === "ok") return outcome.sessions
+      degradedCount++
+      if (outcome.kind === "err") {
+        options.log.warn("remote-ws heartbeat gather rejected, degraded heartbeat", {
+          error: String(outcome.error),
+          degraded: degradedCount,
+        })
+      } else {
+        options.log.warn("remote-ws heartbeat gather timeout, degraded heartbeat", {
+          outstanding,
+          degraded: degradedCount,
+        })
+      }
+      return undefined
+    }
 
     function heartbeat(): Promise<void> {
-      queued = true
-      if (beating) return beating
+      if (closed) return Promise.reject(new Error("remote-ws connection closed"))
+      const { promise, waiter } = makeWaiter()
+      waiters.push(waiter)
+      requestCycle()
+      return promise
+    }
 
-      const current = Promise.resolve(
+    // Interval-driven ticks call requestCycle directly so the periodic heartbeat
+    // never registers a waiter (no waiter accumulation during degradation).
+    function requestCycle() {
+      queued = true
+      runLoop()
+    }
+
+    function runLoop() {
+      if (beating || closed) return
+      beating = Promise.resolve(
         withContext(async () => {
-          while (queued) {
-            if (closed) return
+          while (queued && !closed) {
             queued = false
-            const sessions = await options.getSessions()
-            if (closed) return
-            send({ type: "heartbeat", protocolVersion: InstallationVersion, ...sessions })
+            const cycleWaiters = waiters
+            waiters = []
+            const fresh = await gatherOnce()
+            if (closed) {
+              rejectWaiters(cycleWaiters, new Error("remote-ws connection closed"))
+              return
+            }
+            if (fresh !== undefined) {
+              lastGood = fresh
+              const sentLive = ws?.readyState === WebSocket.OPEN
+              send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: fresh })
+              if (sentLive) {
+                for (const w of cycleWaiters) w.resolve()
+              } else {
+                // Buffered because the socket is not open; resolve on the next
+                // fresh send over the (re)connected socket.
+                waiters = cycleWaiters.concat(waiters)
+              }
+            } else {
+              // Degraded: preserve liveness with the last known-good list (empty
+              // on cold start) and keep waiters pending for a future fresh send.
+              send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: lastGood ?? [] })
+              waiters = cycleWaiters.concat(waiters)
+            }
           }
         }),
       ).finally(() => {
         beating = undefined
-        if (!queued || closed) return
-        void heartbeat().catch((err) => {
-          options.log.error("remote-ws heartbeat failed", { error: String(err) })
-        })
+        if (queued && !closed) runLoop()
       })
-      beating = current
-      return current
     }
 
     function startHeartbeat() {
       stopHeartbeat()
-      beat = timers.setInterval(() => {
-        void heartbeat().catch((err) => {
-          options.log.error("remote-ws heartbeat failed", { error: String(err) })
-        })
-      }, interval)
+      beat = timers.setInterval(() => requestCycle(), interval)
     }
 
     function stopHeartbeat() {
@@ -236,6 +363,7 @@ export namespace RemoteWS {
           activity = now()
           startHeartbeat()
           startWatchdog()
+          if (waiters.length > 0) requestCycle()
         }
 
         socket.onmessage = (event) => {
@@ -314,6 +442,9 @@ export namespace RemoteWS {
       stopConnectDeadline()
       if (timer) timers.clearTimeout(timer)
       if (ws) ws.close()
+      const pending = waiters
+      waiters = []
+      rejectWaiters(pending, new Error("remote-ws connection closed"))
     }
 
     void open()

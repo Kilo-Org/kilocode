@@ -123,6 +123,14 @@ async function flush() {
   await Promise.resolve()
 }
 
+async function flushLong(iterations = 10) {
+  // Flush enough microtask ticks for a full gather cycle to settle:
+  // .then handler on getSessions → .then handler on normalized → resolve inner
+  // Promise → await resume in gatherOnce → await resume in while loop body →
+  // .finally on runLoop's beating Promise.
+  for (let i = 0; i < iterations; i++) await Promise.resolve()
+}
+
 function createServer() {
   const messages: string[] = []
   const clients: ServerWebSocket<unknown>[] = []
@@ -197,6 +205,12 @@ describe("RemoteWS", () => {
     conn = undefined
     server?.stop()
   })
+
+  // Fire a heartbeat() and swallow its rejection (e.g. on close()) so the
+  // discarded promise cannot become an unhandled rejection.
+  function fireHeartbeat() {
+    void conn?.heartbeat().catch(() => {})
+  }
 
   test("connects and sends heartbeat", async () => {
     server = createServer()
@@ -1023,6 +1037,459 @@ describe("RemoteWS", () => {
       clock.advance(1)
       await flush()
       expect(FakeWebSocket.instances.length).toBe(3)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // AC4: bounded heartbeat gather with freshness-fenced attach (Path D fix)
+  // -------------------------------------------------------------------------
+
+  test("AC4a: never-settling gather sends a degraded heartbeat and keeps the connection live", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+
+      const promise = conn.heartbeat()
+      clock.advance(1000)
+      await flushLong()
+
+      // Degraded heartbeat was sent over the live socket (cold start → empty)
+      expect(socket.sent.length).toBe(1)
+      const parsed = JSON.parse(socket.sent[0])
+      expect(parsed.type).toBe("heartbeat")
+      expect(parsed.sessions).toEqual([])
+
+      // Connection still live
+      expect(conn.connected).toBe(true)
+
+      // Waiter stays pending (degraded sends do not resolve attach)
+      let resolved = false
+      void promise.then(
+        () => {
+          resolved = true
+        },
+        () => {},
+      )
+      await flushLong()
+      expect(resolved).toBe(false)
+    })
+  })
+
+  test("AC4b: a gather that settles after its deadline is discarded", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let lateResolve!: (v: { sessions: RemoteWS.SessionInfo[] }) => void
+      const getSessions = () =>
+        new Promise<{ sessions: RemoteWS.SessionInfo[] }>((r) => {
+          lateResolve = r
+        })
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: wedge, then time out → degraded send (cold start → empty)
+      fireHeartbeat()
+      clock.advance(1000)
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      expect(JSON.parse(socket.sent[0]).sessions).toEqual([])
+
+      // Late settle: the original getSessions promise eventually resolves.
+      // This must NOT cause any additional heartbeat to be sent — its result
+      // is discarded because the cycle already abandoned it on timeout.
+      lateResolve({
+        sessions: [{ id: "late", status: "active", title: "Late" }] as RemoteWS.SessionInfo[],
+      })
+      await flushLong()
+
+      // No further heartbeat sent; the last payload is still the degraded/last-good list
+      expect(socket.sent.length).toBe(1)
+      expect(JSON.parse(socket.sent[0]).sessions).toEqual([])
+    })
+  })
+
+  test("AC4c: after a timed-out cycle, a later fresh-gather cycle sends fresh sessions", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let mode: "wedge" | "fresh" = "wedge"
+      const freshSessions = [
+        { id: "fresh", status: "active" as const, title: "Fresh" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () =>
+        mode === "wedge"
+          ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+          : Promise.resolve({ sessions: freshSessions })
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: wedge → degraded send
+      fireHeartbeat()
+      clock.advance(1000)
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      expect(JSON.parse(socket.sent[0]).sessions).toEqual([])
+
+      // Cycle 2: switch to fresh, kick another cycle
+      mode = "fresh"
+      const promise2 = conn.heartbeat()
+      void promise2.catch(() => {})
+      await flushLong()
+      expect(socket.sent.length).toBe(2)
+      const payload2 = JSON.parse(socket.sent[1])
+      expect(payload2.type).toBe("heartbeat")
+      expect(payload2.sessions).toEqual(freshSessions)
+      // The fresh cycle sent over a live socket → promise resolved
+      await promise2
+    })
+  })
+
+  test("AC4d: maxOutstandingGathers cap blocks calls while wedged; settling one allows recovery", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let calls = 0
+      let mode: "wedge" | "fresh" = "wedge"
+      const wedgeResolvers: Array<(v: { sessions: RemoteWS.SessionInfo[] }) => void> = []
+      const freshSessions = [
+        { id: "fresh", status: "active" as const, title: "Fresh" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () => {
+        calls++
+        if (mode === "wedge") {
+          return new Promise<{ sessions: RemoteWS.SessionInfo[] }>((r) => {
+            wedgeResolvers.push(r)
+          })
+        }
+        return Promise.resolve({ sessions: freshSessions })
+      }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+        maxOutstandingGathers: 2,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: wedge → degraded. The wedge never settles, so its slot stays held.
+      fireHeartbeat()
+      clock.advance(1000)
+      await flushLong()
+      expect(calls).toBe(1)
+      expect(JSON.parse(socket.sent[0]).sessions).toEqual([])
+
+      // Cycle 2: wedge → degraded. Second wedge held, outstanding now at cap (2).
+      fireHeartbeat()
+      clock.advance(1000)
+      await flushLong()
+      expect(calls).toBe(2)
+      expect(JSON.parse(socket.sent[1]).sessions).toEqual([])
+
+      // Cycle 3: cap reached. getSessions MUST NOT be called again, but a
+      // degraded heartbeat must still be sent (liveness is preserved).
+      fireHeartbeat()
+      clock.advance(1000)
+      await flushLong()
+      expect(calls).toBe(2)
+      expect(socket.sent.length).toBe(3)
+      expect(JSON.parse(socket.sent[2]).sessions).toEqual([])
+
+      // Settle the first wedge → its slot is released, outstanding drops to 1.
+      wedgeResolvers.shift()!({ sessions: freshSessions })
+      // Let the .then release handler run (microtask).
+      await flushLong()
+      // Switch to fresh so the next gather resolves promptly.
+      mode = "fresh"
+      // Cycle 4: outstanding=1 < cap=2, getSessions IS called, resolves fresh.
+      fireHeartbeat()
+      await flushLong()
+      expect(calls).toBe(3)
+      expect(socket.sent.length).toBe(4)
+      expect(JSON.parse(socket.sent[3]).sessions).toEqual(freshSessions)
+    })
+  })
+
+  test("AC4f: promptly-rejecting getSessions → degraded, no slot consumed, recovers on resolve", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let calls = 0
+      let mode: "reject" | "fresh" = "reject"
+      const freshSessions = [
+        { id: "fresh", status: "active" as const, title: "Fresh" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () => {
+        calls++
+        return mode === "reject"
+          ? Promise.reject(new Error("gather failed"))
+          : Promise.resolve({ sessions: freshSessions })
+      }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: reject → degraded (cold start → empty)
+      fireHeartbeat()
+      await flushLong()
+      expect(calls).toBe(1)
+      expect(JSON.parse(socket.sent[0]).sessions).toEqual([])
+
+      // Cycle 2: reject again — no slot was held, so getSessions is called again immediately
+      fireHeartbeat()
+      await flushLong()
+      expect(calls).toBe(2)
+      expect(socket.sent.length).toBe(2)
+      expect(JSON.parse(socket.sent[1]).sessions).toEqual([])
+
+      // Switch to fresh → next cycle is fresh
+      mode = "fresh"
+      fireHeartbeat()
+      await flushLong()
+      expect(calls).toBe(3)
+      expect(socket.sent.length).toBe(3)
+      expect(JSON.parse(socket.sent[2]).sessions).toEqual(freshSessions)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // AC6: freshness-fenced attach — heartbeat() resolves only on a fresh send
+  // over a live socket; survives transient reconnect; rejects on close()
+  // -------------------------------------------------------------------------
+
+  test("AC6a: heartbeat() does not resolve on degraded, resolves on the next fresh send", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let mode: "wedge" | "fresh" = "wedge"
+      const freshSessions = [
+        { id: "fresh", status: "active" as const, title: "Fresh" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () =>
+        mode === "wedge"
+          ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+          : Promise.resolve({ sessions: freshSessions })
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Degraded cycle: promise stays pending
+      const promise1 = conn.heartbeat()
+      let settled1 = false
+      void promise1.then(
+        () => {
+          settled1 = true
+        },
+        () => {},
+      )
+      clock.advance(1000)
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      expect(settled1).toBe(false)
+
+      // Fresh cycle: both the deferred promise1 and the new promise2 resolve
+      mode = "fresh"
+      const promise2 = conn.heartbeat()
+      let settled2 = false
+      void promise2.then(
+        () => {
+          settled2 = true
+        },
+        () => {},
+      )
+      await flushLong()
+      expect(socket.sent.length).toBe(2)
+      expect(JSON.parse(socket.sent[1]).sessions).toEqual(freshSessions)
+      expect(settled1).toBe(true)
+      expect(settled2).toBe(true)
+    })
+  })
+
+  test("AC6b: pending heartbeat() survives disconnect+reconnect and resolves on fresh send over the new socket", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let mode: "wedge" | "fresh" = "wedge"
+      const freshSessions = [
+        { id: "fresh", status: "active" as const, title: "Fresh" },
+      ] as RemoteWS.SessionInfo[]
+      const getSessions = () =>
+        mode === "wedge"
+          ? new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+          : Promise.resolve({ sessions: freshSessions })
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket1 = FakeWebSocket.instances[0]
+      socket1.open()
+
+      // Cycle 1 on socket1: wedge → degraded send, waiter pending
+      const promise = conn.heartbeat()
+      let settled = false
+      void promise.then(
+        () => {
+          settled = true
+        },
+        () => {},
+      )
+      clock.advance(1000)
+      await flushLong()
+      expect(socket1.sent.length).toBe(1)
+      expect(settled).toBe(false)
+
+      // Transient disconnect
+      socket1.disconnect(1000, "transient")
+      await flush()
+      expect(conn.connected).toBe(false)
+
+      // Switch to fresh before reconnect so the next gather is fresh
+      mode = "fresh"
+
+      // Reconnect after backoff
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+      const socket2 = FakeWebSocket.instances[1]
+      socket2.open()
+      await flushLong()
+      expect(conn.connected).toBe(true)
+
+      // The onopen handler kicks a cycle because waiters > 0; that fresh
+      // cycle sends over socket2 and resolves the deferred waiter.
+      expect(socket2.sent.length).toBe(1)
+      const payload = JSON.parse(socket2.sent[0])
+      expect(payload.type).toBe("heartbeat")
+      expect(payload.sessions).toEqual(freshSessions)
+      expect(settled).toBe(true)
+    })
+  })
+
+  test("AC6c: pending heartbeat() rejects (does not hang) when close() is called", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const getSessions = () =>
+        new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {}) // wedge
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: wedge → degraded send, waiter pending
+      const promise = conn.heartbeat()
+      let resolved = false
+      let rejected = false
+      let rejectionError: unknown
+      void promise.then(
+        () => {
+          resolved = true
+        },
+        (err) => {
+          rejected = true
+          rejectionError = err
+        },
+      )
+      clock.advance(1000)
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      expect(resolved).toBe(false)
+      expect(rejected).toBe(false)
+
+      // Close: pending waiter must reject (not hang)
+      conn.close()
+      conn = undefined
+      await flush()
+      expect(resolved).toBe(false)
+      expect(rejected).toBe(true)
+      expect(String(rejectionError)).toContain("remote-ws connection closed")
     })
   })
 })
