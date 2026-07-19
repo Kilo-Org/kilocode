@@ -54,7 +54,6 @@ const endpointSchema = z.object({
 
 const responseSchema = z.object({
   data: z.object({
-    id: z.string(),
     // Elements are validated one by one below so a single malformed endpoint
     // drops out alone instead of failing the whole catalog.
     endpoints: z.array(z.unknown()),

@@ -197,6 +197,16 @@ test("tolerates null endpoint fields and drops only malformed entries", async ()
   expect(result.endpoints[1].pricing?.input).toBeUndefined()
 })
 
+test("accepts responses without the unused data.id field", async () => {
+  stubFetch(async () => json(JSON.stringify({ data: { endpoints: [{ name: "X | test/model", tag: "x/fp8" }] } })))
+
+  const result = await fetchKiloModelEndpoints("test/model", { catalog: "public" })
+
+  expect(result.error).toBeUndefined()
+  expect(result.endpoints).toHaveLength(1)
+  expect(result.endpoints[0].provider).toBe("x/fp8")
+})
+
 test("keeps cache-only pricing", async () => {
   const body = JSON.stringify({
     data: {
