@@ -468,7 +468,8 @@ class PermissionViewTest : BasePlatformTestCase() {
         view.rulesForTest().toggle()
         view.rulesForTest().approveButtonsForTest()[1].doClick()
 
-        assertEquals("Allow", view.runButtonForTest().text)
+        assertEquals("Allow once and Save", view.runButtonForTest().text)
+        assertEquals("Reject and Save", view.denyButtonForTest().text)
         view.runButtonForTest().doClick()
 
         assertEquals(1, replies.size)
@@ -499,7 +500,8 @@ class PermissionViewTest : BasePlatformTestCase() {
         view.rulesForTest().denyButtonsForTest()[0].doClick()
 
         assertEquals(PermissionRuleDecision.DENIED, view.rulesForTest().decisionForTest("git clean *"))
-        assertEquals("Allow", view.runButtonForTest().text)
+        assertEquals("Allow once and Save", view.runButtonForTest().text)
+        assertEquals("Reject and Save", view.denyButtonForTest().text)
         view.runButtonForTest().doClick()
 
         assertEquals(emptyList<String>(), replies.single().third?.approvedAlways)

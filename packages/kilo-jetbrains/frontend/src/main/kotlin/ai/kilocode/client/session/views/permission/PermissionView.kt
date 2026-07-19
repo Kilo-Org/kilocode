@@ -371,9 +371,14 @@ class PermissionView(
 
     @RequiresEdt
     private fun syncPrimaryText() {
+        val changed = rules.anyDecided()
         card.setActionText(
             ID_RUN,
-            KiloBundle.message(if (rules.anyDecided()) "session.permission.apply.allow" else "session.permission.allow.once"),
+            KiloBundle.message(if (changed) "session.permission.allow.once.save" else "session.permission.allow.once"),
+        )
+        card.setActionText(
+            ID_DENY,
+            KiloBundle.message(if (changed) "session.permission.reject.save" else "session.permission.reject"),
         )
     }
 
@@ -408,8 +413,8 @@ class PermissionView(
     }
 
     // Test helpers
-    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.apply.allow") }
-    internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") }
+    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.allow.once.save") }
+    internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") || it.text == KiloBundle.message("session.permission.reject.save") }
     internal fun codeLabelsForTest() = codeEditors()
     internal fun diffViewsForTest() = diffViews.toList()
     internal fun headerFontForTest() = textAreas(card).first { it.font.isBold }.font
