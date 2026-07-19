@@ -64,7 +64,11 @@ describe("Markdown bidirectional rendering contract", () => {
       ),
     )
 
-    expect(html).toContain('<code dir="auto">inlineCode</code>')
+    // Non-trivial inline code spans are marked as file-link candidates (see
+    // marked.tsx's codespan renderer); the isolated `dir="auto"` still applies.
+    expect(html).toContain(
+      '<code class="file-link-candidate" dir="auto" data-file-candidate="./inlineCode">inlineCode</code>',
+    )
     expect(html).toContain('<pre dir="auto"><code class="language-ts" data-lang="ts">')
     expect(html).toContain("const value = 1")
     expect(html.match(/<span dir="auto"><span class="katex/g)?.length).toBe(1)
