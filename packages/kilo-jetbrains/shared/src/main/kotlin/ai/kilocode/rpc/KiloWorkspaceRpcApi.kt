@@ -63,6 +63,9 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     /** Resolve the editable global config target. */
     suspend fun globalConfigTarget(): ConfigTargetDto
 
+    /** Refresh local and global config files after external CLI writes. */
+    suspend fun refreshConfigFiles(directory: String)
+
     /** Open or create the local config file in the IDE. */
     suspend fun openLocalConfig(directory: String): Boolean
 

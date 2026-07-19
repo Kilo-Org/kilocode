@@ -661,6 +661,7 @@ class SessionController(
         cs.launch {
             try {
                 if (rules != null) sessions.savePermissionRules(requestId, directory, rules)
+                if (rules != null) workspace.refreshConfigFiles()
                 sessions.replyPermission(requestId, directory, reply)
                 capture("Approval Answered", sessionProps() + mapOf(
                     "requestId" to requestId,

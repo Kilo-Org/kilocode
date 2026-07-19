@@ -1166,7 +1166,7 @@ object KiloCliDataParser {
         }?.toMap() ?: emptyMap()
         val path = metaObj.path()
         val diffs = metaObj.permissionDiffs(path)
-        val rules = metaObj.rules().ifEmpty { bashHierarchy(permission, patterns, always) }
+        val rules = metaObj.rules()
         return PermissionRequestDto(
             id = id,
             sessionID = sid,
@@ -1643,24 +1643,6 @@ private fun JsonObject.decision(): String {
         "denied", "deny" -> "denied"
         else -> "pending"
     }
-}
-
-private fun bashHierarchy(permission: String, patterns: List<String>, always: List<String>): List<String> {
-    if (permission != "bash") return emptyList()
-    val out = linkedSetOf<String>()
-    val prefixes = always.mapNotNull { item -> item.removeSuffix(" *").takeIf { it != item && it.isNotBlank() } }
-    for (pattern in patterns) {
-        val text = pattern.trim()
-        if (text.isBlank()) continue
-        val prefix = prefixes
-            .sortedByDescending { it.length }
-            .firstOrNull { text == it || text.startsWith("$it ") }
-            ?: text.substringBefore(' ')
-        val parts = prefix.split(Regex("\\s+")).filter { it.isNotBlank() }
-        for (i in 1..parts.size) out.add(parts.take(i).joinToString(" ") + " *")
-        if (text != prefix) out.add(text)
-    }
-    return out.ifEmpty { always }.toList()
 }
 
 private fun JsonObject?.permissionDiffs(path: String?): List<PermissionFileDiffDto> {

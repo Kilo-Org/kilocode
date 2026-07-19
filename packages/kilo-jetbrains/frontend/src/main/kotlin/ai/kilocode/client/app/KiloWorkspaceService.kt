@@ -83,7 +83,7 @@ class KiloWorkspaceService internal constructor(
             LOG.info("Creating workspace for $directory")
             val state = stream { state(directory) }
                 .stateIn(cs, SharingStarted.Eagerly, INIT)
-            Workspace(directory, state) { reload(directory) }
+            Workspace(directory, state, { reload(directory) }) { refreshConfigFiles(directory) }
         }
         // Refresh on every workspace access so config actions reflect file system changes.
         refreshLocalConfigTarget(directory)
@@ -213,6 +213,15 @@ class KiloWorkspaceService internal constructor(
                 pendingGlobal.set(false)
                 ActivityTracker.getInstance().inc()
             }
+        }
+    }
+
+    fun refreshConfigFiles(directory: String) {
+        cs.launch {
+            call { refreshConfigFiles(directory) }
+            localConfigTarget(directory)
+            globalConfigTarget()
+            ActivityTracker.getInstance().inc()
         }
     }
 

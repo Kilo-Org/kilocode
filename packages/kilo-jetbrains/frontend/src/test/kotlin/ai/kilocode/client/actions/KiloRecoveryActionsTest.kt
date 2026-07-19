@@ -360,6 +360,7 @@ class KiloRecoveryActionsTest : BasePlatformTestCase() {
             dir,
             MutableStateFlow(KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)),
             reload = {},
+            refreshConfigFiles = {},
         )
     }
 }

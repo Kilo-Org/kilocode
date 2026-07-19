@@ -337,6 +337,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals(1, rpc.permissionRulesSaved.size)
         assertEquals("perm1", rpc.permissionRulesSaved[0].first)
         assertEquals(1, rpc.permissionReplies.size)
+        assertEquals(listOf("/test"), projectRpc.refreshedConfigs.toList())
     }
 
     fun `test permission request maps rule decisions into model`() {

@@ -53,6 +53,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         private set
     var globalConfigPathCalls = 0
         private set
+    val refreshedConfigs = CopyOnWriteArrayList<String>()
 
     override suspend fun resolveProjectDirectory(projectId: ProjectId?, hint: String): String {
         assertNotEdt("resolveProjectDirectory")
@@ -111,6 +112,11 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
         globalConfigPathCalls += 1
         beforeGlobalConfigTarget?.invoke()
         return ConfigTargetDto(globalConfigPath, globalConfigDisplayPath, globalConfigExists)
+    }
+
+    override suspend fun refreshConfigFiles(directory: String) {
+        assertNotEdt("refreshConfigFiles")
+        refreshedConfigs.add(directory)
     }
 
     override suspend fun openLocalConfig(directory: String): Boolean {

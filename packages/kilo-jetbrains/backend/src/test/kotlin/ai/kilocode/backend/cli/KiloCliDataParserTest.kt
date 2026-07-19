@@ -2366,7 +2366,7 @@ class KiloCliDataParserTest {
     }
 
     @Test
-    fun `parsePermissionRequest - derives bash hierarchy from always prefix`() {
+    fun `parsePermissionRequest - uses always when metadata rules are absent`() {
         val data = globalEvent("""
             "type": "permission.asked",
             "properties": {
@@ -2382,9 +2382,9 @@ class KiloCliDataParserTest {
         val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
         assertNotNull(result)
         val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
-        assertEquals(listOf("git *", "git add *", "git add ."), asked.request.rules)
-        assertEquals(listOf("git *", "git add *", "git add ."), asked.request.ruleDecisions.map { it.pattern })
-        assertEquals(listOf("pending", "pending", "pending"), asked.request.ruleDecisions.map { it.decision })
+        assertEquals(emptyList(), asked.request.rules)
+        assertEquals(listOf("git add *"), asked.request.ruleDecisions.map { it.pattern })
+        assertEquals(listOf("pending"), asked.request.ruleDecisions.map { it.decision })
     }
 
     @Test
