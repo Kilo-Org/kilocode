@@ -8,6 +8,8 @@ import type { ModelMessage } from "ai"
 const FACTOR = 1.3
 const MEDIA = "[encoded media]"
 const MEDIA_TOKENS = Token.estimate(MEDIA)
+const COMPACTION_BUFFER = 20_000
+const DEFAULT_COMPACTION_OUTPUT_BUDGET = 8_192
 
 type Payload = {
   messages: ModelMessage[]
@@ -94,5 +96,22 @@ export namespace KiloSessionOverflow {
     if (stats.continuation) return false
     const tokens = "tokens" in stats ? stats.tokens : stats.normalized
     return tokens >= limit(input)
+  }
+
+  export function compactionUsable(input: { cfg: Config.Info; model: Provider.Model }) {
+    const context = input.model.limit.context
+    if (context === 0) return 0
+
+    const outputBudget = input.cfg.compaction?.outputBudget ?? DEFAULT_COMPACTION_OUTPUT_BUDGET
+    const effectiveOutputBudget = Math.min(outputBudget, input.model.limit.output || outputBudget)
+    const reserved = input.cfg.compaction?.reserved ?? Math.min(COMPACTION_BUFFER, effectiveOutputBudget)
+    const needed = effectiveOutputBudget + reserved
+
+    if (context <= needed) return context
+
+    const inputLimit = input.model.limit.input
+    return inputLimit
+      ? Math.max(0, inputLimit - effectiveOutputBudget - reserved)
+      : Math.max(0, context - effectiveOutputBudget - reserved)
   }
 }

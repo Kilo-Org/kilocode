@@ -273,6 +273,11 @@ export const Info = Schema.Struct({
       reserved: Schema.optional(NonNegativeInt).annotate({
         description: "Token buffer for compaction. Leaves enough window to avoid overflow during compaction.",
       }),
+      // kilocode_change start
+      outputBudget: Schema.optional(NonNegativeInt).annotate({
+        description: "Token budget for compaction summary generation (default: 8192)",
+      }),
+      // kilocode_change end
     }),
   ),
   experimental: Schema.optional(
