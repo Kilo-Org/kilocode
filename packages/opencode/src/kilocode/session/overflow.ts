@@ -102,7 +102,7 @@ export namespace KiloSessionOverflow {
     const context = input.model.limit.context
     if (context === 0) return 0
 
-    const outputBudget = input.cfg.compaction?.outputBudget ?? DEFAULT_COMPACTION_OUTPUT_BUDGET
+    const outputBudget = input.cfg.compaction?.output_budget ?? DEFAULT_COMPACTION_OUTPUT_BUDGET
     const effectiveOutputBudget = Math.min(outputBudget, input.model.limit.output || outputBudget)
     const reserved = input.cfg.compaction?.reserved ?? Math.min(COMPACTION_BUFFER, effectiveOutputBudget)
     const needed = effectiveOutputBudget + reserved

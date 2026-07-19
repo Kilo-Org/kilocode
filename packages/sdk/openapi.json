@@ -28452,6 +28452,10 @@
               "reserved": {
                 "type": "integer",
                 "minimum": 0
+              },
+              "output_budget": {
+                "type": "integer",
+                "minimum": 0
               }
             },
             "additionalProperties": false
