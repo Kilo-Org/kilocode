@@ -42,7 +42,11 @@ export type NavigateToSessionFn = (sessionID: string) => void
 export type SessionHrefFn = (sessionID: string) => string
 
 // kilocode_change start
-export type OpenFileFn = (filePath: string, line?: number, column?: number) => void
+// The optional trailing sessionID scopes the open to the session the file
+// reference was rendered for, so the extension resolves its workspace directory
+// from that explicit id instead of whatever session is current when the click
+// is processed (avoids opening the wrong worktree during a session switch).
+export type OpenFileFn = (filePath: string, line?: number, column?: number, sessionID?: string) => void
 
 export type OpenDiffFn = (diff: {
   file: string

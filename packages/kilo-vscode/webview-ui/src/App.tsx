@@ -138,8 +138,8 @@ export const DataBridge: Component<{ children: any }> = (props) => {
     session.rejectQuestion(input.requestID)
   }
 
-  const open = (filePath: string, line?: number, column?: number) => {
-    vscode.postMessage({ type: "openFile", filePath, line, column })
+  const open = (filePath: string, line?: number, column?: number, sessionID?: string) => {
+    vscode.postMessage({ type: "openFile", filePath, line, column, sessionID })
   }
 
   const openDiff = (diff: { file: string; patch?: string; additions: number; deletions: number }) => {

@@ -1445,6 +1445,16 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       subtree: true,
     })
     schedule()
+    // A candidate whose validation could not be confirmed mid-stream (every
+    // retry timed out) is left untouched as "unknown", not demoted. If the
+    // stream then ends with no further DOM mutation, the MutationObserver never
+    // fires again and that candidate stays plain even after the filesystem
+    // recovers. Re-scan once when streaming stops so those unknowns get a final
+    // pass — only still-unresolved candidates remain in the DOM by then, so this
+    // is cheap and never demotes a confirmed link.
+    createEffect(() => {
+      if (!streaming()) schedule()
+    })
     onCleanup(() => {
       observer.disconnect()
       if (frame !== undefined) cancelAnimationFrame(frame)
@@ -1464,7 +1474,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       const colAttr = fileLink.getAttribute("data-file-col")
       const line = lineAttr ? parseInt(lineAttr, 10) : undefined
       const column = colAttr ? parseInt(colAttr, 10) : undefined
-      data.openFile(path, line, column)
+      // Scope the open to the session this message was rendered for, matching
+      // how the candidate was validated — see checkFile / validateFiles.
+      data.openFile(path, line, column, props.message.sessionID)
       return
     }
     // Handle markdown links whose href looks like a relative file path
@@ -1475,7 +1487,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       const result = extractFilePathFromHref(href)
       if (!result) return
       e.preventDefault()
-      data.openFile(result.path, result.line, result.column)
+      data.openFile(result.path, result.line, result.column, props.message.sessionID)
     }
   }
 

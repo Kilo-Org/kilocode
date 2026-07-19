@@ -289,16 +289,23 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
     {
       renderer: {
         link({ href, title, text }) {
-          const titleAttr = title ? ` title="${title}"` : ""
-          // kilocode_change: file-path links get a distinct class for styling.
-          // Keep target/rel so the shared (opencode) consumer's navigation and
-          // security behavior is unchanged — Kilo's click handler intercepts
-          // these via preventDefault and opens the file instead.
+          // kilocode_change start: escape href/title for the attribute context —
+          // both come from raw model output, so a stray `"` must not break out of
+          // the attribute (defense-in-depth alongside the DOMPurify pass). The
+          // browser decodes the entities back, so the click handler still reads
+          // the original href.
+          const safeHref = href ? escapeAttribute(href) : ""
+          const titleAttr = title ? ` title="${escapeAttribute(title)}"` : ""
+          // file-path links get a distinct class for styling. Keep target/rel so
+          // the shared (opencode) consumer's navigation and security behavior is
+          // unchanged — Kilo's click handler intercepts these via preventDefault
+          // and opens the file instead.
           const isFile = href ? extractFilePathFromHref(href) : undefined
           if (isFile) {
-            return `<a href="${href}"${titleAttr} class="external-link file-path-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           }
-          return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          // kilocode_change end
         },
         // kilocode_change start — every code span is a file-link candidate.
         // Post-render validation (via filesystem stat) will strip the class

@@ -81,7 +81,10 @@ export function handleEditorAction(
   },
 ): boolean {
   if (message.type === "openFile") {
-    if (message.filePath) openFile(opts.dir(), message.filePath, message.line, message.column)
+    // Resolve the directory from the session the file reference was rendered
+    // for (when the webview provides it), not whatever session happens to be
+    // current — mirrors the validateFiles case below.
+    if (message.filePath) openFile(opts.dir(message.sessionID), message.filePath, message.line, message.column)
     return true
   }
   if (message.type === "openContent") {

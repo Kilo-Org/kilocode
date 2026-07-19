@@ -50,6 +50,9 @@ function key(sessionID: string, path: string): string {
 }
 
 function remember(k: string, exists: boolean, negativeTtlMs: number): void {
+  // Map iteration order is insertion order, and reads refresh recency (see
+  // checkFile), so evicting the first key drops the least-recently-used entry.
+  cache.delete(k)
   if (cache.size >= MAX_CACHE) {
     const oldest = cache.keys().next().value
     if (oldest !== undefined) cache.delete(oldest)
@@ -99,8 +102,10 @@ function runBatch(sessionID: string, batch: Batch, validateFiles: ValidateFilesF
  * not be confirmed (e.g. every retry timed out) — callers should treat
  * `undefined` as "leave as-is", not as a negative result.
  *
- * `opts` tunes retry/TTL behavior; the first caller to open a per-tick batch
- * for a session sets the config for that batch.
+ * `opts` tunes retry/TTL behavior. Note the config is per-batch: the first
+ * caller to open a per-tick batch for a session fixes the config for that
+ * batch, so callers batched into the same microtask tick share one config.
+ * Production callers omit `opts` and rely on DEFAULTS; `opts` exists for tests.
  */
 export function checkFile(
   sessionID: string,
@@ -110,7 +115,12 @@ export function checkFile(
 ): Promise<boolean | undefined> {
   const k = key(sessionID, path)
   const cached = cache.get(k)
-  if (cached && (cached.exists || Date.now() < cached.expires)) return Promise.resolve(cached.exists)
+  if (cached && (cached.exists || Date.now() < cached.expires)) {
+    // Refresh recency so the LRU eviction in remember() keeps hot entries.
+    cache.delete(k)
+    cache.set(k, cached)
+    return Promise.resolve(cached.exists)
+  }
   if (cached) cache.delete(k) // expired negative → re-validate
   const existing = inflight.get(k)
   if (existing) return existing

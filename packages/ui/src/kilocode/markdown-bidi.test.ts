@@ -105,6 +105,13 @@ describe("Markdown bidirectional rendering contract", () => {
     expect(html).toContain('rel="noopener noreferrer"')
   })
 
+  test("escapes an ampersand in a link href so it can't break the attribute", async () => {
+    const parser = createMarkedParser({})
+    const html = await Promise.resolve(parser.parse("[q](https://e.com/x?a=1&b=2)"))
+    expect(html).toContain('href="https://e.com/x?a=1&amp;b=2"')
+    expect(html).not.toContain('href="https://e.com/x?a=1&b=2"')
+  })
+
   test("updates streaming code highlight in place while preserving direction", () => {
     const win = new Window()
     const scope = globalThis as typeof globalThis & {
