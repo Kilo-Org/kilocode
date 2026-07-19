@@ -1,7 +1,8 @@
 import { describe, test, expect, beforeEach } from "bun:test"
 import { Capture } from "@/kilocode/session-export/capture"
 import { resetEligibility } from "@/kilocode/session-export/eligibility"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageID, SessionID } from "@/session/schema"
 import type { MessageV2 } from "@/session/message-v2"
 import { jsonSchema, tool } from "ai"
@@ -487,7 +488,7 @@ function context(sessionId: string): MessageV2.WithParts[] {
         role: "user",
         time: { created: 0 },
         agent: "build",
-        model: { providerID: ProviderID.make("kilo"), modelID: ModelID.make("free-1") },
+        model: { providerID: ProviderV2.ID.make("kilo"), modelID: ModelV2.ID.make("free-1") },
       },
       parts: [],
     },

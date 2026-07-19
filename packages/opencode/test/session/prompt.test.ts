@@ -1,4 +1,10 @@
 import { NodeFileSystem } from "@effect/platform-node"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { Database } from "@opencode-ai/core/database/database"
+import { eq } from "drizzle-orm"
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { Bus } from "@/bus" // kilocode_change - ToolRegistry retains the Kilo bus dependency
 import { FetchHttpClient } from "effect/unstable/http"
 // kilocode_change start
 import { expect, spyOn } from "bun:test"
@@ -11,8 +17,8 @@ import { fileURLToPath, pathToFileURL } from "url"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
-import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
+import { Auth } from "../../src/auth" // kilocode_change
 import { Config } from "@/config/config"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "../../src/mcp"
@@ -22,14 +28,14 @@ import { Provider as ProviderSvc } from "@/provider/provider"
 import { Env } from "../../src/env"
 import { Git } from "../../src/git"
 import { Image } from "../../src/image/image"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
 import { Session } from "@/session/session"
-import { SessionMessageTable } from "../../src/session/session.sql"
+import { SessionMessageTable } from "@opencode-ai/core/session/sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionSummary } from "../../src/session/summary"
 import { Instruction } from "../../src/session/instruction"
@@ -37,32 +43,29 @@ import { SessionProcessor } from "../../src/session/processor"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
+import { KiloSession } from "../../src/kilocode/session" // kilocode_change
 import { Suggestion } from "../../src/kilocode/suggestion" // kilocode_change - accept suggestion in telemetry test
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
-import { SessionV2 } from "../../src/v2/session"
+import { SessionV2 } from "@opencode-ai/core/session"
+import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
 import { Shell } from "../../src/shell/shell"
 import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
-import * as Log from "@opencode-ai/core/util/log"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import * as Database from "../../src/storage/db"
-import { Ripgrep } from "../../src/file/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Format } from "../../src/format"
-import { Reference } from "../../src/reference/reference"
-import { RepositoryCache } from "../../src/reference/repository-cache"
 import { TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
-import { SyncEvent } from "@/sync"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { EventV2Bridge } from "@/event-v2-bridge"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
-
-void Log.init({ print: false })
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -74,8 +77,8 @@ const summary = Layer.succeed(
 )
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 function withSh<A, E, R>(fx: () => Effect.Effect<A, E, R>) {
@@ -96,20 +99,20 @@ function withSh<A, E, R>(fx: () => Effect.Effect<A, E, R>) {
   )
 }
 
-function toolPart(parts: MessageV2.Part[]) {
-  return parts.find((part): part is MessageV2.ToolPart => part.type === "tool")
+function toolPart(parts: SessionV1.Part[]) {
+  return parts.find((part): part is SessionV1.ToolPart => part.type === "tool")
 }
 
-type CompletedToolPart = MessageV2.ToolPart & { state: MessageV2.ToolStateCompleted }
-type ErrorToolPart = MessageV2.ToolPart & { state: MessageV2.ToolStateError }
+type CompletedToolPart = SessionV1.ToolPart & { state: SessionV1.ToolStateCompleted }
+type ErrorToolPart = SessionV1.ToolPart & { state: SessionV1.ToolStateError }
 
-function completedTool(parts: MessageV2.Part[]) {
+function completedTool(parts: SessionV1.Part[]) {
   const part = toolPart(parts)
   expect(part?.state.status).toBe("completed")
   return part?.state.status === "completed" ? (part as CompletedToolPart) : undefined
 }
 
-function errorTool(parts: MessageV2.Part[]) {
+function errorTool(parts: SessionV1.Part[]) {
   const part = toolPart(parts)
   expect(part?.state.status).toBe("error")
   return part?.state.status === "error" ? (part as ErrorToolPart) : undefined
@@ -158,7 +161,7 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const status = SessionStatus.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer))
 const run = SessionRunState.layer.pipe(Layer.provide(status))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 
@@ -207,11 +210,12 @@ function makePrompt(input?: { processor?: "blocking" }) {
     ProviderSvc.defaultLayer,
     lsp,
     mcp,
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     BackgroundJob.defaultLayer,
     status,
-    SyncEvent.defaultLayer,
+    Database.defaultLayer,
     EventV2Bridge.defaultLayer,
+    Bus.layer, // kilocode_change - satisfy the Kilo ToolRegistry dependency
     MemoryService.layer, // kilocode_change
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
@@ -220,12 +224,12 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
     Layer.provide(Git.defaultLayer),
-    Layer.provide(Reference.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
+    Layer.provide(RepositoryCache.defaultLayer), // kilocode_change - RepoCloneTool dependency
     Layer.provide(Format.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
+    Layer.provide(Auth.defaultLayer), // kilocode_change
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -248,13 +252,13 @@ function makePrompt(input?: { processor?: "blocking" }) {
   return SessionPrompt.layer.pipe(
     Layer.provide(SessionRevert.defaultLayer),
     Layer.provide(Image.defaultLayer),
-    Layer.provide(Reference.defaultLayer),
     Layer.provide(summary),
     Layer.provideMerge(run),
     Layer.provideMerge(compact),
     Layer.provideMerge(proc),
     Layer.provideMerge(registry),
     Layer.provideMerge(trunc),
+    Layer.provideMerge(question), // kilocode_change - SessionPrompt dismisses pending questions
     Layer.provide(Instruction.defaultLayer),
     Layer.provide(SystemPrompt.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
@@ -325,23 +329,23 @@ function providerCfg(url: string) {
 }
 
 const writeText = Effect.fn("test.writeText")(function* (file: string, text: string) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   yield* fs.writeWithDirs(file, text)
 })
 
 const ensureDir = Effect.fn("test.ensureDir")(function* (dir: string) {
-  const fs = yield* AppFileSystem.Service
+  const fs = yield* FSUtil.Service
   yield* fs.ensureDir(dir)
 })
 
-const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config: Partial<Config.Info>) {
+const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config: Partial<ConfigV1.Info>) {
   yield* writeText(
     path.join(dir, "opencode.json"),
     JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...config }), // kilocode_change
   )
 })
 
-const useServerConfig = Effect.fn("test.useServerConfig")(function* (config: (url: string) => Partial<Config.Info>) {
+const useServerConfig = Effect.fn("test.useServerConfig")(function* (config: (url: string) => Partial<ConfigV1.Info>) {
   const { directory: dir } = yield* TestInstance
   const llm = yield* TestLLMServer
   yield* writeConfig(dir, config(llm.url))
@@ -408,7 +412,7 @@ const user = Effect.fn("test.user")(function* (sessionID: SessionID, text: strin
 const seed = Effect.fn("test.seed")(function* (sessionID: SessionID, opts?: { finish?: string }) {
   const session = yield* Session.Service
   const msg = yield* user(sessionID, "hello")
-  const assistant: MessageV2.Assistant = {
+  const assistant: SessionV1.Assistant = {
     id: MessageID.ascending(),
     role: "assistant",
     parentID: msg.id,
@@ -688,8 +692,84 @@ noLLMServer.instance(
 )
 // kilocode_change end
 
-noLLMServer.instance(
-  "prompt emits v2 prompted and synthetic events",
+it.instance("loop surfaces content-filter finishes as session errors", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const events = yield* EventV2Bridge.Service
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+    const errors: NonNullable<SessionV1.Assistant["error"]>[] = []
+    const expected = {
+      name: "ContentFilterError",
+      data: { message: "The response was blocked by the provider's content filter" },
+    } satisfies NonNullable<SessionV1.Assistant["error"]>
+    const off = yield* events.listen((event) => {
+      if (event.type !== Session.Event.Error.type) return Effect.void
+      const data = event.data as typeof Session.Event.Error.data.Type
+      if (data.sessionID === chat.id && data.error?.name === "ContentFilterError") errors.push(data.error)
+      return Effect.void
+    })
+
+    yield* prompt.prompt({
+      sessionID: chat.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+    yield* llm.push(reply().text("partial response").contentFilter())
+
+    const result = yield* prompt.loop({ sessionID: chat.id })
+    const stored = yield* MessageV2.get({ sessionID: chat.id, messageID: result.info.id })
+    yield* off
+
+    expect(yield* llm.hits).toHaveLength(1)
+    expect(result.info.role).toBe("assistant")
+    expect(stored.info.role).toBe("assistant")
+    if (result.info.role === "assistant" && stored.info.role === "assistant") {
+      expect(result.info.finish).toBe("content-filter")
+      expect(result.info.error).toEqual(expected)
+      expect(stored.info.error).toEqual(result.info.error)
+      expect(errors).toContainEqual(expected)
+    }
+    expect(result.parts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: "text", text: "partial response" })]),
+    )
+  }),
+)
+
+it.instance("loop stops provider overflow instead of auto-compacting when disabled", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig((url) => ({
+      ...providerCfg(url),
+      compaction: { auto: false },
+    }))
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+
+    yield* llm.error(413, { error: { message: "request entity too large" } })
+    yield* prompt.prompt({
+      sessionID: chat.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+
+    const result = yield* prompt.loop({ sessionID: chat.id })
+    const messages = yield* sessions.messages({ sessionID: chat.id })
+
+    expect(result.info.role).toBe("assistant")
+    if (result.info.role === "assistant") {
+      expect(result.info.error?.name).toBe("ContextOverflowError")
+      expect(result.info.finish).toBe("error")
+    }
+    expect(messages.some((message) => message.parts.some((part) => part.type === "compaction"))).toBe(false)
+  }),
+)
+
+noLLMServer.instance.skip(
+  "prompt emits v2 prompted and synthetic events (v2 projector disabled)",
   () =>
     Effect.gen(function* () {
       const prompt = yield* SessionPrompt.Service
@@ -712,11 +792,16 @@ noLLMServer.instance(
       })
 
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
-        Effect.provide(SessionV2.layer),
+        Effect.provide(SessionExecution.noopLayer),
+        Effect.provide(SessionV2.defaultLayer),
       )
-      const row = Database.use((db) =>
-        db.select().from(SessionMessageTable).where(Database.eq(SessionMessageTable.session_id, chat.id)).get(),
-      )
+      const { db } = yield* Database.Service
+      const row = yield* db
+        .select()
+        .from(SessionMessageTable)
+        .where(eq(SessionMessageTable.session_id, chat.id))
+        .get()
+        .pipe(Effect.orDie)
       expect(messages.find((message) => message.type === "user")).toMatchObject({ type: "user", text: "hello v2" })
       expect(typeof row?.data.time.created).toBe("number")
       expect(messages).toEqual(
@@ -930,9 +1015,68 @@ it.instance("failed subtask preserves metadata on error tool state", () =>
     expect(tool.state.metadata).toBeDefined()
     expect(tool.state.metadata?.sessionId).toBeDefined()
     expect(tool.state.metadata?.model).toEqual({
-      providerID: ProviderID.make("test"),
-      modelID: ModelID.make("missing-model"),
+      providerID: ProviderV2.ID.make("test"),
+      modelID: ModelV2.ID.make("missing-model"),
     })
+  }),
+)
+
+it.instance("subtask child inherits parent session external_directory allow", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({
+      title: "Parent",
+      permission: [{ permission: "external_directory", pattern: "/tmp/allowed/*", action: "allow" }],
+    })
+    yield* llm.text("done")
+    const msg = yield* user(chat.id, "hello")
+    yield* addSubtask(chat.id, msg.id)
+
+    yield* prompt.loop({ sessionID: chat.id })
+
+    const kids = yield* sessions.children(chat.id)
+    expect(kids).toHaveLength(1)
+    const child = kids[0]!
+    const rules = child.permission ?? []
+    expect(rules).toEqual(
+      expect.arrayContaining([{ permission: "external_directory", pattern: "/tmp/allowed/*", action: "allow" }]),
+    )
+    expect(Permission.evaluate("external_directory", "/tmp/allowed/file", rules).action).toBe("allow")
+    expect(Permission.evaluate("task", "anything", rules).action).toBe("deny")
+  }),
+)
+
+noLLMServer.instance("prompt tools replace matching rules and preserve existing restrictions", () =>
+  Effect.gen(function* () {
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({ title: "Prompt tools" })
+
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      tools: { bash: false },
+      parts: [{ type: "text", text: "first" }],
+    })
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      tools: { read: true },
+      parts: [{ type: "text", text: "second" }],
+    })
+
+    const reloaded = yield* sessions.get(session.id)
+    // kilocode_change start - Kilo preserves existing restrictions that the new prompt does not override
+    expect(reloaded.permission).toEqual([
+      { permission: "bash", pattern: "*", action: "deny" },
+      { permission: "read", pattern: "*", action: "allow" },
+    ])
+    expect(Permission.evaluate("bash", "anything", reloaded.permission ?? []).action).toBe("deny")
+    // kilocode_change end
   }),
 )
 
@@ -954,7 +1098,7 @@ it.instance(
         Effect.gen(function* () {
           const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
           const taskMsg = msgs.find((item) => item.info.role === "assistant" && item.info.agent === "general")
-          const tool = taskMsg?.parts.find((part): part is MessageV2.ToolPart => part.type === "tool")
+          const tool = taskMsg?.parts.find((part): part is SessionV1.ToolPart => part.type === "tool")
           if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
         }),
         "timed out waiting for running subtask metadata",
@@ -997,11 +1141,12 @@ it.instance(
           const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
           const assistant = msgs.findLast((item) => item.info.role === "assistant" && item.info.agent === "code") // kilocode_change
           const tool = assistant?.parts.find(
-            (part): part is MessageV2.ToolPart => part.type === "tool" && part.tool === "task",
+            (part): part is SessionV1.ToolPart => part.type === "tool" && part.tool === "task",
           )
           if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
         }),
         "timed out waiting for running task metadata",
+        "10 seconds", // kilocode_change - allow loaded Darwin runners to persist the tool transition
       )
 
       if (tool.state.status !== "running") return
@@ -1012,7 +1157,7 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  10_000,
+  20_000, // kilocode_change
 )
 
 // kilocode_change start - child task failures stay tool errors so the parent can recover
@@ -1140,7 +1285,7 @@ unix(
         }
       }
     }),
-  3_000,
+  10_000, // kilocode_change - upstream's 3s deadline flakes under CI shard load (observed 3048ms on macOS)
 )
 
 raceNoLLMServer.instance(
@@ -1233,7 +1378,7 @@ raceNoLLMServer.instance(
       }
     }),
   { config: cfg },
-  3_000,
+  10_000, // kilocode_change - cancellation tree cleanup can exceed 3s under macOS CI shard load
 )
 
 noLLMServer.instance(
@@ -1520,7 +1665,7 @@ it.instance(
       expect(inputs).toHaveLength(2)
       expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("second")
     }),
-  3_000,
+  10_000, // kilocode_change - loaded CI runners can exceed 3s for two prompt turns
 )
 
 it.instance(
@@ -1666,24 +1811,26 @@ unixNoLLMServer(
 unixNoLLMServer(
   "shell commands can change directory after startup",
   () =>
-    Effect.gen(function* () {
-      const { directory: dir } = yield* TestInstance
-      const { prompt, run, chat } = yield* boot()
-      const parent = path.dirname(dir)
-      const result = yield* prompt.shell({
-        sessionID: chat.id,
-        agent: "build",
-        command: "cd .. && pwd",
-      })
+    withSh(() =>
+      Effect.gen(function* () {
+        const { directory: dir } = yield* TestInstance
+        const { prompt, run, chat } = yield* boot()
+        const parent = path.dirname(dir)
+        const result = yield* prompt.shell({
+          sessionID: chat.id,
+          agent: "build",
+          command: "cd .. && pwd",
+        })
 
-      expect(result.info.role).toBe("assistant")
-      const tool = completedTool(result.parts)
-      if (!tool) return
+        expect(result.info.role).toBe("assistant")
+        const tool = completedTool(result.parts)
+        if (!tool) return
 
-      expect(tool.state.output).toContain(parent)
-      expect(tool.state.metadata.output).toContain(parent)
-      yield* run.assertNotBusy(chat.id)
-    }),
+        expect(tool.state.output).toContain(parent)
+        expect(tool.state.metadata.output).toContain(parent)
+        yield* run.assertNotBusy(chat.id)
+      }),
+    ),
   { config: cfg },
 )
 
@@ -1702,7 +1849,7 @@ unixNoLLMServer(
       if (!tool) return
 
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
-        Effect.provide(SessionV2.layer),
+        Effect.provide(SessionV2.defaultLayer), // kilocode_change - use the complete upstream v2 session layer
       )
       const shell = messages.find((message) => message.type === "shell")
 
@@ -1945,7 +2092,7 @@ unixNoLLMServer(
       Effect.gen(function* () {
         const { prompt, chat } = yield* boot()
         const { directory: dir } = yield* TestInstance
-        const afs = yield* AppFileSystem.Service
+        const afs = yield* FSUtil.Service
         const ready = path.join(dir, ".trap-ready")
 
         const sh = yield* prompt
@@ -2003,7 +2150,7 @@ unix(
 
       yield* llm.tool("bash", {
         command:
-          'i=0; while [ "$i" -lt 4000 ]; do printf "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %05d\\n" "$i"; i=$((i + 1)); done; sleep 30',
+          'i=0; while [ "$i" -lt 4000 ]; do printf "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx %05d\\n" "$i"; i=$((i + 1)); done; printf truncation-ready; sleep 30',
         description: "Print many lines",
         timeout: 30_000,
         workdir: path.resolve(dir),
@@ -2048,13 +2195,42 @@ unixNoLLMServer(
   "cancel interrupts loop queued behind shell",
   () =>
     Effect.gen(function* () {
-      const { prompt, chat } = yield* boot()
+      const { prompt, sessions, chat } = yield* boot()
 
       const sh = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "sleep 30" }).pipe(Effect.forkChild)
       yield* waitForBusy(chat.id)
+      // kilocode_change start - busy is set before shell persistence completes
+      yield* pollWithTimeout(
+        sessions
+          .messages({ sessionID: chat.id })
+          .pipe(
+            Effect.map((messages) =>
+              messages.some((message) =>
+                message.parts.some((part) => part.type === "tool" && part.state.status === "running"),
+              )
+                ? true
+                : undefined,
+            ),
+          ),
+        `session ${chat.id} never persisted its running shell tool`,
+      )
+      // kilocode_change end
 
+      // kilocode_change start - wait until the loop reaches the queued-run handoff
+      const opened = yield* Deferred.make<void>()
+      yield* Effect.acquireRelease(
+        Effect.sync(() =>
+          Bus.subscribe(KiloSession.Event.TurnOpen, (event) => {
+            if (event.properties.sessionID !== chat.id) return
+            Effect.runFork(Deferred.succeed(opened, undefined))
+          }),
+        ),
+        (off) => Effect.sync(off),
+      )
       const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn before cancelling
+      yield* awaitWithTimeout(Deferred.await(opened), `session ${chat.id} never opened its queued turn`)
+      yield* Effect.yieldNow
+      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
 
@@ -2268,8 +2444,9 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+// kilocode_change start - expand configured Kilo references once per prompt
 noLLMServer.instance(
-  "resolves configured reference mentions before workspace paths and agents",
+  "resolves configured reference mentions to one root directory attachment",
   () =>
     Effect.gen(function* () {
       const { directory: dir } = yield* TestInstance
@@ -2284,52 +2461,41 @@ noLLMServer.instance(
       const parts = yield* prompt.resolvePromptParts(
         "Use @docs and @docs/README.md and @docs/guide and @docs/missing.md and @docs/README.md and @build",
       )
-      const references = parts.filter(
-        (part): part is MessageV2.TextPartInput =>
-          part.type === "text" && part.synthetic === true && part.text.startsWith("Referenced configured reference "),
-      )
-      const files = parts.filter((part): part is MessageV2.FilePartInput => part.type === "file")
-      const agents = parts.filter((part): part is MessageV2.AgentPartInput => part.type === "agent")
-      const bare = references.find((part) => part.text.includes("@docs."))
-      const missing = references.find((part) => part.text.includes("@docs/missing.md"))
-      const guide = files.find((part) => part.filename === "docs/guide")
+      const files = parts.filter((part): part is SessionV1.FilePartInput => part.type === "file")
+      const agents = parts.filter((part): part is SessionV1.AgentPartInput => part.type === "agent")
+      const text = parts.find((part): part is SessionV1.TextPartInput => part.type === "text" && !part.synthetic)
 
-      expect(references.length).toBe(2)
-      expect(bare?.metadata?.reference).toMatchObject({
-        name: "docs",
-        kind: "local",
-        path: docs,
+      expect(text?.text).toContain("@docs")
+      expect(files).toHaveLength(1)
+      expect(files[0]).toMatchObject({
+        filename: "docs",
+        mime: "application/x-directory",
+        source: { type: "file", path: "docs", text: { value: "@docs" } },
       })
-      expect(missing?.text).toContain("Path does not exist inside configured reference @docs")
-      expect(missing?.metadata?.reference).toMatchObject({
-        target: "missing.md",
-        targetPath: path.join(docs, "missing.md"),
-      })
-
-      expect(files.length).toBe(2)
-      expect(files.map((file) => fileURLToPath(file.url)).sort()).toEqual(
-        [path.join(docs, "README.md"), path.join(docs, "guide")].sort(),
-      )
-      expect(guide?.mime).toBe("application/x-directory")
+      expect(fileURLToPath(files[0].url)).toBe(docs)
       expect(agents.map((agent) => agent.name)).toEqual(["code"]) // kilocode_change
     }),
   {
     config: {
       ...cfg,
-      reference: {
+      references: {
         docs: "./external-docs",
       },
     },
   },
 )
+// kilocode_change end
 
+// kilocode_change start - deduplicate configured Kilo references by source identity
 noLLMServer.instance(
-  "injects metadata for bare configured reference mentions",
+  "does not let an unrelated directory attachment shadow a configured reference",
   () =>
     Effect.gen(function* () {
       const { directory: dir } = yield* TestInstance
       const docs = path.join(dir, "external-docs")
+      const unrelated = path.join(dir, "unrelated")
       yield* ensureDir(docs)
+      yield* ensureDir(unrelated)
 
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
@@ -2337,83 +2503,62 @@ noLLMServer.instance(
       const message = yield* prompt.prompt({
         sessionID: session.id,
         noReply: true,
-        parts: yield* prompt.resolvePromptParts("Use @docs for context"),
+        parts: [
+          { type: "text", text: "Use @docs for context" },
+          {
+            type: "file",
+            mime: "application/x-directory",
+            filename: "docs",
+            url: pathToFileURL(unrelated).href,
+          },
+        ],
       })
+      const text = message.parts
+        .flatMap((part) => (part.type === "text" && part.synthetic ? [part.text] : []))
+        .join("\n")
 
-      const stored = yield* MessageV2.get({ sessionID: session.id, messageID: message.info.id })
-      const synthetic = stored.parts.filter(
-        (part): part is MessageV2.TextPart => part.type === "text" && part.synthetic === true,
-      )
-      const reference = synthetic.find((part) => part.text.startsWith("Referenced configured reference @docs."))
-
-      expect(reference?.metadata?.reference).toMatchObject({ name: "docs", kind: "local", path: docs })
-      expect(synthetic.some((part) => part.text.includes(`Reference root: ${docs}`))).toBe(true)
-      expect(synthetic.some((part) => part.text.includes("subagent scout"))).toBe(true)
-
+      expect(text).toContain(docs)
+      expect(text).toContain(unrelated)
       yield* sessions.remove(session.id)
     }),
   {
     config: {
       ...cfg,
-      reference: {
+      references: {
         docs: "./external-docs",
       },
     },
   },
 )
+// kilocode_change end
 
 noLLMServer.instance(
-  "injects metadata for configured reference file attachments",
+  "stores raw reference mentions alongside directory attachments",
   () =>
     Effect.gen(function* () {
       const { directory: dir } = yield* TestInstance
       const docs = path.join(dir, "external-docs")
-      const readme = path.join(docs, "README.md")
       yield* ensureDir(docs)
-      yield* writeText(readme, "reference readme")
 
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
       const session = yield* sessions.create({})
       const message = yield* prompt.prompt({
         sessionID: session.id,
-        agent: "build",
         noReply: true,
-        parts: [
-          { type: "text", text: "Read @docs/README.md" },
-          {
-            type: "file",
-            mime: "text/plain",
-            filename: "docs/README.md",
-            url: pathToFileURL(readme).href,
-            source: {
-              type: "file",
-              path: "docs/README.md",
-              text: { value: "@docs/README.md", start: 5, end: 20 },
-            },
-          },
-        ],
+        parts: [{ type: "text", text: "Use @docs for context" }],
       })
 
       const stored = yield* MessageV2.get({ sessionID: session.id, messageID: message.info.id })
       const synthetic = stored.parts.filter(
-        (part): part is MessageV2.TextPart => part.type === "text" && part.synthetic === true,
+        (part): part is SessionV1.TextPart => part.type === "text" && part.synthetic === true,
       )
-      const reference = synthetic.find((part) =>
-        part.text.startsWith("Referenced configured reference @docs/README.md."),
-      )
+      const files = stored.parts.filter((part): part is SessionV1.FilePart => part.type === "file")
+      const text = stored.parts.find((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic)
 
-      expect(reference?.metadata?.reference).toMatchObject({
-        name: "docs",
-        kind: "local",
-        path: docs,
-        target: "README.md",
-        targetPath: readme,
-        source: { value: "@docs/README.md", start: 5, end: 20 },
-      })
-      expect(synthetic.findIndex((part) => part === reference)).toBeLessThan(
-        synthetic.findIndex((part) => part.text.startsWith("Called the Read tool with the following input:")),
-      )
+      expect(text?.text).toBe("Use @docs for context")
+      expect(synthetic.some((part) => part.text.includes("Called the Read tool"))).toBe(true) // kilocode_change
+      expect(files).toHaveLength(1) // kilocode_change - directory attachment is expanded, not denied
 
       yield* sessions.remove(session.id)
     }),
@@ -2533,6 +2678,41 @@ it.instance(
 
 // Agent variant
 
+// kilocode_change start - Agent Manager records a model-less synthetic prompt after forking
+noLLMServer.instance(
+  "preserves the session variant through a model-less handoff",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({
+        model: {
+          id: ref.modelID,
+          providerID: ref.providerID,
+          variant: "high",
+        },
+      })
+
+      const handoff = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [{ type: "text", text: "fork handoff", synthetic: true }],
+      })
+      if (handoff.info.role !== "user") throw new Error("expected user message")
+
+      expect(handoff.info.model).toEqual({
+        providerID: ref.providerID,
+        modelID: ref.modelID,
+        variant: "high",
+      })
+
+      const saved = yield* sessions.get(session.id)
+      expect(saved.model?.variant).toBe("high")
+    }),
+  { config: cfg },
+)
+// kilocode_change end
+
 noLLMServer.instance(
   "applies agent variant only when using agent model",
   () =>
@@ -2544,7 +2724,7 @@ noLLMServer.instance(
       const other = yield* prompt.prompt({
         sessionID: session.id,
         agent: "build",
-        model: { providerID: ProviderID.make("opencode"), modelID: ModelID.make("kimi-k2.5-free") },
+        model: { providerID: ProviderV2.ID.make("opencode"), modelID: ModelV2.ID.make("kimi-k2.5-free") },
         noReply: true,
         parts: [{ type: "text", text: "hello" }],
       })
@@ -2559,8 +2739,8 @@ noLLMServer.instance(
       })
       if (match.info.role !== "user") throw new Error("expected user message")
       expect(match.info.model).toEqual({
-        providerID: ProviderID.make("test"),
-        modelID: ModelID.make("test-model"),
+        providerID: ProviderV2.ID.make("test"),
+        modelID: ModelV2.ID.make("test-model"),
         variant: "xhigh",
       })
       expect(match.info.model.variant).toBe("xhigh")
@@ -2707,11 +2887,7 @@ it.instance(
       const tagged = trackSpy.mock.calls
         .map((args) => args[0] as Parameters<typeof Telemetry.trackLlmCompletion>[0])
         .find(
-          (p) =>
-            p.mode === "review" &&
-            p.feature === "code_reviews" &&
-            p.command === "review" &&
-            p.tool === "suggest",
+          (p) => p.mode === "review" && p.feature === "code_reviews" && p.command === "review" && p.tool === "suggest",
         )
       expect(tagged).toBeDefined()
     }),

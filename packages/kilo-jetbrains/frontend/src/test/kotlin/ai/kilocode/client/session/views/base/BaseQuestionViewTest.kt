@@ -214,6 +214,20 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test action button click returns focus to session prompt`() {
+        edt {
+            var focused = false
+            val panel = BaseQuestionView(focus = { focused = true })
+            val root = JPanel(BorderLayout())
+            root.add(panel)
+            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+
+            actionButton(panel, "OK").doClick()
+
+            assertTrue("button action should request prompt focus through the session manager", focused)
+        }
+    }
+
     fun `test setActionEnabled disables and enables button`() {
         edt {
             val panel = BaseQuestionView()

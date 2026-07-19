@@ -146,6 +146,7 @@ export class WorktreeManager {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
+    baseRef?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
@@ -156,6 +157,26 @@ export class WorktreeManager {
   async renameBranch(worktreePath: string, current: string, requested: string): Promise<string> {
     await this.ensureMigrated()
     return this.withGitLock(() => this.renameBranchImpl(worktreePath, current, requested))
+  }
+
+  /** Whether the worktree has uncommitted changes or commits ahead of base.
+   *  Used to defer automatic branch naming until the branch carries real work. */
+  async hasWork(worktreePath: string, base: string): Promise<boolean> {
+    if (!this.isManagedPath(worktreePath)) return false
+    return this.withGitLock(async () => {
+      const git = simpleGit(worktreePath)
+      const status = await git.status()
+      if (status.files.length > 0) return true
+      return git
+        .raw(["rev-list", "--count", `${base}..HEAD`])
+        .then((count) => parseInt(count.trim(), 10) > 0)
+        .catch((error) => {
+          // An unresolvable base ref means no work to compare; other git
+          // failures also fail safe to "no work", keeping the placeholder name.
+          this.log(`hasWork rev-list failed: ${error}`)
+          return false
+        })
+    })
   }
 
   private async ensureGitAvailable(): Promise<void> {
@@ -175,6 +196,7 @@ export class WorktreeManager {
     prompt?: string
     existingBranch?: string
     baseBranch?: string
+    baseRef?: string
     branchName?: string
     onProgress?: (step: WorktreeProgressStep, message: string, detail?: string) => void
   }): Promise<CreateWorktreeResult> {
@@ -223,6 +245,9 @@ export class WorktreeManager {
       startPoint = await this.resolveStartPoint(requestedBase, params.onProgress, {
         allowFallback: !params.baseBranch, // Only fallback if user didn't explicitly request a specific base
       })
+      if (params.baseRef && !(await this.refExistsLocally(params.baseRef))) {
+        throw new Error(`Could not resolve start point for ref "${params.baseRef}"`)
+      }
       parent = startPoint.branch
       parentRemote = startPoint.remote
     }
@@ -236,7 +261,7 @@ export class WorktreeManager {
     params.onProgress?.("creating", `Creating worktree for ${branch}...`)
 
     // Dereference to commit SHA to prevent upstream tracking for new branches
-    const startRef = params.existingBranch ? undefined : `${startPoint.ref}^{commit}`
+    const startRef = params.existingBranch ? undefined : `${params.baseRef ?? startPoint.ref}^{commit}`
 
     try {
       const args = params.existingBranch

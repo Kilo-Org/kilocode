@@ -45,6 +45,19 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(spec.info.description).toBe("kilo api")
   })
 
+  test("includes legacy Kilo events in the generated SDK contract", () => {
+    const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
+    for (const type of [
+      "suggestion.shown",
+      "session.network.asked",
+      "background_process.updated",
+      "interactive_terminal.updated",
+      "indexing.status",
+    ]) {
+      expect(spec).toContain(type)
+    }
+  })
+
   test("constrains embedding model metadata", () => {
     const accepts = (dimension: number, scoreThreshold: number) =>
       Result.isSuccess(
@@ -189,6 +202,8 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const profile = response(KiloGatewayPaths.profile)?.properties
     expect(profile?.balance).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
     expect(profile?.kiloPass).toEqual({ anyOf: [expect.objectContaining({ type: "object" }), { type: "null" }] })
+    expect(profile?.profile?.properties?.selectedOrganizationId).toEqual({ type: "string" })
+    expect(profile?.profile?.properties?.hasPersonalAccount).toEqual({ type: "boolean" })
     const pass = profile?.kiloPass?.anyOf?.find((item) => item.type === "object")?.properties
     expect(pass?.nextBillingAt).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })
     expect(profile?.currentOrgId).toEqual({ anyOf: [{ type: "string" }, { type: "null" }] })

@@ -186,6 +186,21 @@ export class SessionTerminalManager {
     return this.host.activeTerminal() !== undefined
   }
 
+  activeSession(): string | undefined {
+    const active = this.host.activeTerminal()
+    if (!active) return undefined
+    for (const [id, entry] of this.terminals) {
+      if (entry.terminal === active && entry.terminal.exitStatus === undefined) return id
+    }
+    return undefined
+  }
+
+  prepareContext(sessionId: string): boolean {
+    if (this.showExisting(sessionId)) return true
+    const active = this.activeSession()
+    return !active || active === sessionId
+  }
+
   dispose(): void {
     void this.host.setContext("kilo-code.agentTerminalFocus", false)
     for (const entry of this.terminals.values()) entry.terminal.dispose()

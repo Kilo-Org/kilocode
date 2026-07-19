@@ -10,24 +10,33 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.ui.ConnectionPanel
 import ai.kilocode.client.session.ui.empty.EmptySessionPanel
 import ai.kilocode.client.session.ui.LoadingPanel
+import ai.kilocode.client.session.ui.RevertProgress
 import ai.kilocode.client.session.ui.SessionDropOverlay
+import ai.kilocode.client.session.ui.SessionLayoutPanel
 import ai.kilocode.client.session.ui.prompt.PromptPanel
 import ai.kilocode.client.session.ui.account.SessionAccountOverlay
 import ai.kilocode.client.session.ui.SessionMessageListPanel
 import ai.kilocode.client.session.ui.SessionRootPanel
+import ai.kilocode.client.session.ui.SessionView
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.header.SessionHeaderPanel
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.controller.SessionControllerEvent
+import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ProfileDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import com.intellij.util.ui.JBUI
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionView
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import com.intellij.ui.components.JBScrollPane
+import java.awt.Dimension
 import javax.swing.JLayeredPane
+import javax.swing.JPanel
+import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class SessionUiLayoutTest : SessionUiTestBase() {
@@ -45,6 +54,21 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertFalse(root.blocker.isVisible)
     }
 
+    fun `test session surfaces use session background from initial render`() {
+        val bg = SessionEditorStyle.current().editorBackground
+        val root = find<SessionRootPanel>(ui)
+        val pane = scrollComponent() as JBScrollPane
+
+        assertEquals(bg, ui.background)
+        assertEquals(bg, root.content.background)
+        assertEquals(bg, pane.background)
+        assertEquals(bg, pane.viewport.background)
+
+        showMessages()
+
+        assertEquals(bg, find<SessionMessageListPanel>(ui).background)
+    }
+
     fun `test prompt is docked and connection is overlaid`() {
         val root = find<SessionRootPanel>(ui)
         val connection = find<ConnectionPanel>(ui)
@@ -54,6 +78,24 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(root.overlay, connection.parent)
         assertTrue(root.overlay.components.any { it is SessionAccountOverlay })
         assertFalse(root.content.components.contains(connection))
+    }
+
+    fun `test transcript uses larger standard gap before prompts after first item`() {
+        val panel = SessionLayoutPanel(gap = SessionUiStyle.SessionLayout.GAP).apply {
+            setSize(400, 300)
+            add(Row(SessionView.Kind.UserPrompt))
+            add(Row(SessionView.Kind.Default))
+            add(Row(SessionView.Kind.UserPrompt))
+        }
+
+        panel.doLayout()
+
+        assertEquals(0, panel.getComponent(0).y)
+        assertEquals(SessionUiStyle.SessionLayout.GAP, panel.getComponent(1).y - panel.getComponent(0).bounds.maxY.toInt())
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP),
+            panel.getComponent(2).y - panel.getComponent(1).bounds.maxY.toInt(),
+        )
     }
 
     fun `test drop overlay is attached under root overlay layer`() {
@@ -137,6 +179,30 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         val prompt = find<PromptPanel>(ui)
 
         assertSame(prompt.defaultFocusedComponent, ui.defaultFocusedComponent)
+    }
+
+    fun `test revert sync preserves active prompt draft`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        val msg = message("u1")
+        model.upsertMessage(msg)
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+        prompt.setText("unsent draft")
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("unsent draft", prompt.text())
+    }
+
+    fun `test revert sync restores prompt when empty`() {
+        val prompt = find<PromptPanel>(ui)
+        val model = controller().model
+        model.upsertMessage(message("u1"))
+        model.updateContent("u1", part("p1", "u1", "text", "rolled back prompt"))
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        assertEquals("rolled back prompt", prompt.text())
     }
 
     fun `test connection panel overlays above full prompt width`() {
@@ -296,25 +362,27 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         assertSame(find<SessionMessageListPanel>(ui), scrollView())
     }
 
-    fun `test retry status renders in loading panel instead of message body`() {
+    fun `test retry status keeps transcript and shows message in footer`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
 
-        controller().model.setState(SessionState.Retry("Cannot connect to API", attempt = 2, next = 1_234L))
+        controller().model.setState(SessionState.Retry("The usage limit has been reached", attempt = 4, next = 0L))
         layout()
 
-        val panel = find<LoadingPanel>(ui)
+        val panel = find<SessionMessageListPanel>(ui)
         assertSame(panel, scrollView())
-        assertEquals("Cannot connect to API", panel.labelText())
+        assertTrue(panel.progress.isVisible)
+        assertEquals("The usage limit has been reached (attempt 4)", panel.progress.labelText())
 
         controller().model.setState(SessionState.Idle)
         layout()
 
-        assertSame(find<SessionMessageListPanel>(ui), scrollView())
+        assertSame(panel, scrollView())
+        assertFalse(panel.progress.isVisible)
     }
 
-    fun `test offline status renders in loading panel with fallback`() {
+    fun `test offline status keeps transcript and shows message in footer`() {
         rpc.history.addAll(history(1))
         ui = newUi(id = "ses_test")
         settle()
@@ -322,9 +390,130 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         controller().model.setState(SessionState.Offline("", requestId = "req1"))
         layout()
 
-        val panel = find<LoadingPanel>(ui)
+        val panel = find<SessionMessageListPanel>(ui)
         assertSame(panel, scrollView())
-        assertEquals("Connection offline", panel.labelText())
+        assertTrue(panel.progress.isVisible)
+        assertEquals("Connection offline", panel.progress.labelText())
+    }
+
+    fun `test busy progress footer uses transcript foreground`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        controller().model.setState(SessionState.Busy("Considering next steps..."))
+        layout()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        assertTrue(panel.progress.isVisible)
+        assertEquals(SessionEditorStyle.current().editorForeground, panel.progress.labelForeground())
+    }
+
+
+    fun `test rollback keeps transcript and shows inline progress`() {
+        showMessages()
+        emit(ChatEventDto.MessageUpdated("ses_test", message("msg1")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("p_msg1", "msg1", "text", "hello")))
+        settle()
+        layout()
+        val panel = find<SessionMessageListPanel>(ui)
+        assertSame(panel, scrollView())
+        val gate = CompletableDeferred<Unit>()
+        rpc.revertGate = gate
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().revert("msg1")
+        }
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        val progress = find<RevertProgress>(panel.findMessage("msg1")!!)
+        assertNotNull(progress)
+
+        gate.complete(Unit)
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        assertNull(find(panel.findMessage("msg1")!!, RevertProgress::class.java))
+    }
+
+    fun `test cancel revert clears inline rollback progress`() {
+        showMessages()
+        emit(ChatEventDto.MessageUpdated("ses_test", message("msg1")), flush = false)
+        emit(ChatEventDto.PartUpdated("ses_test", part("p_msg1", "msg1", "text", "hello")))
+        settle()
+        val gate = CompletableDeferred<Unit>()
+        rpc.revertGate = gate
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().revert("msg1")
+        }
+        settle()
+        layout()
+        val panel = find<SessionMessageListPanel>(ui)
+        assertSame(panel, scrollView())
+        assertNotNull(find<RevertProgress>(panel.findMessage("msg1")!!))
+
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            controller().cancelRevert()
+        }
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        assertNull(find(panel.findMessage("msg1")!!, RevertProgress::class.java))
+        assertTrue(rpc.reverts.isEmpty())
+        gate.complete(Unit)
+        settle()
+        layout()
+
+        assertSame(panel, scrollView())
+        assertNull(find(panel.findMessage("msg1")!!, RevertProgress::class.java))
+        assertTrue(rpc.reverts.isEmpty())
+    }
+
+    fun `test retry before transcript shows loading panel`() {
+        ui = newUi(displayMs = 1_000)
+
+        controller().model.setState(SessionState.Retry("The usage limit has been reached", attempt = 4, next = 0L))
+        layout()
+
+        assertSame(find<LoadingPanel>(ui), scrollView())
+    }
+
+    fun `test retry offline churn retains transcript panel and footer`() {
+        rpc.history.addAll(history(1))
+        ui = newUi(id = "ses_test")
+        settle()
+
+        val panel = find<SessionMessageListPanel>(ui)
+        val progress = panel.progress
+        val count = panel.componentCount
+
+        repeat(100) { i ->
+            controller().model.setState(SessionState.Retry("Rate limited", attempt = i + 1, next = 0L))
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertTrue(panel.progress.isVisible)
+
+            controller().model.setState(SessionState.Offline("Connection offline", requestId = "req$i"))
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertTrue(panel.progress.isVisible)
+
+            controller().model.setState(SessionState.Idle)
+            layout()
+            assertSame(panel, scrollView())
+            assertSame(progress, panel.progress)
+            assertEquals(count, panel.componentCount)
+            assertFalse(panel.progress.isVisible)
+        }
     }
 
     fun `test empty explicit session id shows message body`() {
@@ -541,4 +730,8 @@ class SessionUiLayoutTest : SessionUiTestBase() {
         .components
         .single()
         .let { it as javax.swing.JComponent }
+
+    private class Row(override val sessionViewKind: SessionView.Kind) : JPanel(), SessionView {
+        override fun getPreferredSize() = Dimension(100, 10)
+    }
 }

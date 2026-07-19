@@ -37,6 +37,12 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
     @get:Input
     abstract val cliVersion: Property<String>
 
+    @get:Input
+    abstract val repo: Property<Boolean>
+
+    @get:Internal
+    abstract val repoRoot: DirectoryProperty
+
     @get:Internal
     abstract val token: Property<String>
 
@@ -49,20 +55,51 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
     @get:Inject
     abstract val exec: ExecOperations
 
+    init {
+        repo.convention(false)
+        outputs.upToDateWhen { !repo.getOrElse(false) }
+    }
+
     @TaskAction
     fun run() {
+        if (repo.getOrElse(false)) {
+            generateFromRepo()
+            return
+        }
         val kilo = resolve()
+        generate(kilo.absolutePath)
+    }
+
+    private fun generateFromRepo() {
+        val root = repoRoot.asFile.get()
         val out = ByteArrayOutputStream()
         val err = ByteArrayOutputStream()
         val result = exec.exec {
-            commandLine(kilo.absolutePath, "generate")
+            workingDir = root
+            commandLine("bun", "run", "--conditions=browser", "./src/index.ts", "generate")
             standardOutput = out
             errorOutput = err
             isIgnoreExitValue = true
         }
-        if (result.exitValue != 0) {
+        writeSpec(result.exitValue, out, err)
+    }
+
+    private fun generate(kilo: String) {
+        val out = ByteArrayOutputStream()
+        val err = ByteArrayOutputStream()
+        val result = exec.exec {
+            commandLine(kilo, "generate")
+            standardOutput = out
+            errorOutput = err
+            isIgnoreExitValue = true
+        }
+        writeSpec(result.exitValue, out, err)
+    }
+
+    private fun writeSpec(code: Int, out: ByteArrayOutputStream, err: ByteArrayOutputStream) {
+        if (code != 0) {
             throw GradleException(
-                "kilo generate failed with exit code ${result.exitValue}.\n" +
+                "kilo generate failed with exit code $code.\n" +
                     err.toString(Charsets.UTF_8).take(2000)
             )
         }

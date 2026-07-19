@@ -36,11 +36,17 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
     })
 
   const running = createMemo(() => taskRunning(props.status))
+  // BasicTool's forceOpen effect only fires onOpenChange on a false->true
+  // transition — a virtualized remount that starts with forceOpen already
+  // true never transitions, so this local signal must also seed itself from
+  // forceOpen directly, or the child list/result below stays hidden even
+  // though the accordion itself renders open.
   const [open, setOpen] = createSignal(
     initialOpen({
       tool: props.tool,
       partID: props.partID,
       defaultOpen: running(),
+      forceOpen: props.forceOpen,
     }),
   )
 
@@ -148,6 +154,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
         partID={props.partID}
         trigger={trigger()}
         defaultOpen={running()}
+        forceOpen={props.forceOpen}
         defer
         onOpenChange={setOpen}
       >

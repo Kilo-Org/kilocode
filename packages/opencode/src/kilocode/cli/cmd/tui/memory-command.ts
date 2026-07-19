@@ -48,6 +48,10 @@ function auto(input: boolean) {
   return `Memory auto-save ${input ? "on" : "off"}`
 }
 
+function verbose(input: boolean) {
+  return `Memory verbose ${input ? "on" : "off"}`
+}
+
 async function edit(input: { file: string; cwd?: string; renderer?: CliRenderer }) {
   const editor = (process.env["VISUAL"] || process.env["EDITOR"])?.trim()
   if (!editor) throw new Error("Set $VISUAL or $EDITOR to use /memory edit")
@@ -80,6 +84,7 @@ export async function runMemoryCommand(input: {
   client: KiloClient
   workspace?: string
   directory?: string
+  sessionID?: string
   toast: Toast
   renderer?: CliRenderer
   show(): void
@@ -104,10 +109,10 @@ export async function runMemoryCommand(input: {
     }
     const name = "Memory"
     if (parsed.operation === "enable") {
-      const result = read(await input.client.memory.enable(route(input)))
+      read(await input.client.memory.enable(route(input)))
       input.toast.show({
         variant: "success",
-        message: `${name} enabled (${tokens(result.index.tokens)}). Files: ${result.root}. Edit sources, then run /memory rebuild. Auto-save sends best-effort-redacted turn context to your configured model provider; disable with /memory auto off.`,
+        message: `${name} enabled`,
       })
       return true
     }
@@ -133,6 +138,16 @@ export async function runMemoryCommand(input: {
       input.toast.show({ variant: "info", message: auto(result.state.autoConsolidate) })
       return true
     }
+    if (parsed.operation === "verbose") {
+      const result = read(
+        await input.client.memory.configure({
+          ...route(input),
+          verbose: parsed.mode === "on",
+        }),
+      )
+      input.toast.show({ variant: "info", message: verbose(result.state.verbose) })
+      return true
+    }
     if (parsed.operation === "disable") {
       read(await input.client.memory.disable(route(input)))
       input.toast.show({ variant: "info", message: `${name} disabled` })
@@ -150,18 +165,36 @@ export async function runMemoryCommand(input: {
     }
     // Wording mirrors the server memory event messages so chat-intent and command saves read the same.
     if (parsed.operation === "remember") {
-      const result = read(await input.client.memory.remember({ ...route(input), text: parsed.text }))
+      const result = read(
+        await input.client.memory.remember({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          text: parsed.text,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Memory saved · ${changeCount(result.operationCount)}` })
       return true
     }
     if (parsed.operation === "correct") {
-      const result = read(await input.client.memory.correct({ ...route(input), text: parsed.text }))
+      const result = read(
+        await input.client.memory.correct({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          text: parsed.text,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Correction saved · ${changeCount(result.operationCount)}` })
       return true
     }
 
     if (parsed.operation === "forget") {
-      const result = read(await input.client.memory.forget({ ...route(input), query: parsed.query }))
+      const result = read(
+        await input.client.memory.forget({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          query: parsed.query,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Memory updated · ${result.removed.toLocaleString()} removed` })
     }
     return true

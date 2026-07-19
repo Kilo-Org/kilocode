@@ -339,6 +339,10 @@ The Kilo CLI is a fork of [OpenCode](https://opencode.ai) and supports the same 
 
 Project-level configuration takes precedence over global settings.
 
+{% callout type="warning" %}
+**Migrating from opencode?** Kilo no longer falls back to opencode configuration stored in `.opencode` directories (such as `~/.config/opencode` or a project `./.opencode/`). To keep using it, move your global config into `~/.config/kilo/` and any project config into `./.kilo/`.
+{% /callout %}
+
 ### Key Configuration Options
 
 ```json

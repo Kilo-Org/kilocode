@@ -18,6 +18,7 @@ import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { MemoryEvents } from "@/kilocode/memory/events"
 import { installMemoryRuntime } from "@/kilocode/memory/runtime"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 const log = Log.create({ service: "kilocode-bootstrap" })
 
@@ -52,6 +53,7 @@ export namespace KilocodeBootstrap {
         )
         // kilocode_change start - session export bootstrap
         yield* Effect.gen(function* () {
+          if (!SessionExport.enabled) return
           const anon = yield* EffectBridge.fromPromise(() =>
             Identity.getMachineId().catch((err) => {
               log.warn("session export identity failed", { err })
@@ -99,4 +101,14 @@ export namespace KilocodeBootstrap {
       Bus.defaultLayer,
     ]),
   )
+
+  const memory = LayerNode.make(MemoryService.layer, [])
+  export const node = LayerNode.make(layer, [
+    KiloSessions.node,
+    Session.node,
+    SessionSummary.node,
+    Provider.node,
+    memory,
+    Bus.node,
+  ])
 }

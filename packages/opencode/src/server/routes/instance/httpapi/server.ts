@@ -9,17 +9,15 @@ import {
   HttpServerResponse,
 } from "effect/unstable/http"
 import * as Socket from "effect/unstable/socket/Socket"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
 import { Auth } from "@/auth"
-import { Bus } from "@/bus"
+import { BackgroundJob } from "@/background/job"
 import { Config } from "@/config/config"
 import { Command } from "@/command"
-import * as Observability from "@opencode-ai/core/effect/observability"
-import { File } from "@/file"
-import { FileWatcher } from "@/file/watcher"
-import { Ripgrep } from "@/file/ripgrep"
+import * as Observability from "@opencode-ai/core/observability"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Format } from "@/format"
 import { Git } from "@/git" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -30,16 +28,23 @@ import { Installation } from "@/installation"
 import { InstanceLayer } from "@/project/instance-layer"
 import { Plugin } from "@/plugin"
 import { Project } from "@/project/project"
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { ProjectCopy } from "@opencode-ai/core/project/copy"
+import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
 import { ProviderAuth } from "@/provider/auth"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { Provider } from "@/provider/provider"
-import { Pty } from "@/pty"
-import { PtyTicket } from "@/pty/ticket"
+import { PtyTicket } from "@opencode-ai/core/pty/ticket"
 import { Question } from "@/question"
-import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
+// kilocode_change start
+import { Notebook } from "@/kilocode/notebook/service"
+import { AgentManager } from "@/kilocode/agent-manager/service"
+import { KiloViewers } from "@/kilocode/presence/service"
+// kilocode_change end
 import { Session } from "@/session/session"
 import { SessionCompaction } from "@/session/compaction"
+import { LLM } from "@/session/llm"
 import { SessionPrompt } from "@/session/prompt"
 import { SessionRevert } from "@/session/revert"
 import { SessionRunState } from "@/session/run-state"
@@ -49,10 +54,15 @@ import { Todo } from "@/session/todo"
 import { SessionShare } from "@/share/session"
 import { ShareNext } from "@/share/share-next"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventV2 } from "@opencode-ai/core/event"
+import { Database } from "@opencode-ai/core/database/database"
+import { Credential } from "@opencode-ai/core/credential" // kilocode_change
 import { Skill } from "@/skill"
 import { Snapshot } from "@/snapshot"
-import { Storage } from "@/storage/storage" // kilocode_change
+// kilocode_change start
+import { Storage } from "@/storage/storage"
 import { SyncEvent } from "@/sync"
+// kilocode_change end
 import { ToolRegistry } from "@/tool/registry"
 import { lazy } from "@/util/lazy"
 import { Vcs } from "@/project/vcs"
@@ -63,18 +73,20 @@ import { CorsConfig, isAllowedCorsOrigin, type CorsOptions } from "@/server/cors
 import { serveUIEffect } from "@/server/shared/ui"
 import { ServerAuth } from "@/server/auth"
 import { InstanceHttpApi, RootHttpApi } from "./api"
+import { Api } from "@opencode-ai/server/api"
 import { PublicApi } from "./public"
 import {
   authorizationLayer,
   authorizationRouterMiddleware,
   ptyConnectAuthorizationLayer,
-  v2AuthorizationLayer,
+  serverAuthorizationLayer,
 } from "./middleware/authorization"
 import { EventApi } from "./groups/event"
 import { PtyConnectApi } from "./groups/pty"
 import { eventHandlers } from "./handlers/event"
 import { configHandlers } from "./handlers/config"
 import { controlHandlers } from "./handlers/control"
+import { controlPlaneHandlers } from "./handlers/control-plane"
 import { experimentalHandlers } from "./handlers/experimental"
 import { fileHandlers } from "./handlers/file"
 import { globalHandlers } from "./handlers/global"
@@ -82,13 +94,19 @@ import { instanceHandlers } from "./handlers/instance"
 import { mcpHandlers } from "./handlers/mcp"
 import { permissionHandlers } from "./handlers/permission"
 import { projectHandlers } from "./handlers/project"
+import { projectCopyHandlers } from "./handlers/project-copy"
 import { providerHandlers } from "./handlers/provider"
 import { ptyConnectHandlers, ptyHandlers } from "./handlers/pty"
 import { questionHandlers } from "./handlers/question"
 import { sessionHandlers } from "./handlers/session"
 import { syncHandlers } from "./handlers/sync"
 import { tuiHandlers } from "./handlers/tui"
-import { v2Handlers } from "./handlers/v2"
+import { handlers } from "@opencode-ai/server/handlers"
+import {
+  layer as referenceReconcilerLayer,
+  locations as locationServiceMapLayer,
+} from "@/kilocode/server/reference-reconciler" // kilocode_change
+import { schemaErrorLayer as v2SchemaErrorLayer } from "@opencode-ai/server/middleware/schema-error"
 import { workspaceHandlers } from "./handlers/workspace"
 // kilocode_change start
 import {
@@ -126,10 +144,10 @@ const cors = (corsOptions?: CorsOptions) =>
 const authOnlyRouterLayer = authorizationRouterMiddleware.layer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const httpApiAuthLayer = authorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const ptyConnectHttpApiAuthLayer = ptyConnectAuthorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
-const v2HttpApiAuthLayer = v2AuthorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
+const serverHttpApiAuthLayer = serverAuthorizationLayer.pipe(Layer.provide(ServerAuth.Config.defaultLayer))
 const workspaceRoutingLive = workspaceRoutingLayer.pipe(Layer.provide(Socket.layerWebSocketConstructorGlobal))
 const rootApiRoutes = HttpApiBuilder.layer(RootHttpApi).pipe(
-  Layer.provide([controlHandlers, globalHandlers]),
+  Layer.provide([controlHandlers, controlPlaneHandlers, globalHandlers]),
   Layer.provide(schemaErrorLayer),
   Layer.provide(httpApiAuthLayer),
 )
@@ -149,13 +167,13 @@ const instanceApiRoutes = HttpApiBuilder.layer(InstanceHttpApi).pipe(
     instanceHandlers,
     mcpHandlers,
     projectHandlers,
+    projectCopyHandlers,
     ptyHandlers,
     questionHandlers,
     permissionHandlers,
     providerHandlers,
     sessionHandlers,
     syncHandlers,
-    v2Handlers,
     tuiHandlers,
     workspaceHandlers,
   ]),
@@ -163,7 +181,13 @@ const instanceApiRoutes = HttpApiBuilder.layer(InstanceHttpApi).pipe(
 )
 
 const instanceRoutes = instanceApiRoutes.pipe(
-  Layer.provide([httpApiAuthLayer, v2HttpApiAuthLayer, workspaceRoutingLive, instanceContextLayer, schemaErrorLayer]),
+  Layer.provide([httpApiAuthLayer, workspaceRoutingLive, instanceContextLayer, schemaErrorLayer]),
+)
+const serverRoutes = HttpApiBuilder.layer(Api).pipe(
+  // kilocode_change start - effective references must be ready before any V2 location consumer runs
+  Layer.provide(handlers.pipe(Layer.provide(locationServiceMapLayer), Layer.provide(referenceReconcilerLayer))),
+  // kilocode_change end
+  Layer.provide([serverHttpApiAuthLayer, v2SchemaErrorLayer]),
 )
 
 // `OpenApi.fromApi` is non-trivial; defer until /doc is actually hit so
@@ -179,7 +203,7 @@ const docRoute = HttpRouter.use((router) => router.add("GET", "/doc", () => Effe
 
 const uiRoute = HttpRouter.use((router) =>
   Effect.gen(function* () {
-    const fs = yield* AppFileSystem.Service
+    const fs = yield* FSUtil.Service
     const client = yield* HttpClient.HttpClient
     const flags = yield* RuntimeFlags.Service
     yield* router.add("*", "/*", (request) =>
@@ -198,24 +222,34 @@ type RouteRequirements =
 export function createRoutes(
   corsOptions?: CorsOptions,
 ): Layer.Layer<never, EffectConfig.ConfigError, RouteRequirements> {
-  return Layer.mergeAll(rootApiRoutes, eventApiRoutes, ptyConnectApiRoutes, instanceRoutes, docRoute, uiRoute).pipe(
+  return Layer.mergeAll(
+    rootApiRoutes,
+    eventApiRoutes,
+    ptyConnectApiRoutes,
+    instanceRoutes,
+    serverRoutes,
+    docRoute,
+    uiRoute,
+  ).pipe(
     Layer.provide([
       errorLayer,
       compressionLayer,
       corsVaryFix,
-      fenceLayer,
+      fenceLayer.pipe(Layer.provide(Database.defaultLayer)),
       cors(corsOptions),
+      Database.defaultLayer,
+      Credential.defaultLayer, // kilocode_change
       Account.defaultLayer,
       Agent.defaultLayer,
       Auth.defaultLayer,
+      BackgroundJob.defaultLayer,
       Command.defaultLayer,
       Config.defaultLayer,
-      File.defaultLayer,
-      FileWatcher.defaultLayer,
       Format.defaultLayer,
       Git.defaultLayer, // kilocode_change
       LSP.defaultLayer,
       MemoryService.layer, // kilocode_change
+      LLM.defaultLayer,
       Installation.defaultLayer,
       MCP.defaultLayer,
       ModelCache.defaultLayer, // kilocode_change
@@ -223,13 +257,19 @@ export function createRoutes(
       Permission.defaultLayer,
       Plugin.defaultLayer,
       Project.defaultLayer,
+      ProjectV2.defaultLayer,
+      ProjectCopy.defaultLayer,
+      MoveSession.defaultLayer,
       ProviderAuth.defaultLayer,
       Provider.defaultLayer,
-      Pty.defaultLayer,
       PtyTicket.defaultLayer,
       Question.defaultLayer,
-      Notebook.defaultLayer, // kilocode_change
+      // kilocode_change start
+      AgentManager.defaultLayer,
+      Notebook.defaultLayer,
+      KiloViewers.defaultLayer,
       Ripgrep.defaultLayer,
+      // kilocode_change end
       RuntimeFlags.defaultLayer,
       Session.defaultLayer,
       SessionCompaction.defaultLayer,
@@ -241,23 +281,26 @@ export function createRoutes(
       SessionSummary.defaultLayer,
       ShareNext.defaultLayer,
       Snapshot.defaultLayer,
-      Storage.defaultLayer, // kilocode_change
+      // kilocode_change start
+      Storage.defaultLayer,
       SyncEvent.defaultLayer,
+      // kilocode_change end
       EventV2Bridge.defaultLayer,
+      EventV2.defaultLayer,
       Skill.defaultLayer,
       Todo.defaultLayer,
       ToolRegistry.defaultLayer,
       Vcs.defaultLayer,
       Workspace.defaultLayer,
       Worktree.appLayer,
-      Bus.layer,
-      AppFileSystem.defaultLayer,
+      FSUtil.defaultLayer,
       FetchHttpClient.layer,
       HttpServer.layerServices,
     ]),
     Layer.provide(Layer.succeed(CorsConfig)(corsOptions)),
+    Layer.provideMerge(Ripgrep.defaultLayer),
     Layer.provide(InstanceLayer.layer),
-    Layer.provide(Observability.layer),
+    Layer.provideMerge(Observability.layer),
   )
 }
 

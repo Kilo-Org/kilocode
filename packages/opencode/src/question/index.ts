@@ -1,13 +1,11 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
-import { Bus } from "@/bus"
-import { BusEvent } from "@/bus/bus-event"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID, MessageID } from "@/session/schema"
-import * as Log from "@opencode-ai/core/util/log"
 import { QuestionID } from "./schema"
 import { KiloQuestion } from "@/kilocode/question" // kilocode_change
-
-const log = Log.create({ service: "question" })
+import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventV2 } from "@opencode-ai/core/event"
 
 // Schemas — these are pure data; nothing checks class identity (see PR
 // description) so they're plain `Schema.Struct` + type alias. That lets
@@ -103,21 +101,21 @@ export const Reply = Schema.Struct({
 }).annotate({ identifier: "QuestionReply" })
 export type Reply = Schema.Schema.Type<typeof Reply>
 
-const Replied = Schema.Struct({
+export const Replied = Schema.Struct({
   sessionID: SessionID,
   requestID: QuestionID,
   answers: Schema.Array(Answer),
 }).annotate({ identifier: "QuestionReplied" })
 
-const Rejected = Schema.Struct({
+export const Rejected = Schema.Struct({
   sessionID: SessionID,
   requestID: QuestionID,
 }).annotate({ identifier: "QuestionRejected" })
 
 export const Event = {
-  Asked: BusEvent.define("question.asked", Request),
-  Replied: BusEvent.define("question.replied", Replied),
-  Rejected: BusEvent.define("question.rejected", Rejected),
+  Asked: EventV2.define({ type: "question.asked", schema: Request.fields }),
+  Replied: EventV2.define({ type: "question.replied", schema: Replied.fields }),
+  Rejected: EventV2.define({ type: "question.rejected", schema: Rejected.fields }),
 }
 
 export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("QuestionRejectedError", {}) {
@@ -162,7 +160,7 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Qu
 export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const bus = yield* Bus.Service
+    const events = yield* EventV2Bridge.Service
     const state = yield* InstanceState.make<State>(
       Effect.fn("Question.state")(function* () {
         const state = {
@@ -190,7 +188,7 @@ export const layer = Layer.effect(
     }) {
       const pending = (yield* InstanceState.get(state)).pending
       const id = QuestionID.ascending()
-      log.info("asking", { id, questions: input.questions.length })
+      yield* Effect.logInfo("asking", { id, questions: input.questions.length })
 
       const deferred = yield* Deferred.make<ReadonlyArray<Answer>, RejectedError>()
       const info: Request = {
@@ -206,7 +204,7 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       pending.set(id, { info, deferred })
-      yield* bus.publish(Event.Asked, info)
+      yield* events.publish(Event.Asked, info)
 
       return yield* Effect.ensuring(
         Deferred.await(deferred),
@@ -214,7 +212,7 @@ export const layer = Layer.effect(
         KiloQuestion.finalize({
           pending,
           id,
-          publishRejected: () => bus.publish(Event.Rejected, { sessionID: info.sessionID, requestID: info.id }),
+          publishRejected: () => events.publish(Event.Rejected, { sessionID: info.sessionID, requestID: info.id }),
         }),
         // kilocode_change end
       )
@@ -227,12 +225,12 @@ export const layer = Layer.effect(
       const pending = (yield* InstanceState.get(state)).pending
       const existing = pending.get(input.requestID)
       if (!existing) {
-        log.warn("reply for unknown request", { requestID: input.requestID })
+        yield* Effect.logWarning("reply for unknown request", { requestID: input.requestID })
         return yield* new NotFoundError({ requestID: input.requestID })
       }
       pending.delete(input.requestID)
-      log.info("replied", { requestID: input.requestID, answers: input.answers })
-      yield* bus.publish(Event.Replied, {
+      yield* Effect.logInfo("replied", { requestID: input.requestID, answers: input.answers })
+      yield* events.publish(Event.Replied, {
         sessionID: existing.info.sessionID,
         requestID: existing.info.id,
         answers: input.answers.map((a) => [...a]),
@@ -244,12 +242,12 @@ export const layer = Layer.effect(
       const pending = (yield* InstanceState.get(state)).pending
       const existing = pending.get(requestID)
       if (!existing) {
-        log.warn("reject for unknown request", { requestID })
+        yield* Effect.logWarning("reject for unknown request", { requestID })
         return yield* new NotFoundError({ requestID })
       }
       pending.delete(requestID)
-      log.info("rejected", { requestID })
-      yield* bus.publish(Event.Rejected, {
+      yield* Effect.logInfo("rejected", { requestID })
+      yield* events.publish(Event.Rejected, {
         sessionID: existing.info.sessionID,
         requestID: existing.info.id,
       })
@@ -265,7 +263,7 @@ export const layer = Layer.effect(
     const dismissAll = KiloQuestion.makeDismissAll({
       state,
       publishRejected: (entry) =>
-        bus.publish(Event.Rejected, { sessionID: entry.info.sessionID, requestID: entry.info.id }),
+        events.publish(Event.Rejected, { sessionID: entry.info.sessionID, requestID: entry.info.id }),
       makeError: () => new RejectedError(),
     })
     // kilocode_change end
@@ -274,6 +272,8 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(Layer.provide(Bus.layer))
+export const defaultLayer = layer.pipe(Layer.provide(EventV2Bridge.defaultLayer))
+
+export const node = LayerNode.make(layer, [EventV2Bridge.node])
 
 export * as Question from "."

@@ -11,6 +11,7 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream
 import org.junit.jupiter.api.io.TempDir
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.RandomAccessFile
 import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -48,7 +49,15 @@ class KiloCliDownloaderTest {
             assertEquals("/release/v1.2.3/kilo-${KiloCliPlatform.current()}.${KiloCliPlatform.archive()}", server.takeRequest().path)
             assertEquals(CliDownload(0, "1.2.3", KiloCliPlatform.current()), seen.first())
             assertTrue(seen.any { it.percent == 100 && it.version == "1.2.3" && it.platform == KiloCliPlatform.current() })
-            assertContains(log.messages, "INFO: Kilo CLI 1.2.3 for ${KiloCliPlatform.current()} is not cached; downloading new release into ${cli.parentFile.parentFile.absolutePath}")
+            assertTrue(
+                log.messages.any {
+                    it.startsWith("INFO: Kilo CLI 1.2.3 for ${KiloCliPlatform.current()} is not cached; downloading new release into ") &&
+                        it.contains("/.tmp/")
+                }
+            )
+            assertTrue(log.messages.any { it.contains("Kilo CLI path diagnostics:") && it.contains("cacheRoot=${dir.absolutePath}") })
+            assertTrue(log.messages.any { it.contains("Kilo CLI cache target:") && it.contains("exe=${cli.absolutePath}") })
+            assertTrue(log.messages.any { it.contains("Kilo CLI cache lock path:") && it.contains(File(dir, ".lock").canonicalPath) })
 
             val cachedProgress = mutableListOf<CliDownload>()
             val cached = KiloCliDownloader(
@@ -113,23 +122,55 @@ class KiloCliDownloaderTest {
     @Test
     fun `forced resolve re-downloads and keeps only the active version`() = runBlocking {
         MockWebServer().use { server ->
-            val bytes = archive()
-            repeat(2) {
-                server.enqueue(metadata(bytes))
-                server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(bytes)))
-            }
+            val first = archive("#!/bin/old\n")
+            val next = archive("#!/bin/new\n")
+            server.enqueue(metadata(first))
+            server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(first)))
+            server.enqueue(metadata(next))
+            server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(next)))
             val cli = KiloCliDownloader(
                 root = dir,
                 baseUrl = server.url("/release").toString(),
                 api = server.url("/api").toString(),
             )
-            cli.resolve("1.2.3")
+            val old = cli.resolve("1.2.3")
+            assertEquals("#!/bin/old\n", old.readText())
             assertEquals(2, server.requestCount)
 
             val forced = cli.resolve("1.2.3", force = true)
             assertTrue(forced.isFile)
+            assertEquals("#!/bin/new\n", forced.readText())
             assertEquals(4, server.requestCount)
-            assertEquals(listOf("1.2.3"), dir.listFiles()?.filter { it.isDirectory }?.map { it.name })
+            assertEquals(listOf("1.2.3"), dir.listFiles()?.filter { it.isDirectory && !it.name.startsWith(".") }?.map { it.name })
+        }
+    }
+
+    @Test
+    fun `forced resolve keeps the existing cli when download fails`() = runBlocking {
+        MockWebServer().use { server ->
+            val bytes = archive("#!/bin/old\n")
+            server.enqueue(metadata(bytes))
+            server.enqueue(MockResponse().setResponseCode(200).setBody(Buffer().write(bytes)))
+            server.enqueue(metadata(bytes))
+            server.enqueue(MockResponse().setResponseCode(503).setBody("unavailable"))
+
+            val cli = KiloCliDownloader(
+                root = dir,
+                baseUrl = server.url("/release").toString(),
+                api = server.url("/api").toString(),
+            ).resolve("1.2.3")
+            val ex = assertFailsWith<IllegalStateException> {
+                KiloCliDownloader(
+                    root = dir,
+                    baseUrl = server.url("/release").toString(),
+                    api = server.url("/api").toString(),
+                ).resolve("1.2.3", force = true)
+            }
+
+            assertContains(ex.message.orEmpty(), "Failed to download")
+            assertTrue(cli.isFile)
+            assertEquals("#!/bin/old\n", cli.readText())
+            assertTrue(File(cli.parentFile.parentFile, ".complete").isFile)
         }
     }
 
@@ -232,9 +273,32 @@ class KiloCliDownloaderTest {
         }
     }
 
-    private fun archive(): ByteArray {
+    @Test
+    fun `cache lock times out clearly when already held in this process`() = runBlocking {
+        assertTrue(dir.mkdirs() || dir.isDirectory)
+        val file = File(dir, ".lock")
+        val log = TestLog()
+        RandomAccessFile(file, "rw").channel.use { channel ->
+            channel.lock().use {
+                val ex = assertFailsWith<IllegalStateException> {
+                    KiloCliDownloader(
+                        log = log,
+                        root = dir,
+                        lockTimeoutMs = 50,
+                    ).resolve("1.2.3")
+                }
+
+                assertContains(ex.message.orEmpty(), "Timed out waiting for Kilo CLI cache lock")
+                assertContains(ex.message.orEmpty(), file.canonicalPath)
+                assertTrue(log.messages.any { it.contains("Waiting for Kilo CLI cache lock") && it.contains(file.canonicalPath) })
+                assertTrue(log.messages.any { it.contains("Timed out waiting for Kilo CLI cache lock") && it.contains(file.canonicalPath) })
+            }
+        }
+    }
+
+    private fun archive(script: String = "#!/bin/sh\n"): ByteArray {
         val files = mapOf(
-            "bin/${KiloCliPlatform.exe()}" to "#!/bin/sh\n".toByteArray(),
+            "bin/${KiloCliPlatform.exe()}" to script.toByteArray(),
             "bin/kilo-sandbox-mutation-worker.js" to "worker\n".toByteArray(),
         )
         if (KiloCliPlatform.archive() == "zip") return zip(files)

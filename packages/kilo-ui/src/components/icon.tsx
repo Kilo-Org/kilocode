@@ -2,6 +2,14 @@ import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
 import { splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
+  memory: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="2"/>`,
+  },
+  database: {
+    viewBox: "0 0 24 24",
+    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="2"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  },
   "book-open-check": {
     viewBox: "0 0 24 24",
     path: `<path d="M12 21V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,

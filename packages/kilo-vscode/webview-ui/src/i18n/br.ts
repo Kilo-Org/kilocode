@@ -136,7 +136,7 @@ export const dict = {
   "revert.banner.count_other": "{{count}} mensagens revertidas",
   "revert.banner.redo": "Refazer",
   "revert.banner.redo.all": "Refazer Tudo",
-  "revert.banner.hint": "Envie uma nova mensagem para tornar isso permanente",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",
@@ -633,7 +633,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Pesquisa Grep",
   "ui.permission.toolLabel.webSearch": "Pesquisa Web",
   "ui.permission.toolLabel.list": "Listar",
-  "ui.permission.toolLabel.externalDirectory": "Ler diretório externo",
+  "ui.permission.toolLabel.externalDirectory": "Permitir acesso ao diretório externo",
   "ui.permission.toolLabel.webFetch": "Busca Web",
   "ui.permission.toolLabel.task": "Tarefa",
   "ui.permission.toolLabel.skill": "Habilidade",
@@ -956,6 +956,7 @@ export const dict = {
   "provider.custom.models.name.label": "Nome",
   "provider.custom.models.name.placeholder": "Nome de Exibição",
   "provider.custom.models.reasoning.label": "Raciocínio",
+  "provider.custom.models.modalities.image": "Imagem",
   "provider.custom.models.variants.label": "Variantes",
   "provider.custom.models.variants.add": "Adicionar variante",
   "provider.custom.models.variants.remove": "Remover variante",
@@ -1265,6 +1266,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Chave de API do Qdrant",
   "settings.indexing.qdrantApiKey.description": "Chave de API opcional para a instância do Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Chave de API opcional",
+  "settings.indexing.fileExtensions.title": "Extensões de arquivo",
+  "settings.indexing.fileExtensions.description":
+    "Lista de permissões separada por vírgulas. Deixe em branco para usar os padrões integrados.",
+  "settings.indexing.fileExtensions.invalid": "Extensão inválida: {{extension}}",
   "settings.indexing.dimension.title": "Dimensão do vetor",
   "settings.indexing.dimension.description":
     "Deixe vazio para detectar automaticamente a dimensão de embedding do modelo.",
@@ -1433,6 +1438,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Pesquisa de código",
   "settings.experimental.codebaseSearch.description":
     "Ativar pesquisa por linguagem natural com IA em toda a base de código",
+  "settings.experimental.imageGeneration.title": "Geração de imagens",
+  "settings.experimental.imageGeneration.description": "Ativar geração de imagens por IA",
+  "settings.experimental.imageGenerationModel.title": "Modelo de imagem",
+  "settings.experimental.imageGenerationModel.description": "Modelo de geração de imagens",
+  "settings.experimental.imageGenerationModel.placeholder": "Padrão (Auto Router)",
+
   "settings.experimental.speechToText.title": "Fala para texto",
   "settings.experimental.speechToText.description":
     "Ative a entrada de voz nos campos de prompt usando sua conta do Kilo por meio do Kilo Gateway.",
@@ -1449,11 +1460,20 @@ export const dict = {
   "settings.sandboxing.title": "Isolamento em sandbox",
   "settings.sandboxing.network.title": "Restringir acesso à rede",
   "settings.sandboxing.network.description":
-    "Bloqueie o acesso de saída à rede para comandos originados pelo modelo e ferramentas HTTP. Servidores MCP locais e hooks de plugins são executados fora dessa restrição. O tráfego de inferência de provedores e modelos permanece disponível.",
+    "Bloqueia o acesso direto de saída de comandos originados pelo modelo e ferramentas HTTP. As ferramentas MCP locais e remotas ficam indisponíveis enquanto a restrição estiver ativa. O tráfego do provedor e os hooks de plugins confiáveis permanecem fora desta restrição.",
 
+  "settings.sandboxing.allowedHosts.title": "Destinos de rede permitidos",
+  "settings.sandboxing.allowedHosts.description":
+    "Destinos de host e porta DNS para o tráfego de proxy HTTP e HTTPS em sandbox. GitHub CLI e HTTPS Git geralmente precisam de github.com:443 e api.github.com:443. As alterações se aplicam a novas sessões.",
   "settings.sandboxing.writablePaths.title": "Caminhos graváveis adicionais",
   "settings.sandboxing.writablePaths.description":
     "Caminhos adicionais do sistema de arquivos onde o sandbox permite gravação (por exemplo, /tmp, /var/log). Eles são mesclados com os caminhos graváveis padrão quando o sandbox está ativo.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Ativar SWE-Pruner: poda das saídas grandes das ferramentas de leitura, busca e shell levando em conta a tarefa, guiada por uma pergunta de foco fornecida pelo agente",
+  "settings.experimental.swePrunerModel.title": "Modelo do SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "Modelo usado para podar as saídas das ferramentas; por padrão, o modelo pequeno configurado",
   "settings.experimental.mcpTimeout.title": "Tempo limite MCP (ms)",
   "settings.experimental.mcpTimeout.description": "Tempo limite para solicitações do servidor MCP em milissegundos",
   "settings.experimental.remote.title": "Controle Remote",
@@ -1478,11 +1498,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura de amostragem (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controla o grau de aleatoriedade das respostas da IA (0–2). Valores mais baixos (por exemplo, 0.2) produzem resultados focados e consistentes. Valores mais altos (por exemplo, 1.0) produzem respostas mais variadas e criativas. Deixe em branco para usar o padrão do modelo.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parâmetro de amostragem nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Limite da amostragem nucleus (0–1). Restringe as opções de tokens ao menor conjunto cuja probabilidade acumulada atinge P. Valores mais baixos tornam o resultado mais focado; valores mais altos permitem maior diversidade. Deixe em branco para usar o padrão do modelo.",
   "settings.agentBehaviour.maxSteps.title": "Passos máximos",
-  "settings.agentBehaviour.maxSteps.description": "Iterações máximas do agente",
+  "settings.agentBehaviour.maxSteps.description":
+    "Número máximo de etapas do agente. Ao atingir o limite, o agente é instruído a parar de usar ferramentas e fornecer uma resposta final. Aumente para tarefas complexas com várias etapas; reduza para manter as respostas mais curtas e previsíveis.",
   "settings.agentBehaviour.hidden.title": "Oculto",
   "settings.agentBehaviour.hidden.description": "Ocultar este agente do seletor de modos na entrada do chat",
   "settings.agentBehaviour.disable.title": "Desativado",
@@ -1590,8 +1613,8 @@ export const dict = {
     "Nenhum comando personalizado configurado. Adicione comandos ao opencode.json para vê-los aqui.",
   "settings.agentBehaviour.workflows.detail.description": "Descrição",
   "settings.agentBehaviour.workflows.detail.template": "Modelo",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Executar os comandos shell do agente dentro de um sandbox a nível de sistema operacional que restringe escritas aos diretórios de estado do projeto e do Kilo",
 
   "settings.autoApprove.description":
@@ -1661,27 +1684,27 @@ export const dict = {
   "settings.context.memory.index.enable": "Ative a memória para criar arquivos de memória do projeto.",
   "settings.context.memory.inspect": "Inspecionar",
   "settings.context.memory.rebuild": "Reconstruir índice da memória",
-  "chat.memory.on": "Memória ligada",
-  "chat.memory.label": "Memória · {{tokens}} tokens",
   "chat.memory.status.loading": "Carregando status da memória",
-  "chat.memory.session.tokens": "Contexto inicial desta sessão: {{tokens}} tokens",
-  "chat.memory.total.tokens": "Índice armazenado: {{tokens}} tokens",
+  "chat.memory.status.active": "Memória ativa nesta sessão",
   "chat.memory.project.enabled": "Memória do projeto ativada",
   "chat.memory.project.disabled": "Memória do projeto desativada",
   "chat.memory.command.failed": "Comando de memória falhou",
-  "chat.memory.savedOperations": "Última operação de memória: {{count}} ops",
   "chat.memory.inspect": "Inspecionar memória",
   "chat.memory.remember": "Lembrar",
   "chat.memory.forget": "Esquecer",
   "chat.memory.rebuild": "Reconstruir índice",
   "chat.memory.disable": "Desativar memória",
-  "chat.memory.badge.injected": "Memória injetada",
+  "chat.memory.enable": "Ativar memória",
+  "chat.memory.verbose": "Detalhado",
+  "chat.memory.activity.idle": "Nenhuma atividade de memória nesta sessão",
+  "chat.memory.activity.loaded": "{{tokens}} tokens carregados",
+  "chat.memory.activity.recalled": "{{count}} recuperados",
+  "chat.memory.activity.saved": "{{count}} salvos",
+  "chat.memory.activity.loaded.item": "carregado: {{item}}",
+  "chat.memory.activity.recalled.item": "recuperado: {{item}}",
+  "chat.memory.activity.saved.item": "salvo: {{item}}",
   "chat.memory.badge.recalled": "Memória recuperada",
-  "chat.memory.badge.startupCtx": "ctx inicial",
   "chat.memory.badge.items": "{{count}} itens",
-  "chat.memory.badge.tokens": "{{tokens}} tokens",
-  "chat.memory.badge.recalledDetail": "Memória recuperada: {{count}} itens - {{tokens}} tokens",
-  "chat.memory.badge.files": "Arquivos de memória: {{files}}",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Usar prompt personalizado",
@@ -1692,6 +1715,10 @@ export const dict = {
     "O prompt de sistema enviado à IA ao gerar commit messages. Isso substitui totalmente o prompt padrão.",
   "settings.commitMessage.prompt.placeholder":
     "ex: Gere commit messages em espanhol seguindo o formato conventional commits. Retorne APENAS o commit message.",
+
+  "settings.commitMessage.language.sync": "Sincronizar com idioma da interface",
+  "settings.commitMessage.language.title": "Idioma",
+  "settings.commitMessage.language.description": "Escolha qual idioma usar para as mensagens de commit geradas por AI:",
 
   "settings.display.username.title": "Nome de usuário",
   "settings.display.username.description": "Nome de usuário personalizado nas conversas",
@@ -1864,4 +1891,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Carregando branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plano pronto:",
+  "chat.search.placeholder": "Pesquisar na conversa…",
+  "chat.search.toggle": "Pesquisar na conversa",
+  "chat.search.matchCase": "Diferenciar maiúsculas de minúsculas",
+  "chat.search.matchWholeWord": "Coincidir palavra inteira",
+  "chat.search.useRegex": "Usar expressão regular",
+  "chat.search.previousMatch": "Correspondência anterior",
+  "chat.search.nextMatch": "Próxima correspondência",
+  "chat.search.close": "Fechar pesquisa",
+  "chat.search.invalidRegex": "Expressão regular inválida",
+  "chat.search.noResults": "Nenhum resultado",
+  "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
 }

@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rm, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -14,6 +14,7 @@ import type {
   VectorStoreSearchResult,
 } from "../../../../src/indexing/interfaces"
 import { FileWatcher } from "../../../../src/indexing/processors/file-watcher"
+import { CodeParser } from "../../../../src/indexing/processors/parser"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
 import { WorktreeOverlay } from "../../../../src/indexing/worktree-overlay"
 
@@ -316,5 +317,70 @@ describe("FileWatcher", () => {
 
     expect(result.status).toBe("skipped")
     expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
+  })
+
+  test("processFile uses the configured extension allowlist", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    const cacheDir = path.join(root, ".cache")
+    const custom = path.join(root, "source.custom")
+    const excluded = path.join(root, "source.ts")
+    const content = "custom source content ".repeat(20)
+    await mkdir(cacheDir, { recursive: true })
+    await writeFile(custom, content)
+    await writeFile(excluded, content)
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    const watcher = new FileWatcher(
+      root,
+      cache,
+      createEmbedder(),
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [".custom"],
+      new CodeParser([".custom"]),
+    )
+
+    const first = await watcher.processFile(custom)
+    expect(first.status).toBe("processed_for_batching")
+    if (first.status === "processed_for_batching" && first.newHash) cache.updateHash(custom, first.newHash)
+    expect(await watcher.processFile(excluded)).toMatchObject({
+      status: "skipped",
+      reason: "File extension is not configured for indexing",
+    })
+    await writeFile(custom, new Uint8Array([0, 1, 2, 3]))
+    expect(await watcher.processFile(custom)).toMatchObject({ status: "skipped", reason: "File is binary" })
+    expect(cache.getHash(custom)).toBeUndefined()
+    await writeFile(custom, content)
+    expect((await watcher.processFile(custom)).status).toBe("processed_for_batching")
+  })
+
+  test("processFile skips files matched by nested .gitignore during incremental updates", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    try {
+      const cacheDir = path.join(root, ".cache")
+      const dir = path.join(root, "pkg")
+      const file = path.join(dir, "secret.ts")
+
+      await mkdir(cacheDir, { recursive: true })
+      await mkdir(dir, { recursive: true })
+      await writeFile(path.join(dir, ".gitignore"), "secret.ts\n")
+      await writeFile(file, "export const secret = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+
+      const watcher = new FileWatcher(root, cache, createEmbedder(), undefined, await loadIgnore(root))
+      const result = await watcher.processFile(file)
+
+      expect(result.status).toBe("skipped")
+      expect(result.reason).toBe("File is ignored by .gitignore or .kilocodeignore")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })

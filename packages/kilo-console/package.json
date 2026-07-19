@@ -1,6 +1,6 @@
 {
   "name": "@kilocode/kilo-console",
-  "version": "7.4.1",
+  "version": "7.4.11",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,9 +8,11 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1 --port 3018",
     "test": "bun test src",
+    "test:ci": "mkdir -p .artifacts/unit && bun test src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@kilocode/kilo-indexing": "workspace:*",
     "@kilocode/kilo-web-ui": "workspace:*",
     "@kilocode/sdk": "workspace:*",
     "@lottiefiles/dotlottie-web": "0.74.0",

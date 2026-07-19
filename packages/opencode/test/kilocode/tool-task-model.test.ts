@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
+import { Database } from "@opencode-ai/core/database/database"
 import fs from "fs/promises"
 import path from "path"
 import { Agent } from "../../src/agent/agent"
@@ -16,7 +17,8 @@ import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import type { SessionPrompt } from "../../src/session/prompt"
 import { MessageID, PartID } from "../../src/session/schema"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "../../src/provider/provider"
 import { TaskTool, type TaskPromptOps } from "../../src/tool/task"
 import { Truncate } from "../../src/tool/truncate"
@@ -38,18 +40,18 @@ beforeAll(async () => {
 })
 
 const parent = {
-  providerID: ProviderID.make("parent-provider"),
-  modelID: ModelID.make("parent-model"),
+  providerID: ProviderV2.ID.make("parent-provider"),
+  modelID: ModelV2.ID.make("parent-model"),
 }
 
 const saved = {
-  providerID: ProviderID.make("saved-provider"),
-  modelID: ModelID.make("saved-model"),
+  providerID: ProviderV2.ID.make("saved-provider"),
+  modelID: ModelV2.ID.make("saved-model"),
 }
 
 const cfg = {
-  providerID: ProviderID.make("config-provider"),
-  modelID: ModelID.make("config-model"),
+  providerID: ProviderV2.ID.make("config-provider"),
+  modelID: ModelV2.ID.make("config-model"),
 }
 
 const inherited = "thorough"
@@ -57,8 +59,8 @@ const overrideVariant = "full"
 const savedVariant = "fast"
 const cfgVariant = "balanced"
 const sub = {
-  providerID: ProviderID.make("sub-provider"),
-  modelID: ModelID.make("sub-model"),
+  providerID: ProviderV2.ID.make("sub-provider"),
+  modelID: ModelV2.ID.make("sub-model"),
 }
 const subVariant = "deep"
 
@@ -110,6 +112,7 @@ const it = testEffect(
     Truncate.defaultLayer,
     Provider.defaultLayer,
     ToolRegistry.defaultLayer,
+    Database.defaultLayer,
   ),
 )
 

@@ -312,6 +312,40 @@ describe("MemoryCapture (fake ports)", () => {
     }
   })
 
+  test("small file edit with recalled memory still records digest (edit defeats echo, any file type)", async () => {
+    const t = await tmp()
+    try {
+      await KiloMemory.enable({ root: t.root })
+      await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
+
+      let runs = 0
+      const result = await run({
+        root: t.root,
+        session: session(
+          view({
+            assistant: "Fixed the parser.",
+            recalledMemory: true,
+            diffs: [{ file: "src/parser", additions: 4, deletions: 0 }],
+          }),
+        ),
+        model: model({
+          digest: '{"topic":"parser","summary":"Fixed the parser in src/parser."}',
+          typed: '{"operations":[],"skipped":[]}',
+          onRun: (system) => {
+            if (system === digestPrompt) runs++
+          },
+        }),
+      })
+
+      expect(result).toMatchObject({ skipped: false })
+      expect(runs).toBe(1)
+      const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_effect", max: 480 })
+      expect(saved?.summary).toContain("Fixed the parser")
+    } finally {
+      await t.done()
+    }
+  })
+
   test("interrupted close records a non-LLM fallback digest tagged with the reason", async () => {
     const t = await tmp()
     try {
@@ -720,17 +754,63 @@ describe("MemoryService digest-only commit", () => {
 })
 
 describe("MemoryService recordRecall", () => {
-  test("records the last active recall (session, count, time) into stats", async () => {
+  test("records the last active recall and publishes its persisted status", async () => {
     const t = await tmp()
+    const events: MemoryEvents.Status[] = []
     try {
       await KiloMemory.enable({ root: t.root })
+      MemoryEvents.setSink((input) => {
+        events.push(input.payload)
+      })
       const svc = MemoryService.make()
       await Effect.runPromise(svc.recordRecall({ root: t.root, sessionID: "ses_recall", now: 4242, count: 3 }))
       const state = await MemoryFiles.readState(t.root)
       expect(state.stats.lastRecallAt).toBe(4242)
       expect(state.stats.lastRecallCount).toBe(3)
       expect(state.stats.lastRecallSessionID).toBe("ses_recall")
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          sessionID: "ses_recall",
+          state: "injecting",
+          detail: expect.objectContaining({ type: "recalled", message: "Memory recalled · 3 items" }),
+        }),
+      )
     } finally {
+      MemoryEvents.setSink(() => {})
+      await t.done()
+    }
+  })
+})
+
+describe("MemoryService state events", () => {
+  test("publishes status after enabling, configuring, and disabling memory", async () => {
+    const t = await tmp()
+    const events: { event?: MemoryEvents.Event; payload: MemoryEvents.Status }[] = []
+    try {
+      MemoryEvents.setSink((input) => {
+        events.push(input)
+      })
+      const svc = MemoryService.make()
+      await Effect.runPromise(svc.enable({ root: t.root }))
+      await Effect.runPromise(svc.configure({ root: t.root, settings: { verbose: true } }))
+      await Effect.runPromise(svc.disable({ root: t.root }))
+
+      expect(events).toEqual([
+        expect.objectContaining({
+          event: "status",
+          payload: expect.objectContaining({ directory: t.root, enabled: true, state: "idle" }),
+        }),
+        expect.objectContaining({
+          event: "status",
+          payload: expect.objectContaining({ directory: t.root, enabled: true, state: "idle" }),
+        }),
+        expect.objectContaining({
+          event: "status",
+          payload: expect.objectContaining({ directory: t.root, enabled: false, state: "idle" }),
+        }),
+      ])
+    } finally {
+      MemoryEvents.setSink(() => {})
       await t.done()
     }
   })

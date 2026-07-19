@@ -44,6 +44,8 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
   const language = useLanguage()
   const [target, setTarget] = createSignal<string | null>(null)
 
+  const personal = createMemo(() => props.profileData?.profile.hasPersonalAccount !== false)
+
   // Always fetch fresh profile+balance when navigating to this view
   onMount(() => {
     vscode.postMessage({ type: "refreshProfile" })
@@ -55,31 +57,32 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
     setTarget(null)
   })
 
-  const switching = createMemo(() => {
-    const t = target()
-    if (t === null) return false
-    const current = props.profileData?.currentOrgId ?? PERSONAL
-    return current !== t
-  })
-
   const orgOptions = createMemo<OrgOption[]>(() => {
     const orgs = props.profileData?.profile.organizations ?? []
     if (orgs.length === 0) return []
     return [
-      { value: PERSONAL, label: language.t("profile.personalAccount") },
+      ...(personal() ? [{ value: PERSONAL, label: language.t("profile.personalAccount") }] : []),
       ...orgs.map((org) => ({ value: org.id, label: org.name, description: org.role })),
     ]
   })
 
+  const currentId = createMemo(() => {
+    return props.profileData?.currentOrgId ?? (personal() ? PERSONAL : orgOptions()[0]?.value)
+  })
+
+  const switching = createMemo(() => {
+    const t = target()
+    if (t === null) return false
+    return currentId() !== t
+  })
+
   const currentOrg = createMemo(() => {
-    const id = props.profileData?.currentOrgId ?? PERSONAL
-    return orgOptions().find((o) => o.value === id)
+    return orgOptions().find((o) => o.value === currentId())
   })
 
   const selectOrg = (option: OrgOption | undefined) => {
     if (!option) return
-    const current = props.profileData?.currentOrgId ?? PERSONAL
-    if (option.value === current) return
+    if (option.value === currentId()) return
     setTarget(option.value)
     vscode.postMessage({
       type: "setOrganization",
@@ -258,7 +261,13 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                     </div>
 
                     {/* Kilo Pass is part of personal credits, so only show it on the personal account */}
-                    <Show when={(data().currentOrgId ?? null) === null ? data().kiloPass : null}>
+                    <Show
+                      when={
+                        (data().currentOrgId ?? null) === null && data().profile.hasPersonalAccount !== false
+                          ? data().kiloPass
+                          : null
+                      }
+                    >
                       {(pass) => (
                         <div
                           style={{
@@ -331,7 +340,13 @@ const ProfileView: Component<ProfileViewProps> = (props) => {
                     </Show>
 
                     {/* No active Kilo Pass on the personal account — nudge to subscribe */}
-                    <Show when={(data().currentOrgId ?? null) === null && !data().kiloPass}>
+                    <Show
+                      when={
+                        (data().currentOrgId ?? null) === null &&
+                        data().profile.hasPersonalAccount !== false &&
+                        !data().kiloPass
+                      }
+                    >
                       <div
                         style={{
                           "border-top": "1px solid var(--border-weak-base)",

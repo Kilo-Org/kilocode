@@ -42,12 +42,14 @@ import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.colors.CodeInsightColors
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.openapi.editor.event.CaretEvent
 import com.intellij.openapi.editor.event.CaretListener
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.HighlighterLayer
 import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.editor.markup.RangeHighlighter
@@ -61,7 +63,6 @@ import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.IslandsState
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -74,7 +75,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BasicStroke
 import java.awt.BorderLayout
+import java.awt.Component
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -114,7 +117,7 @@ class PromptPanel(
     companion object {
         private val LOG = KiloLog.create(PromptPanel::class.java)
         private val SEND_ICON: Icon = IconLoader.getIcon("/icons/send.svg", PromptPanel::class.java)
-        private val STOP_ICON: Icon = IconLoader.getIcon("/icons/stop.svg", PromptPanel::class.java)
+        private val STOP_ICON: Icon = AllIcons.Actions.Suspend
         private val SHIELD_ICON: Icon = IconLoader.getIcon("/icons/shield.svg", PromptPanel::class.java)
         private val SHIELD_FILLED_ICON: Icon = IconLoader.getIcon("/icons/shield-filled.svg", PromptPanel::class.java)
         private val WAND_ICON: Icon = IconLoader.getIcon("/icons/wand-sparkles.svg", PromptPanel::class.java)
@@ -133,13 +136,14 @@ class PromptPanel(
     var onAutoApproveToggle: (Boolean) -> Unit = {}
     var onFileDrag: (Boolean) -> Unit = {}
     private var style = SessionEditorStyle.current()
+    private var focused = false
     private val shell = BorderLayoutPanel().apply {
         isOpaque = true
         border = JBUI.Borders.empty(
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
             JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
+            JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
         )
     }
     private val attachments = mutableListOf<PromptAttachment>()
@@ -167,21 +171,16 @@ class PromptPanel(
         setShowPlaceholderWhenFocused(true)
         setOneLineMode(false)
         addSettingsProvider { ed ->
-            style.applyTranscriptToEditor(ed)
-            ed.setBorder(JBUI.Borders.empty())
-            ed.scrollPane.border = JBUI.Borders.empty()
-            ed.scrollPane.viewportBorder = JBUI.Borders.empty()
-            ed.backgroundColor = style.editorScheme.defaultBackground
-            ed.scrollPane.background = style.editorScheme.defaultBackground
-            ed.scrollPane.viewport.background = style.editorScheme.defaultBackground
+            chrome(ed)
             ed.settings.isUseSoftWraps = true
             ed.settings.isPaintSoftWraps = false
             ed.settings.isAdditionalPageAtBottom = false
+            ed.settings.setBlockCursor(false)
+            SpellCheckingEditorCustomizationProvider.getInstance().getDisabledCustomization()?.customize(ed)
             ed.putUserData(PROMPT_ATTACHMENT_PASTE_HANDLER_KEY, PromptAttachmentPasteHandler { processPaste(it) })
-            ed.scrollPane.verticalScrollBarPolicy =
-                ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-            ed.scrollPane.horizontalScrollBarPolicy =
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            ed.setHorizontalScrollbarVisible(false)
+            ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+            ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             installCompletionShortcut(ed)
             completion?.let { MentionNavigator(ed, it).install() }
             installFileDrop(ed.contentComponent, "editor")
@@ -198,11 +197,11 @@ class PromptPanel(
             })
             ed.contentComponent.addFocusListener(object : FocusAdapter() {
                 override fun focusGained(e: FocusEvent) {
-                    repaint()
+                    syncFocus(true)
                 }
 
                 override fun focusLost(e: FocusEvent) {
-                    repaint()
+                    syncFocus(false)
                 }
             })
         }
@@ -242,6 +241,14 @@ class PromptPanel(
         toolTipText = KiloBundle.message("prompt.action.enhance")
         accessibleContext.accessibleName = KiloBundle.message("prompt.action.enhance")
         addActionListener { enhance() }
+    }
+    private val separator = object : JComponent() {
+        override fun getPreferredSize() = JBUI.size(1, 16)
+        override fun getMinimumSize() = preferredSize
+        override fun getMaximumSize() = preferredSize
+    }.apply {
+        alignmentY = Component.CENTER_ALIGNMENT
+        border = JBUI.Borders.customLineLeft(SessionUiStyle.View.Prompt.separator())
     }
 
     @Volatile
@@ -289,6 +296,8 @@ class PromptPanel(
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(enhance)
         bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
+        bar.add(separator)
+        bar.add(Box.createHorizontalStrut(JBUI.scale(SessionUiStyle.View.Prompt.CONTROL_GAP)))
         bar.add(button)
         shell.add(bar, BorderLayout.SOUTH)
         add(shell, BorderLayout.CENTER)
@@ -301,10 +310,41 @@ class PromptPanel(
 
     override fun updateUI() {
         super.updateUI()
+        syncBorder()
+    }
+
+    override fun getPreferredSize(): Dimension = promptSize(super.getPreferredSize())
+
+    override fun getMinimumSize(): Dimension = promptSize(super.getMinimumSize())
+
+    override fun getMaximumSize(): Dimension = Dimension(super.getMaximumSize().width, preferredSize.height)
+
+    private fun syncFocus(value: Boolean) {
+        if (focused == value) {
+            repaint()
+            return
+        }
+        focused = value
+        syncBorder()
+        revalidate()
+        repaint()
+    }
+
+    private fun syncBorder() {
         border = JBUI.Borders.compound(
-            JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator()),
+            if (focused) {
+                JBUI.Borders.emptyTop(JBUI.scale(1))
+            } else {
+                JBUI.Borders.customLineTop(SessionUiStyle.View.Prompt.separator())
+            },
             JBUI.Borders.empty(),
         )
+    }
+
+    private fun promptSize(size: Dimension): Dimension {
+        val chrome = (shell.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = insets
+        return Dimension(size.width, editor.preferredSize.height + chrome + ins.top + ins.bottom)
     }
 
     override fun paintChildren(g: Graphics) {
@@ -356,6 +396,13 @@ class PromptPanel(
     }
 
     @RequiresEdt
+    private fun chrome(ed: EditorEx) {
+        if (ed.isDisposed) return
+        style.applyPromptToEditor(ed)
+        if (ed.isDisposed) return
+    }
+
+    @RequiresEdt
     fun setReady(value: Boolean) {
         ready = value
         if (value) completion?.prewarm()
@@ -393,6 +440,19 @@ class PromptPanel(
     fun text(): String = editor.text.trim()
 
     @RequiresEdt
+    fun hasDraft(): Boolean = text().isNotEmpty() || attachments.isNotEmpty()
+
+    @RequiresEdt
+    fun hasAttachments(): Boolean = attachments.isNotEmpty()
+
+    @RequiresEdt
+    fun setText(value: String) {
+        editor.text = value
+        syncEditorHeight()
+        syncHighlights()
+    }
+
+    @RequiresEdt
     override fun send() {
         submit("action")
     }
@@ -426,9 +486,9 @@ class PromptPanel(
         this.style = style
         background = style.editorScheme.defaultBackground
         shell.background = style.editorScheme.defaultBackground
-        editor.font = style.transcriptFont
-        editor.getEditor(false)?.let(style::applyTranscriptToEditor)
-        editor.background = style.editorScheme.defaultBackground
+        style.applyTranscriptToField(editor)
+        editor.getEditor(false)?.let(::chrome)
+        editor.background = style.editorBackground
         syncEditorHeight()
         syncAutoApprove()
         syncHighlights()
@@ -868,18 +928,33 @@ class PromptPanel(
         val view = editor.getEditor(false)
         val line = view?.lineHeight ?: editor.getFontMetrics(editor.font).height
         val min = line * SessionUiStyle.View.Prompt.EDITOR_LINES + JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
-        val content = editor.preferredSize.height
+        val content = if (editor.text.isBlank()) min else editor.preferredSize.height
         val sessionCap = rootCap(min)
         val height = minOf(content, sessionCap ?: content).coerceAtLeast(min)
+        syncEditorScroll(view, content > height)
+        // height is already scaled px (from the editor lineHeight); assign with plain
+        // Dimension so IDE zoom does not scale it a second time via the user scale factor.
         if (before == height && lower == height) {
-            editor.preferredSize = JBDimension(0, height)
-            editor.minimumSize = JBDimension(0, height)
+            editor.preferredSize = Dimension(0, height)
+            editor.minimumSize = Dimension(0, height)
             return
         }
-        editor.preferredSize = JBDimension(0, height)
-        editor.minimumSize = JBDimension(0, height)
+        editor.preferredSize = Dimension(0, height)
+        editor.minimumSize = Dimension(0, height)
         revalidate()
         repaint()
+    }
+
+    @RequiresEdt
+    private fun syncEditorScroll(ed: EditorEx?, overflow: Boolean) {
+        // AS_NEEDED keeps the standard auto-hiding editor scrollbar (appears on
+        // scroll/hover, fades on inactivity); NEVER hides it entirely when the
+        // content fits so no bar is shown at all.
+        ed?.scrollPane?.verticalScrollBarPolicy = if (overflow) {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
+        } else {
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+        }
     }
 
     @RequiresEdt
