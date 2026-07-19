@@ -54,6 +54,24 @@ type WizardStore = {
   fetchError?: string
 }
 
+/** Plain snapshot of a WizardStore. We pass a snapshot (not the reactive
+ *  store proxy) across each `dialog.replace(() => <Wizard .../>)` boundary so
+ *  the next mount's `createStore` gets a real object instead of a proxy from
+ *  the previous (unmounting) component. */
+function snapshot(store: WizardStore): WizardStore {
+  return {
+    mode: store.mode,
+    providerID: store.providerID,
+    name: store.name,
+    baseURL: store.baseURL,
+    key: store.key,
+    fetched: store.fetched.slice(),
+    selected: store.selected.slice(),
+    manual: store.manual.slice(),
+    fetchError: store.fetchError,
+  }
+}
+
 /**
  * Launch the wizard. `replace` is the dialog context's `replace`. For edit
  * mode, `providerID` identifies the existing provider.
@@ -161,6 +179,7 @@ function Wizard(props: { initial: WizardStore }) {
   const sync = useSync()
   const toast = useToast()
   const [state, setState] = createStore<WizardStore>(unwrap(props.initial))
+  const replace = (el: () => JSX.Element) => dialog.replace(el)
 
   // Prefill from existing config on first mount in edit mode.
   if (state.mode === "edit" && !state.name) {
@@ -218,6 +237,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState({ providerID: id, name: id })
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -238,6 +258,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("name", name)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -258,6 +279,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("baseURL", value.trim())
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -286,6 +308,7 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("key", parsed.kind === "key" ? parsed.key : `{env:${parsed.name}}`)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -308,7 +331,7 @@ function Wizard(props: { initial: WizardStore }) {
         onConfirm={(value) => {
           const trimmed = value.trim()
           if (!trimmed) {
-            // preserve — re-render will fall through to ModelsStep
+            replace(() => <Wizard initial={snapshot(state)} />)
             return
           }
           const parsed = parseSecret(trimmed)
@@ -318,6 +341,7 @@ function Wizard(props: { initial: WizardStore }) {
           }
           if (parsed.kind === "key") setState("key", parsed.key)
           else if (parsed.kind === "env") setState("key", `{env:${parsed.name}}`)
+          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
