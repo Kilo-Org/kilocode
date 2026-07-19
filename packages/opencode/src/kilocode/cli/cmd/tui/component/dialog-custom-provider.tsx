@@ -236,7 +236,6 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState({ providerID: id, name: id })
-          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -257,7 +256,6 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("name", name)
-          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -278,7 +276,6 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("baseURL", value.trim())
-          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -307,7 +304,6 @@ function Wizard(props: { initial: WizardStore }) {
             return
           }
           setState("key", parsed.kind === "key" ? parsed.key : `{env:${parsed.name}}`)
-          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
@@ -330,7 +326,7 @@ function Wizard(props: { initial: WizardStore }) {
         onConfirm={(value) => {
           const trimmed = value.trim()
           if (!trimmed) {
-            replace(() => <Wizard initial={snapshot(state)} />)
+            // preserve — re-render will fall through to ModelsStep
             return
           }
           const parsed = parseSecret(trimmed)
@@ -340,7 +336,6 @@ function Wizard(props: { initial: WizardStore }) {
           }
           if (parsed.kind === "key") setState("key", parsed.key)
           else if (parsed.kind === "env") setState("key", `{env:${parsed.name}}`)
-          replace(() => <Wizard initial={snapshot(state)} />)
         }}
       />
     )
