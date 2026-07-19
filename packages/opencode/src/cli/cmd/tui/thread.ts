@@ -334,14 +334,16 @@ export const TuiThreadCommand = cmd({
             headers: transport.headers, // kilocode_change
             directory: cwd,
           })
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            args.session = id
+            args.cloudFork = false
+          } catch (err) {
+            Log.Default.debug("failed to import cloud session", { err })
+            UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
             return
           }
-          args.session = id
-          args.cloudFork = false
         }
         // kilocode_change end
 

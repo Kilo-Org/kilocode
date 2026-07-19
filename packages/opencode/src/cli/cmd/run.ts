@@ -32,11 +32,14 @@ import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
 import { event as normalizeEvent } from "./run/event"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { errorMessage } from "@/util/error"
+import { Log } from "@opencode-ai/core/util/log"
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
 import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
 
 const runtimeTask = import("./run/runtime")
+const log = Log.create({ service: "cli.run" })
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
 function pick(value: string | undefined): ModelInput | undefined {
@@ -441,28 +444,29 @@ export const RunCommand = effectCmd({
       async function session(sdk: KiloClient): Promise<SessionInfo | undefined> {
         // kilocode_change start - import cloud session before local lookup
         if (args.session && args["cloud-fork"]) {
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            const current = await sdk.session
+              .get({
+                sessionID: id,
+              })
+              .catch(() => undefined)
+
+            if (!current?.data) {
+              UI.error("Session not found")
+              process.exit(1)
+            }
+
+            return {
+              id: current.data.id,
+              title: current.data.title,
+              directory: current.data.directory,
+              model: current.data.model,
+            }
+          } catch (err) {
+            log.debug("failed to import cloud session", { err })
+            UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
             process.exit(1)
-          }
-
-          const current = await sdk.session
-            .get({
-              sessionID: id,
-            })
-            .catch(() => undefined)
-
-          if (!current?.data) {
-            UI.error("Session not found")
-            process.exit(1)
-          }
-
-          return {
-            id: current.data.id,
-            title: current.data.title,
-            directory: current.data.directory,
-            model: current.data.model,
           }
         }
         // kilocode_change end

@@ -1,4 +1,5 @@
 import { cmd } from "../cmd"
+import { Log } from "@opencode-ai/core/util/log"
 import { UI } from "@/cli/ui"
 import { win32DisableProcessedInput, win32InstallCtrlCGuard } from "./win32"
 import { TuiConfig } from "@/cli/cmd/tui/config/tui"
@@ -7,6 +8,8 @@ import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session"
 import { errorMessage } from "@/util/error"
 import { validateSession } from "./validate-session"
 import { ServerAuth } from "@/server/auth"
+
+const log = Log.create({ service: "tui.attach" })
 
 export const AttachCommand = cmd({
   command: "attach <url>",
@@ -89,14 +92,16 @@ export const AttachCommand = cmd({
           directory,
           headers,
         })
-        const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-        if (!id) {
-          UI.error("Failed to import session from cloud")
+        try {
+          const id = await importCloudSession(sdk, args.session)
+          args.session = id
+          args.cloudFork = false
+        } catch (err) {
+          log.debug("failed to import cloud session", { err })
+          UI.error(`Failed to import session from cloud: ${errorMessage(err)}`)
           process.exitCode = 1
           return
         }
-        args.session = id
-        args.cloudFork = false
       }
       // kilocode_change end
       const config = await TuiConfig.get()
