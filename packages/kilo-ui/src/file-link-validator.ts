@@ -14,7 +14,14 @@
 // frame (as MutationObserver-driven passes do) become a single round trip.
 import type { ValidateFilesFn } from "./context/data"
 
-const MAX_CACHE = 2000
+// Positives and negatives are cached separately, each LRU-bounded. Under the
+// permissive code-span heuristic (looksLikeCandidate in file-path.ts) almost any
+// bare token becomes a candidate, so a long session produces far more transient
+// negatives (`useState`, `null`, …) than real files. Keeping them in their own
+// map means that churn evicts only other negatives — a confirmed clickable file
+// never gets pushed out by non-file probe noise — and eviction stays O(1).
+const MAX_POSITIVE = 2000
+const MAX_NEGATIVE = 1000
 
 export type CheckOptions = {
   // How many times to re-attempt a rejected/timed-out validation before
@@ -31,10 +38,11 @@ export type CheckOptions = {
 
 const DEFAULTS: CheckOptions = { maxAttempts: 3, retryDelayMs: 2000, negativeTtlMs: 30_000 }
 
-type Entry = { exists: boolean; expires: number }
-
-// key: `${sessionID}::${path}`
-const cache = new Map<string, Entry>()
+// key: `${sessionID}::${path}`. Confirmed files never expire; a negative stores
+// the timestamp (ms) at which it should be re-validated. Map iteration order is
+// insertion order and reads refresh recency, so the oldest key is the LRU one.
+const positives = new Set<string>()
+const negatives = new Map<string, number>()
 const inflight = new Map<string, Promise<boolean | undefined>>()
 
 type Batch = {
@@ -49,15 +57,27 @@ function key(sessionID: string, path: string): string {
   return `${sessionID}::${path}`
 }
 
+type Lru = { size: number; keys(): IterableIterator<string>; delete(k: string): boolean }
+
+function evictOldest(map: Lru, max: number): void {
+  if (map.size < max) return
+  const oldest = map.keys().next().value
+  if (oldest !== undefined) map.delete(oldest)
+}
+
 function remember(k: string, exists: boolean, negativeTtlMs: number): void {
-  // Map iteration order is insertion order, and reads refresh recency (see
-  // checkFile), so evicting the first key drops the least-recently-used entry.
-  cache.delete(k)
-  if (cache.size >= MAX_CACHE) {
-    const oldest = cache.keys().next().value
-    if (oldest !== undefined) cache.delete(oldest)
+  // A path can flip negative→positive (a file created mid-session), so always
+  // clear the other tier. delete-then-set refreshes LRU recency for the key.
+  if (exists) {
+    negatives.delete(k)
+    positives.delete(k)
+    evictOldest(positives, MAX_POSITIVE)
+    positives.add(k)
+    return
   }
-  cache.set(k, { exists, expires: exists ? Infinity : Date.now() + negativeTtlMs })
+  negatives.delete(k)
+  evictOldest(negatives, MAX_NEGATIVE)
+  negatives.set(k, Date.now() + negativeTtlMs)
 }
 
 function settle(batch: Batch, path: string, exists: boolean | undefined): void {
@@ -114,14 +134,21 @@ export function checkFile(
   opts?: Partial<CheckOptions>,
 ): Promise<boolean | undefined> {
   const k = key(sessionID, path)
-  const cached = cache.get(k)
-  if (cached && (cached.exists || Date.now() < cached.expires)) {
-    // Refresh recency so the LRU eviction in remember() keeps hot entries.
-    cache.delete(k)
-    cache.set(k, cached)
-    return Promise.resolve(cached.exists)
+  if (positives.has(k)) {
+    // Refresh recency so LRU eviction keeps hot entries.
+    positives.delete(k)
+    positives.add(k)
+    return Promise.resolve(true)
   }
-  if (cached) cache.delete(k) // expired negative → re-validate
+  const expires = negatives.get(k)
+  if (expires !== undefined) {
+    if (Date.now() < expires) {
+      negatives.delete(k)
+      negatives.set(k, expires)
+      return Promise.resolve(false)
+    }
+    negatives.delete(k) // expired negative → re-validate
+  }
   const existing = inflight.get(k)
   if (existing) return existing
 

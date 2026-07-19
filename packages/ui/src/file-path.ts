@@ -57,6 +57,9 @@ const NON_PATH_CHAR = /[()[\]{}<>;=,\s]/
  * separator paths become clickable, which a strict "must have an extension" rule
  * would miss. Spans that are empty or contain code punctuation (`useState()`,
  * `arr[i]`, `a = b`) are rejected up front so the obvious non-paths never probe.
+ * The extra non-file probes this admits are deduped/batched and cached as
+ * bounded negatives (see file-link-validator.ts) so they don't evict confirmed
+ * files, and validation is deferred to message completion to cap volume.
  */
 export function looksLikeCandidate(path: string): boolean {
   return !!path && !NON_PATH_CHAR.test(path)
