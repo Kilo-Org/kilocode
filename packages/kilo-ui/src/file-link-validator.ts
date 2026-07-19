@@ -15,16 +15,32 @@
 import type { ValidateFilesFn } from "./context/data"
 
 const MAX_CACHE = 2000
-const MAX_ATTEMPTS = 3
-const RETRY_DELAY_MS = 2000
+
+export type CheckOptions = {
+  // How many times to re-attempt a rejected/timed-out validation before
+  // resolving `undefined` (never `false`).
+  maxAttempts: number
+  // Backoff between retry attempts, in ms.
+  retryDelayMs: number
+  // How long a confirmed "does not exist" stays cached, in ms. A path may be
+  // mentioned before its file is created during streaming, so negatives are
+  // re-checked after this window instead of staying plain for the whole
+  // session. Confirmed positives never expire.
+  negativeTtlMs: number
+}
+
+const DEFAULTS: CheckOptions = { maxAttempts: 3, retryDelayMs: 2000, negativeTtlMs: 30_000 }
+
+type Entry = { exists: boolean; expires: number }
 
 // key: `${sessionID}::${path}`
-const cache = new Map<string, boolean>()
+const cache = new Map<string, Entry>()
 const inflight = new Map<string, Promise<boolean | undefined>>()
 
 type Batch = {
   paths: Set<string>
   resolvers: Map<string, Array<(exists: boolean | undefined) => void>>
+  config: CheckOptions
 }
 
 const batches = new Map<string, Batch>()
@@ -33,12 +49,12 @@ function key(sessionID: string, path: string): string {
   return `${sessionID}::${path}`
 }
 
-function remember(k: string, exists: boolean): void {
+function remember(k: string, exists: boolean, negativeTtlMs: number): void {
   if (cache.size >= MAX_CACHE) {
     const oldest = cache.keys().next().value
     if (oldest !== undefined) cache.delete(oldest)
   }
-  cache.set(k, exists)
+  cache.set(k, { exists, expires: exists ? Infinity : Date.now() + negativeTtlMs })
 }
 
 function settle(batch: Batch, path: string, exists: boolean | undefined): void {
@@ -53,7 +69,7 @@ function runBatch(sessionID: string, batch: Batch, validateFiles: ValidateFilesF
       const set = new Set(existing)
       for (const p of paths) {
         const exists = set.has(p)
-        remember(key(sessionID, p), exists)
+        remember(key(sessionID, p), exists, batch.config.negativeTtlMs)
         inflight.delete(key(sessionID, p))
         settle(batch, p, exists)
       }
@@ -64,8 +80,8 @@ function runBatch(sessionID: string, batch: Batch, validateFiles: ValidateFilesF
       // giving up; even then, giving up resolves as `undefined` (unknown),
       // not `false`, so the caller leaves the candidate untouched instead of
       // demoting a real file to plain text.
-      if (attempt + 1 < MAX_ATTEMPTS) {
-        setTimeout(() => runBatch(sessionID, batch, validateFiles, attempt + 1), RETRY_DELAY_MS)
+      if (attempt + 1 < batch.config.maxAttempts) {
+        setTimeout(() => runBatch(sessionID, batch, validateFiles, attempt + 1), batch.config.retryDelayMs)
         return
       }
       for (const p of paths) {
@@ -82,18 +98,28 @@ function runBatch(sessionID: string, batch: Batch, validateFiles: ValidateFilesF
  * Returns `true`/`false` once confirmed, or `undefined` if validation could
  * not be confirmed (e.g. every retry timed out) — callers should treat
  * `undefined` as "leave as-is", not as a negative result.
+ *
+ * `opts` tunes retry/TTL behavior; the first caller to open a per-tick batch
+ * for a session sets the config for that batch.
  */
 export function checkFile(
   sessionID: string,
   path: string,
   validateFiles: ValidateFilesFn,
+  opts?: Partial<CheckOptions>,
 ): Promise<boolean | undefined> {
   const k = key(sessionID, path)
-  if (cache.has(k)) return Promise.resolve(cache.get(k)!)
+  const cached = cache.get(k)
+  if (cached && (cached.exists || Date.now() < cached.expires)) return Promise.resolve(cached.exists)
+  if (cached) cache.delete(k) // expired negative → re-validate
   const existing = inflight.get(k)
   if (existing) return existing
 
-  const batch = batches.get(sessionID) ?? { paths: new Set(), resolvers: new Map() }
+  const batch: Batch = batches.get(sessionID) ?? {
+    paths: new Set(),
+    resolvers: new Map(),
+    config: { ...DEFAULTS, ...opts },
+  }
   const isNewBatch = !batches.has(sessionID)
   batches.set(sessionID, batch)
   batch.paths.add(path)

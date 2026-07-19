@@ -1,6 +1,12 @@
 // kilocode_change - new file
 import { describe, expect, it } from "bun:test"
-import { extractSuffix, normalizeCandidatePath, extractFilePathFromHref } from "./file-path"
+import {
+  extractSuffix,
+  normalizeCandidatePath,
+  extractFilePathFromHref,
+  looksLikeFilePath,
+  escapeAttribute,
+} from "./file-path"
 
 describe("extractSuffix", () => {
   it("no suffix", () => {
@@ -239,5 +245,43 @@ describe("extractFilePathFromHref", () => {
         line: 10,
       })
     })
+  })
+})
+
+describe("looksLikeFilePath", () => {
+  it("accepts names with an extension", () => {
+    expect(looksLikeFilePath("src/foo.ts")).toBe(true)
+    expect(looksLikeFilePath("README.md")).toBe(true)
+    expect(looksLikeFilePath("./a/b/c.tsx")).toBe(true)
+  })
+
+  it("accepts known extensionless filenames", () => {
+    expect(looksLikeFilePath("Dockerfile")).toBe(true)
+    expect(looksLikeFilePath("LICENSE")).toBe(true)
+    expect(looksLikeFilePath("path/to/Makefile")).toBe(true)
+  })
+
+  it("rejects bare identifiers and extensionless paths", () => {
+    expect(looksLikeFilePath("useState")).toBe(false)
+    expect(looksLikeFilePath("null")).toBe(false)
+    expect(looksLikeFilePath("src/foo")).toBe(false)
+    expect(looksLikeFilePath("README")).toBe(false)
+  })
+})
+
+describe("escapeAttribute", () => {
+  it("escapes quotes, ampersands, and angle brackets", () => {
+    expect(escapeAttribute('a"b')).toBe("a&quot;b")
+    expect(escapeAttribute("a&b")).toBe("a&amp;b")
+    expect(escapeAttribute("a<b>c")).toBe("a&lt;b&gt;c")
+  })
+
+  it("escapes & before introducing entities (no double-escaping)", () => {
+    expect(escapeAttribute('"')).toBe("&quot;")
+    expect(escapeAttribute('&"')).toBe("&amp;&quot;")
+  })
+
+  it("leaves ordinary paths untouched", () => {
+    expect(escapeAttribute("./src/foo.ts")).toBe("./src/foo.ts")
   })
 })

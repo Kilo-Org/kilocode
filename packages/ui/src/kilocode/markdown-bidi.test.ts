@@ -64,14 +64,45 @@ describe("Markdown bidirectional rendering contract", () => {
       ),
     )
 
-    // Non-trivial inline code spans are marked as file-link candidates (see
-    // marked.tsx's codespan renderer); the isolated `dir="auto"` still applies.
-    expect(html).toContain(
-      '<code class="file-link-candidate" dir="auto" data-file-candidate="./inlineCode">inlineCode</code>',
-    )
+    // `inlineCode` is a bare identifier (no extension), so it is not treated
+    // as a file-link candidate and renders as plain code with isolated dir.
+    expect(html).toContain('<code dir="auto">inlineCode</code>')
     expect(html).toContain('<pre dir="auto"><code class="language-ts" data-lang="ts">')
     expect(html).toContain("const value = 1")
     expect(html.match(/<span dir="auto"><span class="katex/g)?.length).toBe(1)
+  })
+
+  test("marks path-like code spans as candidates and leaves bare identifiers plain", async () => {
+    const parser = createMarkedParser({})
+    const withPath = await Promise.resolve(parser.parse("see `src/foo.ts:12:5`"))
+    expect(withPath).toContain('class="file-link-candidate"')
+    expect(withPath).toContain('data-file-candidate="./src/foo.ts"')
+    expect(withPath).toContain('data-file-line="12"')
+    expect(withPath).toContain('data-file-col="5"')
+
+    // Bare identifiers (no extension / not a known extensionless name) are not
+    // candidates, so they never trigger filesystem validation.
+    const plain = await Promise.resolve(parser.parse("call `useState` here"))
+    expect(plain).toContain('<code dir="auto">useState</code>')
+    expect(plain).not.toContain("file-link-candidate")
+  })
+
+  test("escapes the candidate attribute so a quote can't break out", async () => {
+    const parser = createMarkedParser({})
+    // Path-like (has an extension) but contains a quote from raw model output.
+    const html = await Promise.resolve(parser.parse('`a".ts`'))
+    expect(html).toContain('data-file-candidate="./a&quot;.ts"')
+    // The quote must be escaped, not left raw to break the attribute and
+    // inject a new one.
+    expect(html).not.toContain('data-file-candidate="./a".ts"')
+  })
+
+  test("tags file-path markdown links but keeps target/rel", async () => {
+    const parser = createMarkedParser({})
+    const html = await Promise.resolve(parser.parse("[open](src/foo.ts)"))
+    expect(html).toContain('class="external-link file-path-link"')
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
   })
 
   test("updates streaming code highlight in place while preserving direction", () => {

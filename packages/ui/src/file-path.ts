@@ -31,9 +31,25 @@ export function normalizeCandidatePath(path: string): string {
 const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]+:/
 const EXTENSIONLESS_FILES = new Set(["Dockerfile", "LICENSE", "Makefile"])
 
-function looksLikeFilePath(path: string): boolean {
+/**
+ * Heuristic: does this candidate resemble a file path worth stat-checking?
+ * A basename with a dot (an extension) or a known extensionless filename.
+ * Keeps bare identifiers (`useState`, `null`, `true`) from turning into
+ * filesystem-validated candidates.
+ */
+export function looksLikeFilePath(path: string): boolean {
   const name = path.split(/[\\/]/).pop() ?? path
   return name.includes(".") || EXTENSIONLESS_FILES.has(name)
+}
+
+/**
+ * Escape a string for safe interpolation into a double-quoted HTML attribute.
+ * Candidate paths come from raw model output, so escaping prevents a value
+ * containing `"` (or `&`/`<`/`>`) from breaking out of the attribute —
+ * defense-in-depth alongside the DOMPurify pass the markdown already runs.
+ */
+export function escapeAttribute(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
 /**

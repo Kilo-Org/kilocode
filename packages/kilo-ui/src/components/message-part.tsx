@@ -56,7 +56,7 @@ import { readToolOpen, toolOpenKey } from "./tool-open-state"
 import { ContextToolGroupHeader, ContextToolExpandedList, ContextToolRollingResults } from "./context-tool-results"
 import { ShellRollingResults } from "./shell-rolling-results"
 import { reasoningHeading } from "./reasoning-heading"
-import { extractFilePathFromHref } from "../file-path"
+import { extractFilePathFromHref } from "@opencode-ai/ui/file-path"
 import { normalize } from "./session-diff"
 import { deferredHighlight } from "../context/marked"
 import { escapeHtml } from "../util/escape-html"
@@ -1424,7 +1424,19 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
         validate()
       })
     }
-    const observer = new MutationObserver(schedule)
+    // Ignore mutations promote() causes itself: a promoted/demoted node loses
+    // the file-link-candidate class, so an attribute-only change on a node
+    // that's no longer a candidate is our own write and must not schedule
+    // another (no-op) pass. Real new/changed candidates arrive via childList
+    // or characterData, or as attribute changes on still-candidate nodes.
+    const observer = new MutationObserver((records) => {
+      const relevant = records.some(
+        (r) =>
+          r.type !== "attributes" ||
+          (r.target instanceof HTMLElement && r.target.classList.contains("file-link-candidate")),
+      )
+      if (relevant) schedule()
+    })
     observer.observe(bodyRef, {
       attributes: true,
       attributeFilter: ["class", "data-file-candidate", "data-file-line", "data-file-col"],

@@ -10,7 +10,13 @@ import katex from "katex"
 import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
 // kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { extractSuffix, normalizeCandidatePath, extractFilePathFromHref } from "../file-path" // kilocode_change
+import {
+  extractSuffix,
+  normalizeCandidatePath,
+  extractFilePathFromHref,
+  looksLikeFilePath,
+  escapeAttribute,
+} from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
 import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_change
@@ -284,10 +290,13 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
       renderer: {
         link({ href, title, text }) {
           const titleAttr = title ? ` title="${title}"` : ""
-          // kilocode_change: file-path links get a distinct class for styling
+          // kilocode_change: file-path links get a distinct class for styling.
+          // Keep target/rel so the shared (opencode) consumer's navigation and
+          // security behavior is unchanged — Kilo's click handler intercepts
+          // these via preventDefault and opens the file instead.
           const isFile = href ? extractFilePathFromHref(href) : undefined
           if (isFile) {
-            return `<a href="${href}"${titleAttr} class="external-link file-path-link">${text}</a>`
+            return `<a href="${href}"${titleAttr} class="external-link file-path-link" target="_blank" rel="noopener noreferrer">${text}</a>`
           }
           return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
         },
@@ -306,7 +315,15 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
             return `<code dir="auto">${escaped}</code>`
           }
           const { candidate, line, column } = extractSuffix(text)
-          const normalized = normalizeCandidatePath(candidate)
+          // Only real-looking paths (an extension or a known extensionless
+          // name) become candidates, so bare identifiers like `useState` or
+          // `null` don't trigger filesystem probes during streaming.
+          if (!looksLikeFilePath(candidate)) {
+            return `<code dir="auto">${escaped}</code>`
+          }
+          // Escape the candidate for the attribute — it's derived from raw
+          // model output, so a stray `"` must not break out of the attribute.
+          const normalized = escapeAttribute(normalizeCandidatePath(candidate))
           const lineAttr = line ? ` data-file-line="${line}"` : ""
           const colAttr = column ? ` data-file-col="${column}"` : ""
           return `<code class="file-link-candidate" dir="auto" data-file-candidate="${normalized}"${lineAttr}${colAttr}>${escaped}</code>`
