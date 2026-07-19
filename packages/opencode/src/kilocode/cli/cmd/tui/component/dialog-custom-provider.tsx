@@ -10,7 +10,7 @@
  * Kilo-owned file (path contains `kilocode`) — no upstream merge markers.
  */
 
-import { createEffect, createSignal, Match, Switch, type JSX } from "solid-js"
+import { createEffect, createSignal, Match, onMount, Switch, type JSX } from "solid-js"
 import { createStore, produce, unwrap } from "solid-js/store"
 import type { Config, ProviderConfig } from "@kilocode/sdk/v2"
 import { TextAttributes } from "@opentui/core"
@@ -164,38 +164,6 @@ function confirmAction(message: string): Promise<boolean> {
       () => {
         dialog.clear()
         resolve(false)
-      },
-    )
-  })
-}
-
-/**
- * Mount a DialogPrompt via dialog.replace and resolve with the entered value
- * (or null on cancel). Dismisses the prompt on confirm/cancel. Unlike
- * DialogPrompt.show, this does not require the caller to dialog.replace
- * afterwards, because we resolve and the caller controls re-mounting.
- */
-function ask(dialog: ReturnType<typeof useDialog>, title: string, placeholder: string, value?: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    dialog.replace(
-      () => (
-        <DialogPrompt
-          title={title}
-          placeholder={placeholder}
-          {...(value !== undefined ? { value } : {})}
-          onConfirm={(entered) => {
-            dialog.clear()
-            resolve(entered)
-          }}
-          onCancel={() => {
-            dialog.clear()
-            resolve(null)
-          }}
-        />
-      ),
-      () => {
-        dialog.clear()
-        resolve(null)
       },
     )
   })
@@ -415,11 +383,18 @@ const secretForFetch = (): string | undefined => {
     retryTick()
     if (props.state.fetched.length > 0 && retryTick() === 0) return
     setLoading(true)
+    props.setState("fetchError", undefined)
     void (async () => {
       const result = await fetchModels(props.state.baseURL, secretForFetch())
       if (result.ok) {
         props.setState("fetched", result.models)
-        props.setState("fetchError", undefined)
+        // An empty result is treated as a fetch failure so the user sees the
+        // retry/manual flow instead of an apparently empty picker.
+        if (result.models.length === 0) {
+          props.setState("fetchError", "Provider returned no models")
+        } else {
+          props.setState("fetchError", undefined)
+        }
       } else {
         props.setState("fetchError", result.error)
       }
@@ -446,30 +421,27 @@ const secretForFetch = (): string | undefined => {
       }),
     )
 
-  const addManual = async () => {
-    const idRaw = await ask(dialog, "Add model — id", "model-id", undefined)
-    if (idRaw == null) return
-    const id = idRaw.trim()
-    if (!id) {
-      toast.show({ variant: "error", message: "Model id is required" })
-      remountPicker()
-      return
-    }
-    const nameRaw = await ask(dialog, "Add model — name", id, id)
-    const name = (nameRaw ?? id).trim() || id
-    props.setState(
-      "manual",
-      produce((arr: CustomProviderModel[]) => {
-        if (!arr.find((m) => m.id === id)) arr.push({ id, name })
-      }),
-    )
-    props.setState(
-      "selected",
-      produce((arr: string[]) => {
-        if (!arr.includes(id)) arr.push(id)
-      }),
-    )
-    remountPicker()
+  const openAddModel = () => {
+    dialog.replace(() => (
+      <AddModelPrompt
+        onCancel={remountPicker}
+        onDone={(id, name) => {
+          props.setState(
+            "manual",
+            produce((arr: CustomProviderModel[]) => {
+              if (!arr.find((m) => m.id === id)) arr.push({ id, name })
+            }),
+          )
+          props.setState(
+            "selected",
+            produce((arr: string[]) => {
+              if (!arr.includes(id)) arr.push(id)
+            }),
+          )
+          remountPicker()
+        }}
+      />
+    ))
   }
 
   const remountPicker = () => {
@@ -526,7 +498,7 @@ const secretForFetch = (): string | undefined => {
       value: "manual",
       category: "Models",
       onSelect: () => {
-        void addManual()
+        openAddModel()
       },
     })
     opts.push({
@@ -589,6 +561,65 @@ function FetchingView(props: { baseURL: string; onCancel: () => void }) {
       </box>
     </box>
   )
+}
+
+/**
+ * Two-step "Add model manually" flow: prompt for id, then for name, then
+ * call onDone(id, name). Mounted via dialog.replace from the picker so the
+ * picker cleanly unmounts and this component owns the dialog stack. Each
+ * inner prompt uses dialog.replace as well, returning to this component's
+ * own onCancel/onDone.
+ */
+function AddModelPrompt(props: { onCancel: () => void; onDone: (id: string, name: string) => void }) {
+  const dialog = useDialog()
+  const toast = useToast()
+  const { theme } = useTheme()
+  onMount(() => {
+    dialog.replace(() => (
+      <DialogPrompt
+        title="Add model — id"
+        placeholder="model-id"
+        description={() => (
+          <text fg={theme.textMuted} wrapMode="word">
+            The id the provider expects in API requests.
+          </text>
+        )}
+        onCancel={() => {
+          dialog.clear()
+          props.onCancel()
+        }}
+        onConfirm={(value) => {
+          const id = value.trim()
+          if (!id) {
+            toast.show({ variant: "error", message: "Model id is required" })
+            return
+          }
+          dialog.replace(() => (
+            <DialogPrompt
+              title="Add model — name"
+              placeholder={id}
+              value={id}
+              description={() => (
+                <text fg={theme.textMuted} wrapMode="word">
+                  Display name (press enter to use the id).
+                </text>
+              )}
+              onCancel={() => {
+                dialog.clear()
+                props.onCancel()
+              }}
+              onConfirm={(nameValue) => {
+                dialog.clear()
+                const name = (nameValue ?? id).trim() || id
+                props.onDone(id, name)
+              }}
+            />
+          ))
+        }}
+      />
+    ))
+  })
+  return <></>
 }
 
 // ---------------------------------------------------------------------------
