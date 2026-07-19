@@ -14,7 +14,7 @@ import {
   extractSuffix,
   normalizeCandidatePath,
   extractFilePathFromHref,
-  looksLikeFilePath,
+  looksLikeCandidate,
   escapeAttribute,
 } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
@@ -322,10 +322,11 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
             return `<code dir="auto">${escaped}</code>`
           }
           const { candidate, line, column } = extractSuffix(text)
-          // Only real-looking paths (an extension or a known extensionless
-          // name) become candidates, so bare identifiers like `useState` or
-          // `null` don't trigger filesystem probes during streaming.
-          if (!looksLikeFilePath(candidate)) {
+          // A candidate just needs to be a bare token (no code punctuation) —
+          // extensionless files (`install`, `run-script`) qualify too. The
+          // post-render filesystem check is authoritative, so non-files like
+          // `useState` are validated away; see looksLikeCandidate.
+          if (!looksLikeCandidate(candidate)) {
             return `<code dir="auto">${escaped}</code>`
           }
           // Escape the candidate for the attribute — it's derived from raw

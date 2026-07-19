@@ -5,6 +5,7 @@ import {
   normalizeCandidatePath,
   extractFilePathFromHref,
   looksLikeFilePath,
+  looksLikeCandidate,
   escapeAttribute,
 } from "./file-path"
 
@@ -266,6 +267,31 @@ describe("looksLikeFilePath", () => {
     expect(looksLikeFilePath("null")).toBe(false)
     expect(looksLikeFilePath("src/foo")).toBe(false)
     expect(looksLikeFilePath("README")).toBe(false)
+  })
+})
+
+describe("looksLikeCandidate", () => {
+  it("accepts extensionless files, separator paths, and bare tokens", () => {
+    // These are the cases a strict extension check misses; the filesystem check
+    // downstream decides which are real.
+    expect(looksLikeCandidate("install")).toBe(true)
+    expect(looksLikeCandidate("run-script")).toBe(true)
+    expect(looksLikeCandidate(".kilo/run-script")).toBe(true)
+    expect(looksLikeCandidate("src/foo")).toBe(true)
+    expect(looksLikeCandidate("README")).toBe(true)
+    expect(looksLikeCandidate("src/foo.ts")).toBe(true)
+    // A non-file bare identifier is still a candidate — it's just probed and
+    // demoted, rather than rejected up front.
+    expect(looksLikeCandidate("useState")).toBe(true)
+  })
+
+  it("rejects empty spans and code expressions with punctuation", () => {
+    expect(looksLikeCandidate("")).toBe(false)
+    expect(looksLikeCandidate("useState()")).toBe(false)
+    expect(looksLikeCandidate("arr[i]")).toBe(false)
+    expect(looksLikeCandidate("a = b")).toBe(false)
+    expect(looksLikeCandidate("{ a }")).toBe(false)
+    expect(looksLikeCandidate("a < b")).toBe(false)
   })
 })
 

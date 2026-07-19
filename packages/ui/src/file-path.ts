@@ -32,14 +32,34 @@ const SCHEME_RE = /^[a-zA-Z][a-zA-Z0-9+.-]+:/
 const EXTENSIONLESS_FILES = new Set(["Dockerfile", "LICENSE", "Makefile"])
 
 /**
- * Heuristic: does this candidate resemble a file path worth stat-checking?
- * A basename with a dot (an extension) or a known extensionless filename.
- * Keeps bare identifiers (`useState`, `null`, `true`) from turning into
- * filesystem-validated candidates.
+ * Strict heuristic for a markdown-link href (`[text](href)`). Link hrefs are
+ * decided at render time and get NO filesystem check, so a false positive would
+ * hijack a real navigation link (e.g. a `docs/getting-started` SPA route) and
+ * try to open a nonexistent file. Keep this conservative: only a basename with
+ * an extension or a known extensionless filename qualifies.
  */
 export function looksLikeFilePath(path: string): boolean {
   const name = path.split(/[\\/]/).pop() ?? path
   return name.includes(".") || EXTENSIONLESS_FILES.has(name)
+}
+
+// Code punctuation that shows up in expressions but never in a bare file path,
+// so a span containing any of these is prose/code, not a file reference. Quotes
+// are intentionally omitted so escapeAttribute still guards the rare path with a
+// stray quote rather than the span being silently dropped.
+const NON_PATH_CHAR = /[()[\]{}<>;=,\s]/
+
+/**
+ * Permissive heuristic for an inline code span. Unlike a link href, a code-span
+ * candidate IS validated against the filesystem afterward, so being liberal here
+ * is safe: a non-file like `useState` is probed once and demoted back to plain
+ * code. This lets extensionless files (`install`, `run-script`, `configure`) and
+ * separator paths become clickable, which a strict "must have an extension" rule
+ * would miss. Spans that are empty or contain code punctuation (`useState()`,
+ * `arr[i]`, `a = b`) are rejected up front so the obvious non-paths never probe.
+ */
+export function looksLikeCandidate(path: string): boolean {
+  return !!path && !NON_PATH_CHAR.test(path)
 }
 
 /**

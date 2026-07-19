@@ -1407,16 +1407,21 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
 
   // The Markdown component writes its DOM asynchronously (rAF-coalesced
   // morphdom), so scanning for candidates synchronously misses them. Drive
-  // validation from a MutationObserver instead, coalescing streaming bursts
-  // into one pass per frame. Observe child, text, and file-link attributes
-  // because morphdom can update an existing <code> node in place as streaming
-  // text changes (for example `src/fo` -> `src/foo.ts`).
+  // validation from a MutationObserver, coalescing bursts into one pass per
+  // frame. Validation is deferred until the message stops streaming: while a
+  // message streams, morphdom rewrites the same <code> node every frame
+  // (`src/fo` -> `src/foo.ts`), and with every bare token now a candidate,
+  // per-frame validation would re-probe dozens of partial/throwaway paths. So
+  // the observer only arms a pass once streaming has finished; a completed
+  // message (history) validates immediately on mount.
   onMount(() => {
     if (!bodyRef) return
     let scheduled = false
     let frame: number | undefined
     const schedule = () => {
-      if (scheduled) return
+      // Defer while streaming — the streaming->false effect below kicks off the
+      // single pass once the final text has settled.
+      if (scheduled || streaming()) return
       scheduled = true
       frame = requestAnimationFrame(() => {
         scheduled = false
@@ -1445,13 +1450,10 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       subtree: true,
     })
     schedule()
-    // A candidate whose validation could not be confirmed mid-stream (every
-    // retry timed out) is left untouched as "unknown", not demoted. If the
-    // stream then ends with no further DOM mutation, the MutationObserver never
-    // fires again and that candidate stays plain even after the filesystem
-    // recovers. Re-scan once when streaming stops so those unknowns get a final
-    // pass — only still-unresolved candidates remain in the DOM by then, so this
-    // is cheap and never demotes a confirmed link.
+    // Run one pass when the message finishes streaming (and on mount if it is
+    // already complete). This is the primary trigger: it validates the final
+    // settled text once, and also rescues any candidate a prior pass left
+    // "unknown" after a mid-render validation timeout.
     createEffect(() => {
       if (!streaming()) schedule()
     })
