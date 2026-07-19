@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from "node:fs"
 import os from "node:os"
@@ -82,6 +83,38 @@ function target(arch: "x64" | "arm64") {
   return arch === "x64" ? "x86_64-linux-musl" : "aarch64-linux-musl"
 }
 
+function resolveZig(): string {
+  if (process.env.ZIG) return process.env.ZIG
+  const probe = process.platform === "win32" ? "zig.exe" : "zig"
+  const found = spawnSync(process.platform === "win32" ? "where" : "which", [probe], { encoding: "utf8" })
+  if (found.status === 0) {
+    const line = found.stdout.split(/\r?\n/).find((l) => l.trim().length > 0)
+    if (line) return line.trim()
+  }
+  // Support auto-installed zig from `script/ensure-zig.ts`
+  const repoRoot = path.resolve(import.meta.dir, "..", "..", "..")
+  const arch = process.arch === "arm64" ? "arm64" : "x64"
+  const os =
+    process.platform === "linux" ? "linux" : process.platform === "darwin" ? "darwin" : process.platform === "win32" ? "windows" : undefined
+  if (os) {
+    const archiveArch =
+      process.platform === "linux"
+        ? process.arch === "arm64"
+          ? "linux-aarch64"
+          : "linux-x86_64"
+        : process.platform === "darwin"
+          ? process.arch === "arm64"
+            ? "macos-aarch64"
+            : "macos-x86_64"
+          : "windows-x86_64"
+    const staged = path.join(repoRoot, "node_modules", ".zig", "0.14.0", `${os}-${arch}`, `zig-${archiveArch}-0.14.0`, probe)
+    if (existsSync(staged)) return staged
+  }
+  throw new Error(
+    `Could not find a \`zig\` binary. Install zig 0.14.0 (https://ziglang.org/download/0.14.0/), set $ZIG, or run \`bun install\` to auto-download.`,
+  )
+}
+
 function muslLicense(zig: string) {
   const result = Bun.spawnSync([zig, "env"])
   if (result.exitCode !== 0) throw new Error("Could not inspect the Zig toolchain")
@@ -102,7 +135,7 @@ async function compile(arch: "x64" | "arm64") {
   await Bun.write(path.join(include, "capability.h"), capability)
   await Bun.write(path.join(generated, "config.h"), config)
 
-  const zig = process.env.ZIG ?? "zig"
+  const zig = resolveZig()
   const args = [
     zig,
     "cc",
