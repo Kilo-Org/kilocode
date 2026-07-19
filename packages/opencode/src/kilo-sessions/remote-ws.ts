@@ -334,7 +334,7 @@ export namespace RemoteWS {
           scheduleRetry(g)
           return
         }
-        if (closed) return
+        if (closed || g.settled) return
         if (!token) {
           options.log.warn("remote-ws no token, will retry", { gen: g.id })
           scheduleRetry(g)

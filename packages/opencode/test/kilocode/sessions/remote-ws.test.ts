@@ -636,16 +636,15 @@ describe("RemoteWS", () => {
         timers: clock,
         now: () => clock.now,
         timeout: 300_000,
-        tokenTimeout: 1000,
+        tokenTimeout: 15_000,
       })
 
-      // First token attempt fails immediately.
-      clock.advance(1000)
+      // The rejected getToken settles before the token deadline.
       await flush()
       expect(attempt).toBe(1)
       expect(FakeWebSocket.instances.length).toBe(0)
 
-      // Retry fires at the initial backoff (1000ms).
+      // Retry fires at the initial backoff (1000ms), well before tokenTimeout.
       clock.advance(1000)
       await flush()
       expect(attempt).toBe(2)
@@ -987,6 +986,67 @@ describe("RemoteWS", () => {
       await flush()
       expect(disconnects).toBe(1)
       expect(conn.connected).toBe(false)
+    })
+  })
+
+  test("AC3g: a token that resolves after the connect deadline fired does not assign a stale socket", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let attempt = 0
+      let lateResolve!: (v: string) => void
+      const getToken = () => {
+        attempt++
+        if (attempt === 1) {
+          return new Promise<string>((r) => {
+            lateResolve = r
+          })
+        }
+        return Promise.resolve("tok")
+      }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken,
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+        tokenTimeout: 15000,
+      })
+
+      // Gen1: getToken() is still pending; no socket has been constructed yet.
+      await flush()
+      expect(attempt).toBe(1)
+      expect(FakeWebSocket.instances.length).toBe(0)
+
+      // The connect deadline fires while getToken() is pending, settling gen1
+      // and scheduling a retry. ws is still undefined at this point, so the
+      // deadline's ws.close() is a no-op.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(0)
+
+      // Gen2 fires after the initial backoff (1000ms). Its getToken()
+      // resolves immediately and a socket is constructed.
+      clock.advance(1000)
+      await flush()
+      expect(attempt).toBe(2)
+      expect(FakeWebSocket.instances.length).toBe(1)
+      const gen2Socket = FakeWebSocket.instances[0]
+      gen2Socket.open()
+      expect(conn.connected).toBe(true)
+
+      // Now gen1's late token resolves. The guarded continuation must
+      // observe g.settled and return without constructing a stale socket
+      // and without clobbering the live ws pointer.
+      lateResolve("tok-late")
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+      expect(conn.connected).toBe(true)
+      expect(FakeWebSocket.instances[0]).toBe(gen2Socket)
+      expect(gen2Socket.readyState).toBe(FakeWebSocket.OPEN)
     })
   })
 
