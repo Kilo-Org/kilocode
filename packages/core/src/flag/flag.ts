@@ -131,6 +131,11 @@ export const Flag = {
   get KILO_DISABLE_PROJECT_CONFIG() {
     return truthy("KILO_DISABLE_PROJECT_CONFIG")
   },
+  // OCP M1 opt-in: also scan project `.opencode` dirs (after `.kilo`/`.kilocode`).
+  // See https://github.com/oakimov/opencode-plugin-compat/blob/main/patches/kilo-m1.md
+  get KILO_OCP_SCAN_OPENCODE() {
+    return truthy("KILO_OCP_SCAN_OPENCODE")
+  },
   get KILO_EXPERIMENTAL_REFERENCES() {
     return enabledByExperimental("KILO_EXPERIMENTAL_REFERENCES")
   },

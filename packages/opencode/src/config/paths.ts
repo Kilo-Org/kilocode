@@ -22,17 +22,24 @@ export const files = Effect.fn("ConfigPaths.projectFiles")(function* (
 
 export const directories = Effect.fn("ConfigPaths.directories")(function* (directory: string, worktree?: string) {
   const afs = yield* FSUtil.Service
+  // kilocode_change — native dirs first; optional OCP dual-scan for `.opencode`
+  // See https://github.com/oakimov/opencode-plugin-compat/blob/main/patches/kilo-m1.md
+  const projectTargets = [
+    ".kilocode",
+    ".kilo",
+    ...(Flag.KILO_OCP_SCAN_OPENCODE ? [".opencode"] : []),
+  ]
   return unique([
     Global.Path.config,
     ...(!Flag.KILO_DISABLE_PROJECT_CONFIG
       ? yield* afs.up({
-          targets: [".kilocode", ".kilo"], // kilocode_change
+          targets: projectTargets, // kilocode_change
           start: directory,
           stop: worktree,
         })
       : []),
     ...(yield* afs.up({
-      targets: [".kilocode", ".kilo"], // kilocode_change
+      targets: projectTargets, // kilocode_change
       start: Global.Path.home,
       stop: Global.Path.home,
     })),
