@@ -59,7 +59,8 @@ const NON_PATH_CHAR = /[()[\]{}<>;=,\s]/
  * `arr[i]`, `a = b`) are rejected up front so the obvious non-paths never probe.
  * The extra non-file probes this admits are deduped/batched and cached as
  * bounded negatives (see file-link-validator.ts) so they don't evict confirmed
- * files, and validation is deferred to message completion to cap volume.
+ * files, and each candidate is only probed once its streamed path settles (see
+ * the per-element debounce in message-part.tsx) to cap volume.
  */
 export function looksLikeCandidate(path: string): boolean {
   return !!path && !NON_PATH_CHAR.test(path)

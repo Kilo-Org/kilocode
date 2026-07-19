@@ -1381,52 +1381,81 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     el.removeAttribute("data-file-candidate")
   }
 
-  const validate = () => {
-    if (!bodyRef || !data.validateFiles) return
-    const validateFiles = data.validateFiles
-    const sessionID = props.message.sessionID
-    for (const el of bodyRef.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
-      const p = el.getAttribute("data-file-candidate") ?? ""
-      if (!p) continue
-      void checkFile(sessionID, p, validateFiles).then((exists) => {
-        // `undefined` means validation could not be confirmed (e.g. every
-        // retry timed out) — leave the candidate untouched so a later pass
-        // can retry it instead of demoting a possibly-real file to plain text.
-        if (exists === undefined) return
-        // Guard against a stale response racing a newer candidate: morphdom
-        // can rewrite this same <code> node in place during streaming (e.g.
-        // "src/fo" -> "src/foo.ts"), so only apply the result if the element
-        // is still mounted and still represents the path we validated.
-        if (!el.isConnected) return
-        if (!el.classList.contains("file-link-candidate")) return
-        if (el.getAttribute("data-file-candidate") !== p) return
-        promote(el, p, exists)
-      })
-    }
+  const dispatch = (el: HTMLElement, p: string) => {
+    if (!data.validateFiles) return
+    void checkFile(props.message.sessionID, p, data.validateFiles).then((exists) => {
+      // `undefined` means validation could not be confirmed (e.g. every retry
+      // timed out) — leave the candidate untouched so a later pass can retry it
+      // instead of demoting a possibly-real file to plain text.
+      if (exists === undefined) return
+      // Guard against a stale response racing a newer candidate: morphdom can
+      // rewrite this same <code> node in place during streaming (e.g. "src/fo"
+      // -> "src/foo.ts"), so only apply the result if the element is still
+      // mounted and still represents the path we validated.
+      if (!el.isConnected) return
+      if (!el.classList.contains("file-link-candidate")) return
+      if (el.getAttribute("data-file-candidate") !== p) return
+      promote(el, p, exists)
+    })
   }
 
   // The Markdown component writes its DOM asynchronously (rAF-coalesced
   // morphdom), so scanning for candidates synchronously misses them. Drive
   // validation from a MutationObserver, coalescing bursts into one pass per
-  // frame. Validation is deferred until the message stops streaming: while a
-  // message streams, morphdom rewrites the same <code> node every frame
-  // (`src/fo` -> `src/foo.ts`), and with every bare token now a candidate,
-  // per-frame validation would re-probe dozens of partial/throwaway paths. So
-  // the observer only arms a pass once streaming has finished; a completed
-  // message (history) validates immediately on mount.
+  // frame. Links are created *during* streaming, but a candidate is only probed
+  // once its path has settled: because morphdom keeps the same <code> node as a
+  // streamed path grows (`src/fo` -> `src/foo.ts`), we track a per-element
+  // debounce and re-arm it whenever that element's path changes. Intermediate
+  // partials are superseded (their timer cleared) before they ever hit the
+  // filesystem, so a growing token costs one probe for its final value, not one
+  // per frame — while settled paths behind the streaming frontier light up
+  // without waiting for the whole message. On completion we flush immediately.
   onMount(() => {
     if (!bodyRef) return
+    const SETTLE_MS = 400
+    const pending = new Map<HTMLElement, { path: string; timer: ReturnType<typeof setTimeout> }>()
+
+    // Arm (or flush) validation for one candidate. `immediate` skips the
+    // settle delay — used once the message is no longer streaming, so completed
+    // history and just-finished messages validate without a 400ms lag.
+    const arm = (el: HTMLElement, p: string, immediate: boolean) => {
+      const prior = pending.get(el)
+      if (immediate) {
+        if (prior) clearTimeout(prior.timer)
+        pending.delete(el)
+        dispatch(el, p)
+        return
+      }
+      // Already counting down for this exact path — don't reset, or a candidate
+      // behind the streaming frontier would never settle while others mutate.
+      if (prior && prior.path === p) return
+      if (prior) clearTimeout(prior.timer)
+      pending.set(el, {
+        path: p,
+        timer: setTimeout(() => {
+          pending.delete(el)
+          dispatch(el, p)
+        }, SETTLE_MS),
+      })
+    }
+
+    const scan = (immediate: boolean) => {
+      if (!bodyRef || !data.validateFiles) return
+      for (const el of bodyRef.querySelectorAll<HTMLElement>("code.file-link-candidate")) {
+        const p = el.getAttribute("data-file-candidate") ?? ""
+        if (p) arm(el, p, immediate)
+      }
+    }
+
     let scheduled = false
     let frame: number | undefined
     const schedule = () => {
-      // Defer while streaming — the streaming->false effect below kicks off the
-      // single pass once the final text has settled.
-      if (scheduled || streaming()) return
+      if (scheduled) return
       scheduled = true
       frame = requestAnimationFrame(() => {
         scheduled = false
         frame = undefined
-        validate()
+        scan(!streaming())
       })
     }
     // Ignore mutations promote() causes itself: a promoted/demoted node loses
@@ -1450,16 +1479,17 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
       subtree: true,
     })
     schedule()
-    // Run one pass when the message finishes streaming (and on mount if it is
-    // already complete). This is the primary trigger: it validates the final
-    // settled text once, and also rescues any candidate a prior pass left
-    // "unknown" after a mid-render validation timeout.
+    // When streaming stops, flush any still-pending candidate immediately (and
+    // validate on mount for completed history). Also rescues a candidate left
+    // "unknown" after a mid-render validation timeout once mutations stop.
     createEffect(() => {
       if (!streaming()) schedule()
     })
     onCleanup(() => {
       observer.disconnect()
       if (frame !== undefined) cancelAnimationFrame(frame)
+      for (const entry of pending.values()) clearTimeout(entry.timer)
+      pending.clear()
     })
   })
 
