@@ -22,6 +22,107 @@ function capture() {
   }
 }
 
+class FakeClock {
+  now = 0
+  private timers: { id: number; fireAt: number; fn: () => void; interval?: number }[] = []
+  private nextId = 1
+
+  setTimeout(fn: () => void, ms = 0) {
+    const id = this.nextId++
+    this.timers.push({ id, fireAt: this.now + ms, fn })
+    this.timers.sort((a, b) => a.fireAt - b.fireAt || a.id - b.id)
+    return id
+  }
+
+  clearTimeout(id: unknown) {
+    this.timers = this.timers.filter((t) => t.id !== id)
+  }
+
+  setInterval(fn: () => void, ms = 0) {
+    const id = this.nextId++
+    this.timers.push({ id, fireAt: this.now + ms, fn, interval: ms })
+    this.timers.sort((a, b) => a.fireAt - b.fireAt || a.id - b.id)
+    return id
+  }
+
+  clearInterval(id: unknown) {
+    this.timers = this.timers.filter((t) => t.id !== id)
+  }
+
+  advance(ms: number) {
+    const end = this.now + ms
+    while (true) {
+      const due = this.timers.filter((t) => t.fireAt <= end)
+      if (due.length === 0) {
+        this.now = end
+        return
+      }
+      const next = due[0]
+      this.now = next.fireAt
+      this.timers = this.timers.filter((t) => t.id !== next.id)
+      if (next.interval !== undefined) {
+        next.fireAt = this.now + next.interval
+        this.timers.push(next)
+        this.timers.sort((a, b) => a.fireAt - b.fireAt || a.id - b.id)
+      }
+      next.fn()
+    }
+  }
+}
+
+class FakeWebSocket {
+  static readonly OPEN = 1
+  static readonly CONNECTING = 0
+  static readonly CLOSED = 3
+  static instances: FakeWebSocket[] = []
+
+  static reset() {
+    this.instances = []
+  }
+
+  readonly sent: string[] = []
+  readyState = FakeWebSocket.CONNECTING
+  onopen: (() => void) | null = null
+  onmessage: ((event: { data: string }) => void) | null = null
+  onclose: ((event: { code: number; reason: string }) => void) | null = null
+  onerror: ((event: unknown) => void) | null = null
+
+  constructor(readonly url: string) {
+    FakeWebSocket.instances.push(this)
+  }
+
+  send(message: string) {
+    this.sent.push(message)
+  }
+
+  close(code = 1000, reason = "closed") {
+    if (this.readyState === FakeWebSocket.CLOSED) return
+    this.readyState = FakeWebSocket.CLOSED
+    this.onclose?.({ code, reason })
+  }
+
+  open() {
+    if (this.readyState !== FakeWebSocket.CONNECTING) return
+    this.readyState = FakeWebSocket.OPEN
+    this.onopen?.()
+  }
+
+  disconnect(code = 1000, reason = "closed") {
+    this.close(code, reason)
+  }
+
+  receive(data: unknown) {
+    this.onmessage?.({ data: JSON.stringify(data) })
+  }
+}
+
+async function flush() {
+  // Flush a few microtask ticks to let async getToken / onopen chains settle.
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
 function createServer() {
   const messages: string[] = []
   const clients: ServerWebSocket<unknown>[] = []
@@ -253,38 +354,7 @@ describe("RemoteWS", () => {
     const sockets: FakeWebSocket[] = []
     const received: unknown[] = []
 
-    class FakeWebSocket {
-      static readonly OPEN = 1
-      readonly sent: string[] = []
-      readyState = 0
-      onopen: (() => void) | null = null
-      onmessage: ((event: { data: string }) => void) | null = null
-      onclose: ((event: { code: number; reason: string }) => void) | null = null
-      onerror: ((event: unknown) => void) | null = null
-
-      constructor(readonly url: string) {
-        sockets.push(this)
-      }
-
-      send(message: string) {
-        this.sent.push(message)
-      }
-
-      close() {
-        this.readyState = 3
-      }
-
-      open() {
-        this.readyState = FakeWebSocket.OPEN
-        this.onopen?.()
-      }
-
-      disconnect(code = 1000, reason = "closed") {
-        this.readyState = 3
-        this.onclose?.({ code, reason })
-      }
-    }
-
+    FakeWebSocket.reset()
     Object.defineProperty(globalThis, "WebSocket", { value: FakeWebSocket, configurable: true, writable: true })
     try {
       conn = RemoteWS.connect({
@@ -297,13 +367,13 @@ describe("RemoteWS", () => {
       })
 
       await settled()
-      const first = sockets[0]
+      const first = FakeWebSocket.instances[0]
       expect(first).toBeDefined()
       first?.open()
       first?.disconnect()
 
-      await until(() => sockets.length >= 2)
-      const second = sockets[1]
+      await until(() => FakeWebSocket.instances.length >= 2)
+      const second = FakeWebSocket.instances[1]
       expect(second).toBeDefined()
       second?.open()
 
@@ -516,5 +586,443 @@ describe("RemoteWS", () => {
     await ws2
     await settled()
     expect(conn.connected).toBe(true)
+  })
+
+  // -------------------------------------------------------------------------
+  // Deterministic fake-clock tests (AC2: bounded token acquisition)
+  // -------------------------------------------------------------------------
+
+  async function withFakeWebSocket<T>(fn: (clock: FakeClock) => T): Promise<T> {
+    const OriginalWebSocket = globalThis.WebSocket
+    FakeWebSocket.reset()
+    Object.defineProperty(globalThis, "WebSocket", { value: FakeWebSocket, configurable: true, writable: true })
+    try {
+      const clock = new FakeClock()
+      return await fn(clock)
+    } finally {
+      Object.defineProperty(globalThis, "WebSocket", { value: OriginalWebSocket, configurable: true, writable: true })
+    }
+  }
+
+  test("AC2a: getToken() rejection schedules a bounded retry and later succeeds", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let attempt = 0
+      const getToken = async () => {
+        attempt++
+        if (attempt === 1) throw new Error("no token")
+        return "tok"
+      }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken,
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        tokenTimeout: 1000,
+      })
+
+      // First token attempt fails immediately.
+      clock.advance(1000)
+      await flush()
+      expect(attempt).toBe(1)
+      expect(FakeWebSocket.instances.length).toBe(0)
+
+      // Retry fires at the initial backoff (1000ms).
+      clock.advance(1000)
+      await flush()
+      expect(attempt).toBe(2)
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+    })
+  })
+
+  test("AC2b: getToken() that never settles triggers a bounded retry and later succeeds", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let attempt = 0
+      const getToken = async () => {
+        attempt++
+        if (attempt === 1) return new Promise<string | undefined>(() => {}) // never resolves
+        return "tok"
+      }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken,
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        tokenTimeout: 1000,
+      })
+
+      // First token attempt times out.
+      clock.advance(1000)
+      await flush()
+      expect(attempt).toBe(1)
+      expect(FakeWebSocket.instances.length).toBe(0)
+
+      // Retry fires after backoff.
+      clock.advance(1000)
+      await flush()
+      expect(attempt).toBe(2)
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+    })
+  })
+
+  test("AC2c: getToken() resolving undefined schedules a bounded retry and later succeeds", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let attempt = 0
+      const getToken = async () => {
+        attempt++
+        if (attempt === 1) return undefined
+        return "tok"
+      }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken,
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        tokenTimeout: 1000,
+      })
+
+      // First token attempt resolves to undefined before the deadline.
+      await flush()
+      expect(attempt).toBe(1)
+      expect(FakeWebSocket.instances.length).toBe(0)
+
+      // The undefined result schedules a retry at the initial backoff.
+      clock.advance(1000)
+      await flush()
+      expect(attempt).toBe(2)
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // AC3: connection-attempt deadline with a single fenced retry owner
+  // -------------------------------------------------------------------------
+
+  test("AC3a: a socket stuck in CONNECTING is replaced by exactly one new attempt", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+      })
+
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      // Connect deadline fires, scheduling a retry.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1) // old socket not yet replaced
+
+      // Retry fires after backoff; exactly one new socket is created.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+
+      // No further attempts appear.
+      clock.advance(60_000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+    })
+  })
+
+  test("AC3b: synchronous WebSocket constructor throw schedules exactly one retry", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let attempts = 0
+      class ThrowingWebSocket {
+        static readonly OPEN = 1
+        constructor() {
+          attempts++
+          throw new Error("constructor failed")
+        }
+      }
+      const OriginalWebSocket = globalThis.WebSocket
+      Object.defineProperty(globalThis, "WebSocket", { value: ThrowingWebSocket, configurable: true, writable: true })
+
+      try {
+        conn = RemoteWS.connect({
+          url: "ws://example.test",
+          getToken: async () => "tok",
+          getSessions: async () => ({ sessions: [] }),
+          log: nolog(),
+          heartbeat: 60_000,
+          timers: clock,
+          now: () => clock.now,
+        timeout: 300_000,
+          connectTimeout: 1000,
+        })
+
+        await flush()
+        expect(attempts).toBe(1)
+
+        // Retry fires after backoff. The connect deadline (also at 1000ms) observes
+        // the generation is already settled and does not schedule a second retry.
+        clock.advance(1000)
+        await flush()
+        expect(attempts).toBe(2)
+      } finally {
+        Object.defineProperty(globalThis, "WebSocket", { value: OriginalWebSocket, configurable: true, writable: true })
+      }
+    })
+  })
+
+  test("AC3c: connect deadline only schedules exactly one retry when onclose arrives late", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+      })
+
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      // Connect deadline fires for the first generation, closing the socket and scheduling a retry.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      // Retry fires after backoff; exactly one new socket is created.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+
+      // Open the replacement socket and confirm the connection is live.
+      const second = FakeWebSocket.instances[1]
+      second.open()
+      expect(conn.connected).toBe(true)
+
+      // No further sockets are created.
+      clock.advance(60_000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+      expect(conn.connected).toBe(true)
+    })
+  })
+
+  test("AC3d: connect deadline is cleared after a successful open", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+
+      // Advance well past connectTimeout; no deadline-driven reconnect should occur.
+      clock.advance(60_000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+      expect(conn.connected).toBe(true)
+    })
+  })
+
+  test("AC3d: connect deadline is cleared after onclose", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+
+      socket.disconnect()
+      await flush()
+      expect(conn.connected).toBe(false)
+
+      // Reconnect happens at the backoff time (1000ms), not at the connectTimeout.
+      clock.advance(999)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+
+      clock.advance(1)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+
+      // No deadline-driven reconnect after the reconnect.
+      clock.advance(60_000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+    })
+  })
+
+  test("AC3d/e: connect deadline is cleared and no reconnect after Connection.close()", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        connectTimeout: 1000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      expect(conn.connected).toBe(true)
+
+      conn.close()
+      expect(conn.connected).toBe(false)
+
+      // Advance past connectTimeout and backoff; no new attempts.
+      clock.advance(60_000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(1)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // AC5: regression guard for permanent close codes and backoff reset
+  //
+  // Existing coverage:
+  // - Initial backoff retry: "reconnects with backoff after server close".
+  // - 4401 permanent stop: "stops reconnecting on 4401".
+  // - Stale-generation fencing: "ignores callbacks from a stale WebSocket generation".
+  // - close() no-reconnect: "close() prevents further reconnection and stops heartbeat".
+  // - Activity timeout: "force-reconnects on activity timeout" / "resets activity timer...".
+  // Missing and added below:
+  // - 4403 and 4409 permanent close (no reconnect, onClose fired).
+  // - Backoff resets to the initial value after a successful onopen.
+  // -------------------------------------------------------------------------
+
+  test("AC5: 4403 and 4409 are permanent close codes with no reconnect", async () => {
+    await withFakeWebSocket(async (clock) => {
+      for (const code of [4403, 4409]) {
+        conn?.close()
+        const codes: number[] = []
+        FakeWebSocket.reset()
+
+        conn = RemoteWS.connect({
+          url: "ws://example.test",
+          getToken: async () => "tok",
+          getSessions: async () => ({ sessions: [] }),
+          log: nolog(),
+          heartbeat: 60_000,
+          timers: clock,
+          now: () => clock.now,
+        timeout: 300_000,
+          onClose: (c) => codes.push(c),
+        })
+
+        await flush()
+        const socket = FakeWebSocket.instances[0]
+        socket.open()
+        socket.disconnect(code, "permanent")
+
+        await flush()
+        expect(codes).toEqual([code])
+        expect(conn.connected).toBe(false)
+
+        // Advance far past any backoff; no reconnect.
+        clock.advance(120_000)
+        await flush()
+        expect(FakeWebSocket.instances.length).toBe(1)
+      }
+    })
+  })
+
+  test("AC5: backoff resets to the initial value after a successful open", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+      })
+
+      await flush()
+      const first = FakeWebSocket.instances[0]
+      first.open()
+
+      // First transient close. schedule() uses 1000ms, then doubles to 2000ms.
+      first.disconnect(1000, "first")
+      await flush()
+
+      // Reconnect at 1000ms.
+      clock.advance(1000)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+      const second = FakeWebSocket.instances[1]
+      second.open()
+
+      // Second transient close. Because onopen reset backoff to 1000ms, the next
+      // reconnect should be at 1000ms, not 2000ms.
+      second.disconnect(1001, "second")
+      await flush()
+
+      clock.advance(999)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(2)
+
+      clock.advance(1)
+      await flush()
+      expect(FakeWebSocket.instances.length).toBe(3)
+    })
   })
 })
