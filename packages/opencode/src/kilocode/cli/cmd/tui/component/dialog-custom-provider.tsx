@@ -54,23 +54,6 @@ type WizardStore = {
   fetchError?: string
 }
 
-/** Plain snapshot of a WizardStore — used to pass across dialog.replace
- *  boundaries so the next mount's createStore gets a real object, not a
- *  reactive proxy from the previous (unmounting) component. */
-function snapshot(store: WizardStore): WizardStore {
-  return {
-    mode: store.mode,
-    providerID: store.providerID,
-    name: store.name,
-    baseURL: store.baseURL,
-    key: store.key,
-    fetched: store.fetched.slice(),
-    selected: store.selected.slice(),
-    manual: store.manual.slice(),
-    fetchError: store.fetchError,
-  }
-}
-
 /**
  * Launch the wizard. `replace` is the dialog context's `replace`. For edit
  * mode, `providerID` identifies the existing provider.
@@ -178,7 +161,6 @@ function Wizard(props: { initial: WizardStore }) {
   const sync = useSync()
   const toast = useToast()
   const [state, setState] = createStore<WizardStore>(unwrap(props.initial))
-  const replace = (el: () => JSX.Element) => dialog.replace(el)
 
   // Prefill from existing config on first mount in edit mode.
   if (state.mode === "edit" && !state.name) {
