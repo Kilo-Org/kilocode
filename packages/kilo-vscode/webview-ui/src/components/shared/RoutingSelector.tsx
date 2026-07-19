@@ -187,6 +187,11 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
     const gone = missing()
     return [undefined, ...(gone ? [gone] : []), ...(props.endpoints ?? [])]
   }
+  // While the popover is open focus always sits on a row (see onOpen), so
+  // hovered() is undefined exactly when the Auto row is active. Previewing
+  // Auto with a pin still in place intentionally falls back to the pinned
+  // endpoint's data as a reference point — the "Auto (slug)" header marks
+  // that state; it is not a claim the gateway will pick that endpoint.
   const hovered = () => rows()[focused()]
   const pinned = () => props.endpoints?.find((endpoint) => endpoint.provider === props.value) ?? missing()
   const preview = () => hovered() ?? pinned()
