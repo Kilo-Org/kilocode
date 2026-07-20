@@ -1459,6 +1459,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner 모델",
   "settings.experimental.swePrunerModel.description":
     "도구 출력을 정리하는 데 사용하는 모델. 기본값은 구성된 소형 모델입니다",
+  "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
+  "settings.experimental.smoothScrolling.description":
+    "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
   "settings.experimental.mcpTimeout.title": "MCP 타임아웃 (ms)",
   "settings.experimental.mcpTimeout.description": "MCP 서버 요청의 타임아웃 시간 (밀리초)",
   "settings.experimental.remote.title": "Remote 제어",
