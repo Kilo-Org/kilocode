@@ -45,10 +45,22 @@ export async function importCloudSession(
   sessionId: string,
 ): Promise<string> {
   const result = await client.kilo.cloud.session.import({ sessionId })
-  if (result.error) throw new Error(errorMessage(result.error))
+  if (result.error) throw new Error(importErrorReason(result.error))
   const id = (result.data as Record<string, unknown>)?.id
   if (typeof id !== "string") throw new Error("cloud session import returned no session id")
   return id
+}
+
+/**
+ * Extract a human-readable reason from a failed cloud-session import.
+ * The gateway returns errors as `{ error: string }` (400/500), while other
+ * SDK error shapes carry `.message`/`.data.message`. Prefer the `error`
+ * field so the real server reason reaches the user instead of `[object Object]`.
+ */
+function importErrorReason(error: unknown): string {
+  const err = error as { error?: unknown }
+  if (typeof err.error === "string" && err.error) return err.error
+  return errorMessage(error)
 }
 
 /**

@@ -24,6 +24,14 @@ describe("importCloudSession", () => {
     await expect(importCloudSession(c, "ses_cloud")).rejects.toThrow("session not found")
   })
 
+  test("throws with the gateway's { error } reason (400/500 contract)", async () => {
+    const c = client(async () => ({
+      data: undefined,
+      error: { error: "Invalid export data" },
+    }))
+    await expect(importCloudSession(c, "ses_cloud")).rejects.toThrow("Invalid export data")
+  })
+
   test("throws when data.id is missing", async () => {
     const c = client(async () => ({ data: {} }))
     await expect(importCloudSession(c, "ses_cloud")).rejects.toThrow()
