@@ -131,14 +131,14 @@ export namespace KilocodeConfigOverlay {
 
   export async function projectTarget(input: { directory: string; worktree?: string }) {
     const found = await Filesystem.findUp(dirs.toReversed(), input.directory, input.worktree)
-    const names = files.toReversed()
+    const names = KilocodeConfig.KILO_CONFIG_FILES
     const roots = await Filesystem.findUp([...names], input.directory, input.worktree)
     const candidates = [...found.flatMap((dir) => names.map((file) => path.join(dir, file))), ...roots]
     return candidates.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
   }
 
   export function globalTarget() {
-    const candidates = files.toReversed().map((file) => path.join(Global.Path.config, file))
+    const candidates = KilocodeConfig.files(Global.Path.config)
     return candidates.find((file) => existsSync(file)) ?? candidates[0]
   }
 

@@ -3,4 +3,4 @@
 "kilo-code": patch
 ---
 
-Use Kilo configuration filenames consistently instead of loading or writing OpenCode-named files.
+Only load `kilo.json` and `kilo.jsonc` automatically. Rename existing `opencode.json`, `opencode.jsonc`, or legacy global `config.json` and TOML `config` files to continue using them.

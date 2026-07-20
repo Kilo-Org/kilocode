@@ -8,6 +8,7 @@ import {
 } from "jsonc-parser"
 
 import * as ConfigPaths from "@/config/paths"
+import { KilocodeConfig } from "@/kilocode/config/config" // kilocode_change
 import { Global } from "@opencode-ai/core/global"
 import { Filesystem } from "@/util/filesystem"
 import { Flock } from "@opencode-ai/core/util/flock"
@@ -86,10 +87,7 @@ const defaultPatchDeps: PatchDeps = {
   },
   exists: (file) => Filesystem.exists(file),
   // kilocode_change start
-  files: (dir, name) =>
-    name === "kilo"
-      ? [path.join(dir, "kilo.jsonc"), path.join(dir, "kilo.json")]
-      : ConfigPaths.fileInDirectory(dir, name),
+  files: (dir, name) => (name === "kilo" ? KilocodeConfig.files(dir) : ConfigPaths.fileInDirectory(dir, name)),
   // kilocode_change end
 }
 

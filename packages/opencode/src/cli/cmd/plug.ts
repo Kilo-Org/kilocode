@@ -1,6 +1,6 @@
 import { intro, log, outro, spinner } from "@clack/prompts"
 import { Effect } from "effect"
-import path from "path" // kilocode_change
+import { KilocodeConfig } from "@/kilocode/config/config" // kilocode_change
 
 import { ConfigPaths } from "@/config/paths"
 import { Global } from "@opencode-ai/core/global"
@@ -59,10 +59,7 @@ const defaultPlugDeps: PlugDeps = {
   },
   exists: (file) => Filesystem.exists(file),
   // kilocode_change start
-  files: (dir, name) =>
-    name === "kilo"
-      ? [path.join(dir, "kilo.jsonc"), path.join(dir, "kilo.json")]
-      : ConfigPaths.fileInDirectory(dir, name),
+  files: (dir, name) => (name === "kilo" ? KilocodeConfig.files(dir) : ConfigPaths.fileInDirectory(dir, name)),
   // kilocode_change end
   global: Global.Path.config,
 }

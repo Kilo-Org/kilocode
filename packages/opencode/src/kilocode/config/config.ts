@@ -39,6 +39,11 @@ export namespace KilocodeConfig {
   /** Kilo-specific config file names, ordered from highest to lowest precedence. */
   export const KILO_CONFIG_FILES = ["kilo.jsonc", "kilo.json"] as const
 
+  /** Kilo config paths, ordered from highest to lowest precedence. */
+  export function files(dir: string) {
+    return KILO_CONFIG_FILES.map((file) => path.join(dir, file))
+  }
+
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 

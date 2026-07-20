@@ -1,4 +1,5 @@
 import { ConfigParse } from "@/config/parse"
+import { KilocodeConfig } from "@/kilocode/config/config"
 import { Filesystem } from "@/util/filesystem"
 import path from "path"
 
@@ -10,7 +11,7 @@ export namespace KilocodeMcpConfig {
 
   export function files(dir: string, global = false) {
     if (global) {
-      return [path.join(dir, "kilo.jsonc"), path.join(dir, "kilo.json")]
+      return KilocodeConfig.files(dir)
     }
     return [
       path.join(dir, ".kilo", "kilo.jsonc"),
