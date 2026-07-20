@@ -552,6 +552,17 @@ export const layer = Layer.effect(
                 })
               }
               ctx.toolcalls[value.id] = { ...toolCall.call, raw: toolCall.call.raw + value.text }
+              // kilocode_change start - stream tool input progress so clients can
+              // render live feedback while a large tool call's arguments are
+              // still being generated (big writes/edits take many seconds)
+              yield* session.updatePartDelta({
+                sessionID: toolCall.call.sessionID,
+                messageID: toolCall.call.messageID,
+                partID: toolCall.call.partID,
+                field: "raw",
+                delta: value.text,
+              })
+              // kilocode_change end
             }
             return
 

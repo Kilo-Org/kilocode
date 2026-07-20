@@ -94,6 +94,44 @@ describe("SessionStreamScheduler / coalescing", () => {
     expect(partText(flat[0]!)).toBe("queued")
     expect(partText(flat[1]!)).toBe("noId")
   })
+
+  function toolUpdate(raw: string, delta?: string, sid = "sess-1", partID = "t1") {
+    const msg: Item = {
+      type: "partUpdated",
+      sessionID: sid,
+      messageID: "m1",
+      part: { id: partID, type: "tool", messageID: "m1", state: { status: "pending", input: {}, raw } },
+    }
+    if (delta === undefined) return msg
+    return { ...msg, delta: { type: "tool-input-delta", textDelta: delta } } as Item
+  }
+
+  function partRaw(msg: Item): string {
+    return (msg.part as { state: { raw: string } }).state.raw
+  }
+
+  it("merges repeated tool input deltas into state.raw", () => {
+    const sent = items(flushSync(toolUpdate("a", "a"), toolUpdate("b", "b")))
+    expect(sent).toHaveLength(1)
+    expect(partRaw(sent[0]!)).toBe("ab")
+    expect(sent[0]!.delta?.type).toBe("tool-input-delta")
+    expect(sent[0]!.delta?.textDelta).toBe("ab")
+  })
+
+  it("appends tool input deltas onto a queued pending tool part", () => {
+    const sent = items(flushSync(toolUpdate("{"), toolUpdate('"a"', '"a"')))
+    expect(sent).toHaveLength(1)
+    expect(partRaw(sent[0]!)).toBe('{"a"')
+    expect(sent[0]!.delta).toBeUndefined()
+  })
+
+  it("does not bake tool input deltas into non-tool parts", () => {
+    // A raw fragment for a part that isn't a tool (shouldn't happen on the
+    // wire) must not corrupt the queued part; the delta itself still merges.
+    const sent = items(flushSync(update("txt", undefined, "sess-1", "t1"), toolUpdate("x", "x")))
+    expect(sent).toHaveLength(1)
+    expect(partText(sent[0]!)).toBe("txt")
+  })
 })
 
 describe("SessionStreamScheduler / session isolation", () => {

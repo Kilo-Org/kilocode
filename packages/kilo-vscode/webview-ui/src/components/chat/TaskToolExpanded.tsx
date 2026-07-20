@@ -19,6 +19,7 @@ import { createAutoScroll } from "@kilocode/kilo-ui/hooks"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { childID } from "../../context/session-utils"
+import { formatCompactCount } from "../../utils/format"
 import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
@@ -170,8 +171,16 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
               {(item) => {
                 const info = createMemo(() => getToolInfo(item().tool, item().state?.input))
                 const subtitle = createMemo(() => {
+                  const state = item().state as { status: string; title?: string; raw?: string }
+                  // While the model is still generating a tool call's arguments
+                  // (seconds for big writes/edits), show live input progress
+                  // instead of a row that looks frozen.
+                  if (state.status === "pending" && state.raw) {
+                    return language.t("session.messages.receivingToolInput", {
+                      size: `${formatCompactCount(state.raw.length)}B`,
+                    })
+                  }
                   if (info().subtitle) return info().subtitle
-                  const state = item().state as { status: string; title?: string }
                   if (state.status === "completed" || state.status === "running") return state.title
                   return undefined
                 })

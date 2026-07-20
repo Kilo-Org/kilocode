@@ -84,9 +84,15 @@ function partField(part: unknown, key: string): unknown {
   return (part as Record<string, unknown>)[key]
 }
 
-function appendPart(part: unknown, text: string): unknown {
+function appendPart(part: unknown, text: string, raw: boolean): unknown {
   if (!part || typeof part !== "object") return part
   const item = part as Record<string, unknown>
+  if (raw) {
+    if (item.type !== "tool") return part
+    const state = (item.state ?? {}) as Record<string, unknown>
+    const base = typeof state.raw === "string" ? state.raw : ""
+    return { ...item, state: { ...state, raw: base + text } }
+  }
   if ((item.type !== "text" && item.type !== "reasoning") || typeof item.text !== "string") return part
   return { ...item, text: item.text + text }
 }
@@ -103,11 +109,15 @@ function mergePartUpdate(prev: PartUpdate | undefined, msg: PartUpdate): PartUpd
   if (!prev) return msg
   const text = msg.delta?.textDelta
   if (!text) return msg.delta ? prev : msg
-  if (!prev.delta) return { ...prev, part: appendPart(prev.part, text) }
+  const type = msg.delta!.type
+  const raw = type === "tool-input-delta"
+  // A part only ever streams one field, so prev.delta and msg.delta always
+  // share the same type here; a full part with deltas baked in carries none.
+  if (!prev.delta || prev.delta.type !== type) return { ...prev, part: appendPart(prev.part, text, raw) }
   return {
     ...prev,
-    part: appendPart(prev.part, text),
-    delta: { type: "text-delta", textDelta: `${prev.delta.textDelta}${text}` },
+    part: appendPart(prev.part, text, raw),
+    delta: { type, textDelta: `${prev.delta.textDelta}${text}` } as PartUpdate["delta"],
   }
 }
 

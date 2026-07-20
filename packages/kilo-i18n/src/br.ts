@@ -25,6 +25,7 @@ export const dict = {
 
   // Reasoning block label
   "ui.permission.run": "Executar",
+  "session.messages.receivingToolInput": "Recebendo entrada {{size}}",
   "ui.reasoning.label": "Raciocínio",
 
   // Marketplace

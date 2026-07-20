@@ -1446,6 +1446,35 @@ export const SessionProvider: ParentComponent = (props) => {
     setTools(sid, tools)
   }
 
+  /**
+   * Append a tool-call argument fragment to the pending tool part's state.raw,
+   * in both the message part list and the per-session tool index (they hold
+   * separate copies). No-op when the part hasn't arrived yet — the pending
+   * full-part update always precedes the first fragment on the wire.
+   */
+  function appendToolRaw(sessionID: string | undefined, messageID: string, partID: string, text: string) {
+    if (!text) return
+    setStore(
+      "parts",
+      produce((parts) => {
+        const item = parts[messageID]?.find((p) => p.id === partID)
+        if (!item || item.type !== "tool") return
+        const state = item.state as { raw?: string }
+        state.raw = (state.raw ?? "") + text
+      }),
+    )
+    if (!sessionID) return
+    const tools = store.toolParts[sessionID]
+    const index = tools?.findIndex((p) => p.id === partID) ?? -1
+    if (!tools || index < 0) return
+    const item = tools[index]!
+    // Only pending parts receive argument fragments; later states replace raw.
+    if (item.state.status !== "pending") return
+    const next = tools.slice()
+    next[index] = { ...item, state: { ...item.state, raw: (item.state.raw ?? "") + text } }
+    setTools(sessionID, next)
+  }
+
   function dropToolPart(sessionID: string | undefined, partID: string) {
     if (!sessionID) return
     setTools(sessionID, removeSessionToolPart(store.toolParts[sessionID] ?? [], partID))
@@ -1622,6 +1651,21 @@ export const SessionProvider: ParentComponent = (props) => {
     }
 
     if (sessionID) patchPage(sessionID, { lastMutation: "update" })
+
+    // Tool-call argument fragments append to the pending tool part's state.raw.
+    // They never go through patchToolPart/the generic replace path: the update
+    // carries only a minimal stub part, and upserting that stub would clobber
+    // the real tool part's name/input in the session tool index.
+    if (delta?.type === "tool-input-delta") {
+      const stashed = stash.peek(effectiveMessageID)
+      if (stashed) {
+        stash.remove(effectiveMessageID)
+        setStore("parts", effectiveMessageID, stashed)
+      }
+      appendToolRaw(sessionID ?? part.sessionID, effectiveMessageID, part.id, delta.textDelta ?? "")
+      return
+    }
+
     patchToolPart(sessionID, effectiveMessageID, part)
 
     // If the stash has parts for this message, hydrate them first so the

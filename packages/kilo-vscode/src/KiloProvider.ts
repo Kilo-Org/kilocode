@@ -80,6 +80,7 @@ import {
 } from "./kilo-provider/notifications"
 import { childID } from "./kilo-provider/task-session"
 import { VisibleTaskStreams } from "./kilo-provider/visible-task-streams"
+import { FamilyStreamLanes } from "./kilo-provider/family-stream-lanes"
 import { handleNetworkEvent, clearNetworkWaits } from "./kilo-provider/network"
 import { SessionAbort } from "./kilo-provider/abort"
 import {
@@ -361,6 +362,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private pendingSessionRefresh = false // Refresh requested before the client is ready.
   private readonly streams = new SessionStreamScheduler((msg) => this.postMessage(msg))
   private readonly visibleTaskStreams = new VisibleTaskStreams((id, visible) => this.streams.setVisible(id, visible))
+  private readonly familyLanes = new FamilyStreamLanes((id, visible) =>
+    this.visibleTaskStreams.handle({ type: "streamSessionVisible", sessionID: id, visible }),
+  )
   private readonly confirmations = new MessageConfirmation()
   private readonly costs = new MaxCostNudge()
   private readonly activeAlerts = new Map<string, number>() // sid -> limit currently shown in UI
@@ -501,6 +505,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
   private focusSession(id?: string): void {
     this.streams.focus(id)
+    this.familyLanes.focus(id)
     this.registerPresence()
   }
 
@@ -973,6 +978,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           console.log("[Kilo New] KiloProvider: ✅ webviewReady received")
           this.isWebviewReady = true
           this.visibleTaskStreams.clear()
+          this.familyLanes.reassert()
           this.flushPendingKiloModel()
           await this.syncWebviewState("webviewReady")
           this.flushPendingReviewComments()
@@ -2072,6 +2078,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
     this.streams.drop(sessionID)
     this.visibleTaskStreams.delete(sessionID)
+    this.familyLanes.delete(sessionID)
     this.syncedChildSessions.delete(sessionID)
     this.sessionDirectories.delete(sessionID)
     this.aborts.delete(sessionID)
@@ -4104,9 +4111,12 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         sessionID?: string
       }
       const childId = childID(part)
-      if (childId && !this.trackedSessionIds.has(childId)) {
-        console.log("[Kilo New] KiloProvider: 🔗 Auto-adopting child session from task tool", { childId })
-        void this.handleSyncSession(childId, part.sessionID ?? sessionID)
+      if (childId) {
+        this.familyLanes.link(childId, part.sessionID ?? sessionID)
+        if (!this.trackedSessionIds.has(childId)) {
+          console.log("[Kilo New] KiloProvider: 🔗 Auto-adopting child session from task tool", { childId })
+          void this.handleSyncSession(childId, part.sessionID ?? sessionID)
+        }
       }
     }
 
@@ -4511,6 +4521,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
+    this.familyLanes.clear()
     this.streams.dispose()
     this.isWebviewReady = false
     // Release any waitForReady() awaiters so their callers don't hang after disposal.

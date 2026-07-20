@@ -484,6 +484,24 @@ function mapPartEvent(event: PartEvent, sessionID: string | undefined): WebviewM
   }
   if (!sessionID) return null
   const props = event.properties
+  if (props.field === "raw") {
+    // Tool-call argument fragments: carry them as a distinct delta type so the
+    // webview appends to the pending tool part's state.raw instead of treating
+    // the fragment as text-part content.
+    return {
+      type: "partUpdated",
+      sessionID: props.sessionID,
+      messageID: props.messageID,
+      part: {
+        id: props.partID,
+        type: "tool",
+        messageID: props.messageID,
+        sessionID: props.sessionID,
+        state: { status: "pending", input: {}, raw: props.delta },
+      },
+      delta: { type: "tool-input-delta", textDelta: props.delta },
+    }
+  }
   return {
     type: "partUpdated",
     sessionID: props.sessionID,

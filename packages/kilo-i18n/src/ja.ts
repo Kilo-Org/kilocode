@@ -24,6 +24,7 @@ export const dict = {
 
   // Reasoning block label
   "ui.permission.run": "実行",
+  "session.messages.receivingToolInput": "入力を受信中 {{size}}",
   "ui.reasoning.label": "推論",
 
   // Marketplace

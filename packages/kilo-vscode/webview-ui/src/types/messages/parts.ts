@@ -1,6 +1,8 @@
 // Tool state for tool parts
 export type ToolState =
-  | { status: "pending"; input: Record<string, unknown> }
+  // raw holds the still-generating tool-call arguments while pending, streamed
+  // via tool-input-delta updates so pending cards can show live input progress.
+  | { status: "pending"; input: Record<string, unknown>; raw?: string }
   | { status: "running"; input: Record<string, unknown>; title?: string }
   | {
       status: "completed"
@@ -90,10 +92,7 @@ export interface CompactionPart extends BasePart {
 export type Part = TextPart | FilePart | ToolPart | ReasoningPart | StepStartPart | StepFinishPart | CompactionPart
 
 // Part delta for streaming updates
-export interface PartDelta {
-  type: "text-delta"
-  textDelta?: string
-}
+export type PartDelta = { type: "text-delta"; textDelta?: string } | { type: "tool-input-delta"; textDelta?: string }
 
 // Token usage for assistant messages
 export interface TokenUsage {

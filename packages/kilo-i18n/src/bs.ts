@@ -30,6 +30,7 @@ export const dict = {
 
   // Reasoning block label
   "ui.permission.run": "Pokreni",
+  "session.messages.receivingToolInput": "Primanje unosa {{size}}",
   "ui.reasoning.label": "Rezonovanje",
 
   // Marketplace
