@@ -14,7 +14,7 @@ import { useConfig } from "../../context/config"
 import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
-import { routable } from "./model-selector-utils"
+import { routable, routingPreview } from "./model-selector-utils"
 import { fmtPrice } from "./model-preview-utils"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
@@ -66,7 +66,6 @@ function fmtUptime(n: number): string {
 
 interface RoutingPreviewProps {
   endpoint: ModelEndpoint | undefined
-  auto: boolean
   autoLabel: string
   /** The previewed endpoint is pinned but no longer present in the catalog. */
   unavailable: boolean
@@ -92,10 +91,8 @@ const RoutingPreview: Component<RoutingPreviewProps> = (props) => {
         {(endpoint) => (
           <>
             <div class="model-preview-header">
-              <span class="model-preview-name">
-                {props.auto ? `${props.autoLabel} (${endpoint.provider})` : endpoint.name}
-              </span>
-              <span class="model-preview-provider">{props.auto ? endpoint.name : endpoint.provider}</span>
+              <span class="model-preview-name">{endpoint.name}</span>
+              <span class="model-preview-provider">{endpoint.provider}</span>
             </div>
             <Show when={props.unavailable}>
               <div class="model-preview-description">{language.t("model.routing.unavailable")}</div>
@@ -183,19 +180,14 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
     if (props.endpoints.some((endpoint) => endpoint.provider === value)) return undefined
     return { provider: value, name: value }
   })
-  const rows = (): (ModelEndpoint | undefined)[] => {
+  // null is the Auto row; undefined remains reserved for no focused row.
+  const rows = (): (ModelEndpoint | null)[] => {
     const gone = missing()
-    return [undefined, ...(gone ? [gone] : []), ...(props.endpoints ?? [])]
+    return [null, ...(gone ? [gone] : []), ...(props.endpoints ?? [])]
   }
-  // While the popover is open focus always sits on a row (see onOpen), so
-  // hovered() is undefined exactly when the Auto row is active. Previewing
-  // Auto with a pin still in place intentionally falls back to the pinned
-  // endpoint's data as a reference point — the "Auto (slug)" header marks
-  // that state; it is not a claim the gateway will pick that endpoint.
   const hovered = () => rows()[focused()]
   const pinned = () => props.endpoints?.find((endpoint) => endpoint.provider === props.value) ?? missing()
-  const preview = () => hovered() ?? pinned()
-  const previewingAuto = () => hovered() === undefined
+  const preview = () => routingPreview(hovered(), pinned())
   const unavailable = () => preview() !== undefined && preview() === missing()
 
   function focusItem(idx: number) {
@@ -232,8 +224,8 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
     refocus()
   }
 
-  function pick(row: ModelEndpoint | undefined) {
-    if (row === undefined) props.onClear()
+  function pick(row: ModelEndpoint | null) {
+    if (row === null) props.onClear()
     else props.onSelect(row.provider)
     onOpen(false)
   }
@@ -299,12 +291,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
       {(bodyH) => (
         <div class="routing-selector-body" onKeyDown={onKeyDown} style={{ height: `${bodyH()}px` }}>
           <div class="routing-selector-preview">
-            <RoutingPreview
-              endpoint={preview()}
-              auto={previewingAuto()}
-              autoLabel={auto()}
-              unavailable={unavailable()}
-            />
+            <RoutingPreview endpoint={preview()} autoLabel={auto()} unavailable={unavailable()} />
           </div>
           <div class="routing-selector-divider" />
           <div class="routing-selector-list" role="listbox" ref={listRef}>
@@ -326,7 +313,7 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
                     }}
                   >
                     <span class="routing-selector-item-name">{row?.provider ?? auto()}</span>
-                    <Show when={row !== undefined && row === missing()}>
+                    <Show when={row !== null && row === missing()}>
                       <span class="routing-selector-item-unavailable">{language.t("model.routing.unavailable")}</span>
                     </Show>
                   </div>
