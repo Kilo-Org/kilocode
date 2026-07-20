@@ -7,6 +7,7 @@ export const dict = {
   // Provider settings translations
   "settings.providers.group.recommended": "推薦",
   "settings.providers.note.kilo": "存取 500+ AI 模型",
+  "settings.providers.note.aimlapi": "來自所有主流供應商的 1000+ 模型，一鍵設定",
   "settings.providers.note.opencode": "精選模型，包括 Claude、GPT、Gemini 等",
   "settings.providers.note.anthropic": "直接存取 Claude 模型，包括 Pro 和 Max",
   "settings.providers.note.deepseek": "用於推理和程式設計工作的 DeepSeek 模型",

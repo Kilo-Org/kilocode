@@ -7,6 +7,7 @@ export const dict = {
   // Provider settings translations
   "settings.providers.group.recommended": "Preporučeno",
   "settings.providers.note.kilo": "Pristup za 500+ AI modela",
+  "settings.providers.note.aimlapi": "Više od 1000 modela od svih velikih pružatelja, postavljanje jednim klikom",
   "settings.providers.note.opencode": "Odabrani modeli uključujući Claude, GPT, Gemini i još mnogo toga",
   "settings.providers.note.anthropic": "Direktan pristup Claude modelima, uključujući Pro i Max",
   "settings.providers.note.deepseek": "DeepSeek modeli za zadatke rezonovanja i programiranja",
