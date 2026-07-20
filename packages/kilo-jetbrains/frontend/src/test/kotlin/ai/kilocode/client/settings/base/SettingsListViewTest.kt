@@ -14,6 +14,9 @@ import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
+import javax.swing.ListSelectionModel
+import javax.swing.Scrollable
+import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 class SettingsListViewTest : BasePlatformTestCase() {
@@ -236,6 +239,25 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test action click invokes on second selected row in multi selection list`() {
+        edt {
+            val calls = mutableListOf<String>()
+            val cfg = SettingsListConfig.Equal.copy(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
+            val view = SettingsListView("Empty", cfg) { key, id -> calls += "$key:$id" }
+            view.update(listOf(
+                item("a", "Alpha", null, SettingsListCell("edit", "Edit", alwaysVisible = false)),
+                item("b", "Beta", null, SettingsListCell("edit", "Edit", alwaysVisible = false)),
+            ))
+            layout(view)
+            view.list.selectedIndices = intArrayOf(0, 1)
+
+            val area = settingsListCellBounds(view.list, 1, selected = true).getValue("edit")
+            click(view, center(area))
+
+            assertEquals(listOf("b:edit"), calls)
+        }
+    }
+
     fun `test update selects preferred key`() {
         edt {
             val view = SettingsListView("Empty") { _, _ -> }
@@ -257,6 +279,17 @@ class SettingsListViewTest : BasePlatformTestCase() {
             view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), SettingsListSelection.Index(1))
 
             assertEquals("c", view.selected()?.key)
+        }
+    }
+
+    fun `test list view tracks viewport width`() {
+        edt {
+            val view = SettingsListView("Empty") { _, _ -> }
+            view.update(listOf(item("long", "Alpha", "A very long description that should wrap instead of scrolling")))
+
+            assertTrue((view as Scrollable).getScrollableTracksViewportWidth())
+            assertFalse(view.getScrollableTracksViewportHeight())
+            assertEquals(160, view.getScrollableBlockIncrement(java.awt.Rectangle(0, 0, 320, 160), SwingConstants.VERTICAL, 1))
         }
     }
 

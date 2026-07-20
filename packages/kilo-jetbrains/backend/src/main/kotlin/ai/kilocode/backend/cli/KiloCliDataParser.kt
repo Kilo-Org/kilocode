@@ -647,7 +647,12 @@ object KiloCliDataParser {
             val obj = item.obj() ?: return@mapNotNull null
             val name = obj.str("name") ?: return@mapNotNull null
             val location = obj.str("location") ?: return@mapNotNull null
-            SkillDto(name = name, description = obj.str("description"), location = location)
+            SkillDto(
+                name = name,
+                description = obj.str("description"),
+                location = location,
+                content = obj.str("content"),
+            )
         }
 
     fun parseAgentBehaviorCommands(raw: String): List<CommandDto> =

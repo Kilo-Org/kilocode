@@ -341,7 +341,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
             }
             descriptor.navigate(true)
             if (cont.isActive) cont.resume(Unit)
-        }, ModalityState.any())
+        }, ModalityState.nonModal())
     }
 
     private fun project(path: Path): Project? {
