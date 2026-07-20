@@ -34,7 +34,3 @@ abstract class DraftReadyConfigurableBase<T : JComponent> : KiloReadyConfigurabl
 }
 
 abstract class DraftReadyConfigurable<T : JComponent> : DraftReadyConfigurableBase<T>(), Configurable.NoScroll
-
-abstract class ScrollableDraftReadyConfigurable<T : JComponent> : DraftReadyConfigurableBase<T>() {
-    override fun scrollReadyShell(): Boolean = false
-}

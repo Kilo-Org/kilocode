@@ -31,7 +31,7 @@ class SettingsInlineListTest : BasePlatformTestCase() {
             list.syncItems(listOf("*.env" to "deny", "*.key" to "deny", "*.pem" to "deny"), true)
             layout(list)
 
-            search(list).text = "nomatch"
+            list.filter("nomatch")
             layout(list)
 
             assertEquals(0, jbList(list).model.size)
@@ -113,7 +113,7 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test setEnabled disables search add and list`() {
+    fun `test setEnabled disables add and list`() {
         edt {
             val list = list()
             list.syncItems(listOf("*.env" to "deny"), true)
@@ -134,7 +134,6 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         selection: Int = ListSelectionModel.SINGLE_SELECTION,
     ): SettingsInlineList = SettingsInlineList(
         empty = "Empty",
-        search = "Search",
         addLabel = "Add",
         placeholder = "e.g. *.env",
         onAdd = onAdd,
@@ -161,9 +160,6 @@ class SettingsInlineListTest : BasePlatformTestCase() {
     }
 
     private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
-
-    private fun search(list: SettingsInlineList): javax.swing.text.JTextComponent =
-        components(list).filterIsInstance<javax.swing.text.JTextComponent>().first()
 
     private fun layout(root: Container) {
         root.setSize(400, root.preferredSize.height.coerceAtLeast(50))

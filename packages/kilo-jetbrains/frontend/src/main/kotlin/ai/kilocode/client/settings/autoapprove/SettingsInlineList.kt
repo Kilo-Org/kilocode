@@ -63,7 +63,6 @@ internal fun levelChoiceLabel(choice: LevelChoice): String = when (choice) {
  */
 internal class SettingsInlineList(
     private val empty: String,
-    private val search: String,
     private val addLabel: String? = null,
     private val placeholder: String = "",
     private val right: JComponent? = null,
@@ -77,6 +76,7 @@ internal class SettingsInlineList(
     empty,
     SettingsListConfig.Equal,
     selectionMode,
+    showSearch = false,
 ) {
 
     /** Overridable in tests, mirrors `PatternList.input` in ContextSettingsUi.kt. */
@@ -122,8 +122,6 @@ internal class SettingsInlineList(
     }
 
     override fun toolbarRight(): JComponent? = right
-
-    override fun searchPlaceholder(): String = search
 
     private fun promptAdd() {
         if (!isEnabled) return

@@ -4,13 +4,19 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseSettingsUi
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.openapi.components.service
+import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
+import java.awt.BorderLayout
+import javax.swing.event.DocumentEvent
 
 internal class AutoApproveSettingsUi(
     cs: CoroutineScope,
@@ -23,9 +29,16 @@ internal class AutoApproveSettingsUi(
     app,
     workspaces,
     loginBanner = false,
-    scroll = false,
 ) {
+    private val search = SearchTextField(false)
+
     init {
+        search.textEditor.emptyText.text = KiloBundle.message("settings.autoApprove.filter")
+        search.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.pad())
+        search.textEditor.document.addDocumentListener(object : DocumentAdapter() {
+            override fun textChanged(e: DocumentEvent) = form.filter(search.text)
+        })
+        content.add(search, BorderLayout.NORTH)
         startSettings(AutoApproveContent({ updateDraft(it) }, picker))
     }
 

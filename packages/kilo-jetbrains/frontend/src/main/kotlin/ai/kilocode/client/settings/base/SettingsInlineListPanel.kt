@@ -31,6 +31,7 @@ internal abstract class SettingsInlineListPanel(
     emptyText: String,
     cfg: SettingsListConfig = SettingsListConfig.Equal,
     private val selectionMode: Int = ListSelectionModel.SINGLE_SELECTION,
+    private val showSearch: Boolean = true,
 ) : BaseContentPanel() {
     private val search = SearchTextField(false)
     protected val view = SettingsListView(emptyText, cfg) { key, cellId -> onCell(key, cellId) }
@@ -39,17 +40,26 @@ internal abstract class SettingsInlineListPanel(
     @RequiresEdt
     protected fun start() {
         checkEdt()
-        search.textEditor.emptyText.text = searchPlaceholder()
         view.list.selectionMode = selectionMode
         view.minimumSize = JBUI.size(0, minListHeight())
         view.list.minimumSize = JBUI.size(0, minListHeight())
         view.onSelect = { toolbar?.updateActionsImmediately() }
         next(toolbarRow())
         gap(UiStyle.Gap.sm())
-        next(search)
-        gap(UiStyle.Gap.sm())
+        if (showSearch) {
+            search.textEditor.emptyText.text = searchPlaceholder()
+            next(search)
+            gap(UiStyle.Gap.sm())
+            wireSearch()
+        }
         next(view)
-        wireSearch()
+    }
+
+    /** Filter list rows by [query]. Used by an external search field when the list hides its own. */
+    @RequiresEdt
+    fun filter(query: String) {
+        checkEdt()
+        view.filter(query)
     }
 
     @RequiresEdt
@@ -68,8 +78,10 @@ internal abstract class SettingsInlineListPanel(
 
     override fun setEnabled(enabled: Boolean) {
         super.setEnabled(enabled)
-        search.isEnabled = enabled
-        search.textEditor.isEnabled = enabled
+        if (showSearch) {
+            search.isEnabled = enabled
+            search.textEditor.isEnabled = enabled
+        }
         view.isEnabled = enabled
         view.setBusy(!enabled)
         toolbar?.updateActionsImmediately()

@@ -40,10 +40,12 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior", AgentBehaviorConfigurable.ID)
     }
 
-    fun `test auto approve uses platform configurable scrollpane`() {
+    fun `test auto approve opts out of platform scrollpane`() {
+        // Auto-Approve renders its own fixed search field and scrollable body, so it must not be
+        // wrapped in the platform configurable scrollpane.
         val auto: Configurable = AutoApproveConfigurable()
         val context: Configurable = ContextConfigurable()
-        assertFalse(auto is Configurable.NoScroll)
+        assertTrue(auto is Configurable.NoScroll)
         assertTrue(context is Configurable.NoScroll)
     }
 

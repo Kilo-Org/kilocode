@@ -29,7 +29,6 @@ internal class AutoApproveContent(
     private val granular = GRANULAR_TOOLS.map { (id, kind) -> id to granularSection(id, kind) }
     private val tools = SettingsInlineList(
         empty = KiloBundle.message("settings.autoApprove.tools.empty"),
-        search = KiloBundle.message("settings.autoApprove.tools.search"),
         onSetLevel = { key, level -> update { setListTool(this, key, level) } },
         onInherit = { key -> update { inheritListTool(this, key) } },
         picker = picker,
@@ -46,12 +45,24 @@ internal class AutoApproveContent(
         tools.syncRows(toolRows(draft), enabled)
     }
 
+    /** Filter every list on the page by [query], driven by the shared search field. */
+    @RequiresEdt
+    fun filter(query: String) {
+        for ((_, section) in granular) section.filter(query)
+        tools.filter(query)
+    }
+
     private fun granularSection(tool: String, kind: ExceptionKind): GranularToolSection {
-        val addKey = if (kind == ExceptionKind.COMMAND) "addCommand" else "addPath"
-        val placeholderKey = if (kind == ExceptionKind.COMMAND) "placeholder.command" else "placeholder.path"
+        val commands = kind == ExceptionKind.COMMAND
+        val wildcardKey = if (commands) "commands" else "paths"
+        val emptyKey = if (commands) "commands" else "paths"
+        val addKey = if (commands) "addCommand" else "addPath"
+        val placeholderKey = if (commands) "placeholder.command" else "placeholder.path"
         return GranularToolSection(
             tool,
             KiloBundle.message("settings.autoApprove.tool.$tool"),
+            KiloBundle.message("settings.autoApprove.wildcardLabel.$wildcardKey"),
+            KiloBundle.message("settings.autoApprove.filters.empty.$emptyKey"),
             KiloBundle.message("settings.autoApprove.$addKey"),
             KiloBundle.message("settings.autoApprove.$placeholderKey"),
             picker,

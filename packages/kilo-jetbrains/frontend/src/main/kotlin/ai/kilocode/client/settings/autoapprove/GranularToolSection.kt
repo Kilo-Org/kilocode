@@ -11,8 +11,10 @@ import javax.swing.ListSelectionModel
 
 /** One granular permission tool (`external_directory`, `bash`, `read`, `edit`). */
 internal class GranularToolSection(
-    private val     tool: String,
+    private val tool: String,
     description: String,
+    private val wildcardLabel: String,
+    emptyText: String,
     addLabel: String,
     placeholder: String,
     picker: LevelPicker,
@@ -24,8 +26,7 @@ internal class GranularToolSection(
 ) : BaseContentPanel() {
     private val wildcard = LevelSelect(onWildcardChange) { onWildcardInherit() }
     private val list = SettingsInlineList(
-        empty = KiloBundle.message("settings.autoApprove.filters.empty"),
-        search = KiloBundle.message("settings.autoApprove.filters.search"),
+        empty = emptyText,
         addLabel = addLabel,
         placeholder = placeholder,
         right = toolbarRight(),
@@ -47,7 +48,10 @@ internal class GranularToolSection(
         list.syncItems(exceptions(rule), enabled)
     }
 
+    @RequiresEdt
+    fun filter(query: String) = list.filter(query)
+
     private fun toolbarRight() = Stack.horizontal(UiStyle.Gap.sm())
-        .next(JBLabel(KiloBundle.message("settings.autoApprove.defaultSetting")))
+        .next(JBLabel(wildcardLabel))
         .next(wildcard)
 }
