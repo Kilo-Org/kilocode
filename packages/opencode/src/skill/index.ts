@@ -20,7 +20,7 @@ import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
 import { Git } from "@/git" // kilocode_change
 import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
-import { IgnorePermission } from "@/kilocode/permission/ignore"
+import { IgnorePermission } from "@/kilocode/permission/ignore" // kilocode_change
 
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
@@ -338,6 +338,7 @@ export const layer = Layer.effect(
         ).pipe(Effect.provideService(Git.Service, git)) // kilocode_change
       }),
     )
+    // kilocode_change start - reload model-visible skill content under the current ignore policy
     const current = Effect.fn("Skill.current")(function* () {
       const s: State = { skills: {}, dirs: new Set() }
       yield* loadSkills(s, yield* InstanceState.get(discovered), events)
@@ -371,6 +372,7 @@ export const layer = Layer.effect(
       if (!agent) return list
       return list.filter((skill) => Permission.evaluate("skill", skill.name, agent.permission).action !== "deny")
     })
+    // kilocode_change end
 
     return Service.of({ get, require, all, dirs, available })
   }),
