@@ -50,6 +50,7 @@ export interface ExperimentalConfig {
   mcp_timeout?: number
   swe_pruner?: boolean
   swe_pruner_model?: string
+  smooth_scrolling?: boolean
 }
 
 export interface SandboxConfig {
