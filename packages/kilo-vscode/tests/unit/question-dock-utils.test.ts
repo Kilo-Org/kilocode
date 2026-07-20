@@ -241,4 +241,10 @@ describe("tr", () => {
     const t = (key: string) => dict[key] ?? key
     expect(tr(t, "plan.followup.question", "")).toBe("Prêt à implémenter ?")
   })
+
+  it("passes positional description arguments to the translator", () => {
+    const t = (key: string, params?: Record<string, string | number | boolean>) =>
+      key === "plan.followup.answer.continue.description" ? `Continue (${params?.[0]}%)` : key
+    expect(tr(t, "plan.followup.answer.continue.description", "Continue here", [75])).toBe("Continue (75%)")
+  })
 })

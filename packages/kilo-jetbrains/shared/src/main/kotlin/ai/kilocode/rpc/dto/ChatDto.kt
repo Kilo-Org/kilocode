@@ -349,6 +349,7 @@ data class QuestionOptionDto(
     val description: String,
     val labelKey: String? = null,
     val descriptionKey: String? = null,
+    val descriptionArgs: List<String> = emptyList(),
     val mode: String? = null,
 )
 

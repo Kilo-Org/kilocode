@@ -8,12 +8,16 @@ import { Instance } from "@/kilocode/instance"
 import { Provider } from "@/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { Config } from "@/config/config"
+import { InstanceRef } from "@/effect/instance-ref"
 import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
 import { LLM } from "@/session/llm"
 import { KiloLLM } from "@/kilocode/session/llm"
+import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { MessageV2 } from "@/session/message-v2"
+import { usable } from "@/session/overflow"
 import { SessionStatus } from "@/session/status"
 import { Todo } from "@/session/todo"
 import { makeRuntime } from "@/effect/run-service"
@@ -27,6 +31,7 @@ import { PlanFile } from "@/kilocode/plan-file"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
+const configs = lazy(() => makeRuntime(Config.Service, Config.defaultLayer))
 const todo = lazy(() => makeRuntime(Todo.Service, Todo.defaultLayer))
 const llm = lazy(() => makeRuntime(LLM.Service, LLM.defaultLayer))
 const pending = new Map<SessionID, AbortController>()
@@ -37,6 +42,9 @@ export const PlanFollowupRuntime = {
   },
   model(providerID: ProviderV2.ID, modelID: ModelV2.ID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
+  },
+  config(): Promise<Config.Info> {
+    return configs().runPromise((svc) => svc.get())
   },
   todo: {
     get(sessionID: SessionID) {
@@ -207,20 +215,48 @@ export namespace PlanFollowup {
         const key = `${saved.providerID}/${saved.modelID}`
         return {
           model: { ...saved, variant: resolveVariant(state?.variant?.[key], full) },
+          full,
         }
       }
     }
 
-    const entry = await PlanFollowupRuntime.agent("code")
+    const entry = await PlanFollowupRuntime.agent("code").catch(() => undefined)
     if (entry?.model) {
       const full = await PlanFollowupRuntime.model(entry.model.providerID, entry.model.modelID).catch(() => undefined)
       if (full) {
         return {
           model: { ...entry.model, variant: resolveVariant(entry.variant, full) },
+          full,
         }
       }
     }
-    return input
+    return {
+      model: input.model,
+      full: await PlanFollowupRuntime.model(input.model.providerID, input.model.modelID).catch(() => undefined),
+    }
+  }
+
+  async function estimate(input: { assistant: MessageV2.WithParts; model?: Provider.Model }) {
+    if (!input.model || input.model.limit.context === 0 || input.assistant.info.role !== "assistant") return
+    const tokens = KiloSessionOverflow.count(input.assistant.info.tokens)
+    if (!tokens) return
+
+    const context = input.model.limit.input || input.model.limit.context
+    if (context === 0) return
+    const percent = Math.round((tokens / context) * 100)
+    const cfg = await PlanFollowupRuntime.config().catch(() => undefined)
+    if (!cfg) return { percent, recommended: false }
+    return {
+      percent,
+      recommended:
+        cfg.compaction?.auto !== false &&
+        tokens >=
+          KiloSessionOverflow.limit({
+            cfg,
+            model: input.model,
+            usable: usable({ cfg, model: input.model }),
+          }),
+    }
   }
 
   async function locatePlan(sessionID: SessionID, messages: MessageV2.WithParts[]) {
@@ -302,7 +338,12 @@ export namespace PlanFollowup {
     reject: (requestID: Parameters<Question.Interface["reject"]>[0]) => Promise<void>
   }
 
-  function prompt(input: { sessionID: SessionID; abort: AbortSignal; question: QuestionRuntime }) {
+  function prompt(input: {
+    sessionID: SessionID
+    abort: AbortSignal
+    question: QuestionRuntime
+    estimate?: { percent: number; recommended: boolean }
+  }) {
     if (input.abort.aborted) return Promise.resolve(undefined)
     const promise = input.question.ask({
       sessionID: input.sessionID,
@@ -322,14 +363,23 @@ export namespace PlanFollowup {
             {
               label: ANSWER_NEW_SESSION,
               labelKey: "plan.followup.answer.newSession",
-              description: "Implement in a fresh session with a clean context",
-              descriptionKey: "plan.followup.answer.newSession.description",
+              description: input.estimate?.recommended
+                ? "Implement in a fresh session with a clean context (Recommended)"
+                : "Implement in a fresh session with a clean context",
+              descriptionKey: input.estimate?.recommended
+                ? "plan.followup.answer.newSession.recommended.description"
+                : "plan.followup.answer.newSession.description",
             },
             {
               label: ANSWER_CONTINUE,
               labelKey: "plan.followup.answer.continue",
-              description: "Implement the plan in this session",
-              descriptionKey: "plan.followup.answer.continue.description",
+              description: input.estimate
+                ? `Implement the plan in this session (using ${input.estimate.percent}% of Code mode context)`
+                : "Implement the plan in this session",
+              descriptionKey: input.estimate
+                ? "plan.followup.answer.continue.estimated.description"
+                : "plan.followup.answer.continue.description",
+              descriptionArgs: input.estimate ? [String(input.estimate.percent)] : undefined,
               mode: "code",
             },
             {
@@ -395,7 +445,9 @@ export namespace PlanFollowup {
         ])
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
         await AppRuntime.runPromise(
-          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })),
+          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })).pipe(
+            Effect.provideService(InstanceRef, Instance.current),
+          ),
         )
 
         const idle = () =>
@@ -523,7 +575,16 @@ export namespace PlanFollowup {
     const user = latest.find((msg) => msg.info.role === "user")?.info
     if (!user || user.role !== "user" || !user.model) return "break"
 
-    const answers = await prompt({ sessionID: input.sessionID, abort: input.abort, question: input.question })
+    const code = assistant.info.role === "assistant" && KiloSessionOverflow.count(assistant.info.tokens)
+      ? await resolveCodeModel({ model: user.model })
+      : undefined
+    const context = await estimate({ assistant, model: code?.full })
+    const answers = await prompt({
+      sessionID: input.sessionID,
+      abort: input.abort,
+      question: input.question,
+      estimate: context,
+    })
     if (!answers) {
       Telemetry.trackPlanFollowup(input.sessionID, "dismissed")
       return "break"
@@ -551,13 +612,11 @@ export namespace PlanFollowup {
 
     if (answer === ANSWER_CONTINUE) {
       Telemetry.trackPlanFollowup(input.sessionID, "continue")
-      const code = await resolveCodeModel({
-        model: user.model,
-      })
+      const model = code ?? (await resolveCodeModel({ model: user.model }))
       const msg = await inject({
         sessionID: input.sessionID,
         agent: "code",
-        model: code.model,
+        model: model.model,
         text: "Implement the plan above.",
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)

@@ -111,8 +111,10 @@ export const dict = {
   "plan.followup.question": "Klar til at implementere?",
   "plan.followup.answer.newSession": "Start ny session",
   "plan.followup.answer.newSession.description": "Implementér i en ny session med ren kontekst",
+  "plan.followup.answer.newSession.recommended.description": "Implementér i en ny session med ren kontekst (Anbefalet)",
   "plan.followup.answer.continue": "Fortsæt her",
   "plan.followup.answer.continue.description": "Implementér planen i denne session",
+  "plan.followup.answer.continue.estimated.description": "Implementér planen i denne session (bruger {{0}}% af konteksten i kodetilstand)",
   "plan.followup.answer.keepRefining": "Fortsæt med at finpudse",
   "plan.followup.answer.keepRefining.description": "Fortsæt planlægningen uden at implementere endnu",
 

@@ -106,8 +106,10 @@ export const dict = {
   "plan.followup.question": "準備好實作了嗎？",
   "plan.followup.answer.newSession": "開啟新工作階段",
   "plan.followup.answer.newSession.description": "在具有乾淨上下文的新工作階段中實作",
+  "plan.followup.answer.newSession.recommended.description": "在具有乾淨上下文的新工作階段中實作（建議）",
   "plan.followup.answer.continue": "在此繼續",
   "plan.followup.answer.continue.description": "在本工作階段中實作計畫",
+  "plan.followup.answer.continue.estimated.description": "在本工作階段中實作計畫（使用 {{0}}% 的程式碼模式上下文）",
   "plan.followup.answer.keepRefining": "繼續完善",
   "plan.followup.answer.keepRefining.description": "繼續規劃，暫不實作",
 
