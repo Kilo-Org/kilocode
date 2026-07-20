@@ -118,6 +118,8 @@ export const dict = {
   "agentManager.dialog.compareModels.tooltip": "在不同模型上并行运行代理以比较结果",
   "agentManager.dialog.compareModels.searchModels": "搜索模型...",
   "agentManager.dialog.compareModels.selectModels": "选择模型...",
+  "agentManager.dialog.compareModels.effort": "推理强度",
+  "agentManager.dialog.compareModels.effortDefault": "默认",
   "agentManager.dialog.creating": "创建中...",
   "agentManager.dialog.createWorktree": "创建工作树",
   "agentManager.dialog.removeImage": "移除图片",
