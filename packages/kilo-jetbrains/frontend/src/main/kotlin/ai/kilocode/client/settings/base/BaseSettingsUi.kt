@@ -37,7 +37,8 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     private val hint: String? = null,
     private val loginBanner: Boolean = true,
     scroll: Boolean = true,
-) : SettingsPanel(scroll), SettingsDraftPage {
+    pad: Boolean = true,
+) : SettingsPanel(scroll, pad), SettingsDraftPage {
     protected lateinit var form: C
         private set
     protected val jobs = mutableListOf<Job>()

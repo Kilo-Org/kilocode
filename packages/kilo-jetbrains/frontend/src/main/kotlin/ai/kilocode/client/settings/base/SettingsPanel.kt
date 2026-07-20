@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Rectangle
@@ -11,7 +12,10 @@ import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 
-internal open class SettingsPanel(scroll: Boolean = true) : SettingsOverlayPanel() {
+// The platform no longer wraps our configurables in its default margin (they are Configurable.NoMargin),
+// so the page owns its own insets here. The scroll pane stays flush to the panel edges — its scrollbar
+// touches the right edge — while the content border and body inset keep text and controls padded.
+internal open class SettingsPanel(scroll: Boolean = true, pad: Boolean = true) : SettingsOverlayPanel() {
     val top = SettingsTop()
     val settings = Stack.vertical()
 
@@ -20,6 +24,7 @@ internal open class SettingsPanel(scroll: Boolean = true) : SettingsOverlayPanel
             .next(top)
             .gap(UiStyle.Gap.lg())
             .next(settings)
+        if (pad && scroll) body.border = JBUI.Borders.emptyRight(UiStyle.Gap.xl())
         if (scroll) {
             content.add(JBScrollPane(body).apply {
                 border = null
@@ -27,6 +32,14 @@ internal open class SettingsPanel(scroll: Boolean = true) : SettingsOverlayPanel
             }, BorderLayout.CENTER)
         } else {
             content.add(body, BorderLayout.CENTER)
+        }
+        if (pad) {
+            content.border = JBUI.Borders.empty(
+                UiStyle.Gap.pad(),
+                UiStyle.Gap.xl(),
+                UiStyle.Gap.xl(),
+                if (scroll) 0 else UiStyle.Gap.xl(),
+            )
         }
     }
 

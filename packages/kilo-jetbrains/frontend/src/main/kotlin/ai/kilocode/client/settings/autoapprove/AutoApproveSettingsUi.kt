@@ -34,7 +34,7 @@ internal class AutoApproveSettingsUi(
 
     init {
         search.textEditor.emptyText.text = KiloBundle.message("settings.autoApprove.filter")
-        search.border = JBUI.Borders.empty(UiStyle.Gap.md(), UiStyle.Gap.pad())
+        search.border = JBUI.Borders.empty(UiStyle.Gap.md(), 0)
         search.textEditor.document.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) = form.filter(search.text)
         })

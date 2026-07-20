@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import javax.swing.JComponent
 
-abstract class KiloReadyConfigurableBase : SearchableConfigurable {
+abstract class KiloReadyConfigurableBase : SearchableConfigurable, Configurable.NoMargin {
     private var shell: SettingsOverlayPanel? = null
     private var scope: CoroutineScope? = null
     private var ready: JComponent? = null
@@ -39,7 +39,9 @@ abstract class KiloReadyConfigurableBase : SearchableConfigurable {
     @RequiresEdt
     override fun createComponent(): JComponent {
         checkEdt()
-        val root = if (scrollReadyShell()) SettingsPanel() else SettingsOverlayPanel()
+        // The shell never pads: the ready UI (or unavailable content) owns its own insets. This keeps
+        // a single margin when the shell scrolls a nested SettingsPanel.
+        val root = if (scrollReadyShell()) SettingsPanel(pad = false) else SettingsOverlayPanel()
         val cs = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         shell = root
         scope = cs
