@@ -7,11 +7,15 @@
   }
 
   [data-slot="basic-tool-tool-info"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
     font-size: var(--kilo-font-size-12);
     text-align: start;
   }
 
   [data-slot="basic-tool-tool-info-structured"] {
+    width: 100%;
     min-width: 0;
     overflow: hidden;
   }
@@ -25,6 +29,7 @@
   }
 
   [data-slot="basic-tool-tool-info-main"] {
+    width: 100%;
     align-items: baseline;
     overflow: hidden;
   }
@@ -34,6 +39,7 @@
   }
 
   [data-slot="basic-tool-tool-subtitle"] {
+    flex: 1 1 auto;
     font-size: var(--kilo-font-size-12);
     color: var(--text-weak);
   }
@@ -51,6 +57,8 @@
   }
 
   [data-slot="basic-tool-tool-arg"] {
+    flex: 0 1 auto;
+    max-width: 24ch;
     font-size: var(--kilo-font-size-12);
     color: var(--text-weak);
   }

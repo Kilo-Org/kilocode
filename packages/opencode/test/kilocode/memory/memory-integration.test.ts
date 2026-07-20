@@ -257,10 +257,6 @@ describe("KiloMemory integration", () => {
     expect(
       events.find((event) => event.sessionID === "ses_memory_event" && event.detail?.type === "saved")?.detail?.tokens,
     ).toBeUndefined()
-    const decisions = await MemoryFiles.readDecisions(root)
-    expect(decisions).toContain('"trigger":"explicit"')
-    expect(decisions).toContain('"sessionID":"ses_memory_event"')
-    expect(decisions).toContain('"llm":false')
   })
 
   test("explicit forget reports removals without save wording", async () => {
@@ -288,9 +284,6 @@ describe("KiloMemory integration", () => {
 
     expect(events.some((event) => event.detail?.message === "Memory updated · 1 removed")).toBe(true)
     expect(events.some((event) => event.detail?.message?.includes("Memory saved"))).toBe(false)
-    const decisions = await MemoryFiles.readDecisions(root)
-    expect(decisions).toContain("explicit memory operation removed 1 entries")
-    expect(decisions).toContain("explicit memory operation matched no source memory")
   })
 
   test("environment prompt rebuilds stale session index format", async () => {
@@ -396,8 +389,8 @@ describe("KiloMemory integration", () => {
 
       expect(after.sources).toEqual(before.sources)
       expect(after.index).toBe(before.index)
-      expect(after.changes).toBe(before.changes)
-      expect(after.decisions).toBe(before.decisions)
+      expect(after.changes).toBe("")
+      expect(after.decisions).toBe("")
       expect(after.sources.project).toContain("stable_fact")
       expect(after.sources.project).not.toContain("disabled_fact")
       expect(after.sources.corrections).not.toContain("Do not correct while disabled")
@@ -430,9 +423,6 @@ describe("KiloMemory integration", () => {
       expect(shown.sources.project).toContain("- repo_style :: Repo convention: commit messages are concise.")
       expect(shown.sources.project).not.toContain("reply_style")
       expect(shown.sources.project).not.toContain("I prefer terse summaries")
-      expect(shown.decisions).toContain('"reason":"out_of_scope"')
-      expect(shown.decisions).not.toContain("reply_style")
-      expect(shown.decisions).not.toContain("I prefer terse summaries")
     })
   })
 

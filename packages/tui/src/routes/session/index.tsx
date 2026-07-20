@@ -93,7 +93,7 @@ import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
-import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 
@@ -339,7 +339,6 @@ export function Session() {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
   const sdk = useSDK()
-  const memory = MemorySessionTui.verbose({ sessionID: () => route.sessionID }) // kilocode_change
   const editor = useEditorContext()
   onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
@@ -1416,7 +1415,6 @@ export function Session() {
                           last={lastAssistant()?.id === message.id}
                           message={message as AssistantMessage}
                           parts={sync.data.part[message.id] ?? []}
-                          memory={memory /* kilocode_change */}
                         />
                       </Match>
                     </Switch>
@@ -1629,7 +1627,6 @@ function AssistantMessage(props: {
   message: AssistantMessage
   parts: Part[]
   last: boolean
-  memory(): boolean // kilocode_change
 }) {
   const ctx = use()
   const local = useLocal()
@@ -1742,9 +1739,6 @@ function AssistantMessage(props: {
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
-              {/* kilocode_change start */}
-              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={props.memory} />{" "}
-              {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
