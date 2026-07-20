@@ -1,21 +1,10 @@
+import { z } from "zod"
 import { buildKiloHeaders } from "./headers.js"
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export interface DrizzleDb {
   insert(table: object): { values(data: object): { onConflictDoNothing(): { run(): void } } }
-}
-
-type Export = {
-  info: Record<string, unknown> & {
-    time?: {
-      created?: number
-      updated?: number
-      compacting?: number
-      archived?: number
-    }
-  }
-  messages?: unknown
 }
 
 export interface PrepareDeps {
@@ -32,6 +21,132 @@ export interface PrepareDeps {
 }
 
 export class SessionImportValidationError extends Error {}
+
+const fileSchema = z
+  .object({
+    id: z.string(),
+    sessionID: z.string(),
+    messageID: z.string(),
+    type: z.literal("file"),
+    mime: z.string(),
+    url: z.string(),
+  })
+  .passthrough()
+
+const stateSchema = z
+  .object({
+    status: z.literal("completed"),
+    attachments: z.array(fileSchema).optional(),
+  })
+  .passthrough()
+
+const partSchema = z
+  .object({
+    id: z.string(),
+    sessionID: z.string(),
+    messageID: z.string(),
+    type: z.string(),
+    tail_start_id: z.unknown().optional(),
+    state: z.unknown().optional(),
+  })
+  .passthrough()
+
+const messageSchema = z.object({
+  info: z
+    .object({
+      id: z.string(),
+      sessionID: z.string(),
+      parentID: z.string().optional(),
+      role: z.enum(["user", "assistant"]),
+      time: z.object({ created: z.number().finite() }).passthrough(),
+    })
+    .passthrough(),
+  parts: z.array(partSchema),
+})
+
+const exportSchema = z
+  .object({
+    info: z
+      .object({
+        id: z.string(),
+        time: z
+          .object({
+            created: z.number().optional(),
+            updated: z.number().optional(),
+            compacting: z.number().optional(),
+            archived: z.number().optional(),
+          })
+          .passthrough()
+          .optional(),
+      })
+      .passthrough(),
+    messages: z.array(messageSchema),
+  })
+  .superRefine((data, ctx) => {
+    const ids = new Set<string>()
+    const pids = new Set<string>()
+    const parents = new Map<string, string | undefined>()
+
+    for (const msg of data.messages) {
+      if (msg.info.sessionID !== data.info.id) ctx.addIssue({ code: "custom", message: "Invalid message info" })
+      if (ids.has(msg.info.id)) ctx.addIssue({ code: "custom", message: "Duplicate message ID" })
+      ids.add(msg.info.id)
+      parents.set(msg.info.id, msg.info.parentID)
+
+      for (const part of msg.parts) {
+        if (part.sessionID !== data.info.id || part.messageID !== msg.info.id)
+          ctx.addIssue({ code: "custom", message: "Invalid message part" })
+        if (part.type === "compaction" && part.tail_start_id !== undefined && typeof part.tail_start_id !== "string")
+          ctx.addIssue({ code: "custom", message: "Invalid compaction tail" })
+        if (pids.has(part.id)) ctx.addIssue({ code: "custom", message: "Duplicate part ID" })
+        pids.add(part.id)
+
+        if (part.type !== "tool") continue
+        const status = z.object({ status: z.unknown() }).safeParse(part.state)
+        if (!status.success || status.data.status !== "completed") continue
+        const state = stateSchema.safeParse(part.state)
+        if (!state.success) {
+          ctx.addIssue({ code: "custom", message: "Invalid tool attachments" })
+          continue
+        }
+        for (const file of state.data.attachments ?? []) {
+          if (file.sessionID !== data.info.id || file.messageID !== msg.info.id)
+            ctx.addIssue({ code: "custom", message: "Invalid tool attachment" })
+          if (pids.has(file.id)) ctx.addIssue({ code: "custom", message: "Duplicate part ID" })
+          pids.add(file.id)
+        }
+      }
+    }
+
+    for (const msg of data.messages) {
+      const parent = msg.info.parentID
+      if (parent !== undefined && !ids.has(parent))
+        ctx.addIssue({ code: "custom", message: "Dangling message parent" })
+
+      const seen = new Set([msg.info.id])
+      let current = parent
+      while (current !== undefined) {
+        if (seen.has(current)) {
+          ctx.addIssue({ code: "custom", message: "Circular message parent" })
+          break
+        }
+        seen.add(current)
+        current = parents.get(current)
+      }
+
+      for (const part of msg.parts) {
+        if (part.type !== "compaction" || typeof part.tail_start_id !== "string") continue
+        if (!ids.has(part.tail_start_id)) ctx.addIssue({ code: "custom", message: "Dangling compaction tail" })
+      }
+    }
+  })
+
+function completed(part: z.infer<typeof partSchema>) {
+  if (part.type !== "tool") return
+  const result = stateSchema.safeParse(part.state)
+  if (!result.success) return
+  return result.data
+}
 
 const INGEST_BASE = process.env.KILO_SESSION_INGEST_URL ?? "https://ingest.kilosessions.ai"
 const TIMEOUT = 30_000
@@ -96,123 +211,31 @@ export interface ImportDeps extends PrepareDeps {
   SessionCreatedEvent: { type: string; properties: unknown }
 }
 
-function record(input: unknown): input is Record<string, unknown> {
-  return typeof input === "object" && input !== null && !Array.isArray(input)
-}
-
-export function prepareSessionImport(data: Export, deps: PrepareDeps) {
-  if (!record(data) || !record(data.info) || typeof data.info.id !== "string")
-    throw new SessionImportValidationError("Invalid session info")
-  if (!Array.isArray(data.messages)) throw new SessionImportValidationError("Invalid session messages")
+export function prepareSessionImport(data: unknown, deps: PrepareDeps) {
+  const parsed = exportSchema.safeParse(data)
+  if (!parsed.success)
+    throw new SessionImportValidationError(parsed.error.issues[0]?.message ?? "Invalid session export")
+  const source = parsed.data
 
   const sessionID = deps.Identifier.descending("session")
   const ids = new Map<string, string>()
   const pids = new Map<string, string>()
-  const items: Array<{
-    id: string
-    created: number
-    info: Record<string, unknown>
-    parent?: string
-    parts: Array<{
-      id: string
-      data: Record<string, unknown>
-      tail?: string
-      attachments?: Array<{ id: string; data: Record<string, unknown> }>
-    }>
-  }> = []
-
-  for (const msg of data.messages) {
-    if (!record(msg) || !record(msg.info) || !Array.isArray(msg.parts))
-      throw new SessionImportValidationError("Invalid message")
-    const id = msg.info.id
-    const role = msg.info.role
-    const time = msg.info.time
-    if (
-      typeof id !== "string" ||
-      msg.info.sessionID !== data.info.id ||
-      (role !== "user" && role !== "assistant") ||
-      !record(time) ||
-      typeof time.created !== "number" ||
-      !Number.isFinite(time.created)
-    )
-      throw new SessionImportValidationError("Invalid message info")
-    const parent = msg.info.parentID
-    if (parent !== undefined && typeof parent !== "string")
-      throw new SessionImportValidationError("Invalid message parent")
-    if (ids.has(id)) throw new SessionImportValidationError("Duplicate message ID")
-    ids.set(id, deps.Identifier.ascending("message"))
-
-    const parts: Array<{
-      id: string
-      data: Record<string, unknown>
-      tail?: string
-      attachments?: Array<{ id: string; data: Record<string, unknown> }>
-    }> = []
+  for (const msg of source.messages) {
+    ids.set(msg.info.id, deps.Identifier.ascending("message"))
     for (const part of msg.parts) {
-      if (
-        !record(part) ||
-        typeof part.id !== "string" ||
-        part.sessionID !== data.info.id ||
-        part.messageID !== id ||
-        typeof part.type !== "string"
-      )
-        throw new SessionImportValidationError("Invalid message part")
-      const tail = part.type === "compaction" ? part.tail_start_id : undefined
-      if (tail !== undefined && typeof tail !== "string")
-        throw new SessionImportValidationError("Invalid compaction tail")
-      if (pids.has(part.id)) throw new SessionImportValidationError("Duplicate part ID")
       pids.set(part.id, deps.Identifier.ascending("part"))
-
-      const state =
-        part.type === "tool" && record(part.state) && part.state.status === "completed" ? part.state : undefined
-      const attachments = (() => {
-        if (!state || state.attachments === undefined) return
-        if (!Array.isArray(state.attachments)) throw new SessionImportValidationError("Invalid tool attachments")
-        const result: Array<{ id: string; data: Record<string, unknown> }> = []
-        for (const attachment of state.attachments) {
-          if (
-            !record(attachment) ||
-            typeof attachment.id !== "string" ||
-            attachment.sessionID !== data.info.id ||
-            attachment.messageID !== id ||
-            attachment.type !== "file" ||
-            typeof attachment.mime !== "string" ||
-            typeof attachment.url !== "string"
-          )
-            throw new SessionImportValidationError("Invalid tool attachment")
-          if (pids.has(attachment.id)) throw new SessionImportValidationError("Duplicate part ID")
-          pids.set(attachment.id, deps.Identifier.ascending("part"))
-          result.push({ id: attachment.id, data: attachment })
-        }
-        return result
-      })()
-      parts.push({
-        id: part.id,
-        data: part,
-        ...(tail !== undefined ? { tail } : {}),
-        ...(attachments !== undefined ? { attachments } : {}),
-      })
-    }
-    items.push({ id, created: time.created, info: msg.info, parts, ...(parent !== undefined ? { parent } : {}) })
-  }
-
-  const parents = new Map(items.map((item) => [item.id, item.parent]))
-  for (const item of items) {
-    const seen = new Set([item.id])
-    let parent = item.parent
-    while (parent !== undefined) {
-      if (seen.has(parent)) throw new SessionImportValidationError("Circular message parent")
-      seen.add(parent)
-      parent = parents.get(parent)
+      for (const file of completed(part)?.attachments ?? []) {
+        pids.set(file.id, deps.Identifier.ascending("part"))
+      }
     }
   }
 
   const now = Date.now()
   const time = {
-    created: data.info.time?.created ?? now,
+    created: source.info.time?.created ?? now,
     updated: now,
-    ...(data.info.time?.compacting !== undefined && { compacting: data.info.time.compacting }),
-    ...(data.info.time?.archived !== undefined && { archived: data.info.time.archived }),
+    ...(source.info.time?.compacting !== undefined && { compacting: source.info.time.compacting }),
+    ...(source.info.time?.archived !== undefined && { archived: source.info.time.archived }),
   }
 
   const info: Record<string, unknown> & {
@@ -221,12 +244,12 @@ export function prepareSessionImport(data: Export, deps: PrepareDeps) {
     directory: string
     time: typeof time
   } = {
-    ...data.info,
+    ...source.info,
     id: sessionID,
     projectID: deps.Instance.project.id,
-    slug: data.info.slug,
+    slug: source.info.slug,
     directory: deps.Instance.directory,
-    version: data.info.version,
+    version: source.info.version,
     time,
   }
   delete info.workspaceID
@@ -250,40 +273,37 @@ export function prepareSessionImport(data: Export, deps: PrepareDeps) {
     session_id: string
     data: Record<string, unknown>
   }> = []
-  for (const item of items) {
-    const id = ids.get(item.id)
-    if (!id) throw new SessionImportValidationError("Missing message ID")
-    const parentID = item.parent === undefined ? undefined : ids.get(item.parent)
-    if (item.parent !== undefined && !parentID) throw new SessionImportValidationError("Dangling message parent")
+  for (const msg of source.messages) {
+    const id = ids.get(msg.info.id)!
+    const parentID = msg.info.parentID === undefined ? undefined : ids.get(msg.info.parentID)!
     const next = {
-      ...item.info,
+      ...msg.info,
       id,
       sessionID,
       ...(parentID ? { parentID } : {}),
     }
-    messages.push({ id, session_id: sessionID, time_created: item.created, data: next })
+    messages.push({ id, session_id: sessionID, time_created: msg.info.time.created, data: next })
 
-    for (const part of item.parts) {
-      const partID = pids.get(part.id)
-      if (!partID) throw new SessionImportValidationError("Missing part ID")
-      const tail = part.tail === undefined ? undefined : ids.get(part.tail)
-      if (part.tail !== undefined && !tail) throw new SessionImportValidationError("Dangling compaction tail")
+    for (const part of msg.parts) {
+      const partID = pids.get(part.id)!
+      const tail =
+        part.type === "compaction" && typeof part.tail_start_id === "string"
+          ? ids.get(part.tail_start_id)!
+          : undefined
       const data: Record<string, unknown> = {
-        ...part.data,
+        ...part,
         id: partID,
         messageID: id,
         sessionID,
         ...(tail ? { tail_start_id: tail } : {}),
       }
-      if (part.attachments) {
-        const state = part.data.state
-        if (!record(state)) throw new SessionImportValidationError("Invalid tool state")
+      const state = completed(part)
+      if (state?.attachments) {
         data.state = {
           ...state,
-          attachments: part.attachments.map((attachment) => {
-            const attachmentID = pids.get(attachment.id)
-            if (!attachmentID) throw new SessionImportValidationError("Missing attachment ID")
-            return { ...attachment.data, id: attachmentID, messageID: id, sessionID }
+          attachments: state.attachments.map((file) => {
+            const fileID = pids.get(file.id)!
+            return { ...file, id: fileID, messageID: id, sessionID }
           }),
         }
       }
@@ -299,7 +319,7 @@ export function prepareSessionImport(data: Export, deps: PrepareDeps) {
   return { info, messages, parts }
 }
 
-export function importSessionToDb(data: Export, deps: ImportDeps) {
+export function importSessionToDb(data: unknown, deps: ImportDeps) {
   const prepared = prepareSessionImport(data, deps)
 
   deps.Database.transaction((db) => {
