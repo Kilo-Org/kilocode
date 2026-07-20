@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Refazer",
   "revert.banner.redo.all": "Refazer Tudo",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversa revertida. As alterações nos arquivos não foram restauradas porque os snapshots estão desativados.",
+  "revert.banner.workspace.unavailable":
+    "Conversa revertida. Nenhum ponto de restauração dos arquivos estava disponível, portanto as alterações no espaço de trabalho não foram restauradas.",
+  "revert.banner.workspace.legacy":
+    "Conversa revertida. O status da restauração do espaço de trabalho não está disponível para esta reversão anterior.",
+  "revert.banner.workspace.enableSnapshots": "Ativar snapshots",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Incluir arquivo ativo",
   "prompt.context.removeActiveFile": "Remover arquivo ativo do contexto",
   "prompt.context.removeFile": "Remover arquivo do contexto",
+  "prompt.thinking.tooltip": "Esforço de raciocínio",
   "prompt.action.attachFile": "Anexar arquivo",
   "prompt.attachment.remove": "Remover anexo",
   "prompt.action.send": "Enviar",
@@ -1728,6 +1736,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Recolher raciocínio automaticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Recolhe os blocos de raciocínio depois que o agente termina de escrevê-los. Deixe desativado para manter o raciocínio expandido, a menos que você o recolha manualmente.",
+  "settings.display.shiftTabCycle.title": "Alternar o esforço de raciocínio com Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Pressione Shift+Tab em um campo de entrada de prompt para alternar para o próximo nível de esforço de raciocínio. Desative para manter Shift+Tab para navegação de foco pelo teclado.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

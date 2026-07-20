@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Повторить",
   "revert.banner.redo.all": "Повторить всё",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Разговор был отменён. Изменения файлов не были восстановлены, так как снимки отключены.",
+  "revert.banner.workspace.unavailable":
+    "Разговор был отменён. Контрольная точка файлов была недоступна, поэтому изменения в рабочей области не были восстановлены.",
+  "revert.banner.workspace.legacy":
+    "Диалог отменён. Статус восстановления рабочей области недоступен для этого более раннего отката.",
+  "revert.banner.workspace.enableSnapshots": "Включить снимки",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
@@ -349,6 +356,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Включить активный файл",
   "prompt.context.removeActiveFile": "Удалить активный файл из контекста",
   "prompt.context.removeFile": "Удалить файл из контекста",
+  "prompt.thinking.tooltip": "Усилие рассуждения",
   "prompt.action.attachFile": "Прикрепить файл",
   "prompt.attachment.remove": "Удалить вложение",
   "prompt.action.send": "Отправить",
@@ -1717,6 +1725,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
   "settings.display.reasoningAutoCollapse.description":
     "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

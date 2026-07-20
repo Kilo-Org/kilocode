@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Samtalen blev gendannet. Filændringer blev ikke gendannet, fordi snapshots er deaktiveret.",
+  "revert.banner.workspace.unavailable":
+    "Samtalen blev gendannet. Der var intet filkontrolpunkt tilgængeligt, så ændringer i arbejdsområdet blev ikke gendannet.",
+  "revert.banner.workspace.legacy":
+    "Samtalen blev gendannet. Status for gendannelse af arbejdsområdet er ikke tilgængelig for denne tidligere gendannelse.",
+  "revert.banner.workspace.enableSnapshots": "Aktivér snapshots",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Inkluder aktiv fil",
   "prompt.context.removeActiveFile": "Fjern aktiv fil fra kontekst",
   "prompt.context.removeFile": "Fjern fil fra kontekst",
+  "prompt.thinking.tooltip": "Ræsonnementsindsats",
   "prompt.action.attachFile": "Vedhæft fil",
   "prompt.attachment.remove": "Fjern vedhæftning",
   "prompt.action.send": "Send",
@@ -1711,6 +1719,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
+  "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
