@@ -53,6 +53,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     private lateinit var appRpc: FakeAppRpcApi
     private lateinit var agentRpc: FakeAgentBehaviorRpcApi
     private lateinit var workspaceRpc: FakeWorkspaceRpcApi
+    private var shown = 0
 
     override fun tearDown() {
         try {
@@ -69,7 +70,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     fun `test loads skills with location note and builtins have no actions`() {
         val panel = panel()
 
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt {
             val rows = rows(panel)
@@ -90,6 +91,9 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             assertEquals(listOf("built-in"), builtin.badges.map { it.text })
             assertEquals(listOf("edit"), builtin.cells.map { it.id })
             assertEquals("Open", builtin.cells.single().label)
+            val remote = rows.single { it.key == REMOTE }
+            assertEquals(listOf("edit"), remote.cells.map { it.id })
+            assertEquals("Open", remote.cells.single().label)
             assertEquals(listOf(DIR), agentRpc.skillCalls)
             true
         }
@@ -97,7 +101,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test skills list is vertically scrolled without horizontal scrollbar`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt {
             val pane = scrollFor(panel, skillsList(panel))
@@ -124,7 +128,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test skills list does not show description tooltips`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt {
             val list = skillsList(panel)
@@ -139,7 +143,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test renderer puts location on first line and description on preview line`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt {
             val list = skillsList(panel)
@@ -159,7 +163,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test double click stages skill content until apply`() {
         val panel = panel(edit = { _, _ -> FakeSkillDialog("# Saved") })
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         doubleClick(skillsList(panel), panel, CUSTOM)
 
@@ -172,7 +176,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test edited skill row keeps normal actions`() {
         val panel = panel(edit = { _, _ -> FakeSkillDialog("# Draft") })
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         doubleClick(skillsList(panel), panel, CUSTOM)
 
@@ -186,7 +190,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             seen += skill.content
             FakeSkillDialog(if (seen.size == 1) "# Draft" else "# Draft 2")
         })
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         doubleClick(skillsList(panel), panel, CUSTOM)
         doubleClick(skillsList(panel), panel, CUSTOM)
@@ -197,13 +201,29 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test open in editor action opens skill file`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         click(skillsList(panel), panel, CUSTOM, "open")
 
         assertEquals("The skill file will open after you close Settings.", edt { progressText(panel) })
         flushUntil { workspaceRpc.openedFiles.size == 1 }
         assertEquals(FakeWorkspaceRpcApi.Opened(CUSTOM, null, null), workspaceRpc.openedFiles.single())
+    }
+
+    fun `test read only skills open without staging edits or editor file open`() {
+        shown = 0
+        val panel = panel(edit = { _, savable ->
+            assertFalse(savable)
+            FakeSkillDialog("# Ignored") { shown += 1 }
+        })
+        flushUntil { rows(panel).size == 3 }
+
+        click(skillsList(panel), panel, REMOTE, "edit")
+
+        assertEquals(1, shown)
+        assertFalse(edt { panel.modified() })
+        assertTrue(agentRpc.skillSaves.isEmpty())
+        assertTrue(workspaceRpc.openedFiles.isEmpty())
     }
 
     fun `test skill edit dialog shows content with fallback`() {
@@ -240,7 +260,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test delete action stages skill removal until apply`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
         TestDialogManager.setTestDialog(TestDialog.YES)
 
         click(skillsList(panel), panel, CUSTOM, "delete")
@@ -254,7 +274,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test delete action requires confirmation`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
         TestDialogManager.setTestDialog { Messages.NO }
 
         click(skillsList(panel), panel, CUSTOM, "delete")
@@ -268,7 +288,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         var path = "/extra/skills"
         var url = "https://skills.test/index.json"
         val panel = panel(choose = { path }, input = { _, _ -> url })
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt { panel.sources.addPath(); true }
         edt { panel.sources.addUrl(); true }
@@ -296,7 +316,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         val panel = panel(choose = { path }, input = { _, _ -> url })
         appRpc.configUpdateReturnStale = true
         appRpc.afterConfig = { agentRpc.skills = agentRpc.skills + SkillDto("extra", "Extra skill", extra) }
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt {
             panel.sources.addPath()
@@ -316,7 +336,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     fun `test source reset discards staged changes`() {
         val path = "/extra/skills"
         val panel = panel(choose = { path })
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt { panel.sources.addPath(); true }
 
@@ -325,14 +345,14 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         edt { panel.resetDraft(); true }
 
         assertTrue(appRpc.configPatches.isEmpty())
-        assertEquals(listOf(CUSTOM, "builtin"), edt { rows(panel).map { it.key } })
+        assertEquals(listOf(CUSTOM, "builtin", REMOTE), edt { rows(panel).map { it.key } })
         assertFalse(edt { sourceRows(panel).any { it.key == "path:$path" } })
         assertTrue(agentRpc.skillReloads.isEmpty())
     }
 
     fun `test delete source writes skills config patch`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 && sourceRows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 && sourceRows(panel).size == 2 }
 
         edt {
             sourceList(panel).selectedIndices = intArrayOf(0)
@@ -353,7 +373,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         val panel = panel()
         appRpc.configUpdateReturnStale = true
         appRpc.afterConfig = { agentRpc.skills = agentRpc.skills.filterNot { it.location == CUSTOM } }
-        flushUntil { rows(panel).size == 2 && sourceRows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 && sourceRows(panel).size == 2 }
 
         edt {
             sourceList(panel).selectedIndices = intArrayOf(0)
@@ -363,13 +383,13 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         }
 
         flushUntil { appRpc.configPatches.size == 1 && !edt { panel.modified() } }
-        assertEquals(listOf("builtin"), edt { rows(panel).map { it.key } })
+        assertEquals(listOf("builtin", REMOTE), edt { rows(panel).map { it.key } })
         assertEquals(listOf("url:https://skills.test/base.json"), edt { sourceRows(panel).map { it.key } })
     }
 
     fun `test search filters skills by name`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
 
         edt {
             components(panel).filterIsInstance<JTextField>().single().text = "think"
@@ -382,13 +402,13 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test skills reload failure keeps existing rows`() {
         val panel = panel()
-        flushUntil { rows(panel).size == 2 }
+        flushUntil { rows(panel).size == 3 }
         agentRpc.skillsError = RuntimeException("timeout")
 
         edt { panel.reload(); true }
         flushUntil { edt { skillsList(panel).isEnabled } }
 
-        assertEquals(listOf(CUSTOM, "builtin"), edt { rows(panel).map { it.key } })
+        assertEquals(listOf(CUSTOM, "builtin", REMOTE), edt { rows(panel).map { it.key } })
     }
 
     fun `test skill editor file type follows location extension`() {
@@ -426,8 +446,9 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         workspaceRpc = FakeWorkspaceRpcApi()
         agentRpc = FakeAgentBehaviorRpcApi().apply {
             skills = listOf(
-                SkillDto("plan", "Plan work", CUSTOM, "# Plan\nUse steps"),
+                SkillDto("plan", "Plan work", CUSTOM, "# Plan\nUse steps", editable = true),
                 SkillDto("thinking", "Built in", "builtin", "Built in content"),
+                SkillDto("remote", "Remote skill", REMOTE, "# Remote skill"),
             )
         }
         app = KiloAppService(cs, appRpc)
@@ -550,10 +571,14 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     private companion object {
         const val DIR = "/test"
         const val CUSTOM = "/home/test/.config/kilo/skill/plan/SKILL.md"
+        const val REMOTE = "/home/test/.cache/kilo/skills/remote/SKILL.md"
     }
 }
 
-private class FakeSkillDialog(private val text: String) : SkillEditDialogHandle {
-    override fun showAndGet() = true
+private class FakeSkillDialog(private val text: String, private val show: () -> Unit = {}) : SkillEditDialogHandle {
+    override fun showAndGet(): Boolean {
+        show()
+        return true
+    }
     override fun content() = text
 }

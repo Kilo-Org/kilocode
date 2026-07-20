@@ -23,6 +23,7 @@ import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.intellij.openapi.util.SystemInfo
 import java.net.URLEncoder
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
@@ -63,7 +64,10 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
 
     override suspend fun skills(directory: String): List<SkillDto> {
         val items = KiloCliDataParser.parseAgentBehaviorSkills(request(directory, "/skill", null))
-        return items.map { item -> item.copy(content = skillContent(item) ?: item.content) }
+        return items.map { item ->
+            val editable = editable(item)
+            item.copy(content = skillContent(item) ?: item.content, editable = editable)
+        }
     }
 
     override suspend fun removeSkill(directory: String, location: String): Boolean =
@@ -225,6 +229,35 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         }.getOrNull()
     }
 
+    private fun editable(skill: SkillDto): Boolean {
+        val raw = normalizeWorkspacePath(skill.location) ?: return false
+        val path = try {
+            Path.of(raw).normalize()
+        } catch (_: InvalidPathException) {
+            return false
+        }
+        if (!path.isAbsolute || !isSkillFile(path)) return false
+        if (urlCached(path)) return false
+        return true
+    }
+
+    private fun urlCached(path: Path): Boolean {
+        val root = Path.of(cacheRoot(), "kilo", "skills").normalize()
+        if (path.startsWith(root)) return true
+        val parts = (0 until path.nameCount).map { path.getName(it).toString() }
+        return parts.windowed(3).any { it[1] == "kilo" && it[2] == "skills" && it[0] in cacheNames }
+    }
+
+    private fun cacheRoot(): String {
+        val xdg = System.getenv("XDG_CACHE_HOME")?.takeIf { it.isNotBlank() }
+        if (xdg != null) return xdg
+        val home = System.getProperty("user.home")
+        if (SystemInfo.isMac) return Path.of(home, "Library", "Caches").toString()
+        if (SystemInfo.isWindows) return System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }
+            ?: Path.of(home, "AppData", "Local").toString()
+        return Path.of(home, ".cache").toString()
+    }
+
     private suspend fun patchConfig(path: String, body: String): Unit = withContext(Dispatchers.IO) {
         val http = app.http ?: throw IllegalStateException("Kilo HTTP client is unavailable")
         val url = "http://127.0.0.1:${app.port}$path"
@@ -333,3 +366,5 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         val config: McpConfigDto?,
     )
 }
+
+private val cacheNames = setOf(".cache", "cache", "Caches")

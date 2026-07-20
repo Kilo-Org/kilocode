@@ -8,4 +8,5 @@ data class SkillDto(
     val description: String? = null,
     val location: String,
     val content: String? = null,
+    val editable: Boolean = false,
 )

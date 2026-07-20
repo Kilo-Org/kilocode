@@ -235,31 +235,35 @@ internal class SkillsSettingsUi(
                 OPEN_CELL,
                 KiloBundle.message("settings.agentBehavior.skills.openInEditor"),
                 primary = true,
-            ).takeUnless { builtin(skill.location) },
+            ).takeIf { skill.editable },
             SettingsListCell(
                 EDIT_CELL,
-                KiloBundle.message(if (builtin(skill.location)) "common.open" else "settings.agentBehavior.edit"),
-                primary = builtin(skill.location),
+                KiloBundle.message(if (skill.editable) "settings.agentBehavior.edit" else "common.open"),
+                primary = !skill.editable,
             ),
             SettingsListCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,
                 iconOnly = true,
-            ).takeUnless { builtin(skill.location) },
+            ).takeIf { skill.editable },
         )
     }
 
     private fun edit(skill: SkillDto) {
         val current = skill.copy(content = content(skill))
-        val dialog = edit(current, !builtin(skill.location))
+        val dialog = edit(current, skill.editable)
+        if (!skill.editable) {
+            dialog.showAndGet()
+            return
+        }
         if (!dialog.showAndGet()) return
         state.update { copy(edited = edited + (skill.location to dialog.content())) }
         view.update(rows(), SettingsListSelection.Key(key(skill)))
     }
 
     private fun open(skill: SkillDto) {
-        if (builtin(skill.location)) return
+        if (!skill.editable) return
         showProgress(KiloBundle.message("settings.agentBehavior.skills.openInEditor.pending"))
         cs.launch {
             val opened = service<KiloWorkspaceService>().openFile(skill.location)

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -101,6 +102,8 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertEquals(listOf("plan", "builtin"), skills.map { it.name })
         assertEquals("Plan work", skills.single { it.name == "plan" }.description)
         assertEquals(content, skills.single { it.name == "plan" }.content)
+        assertEquals(true, skills.single { it.name == "plan" }.editable)
+        assertEquals(false, skills.single { it.name == "builtin" }.editable)
 
         assertTrue(rpc.removeSkill("/test project", file.toString()))
         assertEquals("{\"location\":\"$file\"}", mock.lastSkillRemoveBody)
@@ -114,6 +117,21 @@ class KiloAgentBehaviorRpcApiImplTest {
 
         assertTrue(rpc.reloadSkills("/test project"))
         assertEquals(1, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `url cached skills are read only`() = runBlocking {
+        val cache = Path.of(System.getProperty("user.home"), ".cache", "kilo", "skills", "remote")
+        val file = Files.createDirectories(cache).resolve("SKILL.md")
+        Files.writeString(file, "# Remote")
+        mock.skills = """[
+            {"name":"remote","description":"Remote","location":"$file","content":"# Remote"}
+        ]""".trimIndent()
+
+        val skill = rpc().skills("/test project").single()
+
+        assertEquals(false, skill.editable)
+        assertEquals("# Remote", skill.content)
     }
 
     @Test
