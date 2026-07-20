@@ -59,7 +59,15 @@ export namespace RemoteWS {
             queued = false
             const sessions = await options.getSessions()
             if (closed) return
-            send({ type: "heartbeat", protocolVersion: InstallationVersion, ...sessions })
+            send({
+              type: "heartbeat",
+              protocolVersion: InstallationVersion,
+              // kilocode_change - advertise file-attachment support so the relay
+              // and mobile client can stop probing.
+              capabilities: { attachments: true },
+              // kilocode_change end
+              ...sessions,
+            })
           }
         }),
       ).finally(() => {

@@ -4,6 +4,7 @@ import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
+import { RemoteAttachments } from "@/kilocode/remote-attachments" // kilocode_change - materialize remote attachment parts before prompt()
 import { Session } from "@/session/session"
 import type { MessageV2 } from "@/session/message-v2"
 import { SessionPrompt } from "@/session/prompt"
@@ -148,6 +149,14 @@ export namespace RemoteSender {
     remoteExit?: {
       get: () => RemoteExit.Callback | undefined
     }
+    // kilocode_change start - per-session attachment materializer factory.
+    // Production wires this to RemoteAttachments.create so the scratch dir
+    // and Session.Event.Deleted cleanup are scoped to the session whose
+    // parts we are about to materialize. Tests pass a stub that simply
+    // returns the input so the existing remote-sender suite continues to
+    // exercise schema/ordering paths without touching the network.
+    attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
+    // kilocode_change end
   }
 
   export type Sender = {
@@ -271,6 +280,44 @@ export namespace RemoteSender {
           GlobalBus.off("event", handler)
         }
       })
+
+    // kilocode_change start - per-session attachment materializer cache.
+    // The factory is resolved lazily so tests that never send http(s) file
+    // parts never trigger scratch-dir setup. The cache and its bus
+    // listener are owned by this RemoteSender instance and released by
+    // dispose(), so they survive relay subscribe/unsubscribe churn
+    // independent of the relay's view of the session set. The bus
+    // listener is also installed lazily on first use to keep the global
+    // bus listener count from inflating for senders that never handle
+    // attachments (the count would otherwise show up in unrelated tests
+    // that assert it stays at 0).
+    const attachments =
+      options.attachments ??
+      ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
+    const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
+    let attachmentBusUnsub: (() => void) | undefined
+    const ensureAttachmentListener = () => {
+      if (attachmentBusUnsub) return
+      attachmentBusUnsub = sub((event: any) => {
+        if (event?.type !== Session.Event.Deleted.type) return
+        const sid = event?.properties?.sessionID
+        if (typeof sid !== "string") return
+        const result = attachmentCache.get(SessionID.make(sid))
+        if (!result) return
+        attachmentCache.delete(SessionID.make(sid))
+        void result.dispose()
+      })
+    }
+    function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
+      const existing = attachmentCache.get(sessionID)
+      if (existing) return existing
+      const next = attachments(sessionID)
+      if (!next) return undefined
+      ensureAttachmentListener()
+      attachmentCache.set(sessionID, next)
+      return next
+    }
+    // kilocode_change end
 
     async function directoryFor(sid: string): Promise<string> {
       const info = await session.get(SessionID.make(sid)).catch(() => undefined)
@@ -678,6 +725,15 @@ export namespace RemoteSender {
         }
         const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
         dispatchLongRunning(msg, directoryFor(promptInput.sessionID), async () => {
+          // kilocode_change start - materialize remote attachment parts before prompt().
+          // Runs strictly after the synchronous ACK above and strictly before the
+          // existing prompt() call so the resolvePart boundary sees data: URLs
+          // and a scratch path instead of an http(s) URL it cannot fetch.
+          const materializer = attachmentFor(promptInput.sessionID)
+          if (materializer) {
+            promptInput.parts = await materializer.materialize(promptInput.parts)
+          }
+          // kilocode_change end
           await prompt(promptInput)
         })
         return
@@ -825,6 +881,16 @@ export namespace RemoteSender {
         unsub()
         unsub = undefined
       }
+      // kilocode_change start - release attachment bus listener and any cached
+      // per-session materializers. Fire-and-forget the async dispose because
+      // RemoteAttachments.dispose() is best-effort scratch cleanup.
+      attachmentBusUnsub?.()
+      attachmentBusUnsub = undefined
+      for (const result of attachmentCache.values()) {
+        void result.dispose()
+      }
+      attachmentCache.clear()
+      // kilocode_change end
       sessions.clear()
       children.clear()
     }

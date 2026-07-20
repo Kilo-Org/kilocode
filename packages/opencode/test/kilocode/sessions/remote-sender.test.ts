@@ -293,6 +293,56 @@ describe("RemoteSender", () => {
     await provideStarted
   })
 
+  // kilocode_change start - attachment materialize must not delay the send_message ACK
+  test("send_message ACKs before the attachment materializer resolves", async () => {
+    const { conn, sent } = fakeConn()
+    let resolveMaterialize!: (parts: any[]) => void
+    const materializeStarted = new Promise<void>((r) => {
+      // signal when the materializer has been invoked
+      r()
+    })
+    const materializeInvoked = Promise.withResolvers<void>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      attachments: () => ({
+        materialize: (parts: readonly any[]) =>
+          new Promise<any[]>((resolve) => {
+            resolveMaterialize = resolve
+            materializeInvoked.resolve()
+            // never resolves on its own — proves the ACK is sent first
+          }),
+        dispose: async () => {},
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_attach_ack",
+      command: "send_message",
+      data: {
+        sessionID: "ses_attach",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://r2.example/a.png" }],
+      },
+    })
+
+    // ACK is sent synchronously, BEFORE the materializer (or provide) completes
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toEqual({ type: "response", id: "req_attach_ack", result: {} })
+
+    // The materializer IS invoked after the ACK, confirming the work is queued
+    // but does not block the synchronous response.
+    await materializeInvoked.promise
+    // Resolve to let the trailing microtask settle.
+    resolveMaterialize([])
+    await Promise.resolve()
+    await materializeStarted
+  })
+  // kilocode_change end
+
   test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
     const { conn } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
