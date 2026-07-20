@@ -122,13 +122,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
         : []),
     ]
   })
-  const activitySummary = createMemo(() => {
-    if (memory.error()) return memory.error()!
-    if (!memory.enabled()) return language.t("chat.memory.project.disabled")
-    const lines = activityLines()
-    if (lines.length === 0) return language.t("chat.memory.activity.idle")
-    return [language.t("chat.memory.status.active"), ...lines].join(" · ")
-  })
   const activityItems = createMemo(() =>
     activity()
       .flatMap((item) => {
@@ -157,6 +150,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   )
   const activityTooltip = () => (
     <>
+      <div data-slot="task-header-context-tooltip-title">{language.t("settings.context.title")}</div>
+      <div data-slot="task-header-context-tooltip-status">{memoryStatus()}</div>
       {activitySummaryView()}
       <Show when={memoryVerbose() && activityItems().length > 0}>
         <div data-slot="task-header-memory-activity-list">
@@ -292,7 +287,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 startRename()
               }}
             >
-              <span data-slot="task-header-title-label">{title()}</span>
+              <span data-slot="task-header-title-label" dir="auto">
+                {title()}
+              </span>
             </span>
           </Show>
         </div>
@@ -318,107 +315,117 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             <DeferredPopover
               placement="bottom-end"
               portal={false}
-              class="task-header-memory-popover"
+              class="task-header-context-popover"
               triggerAs="button"
               triggerProps={{
                 type: "button",
-                get class() {
-                  return `task-header-memory-trigger${memory.enabled() ? " task-header-memory-trigger--enabled" : ""}`
-                },
+                class: "task-header-context-trigger",
                 get ["aria-label"]() {
-                  return activitySummary()
+                  return language.t("settings.context.title")
                 },
               }}
               trigger={
                 <>
-                  <Icon name="memory" size="small" />
+                  <Icon name="server" size="small" />
                   <Show when={memoryActive()}>
                     <span data-slot="task-header-memory-dot" />
                   </Show>
                 </>
               }
             >
-              <div data-slot="task-header-memory-menu">
-                <div data-slot="task-header-memory-status">{memoryStatus()}</div>
-                {activitySummaryView()}
-                <Show
-                  when={memory.enabled()}
-                  fallback={
-                    <>
+              <div data-slot="task-header-context-menu">
+                <div data-slot="task-header-context-title">{language.t("settings.context.title")}</div>
+                <Show when={!props.readonly}>
+                  <section data-slot="task-header-context-section">
+                    <div data-slot="task-header-context-section-title">
+                      <Icon name="compress" size="small" />
+                      <span>{language.t("settings.context.compaction.title")}</span>
+                    </div>
+                    <div data-slot="task-header-context-actions">
                       <button
-                        data-slot="task-header-memory-action"
-                        disabled={memory.pending()}
-                        onClick={() => memory.enable()}
+                        data-slot="task-header-context-action"
+                        disabled={!canCompact()}
+                        onClick={() => session.compact()}
                       >
-                        {language.t("chat.memory.enable")}
+                        {language.t("command.session.compact")}
                       </button>
-                    </>
-                  }
-                >
-                  <div data-slot="task-header-memory-actions">
-                    <button
-                      data-slot="task-header-memory-action"
-                      disabled={memory.loading() || memory.pending()}
-                      onClick={() => memory.showMemory()}
-                    >
-                      {language.t("chat.memory.inspect")}
-                    </button>
-                    <button
-                      data-slot="task-header-memory-action"
-                      disabled={memory.pending()}
-                      onClick={() => memory.remember()}
-                    >
-                      {language.t("chat.memory.remember")}
-                    </button>
-                    <button
-                      data-slot="task-header-memory-action"
-                      disabled={memory.pending()}
-                      onClick={() => memory.forget()}
-                    >
-                      {language.t("chat.memory.forget")}
-                    </button>
-                    <button
-                      data-slot="task-header-memory-action"
-                      disabled={memory.pending()}
-                      onClick={() => memory.rebuild()}
-                    >
-                      {language.t("chat.memory.rebuild")}
-                    </button>
-                    <button
-                      data-slot="task-header-memory-action"
-                      disabled={memory.pending()}
-                      onClick={() => memory.disable()}
-                    >
-                      {language.t("chat.memory.disable")}
-                    </button>
-                  </div>
-                  <div data-slot="task-header-memory-verbose">
-                    <span>{language.t("chat.memory.verbose")}</span>
-                    <Switch
-                      checked={memoryVerbose()}
-                      disabled={memory.pending()}
-                      hideLabel
-                      onChange={(next) => memory.verbose(next ? "on" : "off")}
-                    >
-                      {language.t("chat.memory.verbose")}
-                    </Switch>
-                  </div>
+                    </div>
+                  </section>
                 </Show>
+                <section data-slot="task-header-context-section">
+                  <div data-slot="task-header-context-section-title">
+                    <Icon name="memory" size="small" />
+                    <span>{language.t("settings.context.memory.title")}</span>
+                  </div>
+                  <div data-slot="task-header-memory-status">{memoryStatus()}</div>
+                  {activitySummaryView()}
+                  <div data-slot="task-header-context-actions">
+                    <Show
+                      when={memory.enabled()}
+                      fallback={
+                        <button
+                          data-slot="task-header-context-action"
+                          disabled={memory.pending()}
+                          onClick={() => memory.enable()}
+                        >
+                          {language.t("chat.memory.enable")}
+                        </button>
+                      }
+                    >
+                      <button
+                        data-slot="task-header-context-action"
+                        disabled={memory.loading() || memory.pending()}
+                        onClick={() => memory.showMemory()}
+                      >
+                        {language.t("chat.memory.inspect")}
+                      </button>
+                      <button
+                        data-slot="task-header-context-action"
+                        disabled={memory.pending()}
+                        onClick={() => memory.remember()}
+                      >
+                        {language.t("chat.memory.remember")}
+                      </button>
+                      <button
+                        data-slot="task-header-context-action"
+                        disabled={memory.pending()}
+                        onClick={() => memory.forget()}
+                      >
+                        {language.t("chat.memory.forget")}
+                      </button>
+                      <button
+                        data-slot="task-header-context-action"
+                        disabled={memory.pending()}
+                        onClick={() => memory.rebuild()}
+                      >
+                        {language.t("chat.memory.rebuild")}
+                      </button>
+                      <button
+                        data-slot="task-header-context-action"
+                        disabled={memory.pending()}
+                        onClick={() => memory.disable()}
+                      >
+                        {language.t("chat.memory.disable")}
+                      </button>
+                    </Show>
+                  </div>
+                  <Show when={memory.enabled()}>
+                    <div data-slot="task-header-memory-verbose">
+                      <span>{language.t("chat.memory.verbose")}</span>
+                      <Switch
+                        checked={memoryVerbose()}
+                        disabled={memory.pending()}
+                        hideLabel
+                        onChange={(next) => memory.verbose(next ? "on" : "off")}
+                      >
+                        {language.t("chat.memory.verbose")}
+                      </Switch>
+                    </div>
+                  </Show>
+                </section>
               </div>
             </DeferredPopover>
           </Tooltip>
-          <Show when={!props.readonly}>
-            <Tooltip value={language.t("command.session.compact")} placement="bottom">
-              <IconButton
-                icon="compress"
-                size="small"
-                variant="ghost"
-                disabled={!canCompact()}
-                onClick={() => session.compact()}
-                aria-label={language.t("command.session.compact")}
-              />
-            </Tooltip>
-          </Show>
           <Show when={hasMessages()}>
             <Tooltip value={language.t("chat.search.toggle")} placement="bottom">
               <IconButton

@@ -22,7 +22,6 @@ import { KiloCompactionChunks } from "../../src/kilocode/session/compaction-chun
 import { KiloSessionCompaction } from "../../src/kilocode/session/compaction"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
-import { Reference } from "../../src/reference/reference"
 import { SessionCompaction } from "../../src/session/compaction"
 import * as SessionProcessorModule from "../../src/session/processor"
 import type { SessionProcessor } from "../../src/session/processor"
@@ -40,6 +39,9 @@ import { remove as cleanup } from "./cleanup"
 const providerID = ProviderV2.ID.make("test")
 const modelID = ModelV2.ID.make("test-model")
 const ref = { providerID, modelID }
+const agents = Layer.mock(Agent.Service)({
+  get: () => Effect.succeed({ name: "compaction", mode: "primary", permission: [], options: {} } satisfies Agent.Info),
+})
 const previous = Flag.KILO_DB
 const dbfile = path.join(os.tmpdir(), `kilo-compaction-chunks-${process.pid}-${crypto.randomUUID()}.db`)
 
@@ -227,13 +229,12 @@ function fakeRuntime(outputTokenMax?: number, error?: MessageV2.Assistant["error
       Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, bus).pipe(
         Layer.provide(ProviderTest.fake({ model }).layer),
         Layer.provide(SessionNs.defaultLayer),
-        Layer.provide(Agent.defaultLayer),
+        Layer.provide(agents),
         Layer.provide(Plugin.defaultLayer),
         Layer.provide(SyncEvent.defaultLayer),
         Layer.provide(EventV2Bridge.defaultLayer),
         Layer.provide(Database.defaultLayer),
         Layer.provide(RuntimeFlags.layer({ outputTokenMax })),
-        Layer.provide(Reference.defaultLayer),
         Layer.provide(bus),
         Layer.provide(
           Layer.mock(Config.Service)({
@@ -309,7 +310,6 @@ function liveRuntime(layer: Layer.Layer<LLM.Service>, context = 10_000) {
       Layer.provide(EventV2Bridge.defaultLayer),
       Layer.provide(Database.defaultLayer),
       Layer.provide(RuntimeFlags.layer()),
-      Layer.provide(Reference.defaultLayer),
       Layer.provide(status),
       Layer.provide(bus),
       Layer.provide(

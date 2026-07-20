@@ -1,5 +1,36 @@
 # @kilocode/cli
 
+## 7.4.11
+
+### Minor Changes
+
+- [#12255](https://github.com/Kilo-Org/kilocode/pull/12255) [`e084ab7`](https://github.com/Kilo-Org/kilocode/commit/e084ab7492eb6f330768157663b29c347dc0fa18) - Improve CLI project-memory controls, status, activity indicators, and optional recall details.
+
+- [#12250](https://github.com/Kilo-Org/kilocode/pull/12250) [`bd69158`](https://github.com/Kilo-Org/kilocode/commit/bd69158131aafdcc2f44aede22b573c2b0432f21) - Support verbose project-memory settings and show recalled memory snippets in conversation markers when enabled.
+
+### Patch Changes
+
+- [#12242](https://github.com/Kilo-Org/kilocode/pull/12242) [`06c2337`](https://github.com/Kilo-Org/kilocode/commit/06c23379d8e07b583591cf3296c6fab4177d3a26) - Speed up local conversation recall searches on large histories.
+
+- [#12252](https://github.com/Kilo-Org/kilocode/pull/12252) [`e67635d`](https://github.com/Kilo-Org/kilocode/commit/e67635d2702d0352d7322a8cfd86f0786af13029) - Restore directory `@`-mentions by listing their entries without inlining child file contents. Untrusted external directory attachments remain denied.
+
+- [#12274](https://github.com/Kilo-Org/kilocode/pull/12274) [`5180c10`](https://github.com/Kilo-Org/kilocode/commit/5180c10c4f69500ce303437646371500a71dba46) - Show newly submitted messages immediately after reverting a conversation.
+
+- [#12086](https://github.com/Kilo-Org/kilocode/pull/12086) [`c654f1e`](https://github.com/Kilo-Org/kilocode/commit/c654f1e3d1efae339a20a44b6cd7e2f78deab4eb) Thanks [@rakshith1928](https://github.com/rakshith1928)! - Fix Grok 4.5 reasoning variants not showing up in the model picker.
+
+- [#12267](https://github.com/Kilo-Org/kilocode/pull/12267) [`e3124d3`](https://github.com/Kilo-Org/kilocode/commit/e3124d31472b8fa652418fae9e583ef2b29c16e9) - Retry incomplete model responses that end without final output or tool activity while preserving partial answers and completed tools.
+
+- Updated dependencies [[`319f159`](https://github.com/Kilo-Org/kilocode/commit/319f159ac333d18855a72ddb1fa61ed471ebf2d9), [`30e7ec4`](https://github.com/Kilo-Org/kilocode/commit/30e7ec4ab45fac724b41ec0b4342e272e7f584d2), [`bd69158`](https://github.com/Kilo-Org/kilocode/commit/bd69158131aafdcc2f44aede22b573c2b0432f21)]:
+  - @kilocode/kilo-gateway@7.4.10
+  - @kilocode/kilo-memory@7.5.0
+  - @kilocode/sdk@7.5.0
+  - @kilocode/kilo-indexing@7.4.10
+  - @kilocode/kilo-telemetry@7.4.10
+  - @kilocode/plugin@7.4.10
+  - @opencode-ai/ui@7.4.10
+  - @opencode-ai/server@7.4.10
+  - @kilocode/plugin-atomic-chat@7.4.10
+
 ## 7.4.9
 
 ### Patch Changes

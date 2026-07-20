@@ -1,3 +1,4 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -193,5 +194,13 @@ export const DiffInput = Schema.Struct({
   messageID: Schema.optional(MessageID),
 })
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
+
+export const node = LayerNode.make(layer, [
+  Session.node,
+  Snapshot.node,
+  EventV2Bridge.node,
+  Config.node,
+  Storage.node, // kilocode_change
+])
 
 export * as SessionSummary from "./summary"

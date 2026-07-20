@@ -1082,6 +1082,11 @@ export const SearchPreviews: Story = {
       summary: () => ({ diffs: [{ file: "src/app.ts", additions: 4, deletions: 1 }] }),
       userMessages: () => [{ id: "tool-call-lab-user-message" }, { id: "tool-call-lab-user-message-next" }],
     }
+    const conversationOnly = {
+      ...reverted,
+      revert: () => ({ messageID: "tool-call-lab-user-message", workspace: "snapshots-disabled" as const }),
+      summary: () => undefined,
+    }
 
     return (
       <StoryProviders
@@ -1164,6 +1169,12 @@ export const SearchPreviews: Story = {
                 <div class="tool-call-lab-example">
                   <span class="tool-call-lab-example-label">Reverted messages</span>
                   <SessionContext.Provider value={reverted as any}>
+                    <RevertBanner />
+                  </SessionContext.Provider>
+                </div>
+                <div class="tool-call-lab-example">
+                  <span class="tool-call-lab-example-label">Conversation-only revert</span>
+                  <SessionContext.Provider value={conversationOnly as any}>
                     <RevertBanner />
                   </SessionContext.Provider>
                 </div>

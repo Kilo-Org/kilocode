@@ -25,6 +25,7 @@ import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
+import { AttachedState } from "@/kilo-sessions/attached-state"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -32,17 +33,15 @@ import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
   return provide(input)
 }
 
-function same(a: Set<string>, b: Set<string>): boolean {
-  if (a.size !== b.size) return false
-  for (const id of a) if (!b.has(id)) return false
-  return true
-}
+// kilocode_change removed: `same` helper is no longer used now that the
+// presence/pending set logic lives in AttachedState.
 
 export namespace KiloSessions {
   export const Event = {
@@ -62,6 +61,11 @@ export namespace KiloSessions {
   export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloSessions") {}
 
   const log = Log.create({ service: "kilo-sessions" })
+  // kilocode_change - narrow `log` to the warn-only shape AttachedState needs.
+  // The full Logger has a typed `extra` arg that does not match the generic
+  // `meta?: unknown` contract; the warn body is forwarded to log.warn via an
+  // `unknown` cast below.
+  const attachedLog = { warn: (msg: string, meta?: unknown) => log.warn(msg, meta as never) }
   const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   const Uuid = z.uuid()
@@ -209,7 +213,19 @@ export namespace KiloSessions {
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
-  const attached = new Set<string>()
+  // kilocode_change start - separate presence-owned attached session ids from
+  // newly-created (pending) session announcements so a concurrent presence
+  // update cannot drop a pending id and a heartbeat failure cannot delete a
+  // presence-owned id. The heartbeat closure throws when no remote connection
+  // is available so `announce` cannot silently mark a session as attached;
+  // create_session's catch block turns that into the sanitized failure
+  // response and the user retries manually.
+  const attachedState = AttachedState.create({
+    heartbeat: () =>
+      remote ? remote.conn.heartbeat() : Promise.reject(new Error("attachRemoteSession: no remote connection")),
+    log: attachedLog,
+  })
+  // kilocode_change end
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -348,8 +364,10 @@ export namespace KiloSessions {
                 if (type === undefined) return
                 const fn = handlers.get(type)
                 if (!fn) return
-                Promise.resolve(fn({ properties: event.payload!.properties })).catch((cause) =>
-                  log.error("subscriber failed", { type, cause }),
+                // Instance.restore: handlers run async work after the emitting fiber's
+                // synchronous window, where fiber-scoped InstanceRef is no longer visible.
+                Promise.resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))).catch(
+                  (cause) => log.error("subscriber failed", { type, cause }),
                 )
               }
               GlobalBus.on("event", handler)
@@ -387,6 +405,8 @@ export namespace KiloSessions {
     Layer.provide(Session.defaultLayer),
   )
 
+  export const node = LayerNode.make(layer, [Bus.node, Config.node, Session.node])
+
   export async function enableRemote() {
     if (remote) return
     if (ingestDisabled) return
@@ -420,8 +440,11 @@ export namespace KiloSessions {
         const { AppRuntime } = await import("@/effect/app-runtime")
         const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
         const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
+        // kilocode_change - advertise both presence-owned and pending-created ids
+        // so the relay learns about new sessions before the next periodic
+        // heartbeat and the create_session response can be sent.
         const ids = new Set(Object.keys(statuses))
-        for (const id of attached) ids.add(id)
+        for (const id of attachedState.union()) ids.add(id)
         const results = await AppRuntime.runPromise(
           Session.Service.use((svc) =>
             Effect.all(
@@ -458,8 +481,7 @@ export namespace KiloSessions {
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
         },
         onMessage: (msg) => {
-          // Must run inside Instance.provide so Bus.subscribeAll can access
-          // the instance-scoped subscription map via Instance.state().
+          // Restore the directory context before dispatching an async remote message.
           void provide({ directory, fn: () => sender.handle(msg) })
         },
         onClose: () => disableRemote(),
@@ -498,6 +520,10 @@ export namespace KiloSessions {
     remoteSeq += 1
     const pending = !!enabling
     enabling = undefined
+    // kilocode_change - clear both presence and pending-created ids so the
+    // next remote connection lifecycle starts with a clean slate and stale
+    // pending announcements from a previous connection do not leak.
+    attachedState.reset()
     if (!remote) {
       if (pending) void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
       return
@@ -516,12 +542,20 @@ export namespace KiloSessions {
     }
   }
   export function setAttachedSessions(ids: readonly string[]) {
-    const next = new Set(ids)
-    if (same(next, attached)) return
-    attached.clear()
-    for (const id of next) attached.add(id)
-    if (remote) void remote.conn.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
+    // kilocode_change - delegate to the two-set state so a concurrent create
+    // announcement is not dropped by a presence clear+rebuild.
+    attachedState.setPresence(ids)
   }
+
+  // kilocode_change start - duplicate-safe single-session attach used by the
+  // remote create_session command. Delegates to the two-set state so the
+  // announcement is preserved across a concurrent presence replacement and a
+  // heartbeat failure rolls back only the entry this call added (a
+  // presence-owned id is never reachable here because the factory guards it).
+  export async function attachRemoteSession(id: string) {
+    await attachedState.announce(id)
+  }
+  // kilocode_change end
 
   export async function create(sessionId: string) {
     const result = await bootstrap(sessionId)

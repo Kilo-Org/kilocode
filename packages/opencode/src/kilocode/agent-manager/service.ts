@@ -37,7 +37,7 @@ interface State {
 
 function matches(request: Request, result: Result) {
   if (request.operation === "overview") return result.operation === "overview"
-  return result.operation === "prompt" && result.sessionID === request.targetSessionID
+  return result.operation === request.operation && result.sessionID === request.targetSessionID
 }
 
 export interface Interface {

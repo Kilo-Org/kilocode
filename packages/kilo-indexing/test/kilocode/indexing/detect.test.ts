@@ -1,13 +1,14 @@
 import { describe, expect, test } from "bun:test"
 import { mkdtemp } from "node:fs/promises"
 import { tmpdir } from "node:os"
+import { fileURLToPath } from "node:url"
 import { hasIndexingPlugin, isIndexingPlugin, normalizePluginName } from "../../../src/detect"
 
 describe("indexing plugin detection", () => {
   test("bundles detect module for browser targets", async () => {
     const dir = await mkdtemp(`${tmpdir()}/kilo-indexing-detect-`)
     const result = await Bun.build({
-      entrypoints: [new URL("../../../src/detect.ts", import.meta.url).pathname],
+      entrypoints: [fileURLToPath(new URL("../../../src/detect.ts", import.meta.url))],
       minify: true,
       outdir: dir,
       target: "browser",

@@ -54,7 +54,7 @@ type Data = z.infer<typeof dataSchema>
 function routed(meta: Gateway) {
   const route = meta.routing
   if (!route) return
-  const hit = route.modelAttempts?.findLast((item) => item.success === true)
+  const hit = route.modelAttempts?.slice().reverse().find((item) => item.success === true)
   const id = hit?.canonicalSlug ?? route.canonicalSlug
   if (!id) return
   const value = id.trim()

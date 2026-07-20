@@ -1084,6 +1084,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (handleModelUsageMessage(message)) return
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
+    handleCommandCompletion(message)
     cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
@@ -1600,6 +1601,10 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("parts", message.id, message.parts)
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
+  }
+
+  function handleCommandCompletion(message: ExtensionMessage): void {
+    if (message.type === "sessionCommandCompleted") finishSubmission(message.messageID)
   }
 
   function handlePartUpdated(

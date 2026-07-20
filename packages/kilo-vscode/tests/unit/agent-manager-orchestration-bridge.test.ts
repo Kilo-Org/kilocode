@@ -42,7 +42,9 @@ describe("AgentManagerOrchestrationBridge", () => {
       state?: (state: "connecting" | "connected" | "disconnected" | "error") => void
     } = {}
     const status = { failList: "", failReply: false }
+    const managed = new Set(["ses_target"])
     const promptAsync = mock(async () => ({ data: undefined }))
+    const close = mock(async () => undefined)
     const client = {
       session: {
         get: mock(async () => ({
@@ -95,6 +97,8 @@ describe("AgentManagerOrchestrationBridge", () => {
       state: () => state,
       stats: async () => ({ worktrees: [] }),
       prs: () => new Map(),
+      managed: (id) => managed.has(id),
+      close,
       log: () => undefined,
     })
     const request = (value: AgentManagerRequest, directory = root) =>
@@ -102,7 +106,7 @@ describe("AgentManagerOrchestrationBridge", () => {
         { id: `event-${value.id}`, type: "kilocode.agent_manager.requested", properties: value } as SSEPayload,
         directory,
       )
-    return { bridge, client, handlers, lists, promptAsync, rejections, replies, request, status }
+    return { bridge, client, close, handlers, lists, managed, promptAsync, rejections, replies, request, status }
   }
 
   const request: AgentManagerRequest = {
@@ -143,6 +147,85 @@ describe("AgentManagerOrchestrationBridge", () => {
         requestID: "amr_prompt",
         directory: root,
         result: { operation: "prompt", sessionID: "ses_target", delivered: true },
+      },
+    ])
+    test.bridge.dispose()
+  })
+
+  it("stops a managed session through the same close operation as the UI", async () => {
+    const test = harness()
+    test.status.failReply = true
+    const stop: AgentManagerRequest = {
+      id: "amr_stop",
+      sessionID: "ses_caller",
+      operation: "stop",
+      targetSessionID: "ses_target",
+    }
+
+    test.request(stop)
+    await waitFor(() => test.replies.length === 1)
+    test.status.failReply = false
+    test.request(stop)
+    await waitFor(() => test.replies.length === 2)
+
+    expect(test.close).toHaveBeenCalledTimes(1)
+    expect(test.close).toHaveBeenCalledWith("ses_target")
+    expect(test.replies).toEqual([
+      {
+        requestID: "amr_stop",
+        directory: root,
+        result: { operation: "stop", sessionID: "ses_target", stopped: true },
+      },
+      {
+        requestID: "amr_stop",
+        directory: root,
+        result: { operation: "stop", sessionID: "ses_target", stopped: true },
+      },
+    ])
+    test.bridge.dispose()
+  })
+
+  it("stops a live panel session before it is persisted", async () => {
+    const test = harness()
+    test.managed.add("ses_live")
+
+    test.request({
+      id: "amr_stop_live",
+      sessionID: "ses_caller",
+      operation: "stop",
+      targetSessionID: "ses_live",
+    })
+    await waitFor(() => test.replies.length === 1)
+
+    expect(state.getSession("ses_live")).toBeUndefined()
+    expect(test.close).toHaveBeenCalledWith("ses_live")
+    expect(test.replies[0]).toEqual({
+      requestID: "amr_stop_live",
+      directory: root,
+      result: { operation: "stop", sessionID: "ses_live", stopped: true },
+    })
+    test.bridge.dispose()
+  })
+
+  it("rejects stopping a session not managed by the current workspace", async () => {
+    const test = harness()
+    test.request({
+      id: "amr_stop_unknown",
+      sessionID: "ses_caller",
+      operation: "stop",
+      targetSessionID: "ses_unknown",
+    })
+    await waitFor(() => test.rejections.length === 1)
+
+    expect(test.close).not.toHaveBeenCalled()
+    expect(test.rejections).toEqual([
+      {
+        requestID: "amr_stop_unknown",
+        directory: root,
+        error: {
+          code: "unknown_session",
+          message: "The session is not managed by this Agent Manager workspace",
+        },
       },
     ])
     test.bridge.dispose()
