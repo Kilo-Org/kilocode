@@ -23,6 +23,9 @@ import {
 } from "./config"
 import { AimlapiApiError, AimlapiClient, type PartnerCheckoutSession } from "./client"
 
+/** Amount pre-filled on the credits screen, derived from the shared minor default. */
+export const DEFAULT_AMOUNT_USD_DISPLAY = String(DEFAULT_AMOUNT_USD_MINOR / 100)
+
 // Copy deck — keep verbatim with the shared spec / Figma mockups.
 export const COPY = {
   choiceTitle: "Do you have aimlapi.com key?",
@@ -105,7 +108,7 @@ function formatUsd(usdMinor: number): string {
 }
 
 async function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  if (signal?.aborted) throw (signal.reason ?? new DOMException("The operation was aborted.", "AbortError"))
+  if (signal?.aborted) throw signal.reason ?? new DOMException("The operation was aborted.", "AbortError")
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       signal?.removeEventListener("abort", onAbort)
@@ -176,7 +179,11 @@ export class AimlapiFlow {
       await this.client.getBalance(key, this.signal)
     } catch (error) {
       if (this.signal.aborted) return
-      this.deps.change({ id: "paste-key", error: COPY.errInvalidKey })
+      // A 401/403 is the real "bad key" signal; anything else (network,
+      // timeout, 5xx) is a transport/service failure and must not be blamed
+      // on the key the user pasted.
+      const invalidKey = error instanceof AimlapiApiError && (error.status === 401 || error.status === 403)
+      this.deps.change({ id: "paste-key", error: invalidKey ? COPY.errInvalidKey : this.describe(error) })
       return
     }
     this.deps.change({ id: "ready" })

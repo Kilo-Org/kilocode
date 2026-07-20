@@ -17,7 +17,7 @@ import { useDialog } from "@tui/ui/dialog"
 import { DialogSelect } from "@tui/ui/dialog-select"
 import { Link } from "@tui/ui/link"
 import { DialogPrompt } from "@tui/ui/dialog-prompt"
-import { AimlapiFlow, COPY, type FlowPhase, type FlowResult } from "../flow"
+import { AimlapiFlow, COPY, DEFAULT_AMOUNT_USD_DISPLAY, type FlowPhase, type FlowResult } from "../flow"
 
 export const PROVIDER_ID = "aimlapi"
 
@@ -166,7 +166,7 @@ export function AimlapiSetup(props: { model: ModelComponent }) {
         <Match when={phase().id === "credits"}>
           <DialogPrompt
             title={COPY.creditsTitle}
-            value="25"
+            value={DEFAULT_AMOUNT_USD_DISPLAY}
             description={() => (
               <box gap={0}>
                 <text fg={theme.text}>

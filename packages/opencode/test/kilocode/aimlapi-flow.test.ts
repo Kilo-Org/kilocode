@@ -1,7 +1,14 @@
 // kilocode_change - new file
 import { describe, expect, test } from "bun:test"
 import { AimlapiApiError, type AimlapiClient, type PartnerCheckoutSession } from "../../src/kilocode/aimlapi/client"
-import { AimlapiFlow, COPY, parseAmountUsd, validEmail, type FlowPhase, type FlowResult } from "../../src/kilocode/aimlapi/flow"
+import {
+  AimlapiFlow,
+  COPY,
+  parseAmountUsd,
+  validEmail,
+  type FlowPhase,
+  type FlowResult,
+} from "../../src/kilocode/aimlapi/flow"
 
 function session(status: PartnerCheckoutSession["status"], token = "sess_1"): PartnerCheckoutSession {
   return {
@@ -94,6 +101,20 @@ describe("submitKey (S3)", () => {
     })
     await h.flow.submitKey("bad")
     expect(h.last()).toEqual({ id: "paste-key", error: COPY.errInvalidKey })
+    expect(h.results).toHaveLength(0)
+  })
+
+  test("a transport failure is not blamed on the key", async () => {
+    const h = harness({
+      getBalance: async () => {
+        throw new AimlapiApiError("Network request failed", 0, "")
+      },
+    })
+    await h.flow.submitKey("maybe-fine-key")
+    const last = h.last() as Extract<FlowPhase, { id: "paste-key" }>
+    expect(last.id).toBe("paste-key")
+    expect(last.error).not.toBe(COPY.errInvalidKey)
+    expect(last.error).toContain("Network error")
     expect(h.results).toHaveLength(0)
   })
 })
@@ -202,7 +223,10 @@ describe("submitAmount (S5 -> S6 -> S7)", () => {
       createSession: async () => session("pending_payment"),
       pay: async (_bearer, _token, input) => {
         payCalls.push({ paymentSessionId: input.paymentSessionId })
-        return { checkout: { providerSessionId: "cs_1", payUrl: "https://pay.test/x" }, partnerCheckout: session("pending_payment") }
+        return {
+          checkout: { providerSessionId: "cs_1", payUrl: "https://pay.test/x" },
+          partnerCheckout: session("pending_payment"),
+        }
       },
       getSession: async () => (++polls < 2 ? session("pending_payment") : session("paid")),
       exchange: async () => ({ apiKey: "exchanged-key", apiKeyId: "key_2" }),
@@ -283,7 +307,10 @@ describe("submitAmount (S5 -> S6 -> S7)", () => {
         return session("pending_payment", token)
       },
       pay: async (_bearer, token) => {
-        return { checkout: { providerSessionId: "cs", payUrl: null }, partnerCheckout: session("pending_payment", token) }
+        return {
+          checkout: { providerSessionId: "cs", payUrl: null },
+          partnerCheckout: session("pending_payment", token),
+        }
       },
       getSession: async () => (succeed ? session("paid") : ((succeed = true), session("expired"))),
       exchange: async () => ({ apiKey: "k", apiKeyId: "id" }),

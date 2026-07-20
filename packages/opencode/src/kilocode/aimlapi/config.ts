@@ -54,8 +54,7 @@ export function resolveEndpoints(): AimlapiEndpoints {
     appBaseUrl: process.env["AIMLAPI_APP_URL"]?.trim() || DEFAULT_ENDPOINTS.appBaseUrl,
     payBaseUrl: process.env["AIMLAPI_PAY_URL"]?.trim() || DEFAULT_ENDPOINTS.payBaseUrl,
     inferenceBaseUrl: process.env["AIMLAPI_INFERENCE_URL"]?.trim() || DEFAULT_ENDPOINTS.inferenceBaseUrl,
-    verificationBaseUrl:
-      process.env["AIMLAPI_VERIFICATION_BASE_URL"]?.trim() || DEFAULT_ENDPOINTS.verificationBaseUrl,
+    verificationBaseUrl: process.env["AIMLAPI_VERIFICATION_BASE_URL"]?.trim() || DEFAULT_ENDPOINTS.verificationBaseUrl,
   }
 }
 
@@ -98,8 +97,7 @@ function safeHttpBaseUrl(value: string | undefined): string | null {
   if (!candidate) return null
   try {
     const url = new URL(candidate)
-    const loopback =
-      url.hostname === "localhost" || /^127(?:\.\d+){3}$/.test(url.hostname) || url.hostname === "[::1]"
+    const loopback = url.hostname === "localhost" || /^127(?:\.\d+){3}$/.test(url.hostname) || url.hostname === "[::1]"
     if (
       (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
       url.username ||

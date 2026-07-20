@@ -248,38 +248,6 @@ export class AimlapiClient {
     )
   }
 
-  /** Top-up for a user who already holds a key (S12 → top-up path). */
-  async topUpByKey(
-    apiKey: string,
-    input: {
-      sessionToken: string
-      amountUsdMinor: number
-      paymentSessionId: string
-      successUrl?: string
-      cancelUrl?: string
-      autoTopUp?: boolean
-    },
-    signal?: AbortSignal,
-  ): Promise<PayResult> {
-    const inferenceBase = this.endpoints.inferenceBaseUrl
-      .trim()
-      .replace(/\/+$/, "")
-      .replace(/\/v1$/i, "")
-    return this.request<PayResult>(`${inferenceBase}/v2/billing/topup`, {
-      method: "POST",
-      bearer: apiKey,
-      body: {
-        sessionToken: input.sessionToken,
-        amountUsdMinor: input.amountUsdMinor,
-        paymentSessionId: input.paymentSessionId,
-        ...(input.successUrl ? { successUrl: input.successUrl } : {}),
-        ...(input.cancelUrl ? { cancelUrl: input.cancelUrl } : {}),
-        ...(input.autoTopUp ? { autoTopUp: true } : {}),
-      },
-      signal,
-    })
-  }
-
   async exchange(bearer: string, sessionToken: string, signal?: AbortSignal): Promise<ExchangeResult> {
     return this.request<ExchangeResult>(
       `${this.endpoints.appBaseUrl}/v3/partner-checkout/sessions/${encodeURIComponent(sessionToken)}/exchange`,
