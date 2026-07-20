@@ -131,6 +131,13 @@ export const dict = {
   "revert.banner.redo": "Ripeti",
   "revert.banner.redo.all": "Ripeti tutto",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversazione ripristinata. Le modifiche ai file non sono state ripristinate perché gli snapshot sono disabilitati.",
+  "revert.banner.workspace.unavailable":
+    "Conversazione ripristinata. Non era disponibile alcun checkpoint dei file, quindi le modifiche all'area di lavoro non sono state ripristinate.",
+  "revert.banner.workspace.legacy":
+    "Conversazione ripristinata. Lo stato del ripristino dell'area di lavoro non è disponibile per questo ripristino precedente.",
+  "revert.banner.workspace.enableSnapshots": "Abilita snapshot",
   "revert.disabled.agentBusy": "Attendi che l'agente finisca",
   "command.session.compact": "Compatta sessione",
   "command.session.compact.description": "Riassumi la sessione per ridurre la dimensione del contesto",
@@ -296,6 +303,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Includi file attivo",
   "prompt.context.removeActiveFile": "Rimuovi file attivo dal contesto",
   "prompt.context.removeFile": "Rimuovi file dal contesto",
+  "prompt.thinking.tooltip": "Sforzo di ragionamento",
   "prompt.action.attachFile": "Allega file",
   "prompt.attachment.remove": "Rimuovi allegato",
   "prompt.action.send": "Invia",
@@ -1514,6 +1522,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Comprimi automaticamente ragionamento",
   "settings.display.reasoningAutoCollapse.description":
     "Comprimi i blocchi di ragionamento dopo che l'agente ha finito di scriverli. Lascia disattivato per tenerli espansi finché non li comprimi manualmente.",
+  "settings.display.shiftTabCycle.title": "Cambia lo sforzo di ragionamento con Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Premi Shift+Tab in un campo di inserimento del prompt per passare al livello di sforzo di ragionamento successivo. Disattiva l'opzione per mantenere Shift+Tab per la navigazione del focus tramite tastiera.",
   "settings.display.terminalCommand.title": "Blocchi comando terminale",
   "settings.display.terminalCommand.description": "Scegli se i blocchi comando terminale iniziano espansi o compressi.",
   "settings.display.terminalCommand.expanded": "Espansi",

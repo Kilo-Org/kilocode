@@ -195,6 +195,7 @@ export interface ModelAllocation {
   providerID: string
   modelID: string
   count: number
+  variant?: string
 }
 
 export type ContinueInWorktreeStatus =

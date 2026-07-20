@@ -11,6 +11,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -86,6 +87,12 @@ class MockCliServer : AutoCloseable {
     @Volatile var agentsStatus = 200
     @Volatile var commandsStatus = 200
     @Volatile var skillsStatus = 200
+
+    // File search responses
+    @Volatile var findFiles = "[]"
+    @Volatile var findDirectories = "[]"
+    @Volatile var findFileStatus = 200
+    val findFilePaths = CopyOnWriteArrayList<String>()
 
     // Session REST responses
     @Volatile var sessions = "[]"
@@ -370,6 +377,11 @@ class MockCliServer : AutoCloseable {
                 }
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
+                bare == "/find/file" -> {
+                    findFilePaths.add(path)
+                    val body = if (path.contains("type=directory")) findDirectories else findFiles
+                    respond(output, findFileStatus, body)
+                }
                 bare == "/mcp" -> respond(output, mcpStatus, mcp)
                 bare.matches(Regex("/mcp/[^/]+/(connect|disconnect)")) && method == "POST" -> {
                     lastMcpActionPath = path

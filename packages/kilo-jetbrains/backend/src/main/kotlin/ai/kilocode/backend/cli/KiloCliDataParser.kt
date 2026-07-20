@@ -20,6 +20,7 @@ import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.CompactionConfigDto
 import ai.kilocode.rpc.dto.CustomModelDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.CustomProviderSaveDto
@@ -73,6 +74,7 @@ import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import ai.kilocode.rpc.dto.TokensDto
 import ai.kilocode.rpc.dto.ToolRefDto
+import ai.kilocode.rpc.dto.WatcherConfigDto
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -521,6 +523,8 @@ object KiloCliDataParser {
             subagentModel = obj.str("subagent_model"),
             subagentVariant = obj.str("subagent_variant"),
             defaultAgent = obj.str("default_agent"),
+            watcher = parseWatcherConfig(obj["watcher"].obj()),
+            compaction = parseCompactionConfig(obj["compaction"].obj()),
             instructions = obj["instructions"].arr()
                 ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
                 ?: emptyList(),
@@ -529,6 +533,24 @@ object KiloCliDataParser {
             agent = parseAgentConfig(obj["agent"].obj()),
         )
     }.getOrDefault(ConfigDto())
+
+    private fun parseWatcherConfig(obj: JsonObject?): WatcherConfigDto? {
+        if (obj == null) return null
+        return WatcherConfigDto(
+            ignore = obj["ignore"].arr()
+                ?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }
+                ?: emptyList(),
+        )
+    }
+
+    private fun parseCompactionConfig(obj: JsonObject?): CompactionConfigDto? {
+        if (obj == null) return null
+        return CompactionConfigDto(
+            auto = runCatching { obj.flagOrNull("auto") }.getOrNull(),
+            threshold_percent = runCatching { obj.num("threshold_percent") }.getOrNull(),
+            prune = runCatching { obj.flagOrNull("prune") }.getOrNull(),
+        )
+    }
 
     private fun parseSkillsConfig(obj: JsonObject?): SkillsConfigDto? {
         if (obj == null) return null
@@ -837,6 +859,24 @@ object KiloCliDataParser {
 
             val instructions = patch.instructions
             if (instructions != null) put("instructions", JsonArray(instructions.map(::JsonPrimitive)))
+
+            val watcher = patch.watcher
+            if (watcher != null) {
+                put("watcher", buildJsonObject {
+                    val ignore = watcher.ignore
+                    if (ignore != null) put("ignore", JsonArray(ignore.map(::JsonPrimitive)))
+                })
+            }
+
+            val compaction = patch.compaction
+            if (compaction != null) {
+                put("compaction", buildJsonObject {
+                    for (field in compaction.clear) put(field, JsonNull)
+                    if (compaction.auto != null) put("auto", compaction.auto)
+                    if (compaction.threshold_percent != null) put("threshold_percent", compaction.threshold_percent)
+                    if (compaction.prune != null) put("prune", compaction.prune)
+                })
+            }
 
             val skills = patch.skills
             if (skills != null) {

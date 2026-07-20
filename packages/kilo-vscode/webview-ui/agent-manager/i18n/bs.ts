@@ -124,6 +124,8 @@ export const dict = {
     "Pokrenite agente na različitim modelima paralelno radi usporedbe rezultata",
   "agentManager.dialog.compareModels.searchModels": "Pretraži modele...",
   "agentManager.dialog.compareModels.selectModels": "Odaberi modele...",
+  "agentManager.dialog.compareModels.effort": "Napor zaključivanja",
+  "agentManager.dialog.compareModels.effortDefault": "Zadano",
   "agentManager.dialog.creating": "Kreiranje...",
   "agentManager.dialog.createWorktree": "Kreiraj worktree",
   "agentManager.dialog.removeImage": "Ukloni sliku",
