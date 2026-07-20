@@ -309,6 +309,63 @@ describe("DirectoryScanner", () => {
     expect(cache.getHash(open)).toBeDefined()
   })
 
+  test("uses a configured extension allowlist and removes excluded cached files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const custom = join(root, "main.custom")
+    const excluded = join(root, "main.ts")
+    await Bun.write(custom, "custom source content\n")
+    await Bun.write(excluded, "export const excluded = 1\n")
+
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    cache.updateHash(excluded, "old-hash")
+    const scan = new DirectoryScanner(
+      new Emb(),
+      new Store(),
+      new Parser(),
+      cache,
+      ignore(),
+      1,
+      1,
+      undefined,
+      undefined,
+      [".custom"],
+    )
+
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats.processed).toBe(1)
+    expect(cache.getHash(custom)).toBeDefined()
+    expect(cache.getHash(excluded)).toBeUndefined()
+  })
+
+  test("skips binary files admitted by a custom extension", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "data.custom")
+    await Bun.write(file, new Uint8Array([0, 1, 2, 3]))
+    const cache = new CacheManager(cacheDir, root)
+    await cache.initialize()
+    const scan = new DirectoryScanner(
+      new Emb(),
+      new Store(),
+      new Parser(),
+      cache,
+      ignore(),
+      1,
+      1,
+      undefined,
+      undefined,
+      [".custom"],
+    )
+
+    const result = await scan.scanDirectory(root)
+
+    expect(result.stats).toEqual({ processed: 0, skipped: 1 })
+    expect(cache.getHash(file)).toBeUndefined()
+  })
+
   test("skips files matched by nested .kilocodeignore during full scans", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))

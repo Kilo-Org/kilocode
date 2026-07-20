@@ -23,7 +23,6 @@ import { MessageV2 } from "../../src/session/message-v2"
 import * as SessionProcessorModule from "../../src/session/processor"
 import { Session as SessionNs } from "../../src/session/session"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
-import { Reference } from "../../src/reference/reference"
 import { SessionCompaction } from "../../src/session/compaction"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
@@ -178,11 +177,9 @@ function runtime(layer: Layer.Layer<LLM.Service>, config = Config.defaultLayer) 
       Layer.provide(config),
       Layer.provide(RuntimeFlags.layer()),
       Layer.provide(scope),
-      Layer.provide(Reference.defaultLayer),
       Layer.provide(SyncEvent.defaultLayer),
       Layer.provide(EventV2Bridge.defaultLayer),
       Layer.provide(Database.defaultLayer),
-      Layer.provide(Reference.defaultLayer),
     ),
   )
 }

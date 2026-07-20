@@ -5,18 +5,19 @@ import { testRender } from "@opentui/solid"
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
 import type { Event, GlobalEvent, Message, Part, Session } from "@kilocode/sdk/v2"
 import { createSignal } from "solid-js"
-import { ArgsProvider } from "@/cli/cmd/tui/context/args"
-import { createExit, ExitProvider } from "@/cli/cmd/tui/context/exit"
-import { KVProvider } from "@/cli/cmd/tui/context/kv"
-import { ProjectProvider } from "@/cli/cmd/tui/context/project"
-import { SDKProvider } from "@/cli/cmd/tui/context/sdk"
-import { SyncProvider } from "@/cli/cmd/tui/context/sync"
-import { ToastProvider } from "@/cli/cmd/tui/ui/toast"
+import { ArgsProvider } from "@tui/context/args"
+import { ExitProvider } from "@tui/context/exit"
+import { KVProvider } from "@tui/context/kv"
+import { ProjectProvider } from "@tui/context/project"
+import { SDKProvider } from "@tui/context/sdk"
+import { SyncProvider } from "@tui/context/sync"
+import { ToastProvider } from "@tui/ui/toast"
 import { MemorySidebar } from "@/kilocode/cli/cmd/tui/component/memory-status"
 import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
 import { Global } from "@opencode-ai/core/global"
 import { createEventSource, createFetch, directory, json } from "../../../../fixture/tui-sdk"
 import { tmpdir } from "../../../../fixture/fixture"
+import { TestTuiContexts } from "../../../../fixture/tui-environment"
 
 const id = "ses_memory_status"
 
@@ -80,21 +81,23 @@ test("session memory status refetches live and ignores other sessions", async ()
   })
   try {
     const app = await testRender(() => (
-      <ArgsProvider>
-        <ExitProvider exit={createExit(async () => {})}>
-          <KVProvider>
-            <ToastProvider>
-              <SDKProvider url="http://test" directory={directory} fetch={fetch.fetch} events={events.source}>
-                <ProjectProvider>
-                  <SyncProvider>
-                    <Probe sessionID={id} />
-                  </SyncProvider>
-                </ProjectProvider>
-              </SDKProvider>
-            </ToastProvider>
-          </KVProvider>
-        </ExitProvider>
-      </ArgsProvider>
+      <TestTuiContexts paths={{ state: tmp.path }}>
+        <ArgsProvider>
+          <ExitProvider exit={() => {}}>
+            <KVProvider>
+              <ToastProvider>
+                <SDKProvider url="http://test" directory={directory} fetch={fetch.fetch} events={events.source}>
+                  <ProjectProvider>
+                    <SyncProvider>
+                      <Probe sessionID={id} />
+                    </SyncProvider>
+                  </ProjectProvider>
+                </SDKProvider>
+              </ToastProvider>
+            </KVProvider>
+          </ExitProvider>
+        </ArgsProvider>
+      </TestTuiContexts>
     ))
     try {
       await wait(() => calls.count === 1 && app.captureCharFrame().includes("quiet"))

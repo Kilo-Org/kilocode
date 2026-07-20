@@ -1,6 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
-import * as Log from "@opencode-ai/core/util/log"
 import * as LSPClient from "./client"
 import path from "path"
 import { pathToFileURL, fileURLToPath } from "url"
@@ -14,8 +15,6 @@ import { containsPath } from "@/project/instance-context"
 import { TsClient } from "../kilocode/ts-client" // kilocode_change
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-
-const log = Log.create({ service: "lsp" })
 
 export const Event = {
   Updated: EventV2.define({ type: "lsp.updated", schema: {} }),
@@ -102,7 +101,6 @@ const kinds = [
 const filterExperimentalServers = (servers: Record<string, LSPServer.Info>, flags: RuntimeFlags.Info) => {
   if (flags.experimentalLspTy) {
     if (servers["pyright"]) {
-      log.info("LSP server pyright is disabled because KILO_EXPERIMENTAL_LSP_TY is enabled")
       delete servers["pyright"]
     }
   } else {
@@ -154,7 +152,7 @@ export const layer = Layer.effect(
         const servers: Record<string, LSPServer.Info> = {}
 
         if (!cfg.lsp) {
-          log.info("all LSPs are disabled")
+          yield* Effect.logInfo("all LSPs are disabled")
         } else {
           for (const server of Object.values(LSPServer)) {
             servers[server.id] = server
@@ -166,7 +164,7 @@ export const layer = Layer.effect(
             for (const [name, item] of Object.entries(cfg.lsp)) {
               const existing = servers[name]
               if (item.disabled) {
-                log.info(`LSP server ${name} is disabled`)
+                yield* Effect.logInfo(`LSP server ${name} is disabled`)
                 delete servers[name]
                 continue
               }
@@ -186,7 +184,7 @@ export const layer = Layer.effect(
             }
           }
 
-          log.info("enabled LSP servers", {
+          yield* Effect.logInfo("enabled LSP servers", {
             serverIds: Object.values(servers)
               .map((server) => server.id)
               .join(", "),
@@ -226,25 +224,21 @@ export const layer = Layer.effect(
               if (!value) s.broken.add(key)
               return value
             })
-            .catch((err) => {
+            .catch(() => {
               s.broken.add(key)
-              log.error(`Failed to spawn LSP server ${server.id}`, { error: err })
               return undefined
             })
 
           if (!handle) return undefined
-          log.info("spawned lsp server", { serverID: server.id, root })
-
           const client = await LSPClient.create({
             serverID: server.id,
             server: handle,
             root,
             directory: ctx.directory,
             instance: ctx,
-          }).catch(async (err) => {
+          }).catch(async () => {
             s.broken.add(key)
             await Process.stop(handle.process)
-            log.error(`Failed to initialize LSP client ${server.id}`, { error: err })
             return undefined
           })
 
@@ -366,7 +360,7 @@ export const layer = Layer.effect(
     })
 
     const touchFile = Effect.fn("LSP.touchFile")(function* (input: string, diagnostics?: "document" | "full") {
-      log.info("touching file", { file: input })
+      yield* Effect.logInfo("touching file", { file: input })
       const clients = yield* getClients(input)
       yield* Effect.promise(() =>
         Promise.all(
@@ -381,9 +375,7 @@ export const layer = Layer.effect(
               after,
             })
           }),
-        ).catch((err) => {
-          log.error("failed to touch file", { err, file: input })
-        }),
+        ).catch(() => {}),
       )
     })
 
@@ -529,5 +521,7 @@ export const defaultLayer = layer.pipe(
 )
 
 export * as Diagnostic from "./diagnostic"
+
+export const node = LayerNode.make(layer, [Config.node, RuntimeFlags.node, FSUtil.node, EventV2Bridge.node])
 
 export * as LSP from "./lsp"

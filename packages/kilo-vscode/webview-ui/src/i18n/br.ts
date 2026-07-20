@@ -1266,6 +1266,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Chave de API do Qdrant",
   "settings.indexing.qdrantApiKey.description": "Chave de API opcional para a instância do Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Chave de API opcional",
+  "settings.indexing.fileExtensions.title": "Extensões de arquivo",
+  "settings.indexing.fileExtensions.description":
+    "Lista de permissões separada por vírgulas. Deixe em branco para usar os padrões integrados.",
+  "settings.indexing.fileExtensions.invalid": "Extensão inválida: {{extension}}",
   "settings.indexing.dimension.title": "Dimensão do vetor",
   "settings.indexing.dimension.description":
     "Deixe vazio para detectar automaticamente a dimensão de embedding do modelo.",
