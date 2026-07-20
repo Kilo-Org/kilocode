@@ -2,7 +2,7 @@ import { useEvent } from "./event"
 import type {
   AgentV2Info,
   CommandV2Info,
-  ConnectorInfo,
+  IntegrationInfo,
   Event,
   LocationRef,
   ModelV2Info,
@@ -28,7 +28,7 @@ import { hydrate } from "../kilocode/hydration" // kilocode_change
 type LocationData = {
   agent?: AgentV2Info[]
   command?: CommandV2Info[]
-  connector?: ConnectorInfo[]
+  integration?: IntegrationInfo[]
   model?: ModelV2Info[]
   provider?: ProviderV2Info[]
   reference?: ReferenceInfo[]
@@ -438,13 +438,8 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
         case "reference.updated":
           void result.location.reference.refresh()
           break
-        case "credential.switched": {
-          const location = { directory: metadata.directory, workspaceID: metadata.workspace }
-          void Promise.allSettled([result.location.model.refresh(location), result.location.provider.refresh(location)])
-          break
-        }
-        case "connector.updated":
-          void result.location.connector.refresh({ directory: metadata.directory, workspaceID: metadata.workspace })
+        case "integration.updated":
+          void result.location.integration.refresh({ directory: metadata.directory, workspaceID: metadata.workspace })
           break
       }
     } // kilocode_change
@@ -545,14 +540,17 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
             setStore("location", key, "command", result.data.data)
           },
         },
-        connector: {
+        integration: {
           list(location?: LocationRef) {
-            return store.location[locationKey(location ?? defaultLocation())]?.connector
+            return store.location[locationKey(location ?? defaultLocation())]?.integration
           },
           async refresh(ref?: LocationRef) {
-            const result = await sdk.client.v2.connector.list({ location: locationQuery(ref) }, { throwOnError: true })
+            const result = await sdk.client.v2.integration.list(
+              { location: locationQuery(ref) },
+              { throwOnError: true },
+            )
             const key = locationKey(result.data.location)
-            setStore("location", key, "connector", result.data.data)
+            setStore("location", key, "integration", result.data.data)
           },
         },
         model: {
@@ -602,7 +600,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       void Promise.allSettled([
         result.location.refresh(),
         result.location.agent.refresh(),
-        result.location.connector.refresh(),
+        result.location.integration.refresh(),
         result.location.model.refresh(),
         result.location.provider.refresh(),
         result.location.reference.refresh(),
