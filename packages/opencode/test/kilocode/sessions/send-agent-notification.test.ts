@@ -388,3 +388,96 @@ it.instance("coalescing: sendAgentNotification awaits in-flight bootstrap for a 
     Effect.provide(layer()),
   )
 })
+
+it.instance("coalescing: bootstrapInflight stores the real promise and concurrent create() calls share one POST", () => {
+  const originalKey = process.env.KILO_API_KEY
+  const originalIngest = process.env.KILO_SESSION_INGEST_URL
+  let resolveSession: ((value: Response) => void) | undefined
+  const sessionDeferred = new Promise<Response>((resolve) => {
+    resolveSession = resolve
+  })
+  const requests: { method: string; path: string; body?: unknown }[] = []
+  const fetch: typeof globalThis.fetch = Object.assign(
+    async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const pathname = new URL(url).pathname
+      const req = new Request(input, init)
+      const body = req.method === "POST" ? await req.json().catch(() => undefined) : undefined
+      if (pathname === "/api/session") {
+        requests.push({ method: "POST", path: pathname, body })
+        return sessionDeferred
+      }
+      if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
+      if (pathname.endsWith("/ingest")) {
+        requests.push({ method: "POST", path: pathname, body })
+        return new Response("{}", { status: 200 })
+      }
+      return new Response("Not found", { status: 404 })
+    },
+    { preconnect: globalThis.fetch.preconnect },
+  )
+  const request = spyOn(globalThis, "fetch").mockImplementation(fetch)
+
+  process.env.KILO_API_KEY = "test-token"
+  process.env.KILO_SESSION_INGEST_URL = "https://ingest.kilosessions.ai"
+  reset("test-token")
+
+  return Effect.gen(function* () {
+    const sessions = yield* KiloSessions.Service
+
+    expect(KiloSessions._getBootstrapInflight("session-7")).toBeUndefined()
+
+    // Fire two concurrent create() calls for the same session.
+    const create1 = KiloSessions.create("session-7")
+    const create2 = KiloSessions.create("session-7")
+
+    // Synchronously after kicking off both creates, the internal tracker must
+    // hold the real in-flight promise (not undefined) so the second create
+    // coalesced onto the first one's POST instead of starting its own.
+    const inflight = KiloSessions._getBootstrapInflight("session-7")
+    expect(inflight).toBeDefined()
+    expect(inflight).toBeInstanceOf(Promise)
+
+    resolveSession?.(Response.json({ id: "session-7", ingestPath: "/api/session/session-7/ingest" }))
+
+    const result1 = yield* Effect.promise(() => create1)
+    const result2 = yield* Effect.promise(() => create2)
+
+    expect(result1).toEqual({ id: "session-7", ingestPath: "/api/session/session-7/ingest" })
+    expect(result2).toEqual(result1)
+
+    const bootstrapPosts = requests.filter((r) => r.path === "/api/session")
+    expect(bootstrapPosts).toHaveLength(1)
+
+    const notificationResult = yield* sessions.sendAgentNotification("session-7", {
+      id: "notif-7",
+      message: "Coalesced create test",
+    })
+    expect(notificationResult).toEqual({ ok: true })
+
+    const ingestPosts = requests.filter((r) => r.path.endsWith("/ingest"))
+    const notificationPost = ingestPosts.find(
+      (r) => r.body && (r.body as { data: Array<{ type: string }> }).data?.[0]?.type === "agent_notification",
+    )
+    expect(notificationPost).toBeDefined()
+    expect(notificationPost!.body).toEqual({
+      data: [{ type: "agent_notification", data: { id: "notif-7", message: "Coalesced create test" } }],
+    })
+
+    expect(KiloSessions._getBootstrapInflight("session-7")).toBeUndefined()
+  }).pipe(
+    Effect.ensuring(
+      Effect.gen(function* () {
+        const auth = yield* Auth.Service
+        yield* auth.remove("kilo").pipe(Effect.orDie)
+        if (originalKey === undefined) delete process.env.KILO_API_KEY
+        else process.env.KILO_API_KEY = originalKey
+        if (originalIngest === undefined) delete process.env.KILO_SESSION_INGEST_URL
+        else process.env.KILO_SESSION_INGEST_URL = originalIngest
+        reset("test-token")
+        request.mockRestore()
+      }),
+    ),
+    Effect.provide(layer()),
+  )
+})

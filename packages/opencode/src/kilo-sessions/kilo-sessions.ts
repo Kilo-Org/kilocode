@@ -634,36 +634,40 @@ export async function create(sessionId: string) {
 // share ingest path (e.g. the `notify_user` tool calling
 // sendAgentNotification before the Session.Event.Created handler has
 // finished POSTing /api/session) can await the same outcome instead of
-// firing their own bootstrap or failing. The bootstrap promise is created
-// and stored in `bootstrapInflight` synchronously before the first `await`
-// so concurrent callers are deterministically coalesced.
+// firing their own bootstrap or failing. The bootstrap outcome promise is
+// created and stored in `bootstrapInflight` synchronously before the first
+// `await` so concurrent callers are deterministically coalesced.
 function trackBootstrap(
   sessionId: string,
   start: () => Promise<{ id: string; ingestPath: string } | undefined>,
 ) {
-  let task: Promise<{ id: string; ingestPath: string } | undefined>
-  let tracked: Promise<BootstrapOutcome>
-  tracked = new Promise((resolve) => {
-    // Register synchronously before any async work starts so concurrent
-    // callers see the entry in `bootstrapInflight` immediately.
-    bootstrapInflight.set(sessionId, tracked)
-    task = start()
-    task
-      .then((value): BootstrapOutcome => {
-        if (!value) return { ok: false, reason: "not_connected" }
-        return { ok: true, ingestPath: value.ingestPath }
-      })
-      .catch((error: unknown): BootstrapOutcome => {
-        const reason = error instanceof Error ? error.message : String(error)
-        log.warn("session bootstrap failed", { sessionId, reason })
-        return { ok: false, reason }
-      })
-      .then(resolve)
-  })
+  // Build the task and derived outcome promise as synchronous expressions
+  // first; only then register the entry. This guarantees the value stored
+  // in `bootstrapInflight` is the real promise rather than `undefined`.
+  const task = start()
+  const tracked: Promise<BootstrapOutcome> = task
+    .then((value): BootstrapOutcome => {
+      if (!value) return { ok: false, reason: "not_connected" }
+      return { ok: true, ingestPath: value.ingestPath }
+    })
+    .catch((error: unknown): BootstrapOutcome => {
+      const reason = error instanceof Error ? error.message : String(error)
+      log.warn("session bootstrap failed", { sessionId, reason })
+      return { ok: false, reason }
+    })
+
+  // Register synchronously before any async work starts so concurrent
+  // callers see the entry in `bootstrapInflight` immediately.
+  bootstrapInflight.set(sessionId, tracked)
   tracked.finally(() => {
     if (bootstrapInflight.get(sessionId) === tracked) bootstrapInflight.delete(sessionId)
   })
-  return task!
+  return task
+}
+
+/** @internal - test-only helper */
+export function _getBootstrapInflight(sessionId: string): Promise<BootstrapOutcome> | undefined {
+  return bootstrapInflight.get(sessionId)
 }
 
   export async function bootstrap(sessionId: string) {
