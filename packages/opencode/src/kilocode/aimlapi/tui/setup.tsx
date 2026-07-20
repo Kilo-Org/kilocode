@@ -7,7 +7,7 @@
 // AIMLAPI onboarding spec; all protocol logic lives in ../flow.ts.
 
 import { TextAttributes } from "@opentui/core"
-import { Match, Show, Switch, createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { Match, Show, Switch, createSignal, onCleanup, type JSX } from "solid-js"
 import open from "open"
 import { useTheme } from "@tui/context/theme"
 import { useSDK } from "@tui/context/sdk"
@@ -53,9 +53,10 @@ export function AimlapiSetup(props: { model: ModelComponent }) {
     complete: setResult,
   })
 
-  onMount(() => {
-    flow.start(sync.data.provider_next.connected.includes(PROVIDER_ID))
-  })
+  // Enter the state machine before the first render (not in onMount): the
+  // dialog inserts this component through a tracked render effect, and a phase
+  // transition during the mount flush recurses opentui's update loop.
+  flow.start(sync.data.provider_next.connected.includes(PROVIDER_ID))
   onCleanup(() => flow.cancel())
 
   /** Persist the issued/pasted key and continue to the model picker (S8). */
@@ -106,132 +107,137 @@ export function AimlapiSetup(props: { model: ModelComponent }) {
     </text>
   )
 
+  // The root must stay a static element: the dialog's render effect unwraps a
+  // function root (what a bare <Switch> compiles to) inside its tracked scope,
+  // so a dynamic root re-creates the whole component on every phase change.
   return (
-    <Switch>
-      <Match when={phase().id === "reconfigure"}>
-        <DialogSelect
-          title={COPY.reconfigureTitle}
-          options={[
-            { value: "continue", title: COPY.reconfigureContinue, onSelect: () => continueSaved() },
-            { value: "new-key", title: COPY.reconfigureNewKey, onSelect: () => flow.chooseReconfigure() },
-          ]}
-        />
-      </Match>
+    <box>
+      <Switch>
+        <Match when={phase().id === "reconfigure"}>
+          <DialogSelect
+            title={COPY.reconfigureTitle}
+            options={[
+              { value: "continue", title: COPY.reconfigureContinue, onSelect: () => continueSaved() },
+              { value: "new-key", title: COPY.reconfigureNewKey, onSelect: () => flow.chooseReconfigure() },
+            ]}
+          />
+        </Match>
 
-      <Match when={phase().id === "choice"}>
-        <DialogSelect
-          title={COPY.choiceTitle}
-          options={[
-            { value: "new-user", title: COPY.choiceNewUser, onSelect: () => flow.chooseNewUser() },
-            { value: "have-key", title: COPY.choiceHaveKey, onSelect: () => flow.chooseHaveKey() },
-          ]}
-        />
-      </Match>
+        <Match when={phase().id === "choice"}>
+          <DialogSelect
+            title={COPY.choiceTitle}
+            options={[
+              { value: "new-user", title: COPY.choiceNewUser, onSelect: () => flow.chooseNewUser() },
+              { value: "have-key", title: COPY.choiceHaveKey, onSelect: () => flow.chooseHaveKey() },
+            ]}
+          />
+        </Match>
 
-      <Match when={phase().id === "paste-key"}>
-        <DialogPrompt
-          title={COPY.pasteKeyTitle}
-          placeholder={COPY.pasteKeyPlaceholder}
-          description={() => errorLine((phase() as Extract<FlowPhase, { id: "paste-key" }>).error)}
-          onConfirm={(value) => void flow.submitKey(value)}
-          onCancel={() => dialog.clear()}
-        />
-      </Match>
+        <Match when={phase().id === "paste-key"}>
+          <DialogPrompt
+            title={COPY.pasteKeyTitle}
+            placeholder={COPY.pasteKeyPlaceholder}
+            description={() => errorLine((phase() as Extract<FlowPhase, { id: "paste-key" }>).error)}
+            onConfirm={(value) => void flow.submitKey(value)}
+            onCancel={() => dialog.clear()}
+          />
+        </Match>
 
-      <Match when={phase().id === "email"}>
-        <DialogPrompt
-          title={COPY.emailTitle}
-          placeholder={COPY.emailPlaceholder}
-          description={() => errorLine((phase() as Extract<FlowPhase, { id: "email" }>).error)}
-          onConfirm={(value) => void flow.submitEmail(value)}
-          onCancel={() => dialog.clear()}
-        />
-      </Match>
+        <Match when={phase().id === "email"}>
+          <DialogPrompt
+            title={COPY.emailTitle}
+            placeholder={COPY.emailPlaceholder}
+            description={() => errorLine((phase() as Extract<FlowPhase, { id: "email" }>).error)}
+            onConfirm={(value) => void flow.submitEmail(value)}
+            onCancel={() => dialog.clear()}
+          />
+        </Match>
 
-      <Match when={phase().id === "code"}>
-        <DialogPrompt
-          title={COPY.codeTitle((phase() as Extract<FlowPhase, { id: "code" }>).email)}
-          placeholder={COPY.codePlaceholder}
-          description={() => errorLine((phase() as Extract<FlowPhase, { id: "code" }>).error)}
-          onConfirm={(value) => void flow.submitCode(value)}
-          onCancel={() => dialog.clear()}
-        />
-      </Match>
+        <Match when={phase().id === "code"}>
+          <DialogPrompt
+            title={COPY.codeTitle((phase() as Extract<FlowPhase, { id: "code" }>).email)}
+            placeholder={COPY.codePlaceholder}
+            description={() => errorLine((phase() as Extract<FlowPhase, { id: "code" }>).error)}
+            onConfirm={(value) => void flow.submitCode(value)}
+            onCancel={() => dialog.clear()}
+          />
+        </Match>
 
-      <Match when={phase().id === "credits"}>
-        <DialogPrompt
-          title={COPY.creditsTitle}
-          value="25"
-          description={() => (
-            <box gap={0}>
-              <text fg={theme.text}>
-                {COPY.creditsAutoTopUp} <span style={{ fg: theme.textMuted }}>(Tab)</span>:{" "}
-                <span style={{ fg: autoTopUp() ? theme.text : theme.textMuted }}>on</span>{" "}
-                <span style={{ fg: autoTopUp() ? theme.textMuted : theme.text }}>off</span>
+        <Match when={phase().id === "credits"}>
+          <DialogPrompt
+            title={COPY.creditsTitle}
+            value="25"
+            description={() => (
+              <box gap={0}>
+                <text fg={theme.text}>
+                  {COPY.creditsAutoTopUp} <span style={{ fg: theme.textMuted }}>(Tab)</span>:{" "}
+                  <span style={{ fg: autoTopUp() ? theme.text : theme.textMuted }}>on</span>{" "}
+                  <span style={{ fg: autoTopUp() ? theme.textMuted : theme.text }}>off</span>
+                </text>
+                {errorLine((phase() as Extract<FlowPhase, { id: "credits" }>).error)}
+              </box>
+            )}
+            onConfirm={(value) => void flow.submitAmount(value, autoTopUp())}
+            onCancel={() => dialog.clear()}
+          />
+        </Match>
+
+        <Match when={phase().id === "checkout"}>
+          <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
+            <box flexDirection="row" justifyContent="space-between">
+              <text attributes={TextAttributes.BOLD} fg={theme.warning}>
+                {COPY.checkoutTitle}
               </text>
-              {errorLine((phase() as Extract<FlowPhase, { id: "credits" }>).error)}
+              <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+                esc
+              </text>
             </box>
-          )}
-          onConfirm={(value) => void flow.submitAmount(value, autoTopUp())}
-          onCancel={() => dialog.clear()}
-        />
-      </Match>
-
-      <Match when={phase().id === "checkout"}>
-        <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-          <box flexDirection="row" justifyContent="space-between">
-            <text attributes={TextAttributes.BOLD} fg={theme.warning}>
-              {COPY.checkoutTitle}
+            <text fg={theme.text} wrapMode="word">
+              {COPY.checkoutBody}
             </text>
-            <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
-              esc
-            </text>
+            <Show when={(phase() as Extract<FlowPhase, { id: "checkout" }>).payUrl}>
+              {(url) => <Link href={url()} fg={theme.primary} wrapMode="word" />}
+            </Show>
           </box>
-          <text fg={theme.text} wrapMode="word">
-            {COPY.checkoutBody}
-          </text>
-          <Show when={(phase() as Extract<FlowPhase, { id: "checkout" }>).payUrl}>
-            {(url) => <Link href={url()} fg={theme.primary} wrapMode="word" />}
-          </Show>
-        </box>
-      </Match>
+        </Match>
 
-      <Match when={phase().id === "topup-success"}>
-        <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-          <box flexDirection="row" justifyContent="space-between">
-            <text attributes={TextAttributes.BOLD} fg={theme.success}>
-              {COPY.topupSuccessTitle((phase() as Extract<FlowPhase, { id: "topup-success" }>).amountUsd)}
+        <Match when={phase().id === "topup-success"}>
+          <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
+            <box flexDirection="row" justifyContent="space-between">
+              <text attributes={TextAttributes.BOLD} fg={theme.success}>
+                {COPY.topupSuccessTitle((phase() as Extract<FlowPhase, { id: "topup-success" }>).amountUsd)}
+              </text>
+              <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+                esc
+              </text>
+            </box>
+            <text fg={theme.text} wrapMode="word">
+              {COPY.topupSuccessBody((phase() as Extract<FlowPhase, { id: "topup-success" }>).email)}
             </text>
-            <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
-              esc
-            </text>
+            {footer()}
           </box>
-          <text fg={theme.text} wrapMode="word">
-            {COPY.topupSuccessBody((phase() as Extract<FlowPhase, { id: "topup-success" }>).email)}
-          </text>
-          {footer()}
-        </box>
-      </Match>
+        </Match>
 
-      <Match when={phase().id === "ready"}>
-        <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-          <box flexDirection="row" justifyContent="space-between">
-            <text attributes={TextAttributes.BOLD} fg={theme.success}>
-              {COPY.readyTitle}
-            </text>
-            <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
-              esc
-            </text>
+        <Match when={phase().id === "ready"}>
+          <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
+            <box flexDirection="row" justifyContent="space-between">
+              <text attributes={TextAttributes.BOLD} fg={theme.success}>
+                {COPY.readyTitle}
+              </text>
+              <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+                esc
+              </text>
+            </box>
+            {footer()}
           </box>
-          {footer()}
-        </box>
-      </Match>
+        </Match>
 
-      <Match when={phase().id === "busy"}>
-        <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
-          <text fg={theme.textMuted}>{(phase() as Extract<FlowPhase, { id: "busy" }>).message}</text>
-        </box>
-      </Match>
-    </Switch>
+        <Match when={phase().id === "busy"}>
+          <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
+            <text fg={theme.textMuted}>{(phase() as Extract<FlowPhase, { id: "busy" }>).message}</text>
+          </box>
+        </Match>
+      </Switch>
+    </box>
   )
 }
