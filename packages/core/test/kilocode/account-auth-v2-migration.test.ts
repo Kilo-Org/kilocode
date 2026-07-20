@@ -1,7 +1,7 @@
 import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
-import { Connector } from "@opencode-ai/core/connector"
+import { IntegrationSchema } from "@opencode-ai/core/integration/schema"
 import { Credential } from "@opencode-ai/core/credential"
 import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -38,7 +38,7 @@ const auth = Effect.acquireRelease(
 )
 
 describe("Credential auth-v2 migration", () => {
-  it.live("preserves multiple accounts, active selection, and Kilo organization", () =>
+  it.live("imports the active account with its Kilo organization", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -83,16 +83,17 @@ describe("Credential auth-v2 migration", () => {
                 const credentials = yield* Credential.Service
                 return {
                   all: yield* credentials.all(),
-                  active: yield* credentials.active(Connector.ID.make("kilo")),
+                  list: yield* credentials.list(IntegrationSchema.ID.make("kilo")),
                 }
               }).pipe(Effect.provide(layer(tmp.path)))
 
-              expect(result.all.map((item) => item.label)).toEqual(["first", "second"])
-              expect(result.active?.label).toBe("second")
-              expect(result.active?.value.type).toBe("oauth")
-              if (result.active?.value.type === "oauth") {
-                expect(result.active.value.access).toBe("access-second")
-                expect(result.active.value.metadata?.accountID).toBe("org-second")
+              // one credential per integration: only the active account is imported
+              expect(result.all.map((item) => item.label)).toEqual(["second"])
+              expect(result.list.length).toBe(1)
+              expect(result.list[0]?.value.type).toBe("oauth")
+              if (result.list[0]?.value.type === "oauth") {
+                expect(result.list[0].value.access).toBe("access-second")
+                expect(result.list[0].value.metadata?.accountID).toBe("org-second")
               }
             }),
           ),

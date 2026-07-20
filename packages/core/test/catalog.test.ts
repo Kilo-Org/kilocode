@@ -32,14 +32,14 @@ const it = testEffect(
 
 describe("CatalogV2", () => {
   it.effect("projects Kilo organization routing from OAuth credentials", () => {
-    const connectorID = Connector.ID.make("kilocode")
-    const credential = new Credential.Info({
+    const integrationID = Integration.ID.make("kilocode")
+    const credential = new Credential.Stored({
       id: Credential.ID.create(),
-      connectorID,
-      methodID: Connector.MethodID.make("oauth"),
+      integrationID,
       label: "Organization",
       value: new Credential.OAuth({
         type: "oauth",
+        methodID: Integration.MethodID.make("oauth"),
         access: "access",
         refresh: "refresh",
         expires: 1,
@@ -51,7 +51,7 @@ describe("CatalogV2", () => {
       Layer.provideMerge(EventV2.defaultLayer),
       Layer.provideMerge(locationLayer),
       Layer.provideMerge(
-        Layer.mock(Credential.Service)({ activeAll: () => Effect.succeed(new Map([[connectorID, credential]])) }),
+        Layer.mock(Credential.Service)({ all: () => Effect.succeed([credential]) }),
       ),
     )
 

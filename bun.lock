@@ -305,7 +305,7 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.4.9",
+      "version": "7.4.11",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",
@@ -765,7 +765,7 @@
     },
     "packages/tui": {
       "name": "@opencode-ai/tui",
-      "version": "7.4.8",
+      "version": "7.4.11",
       "dependencies": {
         "@kilocode/plugin": "workspace:*",
         "@kilocode/sdk": "workspace:*",
@@ -844,21 +844,23 @@
     },
   },
   "trustedDependencies": [
-    "esbuild",
-    "protobufjs",
+    "tree-sitter-powershell",
     "web-tree-sitter",
     "tree-sitter-bash",
+    "esbuild",
+    "protobufjs",
   ],
   "patchedDependencies": {
+    "@silvia-odwyer/photon-node@0.3.4": "patches/@silvia-odwyer%2Fphoton-node@0.3.4.patch",
+    "virtua@0.49.1": "patches/virtua@0.49.1.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch",
     "@ai-sdk/xai@3.0.92": "patches/@ai-sdk%2Fxai@3.0.92.patch",
-    "virtua@0.49.1": "patches/virtua@0.49.1.patch",
-    "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
     "@ff-labs/fff-bun@0.9.4": "patches/@ff-labs%2Ffff-bun@0.9.4.patch",
-    "pacote@21.5.1": "patches/pacote@21.5.1.patch",
     "@standard-community/standard-openapi@0.2.9": "patches/@standard-community%2Fstandard-openapi@0.2.9.patch",
+    "@modelcontextprotocol/sdk@1.29.0": "patches/@modelcontextprotocol%2Fsdk@1.29.0.patch",
     "@npmcli/agent@4.0.2": "patches/@npmcli%2Fagent@4.0.2.patch",
-    "@silvia-odwyer/photon-node@0.3.4": "patches/@silvia-odwyer%2Fphoton-node@0.3.4.patch",
+    "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
+    "pacote@21.5.1": "patches/pacote@21.5.1.patch",
   },
   "overrides": {
     "@effect/platform-node-shared": "4.0.0-beta.74",
