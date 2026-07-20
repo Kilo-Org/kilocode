@@ -102,6 +102,26 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test exception edit action is selected only and double click edits`() {
+        edt {
+            val edits = mutableListOf<Pair<String, String>>()
+            val list = list(onEdit = { from, to -> edits += from to to })
+            list.editInput = { "git status" }
+            list.syncItems(listOf("git *" to "allow"), true)
+            val jList = jbList(list)
+            jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
+            jList.doLayout()
+
+            assertFalse(settingsListCellBounds(jList, 0, false).containsKey("edit"))
+            jList.selectedIndex = 0
+            assertTrue(settingsListCellBounds(jList, 0, true).containsKey("edit"))
+
+            doubleClickRow(jList, 0)
+
+            assertEquals(listOf("git *" to "git status"), edits)
+        }
+    }
+
     fun `test syncItems retains the same list view instance across updates`() {
         edt {
             val list = list()
@@ -111,6 +131,23 @@ class SettingsInlineListTest : BasePlatformTestCase() {
             list.syncItems(listOf("*.env" to "deny", "*.key" to "deny"), true)
 
             assertSame(jList, jbList(list))
+        }
+    }
+
+    fun `test row height stays stable across level changes and reload`() {
+        edt {
+            val list = list()
+            list.syncRows(listOf(PermissionListRow("git log *", "git log *", level = "allow")), true)
+            val jList = jbList(list)
+            jList.selectedIndex = 0
+            val height = jList.fixedCellHeight
+
+            list.syncRows(listOf(PermissionListRow("git log *", "git log *", level = "ask")), true)
+            assertEquals(height, jList.fixedCellHeight)
+
+            list.syncRows(listOf(PermissionListRow("git log *", "git log *", level = "ask")), false)
+            list.syncRows(listOf(PermissionListRow("git log *", "git log *", level = "deny")), true)
+            assertEquals(height, jList.fixedCellHeight)
         }
     }
 
@@ -130,6 +167,7 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         onAdd: (String) -> Unit = {},
         onSet: (String, String) -> Unit = { _, _ -> },
         onInherit: (String) -> Unit = {},
+        onEdit: (String, String) -> Unit = { _, _ -> },
         onRemove: (List<String>) -> Unit = {},
         picker: LevelPicker = PopupLevelPicker,
         selection: Int = ListSelectionModel.SINGLE_SELECTION,
@@ -140,6 +178,7 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         onAdd = onAdd,
         onSetLevel = onSet,
         onInherit = onInherit,
+        onEdit = onEdit,
         onRemove = onRemove,
         picker = picker,
         selectionMode = selection,
@@ -224,6 +263,27 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         target.dispatchEvent(press)
         target.dispatchEvent(release)
         target.dispatchEvent(clicked)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun doubleClickRow(list: JBList<*>, idx: Int) {
+        val bounds = list.getCellBounds(idx, idx)
+        click(list, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2), count = 2)
+    }
+
+    private fun click(target: JComponent, point: Point, count: Int) {
+        val event = MouseEvent(
+            target,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            point.x,
+            point.y,
+            count,
+            false,
+            MouseEvent.BUTTON1,
+        )
+        target.dispatchEvent(event)
         UIUtil.dispatchAllInvocationEvents()
     }
 

@@ -26,11 +26,13 @@ internal class AutoApproveContent(
     private val update: (PermissionDraft.() -> PermissionDraft) -> Unit,
     private val picker: LevelPicker = PopupLevelPicker,
 ) : BaseContentPanel() {
+    private var selected: Selection? = null
     private val granular = GRANULAR_TOOLS.map { (id, kind) -> id to granularSection(id, kind) }
     private val tools = SettingsInlineList(
         empty = KiloBundle.message("settings.autoApprove.tools.empty"),
         onSetLevel = { key, level -> update { setListTool(this, key, level) } },
         onInherit = { key -> update { inheritListTool(this, key) } },
+        onSelect = { key -> selected = key?.let { Selection(TOOLS_KEY, it) } },
         picker = picker,
     )
 
@@ -41,8 +43,10 @@ internal class AutoApproveContent(
 
     @RequiresEdt
     fun sync(draft: PermissionDraft, enabled: Boolean) {
+        val saved = selected
         for ((id, section) in granular) section.sync(draft.rules[id], enabled)
         tools.syncRows(toolRows(draft), enabled)
+        restoreSelection(saved)
     }
 
     /** Filter every list on the page by [query], driven by the shared search field. */
@@ -70,8 +74,25 @@ internal class AutoApproveContent(
             { update { inheritWildcard(this, tool) } },
             { pattern -> update { addException(this, tool, pattern) } },
             { pattern, level -> update { setException(this, tool, pattern, level) } },
+            { from, to ->
+                selected = Selection(tool, to)
+                update { editException(this, tool, from, to) }
+            },
             { patterns -> update { removeExceptions(this, tool, patterns) } },
+            { section, key -> selected = key?.let { Selection(section, it) } },
         )
+    }
+
+    private fun restoreSelection(saved: Selection?) {
+        if (saved == null) return
+        val found = if (saved.section == TOOLS_KEY) {
+            val ok = tools.selectKey(saved.key, scroll = false)
+            if (ok) tools.focusList()
+            ok
+        } else {
+            granular.firstOrNull { it.first == saved.section }?.second?.restore(saved.key, active = true) == true
+        }
+        if (!found) selected = null
     }
 
     private fun toolRows(draft: PermissionDraft): List<PermissionListRow> = buildList {
@@ -112,5 +133,8 @@ internal class AutoApproveContent(
 
     private companion object {
         const val GROUP_KEY = "todoread+todowrite"
+        const val TOOLS_KEY = "tools"
     }
+
+    private data class Selection(val section: String, val key: String)
 }

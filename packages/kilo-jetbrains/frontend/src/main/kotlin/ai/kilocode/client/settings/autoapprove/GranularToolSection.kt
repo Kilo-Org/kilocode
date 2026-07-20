@@ -22,7 +22,9 @@ internal class GranularToolSection(
     private val onWildcardInherit: () -> Unit,
     private val onExceptionAdd: (String) -> Unit,
     private val onExceptionSetLevel: (String, String) -> Unit,
+    private val onExceptionEdit: (String, String) -> Unit,
     private val onExceptionRemove: (List<String>) -> Unit,
+    private val onSelect: (String, String?) -> Unit = { _, _ -> },
 ) : BaseContentPanel() {
     private val wildcard = LevelSelect(onWildcardChange) { onWildcardInherit() }
     private val list = SettingsInlineList(
@@ -32,7 +34,9 @@ internal class GranularToolSection(
         right = toolbarRight(),
         onAdd = onExceptionAdd,
         onSetLevel = onExceptionSetLevel,
+        onEdit = onExceptionEdit,
         onRemove = onExceptionRemove,
+        onSelect = { key -> onSelect(tool, key) },
         picker = picker,
         selectionMode = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
     )
@@ -50,6 +54,13 @@ internal class GranularToolSection(
 
     @RequiresEdt
     fun filter(query: String) = list.filter(query)
+
+    @RequiresEdt
+    fun restore(key: String, active: Boolean): Boolean {
+        val found = list.selectKey(key, scroll = false)
+        if (found && active) list.focusList()
+        return found
+    }
 
     private fun toolbarRight() = Stack.horizontal(UiStyle.Gap.sm())
         .next(JBLabel(wildcardLabel))

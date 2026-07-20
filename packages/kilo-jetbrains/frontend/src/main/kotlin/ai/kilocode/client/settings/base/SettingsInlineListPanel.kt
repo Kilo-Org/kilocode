@@ -37,6 +37,7 @@ internal abstract class SettingsInlineListPanel(
     private val search = SearchTextField(false)
     protected val view = SettingsListView(emptyText, cfg) { key, cellId -> onCell(key, cellId) }
     private var toolbar: ActionToolbar? = null
+    private var syncing = false
 
     @RequiresEdt
     protected fun start() {
@@ -44,7 +45,10 @@ internal abstract class SettingsInlineListPanel(
         view.list.selectionMode = selectionMode
         view.minimumSize = JBUI.size(0, minListHeight())
         view.list.minimumSize = JBUI.size(0, minListHeight())
-        view.onSelect = { toolbar?.updateActionsImmediately() }
+        view.onSelect = {
+            toolbar?.updateActionsImmediately()
+            if (!syncing) onSelectionChanged(selectedKeys())
+        }
         next(toolbarRow())
         gap(UiStyle.Gap.sm())
         if (showSearch) {
@@ -72,8 +76,13 @@ internal abstract class SettingsInlineListPanel(
     @RequiresEdt
     fun setItems(items: List<SettingsListItem>, enabled: Boolean) {
         checkEdt()
-        view.update(items, SettingsListSelection.PreserveNoScroll)
         setEnabled(enabled)
+        syncing = true
+        try {
+            view.update(items, SettingsListSelection.PreserveNoScroll)
+        } finally {
+            syncing = false
+        }
         toolbar?.updateActionsImmediately()
     }
 
@@ -81,6 +90,18 @@ internal abstract class SettingsInlineListPanel(
     protected fun selectedKeys(): List<String> {
         checkEdt()
         return view.list.selectedValuesList.map { it.key }
+    }
+
+    @RequiresEdt
+    fun selectKey(key: String, scroll: Boolean = true): Boolean {
+        checkEdt()
+        return view.select(key, scroll)
+    }
+
+    @RequiresEdt
+    fun focusList() {
+        checkEdt()
+        view.focusList()
     }
 
     override fun setEnabled(enabled: Boolean) {
@@ -109,6 +130,8 @@ internal abstract class SettingsInlineListPanel(
     protected open fun toolbarRight(): JComponent? = null
 
     protected open fun searchPlaceholder(): String = ""
+
+    protected open fun onSelectionChanged(keys: List<String>) = Unit
 
     private fun toolbarRow(): JComponent {
         val row = JPanel(BorderLayout())

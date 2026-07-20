@@ -95,6 +95,14 @@ internal fun setException(draft: PermissionDraft, tool: String, pattern: String,
 internal fun addException(draft: PermissionDraft, tool: String, pattern: String): PermissionDraft =
     setException(draft, tool, pattern, "allow")
 
+internal fun editException(draft: PermissionDraft, tool: String, from: String, to: String): PermissionDraft {
+    if (from == to) return draft
+    val rule = draft.rules[tool] as? PermissionRuleDto.Patterns ?: return draft
+    val level = rule.map[from] ?: return draft
+    val map = rule.map.filterKeys { it != from } + (to to level)
+    return draft.copy(rules = draft.rules + (tool to PermissionRuleDto.Patterns(map)))
+}
+
 /** Remove a single exception pattern for [tool]. */
 internal fun removeException(draft: PermissionDraft, tool: String, pattern: String): PermissionDraft {
     val rule = draft.rules[tool] as? PermissionRuleDto.Patterns ?: return draft

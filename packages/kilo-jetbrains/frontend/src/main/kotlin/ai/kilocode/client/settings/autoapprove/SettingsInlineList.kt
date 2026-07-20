@@ -26,6 +26,7 @@ internal data class PermissionListRow(
     val inherited: Boolean = false,
     val defaultLevel: String = level,
     val canInherit: Boolean = false,
+    val editable: Boolean = false,
 )
 
 /** A level choice offered by the row popup: either revert to the CLI default or a concrete level. */
@@ -68,7 +69,9 @@ internal class SettingsInlineList(
     private val onAdd: ((String) -> Unit)? = null,
     private val onSetLevel: (String, String) -> Unit,
     private val onInherit: ((String) -> Unit)? = null,
+    private val onEdit: ((String, String) -> Unit)? = null,
     private val onRemove: ((List<String>) -> Unit)? = null,
+    private val onSelect: (String?) -> Unit = {},
     private val picker: LevelPicker = PopupLevelPicker,
     selectionMode: Int = ListSelectionModel.SINGLE_SELECTION,
 ) : SettingsInlineListPanel(
@@ -83,6 +86,17 @@ internal class SettingsInlineList(
         Messages.showInputDialog(this, placeholder, addLabel.orEmpty(), null)
     }
 
+    internal var editInput: (String) -> String? = { key ->
+        Messages.showInputDialog(
+            this,
+            placeholder,
+            KiloBundle.message("settings.autoApprove.edit"),
+            null,
+            key,
+            null,
+        )
+    }
+
     init {
         start()
     }
@@ -92,12 +106,14 @@ internal class SettingsInlineList(
     }
 
     fun syncItems(exceptions: List<Pair<String, String>>, enabled: Boolean) {
-        syncRows(exceptions.map { (pattern, level) -> PermissionListRow(pattern, pattern, level = level) }, enabled)
+        syncRows(exceptions.map { (pattern, level) -> PermissionListRow(pattern, pattern, level = level, editable = true) }, enabled)
     }
 
     override fun onCell(key: String, cellId: String) {
         if (!isEnabled) return
+        onSelect(key)
         if (cellId == LEVEL_CELL) showLevelPopup(key)
+        if (cellId == EDIT_CELL) promptEdit(key)
     }
 
     override fun toolbarActions(): List<AnAction> = buildList {
@@ -122,12 +138,23 @@ internal class SettingsInlineList(
 
     override fun toolbarRight(): JComponent? = right
 
+    override fun onSelectionChanged(keys: List<String>) {
+        onSelect(keys.firstOrNull())
+    }
+
     private fun promptAdd() {
         if (!isEnabled) return
         val add = onAdd ?: return
         val value = input()?.trim().orEmpty()
         if (value.isBlank()) return
         add(value)
+    }
+
+    private fun promptEdit(key: String) {
+        val edit = onEdit ?: return
+        val value = editInput(key)?.trim().orEmpty()
+        if (value.isBlank() || value == key) return
+        edit(key, value)
     }
 
     private fun removeSelected() {
@@ -164,6 +191,7 @@ internal class SettingsInlineList(
     }
 
     private fun choose(key: String, choice: LevelChoice) {
+        onSelect(key)
         when (choice) {
             is LevelChoice.Default -> onInherit?.invoke(key)
             is LevelChoice.Level -> onSetLevel(key, choice.level)
@@ -174,17 +202,25 @@ internal class SettingsInlineList(
         override val key: String get() = row.key
         override val title: String get() = row.title
         override val description: String? get() = row.description
-        override val cells: List<SettingsListCell> = listOf(SettingsListCell(
-            id = LEVEL_CELL,
-            label = if (row.inherited) KiloBundle.message(
-                "settings.autoApprove.default",
-                levelLabel(row.defaultLevel),
-            ) else levelLabel(row.level),
-            alwaysVisible = true,
-        ))
+        override val doubleClick: String? get() = EDIT_CELL.takeIf { row.editable }
+        override val cells: List<SettingsListCell> = buildList {
+            if (row.editable) add(SettingsListCell(
+                id = EDIT_CELL,
+                label = KiloBundle.message("settings.autoApprove.edit"),
+            ))
+            add(SettingsListCell(
+                id = LEVEL_CELL,
+                label = if (row.inherited) KiloBundle.message(
+                    "settings.autoApprove.default",
+                    levelLabel(row.defaultLevel),
+                ) else levelLabel(row.level),
+                alwaysVisible = true,
+            ))
+        }
     }
 
     private companion object {
+        const val EDIT_CELL = "edit"
         const val LEVEL_CELL = "level"
     }
 }

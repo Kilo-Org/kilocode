@@ -119,6 +119,22 @@ internal class SettingsListView(
     }
 
     @RequiresEdt
+    fun select(key: String, scroll: Boolean = true): Boolean {
+        checkEdt()
+        val idx = settingsListIndex(model.items, key)
+        if (idx < 0) return false
+        choose(idx, scroll)
+        return true
+    }
+
+    @RequiresEdt
+    fun focusList() {
+        checkEdt()
+        list.requestFocusInWindow()
+        list.repaint()
+    }
+
+    @RequiresEdt
     fun update(items: List<SettingsListItem>, selection: SettingsListSelection = SettingsListSelection.Preserve) {
         checkEdt()
         this.items = items

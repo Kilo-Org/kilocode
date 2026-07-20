@@ -199,6 +199,86 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test apply keeps selected auto approve section row and height`() {
+        val panel = requireUi()
+        rpc.state.value = rpc.state.value.copy(
+            config = ConfigDto(permission = mapOf(
+                "bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git log *" to "allow", "got" to "allow")),
+            )),
+        )
+        app._state.value = rpc.state.value
+        flushUntil { !edt { panel.modified() } }
+        val list = edt { inlineListFor(panel, "bash") }
+        val height = edt {
+            val jList = jbList(list)
+            val idx = indexOf(jList, "git log *")
+            jList.selectedIndex = idx
+            jList.fixedCellHeight
+        }
+
+        edt {
+            pick = { choices -> choices.first { it is LevelChoice.Level && it.level == "deny" } }
+            clickLevel(list, "git log *")
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() }
+        edt {
+            val jList = jbList(list)
+            assertEquals("git log *", (jList.selectedValue as SettingsListItem).key)
+            assertEquals(height, jList.fixedCellHeight)
+        }
+    }
+
+    fun `test granular row stays selected when level changes before apply`() {
+        val panel = requireUi()
+        rpc.state.value = rpc.state.value.copy(
+            config = ConfigDto(permission = mapOf(
+                "read" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "*.env" to "allow")),
+            )),
+        )
+        app._state.value = rpc.state.value
+        flushUntil { !edt { panel.modified() } }
+        val list = edt { inlineListFor(panel, "read") }
+        val height = edt { jbList(list).fixedCellHeight }
+
+        edt {
+            pick = { choices -> choices.first { it is LevelChoice.Level && it.level == "deny" } }
+            clickLevel(list, "*.env")
+            val jList = jbList(list)
+            assertEquals("*.env", (jList.selectedValue as SettingsListItem).key)
+            assertEquals(height, jList.fixedCellHeight)
+        }
+    }
+
+    fun `test granular exception edit renames pattern and keeps selection`() {
+        val panel = requireUi()
+        rpc.state.value = rpc.state.value.copy(
+            config = ConfigDto(permission = mapOf(
+                "bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")),
+            )),
+        )
+        app._state.value = rpc.state.value
+        flushUntil { !edt { panel.modified() } }
+        val list = edt { inlineListFor(panel, "bash") }
+
+        edt {
+            list.editInput = { "git status" }
+            val jList = jbList(list)
+            jList.setSize(600, jList.preferredSize.height.coerceAtLeast(80))
+            jList.doLayout()
+            doubleClickRow(jList, indexOf(jList, "git *"))
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() }
+        val rule = rpc.configPatches.last().permission?.get("bash")
+        assertEquals(PermissionRuleDto.Patterns(mapOf("*" to "ask", "git status" to "allow", "git *" to null)), rule)
+        edt {
+            assertEquals("git status", (jbList(list).selectedValue as SettingsListItem).key)
+        }
+    }
+
     private fun requireUi(): AutoApproveSettingsUi = requireNotNull(ui)
 
     private fun levelSelects(panel: AutoApproveSettingsUi): List<LevelSelect> =
@@ -242,6 +322,9 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
+
+    private fun indexOf(list: JBList<*>, key: String): Int = (0 until list.model.size)
+        .first { (list.model.getElementAt(it) as SettingsListItem).key == key }
 
     private fun button(list: SettingsInlineList, index: Int): JComponent = components(list)
         .filterIsInstance<JComponent>()
@@ -291,6 +374,24 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         target.dispatchEvent(press)
         target.dispatchEvent(release)
         target.dispatchEvent(clicked)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun doubleClickRow(list: JBList<*>, idx: Int) {
+        val bounds = list.getCellBounds(idx, idx)
+        val point = Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2)
+        val event = MouseEvent(
+            list,
+            MouseEvent.MOUSE_CLICKED,
+            System.currentTimeMillis(),
+            0,
+            point.x,
+            point.y,
+            2,
+            false,
+            MouseEvent.BUTTON1,
+        )
+        list.dispatchEvent(event)
         UIUtil.dispatchAllInvocationEvents()
     }
 
