@@ -14,6 +14,11 @@ const DEFAULT_ADDRESS = "localhost:19530"
 const REQUEST_TIMEOUT_MS = 120_000
 const FLUSH_RETRY_DELAY_MS = 11_000
 const FLUSH_RETRIES = 2
+const DROP_COLLECTION_TIMEOUT_MS = 30_000
+const DROP_COLLECTION_MAX_ATTEMPTS = 4
+const DROP_COLLECTION_VERIFY_POLLS_PER_ATTEMPT = 8
+const DROP_COLLECTION_INITIAL_DELAY_MS = 250
+const DROP_COLLECTION_MAX_DELAY_MS = 2_000
 const METADATA_ID = "f946a536-9af4-4f1f-9f95-7d6efb4647d5"
 const VECTOR_FIELD = "vector"
 const POINT_TYPE = "point"
@@ -63,6 +68,10 @@ type Info = HttpBaseResponse<{
   fields?: Field[]
 }>
 
+type HasCollection = HttpBaseResponse<{
+  has?: boolean
+}>
+
 type Query = HttpBaseResponse<Record<string, unknown>[]>
 
 type SearchRow = Record<string, unknown> & {
@@ -89,6 +98,7 @@ export class MilvusVectorStore implements IVectorStore {
   private readonly database?: string
   private readonly collectionName: string
   private readonly profile: EmbeddingProfile
+  private createdEmptyCollection = false
 
   constructor(
     private readonly workspacePath: string,
@@ -156,27 +166,37 @@ export class MilvusVectorStore implements IVectorStore {
   }
 
   private ensureSuccess(value: unknown, action: string): void {
-    if (!value || typeof value !== "object") return
-    const code = "code" in value ? Number((value as { code?: unknown }).code) : 0
-    if (Number.isFinite(code) && code === 0) return
+    if (!value || typeof value !== "object") {
+      throw new Error(`${action} failed: invalid SDK response`)
+    }
+    const code = (value as { code?: unknown }).code
+    if (typeof code === "number" && Number.isFinite(code) && code === 0) return
     const message = "message" in value ? String((value as { message?: unknown }).message) : ""
-    throw new Error(`${action} failed${message ? `: ${message}` : ""}`)
+    const detail = message || `invalid SDK response code ${String(code)}`
+    throw new Error(`${action} failed: ${detail}`)
+  }
+
+  private dataArray<T>(value: HttpBaseResponse<T[]>, action: string): T[] {
+    if (!Array.isArray(value.data)) {
+      throw new Error(`${action} failed: invalid SDK response data`)
+    }
+    return value.data
+  }
+
+  private async hasCollection(): Promise<boolean> {
+    const exists = (await this.client.hasCollection(this.collectionReq({}))) as HasCollection
+    this.ensureSuccess(exists, "Check Milvus collection")
+    if (typeof exists.data?.has !== "boolean") {
+      throw new Error("Check Milvus collection failed: invalid SDK response data.has")
+    }
+    return exists.data.has
   }
 
   private async collectionExistsInfo(): Promise<Info | null> {
-    try {
-      const exists = await this.client.hasCollection(this.collectionReq({}))
-      this.ensureSuccess(exists, "Check Milvus collection")
-      if (!exists.data?.has) return null
-      const info = (await this.client.describeCollection(this.collectionReq({}))) as Info
-      this.ensureSuccess(info, "Describe Milvus collection")
-      return info
-    } catch (error: unknown) {
-      log.warn(`Warning during describeCollection for "${this.collectionName}"`, {
-        error: error instanceof Error ? error.message : String(error),
-      })
-      return null
-    }
+    if (!(await this.collectionExists())) return null
+    const info = (await this.client.describeCollection(this.collectionReq({}))) as Info
+    this.ensureSuccess(info, "Describe Milvus collection")
+    return info
   }
 
   private field(info: Info, name: string): Field | undefined {
@@ -223,6 +243,12 @@ export class MilvusVectorStore implements IVectorStore {
     return dim
   }
 
+  private parseSchema(value: unknown): number | undefined {
+    const schema = Number(value)
+    if (!Number.isInteger(schema) || schema <= 0) return undefined
+    return schema
+  }
+
   private parseProvider(value: string): EmbeddingProfile["provider"] | undefined {
     switch (value) {
       case "kilo":
@@ -267,20 +293,16 @@ export class MilvusVectorStore implements IVectorStore {
   }
 
   private async getMetadataPayload(): Promise<Record<string, unknown> | undefined> {
-    try {
-      const result = (await this.client.get(
-        this.collectionReq({
-          id: [this.metadataId()],
-          outputFields: [KEY.schema, KEY.complete, KEY.provider, KEY.model, KEY.dimension],
-        }),
-      )) as Query
-      const first = result.data[0]
-      if (!first || typeof first !== "object") return undefined
-      return first
-    } catch (error) {
-      log.warn("Failed to retrieve Milvus indexing metadata", { error })
-      return undefined
-    }
+    const result = (await this.client.get(
+      this.collectionReq({
+        id: [this.metadataId()],
+        outputFields: [KEY.schema, KEY.complete, KEY.provider, KEY.model, KEY.dimension],
+      }),
+    )) as Query
+    this.ensureSuccess(result, "Get Milvus indexing metadata")
+    const first = this.dataArray(result, "Get Milvus indexing metadata")[0]
+    if (!first || typeof first !== "object") return undefined
+    return first
   }
 
   private async hasDataRows(): Promise<boolean> {
@@ -293,7 +315,7 @@ export class MilvusVectorStore implements IVectorStore {
       }),
     )) as Query
     this.ensureSuccess(result, "Query Milvus rows")
-    return result.data.length > 0
+    return this.dataArray(result, "Query Milvus rows").length > 0
   }
 
   private async loadCollection(): Promise<void> {
@@ -367,12 +389,110 @@ export class MilvusVectorStore implements IVectorStore {
     )
     this.ensureSuccess(result, "Create Milvus collection")
     await this.loadCollection()
+    this.createdEmptyCollection = true
+  }
+
+  private errorRecord(error: unknown): Record<string, unknown> | undefined {
+    return error && typeof error === "object" ? (error as Record<string, unknown>) : undefined
+  }
+
+  private nestedRecord(value: unknown): Record<string, unknown> | undefined {
+    return value && typeof value === "object" ? (value as Record<string, unknown>) : undefined
+  }
+
+  private errorStatus(error: unknown): number | undefined {
+    const root = this.errorRecord(error)
+    const response = this.nestedRecord(root?.response)
+    const cause = this.nestedRecord(root?.cause)
+    const candidates = [root?.status, root?.statusCode, response?.status, response?.statusCode, cause?.status]
+    for (const candidate of candidates) {
+      const status = Number(candidate)
+      if (Number.isInteger(status) && status > 0) return status
+    }
+    return undefined
+  }
+
+  private errorCode(error: unknown): string | undefined {
+    const code = this.errorRecord(error)?.code
+    return typeof code === "string" ? code : undefined
+  }
+
+  private errorClass(error: unknown): string {
+    return error instanceof Error ? error.constructor.name : typeof error
+  }
+
+  private errorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error)
+  }
+
+  private isAmbiguousDropError(error: unknown): boolean {
+    const status = this.errorStatus(error)
+    if (status === 401 || status === 403) return false
+    if (status === 408 || status === 429 || (status !== undefined && status >= 500)) return true
+
+    const code = this.errorCode(error)
+    if (code && /^(ETIMEDOUT|ECONNRESET|ECONNABORTED|EPIPE|ENOTFOUND|EAI_AGAIN)$/i.test(code)) return true
+
+    return /timeout|timed out|rate limit|retry later|connection reset|socket hang up|network|fetch failed/i.test(
+      this.errorMessage(error),
+    )
+  }
+
+  private async waitForCollectionAbsence(deadline: number): Promise<boolean> {
+    let delay = DROP_COLLECTION_INITIAL_DELAY_MS
+
+    for (let poll = 0; poll < DROP_COLLECTION_VERIFY_POLLS_PER_ATTEMPT && Date.now() < deadline; poll++) {
+      if (!(await this.collectionExists())) return true
+      await this.sleep(delay)
+      delay = Math.min(delay * 2, DROP_COLLECTION_MAX_DELAY_MS)
+    }
+
+    return !(await this.collectionExists())
+  }
+
+  private async dropCollectionAndWait(): Promise<void> {
+    const started = Date.now()
+    const deadline = started + DROP_COLLECTION_TIMEOUT_MS
+    let attempt = 0
+    let retryDelay = DROP_COLLECTION_INITIAL_DELAY_MS
+    let lastError: unknown
+
+    while (Date.now() < deadline && attempt < DROP_COLLECTION_MAX_ATTEMPTS) {
+      if (!(await this.collectionExists())) return
+
+      attempt += 1
+      try {
+        const result = await this.client.dropCollection(this.collectionReq({}))
+        this.ensureSuccess(result, "Drop Milvus collection")
+      } catch (error) {
+        lastError = error
+        if (!this.isAmbiguousDropError(error)) throw error
+        log.warn("Ambiguous Milvus dropCollection failure; verifying collection absence", {
+          collection: this.collectionName,
+          attempt,
+          status: this.errorStatus(error),
+          errorClass: this.errorClass(error),
+          elapsedMs: Date.now() - started,
+          error: this.errorMessage(error),
+        })
+      }
+
+      if (await this.waitForCollectionAbsence(deadline)) return
+      if (Date.now() >= deadline || attempt >= DROP_COLLECTION_MAX_ATTEMPTS) break
+      await this.sleep(retryDelay)
+      retryDelay = Math.min(retryDelay * 2, DROP_COLLECTION_MAX_DELAY_MS)
+    }
+
+    if (!(await this.collectionExists())) return
+    const elapsed = Date.now() - started
+    throw new Error(`Drop Milvus collection failed: collection still exists after ${elapsed}ms`, {
+      cause: lastError,
+    })
   }
 
   private async recreateCollection(reason: string): Promise<boolean> {
     log.warn(`Collection ${this.collectionName} is incompatible (${reason}). Recreating collection.`)
-    await this.client.dropCollection(this.collectionReq({}))
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await this.dropCollectionAndWait()
     await this.createCollection()
     return true
   }
@@ -382,13 +502,15 @@ export class MilvusVectorStore implements IVectorStore {
     if (!info) throw new Error("Baseline Milvus collection does not exist")
     if (!this.isSchemaCompatible(info)) throw new Error("Baseline Milvus index schema does not match the worktree")
     await this.loadCollection()
+    this.createdEmptyCollection = false
 
     const payload = await this.getMetadataPayload()
     const profile = this.getStoredProfile(payload)
     if (!profile || !this.isProfileMatch(profile)) {
       throw new Error("Baseline Milvus embedding profile does not match the worktree")
     }
-    if (payload?.[KEY.schema] !== SCHEMA) throw new Error("Baseline Milvus index schema does not match the worktree")
+    if (this.parseSchema(payload?.[KEY.schema]) !== SCHEMA)
+      throw new Error("Baseline Milvus index schema does not match the worktree")
     if (payload?.[KEY.complete] !== true) throw new Error("Baseline Milvus index is not complete")
   }
 
@@ -411,12 +533,11 @@ export class MilvusVectorStore implements IVectorStore {
       await this.loadCollection()
       const payload = await this.getMetadataPayload()
       const profile = this.getStoredProfile(payload)
-      const hasRows = await this.hasDataRows()
-      const compatible = payload?.[KEY.schema] === SCHEMA && profile && this.isProfileMatch(profile)
-      if ((payload || hasRows) && !compatible) {
+      const compatible = this.parseSchema(payload?.[KEY.schema]) === SCHEMA && profile && this.isProfileMatch(profile)
+      if (!compatible) {
         const from = profile
           ? `${profile.provider}:${profile.modelId}:${profile.dimension}`
-          : "missing embedding metadata on populated collection"
+          : "missing embedding metadata"
         const to = `${this.profile.provider}:${this.profile.modelId}:${this.profile.dimension}`
         return await this.recreateCollection(`${from} -> ${to}`)
       }
@@ -427,6 +548,7 @@ export class MilvusVectorStore implements IVectorStore {
         vectorSize: this.vectorSize,
         address: this.address,
       })
+      this.createdEmptyCollection = false
       return false
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error)
@@ -532,7 +654,7 @@ export class MilvusVectorStore implements IVectorStore {
       )) as Search
       this.ensureSuccess(result, "Search Milvus rows")
 
-      return result.data
+      return this.dataArray(result, "Search Milvus rows")
         .map((row) => ({ row, score: Number(row.score ?? row.distance) }))
         .filter((item) => Number.isFinite(item.score) && item.score >= actualMinScore)
         .filter((item) => this.isPayloadValid(item.row))
@@ -599,10 +721,7 @@ export class MilvusVectorStore implements IVectorStore {
 
   async deleteCollection(): Promise<void> {
     try {
-      if (await this.collectionExists()) {
-        const result = await this.client.dropCollection(this.collectionReq({}))
-        this.ensureSuccess(result, "Drop Milvus collection")
-      }
+      await this.dropCollectionAndWait()
     } catch (error) {
       log.error(`Failed to delete collection ${this.collectionName}`, { error })
       throw error
@@ -610,34 +729,31 @@ export class MilvusVectorStore implements IVectorStore {
   }
 
   async collectionExists(): Promise<boolean> {
-    try {
-      const exists = await this.client.hasCollection(this.collectionReq({}))
-      this.ensureSuccess(exists, "Check Milvus collection")
-      return exists.data?.has ?? false
-    } catch {
-      return false
-    }
+    return this.hasCollection()
   }
 
   async hasIndexedData(): Promise<boolean> {
     try {
       if (!(await this.collectionExists())) return false
-      const hasRows = await this.hasDataRows()
-      if (!hasRows) {
-        log.info("Milvus has no indexed data", {
+      if (this.createdEmptyCollection) return false
+      const payload = await this.getMetadataPayload()
+      const profile = this.getStoredProfile(payload)
+      const compatible = this.parseSchema(payload?.[KEY.schema]) === SCHEMA && profile && this.isProfileMatch(profile)
+      const indexed = compatible && payload?.[KEY.complete] === true
+      if (!indexed) {
+        log.info("Milvus indexing metadata evaluated", {
           collection: this.collectionName,
-          reason: "points_zero",
+          indexed: false,
         })
         return false
       }
 
-      const payload = await this.getMetadataPayload()
-      const indexed = payload?.[KEY.complete] === true
+      const hasRows = await this.hasDataRows()
       log.info("Milvus indexing metadata evaluated", {
         collection: this.collectionName,
-        indexed,
+        indexed: hasRows,
       })
-      return indexed
+      return hasRows
     } catch (error) {
       log.error("Failed to check if collection has data", { error })
       throw error
@@ -667,10 +783,25 @@ export class MilvusVectorStore implements IVectorStore {
     }
   }
 
+  private async deleteMetadataMarker(): Promise<void> {
+    const result = await this.client.delete(
+      this.collectionReq({ filter: `id == ${this.stringLiteral(this.metadataId())}` }),
+    )
+    this.ensureSuccess(result, "Delete Milvus indexing metadata")
+    await this.flushCollection()
+  }
+
   private async markIndexing(complete: boolean): Promise<void> {
+    if (!complete) {
+      if (this.createdEmptyCollection) return
+      await this.deleteMetadataMarker()
+      return
+    }
+
     const result = await this.client.upsert(this.collectionReq({ data: [this.metadataRow(complete)] }))
     this.ensureSuccess(result, "Upsert Milvus indexing metadata")
-    if (complete) await this.flushCollection()
+    await this.flushCollection()
+    this.createdEmptyCollection = false
   }
 
   async markIndexingComplete(): Promise<void> {

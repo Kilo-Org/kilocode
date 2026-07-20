@@ -8,6 +8,10 @@ function ok(data: unknown = {}) {
   return { code: 0, data }
 }
 
+function errorWithStatus(message: string, status: number) {
+  return Object.assign(new Error(message), { status })
+}
+
 function field(name: string, type: string, extra: Record<string, unknown> = {}) {
   return {
     name,
@@ -69,9 +73,20 @@ import { MilvusVectorStore } from "../../../../src/indexing/vector-store/milvus-
 
 const workspacePath = "/workspace/project"
 const profile = { provider: "openai" as const, modelId: "text-embedding-3-small", dimension: 3 }
+const oldProfileRow = {
+  index_schema: 1,
+  indexing_complete: true,
+  embedding_provider: "openai",
+  embedding_model_id: "text-embedding-ada-002",
+  embedding_dimension: 1536,
+}
 
 function req(fn: { mock: { calls: unknown[][] } }, index = 0): Req {
   return fn.mock.calls[index]![0] as Req
+}
+
+function fastSleep(store: MilvusVectorStore) {
+  ;(store as unknown as { sleep: (ms: number) => Promise<void> }).sleep = mock(async () => {})
 }
 
 describe("MilvusVectorStore", () => {
@@ -135,19 +150,13 @@ describe("MilvusVectorStore", () => {
 
   test("recreates an incompatible populated collection", async () => {
     const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
     const client = clients[0]!
-    client.hasCollection.mockResolvedValue(ok({ has: true }))
-    client.get.mockResolvedValue(
-      ok([
-        {
-          index_schema: 1,
-          indexing_complete: true,
-          embedding_provider: "openai",
-          embedding_model_id: "text-embedding-ada-002",
-          embedding_dimension: 1536,
-        },
-      ]),
-    )
+    client.hasCollection
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: false }))
+    client.get.mockResolvedValue(ok([oldProfileRow]))
     client.query.mockResolvedValue(ok([{ id: "point" }]))
 
     const created = await store.initialize()
@@ -155,6 +164,152 @@ describe("MilvusVectorStore", () => {
     expect(created).toBe(true)
     expect(client.dropCollection).toHaveBeenCalledTimes(1)
     expect(client.createCollection).toHaveBeenCalledTimes(1)
+  })
+
+  test("rejects initialize when hasCollection throws without creating a collection", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    const client = clients[0]!
+    client.hasCollection.mockRejectedValue(new Error("network unavailable"))
+
+    await expect(store.initialize()).rejects.toThrow("network unavailable")
+
+    expect(client.describeCollection).not.toHaveBeenCalled()
+    expect(client.createCollection).not.toHaveBeenCalled()
+  })
+
+  test("rejects initialize when describeCollection throws without creating a collection", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValue(ok({ has: true }))
+    client.describeCollection.mockRejectedValue(new Error("describe failed"))
+
+    await expect(store.initialize()).rejects.toThrow("describe failed")
+
+    expect(client.createCollection).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ["undefined", undefined, "invalid SDK response"],
+    ["null", null, "invalid SDK response"],
+    ["primitive", true, "invalid SDK response"],
+    ["missing code", { data: {} }, "invalid SDK response code undefined"],
+    ["invalid code", { code: "0", data: {} }, "invalid SDK response code 0"],
+    ["non-zero code", { code: 1, message: "boom" }, "boom"],
+  ])("rejects %s SDK responses", async (_name, response, message) => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValue(ok({ has: false }))
+    client.createCollection.mockResolvedValue(response)
+
+    await expect(store.initialize()).rejects.toThrow(`Create Milvus collection failed: ${message}`)
+
+    expect(client.loadCollection).not.toHaveBeenCalled()
+  })
+
+  test("rejects missing hasCollection data.has", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValue(ok({}))
+
+    await expect(store.initialize()).rejects.toThrow("Check Milvus collection failed: invalid SDK response data.has")
+
+    expect(client.createCollection).not.toHaveBeenCalled()
+  })
+
+  test("does not recreate when metadata read fails on a populated collection", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValue(ok({ has: true }))
+    client.get.mockRejectedValue(new Error("metadata read failed"))
+    client.query.mockResolvedValue(ok([{ id: "point" }]))
+
+    await expect(store.initialize()).rejects.toThrow("metadata read failed")
+
+    expect(client.dropCollection).not.toHaveBeenCalled()
+    expect(client.createCollection).not.toHaveBeenCalled()
+  })
+
+  test("recreates in one initialize call when drop returns HTTP 408 but collection is gone", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.hasCollection
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: false }))
+    client.get.mockResolvedValue(ok([oldProfileRow]))
+    client.query.mockResolvedValue(ok([{ id: "point" }]))
+    client.dropCollection.mockRejectedValue(errorWithStatus("request timeout", 408))
+
+    const created = await store.initialize()
+
+    expect(created).toBe(true)
+    expect(client.dropCollection).toHaveBeenCalledTimes(1)
+    expect(client.createCollection).toHaveBeenCalledTimes(1)
+  })
+
+  test("waits for a successful drop until the collection disappears before recreating", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.hasCollection
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: false }))
+    client.get.mockResolvedValue(ok([oldProfileRow]))
+    client.query.mockResolvedValue(ok([{ id: "point" }]))
+
+    const created = await store.initialize()
+
+    expect(created).toBe(true)
+    expect(client.dropCollection).toHaveBeenCalledTimes(1)
+    expect(client.createCollection).toHaveBeenCalledTimes(1)
+  })
+
+  test("does not create a replacement when drop verification never observes absence", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValue(ok({ has: true }))
+    client.get.mockResolvedValue(ok([oldProfileRow]))
+    client.query.mockResolvedValue(ok([{ id: "point" }]))
+
+    await expect(store.initialize()).rejects.toThrow("collection still exists")
+
+    expect(client.dropCollection).toHaveBeenCalledTimes(4)
+    expect(client.createCollection).not.toHaveBeenCalled()
+  })
+
+  test("does not retry non-retryable drop authorization errors", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.hasCollection.mockResolvedValue(ok({ has: true }))
+    client.get.mockResolvedValue(ok([oldProfileRow]))
+    client.query.mockResolvedValue(ok([{ id: "point" }]))
+    client.dropCollection.mockRejectedValue(errorWithStatus("unauthorized", 401))
+
+    await expect(store.initialize()).rejects.toThrow("unauthorized")
+
+    expect(client.dropCollection).toHaveBeenCalledTimes(1)
+    expect(client.createCollection).not.toHaveBeenCalled()
+  })
+
+  test("public deleteCollection uses verified deletion for ambiguous drop errors", async () => {
+    const store = new MilvusVectorStore(workspacePath, "localhost:19530", 3, undefined, undefined, profile)
+    fastSleep(store)
+    const client = clients[0]!
+    client.hasCollection
+      .mockResolvedValueOnce(ok({ has: true }))
+      .mockResolvedValueOnce(ok({ has: false }))
+      .mockResolvedValueOnce(ok({ has: false }))
+    client.dropCollection.mockRejectedValue(errorWithStatus("request timeout", 408))
+
+    await store.deleteCollection()
+
+    expect(client.dropCollection).toHaveBeenCalledTimes(1)
   })
 
   test("upserts valid points with path segment fields", async () => {
