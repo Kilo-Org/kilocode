@@ -11,7 +11,7 @@ import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 
-internal open class SettingsPanel : SettingsOverlayPanel() {
+internal open class SettingsPanel(scroll: Boolean = true) : SettingsOverlayPanel() {
     val top = SettingsTop()
     val settings = Stack.vertical()
 
@@ -20,10 +20,14 @@ internal open class SettingsPanel : SettingsOverlayPanel() {
             .next(top)
             .gap(UiStyle.Gap.lg())
             .next(settings)
-        content.add(JBScrollPane(body).apply {
-            border = null
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        }, BorderLayout.CENTER)
+        if (scroll) {
+            content.add(JBScrollPane(body).apply {
+                border = null
+                horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+            }, BorderLayout.CENTER)
+        } else {
+            content.add(body, BorderLayout.CENTER)
+        }
     }
 
     fun setContent(component: JComponent) {

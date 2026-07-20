@@ -532,6 +532,7 @@ object KiloCliDataParser {
             skills = parseSkillsConfig(obj["skills"].obj()),
             mcp = parseMcpConfig(obj["mcp"].obj()),
             agent = parseAgentConfig(obj["agent"].obj()),
+            permission = parsePermissionConfig(obj["permission"].obj()),
         )
     }.getOrDefault(ConfigDto())
 
@@ -914,6 +915,9 @@ object KiloCliDataParser {
                     } ?: JsonNull)
                 })
             }
+
+            val permission = patch.permission
+            if (permission != null) put("permission", buildPermission(permission))
 
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {
