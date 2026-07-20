@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import * as Observability from "@opencode-ai/core/observability"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import * as fs from "fs/promises"
 import os from "os"
@@ -24,8 +24,7 @@ import { remove as cleanup } from "../kilocode/cleanup" // kilocode_change
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 export const testInstanceStoreLayer = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
-const makeTestRuntime = () =>
-  ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
+const makeTestRuntime = () => ManagedRuntime.make(testInstanceStoreLayer.pipe(Layer.provideMerge(Observability.layer)))
 let testRuntime: ReturnType<typeof makeTestRuntime> | undefined
 const runtime = () => (testRuntime ??= makeTestRuntime())
 

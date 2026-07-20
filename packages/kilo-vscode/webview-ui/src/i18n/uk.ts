@@ -1253,6 +1253,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Ключ API Qdrant",
   "settings.indexing.qdrantApiKey.description": "Необов'язковий ключ API для екземпляра Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Необов'язковий ключ API",
+  "settings.indexing.fileExtensions.title": "Розширення файлів",
+  "settings.indexing.fileExtensions.description":
+    "Список дозволених елементів, розділений комами. Залиште порожнім, щоб використовувати вбудовані значення за замовчуванням.",
+  "settings.indexing.fileExtensions.invalid": "Недійсне розширення: {{extension}}",
   "settings.indexing.tuning.description": "Розширений параметр пошуку та пакетної обробки.",
 
   "settings.experimental.title": "Експериментальне",

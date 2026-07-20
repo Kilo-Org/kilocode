@@ -18,7 +18,7 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../src/env"
-import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Format } from "../../src/format"
 import { Git } from "../../src/git"
@@ -33,8 +33,7 @@ import { Provider as ProviderSvc } from "../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Question } from "../../src/question"
-import { Reference } from "../../src/reference/reference"
-import { RepositoryCache } from "../../src/reference/repository-cache"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { Session } from "../../src/session/session"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
@@ -154,7 +153,6 @@ function makeHttp() {
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
     Database.defaultLayer,
-    Reference.defaultLayer,
     status,
     MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
@@ -208,7 +206,6 @@ function makeHttp() {
         Bus.layer,
         infra,
         Storage.defaultLayer,
-        Reference.defaultLayer,
       ),
     ),
   )

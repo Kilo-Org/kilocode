@@ -14,7 +14,8 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "tsc",
-    "test": "bun test"
+    "test": "bun test",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "dependencies": {
     "posthog-node": "4.4.0",

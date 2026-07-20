@@ -29,7 +29,7 @@
 - <https://app.kilo.ai/profile>
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://app.kilo.ai/tui.json>
-  <!-- packages/opencode/src/cli/cmd/tui/config/tui-migrate.ts -->
+  <!-- packages/opencode/src/config/tui-migrate.ts -->
 - <https://app.kilo.ai/usage>
   <!-- packages/opencode/src/kilocode/components/dialog-kilo-profile.tsx -->
 - <https://arxiv.org/abs/2601.16746>
@@ -72,8 +72,6 @@
   <!-- packages/opencode/src/kilocode/security/github.ts -->
 - <https://github.com/apps/kiloconnect>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
-- <https://github.com/badlogic/pi-mono/blob/main/packages/ai/src/utils/overflow.ts>
-  <!-- packages/opencode/src/provider/error.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-23-25.ts>
   <!-- packages/opencode/src/tool/edit.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-26-25.ts>
@@ -92,8 +90,6 @@
   <!-- packages/opencode/src/kilocode/encoding.ts -->
 - <https://github.com/Kilo-Org/kilocode/issues/9755>
   <!-- packages/opencode/src/kilocode/encoding.ts -->
-- <https://github.com/Kilo-Org/kilocode/issues/new?template=bug-report.yml>
-  <!-- packages/opencode/src/cli/cmd/tui/component/error-component.tsx -->
 - <https://github.com/Kilo-Org/kilocode/issues/new/choose>
   <!-- packages/kilo-vscode/webview-ui/src/components/chat/FeedbackDialog.tsx -->
 - <https://github.com/microsoft/vscode-eslint/archive/refs/heads/main.zip>
@@ -108,8 +104,6 @@
   <!-- packages/opencode/src/provider/provider.ts -->
 - <https://inference.do-ai.run/v1>
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
-- <https://julialang.org/downloads/>
-  <!-- packages/opencode/src/lsp/server.ts -->
 - <https://kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
   <!-- packages/opencode/src/mcp/oauth-provider.ts -->
@@ -148,8 +142,6 @@
 - <https://kilo.ai/kiloclaw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/opencode/src/kilocode/components/dialog-claw-setup.tsx -->
-- <https://kilo.ai/pricing>
-  <!-- packages/opencode/src/cli/cmd/tui/component/dialog-retry-action.tsx -->
 - <https://kilo.ai/pricing/kilo-pass>
   <!-- packages/kilo-vscode/webview-ui/src/components/profile/ProfileView.tsx -->
 - <https://kilo.ai/support>
