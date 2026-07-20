@@ -477,6 +477,10 @@ export interface RequestIndexingSettingsMessage {
   type: "requestIndexingSettings"
 }
 
+export interface RequestChatSettingsMessage {
+  type: "requestChatSettings"
+}
+
 export interface RequestKiloEmbeddingModelsMessage {
   type: "requestKiloEmbeddingModels"
 }
@@ -1283,6 +1287,7 @@ export type WebviewMessage =
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
   | RequestIndexingSettingsMessage
+  | RequestChatSettingsMessage
   | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
