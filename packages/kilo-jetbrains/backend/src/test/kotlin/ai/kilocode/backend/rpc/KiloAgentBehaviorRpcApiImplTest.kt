@@ -181,6 +181,27 @@ class KiloAgentBehaviorRpcApiImplTest {
     }
 
     @Test
+    fun `save skills validates known paths once for multiple edits`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val plan = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
+        val review = Files.createDirectories(dir.resolve("review")).resolve("SKILL.md")
+        Files.writeString(plan, "old plan")
+        Files.writeString(review, "old review")
+        mock.skills = """[
+            {"name":"plan","description":"Plan work","location":"$plan","content":"old plan"},
+            {"name":"review","description":"Review work","location":"$review","content":"old review"}
+        ]""".trimIndent()
+        val rpc = rpc()
+        mock.resetCounts()
+
+        assertTrue(rpc.saveSkills("/test project", mapOf(plan.toString() to "new plan", review.toString() to "new review")))
+
+        assertEquals("new plan", Files.readString(plan))
+        assertEquals("new review", Files.readString(review))
+        assertEquals(1, mock.requestCount("/skill"))
+    }
+
+    @Test
     fun `save skill rejects unknown absolute skill files`() = runBlocking {
         val dir = Files.createTempDirectory("kilo-skill-test")
         val known = Files.createDirectories(dir.resolve("known")).resolve("SKILL.md")

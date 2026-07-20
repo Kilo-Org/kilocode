@@ -69,14 +69,6 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
         assertTrue(rpc.removals.isEmpty())
     }
 
-    fun `test skills returns fallback on rpc failure`() = runBlocking {
-        rpc.skillsError = RuntimeException("boom")
-
-        val items = withContext(Dispatchers.Default) { service.skills("/test") }
-
-        assertTrue(items.isEmpty())
-    }
-
     fun `test loadSkills propagates rpc failure`() = runBlocking {
         rpc.skillsError = RuntimeException("boom")
 
@@ -92,6 +84,18 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
         val items = withContext(Dispatchers.Default) { service.refreshSkills("/test", fallback) }
 
         assertEquals(fallback, items)
+    }
+
+    fun `test saveSkills forwards all edits`() = runBlocking {
+        rpc.skills = listOf(SkillDto("plan", location = "/test/plan/SKILL.md"))
+
+        val ok = withContext(Dispatchers.Default) {
+            service.saveSkills("/test", mapOf("/test/plan/SKILL.md" to "# Saved"))
+        }
+
+        assertTrue(ok)
+        assertEquals(listOf(Triple("/test", "/test/plan/SKILL.md", "# Saved")), rpc.skillSaves)
+        assertEquals("# Saved", rpc.skills.single().content)
     }
 
     fun `test mcpStatus forwards directory`() = runBlocking {

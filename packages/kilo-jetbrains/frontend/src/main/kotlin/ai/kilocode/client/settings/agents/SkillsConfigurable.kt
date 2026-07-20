@@ -165,11 +165,8 @@ internal class SkillsSettingsUi(
             var failed: String? = null
             val behavior = service<KiloAgentBehaviorService>()
             LOG.info("skills settings apply start dir=$dir edited=${target.edited.size} deleted=${target.deleted.size} paths=${target.sources.paths.size} urls=${target.sources.urls.size}")
-            for ((location, content) in target.edited) {
-                if (!behavior.saveSkill(dir, location, content)) {
-                    failed = KiloBundle.message("settings.agentBehavior.save.failed")
-                    break
-                }
+            if (target.edited.isNotEmpty() && !behavior.saveSkills(dir, target.edited)) {
+                failed = KiloBundle.message("settings.agentBehavior.save.failed")
             }
             if (failed == null) {
                 for (location in target.deleted) {

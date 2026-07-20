@@ -30,6 +30,8 @@ interface KiloAgentBehaviorRpcApi : RemoteApi<Unit> {
 
     suspend fun saveSkill(directory: String, location: String, content: String): Boolean
 
+    suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean
+
     suspend fun removeAgent(directory: String, name: String): Boolean
 
     suspend fun createAgent(directory: String, input: AgentCreateDto): Boolean

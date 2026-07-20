@@ -81,6 +81,16 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
         return saveSkillResult
     }
 
+    override suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean {
+        assertNotEdt("agentBehavior.saveSkills")
+        saveSkillError?.let { throw it }
+        for ((location, content) in edits) skillSaves.add(Triple(directory, location, content))
+        if (saveSkillResult) skills = skills.map { skill ->
+            edits[skill.location]?.let { skill.copy(content = it) } ?: skill
+        }
+        return saveSkillResult
+    }
+
     override suspend fun removeAgent(directory: String, name: String): Boolean {
         assertNotEdt("agentBehavior.removeAgent")
         removeError?.let { throw it }

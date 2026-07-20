@@ -89,29 +89,29 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     override suspend fun saveSkill(directory: String, location: String, content: String): Boolean {
         LOG.info("Skill save requested dir=$directory location=$location")
         app.requireReady()
-        val raw = normalizeWorkspacePath(location) ?: run {
-            LOG.warn("Skill save rejected: invalid location dir=$directory location=$location")
-            return false
-        }
-        val path = try {
-            Path.of(raw).normalize()
-        } catch (err: InvalidPathException) {
-            LOG.warn("Skill save rejected: invalid path dir=$directory location=$location", err)
-            return false
-        }
-        if (!path.isAbsolute || !isSkillFile(path)) {
-            LOG.warn("Skill save rejected: not a skill file dir=$directory path=$path")
-            return false
-        }
-        if (!knownSkill(directory, path)) {
-            LOG.warn("Skill save rejected: unknown skill dir=$directory path=$path")
-            return false
-        }
+        val paths = knownSkills(directory)
+        val path = writablePath(directory, location, paths) ?: return false
         withContext(Dispatchers.IO) {
             Files.writeString(path, content, StandardCharsets.UTF_8)
         }
         LOG.info("Skill file saved dir=$directory path=$path bytes=${content.toByteArray(StandardCharsets.UTF_8).size}")
         LOG.info("Skill save reload deferred dir=$directory path=$path")
+        return true
+    }
+
+    override suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean {
+        LOG.info("Skills save requested dir=$directory count=${edits.size}")
+        app.requireReady()
+        val known = knownSkills(directory)
+        val paths = edits.mapNotNull { (location, content) ->
+            val path = writablePath(directory, location, known) ?: return false
+            path to content
+        }
+        withContext(Dispatchers.IO) {
+            for ((path, content) in paths) Files.writeString(path, content, StandardCharsets.UTF_8)
+        }
+        LOG.info("Skill files saved dir=$directory count=${paths.size}")
+        LOG.info("Skills save reload deferred dir=$directory count=${paths.size}")
         return true
     }
 
@@ -217,13 +217,7 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     }
 
     private suspend fun skillContent(skill: SkillDto): String? {
-        val raw = normalizeWorkspacePath(skill.location) ?: return null
-        val path = try {
-            Path.of(raw).normalize()
-        } catch (_: InvalidPathException) {
-            return null
-        }
-        if (!path.isAbsolute || !isSkillFile(path)) return null
+        val path = resolveSkillPath(skill.location) ?: return null
         return runCatching {
             withContext(Dispatchers.IO) {
                 if (!Files.isRegularFile(path)) null else Files.readString(path, StandardCharsets.UTF_8)
@@ -234,23 +228,36 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     }
 
     private fun editable(skill: SkillDto): Boolean {
-        val raw = normalizeWorkspacePath(skill.location) ?: return false
-        val path = try {
-            Path.of(raw).normalize()
-        } catch (_: InvalidPathException) {
-            return false
-        }
-        if (!path.isAbsolute || !isSkillFile(path)) return false
+        val path = resolveSkillPath(skill.location) ?: return false
         if (urlCached(path)) return false
         return true
     }
 
-    private suspend fun knownSkill(directory: String, path: Path): Boolean {
+    private suspend fun knownSkills(directory: String): Set<Path> {
         val items = KiloCliDataParser.parseAgentBehaviorSkills(request(directory, "/skill", null))
-        return items.any { item -> editable(item) && skillPath(item.location) == path }
+        return items.mapNotNull { item -> resolveEditablePath(item) }.toSet()
     }
 
-    private fun skillPath(location: String): Path? {
+    private fun writablePath(directory: String, location: String, known: Set<Path>): Path? {
+        val path = resolveSkillPath(location)
+        if (path == null) {
+            LOG.warn("Skill save rejected: invalid location dir=$directory location=$location")
+            return null
+        }
+        if (path !in known) {
+            LOG.warn("Skill save rejected: unknown skill dir=$directory path=$path")
+            return null
+        }
+        return path
+    }
+
+    private fun resolveEditablePath(skill: SkillDto): Path? {
+        val path = resolveSkillPath(skill.location) ?: return null
+        if (urlCached(path)) return null
+        return path
+    }
+
+    private fun resolveSkillPath(location: String): Path? {
         val raw = normalizeWorkspacePath(location) ?: return null
         val path = try {
             Path.of(raw).normalize()
