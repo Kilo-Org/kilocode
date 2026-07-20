@@ -19,7 +19,11 @@ function layer(
   hits: Ref.Ref<Hit[]>,
   cfg = TestConfig.layer(),
   access = auth,
-  gates?: { readonly started: Deferred.Deferred<void>; readonly wait: Deferred.Deferred<void>; readonly count?: number },
+  gates?: {
+    readonly started: Deferred.Deferred<void>
+    readonly wait: Deferred.Deferred<void>
+    readonly count?: number
+  },
   fail?: number,
 ) {
   const http = HttpClient.make((request) =>
@@ -308,5 +312,62 @@ it.live("does not resolve auth or config for unsupported providers", () =>
     expect(yield* Ref.get(configs)).toBe(0)
     expect(yield* Ref.get(auths)).toBe(0)
     expect(yield* Ref.get(hits)).toEqual([])
+  }),
+)
+
+function aimlapiLayer(hits: Ref.Ref<Hit[]>, item: unknown) {
+  const http = HttpClient.make((request) =>
+    Effect.gen(function* () {
+      yield* Ref.update(hits, (list) => [...list, { url: request.url }])
+      return HttpClientResponse.fromWeb(request, Response.json({ data: [item] }))
+    }),
+  )
+  return Layer.fresh(ModelCache.layer).pipe(
+    Layer.provide(Layer.succeed(HttpClient.HttpClient, http)),
+    Layer.provide(TestConfig.layer()),
+    Layer.provide(auth),
+    Layer.provide(ModelCache.kiloModelsLayer),
+  )
+}
+
+it.live("maps aimlapi pricing units to per-1M model cost", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = {
+      id: "vendor/chat-model",
+      type: "openai/chat-completions",
+      info: { name: "Chat Model", contextLength: 200000 },
+      pricing: {
+        units: [
+          { type: "charge", name: "token", content: "text", origin: "provided", price: 3.25, per: 1_000_000 },
+          // per normalization: 0.000013 per 1 token == 13 per 1M
+          { type: "charge", name: "token", content: "text", origin: "generated", price: 0.000013, per: 1 },
+          { type: "charge", name: "token", content: "text", origin: "cached", price: 1.625, per: 1_000_000 },
+          { type: "charge", name: "token", content: "text", origin: "cache_write", price: 6, per: 1_000_000 },
+          // ignored: audio input, tool-call charge, and a duplicate generated row
+          { type: "charge", name: "token", content: "audio", origin: "provided", price: 999, per: 1_000_000 },
+          { type: "charge", name: "call", content: "structured", origin: "generated", price: 0.05, per: 1 },
+          { type: "charge", name: "token", content: "text", origin: "generated", price: 99, per: 1_000_000 },
+        ],
+      },
+    }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    expect(models["vendor/chat-model"]!.cost).toEqual({ input: 3.25, output: 13, cache_read: 1.625, cache_write: 6 })
+    expect((yield* Ref.get(hits))[0]!.url).toContain("include=capabilities,modalities,pricing")
+  }),
+)
+
+it.live("leaves aimlapi cost at zero when the model carries no pricing", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = { id: "vendor/free-model", type: "openai/chat-completions", info: { name: "Free Model" } }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    expect(models["vendor/free-model"]!.cost).toEqual({ input: 0, output: 0 })
   }),
 )

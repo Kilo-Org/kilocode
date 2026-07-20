@@ -68,6 +68,17 @@ const AimlapiModalities = Schema.Struct({
   input: Schema.optional(Schema.Array(Schema.String)),
   output: Schema.optional(Schema.Array(Schema.String)),
 })
+const AimlapiPricingUnit = Schema.Struct({
+  type: Schema.optional(Schema.String),
+  name: Schema.optional(Schema.String),
+  content: Schema.optional(Schema.String),
+  origin: Schema.optional(Schema.String),
+  price: Schema.optional(Schema.Finite),
+  per: Schema.optional(Schema.Finite),
+})
+const AimlapiPricing = Schema.Struct({
+  units: Schema.optional(Schema.Array(AimlapiPricingUnit)),
+})
 const AimlapiItem = Schema.Struct({
   id: Schema.String,
   type: Schema.optional(Schema.String),
@@ -75,6 +86,7 @@ const AimlapiItem = Schema.Struct({
   tags: Schema.optional(Schema.Array(Schema.String)),
   capabilities: Schema.optional(Schema.Array(Schema.String)),
   modalities: Schema.optional(AimlapiModalities),
+  pricing: Schema.optional(AimlapiPricing),
 })
 const AimlapiResponse = Schema.Struct({ data: Schema.optional(Schema.Array(AimlapiItem)) })
 type AimlapiItem = Schema.Schema.Type<typeof AimlapiItem>
@@ -146,6 +158,34 @@ export const layer: Layer.Layer<
     const aimlapiModalities = (values: readonly string[]): AimlapiModality[] =>
       values.filter((value): value is AimlapiModality => AIMLAPI_MODALITIES.includes(value))
 
+    // Map the catalog `pricing` section to models-dev cost (USD per 1M tokens).
+    // The unit discriminator is `origin` (not `measure`); only text token
+    // charges carry input/output/cache prices — audio and tool-call units are
+    // skipped. The first unit per origin wins; tiered pricing
+    // (thresholds/variants) is not mapped, so the base rate is used.
+    const AIMLAPI_ORIGIN_TO_COST: Record<string, "input" | "output" | "cache_read" | "cache_write"> = {
+      provided: "input",
+      generated: "output",
+      cached: "cache_read",
+      cache_write: "cache_write",
+    }
+    const aimlapiCost = (pricing: AimlapiItem["pricing"]): NonNullable<Models[string]["cost"]> => {
+      const cost: { input: number; output: number; cache_read?: number; cache_write?: number } = {
+        input: 0,
+        output: 0,
+      }
+      const seen = new Set<string>()
+      for (const unit of pricing?.units ?? []) {
+        if (unit.type !== "charge" || unit.name !== "token" || unit.content !== "text") continue
+        const field = unit.origin ? AIMLAPI_ORIGIN_TO_COST[unit.origin] : undefined
+        if (!field || unit.price === undefined || seen.has(field)) continue
+        seen.add(field)
+        const per = unit.per && unit.per > 0 ? unit.per : 1_000_000
+        cost[field] = (unit.price * 1_000_000) / per
+      }
+      return cost
+    }
+
     const aimlapiModel = (item: AimlapiItem): Models[string] => {
       const capabilities = item.capabilities ?? []
       const input = aimlapiModalities(item.modalities?.input ?? [])
@@ -162,7 +202,7 @@ export const layer: Layer.Layer<
         // The catalog's `tools` capability has false negatives, so it cannot
         // gate tool_call without hiding models from agent use.
         tool_call: true,
-        cost: { input: 0, output: 0 },
+        cost: aimlapiCost(item.pricing),
         limit: { context: item.info?.contextLength ?? 128000, output: item.info?.outputMax ?? 8192 },
         modalities: {
           input: input.length > 0 ? input : ["text"],
@@ -175,9 +215,9 @@ export const layer: Layer.Layer<
       const baseURL = options.baseURL ?? AIMLAPI_BASE_URL
 
       // The models endpoint is public; attach the key only when present so
-      // the catalog renders before the provider is connected. Capability and
-      // modality metadata is opt-in per section via `include`.
-      const url = `${baseURL.replace(/\/+$/, "")}/models?include=capabilities,modalities`
+      // the catalog renders before the provider is connected. Capability,
+      // modality and pricing metadata are opt-in per section via `include`.
+      const url = `${baseURL.replace(/\/+$/, "")}/models?include=capabilities,modalities,pricing`
       let request = HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson)
       if (options.apiKey) {
         request = request.pipe(HttpClientRequest.bearerToken(options.apiKey))
