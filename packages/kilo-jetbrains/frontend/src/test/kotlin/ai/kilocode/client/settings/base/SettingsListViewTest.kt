@@ -4,9 +4,11 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.testing.fire
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
+import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
@@ -233,6 +235,46 @@ class SettingsListViewTest : BasePlatformTestCase() {
             click(view, center(area))
 
             assertTrue(calls.isEmpty())
+        }
+    }
+
+    fun `test unfocused selected row is not painted as active`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
+    fun `test preserve no scroll keeps scroll position after row change`() {
+        edt {
+            val view = SettingsListView("Empty") { _, _ -> }
+            val rows = (0 until 30).map { item("row$it", "Row $it", null, SettingsListCell("level", "Allow", alwaysVisible = true)) }
+            view.update(rows)
+            val scroll = JBScrollPane(view.list)
+            scroll.size = Dimension(320, 80)
+            scroll.doLayout()
+            view.list.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+
+            view.list.selectedIndex = 25
+            ScrollingUtil.ensureIndexIsVisible(view.list, 25, 0)
+            scroll.doLayout()
+            UIUtil.dispatchAllInvocationEvents()
+            val before = scroll.viewport.viewPosition.y
+            assertTrue("expected a scrolled viewport", before > 0)
+
+            view.update(rows, SettingsListSelection.PreserveNoScroll)
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertEquals(before, scroll.viewport.viewPosition.y)
+            assertEquals("row25", view.selected()?.key)
         }
     }
 

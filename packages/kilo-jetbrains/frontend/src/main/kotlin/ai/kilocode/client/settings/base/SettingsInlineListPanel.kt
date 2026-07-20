@@ -39,6 +39,7 @@ internal abstract class SettingsInlineListPanel(
     @RequiresEdt
     protected fun start() {
         checkEdt()
+        search.textEditor.emptyText.text = searchPlaceholder()
         view.list.selectionMode = selectionMode
         view.minimumSize = JBUI.size(0, minListHeight())
         view.list.minimumSize = JBUI.size(0, minListHeight())
@@ -54,7 +55,7 @@ internal abstract class SettingsInlineListPanel(
     @RequiresEdt
     fun setItems(items: List<SettingsListItem>, enabled: Boolean) {
         checkEdt()
-        view.update(items, SettingsListSelection.Preserve)
+        view.update(items, SettingsListSelection.PreserveNoScroll)
         setEnabled(enabled)
         toolbar?.updateActionsImmediately()
     }
@@ -86,6 +87,10 @@ internal abstract class SettingsInlineListPanel(
 
     protected open fun toolbarActions(): List<AnAction> = emptyList()
 
+    protected open fun toolbarRight(): JComponent? = null
+
+    protected open fun searchPlaceholder(): String = ""
+
     private fun toolbarRow(): JComponent {
         val row = JPanel(BorderLayout())
         UiStyle.Components.transparent(row)
@@ -98,6 +103,7 @@ internal abstract class SettingsInlineListPanel(
             updateActionsImmediately()
         }
         row.add(toolbar!!.component, BorderLayout.WEST)
+        toolbarRight()?.let { row.add(it, BorderLayout.EAST) }
         return row
     }
 

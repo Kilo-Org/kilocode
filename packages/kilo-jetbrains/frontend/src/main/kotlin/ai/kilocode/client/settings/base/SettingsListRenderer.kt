@@ -68,15 +68,15 @@ internal class SettingsListRenderer(
         selected: Boolean,
         focused: Boolean,
     ): JPanel {
-        val focus = selected || list.hasFocus() || focused
-        val fg = UIUtil.getListForeground(selected, focus)
-        val weak = if (selected) fg else UiStyle.Colors.weak()
+        val active = selected && list.hasFocus()
+        val fg = UIUtil.getListForeground(active, active || focused)
+        val weak = if (active) fg else UiStyle.Colors.weak()
         val current = model.items.getOrNull(index)
         val section = if (current === value) settingsListSectionTitle(model.items, index) else null
 
         background = list.background
         top.background = list.background
-        wrap.update(list, selected, focus)
+        wrap.update(list, active, active || focused)
         sep.caption = section
         sep.setHideLine(index == 0)
         top.isVisible = section != null

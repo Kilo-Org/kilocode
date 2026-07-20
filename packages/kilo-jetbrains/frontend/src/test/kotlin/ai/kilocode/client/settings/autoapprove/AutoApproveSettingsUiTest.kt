@@ -2,6 +2,8 @@ package ai.kilocode.client.settings.autoapprove
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.settings.base.SettingsListItem
+import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigDto
@@ -26,13 +28,8 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.text.JTextComponent
 
-// Matches AutoApproveContent's fixed construction order.
-private val LEVEL_SELECT_ORDER = listOf(
-    "external_directory", "bash", "read", "edit",
-    "glob", "grep", "list", "task", "skill", "lsp",
-    "todoread+todowrite",
-    "websearch", "webfetch", "doom_loop",
-)
+// Matches AutoApproveContent's fixed granular section order.
+private val LEVEL_SELECT_ORDER = listOf("external_directory", "bash", "read", "edit")
 
 class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private lateinit var appScope: CoroutineScope
@@ -42,6 +39,8 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private lateinit var app: KiloAppService
     private lateinit var workspaces: KiloWorkspaceService
     private var ui: AutoApproveSettingsUi? = null
+    private var pick: (List<LevelChoice>) -> LevelChoice = { it.first() }
+    private val picker = LevelPicker { _, _, choices, choose -> choose(pick(choices)) }
 
     override fun setUp() {
         super.setUp()
@@ -54,7 +53,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         val state = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto())
         rpc.state.value = state
         app._state.value = state
-        edt { ui = AutoApproveSettingsUi(uiScope, app, workspaces) }
+        edt { ui = AutoApproveSettingsUi(uiScope, app, workspaces, picker) }
         flushUntil { text(requireUi()).contains("External Directory") }
     }
 
@@ -73,12 +72,26 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     fun `test page is not editable before app is ready`() {
         rpc.state.value = KiloAppStateDto(KiloAppStatusDto.LOADING)
         app._state.value = KiloAppStateDto(KiloAppStatusDto.LOADING)
-        edt { ui = AutoApproveSettingsUi(uiScope, app, workspaces) }
+        edt { ui = AutoApproveSettingsUi(uiScope, app, workspaces, picker) }
         flushUntil { text(requireUi()).contains("External Directory") }
 
         edt {
             assertTrue(levelSelects(requireUi()).all { !it.isEnabled })
+            assertTrue(inlineLists(requireUi()).map { jbList(it) }.all { !it.isEnabled })
         }
+    }
+
+    fun `test simple tool rows use list renderer and level action`() {
+        val panel = requireUi()
+
+        edt {
+            pick = { choices -> choices.first { it is LevelChoice.Level && it.level == "allow" } }
+            clickLevel(toolsList(panel), "glob")
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() }
+        assertEquals(mapOf("glob" to PermissionRuleDto.Level("allow")), rpc.configPatches.single().permission)
     }
 
     fun `test setting a simple tool level sends the expected patch`() {
@@ -147,7 +160,8 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         val panel = requireUi()
 
         edt {
-            selectLevel(levelSelectFor(panel, "todoread+todowrite"), "deny")
+            pick = { choices -> choices.first { it is LevelChoice.Level && it.level == "deny" } }
+            clickLevel(toolsList(panel), "todoread+todowrite")
             panel.applyDraft()
         }
 
@@ -196,8 +210,13 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private fun inlineListFor(panel: AutoApproveSettingsUi, tool: String): SettingsInlineList {
         val index = GRANULAR_ORDER.indexOf(tool)
         require(index >= 0) { "unknown granular tool $tool" }
-        return components(panel).filterIsInstance<SettingsInlineList>()[index]
+        return inlineLists(panel)[index]
     }
+
+    private fun toolsList(panel: AutoApproveSettingsUi): SettingsInlineList = inlineLists(panel).last()
+
+    private fun inlineLists(panel: AutoApproveSettingsUi): List<SettingsInlineList> =
+        components(panel).filterIsInstance<SettingsInlineList>()
 
     private fun removeException(panel: AutoApproveSettingsUi, tool: String, pattern: String) {
         val list = inlineListFor(panel, tool)
@@ -208,6 +227,19 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         click(button(list, 1))
     }
 
+    private fun clickLevel(list: SettingsInlineList, key: String) {
+        val jList = jbList(list)
+        val model = jList.model
+        val idx = (0 until model.size).first { (model.getElementAt(it) as SettingsListItem).key == key }
+        jList.selectedIndex = idx
+        jList.setSize(600, jList.preferredSize.height.coerceAtLeast(80))
+        jList.doLayout()
+        val bounds = settingsListCellBounds(jList, idx, true).getValue("level")
+        click(jList, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
+    }
+
+    private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
+
     private fun button(list: SettingsInlineList, index: Int): JComponent = components(list)
         .filterIsInstance<JComponent>()
         .filter { it.javaClass.name.endsWith("ActionButton") }
@@ -216,6 +248,10 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private fun click(target: JComponent) {
         target.setSize(target.preferredSize)
         val point = Point(target.width.coerceAtLeast(2) / 2, target.height.coerceAtLeast(2) / 2)
+        click(target, point)
+    }
+
+    private fun click(target: JComponent, point: Point) {
         val press = MouseEvent(
             target,
             MouseEvent.MOUSE_PRESSED,

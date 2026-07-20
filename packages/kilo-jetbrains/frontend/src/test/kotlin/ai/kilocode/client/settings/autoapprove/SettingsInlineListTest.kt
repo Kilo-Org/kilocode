@@ -1,6 +1,8 @@
 package ai.kilocode.client.settings.autoapprove
 
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.settings.base.SettingsListItem
+import ai.kilocode.client.settings.base.settingsListCellBounds
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
@@ -10,6 +12,7 @@ import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.ListSelectionModel
 
 class SettingsInlineListTest : BasePlatformTestCase() {
     fun `test empty list keeps minimum height for empty text`() {
@@ -39,7 +42,7 @@ class SettingsInlineListTest : BasePlatformTestCase() {
     fun `test toolbar delete removes selected rows in bulk`() {
         edt {
             val removed = mutableListOf<String>()
-            val list = SettingsInlineList("Add", "e.g. *.env", {}, { _, _ -> }, { removed += it })
+            val list = list(onRemove = { removed += it }, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
             list.syncItems(listOf("*.env" to "deny", "*.key" to "deny"), true)
             layout(list)
 
@@ -55,13 +58,46 @@ class SettingsInlineListTest : BasePlatformTestCase() {
     fun `test toolbar add invokes onAdd with the input override value`() {
         edt {
             val added = mutableListOf<String>()
-            val list = SettingsInlineList("Add", "e.g. *.env", { added += it }, { _, _ -> }, {})
+            val list = list(onAdd = { added += it })
             list.input = { "git *" }
             layout(list)
 
             click(button(list, 0))
 
             assertEquals(listOf("git *"), added)
+        }
+    }
+
+    fun `test row level action changes through picker selection`() {
+        edt {
+            val changed = mutableListOf<String>()
+            val picker = FakePicker { it.first { c -> c is LevelChoice.Level && c.level == "ask" } }
+            val list = list(onSet = { _, level -> changed += level }, picker = picker)
+            list.syncRows(listOf(PermissionListRow("glob", "Glob", "Search files", "allow")), true)
+            layout(list)
+
+            clickLevel(list, "glob")
+
+            assertEquals(listOf(LevelChoice.Level("allow"), LevelChoice.Level("ask"), LevelChoice.Level("deny")), picker.offered)
+            assertEquals(listOf("ask"), changed)
+        }
+    }
+
+    fun `test picker offers default option for inheritable rows`() {
+        edt {
+            val inherited = mutableListOf<String>()
+            val picker = FakePicker { it.first { c -> c is LevelChoice.Default } }
+            val list = list(onInherit = { inherited += it }, picker = picker)
+            list.syncRows(
+                listOf(PermissionListRow("glob", "Glob", "Search files", "allow", inherited = true, canInherit = true)),
+                true,
+            )
+            layout(list)
+
+            clickLevel(list, "glob")
+
+            assertEquals(LevelChoice.Default("allow"), picker.offered.first())
+            assertEquals(listOf("glob"), inherited)
         }
     }
 
@@ -89,7 +125,40 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         }
     }
 
-    private fun list(): SettingsInlineList = SettingsInlineList("Add", "e.g. *.env", {}, { _, _ -> }, {})
+    private fun list(
+        onAdd: (String) -> Unit = {},
+        onSet: (String, String) -> Unit = { _, _ -> },
+        onInherit: (String) -> Unit = {},
+        onRemove: (List<String>) -> Unit = {},
+        picker: LevelPicker = PopupLevelPicker,
+        selection: Int = ListSelectionModel.SINGLE_SELECTION,
+    ): SettingsInlineList = SettingsInlineList(
+        empty = "Empty",
+        search = "Search",
+        addLabel = "Add",
+        placeholder = "e.g. *.env",
+        onAdd = onAdd,
+        onSetLevel = onSet,
+        onInherit = onInherit,
+        onRemove = onRemove,
+        picker = picker,
+        selectionMode = selection,
+    )
+
+    private class FakePicker(private val select: (List<LevelChoice>) -> LevelChoice) : LevelPicker {
+        var offered: List<LevelChoice> = emptyList()
+            private set
+
+        override fun show(
+            anchor: JComponent,
+            at: Point,
+            choices: List<LevelChoice>,
+            choose: (LevelChoice) -> Unit,
+        ) {
+            offered = choices
+            choose(select(choices))
+        }
+    }
 
     private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
 
@@ -111,6 +180,21 @@ class SettingsInlineListTest : BasePlatformTestCase() {
     private fun click(target: JComponent) {
         target.setSize(target.preferredSize)
         val point = Point(target.width.coerceAtLeast(2) / 2, target.height.coerceAtLeast(2) / 2)
+        click(target, point)
+    }
+
+    private fun clickLevel(list: SettingsInlineList, key: String) {
+        val jList = jbList(list)
+        val model = jList.model
+        val idx = (0 until model.size).first { (model.getElementAt(it) as SettingsListItem).key == key }
+        jList.selectedIndex = idx
+        jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
+        jList.doLayout()
+        val bounds = settingsListCellBounds(jList, idx, true).getValue("level")
+        click(jList, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
+    }
+
+    private fun click(target: JComponent, point: Point) {
         val press = MouseEvent(
             target,
             MouseEvent.MOUSE_PRESSED,

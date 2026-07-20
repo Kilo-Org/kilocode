@@ -14,89 +14,180 @@ import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.awt.RelativePoint
 import java.awt.Point
+import javax.swing.JComponent
 import javax.swing.ListSelectionModel
 
+internal data class PermissionListRow(
+    val key: String,
+    val title: String,
+    val description: String? = null,
+    val level: String,
+    val inherited: Boolean = false,
+    val defaultLevel: String = level,
+    val canInherit: Boolean = false,
+)
+
+/** A level choice offered by the row popup: either revert to the CLI default or a concrete level. */
+internal sealed interface LevelChoice {
+    data class Default(val level: String) : LevelChoice
+    data class Level(val level: String) : LevelChoice
+}
+
 /**
- * Embeddable exception list for granular auto-approve tools. Uses the standard inline settings
- * list layout: toolbar, filter field, then list. The list supports multi-selection so toolbar
- * delete can remove many exceptions at once.
+ * Renders the per-row level chooser. The production picker is a JBPopup anchored under the level
+ * cell; tests substitute a picker that resolves a choice directly.
+ */
+internal fun interface LevelPicker {
+    fun show(anchor: JComponent, at: Point, choices: List<LevelChoice>, choose: (LevelChoice) -> Unit)
+}
+
+internal object PopupLevelPicker : LevelPicker {
+    override fun show(anchor: JComponent, at: Point, choices: List<LevelChoice>, choose: (LevelChoice) -> Unit) {
+        JBPopupFactory.getInstance()
+            .createPopupChooserBuilder(choices)
+            .setRenderer(SimpleListCellRenderer.create("") { levelChoiceLabel(it) })
+            .setItemChosenCallback(choose)
+            .createPopup()
+            .show(RelativePoint(anchor, at))
+    }
+}
+
+internal fun levelChoiceLabel(choice: LevelChoice): String = when (choice) {
+    is LevelChoice.Default -> KiloBundle.message("settings.autoApprove.default", levelLabel(choice.level))
+    is LevelChoice.Level -> levelLabel(choice.level)
+}
+
+/**
+ * Embeddable auto-approve permission list. Uses the standard inline settings list layout:
+ * toolbar, filter field, then list with title/description rows and a right-side level action cell.
  */
 internal class SettingsInlineList(
-    private val addLabel: String,
-    private val placeholder: String,
-    private val onAdd: (String) -> Unit,
+    private val empty: String,
+    private val search: String,
+    private val addLabel: String? = null,
+    private val placeholder: String = "",
+    private val right: JComponent? = null,
+    private val onAdd: ((String) -> Unit)? = null,
     private val onSetLevel: (String, String) -> Unit,
-    private val onRemove: (List<String>) -> Unit,
+    private val onInherit: ((String) -> Unit)? = null,
+    private val onRemove: ((List<String>) -> Unit)? = null,
+    private val picker: LevelPicker = PopupLevelPicker,
+    selectionMode: Int = ListSelectionModel.SINGLE_SELECTION,
 ) : SettingsInlineListPanel(
-    KiloBundle.message("settings.autoApprove.exceptions.empty"),
+    empty,
     SettingsListConfig.Equal,
-    ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
+    selectionMode,
 ) {
 
     /** Overridable in tests, mirrors `PatternList.input` in ContextSettingsUi.kt. */
     internal var input: () -> String? = {
-        Messages.showInputDialog(this, placeholder, addLabel, null)
+        Messages.showInputDialog(this, placeholder, addLabel.orEmpty(), null)
     }
 
     init {
         start()
     }
 
+    fun syncRows(rows: List<PermissionListRow>, enabled: Boolean) {
+        setItems(rows.map(::PermissionItem), enabled)
+    }
+
     fun syncItems(exceptions: List<Pair<String, String>>, enabled: Boolean) {
-        setItems(exceptions.map { (pattern, level) -> ExceptionItem(pattern, level) }, enabled)
+        syncRows(exceptions.map { (pattern, level) -> PermissionListRow(pattern, pattern, level = level) }, enabled)
     }
 
     override fun onCell(key: String, cellId: String) {
         if (!isEnabled) return
-        if (cellId == "level") showLevelPopup(key)
+        if (cellId == LEVEL_CELL) showLevelPopup(key)
     }
 
-    override fun toolbarActions(): List<AnAction> = listOf(
-        SettingsToolbarAction(
-            KiloBundle.message("settings.autoApprove.add"),
-            addLabel,
-            AllIcons.General.Add,
-            { isEnabled },
-        ) { promptAdd() },
-        SettingsToolbarAction(
-            KiloBundle.message("settings.autoApprove.delete"),
-            KiloBundle.message("settings.autoApprove.delete.description"),
-            AllIcons.General.Remove,
-            { isEnabled && selectedKeys().isNotEmpty() },
-        ) { removeSelected() },
-    )
+    override fun toolbarActions(): List<AnAction> = buildList {
+        val add = addLabel
+        if (add != null && onAdd != null) {
+            add(SettingsToolbarAction(
+                KiloBundle.message("settings.autoApprove.add"),
+                add,
+                AllIcons.General.Add,
+                { isEnabled },
+            ) { promptAdd() })
+        }
+        if (onRemove != null) {
+            add(SettingsToolbarAction(
+                KiloBundle.message("settings.autoApprove.delete"),
+                KiloBundle.message("settings.autoApprove.delete.description"),
+                AllIcons.General.Remove,
+                { isEnabled && selectedKeys().isNotEmpty() },
+            ) { removeSelected() })
+        }
+    }
+
+    override fun toolbarRight(): JComponent? = right
+
+    override fun searchPlaceholder(): String = search
 
     private fun promptAdd() {
         if (!isEnabled) return
+        val add = onAdd ?: return
         val value = input()?.trim().orEmpty()
         if (value.isBlank()) return
-        onAdd(value)
+        add(value)
     }
 
     private fun removeSelected() {
+        val remove = onRemove ?: return
         val keys = selectedKeys()
         if (keys.isEmpty()) return
-        onRemove(keys)
+        remove(keys)
     }
 
-    private fun showLevelPopup(pattern: String) {
+    private fun showLevelPopup(key: String) {
+        val item = item(key) ?: return
+        val idx = index(key) ?: return
+        val bounds = settingsListCellBounds(view.list, idx, idx == view.list.selectedIndex)[LEVEL_CELL] ?: return
+        picker.show(view.list, Point(bounds.x, bounds.y + bounds.height), choices(item.row)) { choice ->
+            choose(key, choice)
+        }
+    }
+
+    private fun item(key: String): PermissionItem? {
         val model = view.list.model
-        val index = (0 until model.size).firstOrNull { (model.getElementAt(it) as? ExceptionItem)?.pattern == pattern }
-            ?: return
-        val bounds = settingsListCellBounds(view.list, index, index == view.list.selectedIndex)["level"] ?: return
-        JBPopupFactory.getInstance()
-            .createPopupChooserBuilder(LEVELS)
-            .setRenderer(SimpleListCellRenderer.create("") { levelLabel(it) })
-            .setItemChosenCallback { level -> onSetLevel(pattern, level) }
-            .createPopup()
-            .show(RelativePoint(view.list, Point(bounds.x, bounds.y + bounds.height)))
+        return (0 until model.size)
+            .mapNotNull { model.getElementAt(it) as? PermissionItem }
+            .firstOrNull { it.key == key }
     }
 
-    private data class ExceptionItem(val pattern: String, val level: String) : SettingsListItem {
-        override val key: String get() = pattern
-        override val title: String get() = pattern
-        override val cells: List<SettingsListCell> = listOf(
-            SettingsListCell(id = "level", label = levelLabel(level), alwaysVisible = true),
-        )
+    private fun index(key: String): Int? {
+        val model = view.list.model
+        return (0 until model.size).firstOrNull { (model.getElementAt(it) as? PermissionItem)?.key == key }
+    }
+
+    private fun choices(row: PermissionListRow): List<LevelChoice> = buildList {
+        if (row.canInherit && onInherit != null) add(LevelChoice.Default(row.defaultLevel))
+        LEVELS.forEach { add(LevelChoice.Level(it)) }
+    }
+
+    private fun choose(key: String, choice: LevelChoice) {
+        when (choice) {
+            is LevelChoice.Default -> onInherit?.invoke(key)
+            is LevelChoice.Level -> onSetLevel(key, choice.level)
+        }
+    }
+
+    private data class PermissionItem(val row: PermissionListRow) : SettingsListItem {
+        override val key: String get() = row.key
+        override val title: String get() = row.title
+        override val description: String? get() = row.description
+        override val cells: List<SettingsListCell> = listOf(SettingsListCell(
+            id = LEVEL_CELL,
+            label = if (row.inherited) KiloBundle.message(
+                "settings.autoApprove.default",
+                levelLabel(row.defaultLevel),
+            ) else levelLabel(row.level),
+            alwaysVisible = true,
+        ))
+    }
+
+    private companion object {
+        const val LEVEL_CELL = "level"
     }
 }

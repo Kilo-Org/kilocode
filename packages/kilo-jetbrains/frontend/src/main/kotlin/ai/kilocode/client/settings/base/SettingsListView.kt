@@ -9,6 +9,8 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.event.KeyEvent
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
@@ -57,6 +59,7 @@ internal class SettingsListView(
         list.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) return
+                list.requestFocusInWindow()
                 press = null
                 val hit = hit(e) ?: return
                 press = Press(hit.item.key, hit.id ?: return)
@@ -84,6 +87,11 @@ internal class SettingsListView(
         list.addListSelectionListener { e: ListSelectionEvent ->
             if (!e.valueIsAdjusting) onSelect?.invoke()
         }
+        list.addFocusListener(object : FocusAdapter() {
+            override fun focusGained(e: FocusEvent) = list.repaint()
+
+            override fun focusLost(e: FocusEvent) = list.repaint()
+        })
         ScrollingUtil.installActions(list)
         next(list)
     }
@@ -107,15 +115,17 @@ internal class SettingsListView(
         val key = when (selection) {
             is SettingsListSelection.Key -> selection.key
             is SettingsListSelection.Index -> null
+            SettingsListSelection.PreserveNoScroll,
             SettingsListSelection.Preserve -> list.selectedValue?.key
         }
         val idx = when (selection) {
             is SettingsListSelection.Index -> selection.index
             is SettingsListSelection.Key,
+            SettingsListSelection.PreserveNoScroll,
             SettingsListSelection.Preserve,
             -> null
         }
-        sync(key, idx)
+        sync(key, idx, selection != SettingsListSelection.PreserveNoScroll)
     }
 
     @RequiresEdt
@@ -135,7 +145,7 @@ internal class SettingsListView(
     }
 
     @RequiresEdt
-    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null) {
+    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null, scroll: Boolean = true) {
         checkEdt()
         val q = filter.trim()
         val rows = if (q.isBlank()) items else items.filter { ModelSearch.matches(q, it.title) }
@@ -145,7 +155,7 @@ internal class SettingsListView(
             ?: settingsListIndex(rows, prefer).takeIf { it >= 0 }
             ?: rows.indices.firstOrNull()
             ?: -1
-        if (idx >= 0) choose(idx) else list.clearSelection()
+        if (idx >= 0) choose(idx, scroll) else list.clearSelection()
     }
 
     @RequiresEdt
@@ -166,10 +176,10 @@ internal class SettingsListView(
     }
 
     @RequiresEdt
-    private fun choose(idx: Int) {
+    private fun choose(idx: Int, scroll: Boolean = true) {
         checkEdt()
         list.selectedIndex = idx
-        ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        if (scroll) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
     }
 
     @RequiresEdt
@@ -234,6 +244,7 @@ private fun settingsListIndex(items: List<SettingsListItem>, index: Int): Int {
 
 internal sealed interface SettingsListSelection {
     data object Preserve : SettingsListSelection
+    data object PreserveNoScroll : SettingsListSelection
     data class Key(val key: String) : SettingsListSelection
     data class Index(val index: Int) : SettingsListSelection
 }

@@ -2,7 +2,6 @@ package ai.kilocode.client.settings.autoapprove
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseContentPanel
-import ai.kilocode.client.settings.base.SettingsRow
 import com.intellij.util.concurrency.annotations.RequiresEdt
 
 private enum class ExceptionKind { PATH, COMMAND }
@@ -25,56 +24,37 @@ private val TRAILING_TOOLS = listOf("websearch", "webfetch", "doom_loop")
  */
 internal class AutoApproveContent(
     private val update: (PermissionDraft.() -> PermissionDraft) -> Unit,
+    private val picker: LevelPicker = PopupLevelPicker,
 ) : BaseContentPanel() {
     private val granular = GRANULAR_TOOLS.map { (id, kind) -> id to granularSection(id, kind) }
-
-    private val grouped = LevelSelect(
-        { level -> update { setGrouped(this, GROUPED_IDS, level) } },
-        { update { inheritGrouped(this, GROUPED_IDS) } },
+    private val tools = SettingsInlineList(
+        empty = KiloBundle.message("settings.autoApprove.tools.empty"),
+        search = KiloBundle.message("settings.autoApprove.tools.search"),
+        onSetLevel = { key, level -> update { setListTool(this, key, level) } },
+        onInherit = { key -> update { inheritListTool(this, key) } },
+        picker = picker,
     )
-
-    private val simple = SIMPLE_TOOLS.associateWith { id -> simpleSelect(id) }
-    private val trailing = TRAILING_TOOLS.associateWith { id -> simpleSelect(id) }
 
     init {
         granular.forEach { (_, section) -> next(section) }
-
-        val rows = section(KiloBundle.message("settings.autoApprove.title"))
-        for (id in SIMPLE_TOOLS) {
-            rows.row(SettingsRow(toolTitle(id), KiloBundle.message("settings.autoApprove.tool.$id"), simple.getValue(id)))
-        }
-        rows.row(SettingsRow(
-            "Todoread / Todowrite",
-            KiloBundle.message("settings.autoApprove.tool.todoreadwrite"),
-            grouped,
-        ))
-        for (id in TRAILING_TOOLS) {
-            rows.row(SettingsRow(toolTitle(id), KiloBundle.message("settings.autoApprove.tool.$id"), trailing.getValue(id)))
-        }
+        section(KiloBundle.message("settings.autoApprove.title")).row(tools)
     }
 
     @RequiresEdt
     fun sync(draft: PermissionDraft, enabled: Boolean) {
         for ((id, section) in granular) section.sync(draft.rules[id], enabled)
-        for ((id, select) in simple) select.sync(effectiveLevel(draft, id), inheritedWildcard(draft.rules[id]), enabled)
-        grouped.sync(
-            mostRestrictive(GROUPED_IDS.map { effectiveLevel(draft, it) }),
-            GROUPED_IDS.all { inheritedWildcard(draft.rules[it]) },
-            enabled,
-        )
-        for ((id, select) in trailing) select.sync(effectiveLevel(draft, id), inheritedWildcard(draft.rules[id]), enabled)
+        tools.syncRows(toolRows(draft), enabled)
     }
 
     private fun granularSection(tool: String, kind: ExceptionKind): GranularToolSection {
-        val wildcardKey = if (kind == ExceptionKind.COMMAND) "commands" else "paths"
         val addKey = if (kind == ExceptionKind.COMMAND) "addCommand" else "addPath"
         val placeholderKey = if (kind == ExceptionKind.COMMAND) "placeholder.command" else "placeholder.path"
         return GranularToolSection(
             tool,
             KiloBundle.message("settings.autoApprove.tool.$tool"),
-            KiloBundle.message("settings.autoApprove.wildcardLabel.$wildcardKey"),
             KiloBundle.message("settings.autoApprove.$addKey"),
             KiloBundle.message("settings.autoApprove.$placeholderKey"),
+            picker,
             { level -> update { setWildcard(this, tool, level) } },
             { update { inheritWildcard(this, tool) } },
             { pattern -> update { addException(this, tool, pattern) } },
@@ -83,8 +63,43 @@ internal class AutoApproveContent(
         )
     }
 
-    private fun simpleSelect(tool: String): LevelSelect = LevelSelect(
-        { level -> update { setWildcard(this, tool, level) } },
-        { update { inheritWildcard(this, tool) } },
+    private fun toolRows(draft: PermissionDraft): List<PermissionListRow> = buildList {
+        for (id in SIMPLE_TOOLS) add(toolRow(draft, id))
+        add(groupedRow(draft))
+        for (id in TRAILING_TOOLS) add(toolRow(draft, id))
+    }
+
+    private fun toolRow(draft: PermissionDraft, tool: String) = PermissionListRow(
+        key = tool,
+        title = toolTitle(tool),
+        description = KiloBundle.message("settings.autoApprove.tool.$tool"),
+        level = effectiveLevel(draft, tool),
+        inherited = inheritedWildcard(draft.rules[tool]),
+        defaultLevel = defaultLevel(tool),
+        canInherit = true,
     )
+
+    private fun groupedRow(draft: PermissionDraft) = PermissionListRow(
+        key = GROUP_KEY,
+        title = "Todoread / Todowrite",
+        description = KiloBundle.message("settings.autoApprove.tool.todoreadwrite"),
+        level = mostRestrictive(GROUPED_IDS.map { effectiveLevel(draft, it) }),
+        inherited = GROUPED_IDS.all { inheritedWildcard(draft.rules[it]) },
+        defaultLevel = mostRestrictive(GROUPED_IDS.map(::defaultLevel)),
+        canInherit = true,
+    )
+
+    private fun setListTool(draft: PermissionDraft, key: String, level: String): PermissionDraft {
+        if (key == GROUP_KEY) return setGrouped(draft, GROUPED_IDS, level)
+        return setWildcard(draft, key, level)
+    }
+
+    private fun inheritListTool(draft: PermissionDraft, key: String): PermissionDraft {
+        if (key == GROUP_KEY) return inheritGrouped(draft, GROUPED_IDS)
+        return inheritWildcard(draft, key)
+    }
+
+    private companion object {
+        const val GROUP_KEY = "todoread+todowrite"
+    }
 }

@@ -16,6 +16,7 @@ internal class AutoApproveSettingsUi(
     cs: CoroutineScope,
     private val app: KiloAppService = service(),
     workspaces: KiloWorkspaceService = service(),
+    private val picker: LevelPicker = PopupLevelPicker,
 ) : BaseSettingsUi<AutoApproveContent, PermissionDraft, ConfigPatchDto, KiloAppStateDto, Unit>(
     cs,
     PermissionDraft(),
@@ -25,7 +26,7 @@ internal class AutoApproveSettingsUi(
     scroll = false,
 ) {
     init {
-        startSettings(AutoApproveContent { updateDraft(it) })
+        startSettings(AutoApproveContent({ updateDraft(it) }, picker))
     }
 
     override fun change(from: PermissionDraft, to: PermissionDraft): ConfigPatchDto? = patch(from, to)
