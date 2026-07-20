@@ -386,6 +386,27 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse(view.denyButtonForTest().isEnabled)
     }
 
+    fun `test responding state keeps buttons disabled when rules change`() {
+        view.show(
+            Permission(
+                id = "perm_responding_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+                state = PermissionRequestState.RESPONDING,
+            )
+        )
+
+        view.rulesForTest().update(listOf(PermissionRuleCandidate("git status", PermissionRuleDecision.APPROVED)))
+
+        assertFalse(view.runButtonForTest().isEnabled)
+        assertFalse(view.denyButtonForTest().isEnabled)
+    }
+
     fun `test responding state shows responding message`() {
         view.show(
             Permission(

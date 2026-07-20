@@ -43,6 +43,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var globalConfigExists = true
     var beforeLocalConfigTarget: (suspend () -> Unit)? = null
     var beforeGlobalConfigTarget: (suspend () -> Unit)? = null
+    var refreshConfigThrows: Exception? = null
     val fileCalls = CopyOnWriteArrayList<Pair<String, String>>()
     val searchQueries = CopyOnWriteArrayList<String>()
     val opened = CopyOnWriteArrayList<String>()
@@ -117,6 +118,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun refreshConfigFiles(directory: String) {
         assertNotEdt("refreshConfigFiles")
         refreshedConfigs.add(directory)
+        refreshConfigThrows?.let { throw it }
     }
 
     override suspend fun openLocalConfig(directory: String): Boolean {

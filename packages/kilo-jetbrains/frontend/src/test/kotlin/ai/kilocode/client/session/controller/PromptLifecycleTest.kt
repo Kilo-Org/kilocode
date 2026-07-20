@@ -563,6 +563,7 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         flush()
 
         assertTrue(rpc.permissionRulesSaved.isEmpty())
+        assertTrue(projectRpc.refreshedConfigs.isEmpty())
         assertEquals(1, rpc.permissionReplies.size)
     }
 

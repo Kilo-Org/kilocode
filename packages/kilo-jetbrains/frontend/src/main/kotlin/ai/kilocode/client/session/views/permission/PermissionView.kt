@@ -76,6 +76,7 @@ class PermissionView(
     override val sessionViewKind = SessionView.Kind.Default
 
     private var requestId: String? = null
+    private var responding = false
     private var style = SessionEditorStyle.current()
 
     private val card = BaseQuestionView(selection, focus)
@@ -125,11 +126,11 @@ class PermissionView(
         val target = if (tool == "bash") permission.meta.command else resolveTarget(permission)
         syncCode(tool, target)
         syncDiffs(permission.meta.fileDiffs)
+        responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
         rules.update(permission.meta.ruleDecisions, reset = prev != permission.id)
         syncState(permission)
         syncPrimaryText()
 
-        val responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
         syncButtons(responding)
         rules.setControlsEnabled(!responding)
 
@@ -141,6 +142,7 @@ class PermissionView(
     @RequiresEdt
     fun hideView() {
         requestId = null
+        responding = false
         disposeMd()
         diffViews.clear()
         diffRow.removeAll()
@@ -386,7 +388,7 @@ class PermissionView(
             ID_DENY,
             KiloBundle.message("session.permission.reject"),
         )
-        syncButtons(false)
+        syncButtons(responding)
     }
 
     private fun refresh() {

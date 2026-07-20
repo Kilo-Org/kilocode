@@ -216,12 +216,17 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
-    fun refreshConfigFiles(directory: String) {
-        cs.launch {
-            call { refreshConfigFiles(directory) }
-            localConfigTarget(directory)
-            globalConfigTarget()
-            ActivityTracker.getInstance().inc()
+    fun refreshConfigFiles(directory: String): Job {
+        return cs.launch {
+            try {
+                call { refreshConfigFiles(directory) }
+                localConfigTarget(directory)
+                globalConfigTarget()
+            } catch (e: Exception) {
+                LOG.warn("config file refresh failed for directory=$directory", e)
+            } finally {
+                ActivityTracker.getInstance().inc()
+            }
         }
     }
 

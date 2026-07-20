@@ -1166,7 +1166,8 @@ object KiloCliDataParser {
         }?.toMap() ?: emptyMap()
         val path = metaObj.path()
         val diffs = metaObj.permissionDiffs(path)
-        val rules = metaObj.rules()
+        val rawRules = metaObj.ruleDecisions()
+        val rules = rawRules.map { it.pattern }
         return PermissionRequestDto(
             id = id,
             sessionID = sid,
@@ -1178,7 +1179,7 @@ object KiloCliDataParser {
             message = obj.str("message") ?: metaObj?.str("message"),
             command = metaObj?.str("command") ?: obj.str("command"),
             rules = rules,
-            ruleDecisions = metaObj.ruleDecisions(rules.ifEmpty { always }),
+            ruleDecisions = rawRules.ifEmpty { always.map { PermissionRuleDecisionDto(it) } },
             filePath = path,
             fileDiffs = diffs,
         )
@@ -1596,29 +1597,9 @@ private fun JsonObject?.path(): String? {
     return str("filepath") ?: str("filePath") ?: str("file") ?: str("path")
 }
 
-private fun JsonObject?.rules(): List<String> {
+private fun JsonObject?.ruleDecisions(): List<PermissionRuleDecisionDto> {
     if (this == null) return emptyList()
     val raw = this["rules"] ?: return emptyList()
-    val arr = raw.arr()
-    if (arr != null) {
-        return arr.mapNotNull { elem ->
-            val obj = elem.obj()
-            if (obj != null) return@mapNotNull obj.str("pattern") ?: obj.str("rule") ?: obj.str("text")
-            runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull()
-        }
-    }
-    val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return emptyList()
-    if (text.startsWith("[")) {
-        return runCatching {
-            KiloCliDataParser.parseRulesJson(text)
-        }.getOrElse { listOf(text) }
-    }
-    return listOf(text)
-}
-
-private fun JsonObject?.ruleDecisions(fallback: List<String>): List<PermissionRuleDecisionDto> {
-    if (this == null) return fallback.map { PermissionRuleDecisionDto(it) }
-    val raw = this["rules"] ?: return fallback.map { PermissionRuleDecisionDto(it) }
     val arr = raw.arr()
     if (arr != null) {
         return arr.mapNotNull { elem ->
@@ -1632,7 +1613,7 @@ private fun JsonObject?.ruleDecisions(fallback: List<String>): List<PermissionRu
             PermissionRuleDecisionDto(pattern)
         }
     }
-    val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return fallback.map { PermissionRuleDecisionDto(it) }
+    val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return emptyList()
     if (text.startsWith("[")) return KiloCliDataParser.parseRulesJson(text).map { PermissionRuleDecisionDto(it) }
     return listOf(PermissionRuleDecisionDto(text))
 }
