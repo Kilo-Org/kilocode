@@ -845,7 +845,6 @@
   },
   "trustedDependencies": [
     "esbuild",
-    "tree-sitter-powershell",
     "protobufjs",
     "web-tree-sitter",
     "tree-sitter-bash",
