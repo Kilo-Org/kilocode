@@ -1,7 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
-import * as Log from "@opencode-ai/core/util/log"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import { Deferred, Effect, Layer, Context } from "effect"
 import os from "os"
@@ -21,8 +21,6 @@ import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // 
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 import { IgnorePermission } from "@/kilocode/permission/ignore"
 // kilocode_change end
-
-const log = Log.create({ service: "permission" })
 
 export const Event = {
   Asked: EventV2.define({ type: "permission.asked", schema: PermissionV1.Request.fields }),
@@ -219,9 +217,9 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change - include session-scoped rules
-        log.info("evaluated", { permission: request.permission, pattern, action: rule })
-        // kilocode_change start - saved/session approvals cannot override hard Ask/Plan denials
+        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
+        // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
           return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
         }
@@ -263,21 +261,21 @@ export const layer = Layer.effect(
         always: skill ? [skill] : request.always, // kilocode_change - persist only the exact global skill subtree
         tool: request.tool,
       }
-      log.info("asking", { id, permission: info.permission, patterns: info.patterns })
+      yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
+      // kilocode_change start - policies may change while a permission prompt is pending
       return yield* Effect.ensuring(
-        // kilocode_change start - policies may change while a permission prompt is pending
         Deferred.await(deferred).pipe(
           Effect.andThen(IgnorePermission.assert({ ctx, permission: input.permission, patterns: input.patterns })),
         ),
-        // kilocode_change end
         Effect.sync(() => {
           pending.delete(id)
         }),
       )
+      // kilocode_change end
     })
 
     const reply = Effect.fn("Permission.reply")(function* (input: PermissionV1.ReplyInput) {
@@ -528,5 +526,7 @@ export function toConfig(rules: Ruleset): ConfigPermissionV1.Info {
   return result
 }
 // kilocode_change end
+
+export const node = LayerNode.make(layer, [EventV2Bridge.node, Config.node, Database.node]) // kilocode_change
 
 export * as Permission from "."

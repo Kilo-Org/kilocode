@@ -202,6 +202,10 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    task: {
+      "*": "allow",
+      general: "deny",
+    },
     bash: readOnlyBash,
     read: {
       "*": "allow",
@@ -263,6 +267,8 @@ export function cacheKey(cfg: Config.Info) {
     mode: cfg.mode,
     permission: cfg.permission,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
+    references: cfg.references,
+    reference: cfg.reference,
   })
 }
 

@@ -18,7 +18,7 @@ import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-import { Reference } from "../../src/reference/reference"
+import { Reference } from "@opencode-ai/core/reference"
 import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -136,12 +136,8 @@ const llm = Layer.unwrap(
   }),
 )
 
-const reference = Layer.mock(Reference.Service)({
-  init: () => Effect.void,
+const reference = Layer.mock(Reference.Service, {
   list: () => Effect.succeed([]),
-  get: () => Effect.succeed(undefined),
-  ensure: () => Effect.void,
-  contains: () => Effect.succeed(false),
 })
 const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)

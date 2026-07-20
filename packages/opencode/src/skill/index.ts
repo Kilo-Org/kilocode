@@ -1,3 +1,4 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Effect, Layer, Context, Schema } from "effect"
@@ -13,7 +14,6 @@ import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { ConfigMarkdown } from "@/config/markdown"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Glob } from "@opencode-ai/core/util/glob"
-import * as Log from "@opencode-ai/core/util/log"
 import { Discovery } from "./discovery"
 import { BUILTIN_SKILLS } from "../kilocode/skills/builtin" // kilocode_change
 import { primaryPaths } from "../kilocode/primary-worktree" // kilocode_change
@@ -22,7 +22,6 @@ import { isRecord } from "@/util/record"
 import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 import { IgnorePermission } from "@/kilocode/permission/ignore"
 
-const log = Log.create({ service: "skill" })
 const CLAUDE_EXTERNAL_DIR = ".claude"
 const AGENTS_EXTERNAL_DIR = ".agents"
 // kilocode_change start
@@ -136,7 +135,7 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, events: Eve
         const message = FrontmatterError.isInstance(err) ? err.data.message : `Failed to parse skill ${match.path}` // kilocode_change
         const { Session } = yield* Effect.promise(() => import("@/session/session"))
         yield* events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
-        log.error("failed to load skill", { skill: match.path, err }) // kilocode_change
+        yield* Effect.logError("failed to load skill", { skill: match.path, error: err }) // kilocode_change
         return undefined
       }),
     ),
@@ -147,7 +146,7 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, events: Eve
   if (!isSkillFrontmatter(md.data)) return
 
   if (state.skills[md.data.name]) {
-    log.warn("duplicate skill name", {
+    yield* Effect.logWarning("duplicate skill name", {
       name: md.data.name,
       existing: state.skills[md.data.name].location,
       duplicate: match.path, // kilocode_change
@@ -182,8 +181,9 @@ const scan = Effect.fnUntraced(function* (
   }).pipe(
     Effect.catch((error) => {
       if (!opts?.scope) return Effect.die(error)
-      log.error(`failed to scan ${opts.scope} skills`, { dir: root, error })
-      return Effect.succeed([] as string[])
+      return Effect.logError(`failed to scan ${opts.scope} skills`, { dir: root, error: error }).pipe(
+        Effect.as([] as string[]),
+      )
     }),
   )
 
@@ -267,7 +267,7 @@ const discoverSkills = Effect.fnUntraced(function* (
     const expanded = item.startsWith("~/") ? path.join(global.home, item.slice(2)) : item
     const dir = path.isAbsolute(expanded) ? expanded : path.join(directory, expanded)
     if (!(yield* fsys.isDir(dir))) {
-      log.warn("skill path not found", { path: dir })
+      yield* Effect.logWarning("skill path not found", { path: dir })
       continue
     }
 
@@ -309,7 +309,7 @@ const loadSkills = Effect.fnUntraced(function* (
 
   for (const match of discovered.matches) yield* add(state, match, events) // kilocode_change
 
-  log.info("init", { count: Object.keys(state.skills).length })
+  yield* Effect.logInfo("init", { count: Object.keys(state.skills).length })
 })
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Skill") {}
@@ -414,5 +414,15 @@ export function fmt(list: Info[], opts: { verbose: boolean }) {
       .map((skill) => `- **${skill.name}**: ${skill.description}`),
   ].join("\n")
 }
+
+export const node = LayerNode.make(layer, [
+  Discovery.node,
+  Config.node,
+  EventV2Bridge.node,
+  FSUtil.node,
+  Global.node,
+  RuntimeFlags.node,
+  Git.node, // kilocode_change
+])
 
 export * as Skill from "."
