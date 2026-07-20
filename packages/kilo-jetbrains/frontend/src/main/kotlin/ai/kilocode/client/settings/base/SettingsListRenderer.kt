@@ -68,7 +68,7 @@ internal class SettingsListRenderer(
         selected: Boolean,
         focused: Boolean,
     ): JPanel {
-        val active = selected && list.hasFocus()
+        val active = selected && (list.hasFocus() || (list as? SettingsListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = if (active) fg else UiStyle.Colors.weak()
         val current = model.items.getOrNull(index)
@@ -130,6 +130,10 @@ internal class SettingsListRenderer(
             (cells.getComponent(i) as SettingsListActionCell).update(visible[i])
         }
     }
+}
+
+internal interface SettingsListActive {
+    fun active(): Boolean
 }
 
 internal class SettingsListActionCell : JBLabel() {

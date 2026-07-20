@@ -40,7 +40,10 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private lateinit var workspaces: KiloWorkspaceService
     private var ui: AutoApproveSettingsUi? = null
     private var pick: (List<LevelChoice>) -> LevelChoice = { it.first() }
-    private val picker = LevelPicker { _, _, choices, choose -> choose(pick(choices)) }
+    private val picker = LevelPicker { choices, choose ->
+        choose(pick(choices))
+        null
+    }
 
     override fun setUp() {
         super.setUp()

@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.settingsListCellBounds
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -148,14 +149,10 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         var offered: List<LevelChoice> = emptyList()
             private set
 
-        override fun show(
-            anchor: JComponent,
-            at: Point,
-            choices: List<LevelChoice>,
-            choose: (LevelChoice) -> Unit,
-        ) {
+        override fun popup(choices: List<LevelChoice>, choose: (LevelChoice) -> Unit): JBPopup? {
             offered = choices
             choose(select(choices))
+            return null
         }
     }
 

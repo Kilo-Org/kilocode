@@ -19,7 +19,7 @@ import java.awt.event.MouseEvent
 import javax.swing.SwingUtilities
 
 class SettingsListViewTest : BasePlatformTestCase() {
-    fun `test list owns formatted description tooltip`() {
+    fun `test list does not duplicate description in tooltip`() {
         edt {
             val view = SettingsListView("Empty") { _, _ -> }
             val row = item("with", "Alpha", "Use <safe> text\nAcross lines")
@@ -31,25 +31,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val bounds = view.list.getCellBounds(0, 0)
             val tip = view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4)))
 
-            assertNotNull(tip)
-            assertTrue(tip, tip!!.startsWith("<html>"))
-            assertTrue(tip, tip.contains("Use &lt;safe&gt; text"))
-            assertTrue(tip, tip.contains("<br>Across lines"))
-        }
-    }
-
-    fun `test list description tooltip ignores blank rows and outside points`() {
-        edt {
-            val view = SettingsListView("Empty") { _, _ -> }
-            view.update(listOf(item("without", "Beta", null)))
-            view.list.size = Dimension(320, 80)
-            view.list.doLayout()
-            UIUtil.dispatchAllInvocationEvents()
-
-            val bounds = view.list.getCellBounds(0, 0)
-
-            assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
-            assertNull(view.list.getToolTipText(event(view.list, Point(4, bounds.y + bounds.height + 20))))
+            assertNull(tip)
         }
     }
 
@@ -249,6 +231,22 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
             assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
+    fun `test active popup paints selected row as active without focus`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = object : JBList<SettingsListItem>(model), SettingsListActive {
+                override fun active(): Boolean = true
+            }
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
+            assertEquals(UIUtil.getListForeground(true, true), desc.foreground)
         }
     }
 

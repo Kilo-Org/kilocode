@@ -8,6 +8,7 @@ import com.intellij.openapi.actionSystem.ActionToolbar
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -60,6 +61,12 @@ internal abstract class SettingsInlineListPanel(
     fun filter(query: String) {
         checkEdt()
         view.filter(query)
+    }
+
+    @RequiresEdt
+    protected fun trackPopup(popup: JBPopup) {
+        checkEdt()
+        view.trackPopup(popup)
     }
 
     @RequiresEdt

@@ -10,6 +10,7 @@ import ai.kilocode.client.settings.base.settingsListCellBounds
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupFactory
 import com.intellij.ui.SimpleListCellRenderer
 import com.intellij.ui.awt.RelativePoint
@@ -38,18 +39,16 @@ internal sealed interface LevelChoice {
  * cell; tests substitute a picker that resolves a choice directly.
  */
 internal fun interface LevelPicker {
-    fun show(anchor: JComponent, at: Point, choices: List<LevelChoice>, choose: (LevelChoice) -> Unit)
+    fun popup(choices: List<LevelChoice>, choose: (LevelChoice) -> Unit): JBPopup?
 }
 
 internal object PopupLevelPicker : LevelPicker {
-    override fun show(anchor: JComponent, at: Point, choices: List<LevelChoice>, choose: (LevelChoice) -> Unit) {
+    override fun popup(choices: List<LevelChoice>, choose: (LevelChoice) -> Unit): JBPopup =
         JBPopupFactory.getInstance()
             .createPopupChooserBuilder(choices)
             .setRenderer(SimpleListCellRenderer.create("") { levelChoiceLabel(it) })
             .setItemChosenCallback(choose)
             .createPopup()
-            .show(RelativePoint(anchor, at))
-    }
 }
 
 internal fun levelChoiceLabel(choice: LevelChoice): String = when (choice) {
@@ -142,9 +141,9 @@ internal class SettingsInlineList(
         val item = item(key) ?: return
         val idx = index(key) ?: return
         val bounds = settingsListCellBounds(view.list, idx, idx == view.list.selectedIndex)[LEVEL_CELL] ?: return
-        picker.show(view.list, Point(bounds.x, bounds.y + bounds.height), choices(item.row)) { choice ->
-            choose(key, choice)
-        }
+        val popup = picker.popup(choices(item.row)) { choice -> choose(key, choice) } ?: return
+        trackPopup(popup)
+        popup.show(RelativePoint(view.list, Point(bounds.x, bounds.y + bounds.height)))
     }
 
     private fun item(key: String): PermissionItem? {

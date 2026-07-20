@@ -2,11 +2,13 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.session.ui.model.ModelSearch
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupListener
+import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.xml.util.XmlStringUtil
 import com.intellij.util.ui.UIUtil
 import java.awt.event.KeyEvent
 import java.awt.event.FocusAdapter
@@ -24,17 +26,8 @@ internal class SettingsListView(
     private val onCell: (String, String) -> Unit,
 ) : BaseContentPanel() {
     private val model = CollectionListModel<SettingsListItem>()
-    internal val list = object : JBList<SettingsListItem>(model) {
-        override fun getToolTipText(event: MouseEvent): String? {
-            if (!cfg.description) return null
-            val idx = locationToIndex(event.point)
-            if (idx < 0) return null
-            val bounds = getCellBounds(idx, idx) ?: return null
-            if (!bounds.contains(event.point)) return null
-            val note = model.getElementAt(idx).description?.takeIf { it.isNotBlank() } ?: return null
-            val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
-            return XmlStringUtil.wrapInHtml(text)
-        }
+    internal val list: JBList<SettingsListItem> = object : JBList<SettingsListItem>(model), SettingsListActive {
+        override fun active(): Boolean = popups > 0
     }.apply {
         selectionMode = ListSelectionModel.SINGLE_SELECTION
         setExpandableItemsEnabled(false)
@@ -43,6 +36,7 @@ internal class SettingsListView(
     private var items = emptyList<SettingsListItem>()
     private var filter = ""
     private var press: Press? = null
+    private var popups = 0
     internal var onSelect: (() -> Unit)? = null
 
     fun setEmptyText(text: String) {
@@ -134,6 +128,29 @@ internal class SettingsListView(
         if (list.isEnabled == !value) return
         list.isEnabled = !value
         list.repaint()
+    }
+
+    @RequiresEdt
+    fun trackPopup(popup: JBPopup) {
+        checkEdt()
+        var tracked = false
+        fun activate() {
+            if (tracked) return
+            tracked = true
+            popups++
+            list.repaint()
+        }
+        popup.addListener(object : JBPopupListener {
+            override fun beforeShown(event: LightweightWindowEvent) = activate()
+
+            override fun onClosed(event: LightweightWindowEvent) {
+                if (!tracked) return
+                tracked = false
+                popups = maxOf(0, popups - 1)
+                list.repaint()
+            }
+        })
+        if (popup.isVisible) activate()
     }
 
     @RequiresEdt
