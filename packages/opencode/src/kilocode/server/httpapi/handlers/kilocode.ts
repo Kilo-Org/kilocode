@@ -14,6 +14,7 @@ import { ModelUsage } from "@/kilocode/session/model-usage"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Skill } from "@/skill"
+import { ProviderUsage } from "@/kilocode/provider-usage"
 import type { SessionID } from "@/session/schema"
 import {
   AgentManagerRejectPayload,
@@ -32,7 +33,7 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
     const store = yield* InstanceStore.Service
     const manager = yield* AgentManager.Service
     const notebook = yield* Notebook.Service
-
+    const usage = yield* ProviderUsage.Service
     const heapSnapshot = Effect.fn("KilocodeHttpApi.heapSnapshot")(function* () {
       return yield* Effect.sync(() => HeapSnapshot.write())
     })
@@ -73,6 +74,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       )
       yield* store.dispose(instance)
       return true
+    })
+
+    const providerUsage = Effect.fn("KilocodeHttpApi.providerUsage")(function* () {
+      return yield* usage.get().pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
+    })
+
+    const providerUsageRefresh = Effect.fn("KilocodeHttpApi.providerUsageRefresh")(function* () {
+      return yield* usage.refresh().pipe(Effect.mapError(() => new HttpApiError.ServiceUnavailable({})))
     })
 
     const notebookList = Effect.fn("KilocodeHttpApi.notebookList")(function* () {
@@ -138,6 +147,8 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       .handle("agentRequirements", agentRequirements)
       .handle("removeSkill", removeSkill)
       .handle("removeAgent", removeAgent)
+      .handle("providerUsage", providerUsage)
+      .handle("providerUsageRefresh", providerUsageRefresh)
       .handle("notebookList", notebookList)
       .handle("notebookReply", notebookReply)
       .handle("notebookReject", notebookReject)

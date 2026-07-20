@@ -11,10 +11,15 @@
   <!-- packages/opencode/src/plugin/digitalocean.ts -->
 - <https://api.kilo.ai>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
+- <https://api.minimax.io/v1/token_plan/remains>
+  <!-- packages/opencode/src/kilocode/provider/minimax/usage.ts -->
+- <https://api.minimaxi.com/v1/token_plan/remains>
+  <!-- packages/opencode/src/kilocode/provider/minimax/usage.ts -->
 - <https://api.x.ai/v1>
   <!-- packages/opencode/src/plugin/xai.ts -->
 - <https://app.kilo.ai>
   <!-- packages/opencode/src/kilocode/kilo-commands.tsx -->
+  <!-- packages/opencode/src/kilocode/provider-usage/cloud.ts -->
 - <https://app.kilo.ai/claw>
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/SetupView.tsx -->
   <!-- packages/kilo-vscode/webview-ui/kiloclaw/components/UpgradeView.tsx -->
@@ -160,6 +165,10 @@
   <!-- packages/opencode/src/kilocode/session/index.ts -->
 - <https://opncd.ai>
   <!-- packages/opencode/src/share/share-next.ts -->
+- <https://platform.minimax.io/subscribe/token-plan>
+  <!-- packages/opencode/src/kilocode/provider/minimax/usage.ts -->
+- <https://platform.minimaxi.com/subscribe/token-plan>
+  <!-- packages/opencode/src/kilocode/provider/minimax/usage.ts -->
 - <https://reddit.com/r/kilocode>
   <!-- packages/kilo-vscode/webview-ui/src/components/settings/AboutKiloCodeTab.tsx -->
 - <https://search.parallel.ai/mcp>

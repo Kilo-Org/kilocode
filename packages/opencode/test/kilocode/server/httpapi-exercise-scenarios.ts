@@ -575,6 +575,14 @@ export const kiloScenarios: Scenario[] = [
         check(!(yield* Effect.promise(() => Bun.file(location).exists())), "removed agent should not remain on disk")
       }),
     ),
+  http.protected.get("/kilocode/provider-usage", "kilocode.providerUsage.get").json(200, (body) => {
+    object(body)
+    array(body.items)
+  }),
+  http.protected.post("/kilocode/provider-usage/refresh", "kilocode.providerUsage.refresh").json(200, (body) => {
+    object(body)
+    array(body.items)
+  }),
   http.protected
     .post("/kilocode/agent/remove", "kilocode.removeAgent")
     .at((ctx) => ({ path: "/kilocode/agent/remove", headers: ctx.headers(), body: { name: "httpapi-missing" } }))

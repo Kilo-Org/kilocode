@@ -15038,6 +15038,134 @@
         ]
       }
     },
+    "/kilocode/provider-usage": {
+      "get": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.get",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Get cache-aware, secret-free provider plan usage and personal billing status.",
+        "summary": "Get provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.get({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/kilocode/provider-usage/refresh": {
+      "post": {
+        "tags": ["kilocode"],
+        "operationId": "kilocode.providerUsage.refresh",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Refreshed provider usage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderUsage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ServiceUnavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/effect_HttpApiError_ServiceUnavailable"
+                }
+              }
+            }
+          }
+        },
+        "description": "Refresh provider plan usage while coalescing concurrent source requests.",
+        "summary": "Refresh provider usage",
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.kilocode.providerUsage.refresh({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/kilocode/notebook": {
       "get": {
         "tags": ["kilocode"],
@@ -32968,6 +33096,283 @@
           }
         },
         "required": ["agent", "directory", "enabled", "state", "skills", "mcps", "vscode_extensions"],
+        "additionalProperties": false
+      },
+      "ProviderUsageWindow": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "resource": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["quota", "spend_control"]
+          },
+          "unit": {
+            "type": "string"
+          },
+          "orientation": {
+            "type": "string",
+            "enum": ["used_percent", "remaining_percent", "amount", "count"]
+          },
+          "used": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
+          },
+          "durationMs": {
+            "type": "number"
+          },
+          "resetAt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": ["active", "exhausted", "unlimited", "not_in_plan", "unknown"]
+          }
+        },
+        "required": ["id", "label", "resource", "kind", "unit", "orientation", "state"],
+        "additionalProperties": false
+      },
+      "ProviderUsageBalance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string"
+          },
+          "granted": {
+            "type": "string"
+          },
+          "toppedUp": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "label", "currency", "unit", "total"],
+        "additionalProperties": false
+      },
+      "ProviderUsageCredit": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "balance": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unlimited": {
+            "type": "boolean"
+          },
+          "availableResets": {
+            "type": "number"
+          }
+        },
+        "required": ["id", "label"],
+        "additionalProperties": false
+      },
+      "ProviderUsageError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": ["code", "message", "retryable"],
+        "additionalProperties": false
+      },
+      "ProviderUsageSnapshot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "providerID": {
+            "type": "string"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": ["kilo_managed", "direct", "codex"]
+          },
+          "providerLabel": {
+            "type": "string"
+          },
+          "planLabel": {
+            "type": "string"
+          },
+          "sourceLabel": {
+            "type": "string"
+          },
+          "accountLabel": {
+            "type": "string"
+          },
+          "fetchState": {
+            "type": "string",
+            "enum": ["ready", "stale", "unavailable", "error"]
+          },
+          "planState": {
+            "type": "string",
+            "enum": ["active", "past_due", "canceling", "unknown"]
+          },
+          "routingState": {
+            "type": "string",
+            "enum": ["active", "disabled", "missing", "replaced", "not_applicable", "unknown"]
+          },
+          "availabilityState": {
+            "type": "string",
+            "enum": ["available", "exhausted", "unavailable", "unlimited", "unknown"]
+          },
+          "fetchedAt": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "source": {
+            "type": "string",
+            "enum": ["cloud", "provider_api", "provider_backend"]
+          },
+          "managementUrl": {
+            "type": "string"
+          },
+          "windows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageWindow"
+            }
+          },
+          "balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageBalance"
+            }
+          },
+          "credits": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageCredit"
+            }
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProviderUsageError"
+          }
+        },
+        "required": [
+          "id",
+          "providerID",
+          "sourceKind",
+          "providerLabel",
+          "planLabel",
+          "sourceLabel",
+          "fetchState",
+          "planState",
+          "routingState",
+          "availabilityState",
+          "confidence",
+          "source",
+          "windows",
+          "balances",
+          "credits"
+        ],
+        "additionalProperties": false
+      },
+      "ProviderUsageAutoTopUp": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "amountCents": {
+            "type": "number"
+          },
+          "thresholdCents": {
+            "type": "number"
+          },
+          "paymentType": {
+            "type": "string"
+          },
+          "paymentBrand": {
+            "type": "string"
+          },
+          "paymentLast4": {
+            "type": "string"
+          }
+        },
+        "required": ["enabled", "amountCents", "thresholdCents"],
+        "additionalProperties": false
+      },
+      "ProviderUsageKiloBilling": {
+        "type": "object",
+        "properties": {
+          "topUpUrl": {
+            "type": "string"
+          },
+          "manageUrl": {
+            "type": "string"
+          },
+          "autoTopUp": {
+            "$ref": "#/components/schemas/ProviderUsageAutoTopUp"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ProviderUsageError"
+          }
+        },
+        "required": ["topUpUrl", "manageUrl"],
+        "additionalProperties": false
+      },
+      "ProviderUsage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderUsageSnapshot"
+            }
+          },
+          "kiloBilling": {
+            "$ref": "#/components/schemas/ProviderUsageKiloBilling"
+          },
+          "generatedAt": {
+            "type": "string"
+          }
+        },
+        "required": ["items", "generatedAt"],
         "additionalProperties": false
       },
       "NotebookOutput": {

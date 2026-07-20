@@ -67,6 +67,19 @@ export {
   type OrganizationModeConfig,
 } from "./api/modes.js"
 export { fetchKilocodeNotifications, type KilocodeNotification } from "./api/notifications.js"
+export {
+  CloudTrpcError,
+  MiniMaxNativeUsageSchema,
+  getAutoTopUpState,
+  getCodingPlanUsage,
+  listByokEntries,
+  listCodingPlanSubscriptions,
+  type AutoTopUpState,
+  type ByokEntry,
+  type CodingPlanSubscription,
+  type CodingPlanUsage,
+  type MiniMaxNativeUsage,
+} from "./api/trpc.js"
 export { fetchCloudSession, fetchCloudSessionForImport, importSessionToDb } from "./cloud-sessions.js"
 
 // ============================================================================

@@ -191,6 +191,10 @@ import type {
   KilocodeNotebookRejectResponses,
   KilocodeNotebookReplyErrors,
   KilocodeNotebookReplyResponses,
+  KilocodeProviderUsageGetErrors,
+  KilocodeProviderUsageGetResponses,
+  KilocodeProviderUsageRefreshErrors,
+  KilocodeProviderUsageRefreshResponses,
   KilocodeRemoveAgentErrors,
   KilocodeRemoveAgentResponses,
   KilocodeRemoveSkillErrors,
@@ -7346,6 +7350,76 @@ export class Heap extends HeyApiClient {
   }
 }
 
+export class ProviderUsage extends HeyApiClient {
+  /**
+   * Get provider usage
+   *
+   * Get cache-aware, secret-free provider plan usage and personal billing status.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      KilocodeProviderUsageGetResponses,
+      KilocodeProviderUsageGetErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Refresh provider usage
+   *
+   * Refresh provider plan usage while coalescing concurrent source requests.
+   */
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      KilocodeProviderUsageRefreshResponses,
+      KilocodeProviderUsageRefreshErrors,
+      ThrowOnError
+    >({
+      url: "/kilocode/provider-usage/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Notebook extends HeyApiClient {
   /**
    * List pending notebook requests
@@ -8128,6 +8202,11 @@ export class Kilocode extends HeyApiClient {
   private _heap?: Heap
   get heap(): Heap {
     return (this._heap ??= new Heap({ client: this.client }))
+  }
+
+  private _providerUsage?: ProviderUsage
+  get providerUsage(): ProviderUsage {
+    return (this._providerUsage ??= new ProviderUsage({ client: this.client }))
   }
 
   private _notebook?: Notebook

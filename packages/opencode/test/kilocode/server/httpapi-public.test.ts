@@ -152,6 +152,8 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.tuiConfig },
       { method: "get", path: ConfigConsolePaths.tuiKeybinds },
       { method: "patch", path: ConfigConsolePaths.tuiConfig },
+      { method: "get", path: KilocodePaths.providerUsage },
+      { method: "post", path: KilocodePaths.providerUsageRefresh },
       { method: "get", path: KilocodePaths.sessionModelUsage },
       { method: "post", path: BranchNamePaths.generate },
       { method: "get", path: MemoryPaths.status },
@@ -236,5 +238,36 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     const body = spec.paths[KiloGatewayPaths.audioTranscriptions]?.post?.requestBody as Body | undefined
     const schema = body?.content?.["application/json"]?.schema
     expect(schema?.properties?.prompt).toEqual({ type: "string" })
+  })
+
+  test("keeps provider usage flat and credential-free", () => {
+    const spec = OpenApi.fromApi(PublicApi)
+    const schemas = (spec.components?.schemas ?? {}) as Record<string, Schema>
+    const usage = Object.fromEntries(Object.entries(schemas).filter(([name]) => name.startsWith("ProviderUsage")))
+    const keys = (value: unknown): string[] => {
+      if (Array.isArray(value)) return value.flatMap(keys)
+      if (!value || typeof value !== "object") return []
+      return Object.entries(value).flatMap(([key, item]) => [key, ...keys(item)])
+    }
+    const fields = keys(usage).map((key) => key.toLowerCase())
+
+    expect(spec.paths[KilocodePaths.providerUsage]?.get?.responses?.["200"]).toBeDefined()
+    expect(spec.paths[KilocodePaths.providerUsageRefresh]?.post?.responses?.["200"]).toBeDefined()
+    expect(schemas.ProviderUsageBalance?.properties?.total).toEqual({ type: "string" })
+    expect(schemas.ProviderUsageCredit?.properties?.balance).toEqual({ type: "string" })
+    for (const forbidden of [
+      "key",
+      "token",
+      "authorization",
+      "raw",
+      "endpoint",
+      "stripepaymentmethodid",
+      "inventoryid",
+      "upstreamplanid",
+      "fingerprint",
+      "ciphertext",
+    ]) {
+      expect(fields, forbidden).not.toContain(forbidden)
+    }
   })
 })

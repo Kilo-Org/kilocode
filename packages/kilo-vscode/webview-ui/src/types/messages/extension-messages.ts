@@ -22,6 +22,7 @@ import type { AgentInfo, AgentRequirementResult, SkillInfo, SlashCommandInfo } f
 import type { BrowserSettings, Config, FeatureFlags, IndexingStatus, KiloEmbeddingModelCatalog } from "./config"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { KilocodeNotification, ProfileData } from "./profile"
+import type { ProviderUsageLoadedMessage } from "./provider-usage"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
@@ -1121,6 +1122,7 @@ export type ExtensionMessage =
   | GitRemoteUrlLoadedMessage
   | ActionMessage
   | ProfileDataMessage
+  | ProviderUsageLoadedMessage
   | DeviceAuthStartedMessage
   | DeviceAuthCompleteMessage
   | DeviceAuthFailedMessage

@@ -18,6 +18,7 @@ import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
 import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
 import { DialogIndexing } from "./components/dialog-indexing.js"
+import { DialogProviderUsage } from "./components/dialog-provider-usage.js"
 import { indexingEnabled } from "./indexing-feature"
 import { refreshBalance } from "./balance-refresh"
 
@@ -122,6 +123,18 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
           } catch (error) {
             dialog.replace(() => <DialogAlert title="Error" message={`Failed to toggle remote: ${error}`} />)
           }
+        },
+      },
+
+      {
+        name: "kilo.usage",
+        title: "Plans & usage",
+        desc: "View provider plans, quota, and balances",
+        category: "Kilo",
+        slashName: "usage",
+        slashAliases: ["plans", "quota"],
+        run: () => {
+          dialog.replace(() => <DialogProviderUsage useSDK={useSDK} />)
         },
       },
 

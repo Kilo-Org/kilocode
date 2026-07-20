@@ -1,0 +1,186 @@
+/* Provider Usage Cards */
+.provider-usage-section {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-weak-base);
+}
+
+.provider-usage-section-heading,
+.provider-usage-heading,
+.provider-usage-row-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.provider-usage-section-heading {
+  margin-bottom: 12px;
+}
+
+.provider-usage-section-heading h3 {
+  margin: 0;
+  font-size: var(--kilo-font-size-14);
+  font-weight: 650;
+  color: var(--vscode-foreground);
+}
+
+.provider-usage-section-heading p,
+.provider-usage-meta,
+.provider-usage-notice {
+  margin: 3px 0 0;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+  line-height: 1.45;
+}
+
+.provider-usage-list,
+.provider-usage-resources {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.provider-usage-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-usage-heading [data-slot="card-title"] {
+  font-size: var(--kilo-font-size-13);
+}
+
+.provider-usage-row {
+  display: grid;
+  gap: 5px;
+}
+
+.provider-usage-row-heading {
+  align-items: baseline;
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-12);
+}
+
+.provider-usage-row-heading strong {
+  text-align: right;
+  font-weight: 600;
+}
+
+.kilo-pass-usage-track {
+  position: relative;
+  height: 8px;
+  overflow: visible;
+  border-radius: 4px;
+  background: var(--border-weak-base);
+}
+
+.kilo-pass-usage-paid-background,
+.kilo-pass-usage-bonus-background,
+.kilo-pass-usage-paid-fill,
+.kilo-pass-usage-bonus-fill {
+  position: absolute;
+  inset-block: 0;
+}
+
+.kilo-pass-usage-paid-background {
+  left: 0;
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground, #cca700) 18%, transparent);
+}
+
+.kilo-pass-usage-bonus-background {
+  background: color-mix(in srgb, var(--vscode-testing-iconPassed, #73c991) 18%, transparent);
+}
+
+.kilo-pass-usage-paid-fill {
+  left: 0;
+  border-radius: 4px 0 0 4px;
+  background: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.kilo-pass-usage-bonus-fill {
+  border-radius: 0 4px 4px 0;
+  background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.kilo-pass-usage-boundary {
+  position: absolute;
+  top: 100%;
+  width: 2px;
+  height: 5px;
+  margin-left: -1px;
+  background: var(--vscode-descriptionForeground);
+}
+
+.kilo-pass-usage-amounts {
+  position: relative;
+  height: 15px;
+  color: var(--vscode-editorWarning-foreground, #cca700);
+  font-size: var(--kilo-font-size-11);
+  font-weight: 600;
+}
+
+.kilo-pass-usage-amounts > span {
+  position: absolute;
+  transform: translateX(-50%);
+}
+
+.kilo-pass-usage-amounts .kilo-pass-usage-bonus-amount {
+  right: 0;
+  left: auto !important;
+  color: var(--vscode-testing-iconPassed, #73c991);
+  transform: none;
+}
+
+.kilo-pass-usage-legend,
+.kilo-pass-usage-legend > span {
+  display: flex;
+  align-items: center;
+}
+
+.kilo-pass-usage-legend {
+  justify-content: space-between;
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-11);
+}
+
+.kilo-pass-usage-legend > span {
+  gap: 6px;
+}
+
+.kilo-pass-usage-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.kilo-pass-usage-paid-dot {
+  background: var(--vscode-editorWarning-foreground, #cca700);
+}
+
+.kilo-pass-usage-bonus-dot {
+  background: var(--vscode-testing-iconPassed, #73c991);
+}
+
+.provider-usage-notice {
+  padding-left: 8px;
+  border-left: 2px solid var(--vscode-editorWarning-foreground);
+}
+
+.provider-usage-loading {
+  display: grid;
+  min-height: 92px;
+  place-items: center;
+}
+
+.provider-usage-loading [data-component="spinner"] {
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 360px) {
+  .provider-usage-section-heading,
+  .provider-usage-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -21,6 +21,7 @@ import { instanceReloadHandlers } from "./handlers/instance-reload"
 import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
+import { ProviderUsage } from "@/kilocode/provider-usage"
 import { memoryHandlers } from "./handlers/memory"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
@@ -41,7 +42,7 @@ export const provide = Layer.provide([
   instanceReloadHandlers,
   interactiveTerminalHandlers,
   kiloGatewayHandlers,
-  kilocodeHandlers,
+  kilocodeHandlers.pipe(Layer.provide(ProviderUsage.defaultLayer)),
   memoryHandlers,
   networkHandlers,
   remoteHandlers,
