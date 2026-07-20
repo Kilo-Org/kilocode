@@ -938,6 +938,10 @@ export const dict = {
   "settings.indexing.providerField.description": "Anbieterspezifische Verbindungseinstellung.",
   "settings.indexing.qdrantApiKey.description": "Optionaler API-Schlüssel für die Qdrant-Instanz.",
   "settings.indexing.qdrantApiKey.placeholder": "Optionaler API-Schlüssel",
+  "settings.indexing.fileExtensions.title": "Dateierweiterungen",
+  "settings.indexing.fileExtensions.description":
+    "Durch Kommas getrennte Zulassungsliste. Leer lassen, um die integrierten Standardwerte zu verwenden.",
+  "settings.indexing.fileExtensions.invalid": "Ungültige Erweiterung: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Qdrant API-Schlüssel",
   "settings.indexing.qdrantUrl.description": "Server-URL für die Qdrant-Instanz.",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",

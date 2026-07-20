@@ -917,6 +917,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "คีย์ API Qdrant",
   "settings.indexing.qdrantApiKey.description": "คีย์ API เสริมสำหรับอินสแตนซ์ Qdrant",
   "settings.indexing.qdrantApiKey.placeholder": "คีย์ API เสริม",
+  "settings.indexing.fileExtensions.title": "นามสกุลไฟล์",
+  "settings.indexing.fileExtensions.description":
+    "รายการที่อนุญาตคั่นด้วยเครื่องหมายจุลภาค ปล่อยว่างไว้เพื่อใช้ค่าเริ่มต้นที่มีมาให้",
+  "settings.indexing.fileExtensions.invalid": "นามสกุลไฟล์ไม่ถูกต้อง: {{extension}}",
   "settings.indexing.providerField.description": "การตั้งค่าการเชื่อมต่อเฉพาะผู้ให้บริการ",
   "settings.indexing.status.title": "สถานะ",
   "settings.indexing.tuning.description": "พารามิเตอร์การค้นหาขั้นสูงและการประมวลผลแบทช์",

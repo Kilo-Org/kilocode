@@ -2,7 +2,7 @@ import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/
 import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from "solid-js"
 import type { IndexingStatus, IndexingStatusState } from "@kilocode/kilo-indexing/status"
 import * as Log from "@opencode-ai/core/util/log"
-import { useSync } from "@/cli/cmd/tui/context/sync"
+import { useSync } from "@tui/context/sync"
 import { formatIndexingLabel } from "../indexing-label"
 import { indexingEnabled } from "../indexing-feature"
 

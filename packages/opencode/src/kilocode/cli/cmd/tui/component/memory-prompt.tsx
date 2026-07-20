@@ -1,7 +1,7 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
 import type { CliRenderer } from "@opentui/core"
-import type { DialogContext } from "@/cli/cmd/tui/ui/dialog"
-import type { ToastContext } from "@/cli/cmd/tui/ui/toast"
+import type { DialogContext } from "@tui/ui/dialog"
+import type { ToastContext } from "@tui/ui/toast"
 import {
   showMemoryDialog,
   showMemoryHelpDialog,

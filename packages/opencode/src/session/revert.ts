@@ -1,17 +1,15 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Config } from "@/config/config" // kilocode_change
 import { Snapshot } from "../snapshot"
 import { Storage } from "@/storage/storage"
-import { Log } from "@opencode-ai/core/util/log"
 import { Session } from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionRunState } from "./run-state"
 import { SessionSummary } from "./summary"
-
-const log = Log.create({ service: "session.revert" })
 
 export const RevertInput = Schema.Struct({
   sessionID: SessionID,
@@ -116,7 +114,7 @@ export const layer = Layer.effect(
     })
 
     const unrevert = Effect.fn("SessionRevert.unrevert")(function* (input: { sessionID: SessionID }) {
-      log.info("unreverting", input)
+      yield* Effect.logInfo("unreverting", { sessionID: input.sessionID })
       yield* state.assertNotBusy(input.sessionID)
       const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (!session.revert) return session
@@ -182,5 +180,14 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Config.defaultLayer), // kilocode_change
   ),
 )
+
+export const node = LayerNode.make(layer, [
+  Session.node,
+  Snapshot.node,
+  Storage.node,
+  EventV2Bridge.node,
+  SessionSummary.node,
+  SessionRunState.node,
+])
 
 export * as SessionRevert from "./revert"

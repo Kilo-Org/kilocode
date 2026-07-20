@@ -935,6 +935,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Clave API de Qdrant",
   "settings.indexing.qdrantApiKey.description": "Clave API opcional para la instancia de Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Clave API opcional",
+  "settings.indexing.fileExtensions.title": "Extensiones de archivo",
+  "settings.indexing.fileExtensions.description":
+    "Lista de permitidos separada por comas. Déjala vacía para usar los valores predeterminados integrados.",
+  "settings.indexing.fileExtensions.invalid": "Extensión no válida: {{extension}}",
   "settings.indexing.providerField.description": "Configuración de conexión específica del proveedor.",
   "settings.indexing.status.title": "Estado",
   "settings.indexing.tuning.description": "Parámetro avanzado de búsqueda y procesamiento por lotes.",

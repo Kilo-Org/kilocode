@@ -918,6 +918,10 @@ export const dict = {
   "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
   "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
   "settings.indexing.qdrantApiKey.placeholder": "オプションのAPIキー",
+  "settings.indexing.fileExtensions.title": "ファイル拡張子",
+  "settings.indexing.fileExtensions.description":
+    "カンマ区切りの許可リストです。空欄のままにすると、組み込みのデフォルトが使用されます。",
+  "settings.indexing.fileExtensions.invalid": "無効な拡張子: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Qdrant APIキー",
   "settings.indexing.qdrantUrl.description": "QdrantインスタンスのサーバーURL。",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",

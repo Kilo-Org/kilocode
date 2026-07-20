@@ -18,5 +18,6 @@
   },
   "dependencies": {
     "effect": "catalog:"
-  }
+  },
+  "peerDependencies": {}
 }

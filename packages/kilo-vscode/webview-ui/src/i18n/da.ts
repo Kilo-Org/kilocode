@@ -938,6 +938,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-nøgle",
   "settings.indexing.qdrantApiKey.description": "Valgfri API-nøgle til Qdrant-instansen.",
   "settings.indexing.qdrantApiKey.placeholder": "Valgfri API-nøgle",
+  "settings.indexing.fileExtensions.title": "Filtypenavne",
+  "settings.indexing.fileExtensions.description":
+    "Kommaadskilt tilladelsesliste. Lad feltet være tomt for at bruge de indbyggede standardindstillinger.",
+  "settings.indexing.fileExtensions.invalid": "Ugyldig filtype: {{extension}}",
   "settings.indexing.lancedbDirectory.title": "LanceDB-mappe",
   "settings.indexing.lancedbDirectory.description": "Valgfri mappe til det lokale LanceDB-lager.",
   "settings.indexing.lancedbDirectory.placeholder": "Lad være tom for standard",

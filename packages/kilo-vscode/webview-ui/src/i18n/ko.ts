@@ -1259,6 +1259,10 @@ export const dict = {
   "settings.indexing.providerField.description": "공급자별 연결 설정.",
   "settings.indexing.qdrantApiKey.description": "Qdrant 인스턴스에 대한 선택적 API 키입니다.",
   "settings.indexing.qdrantApiKey.placeholder": "선택적 API 키",
+  "settings.indexing.fileExtensions.title": "파일 확장자",
+  "settings.indexing.fileExtensions.description":
+    "쉼표로 구분된 허용 목록입니다. 기본 제공 기본값을 사용하려면 비워 두세요.",
+  "settings.indexing.fileExtensions.invalid": "잘못된 확장자: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Qdrant API 키",
   "settings.indexing.qdrantUrl.description": "Qdrant 인스턴스의 서버 URL입니다.",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",

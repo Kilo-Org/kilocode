@@ -36,6 +36,9 @@ export type Event =
   | EventServerConnected
   | EventGlobalDisposed
   | EventGlobalConfigUpdated
+  | EventCredentialAdded
+  | EventCredentialRemoved
+  | EventCredentialSwitched
   | EventPluginAdded
   | EventCatalogModelUpdated
   | EventSessionCreated
@@ -51,6 +54,7 @@ export type Event =
   | EventSessionNextPrompted
   | EventSessionNextPromptAdmitted
   | EventSessionNextPromptPromoted
+  | EventSessionNextInterruptRequested
   | EventSessionNextContextUpdated
   | EventSessionNextSynthetic
   | EventSessionNextShellStarted
@@ -92,6 +96,19 @@ export type Event =
   | EventInstallationUpdateAvailable
   | EventPermissionAsked
   | EventPermissionReplied
+  | EventReferenceUpdated
+  | EventConnectorUpdated
+  | EventPermissionV2Asked
+  | EventPermissionV2Replied
+  | EventFileEdited
+  | EventFileWatcherUpdated
+  | EventPtyCreated
+  | EventPtyUpdated
+  | EventPtyExited
+  | EventPtyDeleted
+  | EventQuestionV2Asked
+  | EventQuestionV2Replied
+  | EventQuestionV2Rejected
   | EventTodoUpdated
   | EventSessionStatus
   | EventSessionIdle
@@ -100,26 +117,12 @@ export type Event =
   | EventProjectDirectoriesUpdated
   | EventProjectUpdated
   | EventLspUpdated
-  | EventFileEdited
-  | EventFileWatcherUpdated
   | EventVcsBranchUpdated
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventWorkspaceStatus
   | EventWorktreeReady
   | EventWorktreeFailed
-  | EventAccountAdded
-  | EventAccountRemoved
-  | EventAccountSwitched
-  | EventPermissionV2Asked
-  | EventPermissionV2Replied
-  | EventPtyCreated
-  | EventPtyUpdated
-  | EventPtyExited
-  | EventPtyDeleted
-  | EventQuestionV2Asked
-  | EventQuestionV2Replied
-  | EventQuestionV2Rejected
 
 export type QuestionReplied = {
   sessionID: string
@@ -523,6 +526,13 @@ export type ContextOverflowError = {
   }
 }
 
+export type ContentFilterError = {
+  name: "ContentFilterError"
+  data: {
+    message: string
+  }
+}
+
 export type ApiError = {
   name: "APIError"
   data: {
@@ -554,6 +564,7 @@ export type AssistantMessage = {
     | MessageAbortedError
     | StructuredOutputError
     | ContextOverflowError
+    | ContentFilterError
     | ApiError
   parentID: string
   modelID: string
@@ -854,7 +865,6 @@ export type Prompt = {
   text: string
   files?: Array<PromptFileAttachment>
   agents?: Array<PromptAgentAttachment>
-  references?: Array<PromptReferenceAttachment>
 }
 
 export type QuestionOption = {
@@ -976,6 +986,32 @@ export type AgentRequirementError = {
   }
 }
 
+export type Pty = {
+  id: string
+  title: string
+  command: string
+  args: Array<string>
+  cwd: string
+  status: "running" | "exited"
+  pid: number
+  sessionID?: string | null
+}
+
+export type Todo = {
+  /**
+   * Brief description of the task
+   */
+  content: string
+  /**
+   * Current status of the task: pending, in_progress, completed, cancelled
+   */
+  status: string
+  /**
+   * Priority level of the task: high, medium, low
+   */
+  priority: string
+}
+
 export type SessionStatus =
   | {
       type: "idle"
@@ -1002,17 +1038,6 @@ export type SessionStatus =
       requestID: string
       message: string
     }
-
-export type Pty = {
-  id: string
-  title: string
-  command: string
-  args: Array<string>
-  cwd: string
-  status: "running" | "exited"
-  pid: number
-  sessionID?: string | null
-}
 
 export type GlobalEvent = {
   directory: string
@@ -1050,6 +1075,9 @@ export type GlobalEvent = {
     | EventServerConnected
     | EventGlobalDisposed
     | EventGlobalConfigUpdated
+    | EventCredentialAdded
+    | EventCredentialRemoved
+    | EventCredentialSwitched
     | EventPluginAdded
     | EventCatalogModelUpdated
     | EventSessionCreated
@@ -1065,6 +1093,7 @@ export type GlobalEvent = {
     | EventSessionNextPrompted
     | EventSessionNextPromptAdmitted
     | EventSessionNextPromptPromoted
+    | EventSessionNextInterruptRequested
     | EventSessionNextContextUpdated
     | EventSessionNextSynthetic
     | EventSessionNextShellStarted
@@ -1106,6 +1135,19 @@ export type GlobalEvent = {
     | EventInstallationUpdateAvailable
     | EventPermissionAsked
     | EventPermissionReplied
+    | EventReferenceUpdated
+    | EventConnectorUpdated
+    | EventPermissionV2Asked
+    | EventPermissionV2Replied
+    | EventFileEdited
+    | EventFileWatcherUpdated
+    | EventPtyCreated
+    | EventPtyUpdated
+    | EventPtyExited
+    | EventPtyDeleted
+    | EventQuestionV2Asked
+    | EventQuestionV2Replied
+    | EventQuestionV2Rejected
     | EventTodoUpdated
     | EventSessionStatus
     | EventSessionIdle
@@ -1114,26 +1156,12 @@ export type GlobalEvent = {
     | EventProjectDirectoriesUpdated
     | EventProjectUpdated
     | EventLspUpdated
-    | EventFileEdited
-    | EventFileWatcherUpdated
     | EventVcsBranchUpdated
     | EventWorkspaceReady
     | EventWorkspaceFailed
     | EventWorkspaceStatus
     | EventWorktreeReady
     | EventWorktreeFailed
-    | EventAccountAdded
-    | EventAccountRemoved
-    | EventAccountSwitched
-    | EventPermissionV2Asked
-    | EventPermissionV2Replied
-    | EventPtyCreated
-    | EventPtyUpdated
-    | EventPtyExited
-    | EventPtyDeleted
-    | EventQuestionV2Asked
-    | EventQuestionV2Replied
-    | EventQuestionV2Rejected
     | SyncEventSessionCreated
     | SyncEventSessionUpdated
     | SyncEventSessionDeleted
@@ -1166,7 +1194,6 @@ export type GlobalEvent = {
     | SyncEventSessionNextToolFailed
     | SyncEventSessionNextRetried
     | SyncEventSessionNextCompactionStarted
-    | SyncEventSessionNextCompactionDelta
     | SyncEventSessionNextCompactionEnded
 }
 
@@ -1184,26 +1211,6 @@ export type ServerConfig = {
   mdns?: boolean
   mdnsDomain?: string
   cors?: Array<string>
-}
-
-export type ReferenceConfigEntry =
-  | string
-  | {
-      /**
-       * Git repository URL, host/path reference, or GitHub owner/repo shorthand
-       */
-      repository: string
-      branch?: string
-    }
-  | {
-      /**
-       * Absolute path, ~/ path, or workspace-relative path to a local reference directory
-       */
-      path: string
-    }
-
-export type ReferenceConfig = {
-  [key: string]: ReferenceConfigEntry
 }
 
 export type IndexingConfig = {
@@ -1268,6 +1275,7 @@ export type IndexingConfig = {
   searchMaxResults?: number
   embeddingBatchSize?: number
   scannerMaxBatchRetries?: number
+  fileExtensions?: Array<string>
 }
 
 export type PermissionActionConfig = "ask" | "allow" | "deny"
@@ -1411,7 +1419,7 @@ export type ProviderConfig = {
       interleaved?:
         | true
         | {
-            field: "reasoning_content" | "reasoning_details"
+            field: "reasoning" | "reasoning_content" | "reasoning_details"
           }
       cost?: {
         input: number
@@ -1535,7 +1543,12 @@ export type Config = {
     paths?: Array<string>
     urls?: Array<string>
   }
-  reference?: ReferenceConfig
+  references?: {
+    [key: string]: string | ConfigV2ReferenceGit | ConfigV2ReferenceLocal
+  }
+  reference?: {
+    [key: string]: string | ConfigV2ReferenceGit | ConfigV2ReferenceLocal
+  }
   watcher?: {
     ignore?: Array<string>
   }
@@ -1749,7 +1762,7 @@ export type Model = {
     interleaved:
       | boolean
       | {
-          field: "reasoning_content" | "reasoning_details"
+          field: "reasoning" | "reasoning_content" | "reasoning_details"
         }
   }
   cost: {
@@ -2197,6 +2210,7 @@ export type ProjectCopyError = {
   name: "ProjectCopyError"
   data: {
     message: string
+    forceRequired?: boolean
   }
 }
 
@@ -2416,21 +2430,6 @@ export type NotFoundError = {
   data: {
     message: string
   }
-}
-
-export type Todo = {
-  /**
-   * Brief description of the task
-   */
-  content: string
-  /**
-   * Current status of the task: pending, in_progress, completed, cancelled
-   */
-  status: string
-  /**
-   * Priority level of the task: high, medium, low
-   */
-  priority: string
 }
 
 export type Session3 = {
@@ -3438,7 +3437,7 @@ export type UnauthorizedError = {
   message: string
 }
 
-export type V2SessionsResponse = {
+export type SessionsResponse = {
   data: Array<SessionV2Info>
   cursor: {
     previous?: string
@@ -3469,7 +3468,7 @@ export type UnknownError1 = {
   ref?: string
 }
 
-export type V2SessionMessagesResponse = {
+export type SessionMessagesResponse = {
   data: Array<SessionMessage>
   cursor: {
     previous?: string
@@ -3888,6 +3887,60 @@ export type EventGlobalConfigUpdated = {
   }
 }
 
+export type CredentialOAuth = {
+  type: "oauth"
+  refresh: string
+  access: string
+  expires: number
+  metadata?: {
+    [key: string]: string
+  }
+}
+
+export type CredentialKey = {
+  type: "key"
+  key: string
+  metadata?: {
+    [key: string]: string
+  }
+}
+
+export type CredentialValue = CredentialOAuth | CredentialKey
+
+export type CredentialInfo = {
+  id: string
+  connectorID: string
+  methodID: string
+  label: string
+  value: CredentialValue
+}
+
+export type EventCredentialAdded = {
+  id: string
+  type: "credential.added"
+  properties: {
+    credential: CredentialInfo
+  }
+}
+
+export type EventCredentialRemoved = {
+  id: string
+  type: "credential.removed"
+  properties: {
+    credential: CredentialInfo
+  }
+}
+
+export type EventCredentialSwitched = {
+  id: string
+  type: "credential.switched"
+  properties: {
+    connectorID: string
+    from?: string
+    to?: string
+  }
+}
+
 export type EventPluginAdded = {
   id: string
   type: "plugin.added"
@@ -3931,6 +3984,19 @@ export type ModelV2Info = {
     body: {
       [key: string]: unknown
     }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      stop?: Array<string>
+    }
+    options?: {
+      [key: string]: unknown
+    }
     variant?: string
   }
   variants: Array<{
@@ -3939,6 +4005,19 @@ export type ModelV2Info = {
       [key: string]: string
     }
     body: {
+      [key: string]: unknown
+    }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topP?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      topK?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      seed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      stop?: Array<string>
+    }
+    options?: {
       [key: string]: unknown
     }
   }>
@@ -4100,18 +4179,6 @@ export type PromptAgentAttachment = {
   source?: PromptSource
 }
 
-export type PromptReferenceAttachment = {
-  name: string
-  kind: "local" | "git" | "invalid"
-  uri?: string
-  repository?: string
-  branch?: string
-  target?: string
-  targetUri?: string
-  problem?: string
-  source?: PromptSource
-}
-
 export type EventSessionNextPrompted = {
   id: string
   type: "session.next.prompted"
@@ -4145,6 +4212,15 @@ export type EventSessionNextPromptPromoted = {
     messageID: string
     prompt: Prompt
     timeCreated: number
+  }
+}
+
+export type EventSessionNextInterruptRequested = {
+  id: string
+  type: "session.next.interrupt.requested"
+  properties: {
+    timestamp: number
+    sessionID: string
   }
 }
 
@@ -4394,19 +4470,7 @@ export type ToolTextContent = {
 
 export type ToolFileContent = {
   type: "file"
-  source:
-    | {
-        type: "data"
-        data: string
-      }
-    | {
-        type: "url"
-        url: string
-      }
-    | {
-        type: "file"
-        uri: string
-      }
+  uri: string
   mime: string
   name?: string
 }
@@ -4438,6 +4502,7 @@ export type EventSessionNextToolSuccess = {
       [key: string]: unknown
     }
     content: Array<ToolTextContent | ToolFileContent>
+    outputPaths?: Array<string>
     result?: unknown
     provider: {
       executed: boolean
@@ -4512,6 +4577,7 @@ export type EventSessionNextCompactionDelta = {
   properties: {
     timestamp: number
     sessionID: string
+    messageID: string
     text: string
   }
 }
@@ -4522,7 +4588,10 @@ export type EventSessionNextCompactionEnded = {
   properties: {
     timestamp: number
     sessionID: string
+    messageID?: string
+    reason?: "auto" | "manual"
     text: string
+    recent?: string
     include?: string
   }
 }
@@ -4611,6 +4680,7 @@ export type EventSessionError = {
       | MessageAbortedError
       | StructuredOutputError
       | ContextOverflowError
+      | ContentFilterError
       | ApiError
       | AgentRequirementError
   }
@@ -4669,225 +4739,19 @@ export type EventPermissionReplied = {
   }
 }
 
-export type SessionTodoInfo = {
-  /**
-   * Brief description of the task
-   */
-  content: string
-  /**
-   * Current status of the task: pending, in_progress, completed, cancelled
-   */
-  status: string
-  /**
-   * Priority level of the task: high, medium, low
-   */
-  priority: string
-}
-
-export type EventTodoUpdated = {
+export type EventReferenceUpdated = {
   id: string
-  type: "todo.updated"
-  properties: {
-    sessionID: string
-    todos: Array<SessionTodoInfo>
-  }
-}
-
-export type EventSessionStatus = {
-  id: string
-  type: "session.status"
-  properties: {
-    sessionID: string
-    status: SessionStatus
-  }
-}
-
-export type EventSessionIdle = {
-  id: string
-  type: "session.idle"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionCompacted = {
-  id: string
-  type: "session.compacted"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventCommandExecuted = {
-  id: string
-  type: "command.executed"
-  properties: {
-    name: string
-    sessionID: string
-    arguments: string
-    messageID: string
-  }
-}
-
-export type EventProjectDirectoriesUpdated = {
-  id: string
-  type: "project.directories.updated"
-  properties: {
-    projectID: string
-  }
-}
-
-export type EventProjectUpdated = {
-  id: string
-  type: "project.updated"
-  properties: {
-    id: string
-    worktree: string
-    vcs?: "git"
-    name?: string
-    icon?: {
-      url?: string
-      override?: string
-      color?: string
-    }
-    commands?: {
-      /**
-       * Startup script to run when creating a new workspace (worktree)
-       */
-      start?: string
-    }
-    time: {
-      created: number
-      updated: number
-      initialized?: number
-    }
-    sandboxes: Array<string>
-  }
-}
-
-export type EventLspUpdated = {
-  id: string
-  type: "lsp.updated"
+  type: "reference.updated"
   properties: {
     [key: string]: unknown
   }
 }
 
-export type EventFileEdited = {
+export type EventConnectorUpdated = {
   id: string
-  type: "file.edited"
+  type: "connector.updated"
   properties: {
-    file: string
-  }
-}
-
-export type EventFileWatcherUpdated = {
-  id: string
-  type: "file.watcher.updated"
-  properties: {
-    file: string
-    event: "add" | "change" | "unlink"
-  }
-}
-
-export type EventVcsBranchUpdated = {
-  id: string
-  type: "vcs.branch.updated"
-  properties: {
-    branch?: string
-  }
-}
-
-export type EventWorkspaceReady = {
-  id: string
-  type: "workspace.ready"
-  properties: {
-    name: string
-  }
-}
-
-export type EventWorkspaceFailed = {
-  id: string
-  type: "workspace.failed"
-  properties: {
-    message: string
-  }
-}
-
-export type EventWorkspaceStatus = {
-  id: string
-  type: "workspace.status"
-  properties: {
-    workspaceID: string
-    status: "connected" | "connecting" | "disconnected" | "error"
-  }
-}
-
-export type EventWorktreeReady = {
-  id: string
-  type: "worktree.ready"
-  properties: {
-    name: string
-    branch?: string
-  }
-}
-
-export type EventWorktreeFailed = {
-  id: string
-  type: "worktree.failed"
-  properties: {
-    message: string
-  }
-}
-
-export type AuthOAuthCredential = {
-  type: "oauth"
-  refresh: string
-  access: string
-  expires: number
-  accountId?: string
-}
-
-export type AuthApiKeyCredential = {
-  type: "api"
-  key: string
-  metadata?: {
-    [key: string]: string
-  }
-}
-
-export type AuthCredential = AuthOAuthCredential | AuthApiKeyCredential
-
-export type AuthInfo = {
-  id: string
-  serviceID: string
-  description: string
-  credential: AuthCredential
-}
-
-export type EventAccountAdded = {
-  id: string
-  type: "account.added"
-  properties: {
-    account: AuthInfo
-  }
-}
-
-export type EventAccountRemoved = {
-  id: string
-  type: "account.removed"
-  properties: {
-    account: AuthInfo
-  }
-}
-
-export type EventAccountSwitched = {
-  id: string
-  type: "account.switched"
-  properties: {
-    serviceID: string
-    from?: string
-    to?: string
+    [key: string]: unknown
   }
 }
 
@@ -4922,6 +4786,23 @@ export type EventPermissionV2Replied = {
     sessionID: string
     requestID: string
     reply: PermissionV2Reply
+  }
+}
+
+export type EventFileEdited = {
+  id: string
+  type: "file.edited"
+  properties: {
+    file: string
+  }
+}
+
+export type EventFileWatcherUpdated = {
+  id: string
+  type: "file.watcher.updated"
+  properties: {
+    file: string
+    event: "add" | "change" | "unlink"
   }
 }
 
@@ -5023,6 +4904,145 @@ export type EventQuestionV2Rejected = {
   properties: {
     sessionID: string
     requestID: string
+  }
+}
+
+export type EventTodoUpdated = {
+  id: string
+  type: "todo.updated"
+  properties: {
+    sessionID: string
+    todos: Array<Todo>
+  }
+}
+
+export type EventSessionStatus = {
+  id: string
+  type: "session.status"
+  properties: {
+    sessionID: string
+    status: SessionStatus
+  }
+}
+
+export type EventSessionIdle = {
+  id: string
+  type: "session.idle"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionCompacted = {
+  id: string
+  type: "session.compacted"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventCommandExecuted = {
+  id: string
+  type: "command.executed"
+  properties: {
+    name: string
+    sessionID: string
+    arguments: string
+    messageID: string
+  }
+}
+
+export type EventProjectDirectoriesUpdated = {
+  id: string
+  type: "project.directories.updated"
+  properties: {
+    projectID: string
+  }
+}
+
+export type EventProjectUpdated = {
+  id: string
+  type: "project.updated"
+  properties: {
+    id: string
+    worktree: string
+    vcs?: "git"
+    name?: string
+    icon?: {
+      url?: string
+      override?: string
+      color?: string
+    }
+    commands?: {
+      /**
+       * Startup script to run when creating a new workspace (worktree)
+       */
+      start?: string
+    }
+    time: {
+      created: number
+      updated: number
+      initialized?: number
+    }
+    sandboxes: Array<string>
+  }
+}
+
+export type EventLspUpdated = {
+  id: string
+  type: "lsp.updated"
+  properties: {
+    [key: string]: unknown
+  }
+}
+
+export type EventVcsBranchUpdated = {
+  id: string
+  type: "vcs.branch.updated"
+  properties: {
+    branch?: string
+  }
+}
+
+export type EventWorkspaceReady = {
+  id: string
+  type: "workspace.ready"
+  properties: {
+    name: string
+  }
+}
+
+export type EventWorkspaceFailed = {
+  id: string
+  type: "workspace.failed"
+  properties: {
+    message: string
+  }
+}
+
+export type EventWorkspaceStatus = {
+  id: string
+  type: "workspace.status"
+  properties: {
+    workspaceID: string
+    status: "connected" | "connecting" | "disconnected" | "error"
+  }
+}
+
+export type EventWorktreeReady = {
+  id: string
+  type: "worktree.ready"
+  properties: {
+    name: string
+    branch?: string
+  }
+}
+
+export type EventWorktreeFailed = {
+  id: string
+  type: "worktree.failed"
+  properties: {
+    message: string
   }
 }
 
@@ -5562,6 +5582,7 @@ export type SyncEventSessionNextToolSuccess = {
         [key: string]: unknown
       }
       content: Array<ToolTextContent | ToolFileContent>
+      outputPaths?: Array<string>
       result?: unknown
       provider: {
         executed: boolean
@@ -5636,22 +5657,6 @@ export type SyncEventSessionNextCompactionStarted = {
   }
 }
 
-export type SyncEventSessionNextCompactionDelta = {
-  type: "sync"
-  id: string
-  syncEvent: {
-    type: "session.next.compaction.delta.1"
-    id: string
-    seq: number
-    aggregateID: string
-    data: {
-      timestamp: number
-      sessionID: string
-      text: string
-    }
-  }
-}
-
 export type SyncEventSessionNextCompactionEnded = {
   type: "sync"
   id: string
@@ -5663,10 +5668,26 @@ export type SyncEventSessionNextCompactionEnded = {
     data: {
       timestamp: number
       sessionID: string
+      messageID?: string
+      reason?: "auto" | "manual"
       text: string
+      recent?: string
       include?: string
     }
   }
+}
+
+export type ConfigV2ReferenceGit = {
+  repository: string
+  branch?: string
+  description?: string
+  hidden?: boolean
+}
+
+export type ConfigV2ReferenceLocal = {
+  path: string
+  description?: string
+  hidden?: boolean
 }
 
 export type PolicyEffect = "allow" | "deny"
@@ -5677,7 +5698,10 @@ export type ConfigV2ExperimentalPolicy = {
   resource: string
 }
 
-export type ProjectDirectories = Array<string>
+export type ProjectDirectories = Array<{
+  directory: string
+  type: "main" | "root" | "git_worktree"
+}>
 
 export type ProjectCopyCopy = {
   directory: string
@@ -5805,7 +5829,6 @@ export type SessionMessageUser = {
   text: string
   files?: Array<PromptFileAttachment>
   agents?: Array<PromptAgentAttachment>
-  references?: Array<PromptReferenceAttachment>
   type: "user"
 }
 
@@ -5889,6 +5912,7 @@ export type SessionMessageToolStateCompleted = {
   }
   attachments?: Array<PromptFileAttachment>
   content: Array<ToolTextContent | ToolFileContent>
+  outputPaths?: Array<string>
   structured: {
     [key: string]: unknown
   }
@@ -5977,7 +6001,7 @@ export type SessionMessageCompaction = {
   type: "compaction"
   reason: "auto" | "manual"
   summary: string
-  include?: string
+  recent: string
   id: string
   metadata?: {
     [key: string]: unknown
@@ -6007,8 +6031,8 @@ export type ProviderV2Info = {
         name: string
       }
     | {
-        via: "account"
-        service: string
+        via: "credential"
+        credentialID: string
       }
     | {
         via: "custom"
@@ -6043,6 +6067,63 @@ export type ProviderV2Info = {
   }
 }
 
+export type ConnectorWhen = {
+  key: string
+  op: "eq" | "neq"
+  value: string
+}
+
+export type ConnectorTextPrompt = {
+  type: "text"
+  key: string
+  message: string
+  placeholder?: string
+  when?: ConnectorWhen
+}
+
+export type ConnectorSelectPrompt = {
+  type: "select"
+  key: string
+  message: string
+  options: Array<{
+    label: string
+    value: string
+    hint?: string
+  }>
+  when?: ConnectorWhen
+}
+
+export type ConnectorOAuthMethod = {
+  id: string
+  type: "oauth"
+  label: string
+  prompts?: Array<ConnectorTextPrompt | ConnectorSelectPrompt>
+}
+
+export type ConnectorKeyMethod = {
+  id: string
+  type: "key"
+  label: string
+  prompts?: Array<ConnectorTextPrompt | ConnectorSelectPrompt>
+}
+
+export type ConnectorInfo = {
+  id: string
+  name: string
+  methods: Array<ConnectorOAuthMethod | ConnectorKeyMethod>
+}
+
+export type ConnectorAttempt = {
+  attemptID: string
+  url: string
+  instructions: string
+  mode: "auto" | "code"
+  time: {
+    created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
 export type PermissionV2Request = {
   id: string
   sessionID: string
@@ -6062,22 +6143,8 @@ export type PermissionSavedInfo = {
   resource: string
 }
 
-export type FileSystemTextContent = {
-  type: "text"
-  content: string
-  mime: string
-}
-
-export type FileSystemBinaryContent = {
-  type: "binary"
-  content: string
-  encoding: "base64"
-  mime: string
-}
-
 export type FileSystemEntry = {
   path: string
-  uri: string
   type: "file" | "directory"
   mime: string
 }
@@ -6118,6 +6185,29 @@ export type QuestionV2Reply = {
    * User answers in order of questions (each answer is an array of selected labels)
    */
   answers: Array<QuestionV2Answer>
+}
+
+export type ReferenceLocalSource = {
+  type: "local"
+  path: string
+  description?: string
+  hidden?: boolean
+}
+
+export type ReferenceGitSource = {
+  type: "git"
+  repository: string
+  branch?: string
+  description?: string
+  hidden?: boolean
+}
+
+export type ReferenceInfo = {
+  name: string
+  path: string
+  description?: string
+  hidden?: boolean
+  source: ReferenceLocalSource | ReferenceGitSource
 }
 
 export type EventMemoryStatus1 = {
@@ -6266,6 +6356,19 @@ export type ModelV2Info1 = {
     body: {
       [key: string]: unknown
     }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity"
+      topP?: number | "NaN" | "Infinity" | "-Infinity"
+      topK?: number | "NaN" | "Infinity" | "-Infinity"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity"
+      seed?: number | "NaN" | "Infinity" | "-Infinity"
+      stop?: Array<string>
+    }
+    options?: {
+      [key: string]: unknown
+    }
     variant?: string
   }
   variants: Array<{
@@ -6274,6 +6377,19 @@ export type ModelV2Info1 = {
       [key: string]: string
     }
     body: {
+      [key: string]: unknown
+    }
+    generation?: {
+      maxTokens?: number | "NaN" | "Infinity" | "-Infinity"
+      temperature?: number | "NaN" | "Infinity" | "-Infinity"
+      topP?: number | "NaN" | "Infinity" | "-Infinity"
+      topK?: number | "NaN" | "Infinity" | "-Infinity"
+      frequencyPenalty?: number | "NaN" | "Infinity" | "-Infinity"
+      presencePenalty?: number | "NaN" | "Infinity" | "-Infinity"
+      seed?: number | "NaN" | "Infinity" | "-Infinity"
+      stop?: Array<string>
+    }
+    options?: {
       [key: string]: unknown
     }
   }>
@@ -8185,12 +8301,12 @@ export type ProjectDirectoriesResponse = ProjectDirectoriesResponses[keyof Proje
 export type ExperimentalProjectCopyRemoveData = {
   body?: {
     directory: string
+    force: boolean
   }
   path: {
     projectID: string
   }
   query?: {
-    directory?: string
     workspace?: string
   }
   url: "/experimental/project/{projectID}/copy"
@@ -9265,7 +9381,7 @@ export type SessionMessagesResponses = {
   }>
 }
 
-export type SessionMessagesResponse = SessionMessagesResponses[keyof SessionMessagesResponses]
+export type SessionMessagesResponse2 = SessionMessagesResponses[keyof SessionMessagesResponses]
 
 export type SessionPromptData = {
   body?: {
@@ -14357,6 +14473,40 @@ export type V2HealthGetResponses = {
 
 export type V2HealthGetResponse = V2HealthGetResponses[keyof V2HealthGetResponses]
 
+export type V2LocationGetData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/location"
+}
+
+export type V2LocationGetErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2LocationGetError = V2LocationGetErrors[keyof V2LocationGetErrors]
+
+export type V2LocationGetResponses = {
+  /**
+   * Location.Info
+   */
+  200: LocationInfo
+}
+
+export type V2LocationGetResponse = V2LocationGetResponses[keyof V2LocationGetResponses]
+
 export type V2AgentListData = {
   body?: never
   path?: never
@@ -14428,12 +14578,89 @@ export type V2SessionListError = V2SessionListErrors[keyof V2SessionListErrors]
 
 export type V2SessionListResponses = {
   /**
-   * V2SessionsResponse
+   * SessionsResponse
    */
-  200: V2SessionsResponse
+  200: SessionsResponse
 }
 
 export type V2SessionListResponse = V2SessionListResponses[keyof V2SessionListResponses]
+
+export type V2SessionCreateData = {
+  body: {
+    id?: string
+    agent?: string
+    model?: {
+      id: string
+      providerID: string
+      variant?: string
+    }
+    location?: LocationRef
+  }
+  path?: never
+  query?: never
+  url: "/api/session"
+}
+
+export type V2SessionCreateErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2SessionCreateError = V2SessionCreateErrors[keyof V2SessionCreateErrors]
+
+export type V2SessionCreateResponses = {
+  /**
+   * Success
+   */
+  200: {
+    data: SessionV2Info
+  }
+}
+
+export type V2SessionCreateResponse = V2SessionCreateResponses[keyof V2SessionCreateResponses]
+
+export type V2SessionGetData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}"
+}
+
+export type V2SessionGetErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+}
+
+export type V2SessionGetError = V2SessionGetErrors[keyof V2SessionGetErrors]
+
+export type V2SessionGetResponses = {
+  /**
+   * Success
+   */
+  200: {
+    data: SessionV2Info
+  }
+}
+
+export type V2SessionGetResponse = V2SessionGetResponses[keyof V2SessionGetResponses]
 
 export type V2SessionPromptData = {
   body: {
@@ -14639,12 +14866,12 @@ export type V2SessionMessagesError = V2SessionMessagesErrors[keyof V2SessionMess
 
 export type V2SessionMessagesResponses = {
   /**
-   * V2SessionMessagesResponse
+   * SessionMessagesResponse
    */
-  200: V2SessionMessagesResponse
+  200: SessionMessagesResponse
 }
 
-export type V2SessionMessagesResponse2 = V2SessionMessagesResponses[keyof V2SessionMessagesResponses]
+export type V2SessionMessagesResponse = V2SessionMessagesResponses[keyof V2SessionMessagesResponses]
 
 export type V2ModelListData = {
   body?: never
@@ -14775,6 +15002,320 @@ export type V2ProviderGetResponses = {
 
 export type V2ProviderGetResponse = V2ProviderGetResponses[keyof V2ProviderGetResponses]
 
+export type V2ConnectorListData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector"
+}
+
+export type V2ConnectorListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorListError = V2ConnectorListErrors[keyof V2ConnectorListErrors]
+
+export type V2ConnectorListResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<ConnectorInfo>
+  }
+}
+
+export type V2ConnectorListResponse = V2ConnectorListResponses[keyof V2ConnectorListResponses]
+
+export type V2ConnectorGetData = {
+  body?: never
+  path: {
+    connectorID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector/{connectorID}"
+}
+
+export type V2ConnectorGetErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorGetError = V2ConnectorGetErrors[keyof V2ConnectorGetErrors]
+
+export type V2ConnectorGetResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: ConnectorInfo
+  }
+}
+
+export type V2ConnectorGetResponse = V2ConnectorGetResponses[keyof V2ConnectorGetResponses]
+
+export type V2ConnectorConnectKeyData = {
+  body: {
+    methodID: string
+    key: string
+    inputs: {
+      [key: string]: string
+    }
+    label?: string
+  }
+  path: {
+    connectorID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector/{connectorID}/connect/key"
+}
+
+export type V2ConnectorConnectKeyErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorConnectKeyError = V2ConnectorConnectKeyErrors[keyof V2ConnectorConnectKeyErrors]
+
+export type V2ConnectorConnectKeyResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2ConnectorConnectKeyResponse = V2ConnectorConnectKeyResponses[keyof V2ConnectorConnectKeyResponses]
+
+export type V2ConnectorConnectOauthBeginData = {
+  body: {
+    methodID: string
+    inputs: {
+      [key: string]: string
+    }
+    label?: string
+  }
+  path: {
+    connectorID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector/{connectorID}/connect/oauth"
+}
+
+export type V2ConnectorConnectOauthBeginErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorConnectOauthBeginError =
+  V2ConnectorConnectOauthBeginErrors[keyof V2ConnectorConnectOauthBeginErrors]
+
+export type V2ConnectorConnectOauthBeginResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: ConnectorAttempt
+  }
+}
+
+export type V2ConnectorConnectOauthBeginResponse =
+  V2ConnectorConnectOauthBeginResponses[keyof V2ConnectorConnectOauthBeginResponses]
+
+export type V2ConnectorConnectOauthCancelData = {
+  body?: never
+  path: {
+    attemptID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector/oauth/{attemptID}"
+}
+
+export type V2ConnectorConnectOauthCancelErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorConnectOauthCancelError =
+  V2ConnectorConnectOauthCancelErrors[keyof V2ConnectorConnectOauthCancelErrors]
+
+export type V2ConnectorConnectOauthCancelResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2ConnectorConnectOauthCancelResponse =
+  V2ConnectorConnectOauthCancelResponses[keyof V2ConnectorConnectOauthCancelResponses]
+
+export type V2ConnectorConnectOauthStatusData = {
+  body?: never
+  path: {
+    attemptID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector/oauth/{attemptID}"
+}
+
+export type V2ConnectorConnectOauthStatusErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorConnectOauthStatusError =
+  V2ConnectorConnectOauthStatusErrors[keyof V2ConnectorConnectOauthStatusErrors]
+
+export type V2ConnectorConnectOauthStatusResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data:
+      | {
+          status: "pending"
+          time: {
+            created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+            expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+          }
+        }
+      | {
+          status: "complete"
+          time: {
+            created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+            expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+          }
+        }
+      | {
+          status: "failed"
+          message: string
+          time: {
+            created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+            expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+          }
+        }
+      | {
+          status: "expired"
+          time: {
+            created: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+            expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+          }
+        }
+  }
+}
+
+export type V2ConnectorConnectOauthStatusResponse =
+  V2ConnectorConnectOauthStatusResponses[keyof V2ConnectorConnectOauthStatusResponses]
+
+export type V2ConnectorConnectOauthCompleteData = {
+  body: {
+    code?: string
+  }
+  path: {
+    attemptID: string
+  }
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/connector/oauth/{attemptID}/complete"
+}
+
+export type V2ConnectorConnectOauthCompleteErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ConnectorConnectOauthCompleteError =
+  V2ConnectorConnectOauthCompleteErrors[keyof V2ConnectorConnectOauthCompleteErrors]
+
+export type V2ConnectorConnectOauthCompleteResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2ConnectorConnectOauthCompleteResponse =
+  V2ConnectorConnectOauthCompleteResponses[keyof V2ConnectorConnectOauthCompleteResponses]
+
 export type V2PermissionRequestListData = {
   body?: never
   path?: never
@@ -14811,83 +15352,6 @@ export type V2PermissionRequestListResponses = {
 }
 
 export type V2PermissionRequestListResponse = V2PermissionRequestListResponses[keyof V2PermissionRequestListResponses]
-
-export type V2SessionPermissionListData = {
-  body?: never
-  path: {
-    sessionID: string
-  }
-  query?: never
-  url: "/api/session/{sessionID}/permission/request"
-}
-
-export type V2SessionPermissionListErrors = {
-  /**
-   * InvalidRequestError
-   */
-  400: InvalidRequestError
-  /**
-   * UnauthorizedError
-   */
-  401: UnauthorizedError
-  /**
-   * SessionNotFoundError
-   */
-  404: SessionNotFoundError
-}
-
-export type V2SessionPermissionListError = V2SessionPermissionListErrors[keyof V2SessionPermissionListErrors]
-
-export type V2SessionPermissionListResponses = {
-  /**
-   * Success
-   */
-  200: {
-    data: Array<PermissionV2Request>
-  }
-}
-
-export type V2SessionPermissionListResponse = V2SessionPermissionListResponses[keyof V2SessionPermissionListResponses]
-
-export type V2SessionPermissionReplyData = {
-  body: {
-    reply: PermissionV2Reply
-    message?: string
-  }
-  path: {
-    sessionID: string
-    requestID: string
-  }
-  query?: never
-  url: "/api/session/{sessionID}/permission/request/{requestID}/reply"
-}
-
-export type V2SessionPermissionReplyErrors = {
-  /**
-   * InvalidRequestError
-   */
-  400: InvalidRequestError
-  /**
-   * UnauthorizedError
-   */
-  401: UnauthorizedError
-  /**
-   * SessionNotFoundError | PermissionNotFoundError
-   */
-  404: SessionNotFoundError | PermissionNotFoundError
-}
-
-export type V2SessionPermissionReplyError = V2SessionPermissionReplyErrors[keyof V2SessionPermissionReplyErrors]
-
-export type V2SessionPermissionReplyResponses = {
-  /**
-   * <No Content>
-   */
-  204: void
-}
-
-export type V2SessionPermissionReplyResponse =
-  V2SessionPermissionReplyResponses[keyof V2SessionPermissionReplyResponses]
 
 export type V2PermissionSavedListData = {
   body?: never
@@ -14953,18 +15417,94 @@ export type V2PermissionSavedRemoveResponses = {
 
 export type V2PermissionSavedRemoveResponse = V2PermissionSavedRemoveResponses[keyof V2PermissionSavedRemoveResponses]
 
+export type V2SessionPermissionListData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/permission"
+}
+
+export type V2SessionPermissionListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+}
+
+export type V2SessionPermissionListError = V2SessionPermissionListErrors[keyof V2SessionPermissionListErrors]
+
+export type V2SessionPermissionListResponses = {
+  /**
+   * Success
+   */
+  200: {
+    data: Array<PermissionV2Request>
+  }
+}
+
+export type V2SessionPermissionListResponse = V2SessionPermissionListResponses[keyof V2SessionPermissionListResponses]
+
+export type V2SessionPermissionReplyData = {
+  body: {
+    reply: PermissionV2Reply
+    message?: string
+  }
+  path: {
+    sessionID: string
+    requestID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/permission/{requestID}/reply"
+}
+
+export type V2SessionPermissionReplyErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError | PermissionNotFoundError
+   */
+  404: PermissionNotFoundError | SessionNotFoundError
+}
+
+export type V2SessionPermissionReplyError = V2SessionPermissionReplyErrors[keyof V2SessionPermissionReplyErrors]
+
+export type V2SessionPermissionReplyResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2SessionPermissionReplyResponse =
+  V2SessionPermissionReplyResponses[keyof V2SessionPermissionReplyResponses]
+
 export type V2FsReadData = {
   body?: never
   path?: never
-  query: {
+  query?: {
     location?: {
       directory?: string
       workspace?: string
     }
-    path: string
-    reference?: string
+    path?: string
   }
-  url: "/api/fs/read"
+  url: "/api/fs/read/*"
 }
 
 export type V2FsReadErrors = {
@@ -14984,10 +15524,7 @@ export type V2FsReadResponses = {
   /**
    * Success
    */
-  200: {
-    location: LocationInfo
-    data: FileSystemTextContent | FileSystemBinaryContent
-  }
+  200: Blob | File
 }
 
 export type V2FsReadResponse = V2FsReadResponses[keyof V2FsReadResponses]
@@ -15001,7 +15538,6 @@ export type V2FsListData = {
       workspace?: string
     }
     path?: string
-    reference?: string
   }
   url: "/api/fs/list"
 }
@@ -15030,6 +15566,46 @@ export type V2FsListResponses = {
 }
 
 export type V2FsListResponse = V2FsListResponses[keyof V2FsListResponses]
+
+export type V2FsFindData = {
+  body?: never
+  path?: never
+  query: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+    query: string
+    type?: "file" | "directory"
+    limit?: string
+  }
+  url: "/api/fs/find"
+}
+
+export type V2FsFindErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2FsFindError = V2FsFindErrors[keyof V2FsFindErrors]
+
+export type V2FsFindResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<FileSystemEntry>
+  }
+}
+
+export type V2FsFindResponse = V2FsFindResponses[keyof V2FsFindResponses]
 
 export type V2CommandListData = {
   body?: never
@@ -15176,6 +15752,43 @@ export type V2QuestionRequestListResponses = {
 
 export type V2QuestionRequestListResponse = V2QuestionRequestListResponses[keyof V2QuestionRequestListResponses]
 
+export type V2SessionQuestionListData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/question"
+}
+
+export type V2SessionQuestionListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+}
+
+export type V2SessionQuestionListError = V2SessionQuestionListErrors[keyof V2SessionQuestionListErrors]
+
+export type V2SessionQuestionListResponses = {
+  /**
+   * Success
+   */
+  200: {
+    data: Array<QuestionV2Request>
+  }
+}
+
+export type V2SessionQuestionListResponse = V2SessionQuestionListResponses[keyof V2SessionQuestionListResponses]
+
 export type V2SessionQuestionReplyData = {
   body: QuestionV2Reply
   path: {
@@ -15183,7 +15796,7 @@ export type V2SessionQuestionReplyData = {
     requestID: string
   }
   query?: never
-  url: "/api/session/{sessionID}/question/request/{requestID}/reply"
+  url: "/api/session/{sessionID}/question/{requestID}/reply"
 }
 
 export type V2SessionQuestionReplyErrors = {
@@ -15198,7 +15811,7 @@ export type V2SessionQuestionReplyErrors = {
   /**
    * SessionNotFoundError | QuestionNotFoundError
    */
-  404: SessionNotFoundError | QuestionNotFoundError
+  404: QuestionNotFoundError | SessionNotFoundError
 }
 
 export type V2SessionQuestionReplyError = V2SessionQuestionReplyErrors[keyof V2SessionQuestionReplyErrors]
@@ -15219,7 +15832,7 @@ export type V2SessionQuestionRejectData = {
     requestID: string
   }
   query?: never
-  url: "/api/session/{sessionID}/question/request/{requestID}/reject"
+  url: "/api/session/{sessionID}/question/{requestID}/reject"
 }
 
 export type V2SessionQuestionRejectErrors = {
@@ -15234,7 +15847,7 @@ export type V2SessionQuestionRejectErrors = {
   /**
    * SessionNotFoundError | QuestionNotFoundError
    */
-  404: SessionNotFoundError | QuestionNotFoundError
+  404: QuestionNotFoundError | SessionNotFoundError
 }
 
 export type V2SessionQuestionRejectError = V2SessionQuestionRejectErrors[keyof V2SessionQuestionRejectErrors]
@@ -15247,6 +15860,43 @@ export type V2SessionQuestionRejectResponses = {
 }
 
 export type V2SessionQuestionRejectResponse = V2SessionQuestionRejectResponses[keyof V2SessionQuestionRejectResponses]
+
+export type V2ReferenceListData = {
+  body?: never
+  path?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
+  url: "/api/reference"
+}
+
+export type V2ReferenceListErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+}
+
+export type V2ReferenceListError = V2ReferenceListErrors[keyof V2ReferenceListErrors]
+
+export type V2ReferenceListResponses = {
+  /**
+   * Success
+   */
+  200: {
+    location: LocationInfo
+    data: Array<ReferenceInfo>
+  }
+}
+
+export type V2ReferenceListResponse = V2ReferenceListResponses[keyof V2ReferenceListResponses]
 
 export type PtyConnectData = {
   body?: never

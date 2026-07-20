@@ -1471,6 +1471,10 @@ export const dict = {
   "settings.indexing.providerField.description": "Ustawienie połączenia specyficzne dla dostawcy.",
   "settings.indexing.qdrantApiKey.description": "Opcjonalny klucz API dla instancji Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcjonalny klucz API",
+  "settings.indexing.fileExtensions.title": "Rozszerzenia plików",
+  "settings.indexing.fileExtensions.description":
+    "Lista dozwolonych wartości rozdzielona przecinkami. Pozostaw puste, aby użyć wbudowanych wartości domyślnych.",
+  "settings.indexing.fileExtensions.invalid": "Nieprawidłowe rozszerzenie: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Klucz API Qdranta",
   "settings.indexing.qdrantUrl.description": "Adres URL serwera dla instancji Qdrant.",
   "settings.indexing.qdrantUrl.title": "Adres URL Qdranta",
