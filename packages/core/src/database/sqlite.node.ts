@@ -1,4 +1,4 @@
-import { DatabaseSync } from "node:sqlite"
+import { DatabaseSync, type SQLInputValue } from "node:sqlite"
 import { drizzle } from "drizzle-orm/node-sqlite"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -16,11 +16,6 @@ import * as Statement from "effect/unstable/sql/Statement"
 import { Sqlite } from "./sqlite"
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name"
-
-type SqliteValue = null | number | bigint | string | Uint8Array
-type SqliteStatement = ReturnType<DatabaseSync["prepare"]> & {
-  readonly setReturnArrays: (value: boolean) => void
-}
 
 const TypeId = "~@opencode-ai/core/database/SqliteNode" as const
 type TypeId = typeof TypeId
@@ -63,7 +58,7 @@ const make = (options: Config) =>
         const statement = native.prepare(query)
         statement.setReadBigInts(Context.get(fiber.context, Client.SafeIntegers))
         try {
-          return Effect.succeed(statement.all(...(params as SqliteValue[])) as Array<Record<string, unknown>>)
+          return Effect.succeed(statement.all(...(params as SQLInputValue[])) as Array<Record<string, unknown>>)
         } catch (cause) {
           return Effect.fail(
             new SqlError({
@@ -75,12 +70,12 @@ const make = (options: Config) =>
 
     const runValues = (query: string, params: ReadonlyArray<unknown> = []) =>
       Effect.withFiber<ReadonlyArray<ReadonlyArray<unknown>>, SqlError>((fiber) => {
-        const statement = native.prepare(query) as SqliteStatement
+        const statement = native.prepare(query)
         statement.setReadBigInts(Context.get(fiber.context, Client.SafeIntegers))
         statement.setReturnArrays(true)
         try {
           return Effect.succeed(
-            statement.all(...(params as SqliteValue[])) as unknown as ReadonlyArray<ReadonlyArray<unknown>>,
+            statement.all(...(params as SQLInputValue[])) as unknown as ReadonlyArray<ReadonlyArray<unknown>>,
           )
         } catch (cause) {
           return Effect.fail(

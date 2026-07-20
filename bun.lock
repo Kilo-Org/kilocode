@@ -105,7 +105,6 @@
       },
       "devDependencies": {
         "@opencode-ai/http-recorder": "workspace:*",
-        "@opencode-ai/llm": "workspace:*",
         "@parcel/watcher-darwin-arm64": "2.5.1",
         "@parcel/watcher-darwin-x64": "2.5.1",
         "@parcel/watcher-linux-arm64-glibc": "2.5.1",
@@ -306,7 +305,7 @@
     },
     "packages/kilo-jetbrains": {
       "name": "@kilocode/kilo-jetbrains",
-      "version": "7.4.11",
+      "version": "7.4.9",
     },
     "packages/kilo-memory": {
       "name": "@kilocode/kilo-memory",

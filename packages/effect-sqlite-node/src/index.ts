@@ -1,6 +1,6 @@
 export * as NodeSqliteClient from "./index"
 
-import { DatabaseSync } from "node:sqlite"
+import { DatabaseSync, type SQLInputValue } from "node:sqlite"
 import { identity } from "effect/Function"
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
@@ -16,12 +16,6 @@ import { classifySqliteError, SqlError } from "effect/unstable/sql/SqlError"
 import * as Statement from "effect/unstable/sql/Statement"
 
 const ATTR_DB_SYSTEM_NAME = "db.system.name"
-
-type SqliteValue = null | number | bigint | string | Uint8Array
-type SqliteOptions = NonNullable<ConstructorParameters<typeof DatabaseSync>[1]> & { readonly timeout?: number }
-type SqliteStatement = ReturnType<DatabaseSync["prepare"]> & {
-  readonly setReturnArrays: (value: boolean) => void
-}
 
 export const TypeId: TypeId = "~@opencode-ai/effect-sqlite-node/NodeSqliteClient"
 export type TypeId = "~@opencode-ai/effect-sqlite-node/NodeSqliteClient"
@@ -62,14 +56,13 @@ export const make = (
       : undefined
 
     const makeConnection = Effect.gen(function* () {
-      const opts: SqliteOptions = {
+      const db = new DatabaseSync(options.filename, {
         readOnly: options.readonly,
         timeout: options.timeout,
         allowExtension: options.allowExtension,
         enableForeignKeyConstraints: true,
         open: true,
-      }
-      const db = new DatabaseSync(options.filename, opts)
+      })
       yield* Effect.addFinalizer(() => Effect.sync(() => db.close()))
 
       if (options.disableWAL !== true && options.readonly !== true) {
@@ -81,7 +74,7 @@ export const make = (
           const statement = db.prepare(sql)
           statement.setReadBigInts(Context.get(fiber.context, Client.SafeIntegers))
           try {
-            return Effect.succeed(statement.all(...(params as SqliteValue[])) as Array<Record<string, unknown>>)
+            return Effect.succeed(statement.all(...(params as SQLInputValue[])) as Array<Record<string, unknown>>)
           } catch (cause) {
             return Effect.fail(
               new SqlError({
@@ -93,12 +86,12 @@ export const make = (
 
       const runValues = (sql: string, params: ReadonlyArray<unknown> = []) =>
         Effect.withFiber<ReadonlyArray<ReadonlyArray<unknown>>, SqlError>((fiber) => {
-          const statement = db.prepare(sql) as SqliteStatement
+          const statement = db.prepare(sql)
           statement.setReadBigInts(Context.get(fiber.context, Client.SafeIntegers))
           statement.setReturnArrays(true)
           try {
             return Effect.succeed(
-              statement.all(...(params as SqliteValue[])) as unknown as ReadonlyArray<ReadonlyArray<unknown>>,
+              statement.all(...(params as SQLInputValue[])) as unknown as ReadonlyArray<ReadonlyArray<unknown>>,
             )
           } catch (cause) {
             return Effect.fail(
