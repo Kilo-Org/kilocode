@@ -4,6 +4,7 @@ import ai.kilocode.backend.workspace.CommandInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
@@ -19,6 +20,7 @@ import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionReplyDto
 import ai.kilocode.rpc.dto.SkillsPatchDto
+import ai.kilocode.rpc.dto.WatcherPatchDto
 import org.junit.jupiter.api.Nested
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -1174,6 +1176,38 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - context settings`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "watcher":{"ignore":["**/dist/**","tmp/**"]},
+                    "compaction":{"auto":true,"threshold_percent":75.5,"prune":false}
+                }"""
+            )
+
+            assertEquals(listOf("**/dist/**", "tmp/**"), cfg.watcher?.ignore)
+            assertEquals(true, cfg.compaction?.auto)
+            assertEquals(75.5, cfg.compaction?.threshold_percent)
+            assertEquals(false, cfg.compaction?.prune)
+        }
+
+        @Test
+        fun `parseConfig - malformed compaction fields do not discard config`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{
+                    "model":"openai/gpt",
+                    "watcher":{"ignore":["tmp/**"]},
+                    "compaction":{"auto":{},"threshold_percent":[],"prune":false}
+                }"""
+            )
+
+            assertEquals("openai/gpt", cfg.model)
+            assertEquals(listOf("tmp/**"), cfg.watcher?.ignore)
+            assertNull(cfg.compaction?.auto)
+            assertNull(cfg.compaction?.threshold_percent)
+            assertEquals(false, cfg.compaction?.prune)
+        }
+
+        @Test
         fun `parseConfig - agent overrides and permissions`() {
             val cfg = KiloCliDataParser.parseConfig(
                 """{"agent":{"build":{"model":"x","variant":"high","prompt":"p","description":"d","mode":"subagent","hidden":"true","disable":false,"temperature":0.2,"top_p":0.8,"steps":12,"permission":{"edit":"ask","bash":{"git *":"allow"},"webfetch":null}}}}"""
@@ -2119,6 +2153,29 @@ class KiloCliDataParserTest {
 
             assertEquals(
                 "{\"default_agent\":\"build\",\"instructions\":[\"AGENTS.md\"],\"skills\":{\"paths\":[\".kilo/skills\"],\"urls\":[\"https://example.com/skill\"]}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - context watcher and compaction fields`() {
+            val patch = ConfigPatchDto(
+                watcher = WatcherPatchDto(ignore = listOf("**/dist/**", "tmp/**")),
+                compaction = CompactionPatchDto(auto = false, threshold_percent = 75.5, prune = false),
+            )
+
+            assertEquals(
+                "{\"watcher\":{\"ignore\":[\"**/dist/**\",\"tmp/**\"]},\"compaction\":{\"auto\":false,\"threshold_percent\":75.5,\"prune\":false}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
+        fun `buildConfigPatch - context threshold clear emits null`() {
+            val patch = ConfigPatchDto(compaction = CompactionPatchDto(clear = listOf("threshold_percent")))
+
+            assertEquals(
+                "{\"compaction\":{\"threshold_percent\":null}}",
                 KiloCliDataParser.buildConfigPatch(patch),
             )
         }
