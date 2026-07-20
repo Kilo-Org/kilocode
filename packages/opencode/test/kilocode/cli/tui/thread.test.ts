@@ -6,8 +6,8 @@ import {
   embeddedRemoteExitClient,
   resolveThreadDirectory,
   runEmbeddedRemoteExitBridge,
-} from "../../../../src/cli/cmd/tui/thread"
-import { createExit } from "../../../../src/cli/cmd/tui/context/exit"
+} from "../../../../src/cli/cmd/tui"
+import { preload } from "../../../../src/kilocode/cli/cmd/tui"
 import { KiloTuiThreadDaemon } from "../../../../src/kilocode/cli/cmd/tui/thread"
 import { DaemonClient } from "../../../../src/kilocode/daemon/client"
 
@@ -16,6 +16,31 @@ afterEach(() => {
 })
 
 describe("kilo tui thread", () => {
+  test("skips preload resolver invocation in compiled mode", () => {
+    let calls = 0
+
+    expect(
+      preload(true, () => {
+        calls++
+        return "/resolved/preload"
+      }),
+    ).toEqual([])
+    expect(calls).toBe(0)
+  })
+
+  test("resolves the preload once in source mode", () => {
+    let calls = 0
+    const path = "/resolved/preload"
+
+    expect(
+      preload(false, () => {
+        calls++
+        return path
+      }),
+    ).toEqual([path])
+    expect(calls).toBe(1)
+  })
+
   test("ignores stale PWD after cwd is changed by a process wrapper", async () => {
     await using root = await tmpdir()
     const pkg = path.join(root.path, "packages", "opencode")
@@ -71,7 +96,7 @@ describe("kilo tui thread", () => {
           await new Promise(() => {})
         },
       },
-      exit: createExit(async () => {}),
+      exit: () => {},
       done,
       timeoutMs: 5,
     })
@@ -152,12 +177,12 @@ describe("kilo tui thread", () => {
         },
       }),
     }))
-    mock.module("@/cli/cmd/tui/validate-session", () => ({
+    mock.module("@/cli/tui/validate-session", () => ({
       validateSession: async (input: { sessionID?: string }) => {
         seen.push(input.sessionID ?? "")
       },
     }))
-    mock.module("@/cli/cmd/tui/config/tui", () => ({
+    mock.module("@/config/tui", () => ({
       TuiConfig: {
         get: async () => ({}),
       },

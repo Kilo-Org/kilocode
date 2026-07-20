@@ -83,6 +83,9 @@ internal class SettingsListRenderer(
 
         title.clear()
         title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
+        value.note?.takeIf { it.isNotBlank() }?.let {
+            title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        }
         syncBadges(value)
         icon.icon = value.icon
         mark.isVisible = value.icon != null

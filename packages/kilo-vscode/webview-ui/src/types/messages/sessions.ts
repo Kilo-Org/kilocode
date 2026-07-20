@@ -50,6 +50,7 @@ export interface SessionInfo {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   } | null
   summary?: {
     additions: number

@@ -11,9 +11,14 @@ import ai.kilocode.rpc.dto.SkillDto
 
 class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var agents = emptyList<AgentDetailDto>()
+    var skills = emptyList<SkillDto>()
     var mcps = emptyList<McpStatusDto>()
     var mcpConfigs = emptyMap<String, McpServerConfigDto>()
     val agentCalls = mutableListOf<String>()
+    val skillCalls = mutableListOf<String>()
+    val skillRemovals = mutableListOf<Pair<String, String>>()
+    val skillReloads = mutableListOf<String>()
+    val skillSaves = mutableListOf<Triple<String, String, String>>()
     val mcpCalls = mutableListOf<String>()
     val mcpConfigCalls = mutableListOf<String>()
     val mcpSaves = mutableListOf<Triple<String, String, McpConfigDto?>>()
@@ -27,10 +32,16 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var afterRemove: (suspend (String, String) -> Unit)? = null
     var afterMcpConnect: (suspend (String, String) -> Unit)? = null
     var createError: Exception? = null
+    var skillsError: Exception? = null
     var removeError: Exception? = null
+    var removeSkillError: Exception? = null
+    var saveSkillError: Exception? = null
     var mcpStatusError: Exception? = null
     var mcpConnectError: Exception? = null
     var removeResult = true
+    var removeSkillResult = true
+    var reloadSkillResult = true
+    var saveSkillResult = true
     var mcpConnectResult = true
     var mcpDisconnectResult = true
     var mcpAuthenticateResult = true
@@ -43,12 +54,41 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun skills(directory: String): List<SkillDto> {
         assertNotEdt("agentBehavior.skills")
-        return emptyList()
+        skillsError?.let { throw it }
+        skillCalls.add(directory)
+        return skills
     }
 
     override suspend fun removeSkill(directory: String, location: String): Boolean {
         assertNotEdt("agentBehavior.removeSkill")
-        return false
+        removeSkillError?.let { throw it }
+        skillRemovals.add(directory to location)
+        if (removeSkillResult) skills = skills.filterNot { it.location == location }
+        return removeSkillResult
+    }
+
+    override suspend fun reloadSkills(directory: String): Boolean {
+        assertNotEdt("agentBehavior.reloadSkills")
+        skillReloads.add(directory)
+        return reloadSkillResult
+    }
+
+    override suspend fun saveSkill(directory: String, location: String, content: String): Boolean {
+        assertNotEdt("agentBehavior.saveSkill")
+        saveSkillError?.let { throw it }
+        skillSaves.add(Triple(directory, location, content))
+        if (saveSkillResult) skills = skills.map { if (it.location == location) it.copy(content = content) else it }
+        return saveSkillResult
+    }
+
+    override suspend fun saveSkills(directory: String, edits: Map<String, String>): Boolean {
+        assertNotEdt("agentBehavior.saveSkills")
+        saveSkillError?.let { throw it }
+        for ((location, content) in edits) skillSaves.add(Triple(directory, location, content))
+        if (saveSkillResult) skills = skills.map { skill ->
+            edits[skill.location]?.let { skill.copy(content = it) } ?: skill
+        }
+        return saveSkillResult
     }
 
     override suspend fun removeAgent(directory: String, name: String): Boolean {

@@ -136,6 +136,13 @@ export const dict = {
   "revert.banner.redo": "Redo",
   "revert.banner.redo.all": "Redo All",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversation reverted. File changes were not restored because snapshots are disabled.",
+  "revert.banner.workspace.unavailable":
+    "Conversation reverted. No file checkpoint was available, so workspace changes were not restored.",
+  "revert.banner.workspace.legacy":
+    "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
+  "revert.banner.workspace.enableSnapshots": "Enable snapshots",
   "revert.disabled.agentBusy": "Wait for agent to finish",
   "command.session.compact": "Compact session",
   "command.session.compact.description": "Summarize the session to reduce context size",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Include active file",
   "prompt.context.removeActiveFile": "Remove active file from context",
   "prompt.context.removeFile": "Remove file from context",
+  "prompt.thinking.tooltip": "Reasoning effort",
   "prompt.action.attachFile": "Attach file",
   "prompt.attachment.remove": "Remove attachment",
   "prompt.action.send": "Send",
@@ -1216,6 +1224,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API key",
   "settings.indexing.qdrantApiKey.description": "Optional API key for the Qdrant instance.",
   "settings.indexing.qdrantApiKey.placeholder": "Optional API key",
+  "settings.indexing.fileExtensions.title": "File Extensions",
+  "settings.indexing.fileExtensions.description":
+    "Comma-separated allowlist. Leave empty to use the built-in defaults.",
+  "settings.indexing.fileExtensions.invalid": "Invalid extension: {{extension}}",
   "settings.indexing.tuning.description": "Advanced search and batching parameter.",
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Language",
@@ -1686,6 +1698,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Auto-Collapse Reasoning",
   "settings.display.reasoningAutoCollapse.description":
     "Collapse reasoning blocks after the agent finishes writing them. Leave off to keep reasoning expanded unless you collapse it manually.",
+  "settings.display.shiftTabCycle.title": "Cycle Reasoning Effort with Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Press Shift+Tab in a prompt input to switch to the next reasoning effort level. Disable to keep Shift+Tab for keyboard focus navigation.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

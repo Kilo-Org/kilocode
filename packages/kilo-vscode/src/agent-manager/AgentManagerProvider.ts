@@ -194,6 +194,11 @@ export class AgentManagerProvider implements Disposable {
       },
       stats: (refresh) => this.statsPoller.snapshot(refresh),
       prs: () => this.prBridge.snapshot(),
+      managed: (id) => this.panelSessions.has(id) || !!this.state?.getSession(id),
+      close: async (id) => {
+        await this.onCloseSession(id)
+        this.postToWebview({ type: "agentManager.sessionClosed", sessionId: id })
+      },
       log: (...args) => this.log(...args),
     })
     this.unsubTool = this.connectionService.onEventFiltered(

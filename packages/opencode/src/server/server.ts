@@ -1,7 +1,6 @@
 import "./init-projectors"
 
 import { NodeHttpServer } from "@effect/platform-node"
-import * as Log from "@opencode-ai/core/util/log"
 import { serverUrls } from "@/kilocode/cli/server-urls" // kilocode_change
 import { ConfigProvider, Context, Effect, Exit, Layer, Scope } from "effect"
 import { HttpRouter, HttpServer } from "effect/unstable/http"
@@ -18,8 +17,6 @@ import * as KiloListener from "@/kilocode/server/listener" // kilocode_change
 
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
-
-const log = Log.create({ service: "server" })
 
 export type Listener = {
   hostname: string
@@ -176,7 +173,9 @@ function setupMdns(opts: ListenOptions, port: number, scope: Scope.Scope) {
       yield* Scope.addFinalizer(scope, unpublish)
       return unpublish
     }
-    if (opts.mdns) log.warn("mDNS enabled but hostname is loopback; skipping mDNS publish")
+    if (opts.mdns) {
+      yield* Effect.logWarning("mDNS enabled but hostname is loopback; skipping mDNS publish")
+    }
     return Effect.void
   })
 }

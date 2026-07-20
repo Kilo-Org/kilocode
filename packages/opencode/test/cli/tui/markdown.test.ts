@@ -1,6 +1,6 @@
 // kilocode_change - new file
 import { describe, expect, it } from "bun:test"
-import { formatMarkdownTables } from "../../../src/cli/cmd/tui/util/markdown"
+import { formatMarkdownTables } from "@tui/util/markdown"
 
 describe("formatMarkdownTables", () => {
   it("formats a simple table with fixed-width columns", () => {

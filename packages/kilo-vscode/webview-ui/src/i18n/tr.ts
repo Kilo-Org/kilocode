@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Yinele",
   "revert.banner.redo.all": "Tümünü Yinele",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.unavailable":
+    "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.legacy":
+    "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
+  "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.compact.description": "Bağlam boyutunu azaltmak için oturumu özetle",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Aktif dosyayı dahil et",
   "prompt.context.removeActiveFile": "Aktif dosyayı bağlamdan çıkar",
   "prompt.context.removeFile": "Dosyayı bağlamdan çıkar",
+  "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.attachFile": "Dosya ekle",
   "prompt.attachment.remove": "Eki kaldır",
   "prompt.action.send": "Gönder",
@@ -1256,6 +1264,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API anahtarı",
   "settings.indexing.qdrantApiKey.description": "Qdrant örneği için isteğe bağlı API anahtarı.",
   "settings.indexing.qdrantApiKey.placeholder": "İsteğe bağlı API anahtarı",
+  "settings.indexing.fileExtensions.title": "Dosya Uzantıları",
+  "settings.indexing.fileExtensions.description":
+    "Virgülle ayrılmış izin listesi. Yerleşik varsayılanları kullanmak için boş bırakın.",
+  "settings.indexing.fileExtensions.invalid": "Geçersiz uzantı: {{extension}}",
   "settings.indexing.tuning.description": "Gelişmiş arama ve toplu işlem parametresi.",
 
   "settings.experimental.title": "Deneysel",
@@ -1671,6 +1683,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
+  "settings.display.shiftTabCycle.description":
+    "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

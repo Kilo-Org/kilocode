@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Ponovi",
   "revert.banner.redo.all": "Ponovi Sve",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Razgovor je vraćen. Promjene datoteka nisu vraćene jer su snimci stanja onemogućeni.",
+  "revert.banner.workspace.unavailable":
+    "Razgovor je vraćen. Nije bila dostupna kontrolna tačka datoteka, pa promjene radnog prostora nisu vraćene.",
+  "revert.banner.workspace.legacy":
+    "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
+  "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
   "command.session.compact": "Sažmi sesiju",
   "command.session.compact.description": "Sažmi sesiju kako bi se smanjio kontekst",
@@ -351,6 +358,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Uključi aktivnu datoteku",
   "prompt.context.removeActiveFile": "Ukloni aktivnu datoteku iz konteksta",
   "prompt.context.removeFile": "Ukloni datoteku iz konteksta",
+  "prompt.thinking.tooltip": "Napor razmišljanja",
   "prompt.action.attachFile": "Priloži datoteku",
   "prompt.attachment.remove": "Ukloni prilog",
   "prompt.action.send": "Pošalji",
@@ -921,6 +929,10 @@ export const dict = {
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcionalni API ključ",
+  "settings.indexing.fileExtensions.title": "Ekstenzije datoteka",
+  "settings.indexing.fileExtensions.description":
+    "Lista dozvoljenih stavki odvojena zarezima. Ostavite prazno da biste koristili ugrađene zadane postavke.",
+  "settings.indexing.fileExtensions.invalid": "Neispravna ekstenzija datoteke: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Qdrant API ključ",
   "settings.indexing.qdrantUrl.description": "URL servera za Qdrant instancu.",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",
@@ -1716,6 +1728,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Automatski sažmi razmišljanje",
   "settings.display.reasoningAutoCollapse.description":
     "Sažima blokove razmišljanja nakon što ih agent završi pisati. Ostavite isključeno da razmišljanje ostane prošireno, osim ako ga ručno sažmete.",
+  "settings.display.shiftTabCycle.title": "Promijeni napor razmišljanja pomoću Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Pritisnite Shift+Tab u polju za unos upita da pređete na sljedeći nivo napora razmišljanja. Onemogućite ovu opciju kako biste zadržali Shift+Tab za navigaciju fokusom putem tastature.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

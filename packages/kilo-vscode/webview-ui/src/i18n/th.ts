@@ -136,6 +136,13 @@ export const dict = {
   "revert.banner.redo": "ทำซ้ำ",
   "revert.banner.redo.all": "ทำซ้ำทั้งหมด",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "ย้อนกลับการสนทนาแล้ว ไม่ได้กู้คืนการเปลี่ยนแปลงไฟล์เนื่องจากปิดใช้งานสแนปชอตอยู่",
+  "revert.banner.workspace.unavailable":
+    "ย้อนกลับการสนทนาแล้ว ไม่มีจุดตรวจสอบไฟล์ จึงไม่ได้กู้คืนการเปลี่ยนแปลงในพื้นที่ทำงาน",
+  "revert.banner.workspace.legacy":
+    "ย้อนกลับการสนทนาแล้ว ไม่ทราบสถานะการกู้คืนพื้นที่ทำงานสำหรับการย้อนกลับก่อนหน้านี้",
+  "revert.banner.workspace.enableSnapshots": "เปิดใช้งานสแนปชอต",
   "revert.disabled.agentBusy": "รอให้เอเจนต์ทำงานเสร็จ",
   "command.session.compact": "บีบอัดเซสชัน",
   "command.session.compact.description": "สรุปเซสชันเพื่อลดขนาดบริบท",
@@ -349,6 +356,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "รวมไฟล์ที่ใช้งานอยู่",
   "prompt.context.removeActiveFile": "เอาไฟล์ที่ใช้งานอยู่ออกจากบริบท",
   "prompt.context.removeFile": "เอาไฟล์ออกจากบริบท",
+  "prompt.thinking.tooltip": "ความพยายามในการให้เหตุผล",
   "prompt.action.attachFile": "แนบไฟล์",
   "prompt.attachment.remove": "เอาไฟล์แนบออก",
   "prompt.action.send": "ส่ง",
@@ -911,6 +919,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "คีย์ API Qdrant",
   "settings.indexing.qdrantApiKey.description": "คีย์ API เสริมสำหรับอินสแตนซ์ Qdrant",
   "settings.indexing.qdrantApiKey.placeholder": "คีย์ API เสริม",
+  "settings.indexing.fileExtensions.title": "นามสกุลไฟล์",
+  "settings.indexing.fileExtensions.description":
+    "รายการที่อนุญาตคั่นด้วยเครื่องหมายจุลภาค ปล่อยว่างไว้เพื่อใช้ค่าเริ่มต้นที่มีมาให้",
+  "settings.indexing.fileExtensions.invalid": "นามสกุลไฟล์ไม่ถูกต้อง: {{extension}}",
   "settings.indexing.providerField.description": "การตั้งค่าการเชื่อมต่อเฉพาะผู้ให้บริการ",
   "settings.indexing.status.title": "สถานะ",
   "settings.indexing.tuning.description": "พารามิเตอร์การค้นหาขั้นสูงและการประมวลผลแบทช์",
@@ -1683,6 +1695,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "ยุบเหตุผลอัตโนมัติ",
   "settings.display.reasoningAutoCollapse.description":
     "ยุบ block เหตุผลหลังจากเอเจนต์เขียนเสร็จ ปิดไว้เพื่อให้เหตุผลยังคงขยายอยู่ เว้นแต่คุณจะยุบเอง",
+  "settings.display.shiftTabCycle.title": "สลับระดับความพยายามในการให้เหตุผลด้วย Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "กด Shift+Tab ในช่องป้อนพรอมต์เพื่อสลับไปยังระดับความพยายามในการให้เหตุผลถัดไป ปิดใช้งานเพื่อคง Shift+Tab ไว้สำหรับการนำทางโฟกัสด้วยแป้นพิมพ์",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
