@@ -9,6 +9,7 @@ import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Rectangle
 import javax.swing.JComponent
+import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
 
@@ -48,6 +49,14 @@ internal open class SettingsPanel(scroll: Boolean = true, pad: Boolean = true) :
         settings.next(component)
         revalidate()
         repaint()
+    }
+
+    fun setHeader(component: JComponent) {
+        val header = JPanel(BorderLayout())
+        header.isOpaque = false
+        header.border = JBUI.Borders.emptyRight(UiStyle.Gap.xl())
+        header.add(component, BorderLayout.CENTER)
+        content.add(header, BorderLayout.NORTH)
     }
 
 }

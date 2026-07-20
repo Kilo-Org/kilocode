@@ -15,7 +15,6 @@ import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
-import java.awt.BorderLayout
 import javax.swing.event.DocumentEvent
 
 internal class AutoApproveSettingsUi(
@@ -38,7 +37,7 @@ internal class AutoApproveSettingsUi(
         search.textEditor.document.addDocumentListener(object : DocumentAdapter() {
             override fun textChanged(e: DocumentEvent) = form.filter(search.text)
         })
-        content.add(search, BorderLayout.NORTH)
+        setHeader(search)
         startSettings(AutoApproveContent({ updateDraft(it) }, picker))
     }
 
