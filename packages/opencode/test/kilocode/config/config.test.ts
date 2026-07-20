@@ -1020,7 +1020,7 @@ describe("bash permission migration", () => {
       ),
     )
 
-    expect(files).toEqual(["/config/kilo.json", "/config/kilo.jsonc"])
+    expect(files).toEqual([path.join("/config", "kilo.json"), path.join("/config", "kilo.jsonc")])
   })
 
   for (const action of ["allow", "ask", "deny"] as const) {

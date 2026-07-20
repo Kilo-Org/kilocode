@@ -22,8 +22,8 @@ describe("opencode mcp add (non-interactive subprocess)", () => {
         ])
         opencode.expectExit(result, 0)
 
-        const config = yield* Effect.promise(() =>
-          Bun.file(path.join(home, ".config", "kilo", "kilo.json")).json(), // kilocode_change
+        const config = yield* Effect.promise(
+          () => Bun.file(path.join(home, ".config", "kilo", "kilo.jsonc")).json(), // kilocode_change
         )
         expect(config.mcp.github).toEqual({
           type: "remote",
@@ -58,8 +58,8 @@ describe("opencode mcp add (non-interactive subprocess)", () => {
         ])
         opencode.expectExit(result, 0)
 
-        const config = yield* Effect.promise(() =>
-          Bun.file(path.join(home, ".config", "kilo", "kilo.json")).json(), // kilocode_change
+        const config = yield* Effect.promise(
+          () => Bun.file(path.join(home, ".config", "kilo", "kilo.jsonc")).json(), // kilocode_change
         )
         expect(config.mcp.local).toEqual({
           type: "local",
@@ -80,19 +80,18 @@ describe("opencode mcp add (non-interactive subprocess)", () => {
       Effect.gen(function* () {
         const profile = path.join(home, "profile")
         yield* Effect.promise(() => mkdir(profile, { recursive: true }))
-        const result = yield* opencode.spawn(
-          ["mcp", "add", "profile", "--url", "https://example.com/profile"],
-          { env: { KILO_CONFIG_DIR: profile } },
-        )
+        const result = yield* opencode.spawn(["mcp", "add", "profile", "--url", "https://example.com/profile"], {
+          env: { KILO_CONFIG_DIR: profile },
+        })
         opencode.expectExit(result, 0)
 
-        const config = yield* Effect.promise(() => Bun.file(path.join(profile, "kilo.json")).json())
+        const config = yield* Effect.promise(() => Bun.file(path.join(profile, "kilo.jsonc")).json())
         expect(config.mcp.profile).toEqual({ type: "remote", url: "https://example.com/profile" })
-        expect(yield* Effect.promise(() => Bun.file(path.join(home, ".config", "kilo", "kilo.json")).exists())).toBe(
+        expect(yield* Effect.promise(() => Bun.file(path.join(home, ".config", "kilo", "kilo.jsonc")).exists())).toBe(
           false,
         )
       }),
     60_000,
   )
-        // kilocode_change end
+  // kilocode_change end
 })
