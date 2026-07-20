@@ -36,7 +36,6 @@ import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
-import com.intellij.ui.JBColor
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
@@ -45,11 +44,9 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
-import java.awt.Color
 import java.awt.Dimension
 import java.awt.Container
 import java.awt.Cursor
-import java.awt.FlowLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Rectangle
@@ -84,7 +81,7 @@ class PermissionView(
     private val body = Stack.vertical(gap = UiStyle.Gap.sm())
     private val desc = makeDescription()
     private val codeSlot = BorderLayoutPanel().apply { isVisible = false }
-    private val diffRow = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply { isVisible = false }
+    private val diffRow = Stack.horizontal().apply { isVisible = false }
     private val rules = PermissionRulesView(selection) { syncPrimaryText() }.apply { isVisible = false }
     private val state = JBLabel().apply {
         border = JBUI.Borders.empty(UiStyle.Gap.sm(), 0, 0, 0)
@@ -422,8 +419,8 @@ class PermissionView(
     }
 
     // Test helpers
-    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow") || it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.allow.save") || it.text == KiloBundle.message("session.permission.allow.once.save") }
-    internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") || it.text == KiloBundle.message("session.permission.reject.save") }
+    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow") || it.text == KiloBundle.message("session.permission.allow.once") }
+    internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") }
     internal fun codeLabelsForTest() = codeEditors()
     internal fun diffViewsForTest() = diffViews.toList()
     internal fun headerFontForTest() = textAreas(card).first { it.font.isBold }.font
@@ -592,15 +589,6 @@ internal class PermissionRulesView(
 
     @RequiresEdt
     fun hintLabelsForTest(): List<JBLabel> = rows.map { it.hintLabelForTest() }
-
-    @RequiresEdt
-    fun decisionForTest(pattern: String): PermissionRuleDecision = decisions[pattern] ?: PermissionRuleDecision.PENDING
-
-    @RequiresEdt
-    fun bodyCreatedForTest(): Boolean = box != null
-
-    @RequiresEdt
-    fun bodyInsetForTest(): Int = inset.border.getBorderInsets(inset).left
 
     @RequiresEdt
     private fun syncArrow() {
@@ -811,7 +799,7 @@ internal class PermissionRulesView(
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
                 val base = UiStyle.Colors.bg()
                 g2.color = when {
-                    active -> UiStyle.Colors.blend(base, if (approve) approvedColor() else deniedColor(), 0.15f)
+                    active -> UiStyle.Colors.blend(base, if (approve) UiStyle.Colors.addedForeground() else UiStyle.Colors.removedForeground(), 0.15f)
                     else -> UiStyle.Colors.actionHoverBackground()
                 }
                 val arc = JBUI.scale(JBUI.getInt("Button.arc", 6))
@@ -828,13 +816,3 @@ internal class PermissionRulesView(
         }
     }
 }
-
-private fun approvedColor(): Color = JBColor.namedColor(
-    "Kilo.PermissionRule.approvedForeground",
-    JBColor(Color(0x1f, 0x9d, 0x66), Color(0x35, 0xd4, 0x9a)),
-)
-
-private fun deniedColor(): Color = JBColor.namedColor(
-    "Kilo.PermissionRule.deniedForeground",
-    JBColor(Color(0xdb, 0x58, 0x66), Color(0xff, 0x6b, 0x7a)),
-)

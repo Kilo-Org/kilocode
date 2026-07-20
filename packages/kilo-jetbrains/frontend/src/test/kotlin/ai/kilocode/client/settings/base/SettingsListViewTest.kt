@@ -22,7 +22,7 @@ import javax.swing.SwingConstants
 import javax.swing.SwingUtilities
 
 class SettingsListViewTest : BasePlatformTestCase() {
-    fun `test list does not duplicate description in tooltip`() {
+    fun `test list shows description tooltip over row body`() {
         edt {
             val view = SettingsListView("Empty") { _, _ -> }
             val row = item("with", "Alpha", "Use <safe> text\nAcross lines")
@@ -34,7 +34,23 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val bounds = view.list.getCellBounds(0, 0)
             val tip = view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4)))
 
-            assertNull(tip)
+            assertEquals("<html>Use &lt;safe&gt; text<br>Across lines</html>", tip)
+        }
+    }
+
+    fun `test tooltip config suppresses description tooltip but keeps action tooltip`() {
+        edt {
+            val cfg = SettingsListConfig.Equal.copy(tooltip = false)
+            val view = SettingsListView("Empty", cfg) { _, _ -> }
+            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit", alwaysVisible = true))
+            view.update(listOf(row))
+            layout(view)
+
+            val bounds = view.list.getCellBounds(0, 0)
+            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
+
+            assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
+            assertEquals("Edit", view.list.getToolTipText(event(view.list, center(area))))
         }
     }
 

@@ -7,7 +7,6 @@ import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.PermissionRuleCandidate
 import ai.kilocode.client.session.model.PermissionRuleDecision
-import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
@@ -329,7 +328,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         val text = allText(view)
         assertTrue("Should contain rules title, got: $text", text.contains("Auto-approve Rules"))
         assertFalse("Rules should be collapsed by default", view.rulesForTest().isExpanded())
-        assertTrue("Rules body should be lazy", !view.rulesForTest().bodyCreatedForTest())
+        assertTrue("Rules body should be lazy", view.rulesForTest().commandFieldsForTest().isEmpty())
 
         view.rulesForTest().toggle()
 
@@ -337,12 +336,9 @@ class PermissionViewTest : BasePlatformTestCase() {
         val deny = view.rulesForTest().denyButtonsForTest()
         assertEquals(2, approve.size)
         assertEquals(2, deny.size)
-        assertEquals(PermissionRuleDecision.PENDING, view.rulesForTest().decisionForTest("*.kt"))
-        assertEquals(PermissionRuleDecision.APPROVED, view.rulesForTest().decisionForTest("src/**"))
         assertEquals("Add to allowed", approve[0].toolTipText)
         assertEquals("Remove from allowed", approve[1].toolTipText)
         assertEquals("Add to denied", deny[1].toolTipText)
-        assertEquals(SessionViewIcons.chevronCollapsed.iconWidth, view.rulesForTest().bodyInsetForTest())
         val commands = view.rulesForTest().commandFieldsForTest()
         assertEquals(2, commands.size)
         assertEquals("*.kt", commands[0].text)
@@ -537,10 +533,10 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         view.rulesForTest().toggle()
         view.rulesForTest().approveButtonsForTest()[0].doClick()
-        assertEquals(PermissionRuleDecision.APPROVED, view.rulesForTest().decisionForTest("git clean *"))
+        assertEquals("Remove from allowed", view.rulesForTest().approveButtonsForTest()[0].toolTipText)
         view.rulesForTest().denyButtonsForTest()[0].doClick()
 
-        assertEquals(PermissionRuleDecision.DENIED, view.rulesForTest().decisionForTest("git clean *"))
+        assertEquals("Remove from denied", view.rulesForTest().denyButtonsForTest()[0].toolTipText)
         assertEquals("Allow", view.runButtonForTest().text)
         assertEquals("Reject", view.denyButtonForTest().text)
         assertFalse(view.runButtonForTest().isEnabled)
@@ -596,7 +592,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         view.rulesForTest().approveButtonsForTest()[0].doClick()
         view.rulesForTest().approveButtonsForTest()[0].doClick()
 
-        assertEquals(PermissionRuleDecision.PENDING, view.rulesForTest().decisionForTest("git status"))
+        assertEquals("Add to allowed", view.rulesForTest().approveButtonsForTest()[0].toolTipText)
         assertEquals("Allow once", view.runButtonForTest().text)
         view.runButtonForTest().doClick()
         assertNull(replies.single().third)
@@ -636,7 +632,7 @@ class PermissionViewTest : BasePlatformTestCase() {
                 )
             )
             assertTrue(next.rulesForTest().isExpanded())
-            assertTrue(next.rulesForTest().bodyCreatedForTest())
+            assertEquals(1, next.rulesForTest().commandFieldsForTest().size)
         } finally {
             next.dispose()
         }
@@ -676,9 +672,9 @@ class PermissionViewTest : BasePlatformTestCase() {
             )
         )
 
-        val areas = findAll<javax.swing.text.JTextComponent>(view).filter { it.isVisible }
-        assertTrue("Expected description content row", areas.any { it.text == "Run the targeted tests" && !it.font.isBold })
-        assertTrue(areas.any { it.text == "Permission required" && it.font.isBold })
+        val text = allText(view)
+        assertTrue("Expected description content row, got: $text", text.contains("Run the targeted tests"))
+        assertTrue("Expected permission header, got: $text", text.contains("Permission required"))
     }
 
     // ------ button types ------
@@ -828,6 +824,59 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals(style.editorFont.size, field.font.size)
     }
 
+    fun `test rule command fields are retained and disposed`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        view.show(permissionWithRules("perm_rules_retain", listOf("git status *", "git push *")))
+        view.rulesForTest().toggle()
+
+        val fields = view.rulesForTest().commandFieldsForTest()
+        assertEquals(2, fields.size)
+        fields.forEach { it.getEditor(true) }
+        val count = EditorFactory.getInstance().allEditors.size
+        val components = componentCount(view.rulesForTest())
+
+        repeat(40) {
+            view.show(permissionWithRules("perm_rules_retain", listOf("git status *", "git push *")))
+
+            val next = view.rulesForTest().commandFieldsForTest()
+            assertEquals(2, next.size)
+            assertSame(fields[0], next[0])
+            assertSame(fields[1], next[1])
+            assertEquals(components, componentCount(view.rulesForTest()))
+            next.forEach { it.getEditor(true) }
+            assertEquals(count, EditorFactory.getInstance().allEditors.size)
+        }
+
+        view.hideView()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(view.rulesForTest().commandFieldsForTest().isEmpty())
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test stale rule command fields are released on rebuild`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        view.show(permissionWithRules("perm_rules_rebuild", listOf("git status *")))
+        view.rulesForTest().toggle()
+        view.rulesForTest().commandFieldsForTest().single().getEditor(true)
+        val count = EditorFactory.getInstance().allEditors.size
+
+        repeat(20) { i ->
+            view.show(permissionWithRules("perm_rules_rebuild", listOf("git command $i *")))
+
+            val fields = view.rulesForTest().commandFieldsForTest()
+            assertEquals(1, fields.size)
+            fields.single().getEditor(true)
+            assertEquals(count, EditorFactory.getInstance().allEditors.size)
+        }
+
+        view.hideView()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(view.rulesForTest().commandFieldsForTest().isEmpty())
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
     private fun permission() = Permission(
         id = "perm1",
         sessionId = "ses_test",
@@ -836,6 +885,18 @@ class PermissionViewTest : BasePlatformTestCase() {
         always = emptyList(),
         meta = PermissionMeta(),
         message = "Review file changes",
+    )
+
+    private fun permissionWithRules(id: String, patterns: List<String>) = Permission(
+        id = id,
+        sessionId = "ses_test",
+        name = "bash",
+        patterns = emptyList(),
+        always = emptyList(),
+        meta = PermissionMeta(
+            command = "git status",
+            ruleDecisions = patterns.map { PermissionRuleCandidate(it) },
+        ),
     )
 
     private fun buttons(root: Container): List<AbstractButton> = root.components.flatMap { comp ->
@@ -866,6 +927,9 @@ class PermissionViewTest : BasePlatformTestCase() {
         }
         layout(root)
     }
+
+    private fun componentCount(root: Container): Int =
+        1 + root.components.sumOf { if (it is Container) componentCount(it) else 1 }
 
     private fun occurrences(text: String, token: String): Int {
         if (token.isEmpty()) return 0

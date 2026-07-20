@@ -11,6 +11,7 @@ import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.UIUtil
+import com.intellij.xml.util.XmlStringUtil
 import java.awt.Dimension
 import java.awt.Rectangle
 import java.awt.event.KeyEvent
@@ -33,6 +34,27 @@ internal class SettingsListView(
     private val model = CollectionListModel<SettingsListItem>()
     internal val list: JBList<SettingsListItem> = object : JBList<SettingsListItem>(model), SettingsListActive {
         override fun active(): Boolean = popups > 0
+
+        override fun getToolTipText(event: MouseEvent): String? {
+            val tip = super.getToolTipText(event)
+            if (tip != null) return tip
+            val idx = locationToIndex(event.point)
+            if (idx < 0) return null
+            val bounds = getCellBounds(idx, idx) ?: return null
+            if (!bounds.contains(event.point)) return null
+            val item = model.getElementAt(idx)
+            val selected = isSelectedIndex(idx)
+            val id = settingsListCellBounds(this, idx, selected)
+                .entries
+                .firstOrNull { it.value.contains(event.point) }
+                ?.key
+            val cell = settingsListVisibleCells(item, selected).firstOrNull { it.id == id }
+            if (cell != null) return cell.label.takeIf { it.isNotBlank() }
+            if (!cfg.description || !cfg.tooltip) return null
+            val note = item.description?.takeIf { it.isNotBlank() } ?: return null
+            val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
+            return XmlStringUtil.wrapInHtml(text)
+        }
     }.apply {
         selectionMode = cfg.selection
         setExpandableItemsEnabled(false)

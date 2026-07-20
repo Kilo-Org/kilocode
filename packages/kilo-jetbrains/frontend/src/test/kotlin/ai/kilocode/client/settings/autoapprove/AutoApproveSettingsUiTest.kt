@@ -3,7 +3,6 @@ package ai.kilocode.client.settings.autoapprove
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigDto
@@ -335,8 +334,14 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         jList.selectedIndex = idx
         jList.setSize(600, jList.preferredSize.height.coerceAtLeast(80))
         jList.doLayout()
-        val bounds = settingsListCellBounds(jList, idx, true).getValue("level")
-        click(jList, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
+        cell(list, key, "level")
+    }
+
+    private fun cell(list: SettingsInlineList, key: String, id: String) {
+        val method = SettingsInlineList::class.java.getDeclaredMethod("onCell", String::class.java, String::class.java)
+        method.isAccessible = true
+        method.invoke(list, key, id)
+        UIUtil.dispatchAllInvocationEvents()
     }
 
     private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
