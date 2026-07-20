@@ -1,14 +1,15 @@
 import { Layer, ManagedRuntime } from "effect"
 import { attach } from "./run-service"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import * as Observability from "@opencode-ai/core/observability"
 
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Database } from "@opencode-ai/core/database/database"
+import { Credential } from "@opencode-ai/core/credential" // kilocode_change
 import { Auth } from "@/auth"
 import { Account } from "@/account/account"
 import { Config } from "@/config/config"
 import { Git } from "@/git"
-import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Storage } from "@/storage/storage"
 import { Snapshot } from "@/snapshot"
 import { Plugin } from "@/plugin"
@@ -42,7 +43,6 @@ import { Format } from "@/format"
 import { InstanceLayer } from "@/project/instance-layer"
 import { Project } from "@/project/project"
 import { Vcs } from "@/project/vcs"
-import { Reference } from "@/reference/reference"
 import { Workspace } from "@/control-plane/workspace"
 import { Worktree } from "@/worktree"
 import { Installation } from "@/installation"
@@ -53,23 +53,27 @@ import { Npm } from "@opencode-ai/core/npm"
 import { memoMap } from "@opencode-ai/core/effect/memo-map"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
-import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
+// kilocode_change start
+import { Notebook } from "@/kilocode/notebook/service"
+import { AgentManager } from "@/kilocode/agent-manager/service"
+// kilocode_change end
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change - listener routes are provided by AppLayer
-import { ProjectCopy } from "@opencode-ai/core/project/copy" // kilocode_change - listener routes are provided by AppLayer
-import { MoveSession } from "@opencode-ai/core/control-plane/move-session" // kilocode_change - listener routes are provided by AppLayer
-import { PtyTicket } from "@opencode-ai/core/pty/ticket" // kilocode_change - listener routes are provided by AppLayer
+// kilocode_change start
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { ProjectCopy } from "@opencode-ai/core/project/copy"
+import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
+import { PtyTicket } from "@opencode-ai/core/pty/ticket"
+// kilocode_change end
 
-const CoreLayer = Layer.mergeAll(
+const CoreLayer = Layer.mergeAll( // kilocode_change
   Npm.defaultLayer,
   FSUtil.defaultLayer,
   Database.defaultLayer,
+  Credential.defaultLayer, // kilocode_change
   Auth.defaultLayer,
   Account.defaultLayer,
   Config.defaultLayer,
   Git.defaultLayer,
-  Ripgrep.defaultLayer,
   Storage.defaultLayer,
   Snapshot.defaultLayer,
   Plugin.defaultLayer,
@@ -80,10 +84,12 @@ const CoreLayer = Layer.mergeAll(
   Agent.defaultLayer,
   Skill.defaultLayer,
   Discovery.defaultLayer,
-)
+) // kilocode_change
 
+// kilocode_change start
 const SessionLayer = Layer.mergeAll(
-  AgentManager.defaultLayer, // kilocode_change
+  AgentManager.defaultLayer,
+// kilocode_change end
   Question.defaultLayer,
   Notebook.defaultLayer, // kilocode_change
   Permission.defaultLayer,
@@ -106,27 +112,29 @@ const SessionLayer = Layer.mergeAll(
   McpAuth.defaultLayer,
   Command.defaultLayer,
   Truncate.defaultLayer,
-)
+) // kilocode_change
 
-const FeatureLayer = Layer.mergeAll(
+const FeatureLayer = Layer.mergeAll( // kilocode_change
   ToolRegistry.defaultLayer,
   Format.defaultLayer,
   Project.defaultLayer,
-  ProjectV2.defaultLayer, // kilocode_change - satisfy listener route handlers through AppLayer
-  ProjectCopy.defaultLayer, // kilocode_change - satisfy listener route handlers through AppLayer
-  MoveSession.defaultLayer, // kilocode_change - satisfy listener route handlers through AppLayer
-  PtyTicket.defaultLayer, // kilocode_change - satisfy listener route handlers through AppLayer
+  // kilocode_change start
+  ProjectV2.defaultLayer,
+  ProjectCopy.defaultLayer,
+  MoveSession.defaultLayer,
+  PtyTicket.defaultLayer,
+  // kilocode_change end
   Vcs.defaultLayer,
-  Reference.defaultLayer,
   Workspace.defaultLayer,
   Worktree.appLayer,
   Installation.defaultLayer,
   MemoryService.layer, // kilocode_change
   ShareNext.defaultLayer,
   SessionShare.defaultLayer,
-)
+) // kilocode_change
 
-export const AppLayer = Layer.mergeAll(CoreLayer, SessionLayer, FeatureLayer).pipe(
+export const AppLayer = Layer.mergeAll(CoreLayer, SessionLayer, FeatureLayer).pipe( // kilocode_change
+  Layer.provideMerge(Ripgrep.defaultLayer),
   Layer.provideMerge(InstanceLayer.layer),
   Layer.provideMerge(Observability.layer),
 )

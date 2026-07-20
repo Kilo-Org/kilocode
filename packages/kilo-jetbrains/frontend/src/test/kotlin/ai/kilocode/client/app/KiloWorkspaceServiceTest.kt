@@ -109,4 +109,12 @@ class KiloWorkspaceServiceTest : BasePlatformTestCase() {
         assertEquals(0, rpc.localConfigPathCalls)
         assertEquals(0, rpc.globalConfigPathCalls)
     }
+
+    fun `test searchFiles sends query to RPC`() = runBlocking {
+        withContext(Dispatchers.Default) {
+            service.searchFiles("/test", "src")
+        }
+
+        assertEquals(listOf("src"), rpc.searchQueries)
+    }
 }

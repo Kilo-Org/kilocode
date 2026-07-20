@@ -64,10 +64,24 @@ data class ConfigDto(
     val subagentModel: String? = null,
     val subagentVariant: String? = null,
     val defaultAgent: String? = null,
+    val watcher: WatcherConfigDto? = null,
+    val compaction: CompactionConfigDto? = null,
     val instructions: List<String> = emptyList(),
     val skills: SkillsConfigDto? = null,
     val mcp: Map<String, McpConfigDto> = emptyMap(),
     val agent: Map<String, AgentConfigDto> = emptyMap(),
+)
+
+@Serializable
+data class WatcherConfigDto(
+    val ignore: List<String> = emptyList(),
+)
+
+@Serializable
+data class CompactionConfigDto(
+    val auto: Boolean? = null,
+    val threshold_percent: Double? = null,
+    val prune: Boolean? = null,
 )
 
 @Serializable
@@ -109,10 +123,25 @@ sealed class PermissionRuleDto {
 @Serializable
 data class ConfigPatchDto(
     val values: Map<String, String?> = emptyMap(),
+    val watcher: WatcherPatchDto? = null,
+    val compaction: CompactionPatchDto? = null,
     val instructions: List<String>? = null,
     val skills: SkillsPatchDto? = null,
     val mcp: Map<String, McpConfigDto?>? = null,
     val agents: Map<String, AgentConfigPatchDto> = emptyMap(),
+)
+
+@Serializable
+data class WatcherPatchDto(
+    val ignore: List<String>? = null,
+)
+
+@Serializable
+data class CompactionPatchDto(
+    val clear: List<String> = emptyList(),
+    val auto: Boolean? = null,
+    val threshold_percent: Double? = null,
+    val prune: Boolean? = null,
 )
 
 @Serializable

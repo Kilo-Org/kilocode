@@ -65,4 +65,42 @@ describe("bash permission metadata.command", () => {
       },
     })
   })
+
+  test.skipIf(process.platform === "win32").each([
+    ["single quoted", "cat << 'EOF'\n$HOME\nEOF"],
+    ["double quoted", 'cat << "EOF"\n$HOME\nEOF'],
+    ["escaped", "cat << \\EOF\n$HOME\nEOF"],
+    ["unquoted", "cat << EOF\n$HOME\nEOF"],
+  ] as const)("marks %s heredocs", async (_, command) => {
+    await using tmp = await tmpdir()
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const bash = await runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
+        const requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
+        await Effect.runPromise(bash.execute({ command }, capture(requests)))
+
+        const req = requests.find((item) => item.permission === "bash")
+        expect(req?.metadata.heredoc).toBe(true)
+        expect(req?.metadata.command).toBe(command)
+        expect(req?.patterns).toEqual([command])
+        expect(req?.always).toEqual(["cat *"])
+      },
+    })
+  })
+
+  test("omits heredoc metadata for ordinary commands", async () => {
+    await using tmp = await tmpdir()
+    await provideTestInstance({
+      directory: tmp.path,
+      fn: async () => {
+        const bash = await runtime.runPromise(ShellTool.pipe(Effect.flatMap((info) => info.init())))
+        const requests: Array<Omit<Permission.Request, "id" | "sessionID" | "tool">> = []
+        await Effect.runPromise(bash.execute({ command: "echo hello" }, capture(requests)))
+
+        const req = requests.find((item) => item.permission === "bash")
+        expect(req?.metadata.heredoc).toBeUndefined()
+      },
+    })
+  })
 })

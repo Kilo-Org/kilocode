@@ -39,6 +39,7 @@ mock.module("@kilocode/kilo-gateway", () => ({
 mock.module("@/effect/app-runtime", () => ({
   AppRuntime: {
     async runPromise() {},
+    async dispose() {},
   },
 }))
 

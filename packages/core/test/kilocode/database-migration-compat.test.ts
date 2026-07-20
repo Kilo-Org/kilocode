@@ -9,6 +9,8 @@ import type { SqlClient as SqlClientService } from "effect/unstable/sql/SqlClien
 import { sql } from "drizzle-orm"
 import path from "path"
 import { tmpdir } from "../fixture/tmpdir"
+import { SessionHistory } from "@opencode-ai/core/session/history"
+import { SessionV2 } from "@opencode-ai/core/session"
 
 const make = EffectDrizzleSqlite.makeWithDefaults()
 const run = <A, E>(effect: Effect.Effect<A, E, SqlClientService>) =>
@@ -28,34 +30,89 @@ describe("database migration compatibility", () => {
           sql`INSERT INTO project (id, worktree, time_created, time_updated, sandboxes) VALUES ('project', '/repo', 1, 1, '[]')`,
         )
         yield* db.run(
-          sql`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('session', 'project', 'session', '/repo', 'Session', '7.4.7', 1, 1)`,
+          sql`INSERT INTO session (id, project_id, slug, directory, title, version, time_created, time_updated) VALUES ('ses_session', 'project', 'session', '/repo', 'Session', '7.4.7', 1, 1)`,
         )
         yield* db.run(
-          sql`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('legacy-message', 'session', 1, 1, '{}')`,
+          sql`INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES ('legacy-message', 'ses_session', 1, 1, '{}')`,
         )
         yield* db.run(
-          sql`INSERT INTO part (id, message_id, session_id, time_created, time_updated, data) VALUES ('legacy-part', 'legacy-message', 'session', 1, 1, '{}')`,
+          sql`INSERT INTO part (id, message_id, session_id, time_created, time_updated, data) VALUES ('legacy-part', 'legacy-message', 'ses_session', 1, 1, '{}')`,
         )
         yield* db.run(
-          sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('legacy-projection', 'session', 'user', 1, 1, '{}')`,
+          sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('legacy-projection', 'ses_session', 'user', 1, 1, '{}')`,
         )
 
         yield* DatabaseMigration.applyOnly(db, migrations.slice(split))
 
         // This is the projection shape written by the CLI bundled with VS Code v7.4.7.
         yield* db.run(
-          sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('message', 'session', 'user', 1, 1, '{}')`,
+          sql`INSERT INTO session_message (id, session_id, type, time_created, time_updated, data) VALUES ('message', 'ses_session', 'user', 1, 1, '{}')`,
         )
-        yield* db.run(
-          sql`UPDATE session_message SET data = '{"text":"updated"}' WHERE id = 'message'`,
-        )
+        yield* db.run(sql`UPDATE session_message SET data = '{"text":"updated"}' WHERE id = 'message'`)
 
         expect(yield* db.get(sql`SELECT id, seq, data FROM session_message WHERE id = 'message'`)).toEqual({
           id: "message",
           seq: null,
           data: '{"text":"updated"}',
         })
-        expect(yield* db.get(sql`SELECT id FROM session WHERE id = 'session'`)).toEqual({ id: "session" })
+        yield* db.run(
+          sql`INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('msg_sequenced', 'ses_session', 'user', 1, 2, 2, '{"text":"current","files":[],"agents":[],"time":{"created":2}}')`,
+        )
+        const legacy = JSON.stringify({
+          agent: "code",
+          model: { id: "model", providerID: "provider" },
+          content: [
+            {
+              type: "tool",
+              id: "tool",
+              name: "read",
+              state: {
+                status: "completed",
+                input: {},
+                content: [{ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" }],
+                structured: {
+                  nested: {
+                    status: "completed",
+                    content: [{ type: "media", mediaType: "text/plain", data: "unchanged" }],
+                  },
+                },
+              },
+              time: { created: 3, completed: 3 },
+            },
+          ],
+          time: { created: 3, completed: 3 },
+        })
+        yield* db.run(
+          sql`INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) VALUES ('msg_legacy_tool', 'ses_session', 'assistant', 2, 3, 3, ${legacy})`,
+        )
+        const session = SessionV2.ID.make("ses_session")
+        const history = yield* SessionHistory.load(db, session)
+        expect(history.map((item) => String(item.id))).toEqual(["msg_sequenced", "msg_legacy_tool"])
+        expect(history[1]).toMatchObject({
+          content: [
+            {
+              state: {
+                content: [
+                  {
+                    type: "file",
+                    uri: "data:image/png;base64,AAAA",
+                    mime: "image/png",
+                    name: "image.png",
+                  },
+                ],
+                structured: {
+                  nested: {
+                    status: "completed",
+                    content: [{ type: "media", mediaType: "text/plain", data: "unchanged" }],
+                  },
+                },
+              },
+            },
+          ],
+        })
+        expect((yield* SessionHistory.entriesForRunner(db, session, 0)).map((item) => item.seq)).toEqual([1, 2])
+
+        expect(yield* db.get(sql`SELECT id FROM session WHERE id = 'ses_session'`)).toEqual({ id: "ses_session" })
         expect(yield* db.get(sql`SELECT id FROM message WHERE id = 'legacy-message'`)).toEqual({ id: "legacy-message" })
         expect(yield* db.get(sql`SELECT id FROM part WHERE id = 'legacy-part'`)).toEqual({ id: "legacy-part" })
       }),

@@ -33,6 +33,7 @@ import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -363,8 +364,10 @@ export namespace KiloSessions {
                 if (type === undefined) return
                 const fn = handlers.get(type)
                 if (!fn) return
-                Promise.resolve(fn({ properties: event.payload!.properties })).catch((cause) =>
-                  log.error("subscriber failed", { type, cause }),
+                // Instance.restore: handlers run async work after the emitting fiber's
+                // synchronous window, where fiber-scoped InstanceRef is no longer visible.
+                Promise.resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))).catch(
+                  (cause) => log.error("subscriber failed", { type, cause }),
                 )
               }
               GlobalBus.on("event", handler)
@@ -401,6 +404,8 @@ export namespace KiloSessions {
     Layer.provide(Config.defaultLayer),
     Layer.provide(Session.defaultLayer),
   )
+
+  export const node = LayerNode.make(layer, [Bus.node, Config.node, Session.node])
 
   export async function enableRemote() {
     if (remote) return
@@ -476,8 +481,7 @@ export namespace KiloSessions {
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
         },
         onMessage: (msg) => {
-          // Must run inside Instance.provide so Bus.subscribeAll can access
-          // the instance-scoped subscription map via Instance.state().
+          // Restore the directory context before dispatching an async remote message.
           void provide({ directory, fn: () => sender.handle(msg) })
         },
         onClose: () => disableRemote(),

@@ -3,8 +3,8 @@
 // When upstream adds a new command to index.ts, add it here too.
 import { AcpCommand } from "../cli/cmd/acp"
 import { McpCommand } from "../cli/cmd/mcp"
-import { TuiThreadCommand } from "../cli/cmd/tui/thread"
-import { AttachCommand } from "../cli/cmd/tui/attach"
+import { TuiThreadCommand } from "../cli/cmd/tui"
+import { AttachCommand } from "../cli/cmd/attach"
 import { RunCommand } from "../cli/cmd/run"
 import { GenerateCommand } from "../cli/cmd/generate"
 import { DebugCommand } from "../cli/cmd/debug"
