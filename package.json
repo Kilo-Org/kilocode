@@ -163,11 +163,12 @@
     "gcp-metadata@8.1.2": "patches/gcp-metadata@8.1.2.patch",
     "pacote@21.5.0": "patches/pacote@21.5.0.patch",
     "@ai-sdk/google@3.0.73": "patches/@ai-sdk%2Fgoogle@3.0.73.patch",
-    "@npmcli/agent@4.0.0": "patches/@npmcli%2Fagent@4.0.0.patch",
+    "@modelcontextprotocol/sdk@1.29.0": "patches/@modelcontextprotocol%2Fsdk@1.29.0.patch",
+    "@ff-labs/fff-bun@0.9.4": "patches/@ff-labs%2Ffff-bun@0.9.4.patch",
     "@ai-sdk/xai@3.0.92": "patches/@ai-sdk%2Fxai@3.0.92.patch",
     "pacote@21.5.1": "patches/pacote@21.5.1.patch",
     "mammoth@1.12.0": "patches/mammoth@1.12.0.patch"
   },
-  "version": "7.4.7",
+  "version": "7.4.11",
   "peerDependencies": {}
 }
