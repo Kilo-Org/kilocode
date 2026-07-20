@@ -1,10 +1,11 @@
 import { describe, test, expect, beforeEach, afterEach } from "bun:test"
 import { Database } from "bun:sqlite"
 import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
-import { migrate } from "drizzle-orm/bun-sqlite/migrator"
 import path from "path"
+import os from "os"
 import fs from "fs/promises"
-import { readFileSync, readdirSync } from "fs"
+import { Effect, Layer } from "effect"
+import { Database as CoreDatabase } from "@opencode-ai/core/database/database"
 import { JsonMigration } from "@/kilocode/storage/json-migration"
 import { Global } from "@opencode-ai/core/global"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
@@ -82,42 +83,35 @@ async function writeSession(
   await Bun.write(path.join(storageDir, "session", projectID, `${session.id}.json`), JSON.stringify(session))
 }
 
-// Helper to create in-memory test database with schema
-function createTestDb() {
-  const sqlite = new Database(":memory:")
+// Helper to create test database with the production schema. The schema is
+// created by the real migration runner so tests always match the current
+// migration set, then reopened through bun:sqlite for direct assertions.
+async function createTestDb() {
+  const filename = path.join(os.tmpdir(), `json-migration-test-${crypto.randomUUID()}.sqlite`)
+  await Effect.runPromise(Effect.scoped(Layer.build(CoreDatabase.layerFromPath(filename))).pipe(Effect.orDie))
+
+  const sqlite = new Database(filename)
   sqlite.exec("PRAGMA foreign_keys = ON")
-
-  // Apply schema migrations using drizzle migrate
-  const dir = path.join(import.meta.dirname, "../../../../core/migration")
-  const entries = readdirSync(dir, { withFileTypes: true })
-  const migrations = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => ({
-      sql: readFileSync(path.join(dir, entry.name, "migration.sql"), "utf-8"),
-      timestamp: Number(entry.name.split("_")[0]),
-      name: entry.name,
-    }))
-    .sort((a, b) => a.timestamp - b.timestamp)
-
   const db = drizzle({ client: sqlite })
-  migrate(db, migrations)
 
-  return [sqlite, db] as const
+  return [sqlite, db, filename] as const
 }
 
 describe("JSON to SQLite migration", () => {
   let storageDir: string
   let sqlite: Database
   let db: SQLiteBunDatabase
+  let dbFile: string
 
   beforeEach(async () => {
     storageDir = await setupStorageDir()
-    ;[sqlite, db] = createTestDb()
+    ;[sqlite, db, dbFile] = await createTestDb()
   })
 
   afterEach(async () => {
     sqlite.close()
     await fs.rm(storageDir, { recursive: true, force: true })
+    await Promise.all([dbFile, dbFile + "-shm", dbFile + "-wal"].map((file) => fs.rm(file, { force: true })))
   })
 
   test("migrates project", async () => {
