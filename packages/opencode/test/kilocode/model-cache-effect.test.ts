@@ -369,5 +369,24 @@ it.live("leaves aimlapi cost at zero when the model carries no pricing", () =>
     ).pipe(Effect.provide(aimlapiLayer(hits, item)))
 
     expect(models["vendor/free-model"]!.cost).toEqual({ input: 0, output: 0 })
+    // No description in the catalog → no options blurb for the detail panel.
+    expect((models["vendor/free-model"] as { options?: unknown }).options).toBeUndefined()
+  }),
+)
+
+it.live("exposes the catalog description via model options", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = {
+      id: "vendor/described",
+      type: "openai/chat-completions",
+      info: { name: "Described", description: "  A capable coding model.  " },
+    }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    const model = models["vendor/described"] as { options?: { description?: string } }
+    expect(model.options?.description).toBe("A capable coding model.")
   }),
 )

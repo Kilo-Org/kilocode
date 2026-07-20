@@ -63,6 +63,7 @@ const AimlapiInfo = Schema.Struct({
   releasedAt: Schema.optional(Schema.String),
   contextLength: Schema.optional(Schema.Finite),
   outputMax: Schema.optional(Schema.Finite),
+  description: Schema.optional(Schema.String),
 })
 const AimlapiModalities = Schema.Struct({
   input: Schema.optional(Schema.Array(Schema.String)),
@@ -190,7 +191,7 @@ export const layer: Layer.Layer<
       const capabilities = item.capabilities ?? []
       const input = aimlapiModalities(item.modalities?.input ?? [])
       const output = aimlapiModalities(item.modalities?.output ?? [])
-      return {
+      const model: Models[string] & { options?: Record<string, string> } = {
         id: item.id,
         name: item.info?.name ?? item.id,
         family: item.info?.developer ?? "",
@@ -209,6 +210,11 @@ export const layer: Layer.Layer<
           output: output.length > 0 ? output : ["text"],
         },
       }
+      // The model-detail panel reads the blurb from options.description (Kilo's
+      // convention — models.dev catalog entries carry none).
+      const description = item.info?.description?.trim()
+      if (description) model.options = { description }
+      return model
     }
 
     const fetchAimlapiModels = Effect.fn("ModelCache.fetchAimlapiModels")(function* (options: Options) {
