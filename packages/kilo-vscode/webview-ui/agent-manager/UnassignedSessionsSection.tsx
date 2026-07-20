@@ -2,7 +2,7 @@ import { For, Show, type Accessor, type Component } from "solid-js"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
-import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type { SessionInfo } from "../src/types/messages"
 import { useLanguage } from "../src/context/language"
 import { formatRelativeDate } from "../src/utils/date"
@@ -12,7 +12,6 @@ interface Props {
   loaded: Accessor<boolean>
   collapsed: Accessor<boolean>
   active: Accessor<string | undefined>
-  keybind: Accessor<string>
   onToggle: () => void
   onSelect: (id: string) => void
   onPromote: (id: string) => void
@@ -70,11 +69,7 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
                       </span>
                       <span class="am-item-time">{formatRelativeDate(session.updatedAt)}</span>
                       <div class="am-item-promote">
-                        <TooltipKeybind
-                          title={t("agentManager.session.openInWorktree")}
-                          keybind={props.keybind()}
-                          placement="right"
-                        >
+                        <Tooltip value={t("agentManager.session.openInWorktree")} placement="right">
                           <IconButton
                             icon="branch"
                             size="small"
@@ -82,7 +77,7 @@ export const UnassignedSessionsSection: Component<Props> = (props) => {
                             label={t("agentManager.session.openInWorktree")}
                             onClick={(event: MouseEvent) => promote(session.id, event)}
                           />
-                        </TooltipKeybind>
+                        </Tooltip>
                       </div>
                     </button>
                   </ContextMenu.Trigger>

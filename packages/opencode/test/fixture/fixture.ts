@@ -1,5 +1,5 @@
 import { $ } from "bun"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import * as Observability from "@opencode-ai/core/observability"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import * as fs from "fs/promises"
 import os from "os"

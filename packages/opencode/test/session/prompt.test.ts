@@ -48,27 +48,24 @@ import { Suggestion } from "../../src/kilocode/suggestion" // kilocode_change - 
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionV2 } from "@opencode-ai/core/session"
+import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
 import { Shell } from "../../src/shell/shell"
 import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
-import * as Log from "@opencode-ai/core/util/log"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Format } from "../../src/format"
-import { Reference } from "../../src/reference/reference"
-import { RepositoryCache } from "../../src/reference/repository-cache"
 import { TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
-
-void Log.init({ print: false })
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -227,10 +224,9 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer),
     Layer.provide(Git.defaultLayer),
-    Layer.provide(Reference.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
+    Layer.provide(RepositoryCache.defaultLayer), // kilocode_change - RepoCloneTool dependency
     Layer.provide(Format.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
     Layer.provide(Auth.defaultLayer), // kilocode_change
@@ -256,7 +252,6 @@ function makePrompt(input?: { processor?: "blocking" }) {
   return SessionPrompt.layer.pipe(
     Layer.provide(SessionRevert.defaultLayer),
     Layer.provide(Image.defaultLayer),
-    Layer.provide(Reference.defaultLayer),
     Layer.provide(summary),
     Layer.provideMerge(run),
     Layer.provideMerge(compact),
@@ -697,6 +692,52 @@ noLLMServer.instance(
 )
 // kilocode_change end
 
+it.instance("loop surfaces content-filter finishes as session errors", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const events = yield* EventV2Bridge.Service
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+    const errors: NonNullable<SessionV1.Assistant["error"]>[] = []
+    const expected = {
+      name: "ContentFilterError",
+      data: { message: "The response was blocked by the provider's content filter" },
+    } satisfies NonNullable<SessionV1.Assistant["error"]>
+    const off = yield* events.listen((event) => {
+      if (event.type !== Session.Event.Error.type) return Effect.void
+      const data = event.data as typeof Session.Event.Error.data.Type
+      if (data.sessionID === chat.id && data.error?.name === "ContentFilterError") errors.push(data.error)
+      return Effect.void
+    })
+
+    yield* prompt.prompt({
+      sessionID: chat.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+    yield* llm.push(reply().text("partial response").contentFilter())
+
+    const result = yield* prompt.loop({ sessionID: chat.id })
+    const stored = yield* MessageV2.get({ sessionID: chat.id, messageID: result.info.id })
+    yield* off
+
+    expect(yield* llm.hits).toHaveLength(1)
+    expect(result.info.role).toBe("assistant")
+    expect(stored.info.role).toBe("assistant")
+    if (result.info.role === "assistant" && stored.info.role === "assistant") {
+      expect(result.info.finish).toBe("content-filter")
+      expect(result.info.error).toEqual(expected)
+      expect(stored.info.error).toEqual(result.info.error)
+      expect(errors).toContainEqual(expected)
+    }
+    expect(result.parts).toEqual(
+      expect.arrayContaining([expect.objectContaining({ type: "text", text: "partial response" })]),
+    )
+  }),
+)
+
 it.instance("loop stops provider overflow instead of auto-compacting when disabled", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig((url) => ({
@@ -751,6 +792,7 @@ noLLMServer.instance.skip(
       })
 
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
+        Effect.provide(SessionExecution.noopLayer),
         Effect.provide(SessionV2.defaultLayer),
       )
       const { db } = yield* Database.Service
@@ -979,6 +1021,65 @@ it.instance("failed subtask preserves metadata on error tool state", () =>
   }),
 )
 
+it.instance("subtask child inherits parent session external_directory allow", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({
+      title: "Parent",
+      permission: [{ permission: "external_directory", pattern: "/tmp/allowed/*", action: "allow" }],
+    })
+    yield* llm.text("done")
+    const msg = yield* user(chat.id, "hello")
+    yield* addSubtask(chat.id, msg.id)
+
+    yield* prompt.loop({ sessionID: chat.id })
+
+    const kids = yield* sessions.children(chat.id)
+    expect(kids).toHaveLength(1)
+    const child = kids[0]!
+    const rules = child.permission ?? []
+    expect(rules).toEqual(
+      expect.arrayContaining([{ permission: "external_directory", pattern: "/tmp/allowed/*", action: "allow" }]),
+    )
+    expect(Permission.evaluate("external_directory", "/tmp/allowed/file", rules).action).toBe("allow")
+    expect(Permission.evaluate("task", "anything", rules).action).toBe("deny")
+  }),
+)
+
+noLLMServer.instance("prompt tools replace matching rules and preserve existing restrictions", () =>
+  Effect.gen(function* () {
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({ title: "Prompt tools" })
+
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      tools: { bash: false },
+      parts: [{ type: "text", text: "first" }],
+    })
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      tools: { read: true },
+      parts: [{ type: "text", text: "second" }],
+    })
+
+    const reloaded = yield* sessions.get(session.id)
+    // kilocode_change start - Kilo preserves existing restrictions that the new prompt does not override
+    expect(reloaded.permission).toEqual([
+      { permission: "bash", pattern: "*", action: "deny" },
+      { permission: "read", pattern: "*", action: "allow" },
+    ])
+    expect(Permission.evaluate("bash", "anything", reloaded.permission ?? []).action).toBe("deny")
+    // kilocode_change end
+  }),
+)
+
 it.instance(
   "running subtask preserves metadata after tool-call transition",
   () =>
@@ -1045,6 +1146,7 @@ it.instance(
           if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
         }),
         "timed out waiting for running task metadata",
+        "10 seconds", // kilocode_change - allow loaded Darwin runners to persist the tool transition
       )
 
       if (tool.state.status !== "running") return
@@ -1055,7 +1157,7 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  10_000,
+  20_000, // kilocode_change
 )
 
 // kilocode_change start - child task failures stay tool errors so the parent can recover
@@ -2342,6 +2444,7 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+// kilocode_change start - expand configured Kilo references once per prompt
 noLLMServer.instance(
   "resolves configured reference mentions to one root directory attachment",
   () =>
@@ -2375,12 +2478,59 @@ noLLMServer.instance(
   {
     config: {
       ...cfg,
-      reference: {
+      references: {
         docs: "./external-docs",
       },
     },
   },
 )
+// kilocode_change end
+
+// kilocode_change start - deduplicate configured Kilo references by source identity
+noLLMServer.instance(
+  "does not let an unrelated directory attachment shadow a configured reference",
+  () =>
+    Effect.gen(function* () {
+      const { directory: dir } = yield* TestInstance
+      const docs = path.join(dir, "external-docs")
+      const unrelated = path.join(dir, "unrelated")
+      yield* ensureDir(docs)
+      yield* ensureDir(unrelated)
+
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({})
+      const message = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [
+          { type: "text", text: "Use @docs for context" },
+          {
+            type: "file",
+            mime: "application/x-directory",
+            filename: "docs",
+            url: pathToFileURL(unrelated).href,
+          },
+        ],
+      })
+      const text = message.parts
+        .flatMap((part) => (part.type === "text" && part.synthetic ? [part.text] : []))
+        .join("\n")
+
+      expect(text).toContain(docs)
+      expect(text).toContain(unrelated)
+      yield* sessions.remove(session.id)
+    }),
+  {
+    config: {
+      ...cfg,
+      references: {
+        docs: "./external-docs",
+      },
+    },
+  },
+)
+// kilocode_change end
 
 noLLMServer.instance(
   "stores raw reference mentions alongside directory attachments",

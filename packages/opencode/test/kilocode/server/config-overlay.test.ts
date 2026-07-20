@@ -209,6 +209,7 @@ describe("config overlay routes", () => {
       indexing: {
         enabled: true,
         provider: "ollama",
+        fileExtensions: [".php", ".js"],
         ollama: { baseUrl: "http://localhost:11434" },
       },
     })
@@ -217,6 +218,11 @@ describe("config overlay routes", () => {
 
     expect(body.fields["indexing.enabled"]).toMatchObject({ source: "global", inherited: true, value: true })
     expect(body.fields["indexing.provider"]).toMatchObject({ source: "global", inherited: true, value: "ollama" })
+    expect(body.fields["indexing.fileExtensions"]).toMatchObject({
+      source: "global",
+      inherited: true,
+      value: [".php", ".js"],
+    })
     expect(body.fields["indexing.ollama.baseUrl"]).toMatchObject({
       source: "global",
       inherited: true,

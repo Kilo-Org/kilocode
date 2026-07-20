@@ -1,5 +1,5 @@
 import type { PermissionRequest } from "@kilocode/sdk/v2"
-import { useTheme } from "@/cli/cmd/tui/context/theme"
+import { useTheme } from "@tui/context/theme"
 import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
 
 function MemoryBody(props: { request: PermissionRequest }) {

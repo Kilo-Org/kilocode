@@ -1258,6 +1258,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-sleutel",
   "settings.indexing.qdrantApiKey.description": "Optionele API-sleutel voor de Qdrant-instantie.",
   "settings.indexing.qdrantApiKey.placeholder": "Optionele API-sleutel",
+  "settings.indexing.fileExtensions.title": "Bestandsextensies",
+  "settings.indexing.fileExtensions.description":
+    "Door komma's gescheiden lijst met toegestane items. Laat leeg om de ingebouwde standaardwaarden te gebruiken.",
+  "settings.indexing.fileExtensions.invalid": "Ongeldige extensie: {{extension}}",
   "settings.indexing.tuning.description": "Geavanceerde parameter voor zoeken en batching.",
 
   "settings.experimental.title": "Experimenteel",

@@ -342,8 +342,7 @@ function patchDir(input: PatchInput) {
   return path.join(root, ".kilo") // kilocode_change
 }
 
-function patchName(kind: Kind): "kilo" | "tui" {
-  // kilocode_change
+function patchName(kind: Kind): "kilo" | "tui" { // kilocode_change
   if (kind === "server") return "kilo" // kilocode_change
   return "tui"
 }

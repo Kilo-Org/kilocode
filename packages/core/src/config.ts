@@ -4,6 +4,7 @@ import path from "path"
 import { type ParseError, parse } from "jsonc-parser"
 import { Context, Effect, Layer, Option, Schema } from "effect"
 import { FSUtil } from "./fs-util"
+import { Flag } from "./flag/flag" // kilocode_change
 import { Global } from "./global"
 import { Location } from "./location"
 import { PermissionSchema } from "./permission/schema"
@@ -118,6 +119,12 @@ export class Directory extends Schema.Class<Directory>("Config.Directory")({
 
 export type Entry = Document | Directory
 
+export function latest<K extends keyof Info>(entries: readonly Entry[], key: K): Info[K] | undefined {
+  return entries
+    .filter((entry): entry is Document => entry.type === "document")
+    .findLast((entry) => entry.info[key] !== undefined)?.info[key]
+}
+
 export interface Interface {
   /** Returns location config documents and supplemental directories from lowest to highest priority. */
   readonly entries: () => Effect.Effect<Entry[]>
@@ -168,15 +175,16 @@ export const layer = Layer.effect(
     const locationIsGlobal = path.resolve(location.directory) === path.resolve(global.config)
     // Read configuration once when this location opens. Later calls reuse these
     // values until the location is reopened.
-    const discovered = locationIsGlobal
-      ? []
-      : yield* fs
-          .up({
-            targets: [...folders.toReversed(), ...names.toReversed()], // kilocode_change
-            start: location.directory,
-            stop: location.project.directory,
-          })
-          .pipe(Effect.orDie)
+    const discovered =
+      locationIsGlobal || Flag.KILO_DISABLE_PROJECT_CONFIG // kilocode_change
+        ? []
+        : yield* fs
+            .up({
+              targets: [...folders.toReversed(), ...names.toReversed()], // kilocode_change
+              start: location.directory,
+              stop: location.project.directory,
+            })
+            .pipe(Effect.orDie)
     const directories = [
       globalDirectory,
       ...discovered
@@ -193,7 +201,7 @@ export const layer = Layer.effect(
     )
     const supplementary = yield* Effect.forEach(directories, loadDirectory).pipe(Effect.orDie)
     // Apply general settings first and more specific settings last:
-    // global config, project files, then supplemental directory files. // kilocode_change
+    // global config, project files, then Kilo config-directory files. // kilocode_change
     const configs = [...(supplementary[0] ?? []), ...direct, ...supplementary.slice(1).flat()]
     // Rules use the opposite order so a user-global rule can override a
     // repository rule. Statement order inside each file stays unchanged.

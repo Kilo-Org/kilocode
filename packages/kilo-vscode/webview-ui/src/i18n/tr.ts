@@ -1254,6 +1254,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API anahtarı",
   "settings.indexing.qdrantApiKey.description": "Qdrant örneği için isteğe bağlı API anahtarı.",
   "settings.indexing.qdrantApiKey.placeholder": "İsteğe bağlı API anahtarı",
+  "settings.indexing.fileExtensions.title": "Dosya Uzantıları",
+  "settings.indexing.fileExtensions.description":
+    "Virgülle ayrılmış izin listesi. Yerleşik varsayılanları kullanmak için boş bırakın.",
+  "settings.indexing.fileExtensions.invalid": "Geçersiz uzantı: {{extension}}",
   "settings.indexing.tuning.description": "Gelişmiş arama ve toplu işlem parametresi.",
 
   "settings.experimental.title": "Deneysel",

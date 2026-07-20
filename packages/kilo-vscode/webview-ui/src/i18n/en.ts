@@ -1214,6 +1214,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API key",
   "settings.indexing.qdrantApiKey.description": "Optional API key for the Qdrant instance.",
   "settings.indexing.qdrantApiKey.placeholder": "Optional API key",
+  "settings.indexing.fileExtensions.title": "File Extensions",
+  "settings.indexing.fileExtensions.description":
+    "Comma-separated allowlist. Leave empty to use the built-in defaults.",
+  "settings.indexing.fileExtensions.invalid": "Invalid extension: {{extension}}",
   "settings.indexing.tuning.description": "Advanced search and batching parameter.",
   "settings.experimental.title": "Experimental",
   "settings.language.title": "Language",

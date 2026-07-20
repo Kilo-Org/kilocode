@@ -1,6 +1,7 @@
 import { test, expect, describe, afterEach, beforeEach, spyOn } from "bun:test"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
-import { Effect, Exit, Layer, Option } from "effect"
+import { Cause, Effect, Exit, Layer, Option } from "effect"
+import { NamedError } from "@opencode-ai/core/util/error"
 import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { NodeFileSystem, NodePath } from "@effect/platform-node"
 import { Config } from "@/config/config"
@@ -74,6 +75,7 @@ const wellKnownAuth = (url: string) =>
 function remoteConfigClient(input: {
   wellKnown: unknown
   remote?: unknown
+  remoteHtml?: string
   seen: { wellKnown?: string; remote?: string; authorization?: string }
 }) {
   return HttpClient.make((request) => {
@@ -81,9 +83,17 @@ function remoteConfigClient(input: {
       input.seen.wellKnown = request.url
       return Effect.succeed(json(request, input.wellKnown))
     }
-    if (input.remote !== undefined && request.url.includes("config.example.com")) {
+    if (request.url.includes("config.example.com") && (input.remote !== undefined || input.remoteHtml !== undefined)) {
       input.seen.remote = request.url
       input.seen.authorization = request.headers.authorization
+      if (input.remoteHtml !== undefined) {
+        return Effect.succeed(
+          HttpClientResponse.fromWeb(
+            request,
+            new Response(input.remoteHtml, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } }),
+          ),
+        )
+      }
       return Effect.succeed(json(request, input.remote))
     }
     return Effect.succeed(json(request, {}, 404))
@@ -223,6 +233,7 @@ const wellKnown = (input: {
   config?: unknown
   remoteConfig?: { url: string; headers?: Record<string, string> }
   remote?: unknown
+  remoteHtml?: string
   wellKnown?: unknown
 }) => {
   const seen: { wellKnown?: string; remote?: string; authorization?: string } = {}
@@ -233,6 +244,7 @@ const wellKnown = (input: {
       ...(input.remoteConfig !== undefined ? { remote_config: input.remoteConfig } : {}),
     },
     remote: input.remote,
+    remoteHtml: input.remoteHtml,
   })
   return {
     seen,
@@ -336,7 +348,7 @@ it.effect("does not create global config when KILO_CONFIG_DIR is set", () =>
         Effect.gen(function* () {
           yield* Config.use.get().pipe(provideInstanceEffect(dir))
 
-          expect(yield* FSUtil.use.existsSafe(path.join(dir, "opencode.jsonc"))).toBe(false)
+          expect(yield* FSUtil.use.existsSafe(path.join(dir, "kilo.jsonc"))).toBe(false) // kilocode_change
         }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
       ),
     )
@@ -420,21 +432,17 @@ it.effect("updates global config and omits empty shell key in json", () =>
 )
 
 it.effect("updates global config and omits empty shell key in jsonc", () =>
-  withGlobalConfig(
-    { config: { shell: "bash", model: "test/model" }, name: "kilo.jsonc" },
-    (
-      { dir }, // kilocode_change
-    ) =>
-      Effect.gen(function* () {
-        yield* Config.use.updateGlobal({ shell: "" })
+  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "kilo.jsonc" }, ({ dir }) => // kilocode_change
+    Effect.gen(function* () {
+      yield* Config.use.updateGlobal({ shell: "" })
 
-        const file = path.join(dir, "kilo.jsonc") // kilocode_change
-        const writtenConfig = yield* FSUtil.use.readFileString(file)
-        const parsed = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(writtenConfig, file), file)
-        expect(writtenConfig).not.toContain('"shell"')
-        expect(parsed.shell).toBeUndefined()
-        expect(parsed.model).toBe("test/model")
-      }),
+      const file = path.join(dir, "kilo.jsonc") // kilocode_change
+      const writtenConfig = yield* FSUtil.use.readFileString(file)
+      const parsed = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(writtenConfig, file), file)
+      expect(writtenConfig).not.toContain('"shell"')
+      expect(parsed.shell).toBeUndefined()
+      expect(parsed.model).toBe("test/model")
+    }),
   ),
 )
 
@@ -833,6 +841,26 @@ it.instance("migrates mode field to agent field", () =>
       mode: "primary",
       options: {},
       permission: {},
+    })
+  }),
+)
+
+it.instance("accepts the deprecated reference field", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    yield* writeConfigEffect(test.directory, {
+      $schema: "https://opencode.ai/config.json",
+      reference: {
+        local: { path: "../library" },
+        sdk: { repository: "github.com/example/sdk", branch: "main" },
+        shorthand: "github.com/example/docs",
+      },
+    })
+    const config = yield* Config.use.get()
+    expect(config.reference).toEqual({
+      local: { path: "../library" },
+      sdk: { repository: "github.com/example/sdk", branch: "main" },
+      shorthand: "github.com/example/docs",
     })
   }),
 )
@@ -1295,10 +1323,6 @@ it.instance("migrates legacy write tool to edit permission", () =>
 it.instance(
   "managed settings override user settings",
   Effect.gen(function* () {
-    // kilocode_change start
-    const test = yield* TestInstance
-    yield* writeConfigEffect(test.directory, { model: "user/model", share: "auto", username: "testuser" })
-    // kilocode_change end
     yield* writeManagedSettingsEffect({
       $schema: "https://app.kilo.ai/config.json", // kilocode_change
       model: "managed/model",
@@ -1310,17 +1334,12 @@ it.instance(
     expect(config.share).toBe("disabled")
     expect(config.username).toBe("testuser")
   }),
+  { config: { model: "user/model", share: "auto", username: "testuser" } },
 )
 
-// kilocode_change start
 it.instance(
   "managed settings override project settings",
   Effect.gen(function* () {
-    // kilocode_change end
-    // kilocode_change start
-    const test = yield* TestInstance
-    yield* writeConfigEffect(test.directory, { autoupdate: true, disabled_providers: [] })
-    // kilocode_change end
     yield* writeManagedSettingsEffect({
       $schema: "https://app.kilo.ai/config.json", // kilocode_change
       autoupdate: false,
@@ -1330,36 +1349,29 @@ it.instance(
     const config = yield* Config.use.get()
     expect(config.autoupdate).toBe(false)
     expect(config.disabled_providers).toEqual(["openai"])
-  }), // kilocode_change
-) // kilocode_change
+  }),
+  { config: { autoupdate: true, disabled_providers: [] } },
+)
 
-it.instance(
-  "managed jsonc settings override managed json settings",
-  () =>
-    // kilocode_change
-    Effect.gen(function* () {
-      yield* writeManagedSettingsEffect({ model: "managed/json" })
-      yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "kilo.jsonc") // kilocode_change
-      yield* writeManagedSettingsEffect({ model: "legacy/opencode" }, "opencode.jsonc") // kilocode_change
+it.instance("managed jsonc settings override managed json settings", () =>
+  Effect.gen(function* () {
+    yield* writeManagedSettingsEffect({ model: "managed/json" })
+    yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "kilo.jsonc") // kilocode_change
+    yield* writeManagedSettingsEffect({ model: "legacy/opencode" }, "opencode.jsonc") // kilocode_change
 
-      const config = yield* Config.use.get()
-      expect(config.model).toBe("managed/jsonc")
-    }), // kilocode_change
-) // kilocode_change
+    const config = yield* Config.use.get()
+    expect(config.model).toBe("managed/jsonc")
+  }),
+)
 
-// kilocode_change start
 it.instance(
   "missing managed settings file is not an error",
   Effect.gen(function* () {
-    // kilocode_change end
-    // kilocode_change start
-    const test = yield* TestInstance
-    yield* writeConfigEffect(test.directory, { model: "user/model" })
-    // kilocode_change end
     const config = yield* Config.use.get()
     expect(config.model).toBe("user/model")
-  }), // kilocode_change
-) // kilocode_change
+  }),
+  { config: { model: "user/model" } },
+)
 
 it.instance("migrates legacy edit tool to edit permission", () =>
   Effect.gen(function* () {
@@ -1867,6 +1879,24 @@ invalidRemoteWellKnown.it.instance("wellknown remote_config rejects non-object c
   }),
 )
 
+const loginPageWellKnown = wellKnown({
+  remoteConfig: { url: "https://config.example.com/opencode.json" },
+  remoteHtml: "<!DOCTYPE html><html><head><title>Sign in</title></head><body>Login required</body></html>",
+})
+
+loginPageWellKnown.it.instance(
+  "wellknown remote_config surfaces an actionable auth error when the gateway returns an HTML login page",
+  () =>
+    Effect.gen(function* () {
+      const exit = yield* Config.use.get().pipe(Effect.exit)
+      expect(loginPageWellKnown.seen.remote).toBe("https://config.example.com/opencode.json")
+      expect(Exit.isFailure(exit)).toBe(true)
+      const error = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+      expect(NamedError.hasName(error, "ConfigRemoteAuthError")).toBe(true)
+      expect((error as { data?: { url?: string } }).data?.url).toBe("https://example.com")
+    }),
+)
+
 describe("resolvePluginSpec", () => {
   test("keeps package specs unchanged", async () => {
     await using tmp = await tmpdir()
@@ -2148,9 +2178,9 @@ test("parseManagedPlist strips MDM metadata keys", async () => {
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
         JSON.stringify({
-          PayloadDisplayName: "OpenCode Managed",
-          PayloadIdentifier: "ai.opencode.managed.test",
-          PayloadType: "ai.opencode.managed",
+          PayloadDisplayName: "Kilo Managed", // kilocode_change
+          PayloadIdentifier: "ai.kilo.managed.test", // kilocode_change
+          PayloadType: "ai.kilo.managed", // kilocode_change
           PayloadUUID: "AAAA-BBBB-CCCC",
           PayloadVersion: 1,
           _manualProfile: true,

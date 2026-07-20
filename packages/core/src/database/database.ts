@@ -9,6 +9,7 @@ import { isAbsolute, join } from "path"
 import { existsSync } from "fs" // kilocode_change
 import { DatabaseMigration } from "./migration"
 import { InstallationChannel } from "../installation/version"
+import { LayerNode } from "../effect/layer-node"
 
 const makeDatabase = EffectDrizzleSqlite.makeWithDefaults()
 type DatabaseShape = Effect.Success<typeof makeDatabase>
@@ -65,3 +66,5 @@ export const defaultLayer = Layer.unwrap(
     return layerFromPath(path())
   }),
 ).pipe(Layer.provide(Global.defaultLayer))
+
+export const node = LayerNode.make(layerFromPath(path()), [])

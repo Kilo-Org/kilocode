@@ -921,6 +921,10 @@ export const dict = {
   "settings.indexing.providerField.description": "Postavka veze specifična za provajdera.",
   "settings.indexing.qdrantApiKey.description": "Opcionalni API ključ za Qdrant instancu.",
   "settings.indexing.qdrantApiKey.placeholder": "Opcionalni API ključ",
+  "settings.indexing.fileExtensions.title": "Ekstenzije datoteka",
+  "settings.indexing.fileExtensions.description":
+    "Lista dozvoljenih stavki odvojena zarezima. Ostavite prazno da biste koristili ugrađene zadane postavke.",
+  "settings.indexing.fileExtensions.invalid": "Neispravna ekstenzija datoteke: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Qdrant API ključ",
   "settings.indexing.qdrantUrl.description": "URL servera za Qdrant instancu.",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",
