@@ -57,3 +57,20 @@ test("confines project markdown substitutions while preserving trusted substitut
     else process.env[name] = prior
   }
 })
+
+test("ignore authorization does not replace project scope confinement", async () => {
+  await using tmp = await tmpdir({
+    init: async (dir) => {
+      const item = path.join(dir, "untrusted.md")
+      await Bun.write(item, "secret")
+      return item
+    },
+  })
+
+  expect(() =>
+    KilocodeMarkdown.read(tmp.extra, {
+      trusted: false,
+      authorize: async () => true,
+    }),
+  ).toThrow()
+})

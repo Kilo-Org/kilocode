@@ -338,10 +338,19 @@ export const layer = Layer.effect(
         ).pipe(Effect.provideService(Git.Service, git)) // kilocode_change
       }),
     )
-    // kilocode_change start - reload model-visible skill content under the current ignore policy
+    // kilocode_change start - reuse parsed skills until the ignore policy content changes
+    const states = yield* InstanceState.make(() =>
+      Effect.succeed({ fingerprint: "", value: undefined as State | undefined }),
+    )
     const current = Effect.fn("Skill.current")(function* () {
+      const ctx = yield* InstanceState.context
+      const fingerprint = yield* Effect.promise(() => IgnorePermission.fingerprint(ctx))
+      const state = yield* InstanceState.get(states)
+      if (state.value && state.fingerprint === fingerprint) return state.value
       const s: State = { skills: {}, dirs: new Set() }
       yield* loadSkills(s, yield* InstanceState.get(discovered), events)
+      state.fingerprint = fingerprint
+      state.value = s
       return s
     })
 

@@ -215,7 +215,12 @@ export const RepoOverviewTool = Tool.define<typeof Parameters, Metadata, FSUtil.
           const dependencyFiles = DEPENDENCY_FILES.filter((file) => topLevel.has(file))
           const packageJson = topLevel.has("package.json")
             ? ((yield* KiloFileGuard.read({ ctx: instance, requested: path.join(target.path, "package.json") }).pipe(
-                Effect.map((data) => JSON.parse(data.toString()) as Record<string, unknown>),
+                Effect.flatMap((data) =>
+                  Effect.try({
+                    try: () => JSON.parse(data.toString()) as Record<string, unknown>,
+                    catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                  }),
+                ),
                 Effect.orElseSucceed(() => ({})),
               )) as Record<string, unknown>)
             : {}

@@ -202,9 +202,14 @@ describe("ConfigProtection workspace aliases", () => {
     await Bun.write(path.join(tmp.path, ".kilocodeignore"), "secret.txt\n")
     await fs.symlink(path.join(tmp.path, ".kilocodeignore"), alias)
 
-    const ctx = { directory: tmp.path, worktree: tmp.path } as InstanceContext
+    const directory = path.join(tmp.path, "nested")
+    await fs.mkdir(directory)
+    const ctx = { directory, worktree: tmp.path } as InstanceContext
     expect(
-      ConfigProtection.isRequest({ permission: "edit", patterns: [alias], metadata: { filepath: alias } }, ctx),
+      ConfigProtection.isRequest(
+        { permission: "edit", patterns: [path.basename(alias)], metadata: { filepath: path.basename(alias) } },
+        ctx,
+      ),
     ).toBe(true)
   })
 })

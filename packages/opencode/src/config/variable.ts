@@ -26,7 +26,7 @@ type SubstituteInput = ParseSource & {
   escapeJson?: boolean // kilocode_change
   // kilocode_change start - trust gates {env:}; untrusted project config may only read files inside fileScope.root
   trusted?: boolean
-  fileScope?: ConfigVariableGuard.FileScope & { authorize?: ConfigVariableGuard.Authorize }
+  fileScope?: ConfigVariableGuard.FileScope
   authorize?: ConfigVariableGuard.Authorize
   // kilocode_change end
   env?: Record<string, string>
@@ -115,12 +115,11 @@ export async function substitute(input: SubstituteInput) {
     const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(configDir, filePath)
     // kilocode_change start - validate and read one opened file to prevent credential substitution races;
     // untrusted config passes a fileScope so reads are confined to the project root.
+    const options = input.fileScope
+      ? { ...input.fileScope, token, authorize: input.authorize }
+      : { token, authorize: input.authorize }
     const fileContent = (
-      await ConfigVariableGuard.read(resolvedPath, {
-        ...(input.fileScope ?? {}),
-        token,
-        authorize: input.authorize ?? input.fileScope?.authorize,
-      }).catch((error: NodeJS.ErrnoException) => {
+      await ConfigVariableGuard.read(resolvedPath, options).catch((error: NodeJS.ErrnoException) => {
         // kilocode_change - a deliberate scope block must always reject; only genuine missing/IO errors are
         // emptied under missing:"empty", so an out-of-scope {file:} surfaces instead of being silently dropped.
         if (ConfigVariableGuard.isBlocked(error)) {

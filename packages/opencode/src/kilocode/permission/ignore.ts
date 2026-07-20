@@ -149,6 +149,17 @@ export namespace IgnorePermission {
     return false
   }
 
+  export async function fingerprint(ctx: InstanceContext, dirs?: readonly string[]) {
+    const root = IgnorePermission.root(ctx)
+    try {
+      const contents = await Promise.all(IgnorePermission.files(root, dirs).map(load))
+      return new Bun.CryptoHasher("sha256").update(JSON.stringify(contents)).digest("hex")
+    } catch (err) {
+      log.warn("failed to load .kilocodeignore", { err: failure(err) })
+      return "invalid"
+    }
+  }
+
   function denied(permission: string) {
     return new PermissionV1.DeniedError({
       ruleset: [{ permission, pattern: name, action: "deny" }],

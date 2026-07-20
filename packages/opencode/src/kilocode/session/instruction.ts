@@ -12,18 +12,16 @@ export namespace KilocodeInstruction {
       })
     return {
       ...input,
-      fileScope: input.fileScope,
-      sourceScope: input.sourceScope,
       authorize,
     }
   }
 
-  export function content(text: string, item: string, input: KilocodeMarkdown.Options, ctx: InstanceContext) {
+  export function content(text: string, item: string, input: KilocodeMarkdown.Options) {
     return KilocodeMarkdown.substitute(text, item, input)
   }
 
   export async function read(item: string, input: KilocodeMarkdown.Options, ctx: InstanceContext) {
     const options = resolve(input, ctx)
-    return content(await KilocodeMarkdown.read(item, options), item, options, ctx)
+    return content(await KilocodeMarkdown.read(item, options), item, options)
   }
 }

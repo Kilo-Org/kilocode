@@ -138,6 +138,39 @@ Use this skill.
   )
 
   // kilocode_change start
+  unix("reuses parsed skills until the ignore policy changes", () =>
+    Effect.gen(function* () {
+      const dir = (yield* TestInstance).directory
+      const skill = path.join(dir, ".kilo", "skill", "cache-skill", "SKILL.md")
+      yield* Effect.promise(() =>
+        Bun.write(skill, `---\nname: cache-skill\ndescription: Initial description.\n---\n\nInitial content.\n`),
+      )
+
+      const home = process.env.KILO_TEST_HOME
+      process.env.KILO_TEST_HOME = dir
+      yield* Effect.addFinalizer(() =>
+        Effect.sync(() => {
+          process.env.KILO_TEST_HOME = home
+        }),
+      )
+
+      const registry = yield* ToolRegistry.Service
+      const agent = { name: "build", mode: "primary" as const, permission: [], options: {} }
+      const tools = () => registry.tools({ providerID: "opencode" as any, modelID: "gpt-5" as any, agent })
+      expect((yield* tools()).find((tool) => tool.id === SkillTool.id)?.description).toContain("Initial description.")
+
+      yield* Effect.promise(() =>
+        Bun.write(skill, `---\nname: cache-skill\ndescription: Changed description.\n---\n\nChanged content.\n`),
+      )
+      expect((yield* tools()).find((tool) => tool.id === SkillTool.id)?.description).toContain("Initial description.")
+
+      yield* Effect.promise(() => Bun.write(path.join(dir, ".kilocodeignore"), ".kilo/skill/cache-skill/\n"))
+      expect((yield* tools()).find((tool) => tool.id === SkillTool.id)?.description).not.toContain("cache-skill")
+    }),
+  )
+  // kilocode_change end
+
+  // kilocode_change start
   it.live("built-in kilo-config includes named command lookup guidance", () =>
     provideTmpdirInstance(
       (dir) =>

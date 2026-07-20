@@ -6,6 +6,7 @@ import { Effect, Schema } from "effect"
 import path from "path"
 import { InstanceState } from "@/effect/instance-state"
 import { KiloFileGuard } from "@/kilocode/tool/file-guard"
+import { assertExternalDirectoryEffect } from "@/tool/external-directory"
 
 const resolve = (input: string, directory: string) =>
   path.isAbsolute(input) ? path.resolve(input) : path.resolve(directory, input)
@@ -70,6 +71,7 @@ export const NotebookReadTool = Tool.define<
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
           const filepath = resolve(params.path, instance.directory)
+          yield* assertExternalDirectoryEffect(ctx, filepath)
           const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath, access: "read" }).pipe(
             Effect.orDie,
           )
@@ -170,6 +172,7 @@ export const NotebookEditTool = Tool.define<
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
           const filepath = resolve(params.path, instance.directory)
+          yield* assertExternalDirectoryEffect(ctx, filepath)
           const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath }).pipe(Effect.orDie)
           const edit = yield* cellEdit(params)
           const index = params.action === "create" ? 0 : params.index!
@@ -230,6 +233,7 @@ export const NotebookExecuteTool = Tool.define<
         Effect.gen(function* () {
           const instance = yield* InstanceState.context
           const filepath = resolve(params.path, instance.directory)
+          yield* assertExternalDirectoryEffect(ctx, filepath)
           const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath, access: "read" }).pipe(
             Effect.orDie,
           )

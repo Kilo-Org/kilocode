@@ -180,8 +180,9 @@ export namespace ConfigProtection {
 
   function project(p: string, ctx?: InstanceContext) {
     if (!ctx) return false
-    const root = physical(ctx.worktree === "/" ? ctx.directory : ctx.worktree)
-    const target = physical(path.isAbsolute(p) ? p : path.resolve(ctx.directory, p))
+    const base = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+    const root = physical(base)
+    const target = physical(path.isAbsolute(p) ? p : path.resolve(base, p))
     if (!root || !target) return false
     const relative = path.relative(root, target)
     if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))

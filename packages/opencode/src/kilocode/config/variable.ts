@@ -10,6 +10,8 @@ export namespace ConfigVariableGuard {
 
   export type Authorize = (input: { requested: string; target: string }) => Promise<boolean>
 
+  type ReadOptions = { token?: string; authorize?: Authorize } & (FileScope | { root?: never; source?: never })
+
   // A deliberate security block (out-of-scope, swapped, or /proc) — distinct from a plain missing/IO error so
   // callers using missing:"empty" still surface the block instead of silently emptying it.
   export class BlockedError extends Error {
@@ -38,7 +40,7 @@ export namespace ConfigVariableGuard {
     throw new BlockedError(`blocked file reference outside project config scope: "${token}"`)
   }
 
-  export async function read(filePath: string, scope?: Partial<FileScope> & { token?: string; authorize?: Authorize }) {
+  export async function read(filePath: string, scope?: ReadOptions) {
     const file = await fs.open(filePath, "r")
     try {
       // Resolve the file the fd actually points at, then validate the scope and read through the same fd
@@ -58,7 +60,10 @@ export namespace ConfigVariableGuard {
           throw new BlockedError(`blocked file reference changed during read: "${scope.token ?? "{file:...}"}"`)
         }
       }
-      if (scope?.root && scope.source) check(resolved, scope.token ?? "{file:...}", scope as FileScope)
+      if ((scope?.root === undefined) !== (scope?.source === undefined)) {
+        throw new BlockedError(`blocked incomplete file reference scope: "${scope?.token ?? "{file:...}"}"`)
+      }
+      check(resolved, scope?.token ?? "{file:...}", scope?.root ? scope : undefined)
       if (/^\/proc\/.*\/environ$/.test(resolved)) throw new BlockedError("blocked process environment reference")
       if (scope?.authorize && !(await scope.authorize({ requested: filePath, target: resolved }))) {
         throw new BlockedError(`blocked ignored file reference: "${scope.token ?? "{file:...}"}"`)

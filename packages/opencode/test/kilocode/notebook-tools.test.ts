@@ -89,9 +89,14 @@ describe("native notebook tools", () => {
           ctx,
         )
 
-        expect(asks.map((item) => item.permission)).toEqual(["notebook_read", "notebook_edit", "notebook_execute"])
+        expect(asks.map((item) => item.permission)).toEqual([
+          "notebook_read",
+          "notebook_edit",
+          "external_directory",
+          "notebook_execute",
+        ])
         expect(asks.slice(0, 2).map((item) => item.patterns[0])).toEqual(["analysis.ipynb", "analysis.ipynb"])
-        expect(asks[2]?.patterns[0]?.replaceAll("\\", "/")).toMatch(/workspace\/analysis\.ipynb$/)
+        expect(asks[3]?.patterns[0]?.replaceAll("\\", "/")).toMatch(/workspace\/analysis\.ipynb$/)
         expect(calls.map((item) => item.operation)).toEqual(["read", "edit", "execute"])
         expect(calls[1]).toMatchObject({ expectedRevision: "content:read" })
         expect(calls[2]).toMatchObject({ expectedRevision: "content:edit" })

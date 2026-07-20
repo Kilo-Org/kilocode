@@ -208,11 +208,6 @@ export const GenerateImageTool = Tool.define(
 
           const cfg = yield* configSvc.get()
           const model = params.model ?? cfg.experimental?.image_generation_model ?? DEFAULT_MODEL
-          for (const format of ["png", "jpeg"] as const) {
-            const filepath = ensureExtension(params.path, format)
-            const output = path.isAbsolute(filepath) ? filepath : path.join(instance.directory, filepath)
-            yield* KiloFileGuard.plan({ ctx: instance, requested: output })
-          }
           const req = buildRequest(resolved, params.prompt, model, inputImage)
 
           const response = yield* http.execute(
