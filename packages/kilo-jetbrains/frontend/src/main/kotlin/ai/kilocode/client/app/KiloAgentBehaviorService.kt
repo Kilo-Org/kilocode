@@ -33,7 +33,11 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun agents(directory: String): List<AgentDetailDto> = safe(emptyList()) { call { agents(directory) } }
 
-    suspend fun skills(directory: String): List<SkillDto> = call { skills(directory) }
+    suspend fun skills(directory: String): List<SkillDto> = safe(emptyList()) { call { skills(directory) } }
+
+    suspend fun loadSkills(directory: String): List<SkillDto> = call { skills(directory) }
+
+    suspend fun refreshSkills(directory: String, fallback: List<SkillDto>): List<SkillDto> = safe(fallback) { call { skills(directory) } }
 
     suspend fun commands(directory: String): List<CommandDto> = safe(emptyList()) { call { commands(directory) } }
 

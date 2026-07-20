@@ -3,6 +3,7 @@ package ai.kilocode.client.app
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.McpStatusDto
+import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -10,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import kotlin.test.assertFailsWith
 
 class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
     private lateinit var scope: CoroutineScope
@@ -65,6 +67,31 @@ class KiloAgentBehaviorServiceTest : BasePlatformTestCase() {
 
         assertFalse(ok)
         assertTrue(rpc.removals.isEmpty())
+    }
+
+    fun `test skills returns fallback on rpc failure`() = runBlocking {
+        rpc.skillsError = RuntimeException("boom")
+
+        val items = withContext(Dispatchers.Default) { service.skills("/test") }
+
+        assertTrue(items.isEmpty())
+    }
+
+    fun `test loadSkills propagates rpc failure`() = runBlocking {
+        rpc.skillsError = RuntimeException("boom")
+
+        assertFailsWith<RuntimeException> {
+            withContext(Dispatchers.Default) { service.loadSkills("/test") }
+        }
+    }
+
+    fun `test refreshSkills returns previous rows on rpc failure`() = runBlocking {
+        val fallback = listOf(SkillDto("plan", location = "/test/SKILL.md"))
+        rpc.skillsError = RuntimeException("boom")
+
+        val items = withContext(Dispatchers.Default) { service.refreshSkills("/test", fallback) }
+
+        assertEquals(fallback, items)
     }
 
     fun `test mcpStatus forwards directory`() = runBlocking {

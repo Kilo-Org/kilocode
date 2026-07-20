@@ -224,7 +224,7 @@ internal class SettingsListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return null
         if (!bounds.contains(e.point)) return null
         val item = model.getElementAt(idx)
-        val selected = idx == list.selectedIndex
+        val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
             settingsListCellAt(list, idx, e.point, selected)
         } else {

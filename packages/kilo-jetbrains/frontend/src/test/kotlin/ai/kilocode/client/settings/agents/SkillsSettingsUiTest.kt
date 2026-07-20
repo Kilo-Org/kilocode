@@ -306,7 +306,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             listOf("path:/global/skills", "path:$path", "url:https://skills.test/base.json", "url:$url"),
             edt { sourceRows(panel).map { it.key } },
         )
-        assertTrue(agentRpc.skillReloads.isEmpty())
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
     fun `test stale config update result keeps added skill sources visible`() {
@@ -331,6 +331,36 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             listOf("path:/global/skills", "path:$path", "url:https://skills.test/base.json", "url:$url"),
             edt { sourceRows(panel).map { it.key } },
         )
+    }
+
+    fun `test blocked reload completes apply with warning`() {
+        val path = "/extra/skills"
+        val panel = panel(choose = { path })
+        agentRpc.reloadSkillResult = false
+        flushUntil { rows(panel).size == 3 }
+
+        edt {
+            panel.sources.addPath()
+            panel.applyDraft()
+            true
+        }
+
+        flushUntil { appRpc.configPatches.size == 1 && !edt { panel.modified() } }
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
+        assertEquals("Skills settings saved, but active sessions are present. Reload the core after those sessions finish to apply the new skills.", edt { progressText(panel) })
+    }
+
+    fun `test post apply skills refresh failure keeps saved rows`() {
+        val panel = panel(edit = { _, _ -> FakeSkillDialog("# Saved") })
+        flushUntil { rows(panel).size == 3 }
+
+        doubleClick(skillsList(panel), panel, CUSTOM)
+        agentRpc.skillsError = RuntimeException("timeout")
+        edt { panel.applyDraft(); true }
+
+        flushUntil { agentRpc.skillSaves.size == 1 && !edt { panel.modified() } }
+        assertEquals(listOf(CUSTOM, "builtin", REMOTE), edt { rows(panel).map { it.key } })
+        assertEquals("# Saved", agentRpc.skills.single { it.location == CUSTOM }.content)
     }
 
     fun `test source reset discards staged changes`() {
@@ -367,6 +397,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         assertEquals(emptyList<String>(), patch.paths)
         assertEquals(listOf("https://skills.test/base.json"), patch.urls)
         assertEquals(listOf("url:https://skills.test/base.json"), edt { sourceRows(panel).map { it.key } })
+        assertEquals(listOf(DIR), agentRpc.skillReloads)
     }
 
     fun `test stale config update result keeps removed skill sources hidden`() {

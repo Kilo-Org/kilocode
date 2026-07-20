@@ -139,6 +139,9 @@ class KiloAgentBehaviorRpcApiImplTest {
         val dir = Files.createTempDirectory("kilo-skill-test")
         val file = dir.resolve("test.md")
         Files.writeString(file, "old")
+        mock.skills = """[
+            {"name":"test","description":"Test","location":"$file","content":"old"}
+        ]""".trimIndent()
         val rpc = rpc()
 
         assertTrue(rpc.saveSkill("/test project", file.toString(), "new content"))
@@ -151,6 +154,9 @@ class KiloAgentBehaviorRpcApiImplTest {
         val dir = Files.createTempDirectory("kilo-skill-test")
         val file = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
         Files.writeString(file, "old")
+        mock.skills = """[
+            {"name":"plan","description":"Plan work","location":"$file","content":"old"}
+        ]""".trimIndent()
         val rpc = rpc()
 
         assertTrue(rpc.saveSkill("/test project", file.toString(), "new content"))
@@ -158,6 +164,22 @@ class KiloAgentBehaviorRpcApiImplTest {
         assertEquals("new content", Files.readString(file))
         assertEquals(0, mock.requestCount("/instance/reload"))
         assertFalse(rpc.saveSkill("/test project", "builtin", "nope"))
+    }
+
+    @Test
+    fun `save skill rejects unknown absolute skill files`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val known = Files.createDirectories(dir.resolve("known")).resolve("SKILL.md")
+        val other = Files.createDirectories(dir.resolve("other")).resolve("SKILL.md")
+        Files.writeString(known, "known")
+        Files.writeString(other, "old")
+        mock.skills = """[
+            {"name":"known","description":"Known","location":"$known","content":"known"}
+        ]""".trimIndent()
+
+        assertFalse(rpc().saveSkill("/test project", other.toString(), "new content"))
+
+        assertEquals("old", Files.readString(other))
     }
 
     @Test

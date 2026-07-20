@@ -103,6 +103,10 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
             LOG.warn("Skill save rejected: not a skill file dir=$directory path=$path")
             return false
         }
+        if (!knownSkill(directory, path)) {
+            LOG.warn("Skill save rejected: unknown skill dir=$directory path=$path")
+            return false
+        }
         withContext(Dispatchers.IO) {
             Files.writeString(path, content, StandardCharsets.UTF_8)
         }
@@ -239,6 +243,22 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         if (!path.isAbsolute || !isSkillFile(path)) return false
         if (urlCached(path)) return false
         return true
+    }
+
+    private suspend fun knownSkill(directory: String, path: Path): Boolean {
+        val items = KiloCliDataParser.parseAgentBehaviorSkills(request(directory, "/skill", null))
+        return items.any { item -> editable(item) && skillPath(item.location) == path }
+    }
+
+    private fun skillPath(location: String): Path? {
+        val raw = normalizeWorkspacePath(location) ?: return null
+        val path = try {
+            Path.of(raw).normalize()
+        } catch (_: InvalidPathException) {
+            return null
+        }
+        if (!path.isAbsolute || !isSkillFile(path)) return null
+        return path
     }
 
     private fun urlCached(path: Path): Boolean {

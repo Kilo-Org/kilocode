@@ -112,7 +112,7 @@ internal class SkillsSettingsUi(
 
     override suspend fun fetch(): List<SettingsListItem> {
         val items = withTimeoutOrNull(SKILL_LOAD_TIMEOUT_MS) {
-            service<KiloAgentBehaviorService>().skills(dir)
+            service<KiloAgentBehaviorService>().loadSkills(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.skills.load.timeout"))
         withContext(edt) {
             val dirty = state.modified()
@@ -159,6 +159,7 @@ internal class SkillsSettingsUi(
 
     override fun applyDraft() {
         val token = state.start() ?: return
+        val fallback = skillFallback(token.target)
         if (!launch("apply") { id ->
             val target = token.target
             var failed: String? = null
@@ -182,7 +183,8 @@ internal class SkillsSettingsUi(
                 val patch = ConfigPatchDto(skills = SkillsPatchDto(paths = target.sources.paths, urls = target.sources.urls))
                 if (app.updateConfig(patch) == null) failed = KiloBundle.message("settings.agentBehavior.save.failed")
             }
-            val items = behavior.skills(dir)
+            val reloaded = if (failed == null) behavior.reloadSkills(dir) else true
+            val items = behavior.refreshSkills(dir, fallback)
             withContext(edt) {
                 if (!active(id)) {
                     if (failed == null) KiloNotifications.info(KiloBundle.message("settings.agentBehavior.skills.saved.notification"))
@@ -195,7 +197,7 @@ internal class SkillsSettingsUi(
                     state.complete(token, next)
                     sources.refresh(draft.sources)
                     view.update(rows(items))
-                    clearProgress()
+                    if (reloaded) clearProgress() else showProgress(KiloBundle.message("settings.agentBehavior.skills.reload.blocked"))
                     LOG.info("skills settings apply succeeded dir=$dir")
                 } else {
                     state.fail(token, failed)
@@ -219,6 +221,11 @@ internal class SkillsSettingsUi(
     private fun rows(items: List<SkillDto> = skills.values.toList()): List<SettingsListItem> = items.mapNotNull { skill ->
         if (skill.location in draft.deleted) return@mapNotNull null
         item(skill)
+    }
+
+    private fun skillFallback(target: SkillsDraft): List<SkillDto> = skills.values.mapNotNull { skill ->
+        if (skill.location in target.deleted) return@mapNotNull null
+        target.edited[skill.location]?.let { skill.copy(content = it) } ?: skill
     }
 
     private fun item(skill: SkillDto) = object : SettingsListItem {
