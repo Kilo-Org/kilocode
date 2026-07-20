@@ -1366,7 +1366,11 @@ export const dict = {
   "common.choose": "Choose…",
 
   "settings.autocomplete.model.title": "Autocomplete model",
-  "settings.autocomplete.model.description": "Select the model used for inline code completions",
+  "settings.autocomplete.model.description":
+    "Select a fill-in-the-middle (FIM) model. Chat-only models are not supported.",
+  "settings.autocomplete.model.customWarning.title": "Unverified autocomplete model",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code has not tested this model for autocomplete. It must support fill-in-the-middle (FIM) through its provider's completions endpoint. If suggestions appear as prose or fenced Markdown, the model is responding as chat. Switch to a FIM-capable model.",
   "settings.autocomplete.autoTrigger.title": "Enable automatic inline completions",
   "settings.autocomplete.autoTrigger.description": "Automatically show inline completion suggestions as you type",
   "settings.autocomplete.smartKeybinding.title": "Enable smart inline task keybinding",

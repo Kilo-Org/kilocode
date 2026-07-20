@@ -9,12 +9,13 @@ Kilo Code's autocomplete feature provides intelligent code suggestions and compl
 
 ## How Autocomplete Works
 
-The extension uses **Fill-in-the-Middle (FIM)** completion routed through the **Kilo Gateway**. It analyzes the code before and after your cursor to generate contextually accurate inline suggestions.
+The extension uses **Fill-in-the-Middle (FIM)** completion. It analyzes the code before and after your cursor to generate contextually accurate inline suggestions through Kilo Gateway or a configured BYOK provider.
 
-You can choose between two FIM models:
+You can choose between these completion models:
 
 - **Codestral** (`mistralai/codestral-2508`) by Mistral AI — the default, billed through your Kilo account.
 - **Mercury Edit 2** (`inception/mercury-edit-2`) by Inception — temporarily available via **BYOK** (Bring Your Own Key) only; Kilo Gateway support is coming soon.
+- A FIM-capable model exposed by a configured OpenAI-compatible provider, including local servers such as LM Studio, llama.cpp, Ollama, or OMLX.
 
 ## Triggering Options
 
@@ -32,14 +33,96 @@ This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybin
 
 ## Provider and Model
 
-Autocomplete requests are routed through the **Kilo Gateway**. You can pick the FIM model under **Settings → Models → Autocomplete model**:
+You can pick the FIM model under **Settings → Models → Autocomplete model**:
 
 - **Codestral** (`mistralai/codestral-2508`) — the default. Billed through your Kilo account, or free when you add your own Mistral Codestral key via BYOK. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
 - **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception. Temporarily requires an **Inception BYOK key** until Kilo Gateway support lands. Add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
+- A model from any connected OpenAI-compatible provider. The server and model must implement `POST /v1/completions` with both `prompt` and `suffix`; chat-only models are not compatible.
 
 {% callout type="note" %}
 Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support is coming soon. If you select Mercury Edit 2 without a valid Inception BYOK key configured, autocomplete requests will fail — switch back to Codestral or add an Inception key to continue.
 {% /callout %}
+
+### Local OpenAI-compatible setup
+
+Ollama documents the complete API contract that autocomplete needs: `/v1/completions`, streaming, and the `suffix` field. Its `qwen2.5-coder:1.5b-base` template also maps the prompt and suffix to the model's FIM tokens.
+
+1. Install [Ollama](https://ollama.com/download), pull the FIM base model, and start the server if it is not already running:
+
+```bash
+ollama pull qwen2.5-coder:1.5b-base
+ollama serve
+```
+
+2. Confirm the exact model ID reported by the server:
+
+```bash
+curl --silent --show-error http://127.0.0.1:11434/v1/models
+```
+
+3. Verify non-streaming FIM before configuring Kilo Code:
+
+```bash
+curl --silent --show-error \
+  http://127.0.0.1:11434/v1/completions \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "model": "qwen2.5-coder:1.5b-base",
+    "prompt": "function add(a, b) {\n  return ",
+    "suffix": "\n}\n",
+    "max_tokens": 32,
+    "temperature": 0,
+    "stream": false
+  }'
+```
+
+The `choices[0].text` value should contain an insertion such as `a + b` without repeating the prefix or suffix. Repeat the request with `"stream": true` to verify the streaming path Kilo Code uses.
+
+4. Add Ollama as a normal provider in `~/.config/kilo/kilo.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1"
+      },
+      "models": {
+        "qwen2.5-coder:1.5b-base": {
+          "name": "Qwen2.5 Coder 1.5B Base",
+          "limit": {
+            "context": 32768,
+            "output": 256
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+5. Run **Developer: Reload Window** in VS Code. Open **Kilo Code Settings → Models → Autocomplete model**, then select **Qwen2.5 Coder 1.5B Base** under **Ollama**. The selector shows every connected-provider model; appearing in the list does not prove that a model supports FIM.
+6. Disable other inline-completion extensions such as GitHub Copilot for this test. Open a source file, place the cursor after `return ` in the example above, and request a suggestion. Automatic suggestions appear as you type. To test manually, enable `kilo-code.new.autocomplete.enableSmartInlineTaskKeybinding` and press `Cmd+L` on macOS or `Ctrl+L` on Windows/Linux. Press `Tab` to accept the ghost text.
+
+### Other local servers
+
+- **OMLX:** Use its OpenAI-compatible base URL and the exact ID from `/v1/models`; local validation covered `mlx-community/Qwen2.5-Coder-1.5B-4bit` and `mlx-community/Qwen2.5-Coder-3B-4bit`.
+- **LM Studio:** It exposes `/v1/completions`, but `suffix` support depends on the loaded model and server version. Copy the exact ID from `http://127.0.0.1:1234/v1/models` and run the FIM request above before adding the provider.
+- **llama.cpp:** Its documented code-infill API is `/infill` with `input_prefix` and `input_suffix`, which this OpenAI-compatible transport does not call directly. Use a version or adapter that maps `POST /v1/completions` with `prompt` and `suffix`, and verify it with the request above.
+
+Loopback servers do not require an API key. For a remote endpoint, use HTTPS and add `"apiKey": "{env:MY_PROVIDER_API_KEY}"` under `options`. The environment variable must be visible to the VS Code process. Alternatively, save the key through **Kilo Code Settings → Providers → Custom provider**. Keep credentials in global configuration; project-level configuration cannot resolve `{env:...}` references.
+
+{% callout type="warning" %}
+OpenAI compatibility alone is not enough: the endpoint must support text completions with the `suffix` field, and the selected model must be trained for FIM. Validate this with the server's `/v1/completions` endpoint before enabling automatic suggestions.
+{% /callout %}
+
+### Models that do not work
+
+- **Qwen3-Coder-Next (instruct):** Hosted endpoints accept `POST /v1/completions` with `prompt` and `suffix` but ignore the suffix and route through the chat template, so responses are conversational prose instead of insertable code. The model only emits FIM content through chat completions with explicit `<|fim_prefix|>`/`<|fim_suffix|>`/`<|fim_middle|>` markers, and even then wraps it in Markdown code fences, which this transport does not send or strip. Common self-hosted servers do not bridge the gap either: vLLM rejects `suffix` and OMLX has no `suffix` field on `/v1/completions`. Only the separate Base checkpoint behind a server that maps `prompt`+`suffix` into Qwen FIM tokens (for example SGLang with `--completion-template qwen_coder`) fits this transport.
+- Chat-tuned models in general: if a model's `/v1/completions` output starts with prose like "Here's the corrected version", it is answering as a chat model and will not produce usable inline completions.
 
 ## Status Bar
 

@@ -1273,7 +1273,11 @@ export const dict = {
   "settings.display.title": "Отображение",
   "settings.autocomplete.title": "Автодополнение",
   "settings.autocomplete.model.title": "Модель автодополнения",
-  "settings.autocomplete.model.description": "Выберите модель для встроенного (inline) автодополнения кода",
+  "settings.autocomplete.model.description":
+    "Выберите модель с поддержкой fill-in-the-middle (FIM). Модели только для чата не поддерживаются.",
+  "settings.autocomplete.model.customWarning.title": "Непроверенная модель автодополнения",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code не тестировал эту модель для автодополнения. Модель должна поддерживать fill-in-the-middle (FIM) через completions-эндпоинт провайдера. Если подсказки выглядят как проза или Markdown в ограждениях кода, модель отвечает как чат. Переключитесь на модель с поддержкой FIM.",
   "settings.notifications.title": "Уведомления",
   "settings.context.title": "Контекст",
 

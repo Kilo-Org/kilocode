@@ -69,14 +69,14 @@ describe("validAutocompleteSetting", () => {
     expect(validAutocompleteSetting("model", undefined)).toBe(true)
   })
 
-  it("accepts known providers and models", () => {
-    expect(validAutocompleteSetting("provider", "inception")).toBe(true)
-    expect(validAutocompleteSetting("model", "mercury-edit-2")).toBe(true)
+  it("accepts arbitrary configured providers and models", () => {
+    expect(validAutocompleteSetting("provider", "lmstudio")).toBe(true)
+    expect(validAutocompleteSetting("model", "qwen2.5-coder-1.5b")).toBe(true)
   })
 
-  it("rejects unknown providers and models", () => {
-    expect(validAutocompleteSetting("provider", "openrouter")).toBe(false)
-    expect(validAutocompleteSetting("model", "gpt-5")).toBe(false)
+  it("rejects blank providers and models", () => {
+    expect(validAutocompleteSetting("provider", "")).toBe(false)
+    expect(validAutocompleteSetting("model", "  ")).toBe(false)
   })
 
   it("rejects non-boolean toggle updates", () => {

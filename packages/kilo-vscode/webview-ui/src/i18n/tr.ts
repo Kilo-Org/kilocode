@@ -1220,7 +1220,11 @@ export const dict = {
   "settings.display.title": "Görünüm",
   "settings.autocomplete.title": "Otomatik Tamamlama",
   "settings.autocomplete.model.title": "Otomatik tamamlama modeli",
-  "settings.autocomplete.model.description": "Satır içi (inline) kod tamamlamaları için kullanılacak modeli seçin",
+  "settings.autocomplete.model.description":
+    "Fill-in-the-middle (FIM) destekli bir model seçin. Yalnızca sohbet için olan modeller desteklenmez.",
+  "settings.autocomplete.model.customWarning.title": "Doğrulanmamış otomatik tamamlama modeli",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code bu modeli otomatik tamamlama için test etmedi. Model, sağlayıcının completions uç noktası üzerinden fill-in-the-middle (FIM) desteklemelidir. Öneriler düz metin veya çitli Markdown olarak görünüyorsa model sohbet gibi yanıt veriyordur. FIM destekleyen bir modele geçin.",
   "settings.notifications.title": "Bildirimler",
   "settings.context.title": "Bağlam",
   "settings.indexing.title": "İndeksleme",

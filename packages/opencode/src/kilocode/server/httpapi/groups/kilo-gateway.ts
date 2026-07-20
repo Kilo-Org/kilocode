@@ -161,6 +161,7 @@ export const FimBody = Schema.Struct({
   model: Schema.optional(Schema.String),
   maxTokens: Schema.optional(Schema.Finite),
   temperature: Schema.optional(Schema.Finite),
+  sessionId: Schema.optional(Schema.String),
 })
 
 // Next Edit (NES) — non-streaming. Clients send structured editor context; the

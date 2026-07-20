@@ -12050,6 +12050,7 @@ export type KiloFimData = {
     model?: string
     maxTokens?: number
     temperature?: number
+    sessionId?: string
   }
   path?: never
   query?: {

@@ -13582,6 +13582,9 @@
                   },
                   "temperature": {
                     "type": "number"
+                  },
+                  "sessionId": {
+                    "type": "string"
                   }
                 },
                 "required": ["prefix", "suffix"],

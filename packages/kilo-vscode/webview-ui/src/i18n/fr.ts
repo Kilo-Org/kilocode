@@ -1292,7 +1292,11 @@ export const dict = {
   "settings.display.title": "Affichage",
   "settings.autocomplete.title": "Autocomplétion",
   "settings.autocomplete.model.title": "Modèle d'autocomplétion",
-  "settings.autocomplete.model.description": "Sélectionnez le modèle utilisé pour les complétions de code en ligne",
+  "settings.autocomplete.model.description":
+    "Sélectionnez un modèle fill-in-the-middle (FIM). Les modèles de chat uniquement ne sont pas pris en charge.",
+  "settings.autocomplete.model.customWarning.title": "Modèle d'autocomplétion non vérifié",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code n'a pas testé ce modèle pour l'autocomplétion. Il doit prendre en charge le fill-in-the-middle (FIM) via l'endpoint completions du fournisseur. Si les suggestions apparaissent comme de la prose ou du Markdown clôturé, le modèle répond comme un chat. Passez à un modèle compatible FIM.",
   "settings.notifications.title": "Notifications",
   "settings.context.title": "Contexte",
 

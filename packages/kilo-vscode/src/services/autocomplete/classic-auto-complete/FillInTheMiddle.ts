@@ -1,3 +1,4 @@
+import * as vscode from "vscode"
 import {
   AutocompleteInput,
   AutocompleteContextProvider,
@@ -9,6 +10,7 @@ import { getProcessedSnippets } from "./getProcessedSnippets"
 import { getTemplateForModel } from "../continuedev/core/autocomplete/templating/AutocompleteTemplate"
 import { generateFim } from "../fim"
 import type { KiloConnectionService } from "../../cli-backend"
+import { getAutocompleteModelById } from "../../../shared/autocomplete-models"
 
 export type { FimAutocompletePrompt, FimCompletionResult }
 
@@ -33,9 +35,10 @@ export class FimPromptBuilder {
     const prunedSuffix = helper.prunedSuffix
 
     const template = getTemplateForModel(modelName)
+    const configuredProvider = getAutocompleteModelById(modelName).configuredProvider === true
 
     let formattedPrefix = prunedPrefixRaw
-    if (template.compilePrefixSuffix && prunedSuffix) {
+    if (!configuredProvider && template.compilePrefixSuffix && prunedSuffix) {
       const [compiledPrefix] = template.compilePrefixSuffix(
         prunedPrefixRaw,
         prunedSuffix,
@@ -69,7 +72,15 @@ export class FimPromptBuilder {
     const onChunk = (text: string) => {
       response += text
     }
-    const usageInfo = await generateFim(connection, modelId, formattedPrefix, prunedSuffix, onChunk, signal)
+    const usageInfo = await generateFim(
+      connection,
+      modelId,
+      formattedPrefix,
+      prunedSuffix,
+      onChunk,
+      signal,
+      `${vscode.env.machineId}\0${autocompleteInput.filepath}`,
+    )
 
     const fillInAtCursorSuggestion = processSuggestion(response)
 

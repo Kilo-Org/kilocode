@@ -957,37 +957,11 @@
         },
         "kilo-code.new.autocomplete.model": {
           "type": "string",
-          "enum": [
-            "mistralai/codestral-2508",
-            "inception/mercury-edit-2",
-            "inception/mercury-next-edit",
-            "codestral-2508",
-            "mercury-edit-2",
-            "mercury-next-edit"
-          ],
-          "enumDescriptions": [
-            "Codestral via Kilo Gateway",
-            "Mercury Edit 2 (FIM) via Kilo Gateway",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via Kilo Gateway",
-            "Codestral via your connected Mistral provider API key",
-            "Mercury Edit 2 (FIM) via your connected Inception provider API key",
-            "Mercury Edit 2 (Next Edit), multi-line edit predictions with jump-to-edit UX, via your connected Inception provider API key"
-          ],
-          "description": "Model to use for inline autocomplete suggestions. If unset, the recommended default is used."
+          "description": "Model ID to use for inline autocomplete suggestions. Configured BYOK models must support OpenAI-compatible fill-in-the-middle completions. If unset, the recommended default is used."
         },
         "kilo-code.new.autocomplete.provider": {
           "type": "string",
-          "enum": [
-            "kilo",
-            "mistral",
-            "inception"
-          ],
-          "enumDescriptions": [
-            "Use autocomplete models through Kilo Gateway",
-            "Use autocomplete models through your connected Mistral provider API key",
-            "Use autocomplete models through your connected Inception provider API key"
-          ],
-          "description": "Provider to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
+          "description": "Configured provider ID to use for inline autocomplete suggestions. If unset, Kilo Gateway is used."
         },
         "kilo-code.new.autocomplete.enableAutoTrigger": {
           "type": "boolean",

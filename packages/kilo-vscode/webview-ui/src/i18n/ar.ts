@@ -1208,7 +1208,11 @@ export const dict = {
   "settings.display.title": "العرض",
   "settings.autocomplete.title": "الإكمال التلقائي",
   "settings.autocomplete.model.title": "نموذج الإكمال التلقائي",
-  "settings.autocomplete.model.description": "حدد النموذج المستخدم لإكمال الكود المضمن (inline completions)",
+  "settings.autocomplete.model.description":
+    "حدد نموذج إكمال منتصف النص (FIM). النماذج المخصصة للدردشة فقط غير مدعومة.",
+  "settings.autocomplete.model.customWarning.title": "نموذج إكمال تلقائي غير مُتحقق منه",
+  "settings.autocomplete.model.customWarning.description":
+    "لم يختبر Kilo Code هذا النموذج للإكمال التلقائي. يجب أن يدعم النموذج إكمال منتصف النص (FIM) عبر نقطة نهاية completions لدى المزود. إذا ظهرت الاقتراحات كنص نثري أو Markdown داخل أسوار تعليمات برمجية، فالنموذج يرد كنموذج دردشة. بدّل إلى نموذج يدعم FIM.",
   "settings.notifications.title": "الإشعارات",
   "settings.context.title": "السياق",
   "settings.indexing.title": "الفهرسة",

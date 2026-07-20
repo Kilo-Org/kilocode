@@ -1215,7 +1215,11 @@ export const dict = {
   "settings.display.title": "디스플레이",
   "settings.autocomplete.title": "자동 완성",
   "settings.autocomplete.model.title": "자동 완성 모델",
-  "settings.autocomplete.model.description": "인라인 코드 완성에 사용되는 모델 선택",
+  "settings.autocomplete.model.description":
+    "FIM(fill-in-the-middle) 모델을 선택하세요. 채팅 전용 모델은 지원되지 않습니다.",
+  "settings.autocomplete.model.customWarning.title": "검증되지 않은 자동 완성 모델",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code는 이 모델을 자동 완성용으로 테스트하지 않았습니다. 제공자의 completions 엔드포인트를 통해 FIM(fill-in-the-middle)을 지원해야 합니다. 제안이 산문이나 코드 펜스로 감싼 Markdown으로 표시되면 모델이 채팅으로 응답하고 있는 것입니다. FIM을 지원하는 모델로 전환하세요.",
   "settings.notifications.title": "알림",
   "settings.context.title": "컨텍스트",
 

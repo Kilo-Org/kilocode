@@ -1288,7 +1288,11 @@ export const dict = {
   "settings.display.title": "Anzeige",
   "settings.autocomplete.title": "Autovervollständigung",
   "settings.autocomplete.model.title": "Autocomplete-Modell",
-  "settings.autocomplete.model.description": "Wählen Sie das Modell für Inline-Code-Vervollständigungen",
+  "settings.autocomplete.model.description":
+    "Wählen Sie ein Fill-in-the-Middle-Modell (FIM). Reine Chat-Modelle werden nicht unterstützt.",
+  "settings.autocomplete.model.customWarning.title": "Nicht verifiziertes Autocomplete-Modell",
+  "settings.autocomplete.model.customWarning.description":
+    "Kilo Code hat dieses Modell nicht für die Autovervollständigung getestet. Es muss Fill-in-the-Middle (FIM) über den Completions-Endpunkt des Anbieters unterstützen. Erscheinen Vorschläge als Fließtext oder eingezäuntes Markdown, antwortet das Modell als Chat. Wechseln Sie zu einem FIM-fähigen Modell.",
   "settings.notifications.title": "Benachrichtigungen",
   "settings.context.title": "Kontext",
 
