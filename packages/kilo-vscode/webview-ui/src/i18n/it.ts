@@ -135,7 +135,8 @@ export const dict = {
     "Conversazione ripristinata. Le modifiche ai file non sono state ripristinate perché gli snapshot sono disabilitati.",
   "revert.banner.workspace.unavailable":
     "Conversazione ripristinata. Non era disponibile alcun checkpoint dei file, quindi le modifiche all'area di lavoro non sono state ripristinate.",
-  "revert.banner.workspace.legacy": "Conversazione ripristinata. Lo stato del ripristino dell'area di lavoro non è disponibile per questo ripristino precedente.",
+  "revert.banner.workspace.legacy":
+    "Conversazione ripristinata. Lo stato del ripristino dell'area di lavoro non è disponibile per questo ripristino precedente.",
   "revert.banner.workspace.enableSnapshots": "Abilita snapshot",
   "revert.disabled.agentBusy": "Attendi che l'agente finisca",
   "command.session.compact": "Compatta sessione",

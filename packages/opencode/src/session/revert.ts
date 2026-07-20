@@ -188,6 +188,7 @@ export const node = LayerNode.make(layer, [
   EventV2Bridge.node,
   SessionSummary.node,
   SessionRunState.node,
+  Config.node, // kilocode_change
 ])
 
 export * as SessionRevert from "./revert"

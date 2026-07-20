@@ -140,7 +140,8 @@ export const dict = {
     "Conversation reverted. File changes were not restored because snapshots are disabled.",
   "revert.banner.workspace.unavailable":
     "Conversation reverted. No file checkpoint was available, so workspace changes were not restored.",
-  "revert.banner.workspace.legacy": "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
+  "revert.banner.workspace.legacy":
+    "Conversation reverted. Workspace restoration status is unavailable for this earlier revert.",
   "revert.banner.workspace.enableSnapshots": "Enable snapshots",
   "revert.disabled.agentBusy": "Wait for agent to finish",
   "command.session.compact": "Compact session",
