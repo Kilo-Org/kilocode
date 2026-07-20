@@ -352,6 +352,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "활성 파일 포함",
   "prompt.context.removeActiveFile": "컨텍스트에서 활성 파일 제거",
   "prompt.context.removeFile": "컨텍스트에서 파일 제거",
+  "prompt.thinking.tooltip": "추론 강도",
   "prompt.action.attachFile": "파일 첨부",
   "prompt.attachment.remove": "첨부 파일 제거",
   "prompt.action.send": "전송",
@@ -1689,6 +1690,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "추론 자동 접기",
   "settings.display.reasoningAutoCollapse.description":
     "에이전트가 추론 작성을 마친 뒤 추론 블록을 자동으로 접습니다. 수동으로 접기 전까지 추론을 펼친 상태로 두려면 끄세요.",
+  "settings.display.shiftTabCycle.title": "Shift+Tab으로 추론 강도 전환",
+  "settings.display.shiftTabCycle.description":
+    "프롬프트 입력란에서 Shift+Tab을 눌러 다음 추론 강도 수준으로 전환합니다. Shift+Tab을 키보드 포커스 탐색에 사용하려면 비활성화하세요.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
