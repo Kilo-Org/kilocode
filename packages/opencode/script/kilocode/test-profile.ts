@@ -22,7 +22,7 @@ export namespace TestProfile {
           "git/*.test.ts",
           "image/*.test.ts",
           "plugin/{install-concurrency,loader-shared}.test.ts",
-          "reference/*.test.ts",
+          "server/httpapi-reference.test.ts",
           "snapshot/*.test.ts",
           "tool/{apply_patch,edit,glob,grep,read,recall,registry,repo_clone,repo_overview,shell,skill,truncation,write}.test.ts",
           "util/{filesystem,glob,module,process,which}.test.ts",

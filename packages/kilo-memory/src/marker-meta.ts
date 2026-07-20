@@ -62,10 +62,15 @@ export namespace MemoryMarkerMeta {
     return input.filter(Boolean).slice(0, LIMIT).map(clip)
   }
 
+  function item(line: string) {
+    if (!line.startsWith("text:")) return
+    const value = line.slice("text:".length).trim()
+    const idx = value.indexOf(" :: ")
+    return (idx >= 0 ? value.slice(idx + 4) : value).trim()
+  }
+
   function items(input: string) {
-    return list(
-      input.split("\n").flatMap((line) => (line.startsWith("text:") ? [line.slice("text:".length).trim()] : [])),
-    )
+    return list(input.split("\n").map(item).filter((value) => value !== undefined))
   }
 
   export function snippets(input: Decoded | undefined, verbose: boolean) {

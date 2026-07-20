@@ -140,6 +140,7 @@ import {
 import { fetchAndSendPendingSuggestions } from "./kilo-provider/handlers/suggestion"
 import { nativeTitle } from "./kilo-provider/native-tab-title"
 import { parseReview, reviewMetadata, type ReviewMessageData } from "./shared/review-comments"
+import { completesWithoutStatus } from "./kilo-provider/command-completion"
 import { KiloProviderMemory } from "./kilo-provider/memory"
 
 import {
@@ -3419,6 +3420,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           messageID,
         ),
       )
+      if (messageID && completesWithoutStatus(command)) {
+        this.postMessage({ type: "sessionCommandCompleted", messageID })
+      }
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to send command:", error)
       this.postMessage({

@@ -1,6 +1,6 @@
 {
   "name": "@opencode-ai/ui",
-  "version": "7.4.9",
+  "version": "7.4.11",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -29,7 +29,7 @@
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
-    "test": "bun test src",
+    "test": "bun test src --only-failures",
     "test:ci": "mkdir -p .artifacts/unit && bun test src --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "dev": "vite",
     "generate:tailwind": "bun run script/tailwind.ts",
@@ -41,6 +41,7 @@
     "@types/bun": "catalog:",
     "@types/katex": "0.16.7",
     "@typescript/native-preview": "catalog:",
+    "happy-dom": "20.8.9",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
