@@ -108,6 +108,26 @@ class AutoApproveSettingsStateTest {
     }
 
     @Test
+    fun `addException ignores an existing pattern`() {
+        val draft = PermissionDraft(
+            rules = mapOf("bash" to PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "deny"))),
+        )
+
+        assertEquals(draft, addException(draft, "bash", "git *"))
+    }
+
+    @Test
+    fun `editException ignores an existing target pattern`() {
+        val draft = PermissionDraft(
+            rules = mapOf(
+                "bash" to PermissionRuleDto.Patterns(mapOf("git *" to "deny", "git status" to "ask")),
+            ),
+        )
+
+        assertEquals(draft, editException(draft, "bash", "git *", "git status"))
+    }
+
+    @Test
     fun `setException changes an existing exception level`() {
         val from = PermissionDraft(
             rules = mapOf("read" to PermissionRuleDto.Patterns(mapOf("*" to "allow", "*.env" to "deny"))),

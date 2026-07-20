@@ -69,6 +69,20 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test toolbar add ignores duplicate input`() {
+        edt {
+            val added = mutableListOf<String>()
+            val list = list(onAdd = { added += it })
+            list.syncItems(listOf("git *" to "ask"), true)
+            list.input = { "git *" }
+            layout(list)
+
+            click(button(list, 0))
+
+            assertTrue(added.isEmpty())
+        }
+    }
+
     fun `test row level action changes through picker selection`() {
         edt {
             val changed = mutableListOf<String>()
@@ -119,6 +133,22 @@ class SettingsInlineListTest : BasePlatformTestCase() {
             doubleClickRow(jList, 0)
 
             assertEquals(listOf("git *" to "git status"), edits)
+        }
+    }
+
+    fun `test exception edit ignores duplicate target`() {
+        edt {
+            val edits = mutableListOf<Pair<String, String>>()
+            val list = list(onEdit = { from, to -> edits += from to to })
+            list.editInput = { "git status" }
+            list.syncItems(listOf("git *" to "allow", "git status" to "ask"), true)
+            val jList = jbList(list)
+            jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
+            jList.doLayout()
+
+            doubleClickRow(jList, 0)
+
+            assertTrue(edits.isEmpty())
         }
     }
 

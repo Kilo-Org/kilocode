@@ -80,6 +80,7 @@ internal class SettingsInlineList(
     selectionMode,
     showSearch = false,
 ) {
+    private var keys = emptySet<String>()
 
     /** Overridable in tests, mirrors `PatternList.input` in ContextSettingsUi.kt. */
     internal var input: () -> String? = {
@@ -102,6 +103,7 @@ internal class SettingsInlineList(
     }
 
     fun syncRows(rows: List<PermissionListRow>, enabled: Boolean) {
+        keys = rows.map { it.key }.toSet()
         setItems(rows.map(::PermissionItem), enabled)
     }
 
@@ -147,6 +149,10 @@ internal class SettingsInlineList(
         val add = onAdd ?: return
         val value = input()?.trim().orEmpty()
         if (value.isBlank()) return
+        if (value in keys) {
+            selectKey(value, scroll = true)
+            return
+        }
         add(value)
     }
 
@@ -154,6 +160,10 @@ internal class SettingsInlineList(
         val edit = onEdit ?: return
         val value = editInput(key)?.trim().orEmpty()
         if (value.isBlank() || value == key) return
+        if (value in keys) {
+            selectKey(value, scroll = true)
+            return
+        }
         edit(key, value)
     }
 
