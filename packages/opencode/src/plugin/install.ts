@@ -342,10 +342,12 @@ function patchDir(input: PatchInput) {
   return path.join(root, ".kilo") // kilocode_change
 }
 
-function patchName(kind: Kind): "kilo" | "tui" { // kilocode_change
+// kilocode_change start
+function patchName(kind: Kind): "kilo" | "tui" {
   if (kind === "server") return "kilo" // kilocode_change
   return "tui"
 }
+// kilocode_change end
 
 async function patchOne(dir: string, target: Target, spec: string, force: boolean, dep: PatchDeps): Promise<PatchOne> {
   const name = patchName(target.kind)

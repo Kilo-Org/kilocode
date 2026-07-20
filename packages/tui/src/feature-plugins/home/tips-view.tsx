@@ -136,8 +136,8 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     // kilocode_change start
     const tips = [...KILO_TIPS, ...TIPS, process.platform !== "win32" ? TERMINAL_SUSPEND_TIP : INPUT_UNDO_TIP].flatMap(
       (item) => {
-      const value = typeof item === "string" ? item : item(shortcuts)
-      return value ? [value] : []
+        const value = typeof item === "string" ? item : item(shortcuts)
+        return value ? [value] : []
       },
     )
     // kilocode_change end

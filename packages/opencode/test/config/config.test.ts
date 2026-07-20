@@ -431,8 +431,9 @@ it.effect("updates global config and omits empty shell key in json", () =>
   ),
 )
 
+// kilocode_change start
 it.effect("updates global config and omits empty shell key in jsonc", () =>
-  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "kilo.jsonc" }, ({ dir }) => // kilocode_change
+  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "kilo.jsonc" }, ({ dir }) =>
     Effect.gen(function* () {
       yield* Config.use.updateGlobal({ shell: "" })
 
@@ -445,6 +446,7 @@ it.effect("updates global config and omits empty shell key in jsonc", () =>
     }),
   ),
 )
+// kilocode_change end
 
 it.instance(
   "loads formatter boolean config",
@@ -1353,6 +1355,7 @@ it.instance(
   { config: { autoupdate: true, disabled_providers: [] } },
 )
 
+// kilocode_change start
 it.instance("managed jsonc settings override managed json settings", () =>
   Effect.gen(function* () {
     yield* writeManagedSettingsEffect({ model: "managed/json" })
@@ -1363,6 +1366,7 @@ it.instance("managed jsonc settings override managed json settings", () =>
     expect(config.model).toBe("managed/jsonc")
   }),
 )
+// kilocode_change end
 
 it.instance(
   "missing managed settings file is not an error",
@@ -2172,15 +2176,16 @@ describe("KILO_CONFIG_CONTENT token substitution", () => {
 
 // parseManagedPlist unit tests — pure function, no OS interaction
 
+// kilocode_change start
 test("parseManagedPlist strips MDM metadata keys", async () => {
   const config = ConfigParse.schema(
     ConfigV1.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
         JSON.stringify({
-          PayloadDisplayName: "Kilo Managed", // kilocode_change
-          PayloadIdentifier: "ai.kilo.managed.test", // kilocode_change
-          PayloadType: "ai.kilo.managed", // kilocode_change
+          PayloadDisplayName: "Kilo Managed",
+          PayloadIdentifier: "ai.kilo.managed.test",
+          PayloadType: "ai.kilo.managed",
           PayloadUUID: "AAAA-BBBB-CCCC",
           PayloadVersion: 1,
           _manualProfile: true,
@@ -2199,6 +2204,7 @@ test("parseManagedPlist strips MDM metadata keys", async () => {
   expect((config as any).PayloadType).toBeUndefined()
   expect((config as any)._manualProfile).toBeUndefined()
 })
+// kilocode_change end
 
 test("parseManagedPlist parses server settings", async () => {
   const config = ConfigParse.schema(
