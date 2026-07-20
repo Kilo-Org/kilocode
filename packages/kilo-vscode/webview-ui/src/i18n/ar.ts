@@ -136,6 +136,11 @@ export const dict = {
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled": "تم التراجع عن المحادثة. لم تُستعَد تغييرات الملفات لأن اللقطات معطّلة.",
+  "revert.banner.workspace.unavailable":
+    "تم التراجع عن المحادثة. لم تكن هناك نقطة تحقق للملفات، لذا لم تُستعَد تغييرات مساحة العمل.",
+  "revert.banner.workspace.legacy": "تم التراجع عن المحادثة. حالة استعادة مساحة العمل غير متاحة لهذا التراجع السابق.",
+  "revert.banner.workspace.enableSnapshots": "تفعيل اللقطات",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",

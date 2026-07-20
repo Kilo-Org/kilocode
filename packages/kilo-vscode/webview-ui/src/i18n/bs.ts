@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Ponovi",
   "revert.banner.redo.all": "Ponovi Sve",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Razgovor je vraćen. Promjene datoteka nisu vraćene jer su snimci stanja onemogućeni.",
+  "revert.banner.workspace.unavailable":
+    "Razgovor je vraćen. Nije bila dostupna kontrolna tačka datoteka, pa promjene radnog prostora nisu vraćene.",
+  "revert.banner.workspace.legacy":
+    "Razgovor je vraćen. Status vraćanja radnog prostora nije dostupan za ovo ranije vraćanje.",
+  "revert.banner.workspace.enableSnapshots": "Omogući snimke stanja",
   "revert.disabled.agentBusy": "Sačekajte da agent završi",
   "command.session.compact": "Sažmi sesiju",
   "command.session.compact.description": "Sažmi sesiju kako bi se smanjio kontekst",

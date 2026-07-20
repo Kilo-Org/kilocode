@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Opnieuw uitvoeren",
   "revert.banner.redo.all": "Alles opnieuw uitvoeren",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
+  "revert.banner.workspace.unavailable":
+    "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.legacy":
+    "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
+  "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
   "command.session.compact": "Sessie comprimeren",
   "command.session.compact.description": "De sessie samenvatten om de contextgrootte te verkleinen",

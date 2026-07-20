@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Yinele",
   "revert.banner.redo.all": "Tümünü Yinele",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.unavailable":
+    "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.legacy":
+    "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
+  "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.compact.description": "Bağlam boyutunu azaltmak için oturumu özetle",

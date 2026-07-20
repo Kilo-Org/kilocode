@@ -245,6 +245,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   createEffect(() => persistImages(imageAttach.images()))
 
   let textareaRef: HTMLTextAreaElement | undefined
+  let containerRef: HTMLDivElement | undefined
 
   onMount(() => {
     setBranchesLoading(true)
@@ -340,9 +341,16 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   }
 
   const adjustHeight = () => {
-    if (!textareaRef) return
-    textareaRef.style.height = "auto"
-    textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+    const box = containerRef
+    const area = textareaRef
+    if (!box || !area) return
+    // Grow the container with the prompt (same 200px auto-grow cap as the
+    // sidebar prompt), never the textarea: it fills the container and is the
+    // only element that scrolls. A manual container resize persists until the
+    // next input re-fits the height.
+    box.style.height = "auto"
+    const chrome = box.offsetHeight - area.offsetHeight
+    box.style.height = `${Math.min(area.scrollHeight, 200) + chrome}px`
   }
 
   const insertSpeechText = (value: string) => {
@@ -491,6 +499,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
             />
             {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
             <div
+              ref={containerRef}
               class="prompt-input-container am-prompt-input-container"
               classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
               onDragOver={imageAttach.handleDragOver}
@@ -841,7 +850,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                           }
                         >
                           <span class="am-selector-value">
-                            {[...modelAllocations().values()].map((e) => e.name).join(", ")}
+                            {[...modelAllocations().values()]
+                              .map((e) => (e.variant ? `${e.name} (${e.variant})` : e.name))
+                              .join(", ")}
                           </span>
                         </Show>
                       </span>

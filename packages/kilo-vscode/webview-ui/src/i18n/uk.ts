@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Повторити",
   "revert.banner.redo.all": "Повторити все",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Розмову скасовано. Зміни файлів не відновлено, оскільки знімки вимкнено.",
+  "revert.banner.workspace.unavailable":
+    "Розмову скасовано. Контрольна точка файлів була недоступна, тому зміни в робочому просторі не відновлено.",
+  "revert.banner.workspace.legacy":
+    "Розмову скасовано. Стан відновлення робочого простору для цього попереднього скасування недоступний.",
+  "revert.banner.workspace.enableSnapshots": "Увімкнути знімки",
   "revert.disabled.agentBusy": "Зачекайте завершення агента",
   "command.session.compact": "Стиснути сесію",
   "command.session.compact.description": "Підсумувати сесію для зменшення розміру контексту",
