@@ -7,7 +7,7 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "lib": ["es2022", "dom", "dom.iterable"],
+    "lib": ["es2023", "dom", "dom.iterable"],
     "types": ["node"]
   },
   "include": ["src/**/*", "test/**/*"]

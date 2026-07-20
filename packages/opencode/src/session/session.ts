@@ -204,6 +204,7 @@ const Revert = Schema.Struct({
   partID: optionalOmitUndefined(PartID),
   snapshot: optionalOmitUndefined(Schema.String),
   diff: optionalOmitUndefined(Schema.String),
+  workspace: optionalOmitUndefined(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])), // kilocode_change
 })
 
 const Model = Schema.Struct({

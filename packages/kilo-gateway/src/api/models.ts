@@ -97,11 +97,6 @@ export async function fetchKiloModels(options?: {
   const models: Record<string, any> = {}
 
   for (const model of raw.data) {
-    // Skip image generation models
-    if (model.architecture?.output_modalities?.includes("image")) {
-      continue
-    }
-
     // Skip models that don't support tools — Kilo requires tool calling
     if (!model.supported_parameters?.includes("tools")) {
       continue

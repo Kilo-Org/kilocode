@@ -138,6 +138,10 @@ export const dict = {
   "revert.banner.redo": "重做",
   "revert.banner.redo.all": "全部重做",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled": "工作階段已還原。由於快照已停用，未還原檔案變更。",
+  "revert.banner.workspace.unavailable": "工作階段已還原。沒有可用的檔案檢查點，因此未還原工作區變更。",
+  "revert.banner.workspace.legacy": "工作階段已還原。此次先前還原的工作區復原狀態無法取得。",
+  "revert.banner.workspace.enableSnapshots": "啟用快照",
   "revert.disabled.agentBusy": "等待 Agent 完成",
   "command.session.compact": "精簡工作階段",
   "command.session.compact.description": "總結工作階段以減少上下文大小",
@@ -346,6 +350,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "包含作用中檔案",
   "prompt.context.removeActiveFile": "從上下文移除目前檔案",
   "prompt.context.removeFile": "從上下文移除檔案",
+  "prompt.thinking.tooltip": "推理強度",
   "prompt.action.attachFile": "附加檔案",
   "prompt.attachment.remove": "移除附件",
   "prompt.action.send": "傳送",
@@ -1606,6 +1611,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "自動收合推理",
   "settings.display.reasoningAutoCollapse.description":
     "在代理寫完推理後收合推理區塊。保持關閉可讓推理保持展開，除非你手動收合它。",
+  "settings.display.shiftTabCycle.title": "使用 Shift+Tab 切換推理強度",
+  "settings.display.shiftTabCycle.description":
+    "在提示輸入框中按 Shift+Tab 可切換至下一個推理強度等級。停用此選項可保留 Shift+Tab 用於鍵盤焦點導覽。",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

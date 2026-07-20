@@ -33,7 +33,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.profile"
-                groupWeight="4"
+                groupWeight="5"
                 instance="ai.kilocode.client.settings.profile.UserProfileConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.profile.displayName"/>
@@ -41,7 +41,7 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.models"
-                groupWeight="3"
+                groupWeight="4"
                 instance="ai.kilocode.client.settings.models.ModelsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.models.displayName"/>
@@ -63,6 +63,14 @@
                 key="settings.agentBehavior.displayName"/>
 
         <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.context"
+                groupWeight="0"
+                instance="ai.kilocode.client.settings.context.ContextConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.context.displayName"/>
+
+        <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
                 id="ai.kilocode.jetbrains.settings.agentBehavior.agents"
                 instance="ai.kilocode.client.settings.agents.AgentsConfigurable"
@@ -75,6 +83,13 @@
                 instance="ai.kilocode.client.settings.agents.McpConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.mcp.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.skills"
+                instance="ai.kilocode.client.settings.agents.SkillsConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.skills.displayName"/>
 
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
