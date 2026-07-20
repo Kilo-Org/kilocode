@@ -111,7 +111,10 @@ describe("JSON to SQLite migration", () => {
   afterEach(async () => {
     sqlite.close()
     await fs.rm(storageDir, { recursive: true, force: true })
-    await Promise.all([dbFile, dbFile + "-shm", dbFile + "-wal"].map((file) => fs.rm(file, { force: true })))
+    // Windows can keep SQLite WAL handles alive past layer disposal, so tolerate EBUSY here.
+    await Promise.all(
+      [dbFile, dbFile + "-shm", dbFile + "-wal"].map((file) => fs.rm(file, { force: true }).catch(() => undefined)),
+    )
   })
 
   test("migrates project", async () => {
