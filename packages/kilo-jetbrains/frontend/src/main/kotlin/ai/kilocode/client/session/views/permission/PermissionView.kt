@@ -23,6 +23,7 @@ import ai.kilocode.client.ui.layout.align
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
+import ai.kilocode.client.ui.md.MdCommon
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
 import ai.kilocode.client.ui.md.hybrid.MdShellHighlight
@@ -131,8 +132,7 @@ class PermissionView(
         syncPrimaryText()
 
         val responding = permission.state == PermissionRequestState.RESPONDING || permission.state == PermissionRequestState.RESOLVED
-        card.setActionEnabled(ID_RUN, !responding)
-        card.setActionEnabled(ID_DENY, !responding)
+        syncButtons(responding)
         rules.setControlsEnabled(!responding)
 
         isVisible = true
@@ -214,6 +214,14 @@ class PermissionView(
     }
 
     @RequiresEdt
+    private fun syncButtons(responding: Boolean) {
+        val approved = rules.approved().isNotEmpty()
+        val denied = rules.denied().isNotEmpty()
+        card.setActionEnabled(ID_RUN, !responding && !(denied && !approved))
+        card.setActionEnabled(ID_DENY, !responding && !(approved && !denied))
+    }
+
+    @RequiresEdt
     private fun syncCode(tool: String, target: String?) {
         if (target.isNullOrBlank()) {
             codeSlot.isVisible = false
@@ -255,7 +263,7 @@ class PermissionView(
         view.font = style.transcriptFont
         view.foreground = style.editorForeground
         view.background = style.editorBackground
-        view.preBg = style.editorBackground
+        view.preBg = MdCommon.defaults(style).preBg
         view.codeFont = style.editorFamily
         view.component.border = JBUI.Borders.empty()
     }
@@ -371,20 +379,16 @@ class PermissionView(
 
     @RequiresEdt
     private fun syncPrimaryText() {
-        val changed = rules.anyDecided()
-        val key = when {
-            !changed -> "session.permission.allow.once"
-            rules.denied().isEmpty() && rules.approved().isNotEmpty() -> "session.permission.allow.save"
-            else -> "session.permission.allow.once.save"
-        }
+        val key = if (rules.anyDecided()) "session.permission.allow" else "session.permission.allow.once"
         card.setActionText(
             ID_RUN,
             KiloBundle.message(key),
         )
         card.setActionText(
             ID_DENY,
-            KiloBundle.message(if (changed) "session.permission.reject.save" else "session.permission.reject"),
+            KiloBundle.message("session.permission.reject"),
         )
+        syncButtons(false)
     }
 
     private fun refresh() {
@@ -418,7 +422,7 @@ class PermissionView(
     }
 
     // Test helpers
-    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.allow.save") || it.text == KiloBundle.message("session.permission.allow.once.save") }
+    internal fun runButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.allow") || it.text == KiloBundle.message("session.permission.allow.once") || it.text == KiloBundle.message("session.permission.allow.save") || it.text == KiloBundle.message("session.permission.allow.once.save") }
     internal fun denyButtonForTest() = buttons(card).first { it.text == KiloBundle.message("session.permission.reject") || it.text == KiloBundle.message("session.permission.reject.save") }
     internal fun codeLabelsForTest() = codeEditors()
     internal fun diffViewsForTest() = diffViews.toList()
@@ -451,6 +455,9 @@ internal class PermissionRulesView(
     private val title = JBLabel(KiloBundle.message("session.permission.rules.title"))
     private val arrow = JBLabel(SessionViewIcons.chevronCollapsed)
     private val header = Stack.horizontal(gap = UiStyle.Gap.xs())
+    private val inset = Stack.vertical(gap = UiStyle.Gap.xs()).apply {
+        border = JBUI.Borders.emptyLeft(SessionViewIcons.chevronCollapsed.iconWidth)
+    }
     private var box: Stack? = null
     private val rows = mutableListOf<RuleRow>()
     private var style = SessionEditorStyle.current()
@@ -464,6 +471,7 @@ internal class PermissionRulesView(
             }
         })
         next(header)
+        next(inset)
         syncArrow()
     }
 
@@ -482,7 +490,7 @@ internal class PermissionRulesView(
         decisions = candidates.associate { it.pattern to (old[it.pattern] ?: it.decision) }
         if (candidates.isEmpty()) {
             box?.let {
-                if (it.parent === this) remove(it)
+                if (it.parent === inset) inset.remove(it)
             }
             box = null
             disposeRows()
@@ -513,7 +521,7 @@ internal class PermissionRulesView(
             root.removeAll()
             disposeRows()
             for (candidate in candidates) {
-                val row = RuleRow(candidate.pattern, style, selection) { pattern, decision ->
+                val row = RuleRow(candidate.pattern, candidate.defaultDecision, style, selection) { pattern, decision ->
                     decisions = decisions + (pattern to decision)
                     syncRows()
                     changed()
@@ -534,16 +542,16 @@ internal class PermissionRulesView(
 
     @RequiresEdt
     private fun syncExpanded() {
-        if (box?.parent === this) return
+        if (box?.parent === inset) return
         if (!KiloPluginSettings.getPermissionRulesExpanded()) return
-        add(body())
+        inset.add(body())
     }
 
     @RequiresEdt
     fun toggle() {
         if (candidates.isEmpty()) return
         val root = body()
-        if (isExpanded()) remove(root) else add(root)
+        if (isExpanded()) inset.remove(root) else inset.add(root)
         KiloPluginSettings.setPermissionRulesExpanded(isExpanded())
         syncArrow()
         revalidate()
@@ -551,7 +559,7 @@ internal class PermissionRulesView(
     }
 
     @RequiresEdt
-    fun isExpanded(): Boolean = box?.parent === this
+    fun isExpanded(): Boolean = box?.parent === inset
 
     @RequiresEdt
     fun approved(): List<String> = candidates.map { it.pattern }.filter { decisions[it] == PermissionRuleDecision.APPROVED }
@@ -583,10 +591,16 @@ internal class PermissionRulesView(
     fun commandFieldsForTest(): List<EditorTextField> = rows.map { it.commandFieldForTest() }
 
     @RequiresEdt
+    fun hintLabelsForTest(): List<JBLabel> = rows.map { it.hintLabelForTest() }
+
+    @RequiresEdt
     fun decisionForTest(pattern: String): PermissionRuleDecision = decisions[pattern] ?: PermissionRuleDecision.PENDING
 
     @RequiresEdt
     fun bodyCreatedForTest(): Boolean = box != null
+
+    @RequiresEdt
+    fun bodyInsetForTest(): Int = inset.border.getBorderInsets(inset).left
 
     @RequiresEdt
     private fun syncArrow() {
@@ -605,10 +619,11 @@ internal class PermissionRulesView(
 
     private class RuleRow(
         val pattern: String,
+        private val default: PermissionRuleDecision,
         style: SessionEditorStyle,
         selection: SessionSelection?,
         private val changed: (String, PermissionRuleDecision) -> Unit,
-    ) : Stack(StackAxis.HORIZONTAL, UiStyle.Gap.xs()), Disposable {
+    ) : Stack(StackAxis.VERTICAL, UiStyle.Gap.xs()), Disposable {
         var decision = PermissionRuleDecision.PENDING
             private set
 
@@ -618,14 +633,19 @@ internal class PermissionRulesView(
         private val deny = RuleToggleButton(false) {
             changed(pattern, if (decision == PermissionRuleDecision.DENIED) PermissionRuleDecision.PENDING else PermissionRuleDecision.DENIED)
         }
+        private val hint = JBLabel()
         private val field = RuleCommandField(pattern, style, selection)
+        private val controls = Stack.horizontal(gap = UiStyle.Gap.xs())
 
         init {
-            next(approve.align(HAlign.LEFT, VAlign.CENTER))
-            next(deny.align(HAlign.LEFT, VAlign.CENTER))
-            gap(UiStyle.Gap.lg())
-            next(field.align(HAlign.LEFT, VAlign.CENTER))
-            fill(0)
+            controls.next(approve.align(HAlign.LEFT, VAlign.CENTER))
+            controls.next(deny.align(HAlign.LEFT, VAlign.CENTER))
+            controls.gap(UiStyle.Gap.lg())
+            controls.next(field.align(HAlign.LEFT, VAlign.CENTER))
+            controls.fill(0)
+            next(controls)
+            next(hint.align(HAlign.LEFT, VAlign.CENTER))
+            applyStyle(style)
             update(PermissionRuleDecision.PENDING)
         }
 
@@ -634,6 +654,17 @@ internal class PermissionRulesView(
             decision = value
             approve.update(value == PermissionRuleDecision.APPROVED)
             deny.update(value == PermissionRuleDecision.DENIED)
+            hint.text = KiloBundle.message(when (value) {
+                PermissionRuleDecision.APPROVED -> "session.permission.rule.hint.approve"
+                PermissionRuleDecision.DENIED -> "session.permission.rule.hint.deny"
+                PermissionRuleDecision.PENDING -> "session.permission.rule.hint.default"
+            }, defaultLabel())
+        }
+
+        private fun defaultLabel(): String = when (default) {
+            PermissionRuleDecision.APPROVED -> KiloBundle.message("session.permission.allow")
+            PermissionRuleDecision.DENIED -> KiloBundle.message("session.permission.reject")
+            PermissionRuleDecision.PENDING -> KiloBundle.message("session.permission.ask")
         }
 
         @RequiresEdt
@@ -644,6 +675,8 @@ internal class PermissionRulesView(
 
         @RequiresEdt
         fun applyStyle(style: SessionEditorStyle) {
+            hint.font = style.hintFont
+            hint.foreground = UiStyle.Colors.weak()
             field.applyStyle(style)
         }
 
@@ -652,6 +685,8 @@ internal class PermissionRulesView(
         fun denyButtonForTest(): JButton = deny
 
         fun commandFieldForTest(): EditorTextField = field
+
+        fun hintLabelForTest(): JBLabel = hint
 
         override fun dispose() {
             field.dispose()

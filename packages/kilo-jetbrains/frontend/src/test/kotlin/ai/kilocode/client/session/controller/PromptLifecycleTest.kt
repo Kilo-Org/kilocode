@@ -345,8 +345,8 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         val request = permission("perm1").copy(
             rules = listOf("git *", "git add *", "git add ."),
             ruleDecisions = listOf(
-                PermissionRuleDecisionDto("git *", "approved"),
-                PermissionRuleDecisionDto("git add *", "denied"),
+                PermissionRuleDecisionDto("git *", "approved", "ask"),
+                PermissionRuleDecisionDto("git add *", "denied", "allow"),
                 PermissionRuleDecisionDto("git add ."),
             ),
         )
@@ -358,6 +358,10 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertEquals(
             listOf(PermissionRuleDecision.APPROVED, PermissionRuleDecision.DENIED, PermissionRuleDecision.PENDING),
             state.permission.meta.ruleDecisions.map { it.decision },
+        )
+        assertEquals(
+            listOf(PermissionRuleDecision.PENDING, PermissionRuleDecision.APPROVED, PermissionRuleDecision.PENDING),
+            state.permission.meta.ruleDecisions.map { it.defaultDecision },
         )
     }
 

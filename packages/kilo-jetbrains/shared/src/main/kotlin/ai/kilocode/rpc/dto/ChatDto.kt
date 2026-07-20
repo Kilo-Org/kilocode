@@ -308,6 +308,7 @@ data class PermissionRequestDto(
 data class PermissionRuleDecisionDto(
     val pattern: String,
     val decision: String = "pending",
+    val defaultDecision: String = decision,
 )
 
 @Serializable

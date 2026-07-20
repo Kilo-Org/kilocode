@@ -32,6 +32,7 @@ data class PermissionMeta(
 data class PermissionRuleCandidate(
     val pattern: String,
     val decision: PermissionRuleDecision = PermissionRuleDecision.PENDING,
+    val defaultDecision: PermissionRuleDecision = decision,
 )
 
 data class PermissionFileDiff(

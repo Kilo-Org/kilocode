@@ -1625,7 +1625,8 @@ private fun JsonObject?.ruleDecisions(fallback: List<String>): List<PermissionRu
             val obj = elem.obj()
             if (obj != null) {
                 val pattern = obj.str("pattern") ?: obj.str("rule") ?: obj.str("text") ?: return@mapNotNull null
-                return@mapNotNull PermissionRuleDecisionDto(pattern, obj.decision())
+                val next = obj.decision()
+                return@mapNotNull PermissionRuleDecisionDto(pattern, next, obj.defaultDecision() ?: next)
             }
             val pattern = runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull() ?: return@mapNotNull null
             PermissionRuleDecisionDto(pattern)
@@ -1638,6 +1639,15 @@ private fun JsonObject?.ruleDecisions(fallback: List<String>): List<PermissionRu
 
 private fun JsonObject.decision(): String {
     val value = str("decision") ?: str("state") ?: str("action") ?: return "pending"
+    return permissionDecision(value)
+}
+
+private fun JsonObject.defaultDecision(): String? {
+    val value = str("defaultDecision") ?: str("default") ?: str("defaultAction") ?: str("fallback") ?: return null
+    return permissionDecision(value)
+}
+
+private fun permissionDecision(value: String): String {
     return when (value.lowercase()) {
         "approved", "allow" -> "approved"
         "denied", "deny" -> "denied"

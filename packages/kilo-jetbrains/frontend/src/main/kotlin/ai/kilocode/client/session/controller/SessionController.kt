@@ -2466,12 +2466,17 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
 }
 
 private fun PermissionRuleDecisionDto.toRuleCandidate(): PermissionRuleCandidate {
-    val next = when (decision.lowercase()) {
+    val next = decision.toPermissionRuleDecision()
+    val default = defaultDecision.toPermissionRuleDecision()
+    return PermissionRuleCandidate(pattern, next, default)
+}
+
+private fun String.toPermissionRuleDecision(): PermissionRuleDecision {
+    return when (lowercase()) {
         "approved", "allow" -> PermissionRuleDecision.APPROVED
         "denied", "deny" -> PermissionRuleDecision.DENIED
         else -> PermissionRuleDecision.PENDING
     }
-    return PermissionRuleCandidate(pattern, next)
 }
 
 private fun toQuestion(dto: QuestionRequestDto): Question {

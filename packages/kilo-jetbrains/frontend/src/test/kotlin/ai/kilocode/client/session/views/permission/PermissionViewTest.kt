@@ -7,9 +7,11 @@ import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.PermissionRuleCandidate
 import ai.kilocode.client.session.model.PermissionRuleDecision
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.ui.md.MdCommon
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons
@@ -20,6 +22,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import javax.swing.AbstractButton
+import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
 class PermissionViewTest : BasePlatformTestCase() {
@@ -309,7 +312,7 @@ class PermissionViewTest : BasePlatformTestCase() {
                 always = listOf("src/**"),
                 meta = PermissionMeta(
                     ruleDecisions = listOf(
-                        PermissionRuleCandidate("*.kt"),
+                        PermissionRuleCandidate("*.kt", defaultDecision = PermissionRuleDecision.DENIED),
                         PermissionRuleCandidate("src/**", PermissionRuleDecision.APPROVED),
                     ),
                 ),
@@ -332,10 +335,17 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("Add to allowed", approve[0].toolTipText)
         assertEquals("Remove from allowed", approve[1].toolTipText)
         assertEquals("Add to denied", deny[1].toolTipText)
+        assertEquals(SessionViewIcons.chevronCollapsed.iconWidth, view.rulesForTest().bodyInsetForTest())
         val commands = view.rulesForTest().commandFieldsForTest()
         assertEquals(2, commands.size)
         assertEquals("*.kt", commands[0].text)
         assertEquals("src/**", commands[1].text)
+        layoutTree(view)
+        val hintY = SwingUtilities.convertPoint(view.rulesForTest().hintLabelsForTest()[0], 0, 0, view).y
+        val fieldY = SwingUtilities.convertPoint(commands[0], 0, 0, view).y
+        assertTrue("Rule hint should render below the controls row", hintY > fieldY)
+        assertTrue(allText(view).contains("Future matching calls will use the default permission setting: Reject."))
+        assertTrue(allText(view).contains("This request and future matching calls will be allowed."))
         assertEquals("Allow once", view.runButtonForTest().text)
         assertEquals("Reject", view.denyButtonForTest().text)
         assertEquals("Expected exactly 6 buttons including rule toggles", 6, buttons(view).size)
@@ -468,8 +478,11 @@ class PermissionViewTest : BasePlatformTestCase() {
         view.rulesForTest().toggle()
         view.rulesForTest().approveButtonsForTest()[1].doClick()
 
-        assertEquals("Allow and Save", view.runButtonForTest().text)
-        assertEquals("Reject and Save", view.denyButtonForTest().text)
+        assertEquals("Allow", view.runButtonForTest().text)
+        assertEquals("Reject", view.denyButtonForTest().text)
+        assertTrue(view.runButtonForTest().isEnabled)
+        assertFalse(view.denyButtonForTest().isEnabled)
+        assertTrue(allText(view).contains("This request and future matching calls will be allowed."))
         view.runButtonForTest().doClick()
 
         assertEquals(1, replies.size)
@@ -500,10 +513,14 @@ class PermissionViewTest : BasePlatformTestCase() {
         view.rulesForTest().denyButtonsForTest()[0].doClick()
 
         assertEquals(PermissionRuleDecision.DENIED, view.rulesForTest().decisionForTest("git clean *"))
-        assertEquals("Allow once and Save", view.runButtonForTest().text)
-        assertEquals("Reject and Save", view.denyButtonForTest().text)
-        view.runButtonForTest().doClick()
+        assertEquals("Allow", view.runButtonForTest().text)
+        assertEquals("Reject", view.denyButtonForTest().text)
+        assertFalse(view.runButtonForTest().isEnabled)
+        assertTrue(view.denyButtonForTest().isEnabled)
+        assertTrue(allText(view).contains("This request and future matching calls will be rejected."))
+        view.denyButtonForTest().doClick()
 
+        assertEquals("reject", replies.single().second.reply)
         assertEquals(emptyList<String>(), replies.single().third?.approvedAlways)
         assertEquals(listOf("git clean *"), replies.single().third?.deniedAlways)
     }
@@ -702,7 +719,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("Permission header should equal headerFont", style.headerFont, header)
     }
 
-    fun `test command editor uses editor background`() {
+    fun `test command editor uses markdown code block background`() {
         view.show(
             Permission(
                 id = "perm_bg",
@@ -716,7 +733,7 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val labels = view.codeLabelsForTest()
         assertFalse("Expected code labels", labels.isEmpty())
-        assertEquals(SessionEditorStyle.current().editorBackground, labels[0].background)
+        assertEquals(MdCommon.defaults(SessionEditorStyle.current()).preBg, labels[0].background)
     }
 
     fun `test command editor is retained and disposed`() {
@@ -809,6 +826,17 @@ class PermissionViewTest : BasePlatformTestCase() {
             }
         }
         collect(root)
+    }
+
+    private fun layoutTree(root: Container) {
+        root.setSize(900, 600)
+        fun layout(node: Container) {
+            node.doLayout()
+            for (child in node.components) {
+                if (child is Container) layout(child)
+            }
+        }
+        layout(root)
     }
 
     private fun occurrences(text: String, token: String): Int {

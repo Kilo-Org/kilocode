@@ -2345,8 +2345,8 @@ class KiloCliDataParserTest {
                 "always": ["git *", "git add *", "git add ."],
                 "metadata": {
                     "rules": [
-                        {"pattern": "git *", "decision": "approved"},
-                        {"pattern": "git add *", "action": "deny"},
+                        {"pattern": "git *", "decision": "approved", "defaultAction": "ask"},
+                        {"pattern": "git add *", "action": "deny", "defaultDecision": "allow"},
                         "git add ."
                     ]
                 }
@@ -2359,10 +2359,13 @@ class KiloCliDataParserTest {
         assertEquals(listOf("git *", "git add *", "git add ."), asked.request.rules)
         assertEquals("git *", asked.request.ruleDecisions[0].pattern)
         assertEquals("approved", asked.request.ruleDecisions[0].decision)
+        assertEquals("pending", asked.request.ruleDecisions[0].defaultDecision)
         assertEquals("git add *", asked.request.ruleDecisions[1].pattern)
         assertEquals("denied", asked.request.ruleDecisions[1].decision)
+        assertEquals("approved", asked.request.ruleDecisions[1].defaultDecision)
         assertEquals("git add .", asked.request.ruleDecisions[2].pattern)
         assertEquals("pending", asked.request.ruleDecisions[2].decision)
+        assertEquals("pending", asked.request.ruleDecisions[2].defaultDecision)
     }
 
     @Test
