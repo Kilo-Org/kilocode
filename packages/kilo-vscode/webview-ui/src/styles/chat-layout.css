@@ -411,7 +411,9 @@
    rule defined in kilo-ui's message-part.css. We use a body class instead of
    touching the shared stylesheet to keep Kilo-specific behavior out of the
    shared package. */
-html.kilo-no-smooth-scroll [data-component="reasoning-part"][data-streaming][data-auto-collapse] [data-slot="reasoning-content"] {
+html.kilo-no-smooth-scroll
+  [data-component="reasoning-part"][data-streaming][data-auto-collapse]
+  [data-slot="reasoning-content"] {
   scroll-behavior: auto;
 }
 

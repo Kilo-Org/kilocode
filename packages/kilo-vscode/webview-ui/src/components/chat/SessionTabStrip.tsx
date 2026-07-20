@@ -57,11 +57,7 @@ export const SessionTabStrip: Component = () => {
     }
     handleTabKey({ ids: tabs.ids(), id, event, select: tabs.select, root })
   }
-  const scroll = useTabScroll(
-    tabs.ids,
-    tabs.active,
-    () => config().experimental?.smooth_scrolling !== false,
-  )
+  const scroll = useTabScroll(tabs.ids, tabs.active, () => config().experimental?.smooth_scrolling !== false)
   const root = () => document.querySelector("[data-component=session-tabs] .am-tab-list")
   const freeze = () => setTabWidths(true, document)
   const release = () => setTabWidths(false, document)
