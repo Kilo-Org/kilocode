@@ -745,6 +745,9 @@ export function Diff<T>(props: DiffProps<T>) {
       const oldFile = local.before
       const newFile = local.after
       if (!oldFile || !newFile) throw new Error("Diff requires before and after contents when fileDiff is absent")
+<<<<<<< ours
+>>>>>>> theirs
+=======
 >>>>>>> theirs
       const beforeContents = before()
       const afterContents = after()
