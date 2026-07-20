@@ -1,20 +1,7 @@
 import type { IndexingConfig } from "@kilocode/sdk/v2/client"
+import { isFileExtension } from "@kilocode/kilo-indexing/file-extensions"
 
-const extension = /^\.?[A-Za-z0-9][A-Za-z0-9_+-]*$/
-
-function isFileExtension(input: string): boolean {
-  return extension.test(input.trim())
-}
-
-export function parseFileExtensions(input: string): string[] | undefined {
-  const values = new Set<string>()
-  for (const raw of input.split(",")) {
-    const item = raw.trim().toLowerCase()
-    if (!item) continue
-    values.add(item.startsWith(".") ? item : `.${item}`)
-  }
-  return values.size > 0 ? [...values].sort() : undefined
-}
+export { parseFileExtensions } from "@kilocode/kilo-indexing/file-extensions"
 
 function record(input: unknown): input is Record<string, unknown> {
   return typeof input === "object" && input !== null && !Array.isArray(input)
