@@ -36,6 +36,8 @@ import com.intellij.platform.project.findProjectOrNull
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -194,8 +196,11 @@ class KiloWorkspaceRpcApiImpl internal constructor(
     private suspend fun searchKilo(directory: String, query: String, limit: Int, git: Boolean): FileSearchResultDto {
         return try {
             val cap = limit.coerceIn(1, 200)
-            val files = kiloResults(directory, query, "file", cap, false)
-            val dirs = kiloResults(directory, query, "directory", cap, true)
+            val (files, dirs) = coroutineScope {
+                val files = async { kiloResults(directory, query, "file", cap, false) }
+                val dirs = async { kiloResults(directory, query, "directory", cap, true) }
+                files.await() to dirs.await()
+            }
             val found = linkedMapOf<String, WorkspaceFileDto>()
             (dirs + files).forEach { file -> found.putIfAbsent(file.path, file) }
             FileSearchResultDto(files = found.values.take(cap), git = git)
