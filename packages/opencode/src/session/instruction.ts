@@ -16,6 +16,13 @@ import type { KilocodeMarkdown } from "@/kilocode/config/markdown" // kilocode_c
 import type { MessageV2 } from "./message-v2"
 import type { MessageID } from "./schema"
 
+// kilocode_change start
+type Classified = {
+  startup: Map<string, KilocodeMarkdown.Source>
+  scoped: { item: string; content: string; paths: string[] }[]
+}
+// kilocode_change end
+
 function extract(messages: SessionV1.WithParts[]) {
   const paths = new Set<string>()
   for (const msg of messages) {
@@ -77,6 +84,7 @@ export const layer: Layer.Layer<
         Effect.succeed({
           // Track which instruction files have already been attached for a given assistant message.
           claims: new Map<MessageID, Set<string>>(),
+          sources: undefined as Classified | undefined, // kilocode_change
         }),
       ),
     )
@@ -130,6 +138,7 @@ export const layer: Layer.Layer<
     const clear = Effect.fn("Instruction.clear")(function* (messageID: MessageID) {
       const s = yield* InstanceState.get(state)
       s.claims.delete(messageID)
+      s.sources = undefined // kilocode_change
     })
 
     // kilocode_change start - retain declaration provenance through instruction path expansion
@@ -243,8 +252,16 @@ export const layer: Layer.Layer<
       return { startup, scoped }
     })
 
+    const classified = Effect.fn("Instruction.classified")(function* () {
+      const s = yield* InstanceState.get(state)
+      if (s.sources) return s.sources
+      const sources = yield* classify(yield* systemSources())
+      s.sources = sources
+      return sources
+    })
+
     const startupSources = Effect.fn("Instruction.startupSources")(function* () {
-      return (yield* classify(yield* systemSources())).startup
+      return (yield* classified()).startup
     })
 
     const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
@@ -286,7 +303,7 @@ export const layer: Layer.Layer<
       filepath: string,
       messageID: MessageID,
     ) {
-      const sources = yield* classify(yield* systemSources()) // kilocode_change
+      const sources = yield* classified() // kilocode_change
       const sys = new Set(sources.startup.keys()) // kilocode_change
       const already = extract(messages)
       const results: { filepath: string; content: string }[] = []

@@ -173,6 +173,31 @@ describe("path-scoped instruction rules", () => {
     }),
   )
 
+  it.live("reuses classified rules until the assistant message completes", () =>
+    Effect.gen(function* () {
+      const source = (content: string) => ["---", "paths: src/**/*.ts", "---", "", content].join("\n")
+      const dir = yield* tmpWithFiles({
+        "rules/scoped.md": source("# Initial Rule"),
+        "src/file.ts": "export const value = 1",
+      })
+      const rule = path.join(dir, "rules", "scoped.md")
+      const target = path.join(dir, "src", "file.ts")
+
+      yield* Effect.gen(function* () {
+        const svc = yield* Instruction.Service
+        const first = MessageID.make("msg_scoped-cache-1")
+        yield* svc.systemPaths()
+        yield* write(rule, source("# Updated Rule"))
+
+        expect((yield* svc.resolve([], target, first))[0].content).toContain("# Initial Rule")
+        yield* svc.clear(first)
+        expect((yield* svc.resolve([], target, MessageID.make("msg_scoped-cache-2")))[0].content).toContain(
+          "# Updated Rule",
+        )
+      }).pipe(provideInstance(dir), provideInstruction({ home: dir, config: dir }, { instructions: [rule] }))
+    }),
+  )
+
   it.live("does not inject scoped rules for non-matching files", () =>
     Effect.gen(function* () {
       const dir = yield* tmpWithFiles({
