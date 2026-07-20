@@ -356,6 +356,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "アクティブなファイルを含める",
   "prompt.context.removeActiveFile": "コンテキストからアクティブなファイルを削除",
   "prompt.context.removeFile": "コンテキストからファイルを削除",
+  "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.attachFile": "ファイルを添付",
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
@@ -1713,6 +1714,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
+  "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
+  "settings.display.shiftTabCycle.description":
+    "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

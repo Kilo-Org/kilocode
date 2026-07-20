@@ -356,6 +356,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Включить активный файл",
   "prompt.context.removeActiveFile": "Удалить активный файл из контекста",
   "prompt.context.removeFile": "Удалить файл из контекста",
+  "prompt.thinking.tooltip": "Усилие рассуждения",
   "prompt.action.attachFile": "Прикрепить файл",
   "prompt.attachment.remove": "Удалить вложение",
   "prompt.action.send": "Отправить",
@@ -1724,6 +1725,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
   "settings.display.reasoningAutoCollapse.description":
     "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

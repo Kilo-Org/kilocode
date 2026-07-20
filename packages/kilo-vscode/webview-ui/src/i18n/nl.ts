@@ -359,6 +359,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Actief bestand opnemen",
   "prompt.context.removeActiveFile": "Actief bestand uit context verwijderen",
   "prompt.context.removeFile": "Bestand uit context verwijderen",
+  "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.attachFile": "Bestand bijvoegen",
   "prompt.attachment.remove": "Bijlage verwijderen",
   "prompt.action.send": "Verzenden",
@@ -1695,6 +1696,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
