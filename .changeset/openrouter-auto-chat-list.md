@@ -3,4 +3,4 @@
 "@kilocode/cli": patch
 ---
 
-Show OpenRouter Auto and Auto Beta in the Kilo Gateway model list.
+Include image-output models in the Kilo Gateway chat model list.

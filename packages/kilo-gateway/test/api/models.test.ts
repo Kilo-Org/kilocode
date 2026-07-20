@@ -285,6 +285,17 @@ const MIXED_MODALITY_RESPONSE = JSON.stringify({
       supported_parameters: ["tools"],
     },
     {
+      id: "test/no-tools",
+      name: "No Tools Model",
+      context_length: 128000,
+      max_completion_tokens: 16384,
+      architecture: {
+        input_modalities: ["text"],
+        output_modalities: ["text"],
+      },
+      supported_parameters: ["temperature"],
+    },
+    {
       id: "test/model-a",
       name: "Test Model A",
       context_length: 128000,
@@ -298,7 +309,7 @@ const MIXED_MODALITY_RESPONSE = JSON.stringify({
   ],
 })
 
-test("keeps openrouter auto routers with image output and drops pure image models", async () => {
+test("keeps image-output models with tools and drops models without tools", async () => {
   const orig = globalThis.fetch
   stubFetch(
     async () =>
@@ -315,6 +326,7 @@ test("keeps openrouter auto routers with image output and drops pure image model
   expect(result.error).toBeUndefined()
   expect(result.models["openrouter/auto"]).toBeDefined()
   expect(result.models["openrouter/auto-beta"]).toBeDefined()
+  expect(result.models["black-forest-labs/flux-1.1-pro"]).toBeDefined()
   expect(result.models["test/model-a"]).toBeDefined()
-  expect(result.models["black-forest-labs/flux-1.1-pro"]).toBeUndefined()
+  expect(result.models["test/no-tools"]).toBeUndefined()
 })
