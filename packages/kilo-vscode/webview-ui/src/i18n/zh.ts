@@ -899,6 +899,7 @@ export const dict = {
   "settings.indexing.qdrantApiKey.placeholder": "可选 API 密钥",
   "settings.indexing.milvusAddress.title": "Milvus 地址",
   "settings.indexing.milvusAddress.description": "Milvus Standalone 或 Zilliz Cloud 的地址。",
+  "settings.indexing.milvusAddress.placeholder": "localhost:19530",
   "settings.indexing.milvusToken.title": "Milvus Token",
   "settings.indexing.milvusToken.description": "Milvus 或 Zilliz Cloud 的可选认证 Token。",
   "settings.indexing.milvusToken.placeholder": "可选 Token",

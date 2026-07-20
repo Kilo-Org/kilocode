@@ -1226,6 +1226,7 @@ export const dict = {
   "settings.indexing.qdrantApiKey.placeholder": "Optional API key",
   "settings.indexing.milvusAddress.title": "Milvus address",
   "settings.indexing.milvusAddress.description": "Address for Milvus standalone or Zilliz Cloud.",
+  "settings.indexing.milvusAddress.placeholder": "localhost:19530",
   "settings.indexing.milvusToken.title": "Milvus token",
   "settings.indexing.milvusToken.description": "Optional token for authenticated Milvus or Zilliz Cloud.",
   "settings.indexing.milvusToken.placeholder": "Optional token",

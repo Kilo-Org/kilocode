@@ -552,7 +552,7 @@ const IndexingTab: Component = () => {
             >
               <TextField
                 value={storeValue("milvus", "address")}
-                placeholder="localhost:19530"
+                placeholder={language.t("settings.indexing.milvusAddress.placeholder")}
                 onInput={(e: InputEvent) => {
                   const target = e.currentTarget as HTMLInputElement
                   setStoreDrafts((prev) => ({ ...prev, [`${scope()}.milvus.address`]: target.value }))
