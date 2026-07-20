@@ -16,6 +16,7 @@ import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
@@ -136,6 +137,12 @@ class PermissionViewTest : BasePlatformTestCase() {
         val labels = view.codeLabelsForTest()
         assertEquals("Expected exactly one command editor", 1, labels.size)
         assertTrue("Expected command in editor, got: ${labels[0].text}", labels[0].text.contains("git status --short"))
+        val editor = labels[0].getEditor(true)!!
+        val spans = editor.markupModel.allHighlighters.map {
+            labels[0].text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
+        }
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains("--short" to DefaultLanguageHighlighterColors.KEYWORD))
     }
 
     fun `test bash permission shows only header and compact detail`() {

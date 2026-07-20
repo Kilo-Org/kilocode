@@ -15,6 +15,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.iconButton
+import ai.kilocode.client.ui.editor.BashCommandHighlighter
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
@@ -26,15 +27,12 @@ import ai.kilocode.client.ui.md.MdCodeBlockOptions
 import ai.kilocode.client.ui.md.MdCommon
 import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
-import ai.kilocode.client.ui.md.hybrid.MdShellHighlight
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.ex.EditorEx
-import com.intellij.openapi.editor.markup.HighlighterLayer
-import com.intellij.openapi.editor.markup.HighlighterTargetArea
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.util.Disposer
@@ -230,7 +228,7 @@ class PermissionView(
         }
 
         val view = ensureMd()
-        val lang = if (tool == "bash") "shell-command" else ""
+        val lang = if (tool == "bash") "bash" else ""
         val text = fenced(target, lang)
         if (view.markdown() != text) view.set(text)
         applyCodeStyle(view)
@@ -750,24 +748,7 @@ internal class PermissionRulesView(
             ed.settings.isAdditionalPageAtBottom = false
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
-            syncHighlight(ed)
-        }
-
-        private fun syncHighlight(ed: EditorEx) {
-            ed.markupModel.removeAllHighlighters()
-            val size = ed.document.textLength
-            for (range in MdShellHighlight.command(text).ranges) {
-                val start = range.start.coerceAtMost(size)
-                val end = range.end.coerceAtMost(size)
-                if (start >= end) continue
-                ed.markupModel.addRangeHighlighter(
-                    range.key,
-                    start,
-                    end,
-                    HighlighterLayer.SYNTAX + 1,
-                    HighlighterTargetArea.EXACT_RANGE,
-                )
-            }
+            BashCommandHighlighter.apply(ed, text)
         }
     }
 
