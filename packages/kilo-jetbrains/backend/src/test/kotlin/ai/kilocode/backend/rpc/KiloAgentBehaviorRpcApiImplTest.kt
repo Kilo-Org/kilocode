@@ -135,6 +135,20 @@ class KiloAgentBehaviorRpcApiImplTest {
     }
 
     @Test
+    fun `custom skills under non cache paths remain editable`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = Files.createDirectories(dir.resolve("cache/kilo/skills/custom")).resolve("SKILL.md")
+        Files.writeString(file, "# Custom")
+        mock.skills = """[
+            {"name":"custom","description":"Custom","location":"$file","content":"# Custom"}
+        ]""".trimIndent()
+
+        val skill = rpc().skills("/test project").single()
+
+        assertEquals(true, skill.editable)
+    }
+
+    @Test
     fun `save skill supports configured markdown text and html files without reload`() = runBlocking {
         val dir = Files.createTempDirectory("kilo-skill-test")
         val file = dir.resolve("test.md")

@@ -262,10 +262,16 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     }
 
     private fun urlCached(path: Path): Boolean {
-        val root = Path.of(cacheRoot(), "kilo", "skills").normalize()
-        if (path.startsWith(root)) return true
-        val parts = (0 until path.nameCount).map { path.getName(it).toString() }
-        return parts.windowed(3).any { it[1] == "kilo" && it[2] == "skills" && it[0] in cacheNames }
+        return cacheRoots().any { root -> path.startsWith(root.resolve("kilo").resolve("skills").normalize()) }
+    }
+
+    private fun cacheRoots(): Set<Path> = buildSet {
+        val home = System.getProperty("user.home")
+        add(Path.of(cacheRoot()).normalize())
+        add(Path.of(home, ".cache").normalize())
+        add(Path.of(home, "Library", "Caches").normalize())
+        System.getenv("LOCALAPPDATA")?.takeIf { it.isNotBlank() }?.let { add(Path.of(it).normalize()) }
+        add(Path.of(home, "AppData", "Local").normalize())
     }
 
     private fun cacheRoot(): String {
@@ -386,5 +392,3 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         val config: McpConfigDto?,
     )
 }
-
-private val cacheNames = setOf(".cache", "cache", "Caches")

@@ -630,7 +630,6 @@ object KiloCliDataParser {
                 description = obj.str("description"),
                 location = location,
                 content = obj.str("content"),
-                editable = obj.bool("editable"),
             )
         }
 
