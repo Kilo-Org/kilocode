@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.4.12
+
+### Patch Changes
+
+- [#12191](https://github.com/Kilo-Org/kilocode/pull/12191) [`4d676b6`](https://github.com/Kilo-Org/kilocode/commit/4d676b68d2d0dd025c7d1a6684f49f3d03e9d12d) - Use Kilo Core for JetBrains @ file completion.
+
 ## 7.4.10
 
 ### Patch Changes

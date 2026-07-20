@@ -59,6 +59,14 @@ internal open class SettingsPanel(scroll: Boolean = true, pad: Boolean = true) :
         content.add(header, BorderLayout.NORTH)
     }
 
+    protected fun setCenter(component: JComponent) {
+        val layout = content.layout as? BorderLayout
+        layout?.getLayoutComponent(BorderLayout.CENTER)?.let { content.remove(it) }
+        content.add(component, BorderLayout.CENTER)
+        revalidate()
+        repaint()
+    }
+
 }
 
 private class SettingsBody : Stack(StackAxis.VERTICAL), Scrollable {
