@@ -139,6 +139,24 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         assertEquals(PermissionRuleDto.Patterns(mapOf("git *" to "allow")), rule)
     }
 
+    fun `test scalar wildcard is preserved after applying a new exception`() {
+        val panel = requireUi()
+        rpc.state.value = rpc.state.value.copy(config = ConfigDto(permission = mapOf("bash" to PermissionRuleDto.Level("ask"))))
+        app._state.value = rpc.state.value
+        flushUntil { !edt { panel.modified() } }
+
+        edt {
+            val list = inlineListFor(panel, "bash")
+            list.input = { "git *" }
+            click(button(list, 0))
+            panel.applyDraft()
+        }
+
+        flushUntil { rpc.configPatches.isNotEmpty() }
+        val rule = rpc.state.value.config?.permission?.get("bash")
+        assertEquals(PermissionRuleDto.Patterns(mapOf("*" to "ask", "git *" to "allow")), rule)
+    }
+
     fun `test removing an exception sends a null delete for that pattern only`() {
         val panel = requireUi()
         rpc.state.value = rpc.state.value.copy(

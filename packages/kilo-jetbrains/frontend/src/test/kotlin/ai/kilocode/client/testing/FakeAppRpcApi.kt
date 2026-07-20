@@ -246,7 +246,11 @@ class FakeAppRpcApi : KiloAppRpcApi {
                     if (rule.value == null) result.remove(tool) else result[tool] = rule
                 }
                 is PermissionRuleDto.Patterns -> {
-                    val merged = ((result[tool] as? PermissionRuleDto.Patterns)?.map ?: emptyMap()).toMutableMap()
+                    val merged = when (val old = result[tool]) {
+                        is PermissionRuleDto.Level -> old.value?.let { mapOf("*" to it) } ?: emptyMap()
+                        is PermissionRuleDto.Patterns -> old.map
+                        null -> emptyMap()
+                    }.toMutableMap()
                     for ((pattern, level) in rule.map) {
                         if (level == null) merged.remove(pattern) else merged[pattern] = level
                     }
