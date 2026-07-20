@@ -139,6 +139,7 @@ class KiloWorkspaceService internal constructor(
     }
 
     suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto {
+        LOG.debug { "workspace file search directory=$directory query=$query limit=$limit" }
         return try {
             call { searchFiles(directory, query, limit) }
         } catch (e: CancellationException) {
