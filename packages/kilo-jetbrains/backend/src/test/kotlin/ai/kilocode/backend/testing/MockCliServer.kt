@@ -130,6 +130,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenamePath: String? = null
     @Volatile var lastSessionRenameBody: String? = null
     @Volatile var lastSessionRenameMethod: String? = null
+    @Volatile var pendingPermissions = "[]"
+    @Volatile var pendingQuestions = "[]"
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -374,6 +376,7 @@ class MockCliServer : AutoCloseable {
                     lastSkillRemoveBody = body
                     respond(output, skillRemoveStatus, if (skillRemoveStatus == 200) "true" else """{"error":"Skill not found"}""")
                 }
+                bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
                 bare == "/mcp" -> respond(output, mcpStatus, mcp)
@@ -399,6 +402,8 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
+                bare == "/permission" && method == "GET" -> respond(output, 200, pendingPermissions)
+                bare == "/question" && method == "GET" -> respond(output, 200, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

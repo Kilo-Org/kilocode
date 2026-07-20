@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.PermissionRuleItemDto
+import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.openapi.components.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,6 +24,9 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
+import java.nio.file.Files
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -33,6 +37,7 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         private val JSON = "application/json".toMediaType()
         private val saved = ConcurrentHashMap<String, SavedMcp>()
         private val port = AtomicInteger(-1)
+        private val extensions = setOf("md", "markdown", "txt", "text", "html", "htm")
     }
 
     private val app: KiloBackendAppService get() = backend ?: service()
@@ -56,10 +61,51 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
         }
     }
 
-    override suspend fun skills(directory: String) = KiloCliDataParser.parseAgentBehaviorSkills(request(directory, "/skill", null))
+    override suspend fun skills(directory: String): List<SkillDto> {
+        val items = KiloCliDataParser.parseAgentBehaviorSkills(request(directory, "/skill", null))
+        return items.map { item -> item.copy(content = skillContent(item) ?: item.content) }
+    }
 
     override suspend fun removeSkill(directory: String, location: String): Boolean =
         post(directory, "/kilocode/skill/remove", JsonObject(mapOf("location" to JsonPrimitive(location))))
+
+    override suspend fun reloadSkills(directory: String): Boolean {
+        LOG.info("Skills reload requested dir=$directory")
+        if (hasActiveSession(directory)) {
+            LOG.warn("Skills reload blocked by active session dir=$directory")
+            return false
+        }
+        runCatching { post(directory, "/instance/reload") }.onFailure { err ->
+            LOG.warn("Skills reload failed dir=$directory", err)
+        }.getOrThrow()
+        LOG.info("Skills reload succeeded dir=$directory")
+        return true
+    }
+
+    override suspend fun saveSkill(directory: String, location: String, content: String): Boolean {
+        LOG.info("Skill save requested dir=$directory location=$location")
+        app.requireReady()
+        val raw = normalizeWorkspacePath(location) ?: run {
+            LOG.warn("Skill save rejected: invalid location dir=$directory location=$location")
+            return false
+        }
+        val path = try {
+            Path.of(raw).normalize()
+        } catch (err: InvalidPathException) {
+            LOG.warn("Skill save rejected: invalid path dir=$directory location=$location", err)
+            return false
+        }
+        if (!path.isAbsolute || !isSkillFile(path)) {
+            LOG.warn("Skill save rejected: not a skill file dir=$directory path=$path")
+            return false
+        }
+        withContext(Dispatchers.IO) {
+            Files.writeString(path, content, StandardCharsets.UTF_8)
+        }
+        LOG.info("Skill file saved dir=$directory path=$path bytes=${content.toByteArray(StandardCharsets.UTF_8).size}")
+        LOG.info("Skill save reload deferred dir=$directory path=$path")
+        return true
+    }
 
     override suspend fun removeAgent(directory: String, name: String): Boolean =
         post(directory, "/kilocode/agent/remove", JsonObject(mapOf("name" to JsonPrimitive(name))))
@@ -137,6 +183,46 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     private suspend fun post(directory: String, path: String, body: JsonObject = JsonObject(emptyMap())): Boolean {
         request(directory, path, body)
         return true
+    }
+
+    private fun hasActiveSession(directory: String): Boolean {
+        val active = app.sessions.statuses.value.filterValues { it.type != "idle" }
+        if (active.isNotEmpty()) {
+            LOG.info("Skills reload active statuses dir=$directory count=${active.size} types=${active.values.map { it.type }.distinct()}")
+            return true
+        }
+        val permissions = runCatching { app.chat.pendingPermissions(directory) }.onFailure { err ->
+            LOG.warn("Skills reload pending permission check failed dir=$directory", err)
+        }.getOrDefault(emptyList())
+        if (permissions.isNotEmpty()) {
+            LOG.info("Skills reload pending permissions dir=$directory count=${permissions.size}")
+            return true
+        }
+        val questions = runCatching { app.chat.pendingQuestions(directory) }.onFailure { err ->
+            LOG.warn("Skills reload pending question check failed dir=$directory", err)
+        }.getOrDefault(emptyList())
+        if (questions.isNotEmpty()) {
+            LOG.info("Skills reload pending questions dir=$directory count=${questions.size}")
+            return true
+        }
+        return false
+    }
+
+    private suspend fun skillContent(skill: SkillDto): String? {
+        val raw = normalizeWorkspacePath(skill.location) ?: return null
+        val path = try {
+            Path.of(raw).normalize()
+        } catch (_: InvalidPathException) {
+            return null
+        }
+        if (!path.isAbsolute || !isSkillFile(path)) return null
+        return runCatching {
+            withContext(Dispatchers.IO) {
+                if (!Files.isRegularFile(path)) null else Files.readString(path, StandardCharsets.UTF_8)
+            }
+        }.onFailure { err ->
+            LOG.warn("Skill content read failed: $path", err)
+        }.getOrNull()
     }
 
     private suspend fun patchConfig(path: String, body: String): Unit = withContext(Dispatchers.IO) {
@@ -233,6 +319,12 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     private fun encode(value: String): String = URLEncoder.encode(value, StandardCharsets.UTF_8)
 
     private fun encodePath(value: String): String = encode(value).replace("+", "%20")
+
+    private fun isSkillFile(path: Path): Boolean {
+        val name = path.fileName?.toString() ?: return false
+        if (name == "SKILL.md") return true
+        return name.substringAfterLast('.', "").lowercase() in extensions
+    }
 
     private data class SavedMcp(
         val directory: String,

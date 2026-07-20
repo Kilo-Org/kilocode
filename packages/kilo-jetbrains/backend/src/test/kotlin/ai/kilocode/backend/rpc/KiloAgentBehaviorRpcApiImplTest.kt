@@ -14,6 +14,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -80,8 +81,18 @@ class KiloAgentBehaviorRpcApiImplTest {
 
     @Test
     fun `skills and remove skill call CLI endpoints`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
+        val content = """---
+            |name: plan
+            |description: Plan work
+            |---
+            |
+            |# Fresh Plan
+        """.trimMargin()
+        Files.writeString(file, content)
         mock.skills = """[
-            {"name":"plan","description":"Plan work","location":"/tmp/skill/SKILL.md"},
+            {"name":"plan","description":"Plan work","location":"$file","content":"# Stale Plan"},
             {"name":"builtin","location":"builtin"}
         ]""".trimIndent()
         val rpc = rpc()
@@ -89,9 +100,10 @@ class KiloAgentBehaviorRpcApiImplTest {
         val skills = rpc.skills("/test project")
         assertEquals(listOf("plan", "builtin"), skills.map { it.name })
         assertEquals("Plan work", skills.single { it.name == "plan" }.description)
+        assertEquals(content, skills.single { it.name == "plan" }.content)
 
-        assertTrue(rpc.removeSkill("/test project", "/tmp/skill/SKILL.md"))
-        assertEquals("{\"location\":\"/tmp/skill/SKILL.md\"}", mock.lastSkillRemoveBody)
+        assertTrue(rpc.removeSkill("/test project", file.toString()))
+        assertEquals("{\"location\":\"$file\"}", mock.lastSkillRemoveBody)
         assertEquals(1, mock.requestCount("/kilocode/skill/remove"))
 
         mock.skillRemoveStatus = 400
@@ -99,6 +111,48 @@ class KiloAgentBehaviorRpcApiImplTest {
             rpc.removeSkill("/test", "/tmp/missing/SKILL.md")
         }
         assertContains(err.message.orEmpty(), "HTTP 400")
+
+        assertTrue(rpc.reloadSkills("/test project"))
+        assertEquals(1, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `save skill supports configured markdown text and html files without reload`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = dir.resolve("test.md")
+        Files.writeString(file, "old")
+        val rpc = rpc()
+
+        assertTrue(rpc.saveSkill("/test project", file.toString(), "new content"))
+        assertEquals("new content", Files.readString(file))
+        assertEquals(0, mock.requestCount("/instance/reload"))
+    }
+
+    @Test
+    fun `save skill writes content without reloading instance`() = runBlocking {
+        val dir = Files.createTempDirectory("kilo-skill-test")
+        val file = Files.createDirectories(dir.resolve("plan")).resolve("SKILL.md")
+        Files.writeString(file, "old")
+        val rpc = rpc()
+
+        assertTrue(rpc.saveSkill("/test project", file.toString(), "new content"))
+
+        assertEquals("new content", Files.readString(file))
+        assertEquals(0, mock.requestCount("/instance/reload"))
+        assertFalse(rpc.saveSkill("/test project", "builtin", "nope"))
+    }
+
+    @Test
+    fun `reload skills is blocked by pending permissions`() = runBlocking {
+        mock.pendingPermissions = """[
+            {"id":"per_test","sessionID":"ses_test","permission":"bash","patterns":["*"],"metadata":{}}
+        ]""".trimIndent()
+        val rpc = rpc()
+
+        assertFalse(rpc.reloadSkills("/test project"))
+
+        assertEquals(1, mock.requestCount("/permission"))
+        assertEquals(0, mock.requestCount("/instance/reload"))
     }
 
     @Test
