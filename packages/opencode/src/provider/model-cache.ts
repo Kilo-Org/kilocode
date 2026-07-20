@@ -62,12 +62,19 @@ const AimlapiInfo = Schema.Struct({
   developer: Schema.optional(Schema.String),
   releasedAt: Schema.optional(Schema.String),
   contextLength: Schema.optional(Schema.Finite),
+  outputMax: Schema.optional(Schema.Finite),
+})
+const AimlapiModalities = Schema.Struct({
+  input: Schema.optional(Schema.Array(Schema.String)),
+  output: Schema.optional(Schema.Array(Schema.String)),
 })
 const AimlapiItem = Schema.Struct({
   id: Schema.String,
   type: Schema.optional(Schema.String),
   info: Schema.optional(AimlapiInfo),
   tags: Schema.optional(Schema.Array(Schema.String)),
+  capabilities: Schema.optional(Schema.Array(Schema.String)),
+  modalities: Schema.optional(AimlapiModalities),
 })
 const AimlapiResponse = Schema.Struct({ data: Schema.optional(Schema.Array(AimlapiItem)) })
 type AimlapiItem = Schema.Schema.Type<typeof AimlapiItem>
@@ -134,26 +141,43 @@ export const layer: Layer.Layer<
       return Object.fromEntries((json.data ?? []).map((item) => [item.id, aperture(item)]))
     })
 
-    const aimlapiModel = (item: AimlapiItem): Models[string] => ({
-      id: item.id,
-      name: item.info?.name ?? item.id,
-      family: item.info?.developer ?? "",
-      release_date: item.info?.releasedAt ?? "",
-      attachment: false,
-      reasoning: false,
-      temperature: true,
-      tool_call: true,
-      cost: { input: 0, output: 0 },
-      limit: { context: item.info?.contextLength ?? 128000, output: 8192 },
-      modalities: { input: ["text"], output: ["text"] },
-    })
+    type AimlapiModality = NonNullable<Models[string]["modalities"]>["input"][number]
+    const AIMLAPI_MODALITIES: readonly string[] = ["text", "image", "audio", "video", "pdf"]
+    const aimlapiModalities = (values: readonly string[]): AimlapiModality[] =>
+      values.filter((value): value is AimlapiModality => AIMLAPI_MODALITIES.includes(value))
+
+    const aimlapiModel = (item: AimlapiItem): Models[string] => {
+      const capabilities = item.capabilities ?? []
+      const input = aimlapiModalities(item.modalities?.input ?? [])
+      const output = aimlapiModalities(item.modalities?.output ?? [])
+      return {
+        id: item.id,
+        name: item.info?.name ?? item.id,
+        family: item.info?.developer ?? "",
+        release_date: item.info?.releasedAt ?? "",
+        attachment: input.includes("image"),
+        // Unlocks the host-generated reasoning-effort variants (low/medium/high).
+        reasoning: capabilities.includes("reasoning"),
+        temperature: true,
+        // The catalog's `tools` capability has false negatives, so it cannot
+        // gate tool_call without hiding models from agent use.
+        tool_call: true,
+        cost: { input: 0, output: 0 },
+        limit: { context: item.info?.contextLength ?? 128000, output: item.info?.outputMax ?? 8192 },
+        modalities: {
+          input: input.length > 0 ? input : ["text"],
+          output: output.length > 0 ? output : ["text"],
+        },
+      }
+    }
 
     const fetchAimlapiModels = Effect.fn("ModelCache.fetchAimlapiModels")(function* (options: Options) {
       const baseURL = options.baseURL ?? AIMLAPI_BASE_URL
 
       // The models endpoint is public; attach the key only when present so
-      // the catalog renders before the provider is connected.
-      const url = `${baseURL.replace(/\/+$/, "")}/models`
+      // the catalog renders before the provider is connected. Capability and
+      // modality metadata is opt-in per section via `include`.
+      const url = `${baseURL.replace(/\/+$/, "")}/models?include=capabilities,modalities`
       let request = HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson)
       if (options.apiKey) {
         request = request.pipe(HttpClientRequest.bearerToken(options.apiKey))
