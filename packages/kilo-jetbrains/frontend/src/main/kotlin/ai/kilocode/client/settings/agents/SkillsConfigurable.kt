@@ -238,7 +238,7 @@ internal class SkillsSettingsUi(
             ).takeUnless { builtin(skill.location) },
             SettingsListCell(
                 EDIT_CELL,
-                KiloBundle.message("settings.agentBehavior.edit"),
+                KiloBundle.message(if (builtin(skill.location)) "common.open" else "settings.agentBehavior.edit"),
                 primary = builtin(skill.location),
             ),
             SettingsListCell(
@@ -348,7 +348,7 @@ internal class SkillEditDialog(private val skill: SkillDto, private val savable:
     private class SkillEditor(value: String, location: String, editable: Boolean) : EditorTextField(
         EditorFactory.getInstance().createDocument(value),
         ProjectManager.getInstance().defaultProject,
-        skillFileType(location),
+        skillFileType(location, value),
         false,
         !editable,
     ) {
@@ -537,11 +537,27 @@ internal fun skillPathDescriptor() = FileChooserDescriptor(false, true, false, f
     description = KiloBundle.message("settings.agentBehavior.skills.sources.addPath.prompt")
 }
 
-internal fun skillFileType(location: String): FileType {
-    val name = location.substringAfterLast('/').substringAfterLast('\\').ifBlank { SKILL_FILE }
+internal fun skillFileType(location: String, content: String? = null): FileType {
+    val syntax = content?.syntaxName()
+    val name = syntax ?: location.substringAfterLast('/').substringAfterLast('\\').ifBlank { SKILL_FILE }
     val type = FileTypeManager.getInstance().getFileTypeByFileName(name)
     if (type == UnknownFileType.INSTANCE) return PlainTextFileType.INSTANCE
     return type
+}
+
+private fun String.syntaxName(): String? {
+    val text = trimStart()
+    if (text.isBlank()) return null
+    if (text.looksHtml()) return "index.html"
+    if (text.looksMarkdown()) return SKILL_FILE
+    return null
+}
+
+private fun String.looksHtml() = contains(Regex("^\\s*(<!doctype\\s+html|<html\\b|<body\\b|</?(h[1-6]|p|pre|code|ul|ol|li|blockquote|br)\\b)", RegexOption.IGNORE_CASE))
+
+private fun String.looksMarkdown() = lineSequence().any { line ->
+    line.matches(Regex("\\s{0,3}(#{1,6}\\s+.+|[-*+]\\s+.+|\\d+\\.\\s+.+|```.*|>\\s+.+)")) ||
+        line.contains(Regex("(`[^`]+`|\\[[^]]+][(][^)]+[)])"))
 }
 
 private fun inputSkillUrl(title: String, prompt: String): String? = Messages.showInputDialog(

@@ -81,6 +81,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             assertEquals(listOf("open", "edit", "delete"), custom.cells.map { it.id })
             assertTrue(custom.cells.single { it.id == "open" }.primary)
             assertFalse(custom.cells.single { it.id == "edit" }.primary)
+            assertEquals("Edit", custom.cells.single { it.id == "edit" }.label)
             assertTrue(custom.cells.single { it.id == "delete" }.iconOnly)
             val builtin = rows.single { it.key == "builtin" }
             assertEquals("thinking", builtin.title)
@@ -88,6 +89,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
             assertEquals("edit", builtin.doubleClick)
             assertEquals(listOf("built-in"), builtin.badges.map { it.text })
             assertEquals(listOf("edit"), builtin.cells.map { it.id })
+            assertEquals("Open", builtin.cells.single().label)
             assertEquals(listOf(DIR), agentRpc.skillCalls)
             true
         }
@@ -208,16 +210,31 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         edt {
             val content = SkillEditDialog(SkillDto("plan", "desc", CUSTOM, "# Plan\nUse steps"), true)
             val fallback = SkillEditDialog(SkillDto("plan", "desc", CUSTOM), true)
+            val readonly = SkillEditDialog(SkillDto("kilo-config", "desc", "builtin", "<h1>Kilo Config</h1>"), false)
             try {
                 assertEquals("# Plan\nUse steps", content.content())
                 assertEquals("desc", fallback.content())
+                assertEquals("<h1>Kilo Config</h1>", readonly.content())
                 assertEquals("OK", content.okText())
             } finally {
                 content.close(DialogWrapper.CANCEL_EXIT_CODE)
                 fallback.close(DialogWrapper.CANCEL_EXIT_CODE)
+                readonly.close(DialogWrapper.CANCEL_EXIT_CODE)
             }
             true
         }
+    }
+
+    fun `test skill editor file type follows content syntax before location`() {
+        assertEquals(
+            FileTypeManager.getInstance().getFileTypeByFileName("index.html"),
+            skillFileType("builtin", "<h1>Kilo CLI Configuration Reference</h1><p>All config lives in <code>kilo.json</code>.</p>"),
+        )
+        assertEquals(
+            skillFileType("SKILL.md"),
+            skillFileType("builtin", "# Kilo CLI Configuration Reference\n\nAll config lives in `kilo.json`."),
+        )
+        assertEquals(PlainTextFileType.INSTANCE, skillFileType("builtin", "Plain fallback text"))
     }
 
 
