@@ -58,6 +58,12 @@ class KiloAppService internal constructor(
 
     val version: String? get() = info?.version
 
+    /**
+     * App-lifetime scope for fire-and-forget work that must outlive transient UIs such as the
+     * settings dialog (whose own scope is cancelled the moment it closes on OK).
+     */
+    internal val scope: CoroutineScope get() = cs
+
     internal val _state = MutableStateFlow(init)
     val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
     private val _models = MutableStateFlow(ModelStateDto())
