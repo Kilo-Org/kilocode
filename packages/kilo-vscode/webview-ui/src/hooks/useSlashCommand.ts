@@ -60,6 +60,7 @@ export function useSlashCommand(
   const [query, setQuery] = createSignal<string | null>(null)
   const [index, setIndex] = createSignal(0)
   const [requested, setRequested] = createSignal(false)
+  const [slashEnd, setSlashEnd] = createSignal<number | null>(null)
 
   const all: SlashCommandEntry[] = [
     {
@@ -221,6 +222,7 @@ export function useSlashCommand(
 
   const close = () => {
     setQuery(null)
+    setSlashEnd(null)
   }
 
   const onInput = (val: string, cursor: number) => {
@@ -230,6 +232,7 @@ export function useSlashCommand(
       request()
       setQuery(match[1])
       setIndex(0)
+      setSlashEnd(cursor)
     } else {
       close()
     }
@@ -241,20 +244,25 @@ export function useSlashCommand(
     setText: (text: string) => void,
     onSelect?: () => void,
   ) => {
+    const cursor = slashEnd() ?? textarea.selectionStart ?? 0
+    // trailingText holds text after the slash command.
+    // slashEnd is the cursor position from onInput when the slash pattern was matched.
+    const trailingText = textarea.value.substring(cursor)
+
     if (cmd.action) {
       if (cmd.enabled && !cmd.enabled()) return
-      textarea.value = ""
-      setText("")
+      textarea.value = trailingText
+      setText(trailingText)
       close()
       onSelect?.()
       cmd.action()
       return
     }
-    const text = `/${cmd.name} `
-    textarea.value = text
-    setText(text)
-    const pos = text.length
-    textarea.setSelectionRange(pos, pos)
+    const commandText = `/${cmd.name} `
+    const updatedText = commandText + trailingText
+    textarea.value = updatedText
+    setText(updatedText)
+    textarea.setSelectionRange(commandText.length, commandText.length)
     textarea.focus()
     close()
     onSelect?.()

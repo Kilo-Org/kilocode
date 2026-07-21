@@ -30,7 +30,11 @@ describe("useSlashCommand sandbox action", () => {
   it("runs the sandbox toggle as a client command", () => {
     const state = { toggles: 0, text: "/sandbox", prevented: 0 }
     const ctx = setup(() => state.toggles++)
-    const textarea = { value: state.text } as HTMLTextAreaElement
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
     const event = {
       key: "Enter",
       isComposing: false,
@@ -52,7 +56,11 @@ describe("useSlashCommand sandbox action", () => {
   it("keeps the command text when the sandbox control is disabled", () => {
     const state = { toggles: 0, text: "/sandbox" }
     const ctx = setup(() => state.toggles++, { enabled: () => false })
-    const textarea = { value: state.text } as HTMLTextAreaElement
+    const textarea = {
+      value: state.text,
+      selectionStart: state.text.length,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
     const event = {
       key: "Enter",
       isComposing: false,
@@ -85,6 +93,104 @@ describe("useSlashCommand sandbox action", () => {
     state.hidden = false
     expect(ctx.slash.results().map((command) => command.name)).toEqual(["sandbox"])
     expect(ctx.slash.results()[0]?.description).toBe("Toggle sandbox")
+    ctx.dispose()
+  })
+})
+
+describe("select", () => {
+  it("preserves trailing text for action commands", () => {
+    let actionCalls = 0
+    let currentText = "existing text"
+    const ctx = setup(() => {})
+
+    const textarea = {
+      value: "/newexisting text",
+      selectionStart: 4,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select(
+      {
+        name: "new",
+        description: "Start a new session",
+        hints: [],
+        action: () => {
+          actionCalls++
+        },
+      },
+      textarea,
+      setText,
+    )
+
+    expect(textarea.value).toBe("existing text")
+    expect(currentText).toBe("existing text")
+    expect(actionCalls).toBe(1)
+    ctx.dispose()
+  })
+
+  it("preserves trailing text for server commands and sets cursor", () => {
+    const ctx = setup(() => {})
+    let currentText = ""
+    let selectionStart = 0
+
+    const textarea = {
+      value: "/docmdexisting text",
+      selectionStart: 6,
+      setSelectionRange: (start: number, end: number) => {
+        selectionStart = start
+      },
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select({ name: "docmd", description: "Run doc command", hints: [] }, textarea, setText)
+
+    expect(textarea.value).toBe("/docmd existing text")
+    expect(currentText).toBe("/docmd existing text")
+    expect(selectionStart).toBe("/docmd ".length)
+    ctx.dispose()
+  })
+
+  it("preserves trailing text even when cursor moves after typing slash command", () => {
+    let actionCalls = 0
+    let currentText = "existing text"
+    const ctx = setup(() => {})
+
+    // Type slash command: cursor at 4, slashEnd stored as 4
+    ctx.slash.onInput("/newexisting text", 4)
+
+    // Simulate user moving cursor (e.g. ArrowLeft twice)
+    const textarea = {
+      value: "/newexisting text",
+      selectionStart: 2,
+      setSelectionRange: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    ctx.slash.select(
+      {
+        name: "new",
+        description: "Start a new session",
+        hints: [],
+        action: () => {
+          actionCalls++
+        },
+      },
+      textarea,
+      setText,
+    )
+
+    // Should preserve trailing text from original slashEnd (4), not stale selectionStart (2)
+    expect(textarea.value).toBe("existing text")
+    expect(currentText).toBe("existing text")
+    expect(actionCalls).toBe(1)
     ctx.dispose()
   })
 })
