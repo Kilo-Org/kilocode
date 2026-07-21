@@ -156,7 +156,7 @@ export const dict = {
   "ui.message.collapse": "Zwiń wiadomość",
   "ui.message.copy": "Kopiuj",
   "ui.message.copyMessage": "Kopiuj wiadomość",
-  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
+  "ui.message.deleteQueued": "Usuń wiadomość z kolejki", // kilocode_change
   "ui.message.forkMessage": "Rozwidlij do nowej sesji",
   "ui.message.revertMessage": "Zresetuj do tego punktu",
   "ui.message.copyResponse": "Kopiuj odpowiedź",

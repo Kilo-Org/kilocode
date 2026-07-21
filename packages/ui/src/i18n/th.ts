@@ -158,7 +158,7 @@ export const dict = {
   "ui.message.collapse": "ย่อข้อความ",
   "ui.message.copy": "คัดลอก",
   "ui.message.copyMessage": "คัดลอกข้อความ",
-  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
+  "ui.message.deleteQueued": "ลบข้อความที่อยู่ในคิว", // kilocode_change
   "ui.message.forkMessage": "แตกแขนงไปยังเซสชันใหม่",
   "ui.message.revertMessage": "รีเซ็ตไปยังจุดนี้",
   "ui.message.copyResponse": "คัดลอกคำตอบ",
