@@ -29,13 +29,11 @@ const DEFAULT_ENDPOINTS: AimlapiEndpoints = {
 
 /**
  * Partner id (`^part_[A-Za-z0-9]{1,64}$`) — rebate attribution for Kilo Code.
- * Must match an active partner registered with AI/ML API. Overridable via
- * AIMLAPI_PARTNER_ID (the AIMLAPI team uses a test partner on staging).
- *
- * TODO(aimlapi): replace with the production Kilo Code partner id before the
- * upstream PR ships.
+ * The same id is provisioned on both the staging and production backends, so it
+ * ships as the compiled-in default and one build runs against either (only the
+ * AIMLAPI_*_URL endpoints differ). Overridable via AIMLAPI_PARTNER_ID.
  */
-export const DEFAULT_PARTNER_ID = ""
+export const DEFAULT_PARTNER_ID = "part_NcwZvHtWloCePPggbSypywxq"
 export const DEFAULT_PARTNER_NAME = "Kilo Code"
 
 /** Name attached to API keys issued through this flow. */

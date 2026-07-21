@@ -1,7 +1,7 @@
 // kilocode_change - new file
 import { afterEach, expect, test } from "bun:test"
 import { AimlapiClient } from "../../src/kilocode/aimlapi/client"
-import type { AimlapiEndpoints } from "../../src/kilocode/aimlapi/config"
+import { DEFAULT_PARTNER_ID, type AimlapiEndpoints } from "../../src/kilocode/aimlapi/config"
 
 const endpoints: AimlapiEndpoints = {
   authBaseUrl: "https://auth.test",
@@ -38,12 +38,14 @@ test("onboarding client sends the attribution headers on every request", async (
   expect(headers.get("x-aimlapi-partner-id")).toBe("part_test123")
 })
 
-test("partner-id header is omitted when no partner id is configured", async () => {
+test("partner-id header carries the compiled-in default when no override is set", async () => {
   const cap = captureHeaders()
 
   await new AimlapiClient(endpoints).checkAccount("user@example.com")
 
   const headers = cap.headers()
   expect(headers.get("x-aimlapi-source")).toBe("agent")
-  expect(headers.has("x-aimlapi-partner-id")).toBe(false)
+  // The default id is provisioned on both backends, so it ships without an env override.
+  expect(DEFAULT_PARTNER_ID).not.toBe("")
+  expect(headers.get("x-aimlapi-partner-id")).toBe(DEFAULT_PARTNER_ID)
 })
