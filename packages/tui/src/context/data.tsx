@@ -56,6 +56,12 @@ function locationQuery(ref?: LocationRef) {
   return ref ? { directory: ref.directory, workspace: ref.workspaceID } : undefined
 }
 
+export function eventLocation(metadata: { directory: string; workspace?: string }): LocationRef | undefined {
+  // kilocode_change - "global" is an event-routing sentinel, not a filesystem location.
+  if (metadata.directory === "global") return
+  return { directory: metadata.directory, workspaceID: metadata.workspace }
+}
+
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
   init: () => {
@@ -439,7 +445,7 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
           void result.location.reference.refresh()
           break
         case "integration.updated":
-          void result.location.integration.refresh({ directory: metadata.directory, workspaceID: metadata.workspace })
+          void result.location.integration.refresh(eventLocation(metadata)) // kilocode_change
           break
       }
     } // kilocode_change
