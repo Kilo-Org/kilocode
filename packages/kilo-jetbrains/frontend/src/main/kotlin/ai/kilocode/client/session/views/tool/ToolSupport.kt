@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.editor.BashCommandHighlighter
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.VAlign
@@ -122,6 +123,7 @@ class ToolBody private constructor(
             if (text == value) return
             area?.text = value
             ed?.text = value
+            (ed as? ToolField)?.syncHighlight()
             caretStart()
             size()
         }
@@ -162,6 +164,7 @@ class ToolBody private constructor(
         area?.font = style.transcriptFont
         ed?.font = style.editorFont
         ed?.getEditor(false)?.let(style::applyToEditor)
+        (ed as? ToolField)?.syncHighlight()
         size()
         return before != font
     }
@@ -222,7 +225,7 @@ class ToolBody private constructor(
         fun editor(tool: Tool): ToolBody {
             val disposable = Disposer.newDisposable("Tool body")
             val body = runCatching {
-                val field = ToolField(preview(tool), SessionEditorStyle.current()).also { ed ->
+                val field = ToolField(preview(tool), SessionEditorStyle.current(), tool.name == "bash").also { ed ->
                     Disposer.register(disposable) {
                         ed.getEditor(false)?.let(EditorFactory.getInstance()::releaseEditor)
                     }
@@ -296,7 +299,7 @@ private class ToolArea : JBTextArea(), UiDataProvider, SessionCopyTarget {
     }
 }
 
-private class ToolField(value: String, private var style: SessionEditorStyle) : EditorTextField(
+private class ToolField(value: String, private var style: SessionEditorStyle, private val bash: Boolean) : EditorTextField(
     EditorFactory.getInstance().createDocument(value.trimEnd('\n')),
     ProjectManager.getInstance().defaultProject,
     PlainTextFileType.INSTANCE,
@@ -323,7 +326,17 @@ private class ToolField(value: String, private var style: SessionEditorStyle) : 
             ed.settings.isAdditionalPageAtBottom = false
             ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER
+            syncHighlight(ed)
         }
+    }
+
+    fun syncHighlight() {
+        getEditor(false)?.let(::syncHighlight)
+    }
+
+    private fun syncHighlight(ed: com.intellij.openapi.editor.ex.EditorEx) {
+        if (!bash) return
+        BashCommandHighlighter.apply(ed, text)
     }
 
     override fun uiDataSnapshot(sink: DataSink) {

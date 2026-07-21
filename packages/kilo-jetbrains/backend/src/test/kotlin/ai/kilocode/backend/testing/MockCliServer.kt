@@ -11,6 +11,7 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -67,9 +68,11 @@ class MockCliServer : AutoCloseable {
     @Volatile var mcpStatus = 200
     @Volatile var mcpActionStatus = 200
     @Volatile var agentRemoveStatus = 200
+    @Volatile var skillRemoveStatus = 200
     @Volatile var agentBuilderStatus = 200
     @Volatile var lastMcpActionPath: String? = null
     @Volatile var lastAgentRemoveBody: String? = null
+    @Volatile var lastSkillRemoveBody: String? = null
     @Volatile var lastAgentBuilderPath: String? = null
     @Volatile var lastAgentBuilderBody: String? = null
     @Volatile var lastAgentBuilderMethod: String? = null
@@ -86,6 +89,12 @@ class MockCliServer : AutoCloseable {
     @Volatile var agentsStatus = 200
     @Volatile var commandsStatus = 200
     @Volatile var skillsStatus = 200
+
+    // File search responses
+    @Volatile var findFiles = "[]"
+    @Volatile var findDirectories = "[]"
+    @Volatile var findFileStatus = 200
+    val findFilePaths = CopyOnWriteArrayList<String>()
 
     // Session REST responses
     @Volatile var sessions = "[]"
@@ -128,6 +137,8 @@ class MockCliServer : AutoCloseable {
     @Volatile var lastSessionRenamePath: String? = null
     @Volatile var lastSessionRenameBody: String? = null
     @Volatile var lastSessionRenameMethod: String? = null
+    @Volatile var pendingPermissions = "[]"
+    @Volatile var pendingQuestions = "[]"
 
     /** Configurable delay for all endpoint responses (ms). 0 = no delay. */
     @Volatile var responseDelay: Long = 0
@@ -368,8 +379,18 @@ class MockCliServer : AutoCloseable {
                     lastAgentRemoveBody = body
                     respond(output, agentRemoveStatus, if (agentRemoveStatus == 200) "true" else """{"error":"Agent not found"}""")
                 }
+                bare == "/kilocode/skill/remove" && method == "POST" -> {
+                    lastSkillRemoveBody = body
+                    respond(output, skillRemoveStatus, if (skillRemoveStatus == 200) "true" else """{"error":"Skill not found"}""")
+                }
+                bare == "/instance/reload" && method == "POST" -> respond(output, 200, "true")
                 bare == "/command" -> respond(output, commandsStatus, commands)
                 bare == "/skill" -> respond(output, skillsStatus, skills)
+                bare == "/find/file" -> {
+                    findFilePaths.add(path)
+                    val body = if (path.contains("type=directory")) findDirectories else findFiles
+                    respond(output, findFileStatus, body)
+                }
                 bare == "/mcp" -> respond(output, mcpStatus, mcp)
                 bare.matches(Regex("/mcp/[^/]+/(connect|disconnect)")) && method == "POST" -> {
                     lastMcpActionPath = path
@@ -393,6 +414,8 @@ class MockCliServer : AutoCloseable {
                     respond(output, cloudSessionImportStatus, cloudSessionImport)
                 }
                 bare == "/session/status" -> respond(output, sessionStatusesStatus, sessionStatuses)
+                bare == "/permission" && method == "GET" -> respond(output, 200, pendingPermissions)
+                bare == "/question" && method == "GET" -> respond(output, 200, pendingQuestions)
                 bare == "/session" && method == "GET" -> respond(output, sessionsStatus, sessions)
                 bare == "/session" && method == "POST" -> respond(output, sessionCreateStatus, sessionCreate)
                 bare.matches(Regex("/session/ses_[^/]+")) && method == "GET" ->

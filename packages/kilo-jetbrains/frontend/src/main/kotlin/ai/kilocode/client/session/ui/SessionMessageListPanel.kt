@@ -448,6 +448,9 @@ class SessionMessageListPanel(
 
     override fun dispose() {
         clearHover()
+        question?.hideView()
+        permission?.hideView()
+        login?.hideView()
         turnViews.values.forEach {
             remove(it)
             Disposer.dispose(it)
