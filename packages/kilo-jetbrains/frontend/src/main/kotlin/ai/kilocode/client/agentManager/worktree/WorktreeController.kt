@@ -25,28 +25,34 @@ class WorktreeController(
     var defaultBranch: String = "main"
         private set
 
-    /** Local branches, for the base-branch picker. Refreshed alongside the worktree list. */
+    /** Branches eligible as a base, i.e. local branches not already checked out in a worktree. */
     @Volatile
     var branches: List<String> = emptyList()
         private set
+
+    /** Every known branch name, used to keep generated worktree names collision-free. */
+    @Volatile
+    private var known: Set<String> = emptySet()
 
     fun reload() {
         cs.launch {
             val result = service.list(directory)
             val branchInfo = service.listBranches(directory)
             edt {
-                model.replaceAll(result.worktrees)
-                defaultBranch = result.worktrees.firstOrNull { it.main }?.branch
-                    ?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
-                branches = branchInfo.branches
-                telemetry("Worktree List Loaded", mapOf("count" to result.worktrees.size.toString()))
+                val main = result.worktrees.firstOrNull { it.main }
+                val extra = result.worktrees.filter { !it.main }
+                model.replaceAll(extra)
+                defaultBranch = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
+                val worktreeBranches = extra.mapTo(HashSet()) { it.branch }
+                branches = branchInfo.branches.filter { it !in worktreeBranches }
+                known = branchInfo.branches.toMutableSet().apply { addAll(result.worktrees.map { it.branch }) }
+                telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
         }
     }
 
-    /** A generated friendly branch name not already used by an existing worktree. */
-    fun suggestName(): String =
-        WorktreeNames.generate((0 until model.size).mapTo(HashSet()) { model.getElementAt(it).branch })
+    /** A generated friendly branch name not already used by any branch or worktree. */
+    fun suggestName(): String = WorktreeNames.generate(known)
 
     /** Creates a worktree immediately with a generated friendly name, based on [defaultBranch]. */
     fun quickCreate() = create(suggestName(), defaultBranch)

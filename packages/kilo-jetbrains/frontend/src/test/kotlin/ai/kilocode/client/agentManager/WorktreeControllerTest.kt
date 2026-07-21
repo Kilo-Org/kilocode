@@ -33,7 +33,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test reload populates the model`() {
+    fun `test reload lists only non-main worktrees`() {
         rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val controller = controller()
@@ -41,9 +41,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         controller.reload()
         flush()
 
-        assertEquals(2, controller.model.size)
-        assertEquals("main", controller.model.getElementAt(0).branch)
-        assertEquals("feature/x", controller.model.getElementAt(1).branch)
+        assertEquals(1, controller.model.size)
+        assertEquals("feature/x", controller.model.getElementAt(0).branch)
     }
 
     fun `test create invokes rpc and adds the created worktree`() {
@@ -93,6 +92,19 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf("main", "feature/x", "release/1.0"), controller.branches)
     }
 
+    fun `test base branches exclude branches checked out in worktrees`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.branchesList += listOf("main", "feature/x", "develop")
+        val controller = controller()
+
+        controller.reload()
+        flush()
+
+        // main (main worktree branch) stays; feature/x (a worktree branch) is excluded.
+        assertEquals(listOf("main", "develop"), controller.branches)
+    }
+
     fun `test quick create generates a friendly name based on the default branch`() {
         rpc.listed += WorktreeDto("/repo", "repo", "trunk", "/repo", main = true)
         val controller = controller()
@@ -106,7 +118,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         val req = rpc.creates.first()
         assertEquals("trunk", req.baseBranch)
         assertTrue("generated '${req.branch}'", req.branch.matches(Regex("[a-z]+-[a-z]+(-\\d+)?")))
-        assertEquals(2, controller.model.size)
+        assertEquals(1, controller.model.size)
     }
 
     fun `test name generator avoids taken names`() {

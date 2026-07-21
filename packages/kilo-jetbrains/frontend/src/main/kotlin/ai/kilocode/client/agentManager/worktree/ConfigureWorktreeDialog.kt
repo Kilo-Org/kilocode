@@ -23,7 +23,7 @@ internal class ConfigureWorktreeDialog(
     defaultBase: String,
     branches: List<String>,
 ) : DialogWrapper(parent, false) {
-    private val name = JBTextField(suggestedName).apply {
+    private val name = JBTextField(suggestedName, 35).apply {
         addFocusListener(object : FocusAdapter() {
             override fun focusGained(e: FocusEvent) {
                 selectAll()
