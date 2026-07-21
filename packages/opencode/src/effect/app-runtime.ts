@@ -123,6 +123,7 @@ const FeatureLayer = Layer.mergeAll( // kilocode_change
   Project.defaultLayer,
   // kilocode_change start
   ProjectV2.defaultLayer,
+  EventV2.defaultLayer,
   ProjectCopy.layer.pipe(
     Layer.provide(Database.defaultLayer),
     Layer.provide(FSUtil.defaultLayer),
