@@ -1,4 +1,7 @@
+import type { KilocodeSessionModelUsageResponse } from "@kilocode/sdk/v2"
 import type { Part, TokenUsage } from "./parts"
+
+export type SessionModelUsage = KilocodeSessionModelUsageResponse
 
 export type SessionCloseReason = "completed" | "error" | "interrupted"
 
@@ -47,6 +50,7 @@ export interface SessionInfo {
     partID?: string
     snapshot?: string
     diff?: string
+    workspace?: "restored" | "snapshots-disabled" | "unavailable"
   } | null
   summary?: {
     additions: number

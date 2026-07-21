@@ -3,6 +3,7 @@
 package ai.kilocode.client.session.views.tool
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.ui.selection.SessionSelection
@@ -27,18 +28,20 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
 import com.intellij.openapi.util.io.OSAgnosticPathUtil
 import com.intellij.ui.EditorTextField
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.BorderLayout
 import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Cursor
+import java.awt.Dimension
 import java.awt.Font
+import java.awt.Point
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.Icon
@@ -60,7 +63,7 @@ class ToolParts(
     val state: JBLabel,
     val center: JPanel,
     val controls: JComponent,
-    private val open: ((String) -> Unit)? = null,
+    private val open: SessionFileOpener? = null,
     val extra: JBLabel? = null,
     val targets: List<JBLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
@@ -88,9 +91,9 @@ class ToolParts(
     fun bodyCreated() = body != null
 
     @RequiresEdt
-    fun openLink() {
+    fun openLink(anchor: RelativePoint? = null) {
         val value = href ?: return
-        open?.invoke(value)
+        open?.invoke(value, anchor)
     }
 
     @RequiresEdt
@@ -186,17 +189,20 @@ class ToolBody private constructor(
 
     private fun size() {
         val view = scroll.viewport.view as? JComponent ?: return
+        // height/width are already scaled px (from editor lineHeight and font metrics),
+        // so assign with plain Dimension. Wrapping in JBUI.size/JBDimension would scale
+        // again by the user scale factor and double-scale under IDE zoom.
         val height = height(view)
         val width = width(view)
-        view.preferredSize = JBUI.size(width, height)
-        view.minimumSize = JBUI.size(0, height)
-        view.maximumSize = JBDimension(Int.MAX_VALUE, height)
+        view.preferredSize = Dimension(width, height)
+        view.minimumSize = Dimension(0, height)
+        view.maximumSize = Dimension(Int.MAX_VALUE, height)
         val inset = scroll.viewportBorder?.getBorderInsets(scroll) ?: JBUI.emptyInsets()
         val pane = height + scroll.insets.top + scroll.insets.bottom + inset.top + inset.bottom +
             scroll.horizontalScrollBar.preferredSize.height
-        scroll.preferredSize = JBUI.size(0, pane)
-        scroll.minimumSize = JBUI.size(0, pane)
-        scroll.maximumSize = JBDimension(Int.MAX_VALUE, pane)
+        scroll.preferredSize = Dimension(0, pane)
+        scroll.minimumSize = Dimension(0, pane)
+        scroll.maximumSize = Dimension(Int.MAX_VALUE, pane)
     }
 
     private fun width(view: JComponent): Int {
@@ -332,14 +338,14 @@ private const val LINK_CARD = "link"
 @RequiresEdt
 internal fun toolParts(
     tool: Tool,
-    openFile: ((String) -> Unit)? = null,
+    openFile: SessionFileOpener? = null,
     mode: ToolBodyMode = ToolBodyMode.TEXT,
 ): ToolParts {
     lateinit var parts: ToolParts
     val glyph = JBLabel()
-    val title = JBLabel()
-    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val link = JBLabel().apply {
+    val title = clip(JBLabel())
+    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val link = clip(JBLabel()).apply {
         isVisible = false
         isFocusable = false
         foreground = UiStyle.Colors.fg()
@@ -347,17 +353,21 @@ internal fun toolParts(
         setRequestFocusEnabled(false)
         addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent) {
-                parts.openLink()
+                parts.openLink(RelativePoint(this@apply, Point(width / 2, 0)))
             }
         })
     }
     val slot = JPanel(CardLayout()).apply {
         isOpaque = false
+        minimumSize = Dimension(0, minimumSize.height)
         add(sub, SUB_CARD)
         add(link, LINK_CARD)
     }
-    val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply { isOpaque = false }
+    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
+        isOpaque = false
+        minimumSize = Dimension(0, minimumSize.height)
+    }
     val controls = Stack.horizontal()
     val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
         isOpaque = false
@@ -376,26 +386,26 @@ internal fun toolParts(
 @RequiresEdt
 internal fun searchParts(count: Int): ToolParts {
     val glyph = JBLabel()
-    val title = JBLabel()
-    val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val title = clip(JBLabel())
+    val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val targets = List(count) {
-        JBLabel().apply {
+        clip(JBLabel()).apply {
             foreground = UiStyle.Colors.fg()
-            minimumSize = JBUI.size(0, minimumSize.height)
         }
     }
-    val link = JBLabel().apply { isVisible = false }
+    val link = clip(JBLabel()).apply { isVisible = false }
     val slot = JPanel(CardLayout()).apply {
         isOpaque = false
+        minimumSize = Dimension(0, minimumSize.height)
         add(sub, SUB_CARD)
         add(link, LINK_CARD)
     }
-    val state = JBLabel().apply { foreground = UiStyle.Colors.weak() }
+    val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
     val target = stack.align(HAlign.TRACK, VAlign.CENTER)
     val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
-        minimumSize = JBUI.size(0, minimumSize.height)
+        minimumSize = Dimension(0, minimumSize.height)
         add(title, BorderLayout.WEST)
         add(target, BorderLayout.CENTER)
     }
@@ -440,7 +450,7 @@ internal fun subtitle(tool: Tool) = when (tool.name) {
 
 @RequiresEdt
 internal fun setText(label: JBLabel, text: String): Boolean {
-    val value = if (text.isBlank()) "" else XmlStringUtil.wrapInHtml(XmlStringUtil.escapeString(text))
+    val value = html(text)
     if (label.text == value) return false
     label.text = value
     return true
@@ -448,19 +458,36 @@ internal fun setText(label: JBLabel, text: String): Boolean {
 
 @RequiresEdt
 internal fun setTargetText(label: JBLabel, text: String): Boolean {
-    if (label.text == text) return false
-    label.text = text
+    val value = single(text)
+    if (label.text == value) return false
+    label.text = value
     return true
 }
 
 @RequiresEdt
 internal fun setLinkText(parts: ToolParts, text: String): Boolean {
-    val value = if (text.isBlank()) "" else XmlStringUtil.wrapInHtml("<u>${XmlStringUtil.escapeString(text)}</u>")
-    if (parts.label == text && parts.link.text == value) return false
-    parts.label = text
+    val label = single(text)
+    val value = if (label.isBlank()) "" else XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(label)}</u></nobr>")
+    if (parts.label == label && parts.link.text == value) return false
+    parts.label = label
     parts.link.text = value
     return true
 }
+
+private fun clip(label: JBLabel): JBLabel = label.apply {
+    minimumSize = Dimension(0, minimumSize.height)
+}
+
+private fun html(text: String): String {
+    val value = single(text)
+    if (value.isBlank()) return ""
+    return XmlStringUtil.wrapInHtml("<nobr>${XmlStringUtil.escapeString(value)}</nobr>")
+}
+
+private fun single(text: String): String = text.lineSequence()
+    .map { it.trim() }
+    .filter { it.isNotEmpty() }
+    .joinToString(" ")
 
 @RequiresEdt
 internal fun show(parts: ToolParts, link: Boolean): Boolean {

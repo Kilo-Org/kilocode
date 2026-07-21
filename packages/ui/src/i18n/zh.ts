@@ -124,6 +124,7 @@ export const dict = {
 
   "ui.tool.read": "读取",
   "ui.tool.loaded": "已加载",
+  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行", // kilocode_change
   "ui.tool.list": "列表",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -174,7 +175,9 @@ export const dict = {
   "ui.patch.action.patched": "已应用补丁",
 
   "ui.question.subtitle.answered": "{{count}} 已回答",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(无答案)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "可多选",
   "ui.question.singleHint": "选择一个答案",

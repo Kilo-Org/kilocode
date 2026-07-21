@@ -5,9 +5,8 @@ import { applyEdits, modify } from "jsonc-parser"
 import { mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
 import { ConfigParse } from "@/config/parse"
-import { CurrentWorkingDirectory } from "@/cli/cmd/tui/config/cwd"
-import { TuiConfig } from "@/cli/cmd/tui/config/tui"
-import { TuiInfo } from "@/cli/cmd/tui/config/tui-schema"
+import { CurrentWorkingDirectory } from "@/config/tui-cwd"
+import { TuiConfig } from "@/config/tui"
 import { KilocodeKeybinds } from "./keybinds"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
@@ -18,12 +17,12 @@ export namespace KilocodeTuiConfig {
   export const Scope = z.enum(["project", "global"])
   export type Scope = z.infer<typeof Scope>
 
-  export const Patch = TuiInfo
+  export const Patch = TuiConfig.Info
   export type Patch = Schema.Schema.Type<typeof Patch>
   export type Editable = Omit<Patch, "keybinds"> & { keybinds?: Record<string, string> }
 
   const files = ["tui.jsonc", "tui.json"] as const
-  const dirs = [".kilo", ".kilocode", ".opencode"] as const
+  const dirs = [".kilo", ".kilocode"] as const
 
   export async function get(input: { directory: string }) {
     const cfg = await Effect.runPromise(
@@ -90,7 +89,7 @@ export namespace KilocodeTuiConfig {
   function parse(input: string, file: string): Patch {
     const data = ConfigParse.jsonc(input, file)
     if (!isRecord(data)) return {}
-    return writable(ConfigParse.schema(TuiInfo, normalize(data), file))
+    return writable(ConfigParse.schema(TuiConfig.Info, normalize(data), file))
   }
 
   function normalize(raw: Record<string, unknown>) {
@@ -115,6 +114,8 @@ export namespace KilocodeTuiConfig {
   function writable(config: Patch | TuiConfig.Info, defaults = true): Editable {
     const result = { ...config } as Record<string, unknown>
     delete result.plugin_origins
+    delete result.instruction_origins
+    delete result.skill_path_origins
     const keybinds: Record<string, string> = defaults
       ? Object.fromEntries(KilocodeKeybinds.list().map((item) => [item.id, item.default]))
       : {}

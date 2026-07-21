@@ -49,6 +49,8 @@ export interface ToolPart extends BasePart {
   type: "tool"
   tool: string
   state: ToolState
+  metadata?: Record<string, unknown>
+  callID?: string
 }
 
 export interface ReasoningPart extends BasePart {
@@ -65,6 +67,10 @@ export interface StepStartPart extends BasePart {
 export interface StepFinishPart extends BasePart {
   type: "step-finish"
   reason?: string
+  model?: {
+    providerID: string
+    modelID: string
+  }
   cost?: number
   tokens?: {
     input: number

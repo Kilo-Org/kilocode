@@ -1,5 +1,7 @@
 import { Agent } from "@/agent/agent"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
+import { MemoryMarker } from "@/kilocode/memory/marker" // kilocode_change
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { MCP } from "@/mcp"
@@ -8,19 +10,23 @@ import { Tool } from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
-import { ModelID } from "@/provider/schema"
+
 import { Plugin } from "@/plugin"
 import type { TaskPromptOps } from "@/tool/task"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import { Effect } from "effect"
 import { MessageV2 } from "./message-v2"
-import * as Session from "./session"
+import { Session } from "./session"
 import { SessionProcessor } from "./processor"
 import { PartID } from "./schema"
-import * as Log from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
-
-const log = Log.create({ service: "session.tools" })
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+// kilocode_change start
+import { SwePruner } from "@/kilocode/swe-pruner"
+import { Config } from "@/config/config"
+// kilocode_change end
 
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   agent: Agent.Info
@@ -28,19 +34,25 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   session: Session.Info
   processor: Pick<SessionProcessor.Handle, "message" | "metadata" | "completeToolCall"> // kilocode_change
   bypassAgentCheck: boolean
-  messages: MessageV2.WithParts[]
+  messages: SessionV1.WithParts[]
   promptOps: TaskPromptOps
+  memoryCache: MemoryMarker.Cache // kilocode_change
 }) {
-  using _ = log.time("resolveTools")
   const tools: Record<string, AITool> = {}
   const run = yield* EffectBridge.make()
   const plugin = yield* Plugin.Service
   const permission = yield* Permission.Service
-  const agents = yield* Agent.Service // kilocode_change
-  const sessions = yield* Session.Service // kilocode_change
+  // kilocode_change start
+  const agents = yield* Agent.Service
+  const sessions = yield* Session.Service
+  // kilocode_change end
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
+  // kilocode_change start - SWE-Pruner (experimental)
+  const config = yield* Config.Service
+  const swe = SwePruner.enabled(yield* config.get())
+  // kilocode_change end
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
     sessionID: input.session.id,
@@ -50,8 +62,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     extra: { model: input.model, bypassAgentCheck: input.bypassAgentCheck, promptOps: input.promptOps },
     agent: input.agent.name,
     messages: input.messages,
-    metadata: (val) => input.processor.metadata(options.toolCallId, val), // kilocode_change
-    // kilocode_change start - resolve permissions at ask time so active tools see config edits
+    // kilocode_change start
+    metadata: (val) => input.processor.metadata(options.toolCallId, val),
     ask: (req) =>
       KiloSessionPrompt.askPermission({
         permission,
@@ -65,15 +77,20 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
         },
       }).pipe(Effect.orDie),
-    // kilocode_change end
   })
+  // kilocode_change end
 
   for (const item of yield* registry.tools({
-    modelID: ModelID.make(input.model.api.id),
+    modelID: ModelV2.ID.make(input.model.api.id),
     providerID: input.model.providerID,
+    family: input.model.family, // kilocode_change
     agent: input.agent,
   })) {
-    const schema = ProviderTransform.schema(input.model, ToolJsonSchema.fromTool(item))
+    // kilocode_change start - SWE-Pruner (experimental): advertise the focus parameter on prunable tools
+    const pruner = swe && SwePruner.prunable(item.id)
+    const base = ToolJsonSchema.fromTool(item)
+    const schema = ProviderTransform.schema(input.model, pruner ? SwePruner.extend(base) : base)
+    // kilocode_change end
     tools[item.id] = tool({
       description: item.description,
       inputSchema: jsonSchema(schema),
@@ -86,7 +103,13 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
               { args },
             )
-            const result = yield* item.execute(args, ctx)
+            // kilocode_change start
+            let result = yield* SandboxPolicy.executeTool(ctx.sessionID, item, item.execute(args, ctx))
+            // SWE-Pruner (experimental): prune the output when the model provided a focus question.
+            // Runs before tool.execute.after so plugins observe the final output the model will
+            // see; pruning is signalled to them via metadata.swePruner.
+            if (pruner) result = yield* SwePruner.sweep({ tool: item.id, args, result, abort: ctx.abort })
+            // kilocode_change end
             const output = {
               ...result,
               attachments: result.attachments?.map((attachment) => ({
@@ -96,6 +119,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
                 messageID: input.processor.message.id,
               })),
             }
+            // kilocode_change - mark successful targeted memory recalls for the assistant badge
+            if (item.id === "kilo_memory_recall") MemoryMarker.recall({ result: output, cache: input.memoryCache }) // kilocode_change
             yield* plugin.trigger(
               "tool.execute.after",
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
@@ -111,7 +136,8 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  for (const [key, item] of Object.entries(yield* mcp.tools())) {
+  const mcpTools = (yield* SandboxPolicy.networkRestricted(input.session.id)) ? {} : yield* mcp.tools() // kilocode_change
+  for (const [key, item] of Object.entries(mcpTools)) { // kilocode_change
     const execute = item.execute
     if (!execute) continue
 
@@ -127,10 +153,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             { tool: key, sessionID: ctx.sessionID, callID: opts.toolCallId },
             { args },
           )
-          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* Effect.gen(function* () {
-            yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
-            return yield* Effect.promise(() => execute(args, opts))
-          }).pipe(
+          // kilocode_change start
+          const result: Awaited<ReturnType<NonNullable<typeof execute>>> = yield* SandboxPolicy.executeMcp(
+            ctx.sessionID,
+            item,
+            Effect.gen(function* () {
+              yield* ctx.ask({ permission: key, metadata: {}, patterns: ["*"], always: ["*"] })
+              return yield* Effect.promise(() => execute(args, opts))
+            }),
+          ).pipe(
+            // kilocode_change end
             Effect.withSpan("Tool.execute", {
               attributes: {
                 "tool.name": key,
@@ -147,7 +179,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           )
 
           const textParts: string[] = []
-          const attachments: Omit<MessageV2.FilePart, "id" | "sessionID" | "messageID">[] = []
+          const attachments: Omit<SessionV1.FilePart, "id" | "sessionID" | "messageID">[] = []
           for (const contentItem of result.content) {
             if (contentItem.type === "text") textParts.push(contentItem.text)
             else if (contentItem.type === "image") {

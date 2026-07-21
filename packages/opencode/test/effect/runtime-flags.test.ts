@@ -24,12 +24,10 @@ describe("RuntimeFlags", () => {
           fromConfig({
             KILO_PURE: "true",
             KILO_DISABLE_DEFAULT_PLUGINS: "true",
-            KILO_DISABLE_CHANNEL_DB: "true",
             KILO_AUTO_SHARE: "true",
             KILO_DISABLE_EMBEDDED_WEB_UI: "true",
             KILO_DISABLE_EXTERNAL_SKILLS: "true",
             KILO_DISABLE_LSP_DOWNLOAD: "true",
-            KILO_SKIP_MIGRATIONS: "true",
             KILO_EXPERIMENTAL: "true",
             KILO_ENABLE_EXA: "true",
             KILO_ENABLE_PARALLEL: "true",
@@ -43,17 +41,15 @@ describe("RuntimeFlags", () => {
       expect(flags.pure).toBe(true)
       expect(flags.autoShare).toBe(true)
       expect(flags.disableDefaultPlugins).toBe(true)
-      expect(flags.disableChannelDb).toBe(true)
       expect(flags.disableEmbeddedWebUi).toBe(true)
       expect(flags.disableExternalSkills).toBe(true)
       expect(flags.disableLspDownload).toBe(true)
-      expect(flags.skipMigrations).toBe(true)
       expect(flags.disableClaudeCodePrompt).toBe(false)
       expect(flags.enableExa).toBe(true)
       expect(flags.enableParallel).toBe(true)
       expect(flags.enableExperimentalModels).toBe(true)
       expect(flags.enableQuestionTool).toBe(true)
-      expect(flags.experimentalScout).toBe(true)
+      expect(flags.experimentalReferences).toBe(true)
       expect(flags.experimentalBackgroundSubagents).toBe(true)
       expect(flags.experimentalLspTy).toBe(false)
       expect(flags.experimentalLspTool).toBe(true)
@@ -62,7 +58,8 @@ describe("RuntimeFlags", () => {
       expect(flags.experimentalEventSystem).toBe(true)
       expect(flags.experimentalWorkspaces).toBe(true)
       expect(flags.experimentalIconDiscovery).toBe(true)
-      expect(flags.experimentalNativeLlm).toBe(true)
+      expect(flags.experimentalNativeLlm).toBe(false)
+      expect(flags.experimentalWebSockets).toBe(false)
       expect(flags.client).toBe("desktop")
     }),
   )
@@ -81,13 +78,23 @@ describe("RuntimeFlags", () => {
     }),
   )
 
-  it.effect("enables native LLM via dedicated or umbrella flag", () =>
+  it.effect("enables native LLM via dedicated flag only", () =>
     Effect.gen(function* () {
       const explicit = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_EXPERIMENTAL_NATIVE_LLM: "true" })))
       const umbrella = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_EXPERIMENTAL: "true" })))
 
       expect(explicit.experimentalNativeLlm).toBe(true)
-      expect(umbrella.experimentalNativeLlm).toBe(true)
+      expect(umbrella.experimentalNativeLlm).toBe(false)
+    }),
+  )
+
+  it.effect("enables WebSockets via dedicated flag only", () =>
+    Effect.gen(function* () {
+      const explicit = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_EXPERIMENTAL_WEBSOCKETS: "true" })))
+      const umbrella = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_EXPERIMENTAL: "true" })))
+
+      expect(explicit.experimentalWebSockets).toBe(true)
+      expect(umbrella.experimentalWebSockets).toBe(false)
     }),
   )
 
@@ -100,11 +107,9 @@ describe("RuntimeFlags", () => {
       expect(flags.pure).toBe(false)
       expect(flags.autoShare).toBe(false)
       expect(flags.disableDefaultPlugins).toBe(true)
-      expect(flags.disableChannelDb).toBe(false)
       expect(flags.disableEmbeddedWebUi).toBe(false)
       expect(flags.disableExternalSkills).toBe(false)
       expect(flags.disableLspDownload).toBe(false)
-      expect(flags.skipMigrations).toBe(false)
       expect(flags.disableClaudeCodePrompt).toBe(false)
       expect(flags.disableClaudeCodeSkills).toBe(false)
       expect(flags.enableExa).toBe(false)
@@ -157,22 +162,6 @@ describe("RuntimeFlags", () => {
     }),
   )
 
-  it.effect("skipMigrations defaults to false", () =>
-    Effect.gen(function* () {
-      const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
-
-      expect(flags.skipMigrations).toBe(false)
-    }),
-  )
-
-  it.effect("skipMigrations reads KILO_SKIP_MIGRATIONS", () =>
-    Effect.gen(function* () {
-      const flags = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_SKIP_MIGRATIONS: "true" })))
-
-      expect(flags.skipMigrations).toBe(true)
-    }),
-  )
-
   it.effect("disableClaudeCodePrompt defaults to false", () =>
     Effect.gen(function* () {
       const flags = yield* readFlags.pipe(Effect.provide(fromConfig({})))
@@ -210,6 +199,21 @@ describe("RuntimeFlags", () => {
       const flags = yield* readFlags.pipe(Effect.provide(fromConfig({ KILO_EXPERIMENTAL: "true" })))
 
       expect(flags.experimentalIconDiscovery).toBe(true)
+    }),
+  )
+
+  it.effect("specific experimental flags override KILO_EXPERIMENTAL", () =>
+    Effect.gen(function* () {
+      const flags = yield* readFlags.pipe(
+        Effect.provide(
+          fromConfig({
+            KILO_EXPERIMENTAL: "true",
+            KILO_EXPERIMENTAL_ICON_DISCOVERY: "false",
+          }),
+        ),
+      )
+
+      expect(flags.experimentalIconDiscovery).toBe(false)
     }),
   )
 
@@ -318,7 +322,6 @@ describe("RuntimeFlags", () => {
               KILO_DISABLE_DEFAULT_PLUGINS: "true",
               KILO_DISABLE_EXTERNAL_SKILLS: "true",
               KILO_DISABLE_LSP_DOWNLOAD: "true",
-              KILO_SKIP_MIGRATIONS: "true",
               KILO_EXPERIMENTAL: "true",
               KILO_ENABLE_EXA: "true",
               KILO_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS: "1234",
@@ -330,11 +333,9 @@ describe("RuntimeFlags", () => {
 
       expect(flags.pure).toBe(false)
       expect(flags.disableDefaultPlugins).toBe(false)
-      expect(flags.disableChannelDb).toBe(false)
       expect(flags.disableEmbeddedWebUi).toBe(false)
       expect(flags.disableExternalSkills).toBe(false)
       expect(flags.disableLspDownload).toBe(false)
-      expect(flags.skipMigrations).toBe(false)
       expect(flags.disableClaudeCodePrompt).toBe(false)
       expect(flags.disableClaudeCodeSkills).toBe(false)
       expect(flags.enableExa).toBe(false)

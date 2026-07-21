@@ -1,4 +1,5 @@
 import { NodeHttpServer } from "@effect/platform-node"
+import { Database } from "@opencode-ai/core/database/database"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { HttpClient, HttpClientRequest, HttpRouter } from "effect/unstable/http"
@@ -9,9 +10,11 @@ import { kiloGatewayHandlers } from "../../../src/kilocode/server/httpapi/handle
 import { InstanceStore } from "../../../src/project/instance-store"
 import { ModelCache } from "../../../src/provider/model-cache"
 import { Session } from "../../../src/session/session"
+import { Storage } from "../../../src/storage/storage"
 import { Authorization } from "../../../src/server/routes/instance/httpapi/middleware/authorization"
 import { InstanceContextMiddleware } from "../../../src/server/routes/instance/httpapi/middleware/instance-context"
 import { schemaErrorLayer } from "../../../src/server/routes/instance/httpapi/middleware/schema-error"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
 import {
   WorkspaceRouteContext,
   WorkspaceRoutingMiddleware,
@@ -25,6 +28,7 @@ const auth = Layer.mock(Auth.Service)({
 const store = Layer.mock(InstanceStore.Service)({})
 const cache = Layer.mock(ModelCache.Service)({})
 const session = Layer.mock(Session.Service)({})
+const storage = Layer.mock(Storage.Service)({})
 const passthroughAuthorization = Layer.succeed(
   Authorization,
   Authorization.of((effect) => effect),
@@ -51,7 +55,10 @@ const layer = HttpRouter.serve(
       store,
       cache,
       session,
+      EventV2Bridge.defaultLayer,
     ]),
+    Layer.provide(Database.defaultLayer),
+    Layer.provide(storage),
   ),
   { disableListenLog: true, disableLogger: true },
 ).pipe(Layer.provideMerge(NodeHttpServer.layerTest))
@@ -63,7 +70,10 @@ function stub(run: () => Response | Promise<Response>) {
   const fetch: typeof globalThis.fetch = Object.assign(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url
-      if (url.startsWith("http://127.0.0.1:")) return original(input, init)
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined))
+      if (url.startsWith("http://127.0.0.1:") && headers.get("authorization") !== "Bearer test-token") {
+        return original(input, init)
+      }
       return run()
     },
     { preconnect: original.preconnect },
@@ -180,6 +190,32 @@ describe("Kilo gateway HttpApi statuses", () => {
 
       expect(response.status).toBe(500)
       expect(yield* response.json).toEqual({ error: "KiloClaw request failed: 500 worker failed" })
+    }),
+  )
+
+  it.live("normalizes numeric KiloClaw timestamps", () =>
+    Effect.gen(function* () {
+      const started = 1_700_000_000_000
+      yield* stub(() =>
+        Response.json({
+          status: "running",
+          sandboxId: "sandbox",
+          userId: "user",
+          lastStartedAt: started,
+          lastStoppedAt: null,
+        }),
+      )
+
+      const response = yield* HttpClient.get(KiloGatewayPaths.clawStatus)
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({
+        status: "running",
+        sandboxId: "sandbox",
+        userId: "user",
+        lastStartedAt: new Date(started).toISOString(),
+        lastStoppedAt: null,
+      })
     }),
   )
 

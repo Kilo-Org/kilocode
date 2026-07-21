@@ -1,12 +1,14 @@
-// kilocode_change - new file
-import { describe, expect, test } from "bun:test"
+import { afterEach, describe, expect, test } from "bun:test"
+import { Flag } from "@opencode-ai/core/flag/flag"
 import { Cause, Effect, Exit, Fiber, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Bus } from "../../../src/bus"
 import * as Config from "../../../src/config/config"
 import { AllowEverythingPermission } from "../../../src/kilocode/permission/allow-everything"
 import { Permission } from "../../../src/permission"
-import { PermissionID } from "../../../src/permission/schema"
+import { EventV2Bridge } from "../../../src/event-v2-bridge"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { Database } from "@opencode-ai/core/database/database"
 import { provideTestInstance } from "../../fixture/fixture"
 import { Server } from "../../../src/server/server"
 import { Session } from "../../../src/session/session"
@@ -15,13 +17,41 @@ import { testEffect } from "../../lib/effect"
 
 const bus = Bus.layer
 const env = Layer.mergeAll(
-  Permission.layer.pipe(Layer.provide(bus), Layer.provide(Config.defaultLayer)),
+  Permission.layer.pipe(
+    Layer.provide(EventV2Bridge.defaultLayer),
+    Layer.provide(Config.defaultLayer),
+    Layer.provide(Database.defaultLayer),
+  ),
   Config.defaultLayer,
   Session.defaultLayer,
   bus,
   CrossSpawnSpawner.defaultLayer,
 )
 const it = testEffect(env)
+const original = {
+  password: Flag.KILO_SERVER_PASSWORD,
+  username: Flag.KILO_SERVER_USERNAME,
+  envPassword: process.env.KILO_SERVER_PASSWORD,
+  envUsername: process.env.KILO_SERVER_USERNAME,
+}
+
+afterEach(() => {
+  Flag.KILO_SERVER_PASSWORD = original.password
+  Flag.KILO_SERVER_USERNAME = original.username
+  if (original.envPassword === undefined) delete process.env.KILO_SERVER_PASSWORD
+  else process.env.KILO_SERVER_PASSWORD = original.envPassword
+  if (original.envUsername === undefined) delete process.env.KILO_SERVER_USERNAME
+  else process.env.KILO_SERVER_USERNAME = original.envUsername
+})
+
+const auth = () => `Basic ${Buffer.from("kilo:secret").toString("base64")}`
+
+const requireAuth = () => {
+  Flag.KILO_SERVER_PASSWORD = "secret"
+  Flag.KILO_SERVER_USERNAME = undefined
+  process.env.KILO_SERVER_PASSWORD = "secret"
+  delete process.env.KILO_SERVER_USERNAME
+}
 
 const ask = (input: Permission.AskInput) =>
   Effect.gen(function* () {
@@ -47,20 +77,28 @@ const wait = () =>
 
 describe("AllowEverythingPermission", () => {
   test("handles disable requests through the HTTP endpoint", async () => {
+    requireAuth()
     await using tmp = await tmpdir({ git: true })
     await provideTestInstance({
       directory: tmp.path,
       fn: async () => {
-        const enable = await Server.Default().app.request("/permission/allow-everything", {
+        const blocked = await Server.Default().app.request("/permission/allow-everything", {
           method: "POST",
           headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path },
+          body: JSON.stringify({ enable: true }),
+        })
+        expect(blocked.status).toBe(401)
+
+        const enable = await Server.Default().app.request("/permission/allow-everything", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path, authorization: auth() },
           body: JSON.stringify({ enable: true }),
         })
         expect(enable.status).toBe(200)
 
         const disable = await Server.Default().app.request("/permission/allow-everything", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path },
+          headers: { "Content-Type": "application/json", "x-kilo-directory": tmp.path, authorization: auth() },
           body: JSON.stringify({ enable: false }),
         })
         expect(disable.status).toBe(200)
@@ -79,7 +117,7 @@ describe("AllowEverythingPermission", () => {
 
           const session = yield* sessions.create({})
           const pending = yield* ask({
-            id: PermissionID.make("permission_global_disable"),
+            id: PermissionV1.ID.make("permission_global_disable"),
             sessionID: session.id,
             permission: "bash",
             patterns: ["ls"],
@@ -90,7 +128,7 @@ describe("AllowEverythingPermission", () => {
 
           yield* wait()
           yield* reply({
-            requestID: PermissionID.make("permission_global_disable"),
+            requestID: PermissionV1.ID.make("permission_global_disable"),
             reply: "reject",
           })
 
@@ -120,7 +158,7 @@ describe("AllowEverythingPermission", () => {
           expect(next.permission ?? []).toEqual([])
 
           const pending = yield* ask({
-            id: PermissionID.make("permission_session_disable"),
+            id: PermissionV1.ID.make("permission_session_disable"),
             sessionID: session.id,
             permission: "bash",
             patterns: ["ls"],
@@ -131,7 +169,7 @@ describe("AllowEverythingPermission", () => {
 
           yield* wait()
           yield* reply({
-            requestID: PermissionID.make("permission_session_disable"),
+            requestID: PermissionV1.ID.make("permission_session_disable"),
             reply: "reject",
           })
 
@@ -143,7 +181,7 @@ describe("AllowEverythingPermission", () => {
 
           const other = yield* sessions.create({})
           const blocked = yield* ask({
-            id: PermissionID.make("permission_other_session"),
+            id: PermissionV1.ID.make("permission_other_session"),
             sessionID: other.id,
             permission: "bash",
             patterns: ["pwd"],
@@ -154,7 +192,7 @@ describe("AllowEverythingPermission", () => {
 
           yield* wait()
           yield* reply({
-            requestID: PermissionID.make("permission_other_session"),
+            requestID: PermissionV1.ID.make("permission_other_session"),
             reply: "reject",
           })
 

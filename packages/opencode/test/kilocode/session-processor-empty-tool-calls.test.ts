@@ -3,6 +3,7 @@ import { describe, expect } from "bun:test"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -13,8 +14,8 @@ import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Reference } from "../../src/reference/reference"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -27,14 +28,14 @@ import { SyncEvent } from "../../src/sync"
 import { KiloSessionProcessor } from "../../src/kilocode/session/processor"
 import * as Log from "@opencode-ai/core/util/log"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { provideTmpdirProject } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 type Script = Stream.Stream<Event, unknown>
@@ -43,13 +44,14 @@ class TestLLM extends Context.Service<
   TestLLM,
   {
     readonly reply: (...items: Event[]) => Effect.Effect<void>
+    readonly script: (item: Script) => Effect.Effect<void>
   }
 >()("@test/EmptyToolCallsLLM") {}
 
-function model(): Provider.Model {
+function model(selection = ref): Provider.Model {
   return {
-    id: "test-model",
-    providerID: "test",
+    id: selection.modelID,
+    providerID: selection.providerID,
     name: "Test",
     limit: { context: 128000, output: 4096 },
     cost: { input: 0, output: 0, cache: { read: 0, write: 0 } },
@@ -92,19 +94,12 @@ const llm = Layer.unwrap(
           },
         }),
       ),
-      Layer.succeed(TestLLM, TestLLM.of({ reply })),
+      Layer.succeed(TestLLM, TestLLM.of({ reply, script: push })),
     )
   }),
 )
 
-const reference = Layer.mock(Reference.Service)({
-  init: () => Effect.void,
-  list: () => Effect.succeed([]),
-  get: () => Effect.succeed(undefined),
-  ensure: () => Effect.void,
-  contains: () => Effect.succeed(false),
-})
-const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 const deps = Layer.mergeAll(
   Session.defaultLayer,
@@ -114,21 +109,63 @@ const deps = Layer.mergeAll(
   Plugin.defaultLayer,
   Config.defaultLayer,
   RuntimeFlags.layer(),
-  reference,
   SessionSummary.defaultLayer,
   Image.defaultLayer,
   SyncEvent.defaultLayer,
   EventV2Bridge.defaultLayer,
+  Database.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
-const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps), Layer.provide(reference))
+const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
 
 const it = testEffect(env)
 
+const setup = Effect.fn("SessionProcessorTest.setup")(function* (dir: string) {
+  const test = yield* TestLLM
+  const processors = yield* SessionProcessor.Service
+  const session = yield* Session.Service
+  const chat = yield* session.create({})
+  const parent = yield* session.updateMessage({
+    id: MessageID.ascending(),
+    role: "user",
+    sessionID: chat.id,
+    agent: "code",
+    model: ref,
+    time: { created: Date.now() },
+  })
+  const msg: MessageV2.Assistant = {
+    id: MessageID.ascending(),
+    role: "assistant",
+    sessionID: chat.id,
+    parentID: parent.id,
+    mode: "code",
+    agent: "code",
+    path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+    cost: 0,
+    tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+    modelID: ref.modelID,
+    providerID: ref.providerID,
+    time: { created: Date.now() },
+  }
+  yield* session.updateMessage(msg)
+  const mdl = model()
+  const handle = yield* processors.create({ assistantMessage: msg, sessionID: chat.id, model: mdl })
+  const input: LLM.StreamInput = {
+    user: parent as MessageV2.User,
+    sessionID: chat.id,
+    model: mdl,
+    agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+    system: [],
+    messages: [],
+    tools: {},
+  }
+  return { test, session, chat, handle, input }
+})
+
 describe("session processor empty tool-calls", () => {
   it.effect("converts finish to stop when model returns tool-calls with no tools", () =>
-    provideTmpdirInstance(
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const test = yield* TestLLM
@@ -185,7 +222,7 @@ describe("session processor empty tool-calls", () => {
 
           yield* handle.process(input)
           expect(handle.message.finish).toBe("stop")
-          const parts = MessageV2.parts(msg.id)
+          const parts = yield* MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(0)
         }),
@@ -194,7 +231,7 @@ describe("session processor empty tool-calls", () => {
   )
 
   it.effect("adds warning when model stops after reasoning-only length finish", () =>
-    provideTmpdirInstance(
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const test = yield* TestLLM
@@ -253,7 +290,7 @@ describe("session processor empty tool-calls", () => {
           }
 
           yield* handle.process(input)
-          const parts = MessageV2.parts(msg.id)
+          const parts = yield* MessageV2.parts(msg.id)
           const warning = parts.find(
             (part): part is MessageV2.TextPart =>
               part.type === "text" && part.text === KiloSessionProcessor.REASONING_LENGTH_WARNING,
@@ -269,7 +306,7 @@ describe("session processor empty tool-calls", () => {
   )
 
   it.effect("treats provider finish errors without details as retryable API errors", () =>
-    provideTmpdirInstance(
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const test = yield* TestLLM
@@ -337,7 +374,7 @@ describe("session processor empty tool-calls", () => {
   )
 
   it.effect("adds generic warning when model stops after text length finish", () =>
-    provideTmpdirInstance(
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const test = yield* TestLLM
@@ -396,7 +433,7 @@ describe("session processor empty tool-calls", () => {
           }
 
           yield* handle.process(input)
-          const parts = MessageV2.parts(msg.id)
+          const parts = yield* MessageV2.parts(msg.id)
           const warning = parts.find(
             (part): part is MessageV2.TextPart =>
               part.type === "text" && part.text === KiloSessionProcessor.OUTPUT_LENGTH_WARNING,
@@ -413,73 +450,49 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
-  it.live("ignores deleted session during cost reconciliation", () =>
-    provideTmpdirInstance(
+  it.live("stops before processing a deleted session", () =>
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
-          const test = yield* TestLLM
-          const processors = yield* SessionProcessor.Service
-          const session = yield* Session.Service
-
-          yield* test.reply(
+          const state = yield* setup(dir)
+          yield* state.test.reply(
             LLMEvent.stepStart({ index: 0 }),
             LLMEvent.stepFinish({ index: 0, reason: "stop", usage: usage() }),
             LLMEvent.finish({ reason: "stop", usage: usage() }),
           )
+          yield* state.session.remove(state.chat.id)
+          const result = yield* state.handle.process(state.input)
+          expect(result).toBe("stop")
+          expect(state.handle.message.error).toBeUndefined()
+        }),
+      { git: true },
+    ),
+  )
 
-          const chat = yield* session.create({})
-          const parent = yield* session.updateMessage({
-            id: MessageID.ascending(),
-            role: "user",
-            sessionID: chat.id,
-            agent: "code",
-            model: ref,
-            time: { created: Date.now() },
-          })
-          const msg: MessageV2.Assistant = {
-            id: MessageID.ascending(),
-            role: "assistant",
-            sessionID: chat.id,
-            parentID: parent.id,
-            mode: "code",
-            agent: "code",
-            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
-            cost: 0,
-            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-            modelID: ref.modelID,
-            providerID: ref.providerID,
-            time: { created: Date.now() },
-          }
-          yield* session.updateMessage(msg)
-
-          const mdl = model()
-          const handle = yield* processors.create({
-            assistantMessage: msg,
-            sessionID: chat.id,
-            model: mdl,
-          })
-          yield* session.remove(chat.id)
-
-          const input: LLM.StreamInput = {
-            user: parent as MessageV2.User,
-            sessionID: chat.id,
-            model: mdl,
-            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
-            system: [],
-            messages: [],
-            tools: {},
-          }
-
-          const result = yield* handle.process(input)
+  it.live("ignores deletion during cost reconciliation", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const state = yield* setup(dir)
+          yield* state.test.script(
+            Stream.make(
+              LLMEvent.stepStart({ index: 0 }),
+              LLMEvent.stepFinish({ index: 0, reason: "stop", usage: usage() }),
+              LLMEvent.finish({ reason: "stop", usage: usage() }),
+            ).pipe(
+              Stream.tap((event) => (event.type === "step-finish" ? state.session.remove(state.chat.id) : Effect.void)),
+            ),
+          )
+          const result = yield* state.handle.process(state.input)
           expect(result).toBe("continue")
-          expect(handle.message.error).toBeUndefined()
+          expect(state.handle.message.error).toBeUndefined()
         }),
       { git: true },
     ),
   )
 
   it.live("preserves tool-calls finish when tool parts exist", () =>
-    provideTmpdirInstance(
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const test = yield* TestLLM
@@ -538,9 +551,87 @@ describe("session processor empty tool-calls", () => {
           const result = yield* handle.process(input)
           expect(handle.message.finish).toBe("tool-calls")
           expect(result).toBe("continue")
-          const parts = MessageV2.parts(msg.id)
+          const parts = yield* MessageV2.parts(msg.id)
           const tools = parts.filter((p) => p.type === "tool")
           expect(tools.length).toBe(1)
+        }),
+      { git: true },
+    ),
+  )
+
+  it.effect("persists routed model metadata on step-finish parts", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const test = yield* TestLLM
+          const processors = yield* SessionProcessor.Service
+          const session = yield* Session.Service
+          const selection = {
+            providerID: ProviderV2.ID.kilo,
+            modelID: ModelV2.ID.make("kilo-auto/efficient"),
+          }
+
+          yield* test.reply(
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.stepFinish({
+              index: 0,
+              reason: "stop",
+              usage: usage(),
+              providerMetadata: { kilocode: { routedModelID: "openai/gpt-5.5-20260423" } },
+            }),
+            LLMEvent.finish({ reason: "stop", usage: usage() }),
+          )
+
+          const chat = yield* session.create({})
+          const parent = yield* session.updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: chat.id,
+            agent: "code",
+            model: selection,
+            time: { created: Date.now() },
+          })
+          const msg: MessageV2.Assistant = {
+            id: MessageID.ascending(),
+            role: "assistant",
+            sessionID: chat.id,
+            parentID: parent.id,
+            mode: "code",
+            agent: "code",
+            path: { cwd: path.resolve(dir), root: path.resolve(dir) },
+            cost: 0,
+            tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+            modelID: selection.modelID,
+            providerID: selection.providerID,
+            time: { created: Date.now() },
+          }
+          yield* session.updateMessage(msg)
+
+          const mdl = model(selection)
+          const handle = yield* processors.create({
+            assistantMessage: msg,
+            sessionID: chat.id,
+            model: mdl,
+          })
+
+          const input: LLM.StreamInput = {
+            user: parent as MessageV2.User,
+            sessionID: chat.id,
+            model: mdl,
+            agent: { name: "code", mode: "primary", permission: [], options: {} } as any,
+            system: [],
+            messages: [],
+            tools: {},
+          }
+
+          yield* handle.process(input)
+          const parts = yield* MessageV2.parts(msg.id)
+          const part = parts.find((item): item is MessageV2.StepFinishPart => item.type === "step-finish")
+
+          expect(part?.model).toEqual({
+            providerID: selection.providerID,
+            modelID: ModelV2.ID.make("openai/gpt-5.5-20260423"),
+          })
         }),
       { git: true },
     ),

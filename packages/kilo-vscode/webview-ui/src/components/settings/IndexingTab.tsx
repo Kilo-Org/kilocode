@@ -1,7 +1,7 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
-import { DEFAULT_VECTOR_STORE } from "@kilocode/kilo-indexing/config"
+import { DEFAULT_VECTOR_STORE, isFileExtension, parseFileExtensions } from "@kilocode/kilo-indexing/config"
 import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
 import { Select } from "@kilocode/kilo-ui/select"
 import { Switch } from "@kilocode/kilo-ui/switch"
@@ -93,7 +93,7 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
 }
 
 const IndexingTab: Component = () => {
-  const { globalConfig, projectConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
+  const { globalConfig, projectConfig, settings, updateGlobalConfig, updateProjectConfig, updateSetting } = useConfig()
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -102,6 +102,8 @@ const IndexingTab: Component = () => {
   const [providerDrafts, setProviderDrafts] = createSignal<Record<string, string>>({})
   const [storeDrafts, setStoreDrafts] = createSignal<Record<string, string>>({})
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
+  const [extensionDrafts, setExtensionDrafts] = createSignal<Record<string, string>>({})
+  const [extensionErrors, setExtensionErrors] = createSignal<Record<string, string>>({})
   const [scope, setScope] = createSignal<IndexingScope>("global")
 
   const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
@@ -247,6 +249,30 @@ const IndexingTab: Component = () => {
     return value === undefined ? "" : String(value)
   }
 
+  const extensionValue = () => {
+    const draft = extensionDrafts()[scope()]
+    if (draft !== undefined) return draft
+    return cfg().fileExtensions?.join(", ") ?? ""
+  }
+
+  const saveExtensions = (value: string) => {
+    const values = value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean)
+    const invalid = values.find((item) => !isFileExtension(item))
+    if (invalid) {
+      setExtensionErrors((prev) => ({
+        ...prev,
+        [scope()]: language.t("settings.indexing.fileExtensions.invalid", { extension: invalid }),
+      }))
+      return
+    }
+    updateIndexing({ fileExtensions: parseFileExtensions(value) })
+    setExtensionDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== scope())))
+    setExtensionErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== scope())))
+  }
+
   const content = (_scope: IndexingScope) => (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
       <Card>
@@ -292,10 +318,22 @@ const IndexingTab: Component = () => {
               : language.t("settings.indexing.enable.description")
           }
           tag={() => tag(scope(), [["enabled"]])}
-          last
         >
           <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
             {language.t("settings.indexing.enable.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.indexing.showButton.title")}
+          description={language.t("settings.indexing.showButton.description")}
+          last
+        >
+          <Switch
+            checked={Boolean(settings()["indexing.showButtonWhenDisabled"] ?? true)}
+            onChange={(checked) => updateSetting("indexing.showButtonWhenDisabled", checked)}
+            hideLabel
+          >
+            {language.t("settings.indexing.showButton.title")}
           </Switch>
         </SettingsRow>
       </Card>
@@ -505,6 +543,26 @@ const IndexingTab: Component = () => {
       </Card>
 
       <Card>
+        <SettingsRow
+          title={language.t("settings.indexing.fileExtensions.title")}
+          description={description(language.t("settings.indexing.fileExtensions.description"), [["fileExtensions"]])}
+          tag={() => tag(scope(), [["fileExtensions"]])}
+        >
+          <TextField
+            value={extensionValue()}
+            error={extensionErrors()[scope()]}
+            validationState={extensionErrors()[scope()] ? "invalid" : "valid"}
+            placeholder=".php, .js, .css"
+            onInput={(e: InputEvent) => {
+              const target = e.currentTarget as HTMLInputElement
+              setExtensionDrafts((prev) => ({ ...prev, [scope()]: target.value }))
+            }}
+            onBlur={(e: FocusEvent) => {
+              const target = e.currentTarget as HTMLInputElement
+              saveExtensions(target.value)
+            }}
+          />
+        </SettingsRow>
         <For each={tuning}>
           {(item, index) => (
             <SettingsRow

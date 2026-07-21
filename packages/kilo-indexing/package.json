@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@kilocode/kilo-indexing",
-  "version": "7.3.49",
+  "version": "7.4.13",
   "type": "module",
   "license": "MIT",
   "description": "Standalone indexing engine and host helpers for Kilo Code",
@@ -19,6 +19,7 @@
     "./detect": "./src/detect.ts",
     "./embedding-models": "./src/kilo-embedding-models.ts",
     "./engine": "./src/indexing/index.ts",
+    "./file-extensions": "./src/file-extensions.ts",
     "./server": "./src/server/routes.ts",
     "./status": "./src/status.ts"
   },
@@ -29,7 +30,8 @@
   "scripts": {
     "typecheck": "tsgo --noEmit",
     "build": "tsc",
-    "test": "bun test --timeout 30000"
+    "test": "bun test --timeout 30000",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "3.1005.0",

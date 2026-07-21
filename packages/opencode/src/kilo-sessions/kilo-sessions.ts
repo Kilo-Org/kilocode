@@ -1,11 +1,12 @@
 import { Bus } from "@/bus"
 import { BusEvent } from "@/bus/bus-event"
+import { GlobalBus } from "@/bus/global" // kilocode_change - unified channel for legacy Bus + EventV2Bridge emissions
 import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
-import { SessionSummary } from "@/session/summary"
 import { KiloSession } from "@/kilocode/session"
 import { SessionID } from "@/session/schema"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { MessageV2 } from "@/session/message-v2"
 import { Storage } from "@/storage/storage"
 import * as Log from "@opencode-ai/core/util/log"
@@ -15,16 +16,16 @@ import { IngestQueue } from "@/kilo-sessions/ingest-queue"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
-import { Context, Effect, Layer, Schema, Stream } from "effect"
+import { Context, Effect, Layer, Schema } from "effect"
 import { KILO_API_BASE } from "@kilocode/kilo-gateway"
 import { Config } from "@/config/config"
-import { EffectBridge } from "@/effect/bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Instance } from "@/kilocode/instance"
 import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
+import { AttachedState } from "@/kilo-sessions/attached-state"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -32,11 +33,15 @@ import { Permission } from "@/permission"
 import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
   return provide(input)
 }
+
+// kilocode_change removed: `same` helper is no longer used now that the
+// presence/pending set logic lives in AttachedState.
 
 export namespace KiloSessions {
   export const Event = {
@@ -56,6 +61,11 @@ export namespace KiloSessions {
   export class Service extends Context.Service<Service, Interface>()("@kilocode/KiloSessions") {}
 
   const log = Log.create({ service: "kilo-sessions" })
+  // kilocode_change - narrow `log` to the warn-only shape AttachedState needs.
+  // The full Logger has a typed `extra` arg that does not match the generic
+  // `meta?: unknown` contract; the warn body is forwarded to log.warn via an
+  // `unknown` cast below.
+  const attachedLog = { warn: (msg: string, meta?: unknown) => log.warn(msg, meta as never) }
   const runtime = makeRuntime(Auth.Service, Auth.defaultLayer)
 
   const Uuid = z.uuid()
@@ -116,7 +126,7 @@ export namespace KiloSessions {
     })
   }
 
-  async function model(providerID: ProviderID, modelID: ModelID) {
+  async function model(providerID: ProviderV2.ID, modelID: ModelV2.ID) {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(Provider.Service.use((svc) => svc.getModel(providerID, modelID)))
   }
@@ -125,7 +135,7 @@ export namespace KiloSessions {
     const { AppRuntime } = await import("@/effect/app-runtime")
     return AppRuntime.runPromise(
       Provider.Service.use((svc) =>
-        Effect.all(refs.map((ref) => svc.getModel(ProviderID.make(ref.providerID), ModelID.make(ref.modelID)))),
+        Effect.all(refs.map((ref) => svc.getModel(ProviderV2.ID.make(ref.providerID), ModelV2.ID.make(ref.modelID)))),
       ),
     )
   }
@@ -203,8 +213,19 @@ export namespace KiloSessions {
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
   let remoteSeq = 0
-  const focused = new Set<string>()
-  const opened = new Set<string>()
+  // kilocode_change start - separate presence-owned attached session ids from
+  // newly-created (pending) session announcements so a concurrent presence
+  // update cannot drop a pending id and a heartbeat failure cannot delete a
+  // presence-owned id. The heartbeat closure throws when no remote connection
+  // is available so `announce` cannot silently mark a session as attached;
+  // create_session's catch block turns that into the sanitized failure
+  // response and the user retries manually.
+  const attachedState = AttachedState.create({
+    heartbeat: () =>
+      remote ? remote.conn.heartbeat() : Promise.reject(new Error("attachRemoteSession: no remote connection")),
+    log: attachedLog,
+  })
+  // kilocode_change end
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
@@ -240,37 +261,30 @@ export namespace KiloSessions {
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
-      const bus = yield* Bus.Service
       const config = yield* Config.Service
       const sessions = yield* Session.Service
       const state = yield* InstanceState.make(
-        Effect.fn("KiloSessions.state")(function* () {
+        Effect.fn("KiloSessions.state")(function* (ctx) {
           if (ingestDisabled) return
 
+          // kilocode_change - register event callbacks into a type→callback dispatch map, drained by a single
+          // GlobalBus listener installed below. GlobalBus is the unified channel that receives BOTH legacy Bus
+          // emissions (TurnOpen/TurnClose) and EventV2Bridge emissions (upstream moved Session/Message/Question/
+          // Status/Permission events to EventV2, which publishes only to GlobalBus, not the legacy typed Bus).
+          // Both channels emit the same { payload: { id, type, properties } } shape.
+          const handlers = new Map<string, (evt: { properties: any }) => unknown | Promise<unknown>>()
           const watch = <D extends { type: string }>(
             def: D,
             fn: (evt: { properties: any }) => unknown | Promise<unknown>,
-          ) =>
-            bus.subscribe(def as never).pipe(
-              Effect.flatMap((stream) =>
-                stream.pipe(
-                  Stream.runForEach((evt) =>
-                    EffectBridge.fromPromise(() => fn(evt as { properties: any })).pipe(
-                      Effect.catchCause((cause) =>
-                        Effect.sync(() => log.error("subscriber failed", { type: def.type, cause })),
-                      ),
-                    ),
-                  ),
-                  Effect.forkScoped,
-                ),
-              ),
-            )
+          ) => {
+            handlers.set(def.type, fn)
+          }
 
-          yield* watch(Session.Event.Created, (evt) => {
+          watch(Session.Event.Created, (evt) => {
             const sessionID = evt.properties.info.id
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
-          yield* watch(Session.Event.Updated, async (evt) => {
+          watch(Session.Event.Updated, async (evt) => {
             const sessionID = evt.properties.sessionID
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
@@ -279,24 +293,24 @@ export namespace KiloSessions {
               { type: "session", data: transport(session) },
             ])
           })
-          yield* watch(MessageV2.Event.Updated, async (evt) => {
+          watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
             if (evt.properties.info.role !== "user") return
             const mdl = await model(evt.properties.info.model.providerID, evt.properties.info.model.modelID)
             await ingest.sync(evt.properties.info.sessionID, [{ type: "model", data: [mdl] }])
           })
-          yield* watch(MessageV2.Event.PartUpdated, (evt) =>
+          watch(MessageV2.Event.PartUpdated, (evt) =>
             ingest.sync(evt.properties.part.sessionID, [{ type: "part", data: evt.properties.part }]),
           )
-          yield* watch(Session.Event.Diff, (evt) =>
+          watch(Session.Event.Diff, (evt) =>
             cumulative(evt.properties.sessionID, evt.properties.diff).then((diff) =>
               ingest.sync(evt.properties.sessionID, [{ type: "session_diff", data: diff }]),
             ),
           )
-          yield* watch(Session.Event.TurnOpen, (evt) =>
+          watch(Session.Event.TurnOpen, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_open", data: {} }]),
           )
-          yield* watch(Session.Event.TurnClose, (evt) =>
+          watch(Session.Event.TurnClose, (evt) =>
             ingest.sync(evt.properties.sessionID, [{ type: "session_close", data: { reason: evt.properties.reason } }]),
           )
 
@@ -331,12 +345,36 @@ export namespace KiloSessions {
 
             void loop().catch(fail)
           }
-          yield* watch(SessionStatus.Event.Status, sync)
-          yield* watch(Question.Event.Asked, sync)
-          yield* watch(Question.Event.Replied, sync)
-          yield* watch(Question.Event.Rejected, sync)
-          yield* watch(Permission.Event.Asked, sync)
-          yield* watch(Permission.Event.Replied, sync)
+          watch(SessionStatus.Event.Status, sync)
+          watch(Question.Event.Asked, sync)
+          watch(Question.Event.Replied, sync)
+          watch(Question.Event.Rejected, sync)
+          watch(Permission.Event.Asked, sync)
+          watch(Permission.Event.Replied, sync)
+
+          // kilocode_change - one GlobalBus listener drains the dispatch map. This state is cached per-directory
+          // (InstanceState), matching the per-directory legacy Bus PubSub it replaced, so we filter process-wide
+          // GlobalBus events down to this instance's directory. A single listener (vs one per event type) keeps
+          // us well under GlobalBus's max-listeners cap when several worktrees are active.
+          yield* Effect.acquireRelease(
+            Effect.sync(() => {
+              const handler = (event: { directory?: string; payload?: { type?: string; properties?: unknown } }) => {
+                if (event.directory !== ctx.directory) return
+                const type = event.payload?.type
+                if (type === undefined) return
+                const fn = handlers.get(type)
+                if (!fn) return
+                // Instance.restore: handlers run async work after the emitting fiber's
+                // synchronous window, where fiber-scoped InstanceRef is no longer visible.
+                Promise.resolve(Instance.restore(ctx, () => fn({ properties: event.payload!.properties }))).catch(
+                  (cause) => log.error("subscriber failed", { type, cause }),
+                )
+              }
+              GlobalBus.on("event", handler)
+              return handler
+            }),
+            (handler) => Effect.sync(() => void GlobalBus.off("event", handler)),
+          )
 
           const cfg = yield* config.getGlobal()
           if (remoteEnabled || cfg.remote_control) {
@@ -366,6 +404,8 @@ export namespace KiloSessions {
     Layer.provide(Config.defaultLayer),
     Layer.provide(Session.defaultLayer),
   )
+
+  export const node = LayerNode.make(layer, [Bus.node, Config.node, Session.node])
 
   export async function enableRemote() {
     if (remote) return
@@ -400,9 +440,11 @@ export namespace KiloSessions {
         const { AppRuntime } = await import("@/effect/app-runtime")
         const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
         const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
+        // kilocode_change - advertise both presence-owned and pending-created ids
+        // so the relay learns about new sessions before the next periodic
+        // heartbeat and the create_session response can be sent.
         const ids = new Set(Object.keys(statuses))
-        for (const id of focused) ids.add(id)
-        for (const id of opened) ids.add(id)
+        for (const id of attachedState.union()) ids.add(id)
         const results = await AppRuntime.runPromise(
           Session.Service.use((svc) =>
             Effect.all(
@@ -423,11 +465,7 @@ export namespace KiloSessions {
           ),
         )
         const sessions = results.filter((r): r is NonNullable<typeof r> => !!r)
-        return {
-          sessions,
-          focused: focused.size > 0 ? [...focused] : undefined,
-          open: opened.size > 0 ? [...opened] : undefined,
-        }
+        return { sessions }
       }
 
       const conn = RemoteWS.connect({
@@ -443,8 +481,7 @@ export namespace KiloSessions {
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: !!remote, connected: false })
         },
         onMessage: (msg) => {
-          // Must run inside Instance.provide so Bus.subscribeAll can access
-          // the instance-scoped subscription map via Instance.state().
+          // Restore the directory context before dispatching an async remote message.
           void provide({ directory, fn: () => sender.handle(msg) })
         },
         onClose: () => disableRemote(),
@@ -483,6 +520,10 @@ export namespace KiloSessions {
     remoteSeq += 1
     const pending = !!enabling
     enabling = undefined
+    // kilocode_change - clear both presence and pending-created ids so the
+    // next remote connection lifecycle starts with a clean slate and stale
+    // pending announcements from a previous connection do not leak.
+    attachedState.reset()
     if (!remote) {
       if (pending) void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: false, connected: false })
       return
@@ -500,17 +541,21 @@ export namespace KiloSessions {
       connected: remote?.conn.connected ?? false,
     }
   }
-  export function setViewedSessions(input: { focused: readonly string[]; open?: readonly string[] }) {
-    focused.clear()
-    opened.clear()
-    for (const id of input.focused) {
-      focused.add(id)
-    }
-    for (const id of input.open ?? []) {
-      opened.add(id)
-    }
-    if (remote) void remote.conn.heartbeat().catch((err) => log.warn("heartbeat failed", { error: String(err) }))
+  export function setAttachedSessions(ids: readonly string[]) {
+    // kilocode_change - delegate to the two-set state so a concurrent create
+    // announcement is not dropped by a presence clear+rebuild.
+    attachedState.setPresence(ids)
   }
+
+  // kilocode_change start - duplicate-safe single-session attach used by the
+  // remote create_session command. Delegates to the two-set state so the
+  // announcement is preserved across a concurrent presence replacement and a
+  // heartbeat failure rolls back only the entry this call added (a
+  // presence-owned id is never reachable here because the factory guards it).
+  export async function attachRemoteSession(id: string) {
+    await attachedState.announce(id)
+  }
+  // kilocode_change end
 
   export async function create(sessionId: string) {
     const result = await bootstrap(sessionId)
@@ -690,15 +735,17 @@ export namespace KiloSessions {
     const [session, local] = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const sessions = yield* Session.Service
-        const summary = yield* SessionSummary.Service
+        const storage = yield* Storage.Service
         return yield* Effect.all([
           sessions.get(SessionID.make(sessionId)),
-          summary.diff({ sessionID: SessionID.make(sessionId) }),
+          storage
+            .read<Snapshot.FileDiff[]>(["session_diff", sessionId])
+            .pipe(Effect.orElseSucceed((): Snapshot.FileDiff[] => [])),
         ])
       }),
     )
     const diffs = await cumulative(sessionId, local)
-    const messages = await Array.fromAsync(MessageV2.stream(SessionID.make(sessionId)))
+    const messages = await AppRuntime.runPromise(MessageV2.stream(SessionID.make(sessionId)))
     messages.reverse()
     const mdls = await models(
       messages.filter((m) => m.info.role === "user").map((m) => (m.info as SDK.UserMessage).model),

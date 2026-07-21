@@ -5,7 +5,8 @@ import { Permission } from "@/permission"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import type { Session } from "../../session/session"
 import type { Agent } from "../../agent/agent"
 import type { Config } from "../../config/config"
@@ -21,8 +22,8 @@ const ModelState = z
       .record(
         z.string(),
         z.object({
-          providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
-          modelID: z.custom<ModelID>(Schema.is(ModelID)),
+          providerID: z.custom<ProviderV2.ID>(Schema.is(ProviderV2.ID)),
+          modelID: z.custom<ModelV2.ID>(Schema.is(ModelV2.ID)),
         }),
       )
       .optional(),
@@ -42,12 +43,18 @@ export namespace KiloTask {
   }
 
   /**
-   * Build inherited permission rules from the calling agent.
+   * Build inherited permission ceilings from the calling agent.
    * Merges the static agent definition with the session's accumulated permissions
-   * so restrictions survive multi-hop chains (plan → general → explore).
+   * so denials survive multi-hop chains (plan → general → explore) without
+   * overriding the selected subagent's own allowlist with parent ask/allow rules.
+   *
+   * OpenCode removed parent-agent inheritance entirely in anomalyco/opencode#31696.
+   * Kilo intentionally differs: parent denials remain hard ceilings for Plan Mode
+   * and MCP restrictions, while parent ask/allow rules must not replace the
+   * selected subagent's policy. Preserve this distinction during upstream merges.
    *
    * The caller must resolve `caller` (Agent.Info) and `session` (Session.Info)
-   * before calling — this function is pure/synchronous.
+   * before calling. This function is pure/synchronous.
    */
   export function inherited(input: {
     caller: Agent.Info
@@ -57,9 +64,15 @@ export namespace KiloTask {
     const rules = Permission.merge(input.caller.permission ?? [], input.session.permission ?? [])
     const prefixes = Object.keys(input.mcp ?? {}).map((k) => k.replace(/[^a-zA-Z0-9_-]/g, "_") + "_")
     const isMcp = (p: string) => prefixes.some((prefix) => p.startsWith(prefix))
-    return rules.filter(
-      (r: Permission.Rule) => r.permission === "edit" || r.permission === "bash" || isMcp(r.permission),
+    const mutation = new Set(["edit", "bash", "notebook_edit", "notebook_execute"])
+    const inherited = rules.filter(
+      (r: Permission.Rule) => r.action === "deny" && (mutation.has(r.permission) || isMcp(r.permission)),
     )
+    for (const permission of mutation) {
+      if (Permission.evaluate(permission, "*", rules).action !== "deny") continue
+      inherited.push({ permission, pattern: "*", action: "deny" })
+    }
+    return merge(inherited)
   }
 
   /** Extra permission rules appended to subagent sessions */
@@ -67,6 +80,7 @@ export namespace KiloTask {
     return [
       { permission: "task", pattern: "*", action: "deny" },
       { permission: "question", pattern: "*", action: "deny" },
+      { permission: "interactive_terminal", pattern: "*", action: "deny" },
       ...rules,
     ]
   }
@@ -83,7 +97,7 @@ export namespace KiloTask {
     return result
   }
 
-  type Model = { providerID: ProviderID; modelID: ModelID }
+  type Model = { providerID: ProviderV2.ID; modelID: ModelV2.ID }
   type Saved = Model & { variant?: string }
   type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
 
@@ -95,8 +109,8 @@ export namespace KiloTask {
     if (!value) return undefined
     const [providerID, ...parts] = value.split("/")
     return {
-      providerID: ProviderID.make(providerID),
-      modelID: ModelID.make(parts.join("/")),
+      providerID: ProviderV2.ID.make(providerID),
+      modelID: ModelV2.ID.make(parts.join("/")),
     }
   }
 

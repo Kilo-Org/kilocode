@@ -9,6 +9,7 @@ import { Config } from "@/config/config"
 import { Auth } from "@/auth"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { SessionExport } from "@/kilocode/session-export"
+import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
 import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
@@ -17,6 +18,8 @@ import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
 import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
+import { JsonMigration } from "@/kilocode/storage/json-migration"
+import { KiloLog } from "@/kilocode/log"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -42,12 +45,22 @@ export namespace KiloCli {
     return cli
   }
 
+  export async function runner() {
+    if (!process.argv.includes("__background-process-runner")) return false
+    return (await import("@/kilocode/background-process/runner")).BackgroundProcessRunner.maybe()
+  }
+
   // Runs from the upstream `.middleware`, before any command handler. Env tagging is additive so
   // it never has to modify upstream's own env assignments.
   export async function bootstrap(): Promise<void> {
+    await KiloLog.init()
     if (!process.env[ENV_FEATURE]) process.env[ENV_FEATURE] = process.argv.includes("serve") ? "unknown" : "cli"
     if (!process.env[ENV_VERSION]) process.env[ENV_VERSION] = InstallationVersion
     process.env.KILO = "1"
+
+    // Must run before AppRuntime initializes the SQLite database, or the marker
+    // exists before legacy JSON can be imported.
+    await JsonMigration.bootstrap()
 
     const cfg = await AppRuntime.runPromise(Config.Service.use((c) => c.getGlobal()))
     await Telemetry.init({
@@ -87,6 +100,7 @@ export namespace KiloCli {
         log.warn("telemetry shutdown failed", { err })
       }
     } finally {
+      await KiloShutdown.run()
       await InstanceRuntime.disposeAllInstances() // safety net (no-op if already disposed)
     }
   }

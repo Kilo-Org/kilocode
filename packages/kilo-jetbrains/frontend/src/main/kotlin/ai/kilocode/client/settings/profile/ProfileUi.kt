@@ -27,6 +27,8 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 
 internal const val DASHBOARD_URL = "https://app.kilo.ai/profile"
+internal const val TOP_UP_URL = "https://app.kilo.ai/credits"
+internal const val PASS_URL = "https://kilo.ai/pricing/kilo-pass"
 
 internal val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -61,6 +63,14 @@ internal class ProfileUi(
         dashboard = {
             telemetry("Dashboard Opened", mapOf("surface" to "settings"))
             browse(DASHBOARD_URL)
+        },
+        topUp = {
+            telemetry("Credits Opened", mapOf("surface" to "settings"))
+            browse(TOP_UP_URL)
+        },
+        pass = {
+            telemetry("Kilo Pass Opened", mapOf("surface" to "settings"))
+            browse(PASS_URL)
         },
         logout = ::logout,
         organization = ::organization,
@@ -153,7 +163,7 @@ internal class ProfileUi(
         val p = prof
         // When loading/connecting and already showing the logged-in card, stay on it to
         // avoid focus loss during reconnects, initial loads, and org switches.
-        val transientLoad = s == KiloAppStatusDto.CONNECTING || s == KiloAppStatusDto.LOADING || s == KiloAppStatusDto.MIGRATION_REQUIRED
+        val transientLoad = s == KiloAppStatusDto.DOWNLOADING || s == KiloAppStatusDto.CONNECTING || s == KiloAppStatusDto.LOADING || s == KiloAppStatusDto.MIGRATION_REQUIRED
         if (transientLoad && shown == Card.LOGGED_IN) return Card.LOGGED_IN
         return when {
             s == KiloAppStatusDto.DISCONNECTED || transientLoad -> Card.LOGGED_OUT

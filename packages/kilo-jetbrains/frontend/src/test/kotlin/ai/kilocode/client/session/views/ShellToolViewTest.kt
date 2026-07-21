@@ -16,9 +16,12 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBHtmlPane
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import java.awt.Container
+import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
 
 @Suppress("UnstableApiUsage")
@@ -74,6 +77,22 @@ class ShellToolViewTest : BasePlatformTestCase() {
             view.markdown(),
         )
         assertEquals(listOf("git status", "clean"), view.codeTexts())
+    }
+
+    fun `test shell header subtitle is normalized to one html line`() {
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "printf 'one\ntwo'", "description" to "Run first line\nthen second line")
+            it.output = "one\ntwo"
+        }))
+
+        assertTrue(view.labelText().contains("Run first line then second line"))
+        assertFalse(view.labelText().contains("\n"))
+        assertTrue(view.subtitleMarkup().contains("<nobr>Run first line then second line</nobr>"))
+        assertEquals("printf 'one\ntwo'\n\none\ntwo", view.bodyText())
+        view.toggle()
+
+        assertTrue(view.markdown().contains("```shell-command\nprintf 'one\ntwo'\n```"))
+        assertTrue(view.markdown().contains("```shell-output\none\ntwo\n```"))
     }
 
     fun `test ansi escapes are preserved in markdown and decoded in output`() {
@@ -309,7 +328,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals(2, panes.size)
         labels.forEach {
             val label = it.border?.getBorderInsets(it)
-            assertEquals(JBUI.scale(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING), label?.left ?: 0)
+            assertEquals(JBUI.scale(SessionUiStyle.View.Layout.HORIZONTAL_PADDING), label?.left ?: 0)
             assertEquals(0, label?.right ?: 0)
         }
         panes.forEach {
@@ -328,8 +347,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         val output = (1..30).joinToString("\n") { "line $it" }
         val view = track(ShellToolView(tool().also { it.output = output }))
         view.toggle()
-        val root = view.mdComponent()!!
-        val pane = root.components.filterIsInstance<JBScrollPane>().single()
+        val pane = view.mdComponent()!!.components.filterIsInstance<JBScrollPane>().single()
         val editor = view.codeEditors().single()
         val nested = editor.getEditor(true)!!.scrollPane
         val line = editor.getEditor(true)!!.lineHeight
@@ -349,11 +367,111 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertTrue(pane.preferredSize.height < editor.preferredSize.height + chrome)
     }
 
+    fun `test shell header popup is available for collapsed command`() {
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "pwd", "description" to "Short")
+        }))
+
+        fitSubtitle(view)
+        assertNotNull(view.headerPopup())
+
+        cropSubtitle(view)
+        assertNotNull(view.headerPopup())
+
+        view.toggle()
+        assertNull(view.headerPopup())
+    }
+
+    fun `test shell header popup body uses shell command editor and splits semicolons`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf(
+                "command" to "echo one; echo two; echo three",
+                "description" to "A very long command description that should be cropped",
+            )
+        }))
+        cropSubtitle(view)
+        val req = view.headerPopup()!!
+        val body = req.build()
+
+        try {
+            val editors = popupCodeEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+
+            assertEquals(1, editors.size)
+            assertEquals("echo one;\n echo two;\n echo three", editors.single().text)
+            val pane = popupScrollPanes(body.component).single { it.viewport.view is com.intellij.ui.EditorTextField }
+            val pad = pane.viewportBorder.getBorderInsets(pane)
+            val field = editors.single()
+            val border = field.border.getBorderInsets(field)
+            val editor = field.getEditor(true)!!
+            val lines = field.text.lines().size
+            assertEquals(
+                SessionUiStyle.View.Code.topPadding(),
+                pad.top,
+            )
+            assertEquals(SessionUiStyle.View.Code.VIEWPORT_BOTTOM_PADDING, pad.bottom)
+            assertEquals(SessionUiStyle.View.Code.SCROLLBAR_HEIGHT, border.top)
+            assertEquals(0, border.bottom)
+            assertTrue(field.preferredSize.height - border.top >= editor.lineHeight * lines)
+            assertTrue(field.minimumSize.height - border.top >= editor.lineHeight * lines)
+            assertTrue(pane.preferredSize.height >= field.preferredSize.height + pad.top + pad.bottom)
+            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(350))
+            assertTrue(body.component.preferredSize.height > 0)
+            assertTrue(body.component.preferredSize.height <= JBUI.scale(450))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test shell header popup breaks chained operators outside quotes`() {
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf(
+                "command" to "cd /x && grep -n 'a;b' f | head || echo 'no | match'",
+                "description" to "A very long command description that should be cropped",
+            )
+        }))
+        cropSubtitle(view)
+        val body = view.headerPopup()!!.build()
+
+        try {
+            val editors = popupCodeEditors(body.component)
+            editors.forEach { it.getEditor(true) }
+            assertEquals(
+                "cd /x &&\n grep -n 'a;b' f |\n head ||\n echo 'no | match'",
+                editors.single().text,
+            )
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    fun `test shell header popup editors are disposed after churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "printf one; printf two", "description" to "A very long command description that should be cropped")
+        }))
+        cropSubtitle(view)
+
+        repeat(20) {
+            val body = view.headerPopup()!!.build()
+            popupCodeEditors(body.component).forEach { it.getEditor(true) }
+            Disposer.dispose(body.disposable)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
     fun `test view factory routes bash and replaces generic views`() {
         val bash = tool()
         val other = Tool("p1", "mystery", toolKind("mystery")).also { it.state = ToolExecState.COMPLETED }
 
-        assertTrue(ViewFactory.create(bash, openFile = {}) is ShellToolView)
+        assertTrue(ViewFactory.create(bash, openFile = { _, _ -> }) is ShellToolView)
         assertTrue(ViewFactory.shouldReplace(ToolView(bash), bash))
         assertTrue(ViewFactory.shouldReplace(ShellToolView(bash), other))
         assertFalse(ViewFactory.shouldReplace(ShellToolView(bash), bash))
@@ -385,5 +503,54 @@ class ShellToolViewTest : BasePlatformTestCase() {
     private fun track(view: ShellToolView): ShellToolView {
         views.add(view)
         return view
+    }
+
+    private fun layout(view: ShellToolView, width: Int) {
+        view.setSize(width, view.preferredSize.height)
+        layout(view)
+    }
+
+    private fun cropSubtitle(view: ShellToolView) {
+        layout(view, 120)
+        val label = subtitle(view)
+        label.setSize(1, label.preferredSize.height)
+    }
+
+    private fun fitSubtitle(view: ShellToolView) {
+        layout(view, 2000)
+        val label = subtitle(view)
+        label.setSize(label.preferredSize.width, label.preferredSize.height)
+    }
+
+    private fun subtitle(view: ShellToolView): JBLabel = labels(view).first { it.text == view.subtitleMarkup() }
+
+    private fun labels(root: Container): List<JBLabel> = root.components.flatMap { child ->
+        val nested = if (child is Container) labels(child) else emptyList()
+        if (child is JBLabel) nested + child else nested
+    }
+
+    private fun layout(root: Container) {
+        root.doLayout()
+        root.components.filterIsInstance<Container>().forEach(::layout)
+    }
+
+    private fun popupCodeEditors(root: JComponent): List<com.intellij.ui.EditorTextField> {
+        val found = mutableListOf<com.intellij.ui.EditorTextField>()
+        fun visit(component: JComponent) {
+            if (component is com.intellij.ui.EditorTextField) found.add(component)
+            component.components.filterIsInstance<JComponent>().forEach(::visit)
+        }
+        visit(root)
+        return found
+    }
+
+    private fun popupScrollPanes(root: JComponent): List<JBScrollPane> {
+        val found = mutableListOf<JBScrollPane>()
+        fun visit(component: JComponent) {
+            if (component is JBScrollPane) found.add(component)
+            component.components.filterIsInstance<JComponent>().forEach(::visit)
+        }
+        visit(root)
+        return found
     }
 }

@@ -1,10 +1,8 @@
 import { describe, expect, it } from "bun:test"
-import type { GlobalEvent } from "@kilocode/sdk/v2/client"
 import { resolveEventSessionId } from "../../src/services/cli-backend/connection-utils"
+import type { SSEPayload as Payload } from "../../src/services/cli-backend/sdk-sse-adapter"
 
 const noLookup = (_: string) => undefined
-
-type Payload = GlobalEvent["payload"]
 
 const message = {
   id: "m1",
@@ -156,6 +154,16 @@ describe("resolveEventSessionId", () => {
     expect(resolveEventSessionId(permission, noLookup)).toBe("s8")
     expect(resolveEventSessionId(question, noLookup)).toBe("s9")
     expect(resolveEventSessionId(suggestion, noLookup)).toBe("s10")
+  })
+
+  it("routes sandbox status events", () => {
+    const event = {
+      id: "e12",
+      type: "sandbox.status.changed",
+      properties: { sessionID: "s11", directory: "/repo", enabled: true, available: true, version: 1 },
+    } satisfies Payload
+
+    expect(resolveEventSessionId(event, noLookup)).toBe("s11")
   })
 
   it("returns undefined for global events", () => {

@@ -1,11 +1,16 @@
 import { Account } from "@/account/account"
 import { Agent } from "@/agent/agent"
+import { BackgroundJob } from "@/background/job"
 import { Config } from "@/config/config"
 import { EffectBridge } from "@/effect/bridge" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { MCP } from "@/mcp"
 import { Project } from "@/project/project"
+import { Provider } from "@/provider/provider" // kilocode_change
+import { ModelV2 } from "@opencode-ai/core/model" // kilocode_change
 import { Session } from "@/session/session"
+import type { SessionID } from "@/session/schema"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
 import { Filesystem } from "@/util/filesystem" // kilocode_change
@@ -41,8 +46,12 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     const config = yield* Config.Service
     const mcp = yield* MCP.Service
     const project = yield* Project.Service
+    const provider = yield* Provider.Service // kilocode_change
     const registry = yield* ToolRegistry.Service
     const worktreeSvc = yield* Worktree.Service
+    const sessions = yield* Session.Service
+    const background = yield* BackgroundJob.Service
+    const flags = yield* RuntimeFlags.Service
 
     const getConsole = Effect.fn("ExperimentalHttpApi.console")(function* () {
       const [state, groups] = yield* Effect.all(
@@ -96,9 +105,14 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     })
 
     const tool = Effect.fn("ExperimentalHttpApi.tool")(function* (ctx: { query: typeof ToolListQuery.Type }) {
+      // kilocode_change start
+      const found = yield* provider.getModel(ctx.query.provider, ctx.query.model).pipe(Effect.option)
+      const model = Option.getOrUndefined(found)
+      // kilocode_change end
       const list = yield* registry.tools({
         providerID: ctx.query.provider,
-        modelID: ctx.query.model,
+        modelID: model ? ModelV2.ID.make(model.api.id) : ctx.query.model, // kilocode_change
+        family: model?.family, // kilocode_change
         agent: yield* agents.defaultInfo(),
       })
       return list.map((item) => ({
@@ -128,9 +142,9 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
     // kilocode_change end
 
     const worktreeCreate = Effect.fn("ExperimentalHttpApi.worktreeCreate")(function* (ctx: {
-      payload: Worktree.CreateInput | undefined
+      payload: typeof Worktree.CreateInput.Type | void
     }) {
-      return yield* mapWorktreeError(worktreeSvc.create(ctx.payload))
+      return yield* mapWorktreeError(worktreeSvc.create(ctx.payload ?? undefined))
     })
 
     const worktreeRemove = Effect.fn("ExperimentalHttpApi.worktreeRemove")(function* (input: {
@@ -208,27 +222,25 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
       const current = sorted && directory ? sorted.find((dir) => Filesystem.contains(dir, directory)) : undefined
       // kilocode_change end
       if (roots && directory && !current) return HttpServerResponse.jsonUnsafe([]) // kilocode_change
-      const sessions = Array.from(
-        Session.listGlobal({
-          projectID, // kilocode_change
-          directory: ctx.query.worktrees ? undefined : ctx.query.directory, // kilocode_change
-          directories: roots, // kilocode_change
-          currentDirectory: directory, // kilocode_change
-          roots: ctx.query.roots,
-          start: ctx.query.start,
-          cursor: ctx.query.cursor,
-          search: ctx.query.search,
-          limit: limit + 1,
-          archived: ctx.query.archived,
-        }),
-      )
+      const all = yield* sessions.listGlobal({
+        projectID, // kilocode_change
+        directory: ctx.query.worktrees ? undefined : ctx.query.directory, // kilocode_change
+        directories: roots, // kilocode_change
+        currentDirectory: directory, // kilocode_change
+        roots: ctx.query.roots,
+        start: ctx.query.start,
+        cursor: ctx.query.cursor,
+        search: ctx.query.search,
+        limit: limit + 1,
+        archived: ctx.query.archived,
+      })
       // kilocode_change start - resolve worktree folder name for each session
       const result = sorted
-        ? sessions.map((session) => {
+        ? all.map((session) => {
             const root = sorted.find((dir) => Filesystem.contains(dir, session.directory))
             return { ...session, worktreeName: path.basename(root ?? session.directory) }
           })
-        : sessions
+        : all
       const list = result.length > limit ? result.slice(0, limit) : result
       // kilocode_change end
       return HttpServerResponse.jsonUnsafe(list, {
@@ -237,6 +249,21 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
             ? { "x-next-cursor": String(list[list.length - 1].time.updated) }
             : undefined,
       })
+    })
+
+    const sessionBackground = Effect.fn("ExperimentalHttpApi.sessionBackground")(function* (ctx: {
+      params: { sessionID: SessionID }
+    }) {
+      if (!flags.experimentalBackgroundSubagents) return false
+      const jobs = (yield* background.list()).filter(
+        (job) =>
+          job.type === "task" &&
+          job.status === "running" &&
+          job.metadata?.parentSessionId === ctx.params.sessionID &&
+          job.metadata.background !== true,
+      )
+      const promoted = yield* Effect.forEach(jobs, (job) => background.promote(job.id), { concurrency: "unbounded" })
+      return promoted.some((job) => job !== undefined)
     })
 
     const resource = Effect.fn("ExperimentalHttpApi.resource")(function* () {
@@ -260,6 +287,7 @@ export const experimentalHandlers = HttpApiBuilder.group(InstanceHttpApi, "exper
         .handle("worktreeDiffFile", worktreeDiffFile)
         // kilocode_change end
         .handle("session", session)
+        .handle("sessionBackground", sessionBackground)
         .handle("resource", resource)
     )
   }),

@@ -9,7 +9,7 @@ import { useRoute } from "@tui/context/route"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useTheme } from "@tui/context/theme"
-import { useTuiConfig } from "@tui/context/tui-config"
+import { useTuiConfig } from "@tui/config"
 import { useToast } from "@tui/ui/toast"
 import { getScrollAcceleration } from "@tui/util/scroll"
 import { errorMessage } from "@/util/error"
@@ -121,6 +121,10 @@ function all(sync: ReturnType<typeof useSync>) {
   return Object.values(sync.data.background_process).flat()
 }
 
+function currentProcesses(sync: ReturnType<typeof useSync>, sessionID: string) {
+  return all(sync).filter((item) => item.sessionID === sessionID || item.lifetime === "persistent")
+}
+
 export function DialogProcessList() {
   const dialog = useDialog()
   const route = useRoute()
@@ -132,7 +136,7 @@ export function DialogProcessList() {
 
   const list = createMemo(() => {
     const current = sid()
-    const items = mode() === "session" && current ? (sync.data.background_process[current] ?? []) : all(sync)
+    const items = mode() === "session" && current ? currentProcesses(sync, current) : all(sync)
     return sort(items)
   })
 

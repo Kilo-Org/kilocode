@@ -1,4 +1,58 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "Forbind Anaconda Desktop",
+  "provider.anaconda.title.manage": "Administrer Anaconda Desktop",
+  "provider.anaconda.status.checking": "Tjekker Anaconda Desktop...",
+  "provider.anaconda.status.opening": "Åbner Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "Opdaterer udbydermodeller...",
+  "provider.anaconda.status.ready": "Klar til at forbinde",
+  "provider.anaconda.status.waiting": "Venter på Desktop",
+  "provider.anaconda.status.attention": "Kræver opmærksomhed",
+  "provider.anaconda.status.unavailable": "Utilgængelig",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop understøttes ikke på {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "Installer Anaconda Desktop på denne maskine, og vend derefter tilbage hertil. Kilo kører ikke installationsprogrammet for dig.",
+  "provider.anaconda.state.notRunning":
+    "Åbn Anaconda Desktop, færdiggør opsætningen og log ind, og vælg derefter Tjek igen.",
+  "provider.anaconda.state.invalidConfig":
+    "Opsætningen af Anaconda Desktop er ufuldstændig. Åbn Desktop, færdiggør opsætningen, og genstart den om nødvendigt.",
+  "provider.anaconda.state.signedOut": "Åbn Anaconda Desktop og log ind, før du forbinder Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "Kilo kunne ikke få adgang til Anaconda Desktop. Åbn Desktop, log ind igen, og genstart den om nødvendigt.",
+  "provider.anaconda.state.unavailable":
+    "Anaconda Desktop svarer ikke endnu. Åbn den, og vent på, at applikationen er færdig med at starte.",
+  "provider.anaconda.state.noModel":
+    "Download en tekstgenereringsmodel i Anaconda Desktop. Vælg en med understøttelse af værktøjskald, når det er muligt, og start derefter dens server.",
+  "provider.anaconda.state.noServer_one":
+    "Der er 1 downloadet tekstgenereringsmodel tilgængelig. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
+  "provider.anaconda.state.noServer_other":
+    "Der er {{count}} downloadede tekstgenereringsmodeller tilgængelige. Start en modelserver i Anaconda Desktop. Modeller med understøttelse af værktøjskald anbefales kraftigt.",
+  "provider.anaconda.state.unhealthy":
+    "Den aktive inferensserver er ikke sund endnu. Tjek den i Anaconda Desktop, og genstart serveren om nødvendigt.",
+  "provider.anaconda.state.ready":
+    "Kilo fandt en sund lokal tekstgenereringsserver og kan importere dens aktuelle forbindelsesindstillinger.",
+  "provider.anaconda.server": "Aktiv inferensserver",
+  "provider.anaconda.context": "Kontekstvindue",
+  "provider.anaconda.contextValue": "{{count}} tokens",
+  "provider.anaconda.tools": "Værktøjskald",
+  "provider.anaconda.tools.supported": "Understøttet",
+  "provider.anaconda.tools.unsupported": "Ikke aktiveret",
+  "provider.anaconda.tools.unknown": "Ukendt",
+  "provider.anaconda.warning.title": "Værktøjsunderstøttelse er begrænset",
+  "provider.anaconda.warning.description":
+    "Denne server bekræfter ikke værktøjskald. Handlinger fra kodningsagenten kan mislykkes eller være utilgængelige. Fortsæt kun, hvis du accepterer disse begrænsninger.",
+  "provider.anaconda.action.download": "Download Anaconda Desktop",
+  "provider.anaconda.action.open": "Åbn Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "Tjek igen",
+  "provider.anaconda.action.continue": "Fortsæt alligevel",
+  "provider.anaconda.action.manage": "Administrer / Opdater",
+  "provider.anaconda.toast.refreshed.title": "Anaconda Desktop opdateret",
+  "provider.anaconda.toast.refreshed.description": "Den aktive lokale server og modeller er opdaterede i Kilo.",
+  "settings.providers.note.anacondaDesktop": "Kør en model, der serveres lokalt af Anaconda Desktop.",
+  "settings.providers.tag.local": "Lokal",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "Foreslået",
   "command.category.view": "Vis",
   "command.category.project": "Projekt",
@@ -82,7 +136,14 @@ export const dict = {
   "revert.banner.count_other": "{{count}} beskeder fortrudt",
   "revert.banner.redo": "Gentag",
   "revert.banner.redo.all": "Gentag alt",
-  "revert.banner.hint": "Send en ny besked for at gøre dette permanent",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Samtalen blev gendannet. Filændringer blev ikke gendannet, fordi snapshots er deaktiveret.",
+  "revert.banner.workspace.unavailable":
+    "Samtalen blev gendannet. Der var intet filkontrolpunkt tilgængeligt, så ændringer i arbejdsområdet blev ikke gendannet.",
+  "revert.banner.workspace.legacy":
+    "Samtalen blev gendannet. Status for gendannelse af arbejdsområdet er ikke tilgængelig for denne tidligere gendannelse.",
+  "revert.banner.workspace.enableSnapshots": "Aktivér snapshots",
   "revert.disabled.agentBusy": "Vent på at agenten er færdig",
   "command.session.compact": "Komprimér session",
   "command.session.compact.description": "Opsummer sessionen for at reducere kontekststørrelsen",
@@ -93,6 +154,30 @@ export const dict = {
   "command.session.unshare": "Stop deling af session",
   "command.session.unshare.description": "Stop med at dele denne session",
   "command.session.export": "Eksporter sessionsudskrift",
+
+  "agentRequirements.skill.installed": "Installeret",
+  "agentRequirements.skill.checkFailed": "Skill-kontrollen mislykkedes",
+  "agentRequirements.skill.missing": "Ikke installeret",
+  "agentRequirements.mcp.connected": "Forbundet",
+  "agentRequirements.mcp.checkFailed": "MCP-kontrollen mislykkedes",
+  "agentRequirements.mcp.missing": "Ikke forbundet",
+  "agentRequirements.extension.installed": "Installeret",
+  "agentRequirements.extension.checkFailed": "Kontrollen af VS Code-udvidelsen mislykkedes",
+  "agentRequirements.extension.missing": "Ikke installeret",
+  "agentRequirements.extension.description": "Installer de manglende udvidelser i VS Code.",
+  "agentRequirements.group.skills": "Skills",
+  "agentRequirements.group.mcps": "MCP’er",
+  "agentRequirements.group.extensions": "VS Code-udvidelser",
+  "agentRequirements.blocked.title": "Forudsætninger for {{agent}}-agenten",
+  "agentRequirements.blocked.description": "Denne agent skal have følgende værktøjer, før den kan køre.",
+  "agentRequirements.prompt.blocked": "Fuldfør først de krævede kontroller for at bruge denne agent",
+  "agentRequirements.action.openMarketplace": "Åbn Marketplace",
+  "agentRequirements.error.unknownAgent": "Den valgte agent blev ikke fundet.",
+  "agentRequirements.error.malformedDeclaration": "Denne agent har en ugyldig kravdeklaration.",
+  "agentRequirements.error.discoveryFailed": "Kilo kunne ikke kontrollere de tilgængelige skills.",
+  "agentRequirements.error.mcpStatusFailed": "Kilo kunne ikke kontrollere MCP-serverstatus.",
+  "agentRequirements.error.scopeMismatch": "Denne agentkravskontrol er ikke længere aktiv.",
+  "agentRequirements.error.requestFailed": "Kilo kunne ikke kontrollere agentkravene.",
 
   "palette.search.placeholder": "Søg i filer, kommandoer og sessioner",
   "palette.empty": "Ingen resultater fundet",
@@ -174,6 +259,7 @@ export const dict = {
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Data kan bruges til træning",
   "model.tag.latest": "Nyeste",
+  "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalet",
   "model.group.favorites": "Favoritter",
   "model.group.collapse": "Skjul {{group}}",
@@ -202,6 +288,7 @@ export const dict = {
   "model.preview.label.average": "Est. gennemsnitspris",
   "model.preview.label.context": "Kontekst",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "Modelvalg",
   "model.preview.label.completion": "Fuldførelse",
   "model.preview.label.costAttempt": "Pris / forsøg",
   "model.preview.value.notSupported": "Ikke understøttet",
@@ -270,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Inkluder aktiv fil",
   "prompt.context.removeActiveFile": "Fjern aktiv fil fra kontekst",
   "prompt.context.removeFile": "Fjern fil fra kontekst",
+  "prompt.thinking.tooltip": "Ræsonnementsindsats",
   "prompt.action.attachFile": "Vedhæft fil",
   "prompt.attachment.remove": "Fjern vedhæftning",
   "prompt.action.send": "Send",
@@ -286,8 +374,27 @@ export const dict = {
   "prompt.action.resetModel": "Nulstil model til standard",
   "prompt.action.enhanceDescription":
     "Knappen 'Forbedr prompt' hjælper med at forbedre din forespørgsel ved at give ekstra kontekst, præcisering eller omformulering. Prøv at skrive en forespørgsel her og klik på knappen igen for at se hvordan det virker.",
+  "prompt.action.sandbox.enable": "Aktivér sandbox",
+  "prompt.action.sandbox.disable": "Deaktivér sandbox",
+  "prompt.action.sandbox.enabled":
+    "Sandbox er aktiveret. Shell-kommandoer for agenten er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.disabled":
+    "Sandbox er deaktiveret. Klik for at begrænse skrivning af shell-kommandoer for agenten til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.status.enabled": "Sandbox aktiveret",
+  "prompt.action.sandbox.status.disabled": "Sandbox deaktiveret",
+  "prompt.action.sandbox.filesystem": "Filsystem",
+  "prompt.action.sandbox.network": "Netværk",
+  "prompt.action.sandbox.filesystem.restricted": "Begrænset",
+  "prompt.action.sandbox.network.blocked": "Blokeret",
+  "prompt.action.sandbox.network.allowed": "Tilladt",
+  "prompt.action.sandbox.unrestricted": "Ubegrænset",
+  "prompt.action.sandbox.description.enabled": "Skrivning er begrænset til projekt- og Kilo-mapperne.",
+  "prompt.action.sandbox.description.disabled": "Klik for at begrænse skriveadgang til filsystemet og netværksadgang.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "Klik for at begrænse skriveadgang til filsystemet. Netværksadgang er fortsat tilladt ifølge dine sandboxindstillinger.",
 
   "speechToText.tooltip.start": "Start stemmeinput med Kilo Gateway",
+  "speechToText.tooltip.starting": "Starter mikrofonen... Vent med at tale.",
   "speechToText.tooltip.stop": "Stop lydoptagelse",
   "speechToText.tooltip.transcribing": "Transskriberer... Klik for at annullere.",
   "speechToText.tooltip.error": "Stemmeinput mislykkedes. Klik for at rydde.",
@@ -532,7 +639,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep-søgning",
   "ui.permission.toolLabel.webSearch": "Websøgning",
   "ui.permission.toolLabel.list": "Liste",
-  "ui.permission.toolLabel.externalDirectory": "Læs ekstern mappe",
+  "ui.permission.toolLabel.externalDirectory": "Giv adgang til ekstern mappe",
   "ui.permission.toolLabel.webFetch": "Webhentning",
   "ui.permission.toolLabel.task": "Opgave",
   "ui.permission.toolLabel.skill": "Færdighed",
@@ -806,6 +913,9 @@ export const dict = {
   "settings.indexing.title": "Indeksering",
   "settings.indexing.enable.title": "Aktivér indeksering",
   "settings.indexing.enable.description": "Slå semantisk kodebase-indeksering til eller fra.",
+  "settings.indexing.showButton.title": "Vis knappen, når indeksering er slået fra",
+  "settings.indexing.showButton.description":
+    "Vis indekseringsknappen under promptfeltet, mens indeksering er slået fra. Hvis knappen er skjult, skal du åbne Indstillinger > Indeksering for at slå indeksering til.",
   "settings.indexing.globalEnable.title": "Aktivér globalt",
   "settings.indexing.globalEnable.description": "Aktivér indeksering for alle arbejdsområder.",
   "settings.indexing.projectEnable.title": "Aktivér for dette projekt",
@@ -830,6 +940,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-nøgle",
   "settings.indexing.qdrantApiKey.description": "Valgfri API-nøgle til Qdrant-instansen.",
   "settings.indexing.qdrantApiKey.placeholder": "Valgfri API-nøgle",
+  "settings.indexing.fileExtensions.title": "Filtypenavne",
+  "settings.indexing.fileExtensions.description":
+    "Kommaadskilt tilladelsesliste. Lad feltet være tomt for at bruge de indbyggede standardindstillinger.",
+  "settings.indexing.fileExtensions.invalid": "Ugyldig filtype: {{extension}}",
   "settings.indexing.lancedbDirectory.title": "LanceDB-mappe",
   "settings.indexing.lancedbDirectory.description": "Valgfri mappe til det lokale LanceDB-lager.",
   "settings.indexing.lancedbDirectory.placeholder": "Lad være tom for standard",
@@ -858,7 +972,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "Brugerdefineret udbyder",
   "settings.providers.connected.environmentDescription": "Forbundet fra dine miljøvariabler",
   "settings.providers.action.signInChatGPT": "Log ind med ChatGPT",
-  "settings.providers.custom.description": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
+  "settings.providers.custom.description": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.subagentModel.title": "Underagentmodel",
   "settings.providers.subagentModel.description":
     "Standardmodel og ræsonnementsindsats for task-tool-underagenter. Lad den være tom for at nedarve den kaldende agents model.",
@@ -866,11 +980,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "Skjul Kilo Gateway-modeller, hvis udbydere muligvis bruger dine prompts til træning.",
   "settings.providers.modeModels": "Model pr. tilstand",
-  "settings.providers.custom.note": "Tilføj en OpenAI-kompatibel udbyder via basis-URL.",
+  "settings.providers.custom.note": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.modeModels.description":
     "Tilsidesæt standardmodellen for bestemte tilstande. Hvis ikke angivet, bruges den globale standardmodel.",
   "provider.custom.title": "Brugerdefineret udbyder",
-  "provider.custom.description.prefix": "Konfigurer en OpenAI-kompatibel udbyder. Se ",
+  "provider.custom.description.prefix": "Konfigurer en brugerdefineret udbyder. Se ",
   "provider.custom.description.link": "dokumentation for udbyderkonfiguration",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "Udbyder-ID",
@@ -890,6 +1004,7 @@ export const dict = {
   "provider.custom.models.name.label": "Navn",
   "provider.custom.models.name.placeholder": "Visningsnavn",
   "provider.custom.models.reasoning.label": "Ræsonnement",
+  "provider.custom.models.modalities.image": "Billede",
   "provider.custom.models.variants.label": "Varianter",
   "provider.custom.models.variants.add": "Tilføj variant",
   "provider.custom.models.variants.remove": "Fjern variant",
@@ -1137,6 +1252,8 @@ export const dict = {
 
   "common.retry": "Prøv igen",
   "common.refresh": "Opdatér",
+  "common.reload": "Genindlæs",
+  "common.reloadDescription": "Genindlæs konfiguration, færdigheder, agenter og kommandoer fra disken",
 
   "profile.title": "Profil",
   "profile.notLoggedIn": "Ikke logget ind",
@@ -1144,6 +1261,10 @@ export const dict = {
   "profile.balance.title": "Saldo",
   "profile.balance.refresh": "Opdatér saldo",
   "profile.action.dashboard": "Dashboard",
+  "profile.action.topUp": "Fyld op",
+  "profile.pass.subscribe": "Få Kilo Pass for at tilføje kredit og optjene bonusser",
+  "profile.pass.bonus": "Bonus",
+  "profile.pass.renews": "Fornyes",
   "profile.action.logout": "Log ud",
 
   "settings.section.configuration": "Konfiguration",
@@ -1181,6 +1302,11 @@ export const dict = {
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",
+  "session.costAlert.header": "Advarsel om sessionsomkostning",
+  "session.costAlert.continue": "Fortsæt",
+  "session.costAlert.question":
+    "Denne session er lige kommet over din advarselsgrænse pr. session på {{limit}} og koster {{cost}}. Fortsæt?",
+  "session.costAlert.stop": "Stop",
 
   "ui.sessionTurn.cancel": "Annuller",
   "ui.sessionTurn.status.thinking": "Tænker...",
@@ -1226,6 +1352,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "Dette nulstiller kun VS Code-udvidelsesspecifikke indstillinger til deres standardværdier. Indstillinger der deles med CLI, såsom tilstande og regler for automatisk godkendelse, er gemt i CLI-konfigurationen og vil ikke blive nulstillet.",
   "settings.aboutKiloCode.resetSettings.button": "Nulstil alle indstillinger",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "Overførsel af indstillinger",
   "settings.aboutKiloCode.settingsTransfer.description":
     "Eksportér eller importér dine indstillinger for at overføre dem mellem VS Code-instanser.",
@@ -1310,6 +1437,12 @@ export const dict = {
   "settings.experimental.batch.description": "Aktiver batchbehandling af flere værktøjskald",
   "settings.experimental.codebaseSearch.title": "Kodesøgning",
   "settings.experimental.codebaseSearch.description": "Aktiver AI-drevet naturlig sprogsøgning på tværs af kodebasen",
+  "settings.experimental.imageGeneration.title": "Billedgenerering",
+  "settings.experimental.imageGeneration.description": "Aktiver AI-billedgenerering",
+  "settings.experimental.imageGenerationModel.title": "Billedmodel",
+  "settings.experimental.imageGenerationModel.description": "Billedgenereringsmodel",
+  "settings.experimental.imageGenerationModel.placeholder": "Standard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Tale til tekst",
   "settings.experimental.speechToText.description":
     "Aktivér stemmeinput i prompt-felter ved hjælp af din Kilo-konto gennem Kilo Gateway.",
@@ -1317,8 +1450,28 @@ export const dict = {
     "Aktivér og log ind på Kilo-udbyderen for at bruge Speech to Text. Speech to Text understøttes i øjeblikket kun med Kilo Gateway.",
   "settings.models.speechToTextModel.title": "Model til tale til tekst",
   "settings.models.speechToTextModel.description": "Vælg Kilo Gateway-transskriptionsmodellen til stemmeinput.",
+  "settings.experimental.nativeNotebookTools.title": "Indbyggede notebook-værktøjer",
+  "settings.experimental.nativeNotebookTools.description":
+    "Aktivér eksperimentelle værktøjer til at læse, redigere og køre VS Code-notebooks",
   "settings.experimental.continueOnDeny.title": "Fortsæt ved afvisning",
   "settings.experimental.continueOnDeny.description": "Fortsæt agentløkken, når en tilladelse afvises",
+  "settings.sandboxing.title": "Sandboxing",
+  "settings.sandboxing.network.title": "Begræns netværksadgang",
+  "settings.sandboxing.network.description":
+    "Blokerer direkte udgående adgang fra modelgenererede kommandoer og HTTP-værktøjer. Lokale og eksterne MCP-værktøjer er ikke tilgængelige, mens begrænsningen er aktiv. Udbydertrafik og pålidelige plugin-hooks forbliver uden for denne begrænsning.",
+
+  "settings.sandboxing.allowedHosts.title": "Tilladte netværksdestinationer",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-værts- og portdestinationer for sandboxet HTTP- og HTTPS-proxytrafik. GitHub CLI og HTTPS Git kræver typisk github.com:443 og api.github.com:443. Ændringer gælder for nye sessioner.",
+  "settings.sandboxing.writablePaths.title": "Yderligere skrivbare stier",
+  "settings.sandboxing.writablePaths.description":
+    "Yderligere filsystemstier, som sandkassen tillader skrivning til (f.eks. /tmp, /var/log). Disse flettes med de standardskrivbare stier, når sandkassen er aktiv.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "Aktivér SWE-Pruner: opgavebevidst beskæring af store output fra læse-, søge- og shellværktøjer, styret af et fokusspørgsmål fra agenten",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
+  "settings.experimental.swePrunerModel.description":
+    "Model til beskæring af værktøjsoutput; som standard den konfigurerede lille model",
   "settings.experimental.mcpTimeout.title": "MCP-timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout for MCP-serveranmodninger i millisekunder",
   "settings.experimental.remote.title": "Remote-styring",
@@ -1343,11 +1496,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Brugerdefineret prompt",
   "settings.agentBehaviour.prompt.description": "Yderligere systemprompt for denne agent",
   "settings.agentBehaviour.temperature.title": "Temperatur",
-  "settings.agentBehaviour.temperature.description": "Samplingtemperatur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Styrer, hvor tilfældige AI-svarene er (0–2). Lavere værdier (f.eks. 0.2) giver fokuserede og ensartede resultater. Højere værdier (f.eks. 1.0) giver mere varierede og kreative svar. Lad feltet være tomt for at bruge modellens standardværdi.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Tærskel for nucleus-sampling (0–1). Begrænser valget af tokens til den mindste mængde, hvis kumulative sandsynlighed når P. Lavere værdier gør resultatet mere fokuseret; højere værdier tillader større variation. Lad feltet være tomt for at bruge modellens standardværdi.",
   "settings.agentBehaviour.maxSteps.title": "Maks. trin",
-  "settings.agentBehaviour.maxSteps.description": "Maksimale agentiterationer",
+  "settings.agentBehaviour.maxSteps.description":
+    "Det maksimale antal agenttrin. Ved grænsen bliver agenten instrueret i at stoppe med at bruge værktøjer og give et endeligt svar. Forøg værdien til komplekse opgaver med flere trin; sænk den for at holde svarene kortere og mere forudsigelige.",
   "settings.agentBehaviour.hidden.title": "Skjult",
   "settings.agentBehaviour.hidden.description": "Skjul denne agent fra tilstandsvælgeren i chatinput",
   "settings.agentBehaviour.disable.title": "Deaktiveret",
@@ -1450,9 +1606,15 @@ export const dict = {
     "Ingen brugerdefinerede kommandoer konfigureret. Tilføj kommandoer til opencode.json for at se dem her.",
   "settings.agentBehaviour.workflows.detail.description": "Beskrivelse",
   "settings.agentBehaviour.workflows.detail.template": "Skabelon",
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
+    "Kør shell-kommandoer for agenten i en sandbox på operativsystemniveau, der begrænser skrivning til projekt- og Kilo-tilstandsmapperne",
 
   "settings.autoApprove.description":
     "Definer, hvordan værktøjer må køre. De fleste værktøjer er som standard indstillet til Tillad. doom_loop og external_directory er som standard indstillet til Spørg.",
+  "settings.autoApprove.maxCost.title": "Advarsel om sessionsomkostning",
+  "settings.autoApprove.maxCost.description":
+    "Advar før en session fortsættes, når forbruget overstiger dette USD-beløb. Brug hele dollars; lad feltet være tomt for at deaktivere.",
   "settings.autoApprove.level.allow": "Tillad",
   "settings.autoApprove.level.ask": "Spørg",
   "settings.autoApprove.level.deny": "Afvis",
@@ -1490,6 +1652,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "Opret kontrolpunkter før filredigeringer",
   "settings.context.autoCompaction.title": "Automatisk komprimering",
   "settings.context.autoCompaction.description": "Komprimér automatisk kontekst, før den når grænsen",
+  "settings.context.compaction.title": "Komprimering",
   "settings.context.compactionLimit.title": "Grænse for automatisk komprimering",
   "settings.context.compactionLimit.description":
     "Komprimér, når konteksten når denne procentdel af modelvinduet. Lad feltet være tomt for kun at bruge sikkerhedsbufferen.",
@@ -1497,6 +1660,42 @@ export const dict = {
   "settings.context.prune.description": "Fjern gamle værktøjsoutput under komprimering",
   "settings.context.watcherPatterns": "Filvagt-ignormønstre",
   "settings.context.watcherPatterns.description": "Glob-mønstre for filer, som vagten skal ignorere",
+
+  "settings.context.memory.title": "Hukommelse",
+  "settings.context.memory.project.title": "Projekthukommelse",
+  "settings.context.memory.autoSave.title": "Gem projekthukommelse automatisk",
+  "settings.context.memory.autoSave.description":
+    "Gemmer automatisk varige projektfakta fra afsluttede ture, når hukommelse er aktiveret.",
+  "settings.context.memory.index.title": "Hukommelsesindeks",
+  "settings.context.memory.status.notLoaded": "Ikke indlæst",
+  "settings.context.memory.status.disabled": "Deaktiveret",
+  "settings.context.memory.status.enabledTokensOps":
+    "Aktiveret - ~{{session}} opstartstokens i denne session - ~{{tokens}} tokens i gemt indeks - seneste handling {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "Aktivér hukommelse for at oprette projektets hukommelsesfiler.",
+  "settings.context.memory.inspect": "Inspicér",
+  "settings.context.memory.rebuild": "Genopbyg hukommelsesindeks",
+  "chat.memory.status.loading": "Indlæser hukommelsesstatus",
+  "chat.memory.status.active": "Hukommelse aktiv i denne session",
+  "chat.memory.project.enabled": "Projekthukommelse aktiveret",
+  "chat.memory.project.disabled": "Projekthukommelse deaktiveret",
+  "chat.memory.command.failed": "Hukommelseskommando mislykkedes",
+  "chat.memory.inspect": "Inspicér hukommelse",
+  "chat.memory.remember": "Husk",
+  "chat.memory.forget": "Glem",
+  "chat.memory.rebuild": "Genopbyg indeks",
+  "chat.memory.disable": "Deaktivér hukommelse",
+  "chat.memory.enable": "Aktivér hukommelse",
+  "chat.memory.verbose": "Detaljeret",
+  "chat.memory.activity.idle": "Ingen hukommelsesaktivitet i denne session",
+  "chat.memory.activity.loaded": "indlæste {{tokens}} tokens",
+  "chat.memory.activity.recalled": "genkaldte {{count}}",
+  "chat.memory.activity.saved": "gemte {{count}}",
+  "chat.memory.activity.loaded.item": "indlæst: {{item}}",
+  "chat.memory.activity.recalled.item": "genkaldt: {{item}}",
+  "chat.memory.activity.saved.item": "gemt: {{item}}",
+  "chat.memory.badge.recalled": "Hukommelse genkaldt",
+  "chat.memory.badge.items": "{{count}} elementer",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Brug brugerdefineret prompt",
@@ -1508,6 +1707,11 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "f.eks. Generer commit messages på spansk efter conventional commits formatet. Returner KUN commit message.",
 
+  "settings.commitMessage.language.sync": "Synkroniser med UI sprog",
+  "settings.commitMessage.language.title": "Sprog",
+  "settings.commitMessage.language.description":
+    "Vælg hvilket sprog der skal bruges til AI-genererede commit-meddelelser:",
+
   "settings.display.username.title": "Brugernavn",
   "settings.display.username.description": "Brugerdefineret brugernavn i samtaler",
   "settings.display.fontSize.title": "Skriftstørrelse",
@@ -1515,6 +1719,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Skjul ræsonnement automatisk",
   "settings.display.reasoningAutoCollapse.description":
     "Skjuler ræsonnementsblokke, når agenten er færdig med at skrive dem. Lad den være slået fra for at holde ræsonnement udvidet, medmindre du skjuler det manuelt.",
+  "settings.display.shiftTabCycle.title": "Skift ræsonnementsindsats med Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Tryk på Shift+Tab i et promptindtastningsfelt for at skifte til næste niveau af ræsonnementsindsats. Deaktivér for at beholde Shift+Tab til tastaturnavigation af fokus.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1679,4 +1886,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Planen er klar:",
+  "chat.search.placeholder": "Søg i chat…",
+  "chat.search.toggle": "Søg i chat",
+  "chat.search.matchCase": "Forskel på store/små bogstaver",
+  "chat.search.matchWholeWord": "Match helt ord",
+  "chat.search.useRegex": "Brug regulært udtryk",
+  "chat.search.previousMatch": "Forrige match",
+  "chat.search.nextMatch": "Næste match",
+  "chat.search.close": "Luk søgning",
+  "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
+  "chat.search.noResults": "Ingen resultater",
+  "chat.search.searchingHistory": "Søger i tidligere beskeder…",
 }

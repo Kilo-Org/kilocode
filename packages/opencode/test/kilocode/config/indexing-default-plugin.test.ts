@@ -8,11 +8,13 @@ import { Account } from "../../../src/account/account"
 import { Auth } from "../../../src/auth"
 import { Config } from "../../../src/config/config"
 import type { ConfigPlugin } from "../../../src/config/plugin"
+import type { ConfigPluginV1 } from "@opencode-ai/core/v1/config/plugin"
 import { KilocodeDefaultPlugins } from "../../../src/kilocode/config/default-plugins"
 import { INDEXING_PLUGIN } from "../../../src/kilocode/indexing-feature"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { Env } from "../../../src/env"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { Git } from "../../../src/git"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { Filesystem } from "../../../src/util/filesystem"
 import { provideTestInstance } from "../../fixture/fixture"
@@ -39,8 +41,9 @@ const unexpectedHttp = HttpClient.make((request) =>
   Effect.die(`unexpected http request: ${request.method} ${request.url}`),
 )
 const layer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer),
   Layer.provide(EffectFlock.defaultLayer),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(emptyAuth),
   Layer.provide(emptyAccount),
@@ -56,7 +59,7 @@ describe("kilocode default indexing plugin", () => {
   })
 
   test("injects indexing without registering an external plugin origin", () => {
-    const config: { plugin?: ConfigPlugin.Spec[]; plugin_origins?: ConfigPlugin.Origin[] } = {}
+    const config: { plugin?: ConfigPluginV1.Spec[]; plugin_origins?: ConfigPlugin.Origin[] } = {}
 
     KilocodeDefaultPlugins.apply(config, { disabled: false })
 

@@ -120,6 +120,7 @@ export const dict = {
 
   "ui.tool.read": "Odczyt",
   "ui.tool.loaded": "Załadowano",
+  "ui.tool.swePruned": "SWE-Pruner · zachowano {{kept}} z {{total}} wierszy", // kilocode_change
   "ui.tool.list": "Lista",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -170,7 +171,9 @@ export const dict = {
   "ui.patch.action.patched": "Załatano",
 
   "ui.question.subtitle.answered": "{{count}} odpowiedzi",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(brak odpowiedzi)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(bez odpowiedzi)",
   "ui.question.multiHint": "Zaznacz wszystkie pasujące",
   "ui.question.singleHint": "Wybierz jedną odpowiedź",

@@ -1,13 +1,14 @@
 import path from "path"
+import { existsSync, realpathSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
 
 export namespace ConfigProtection {
   /**
    * Config directory prefixes (relative paths, forward-slash normalized).
-   * Matches .kilo/, .kilocode/, .opencode/ at any depth within the project.
+   * Matches .kilo/ and legacy .kilocode/ at any depth within the project.
    */
-  const CONFIG_DIRS = [".kilo/", ".kilocode/", ".opencode/"]
+  const CONFIG_DIRS = [".kilo/", ".kilocode/"]
 
   /**
    * Subdirectories under CONFIG_DIRS that are NOT config files (e.g. plan files).
@@ -23,6 +24,10 @@ export namespace ConfigProtection {
 
   /** Metadata key used to signal the UI to hide the "Allow always" option. */
   export const DISABLE_ALWAYS_KEY = "disableAlways" as const
+
+  /** Metadata key used to signal the UI this is a config-file-edit request, so the
+   * "Config file edits always require approval" explanation copy applies. */
+  export const CONFIG_PROTECTED_KEY = "configProtected" as const
 
   function normalize(p: string): string {
     return path.posix.normalize(p.replaceAll("\\", "/"))
@@ -71,6 +76,42 @@ export namespace ConfigProtection {
     ).filter(Boolean)
   }
 
+  function physical(filepath: string): string | undefined {
+    try {
+      const parts: string[] = []
+      let current = path.resolve(filepath)
+      while (!existsSync(current)) {
+        const parent = path.dirname(current)
+        if (parent === current) return
+        parts.unshift(path.basename(current))
+        current = parent
+      }
+      return path.join(realpathSync.native(current), ...parts)
+    } catch {
+      return
+    }
+  }
+
+  function skillRoot(pattern: string): string | undefined {
+    const dir = pattern.replace(/[\\/]\*$/, "")
+    if (!path.isAbsolute(dir)) return
+    const target = physical(dir)
+    if (!target) return
+
+    const roots = [...configs(), ...KilocodePaths.globalDirs()]
+    for (const root of roots) {
+      for (const name of ["skill", "skills"]) {
+        const skills = physical(path.join(root, name))
+        if (!skills || !within(target, skills) || within(skills, target)) continue
+        const skill = path.relative(skills, target).split(path.sep)[0]
+        if (!skill || /[*?\[\]{}]/.test(skill)) continue
+        const candidate = normalize(path.join(skills, skill))
+        if (/[*?\[\]{}]/.test(candidate)) continue
+        return candidate
+      }
+    }
+  }
+
   function fallback(p: string): boolean {
     if (process.platform !== "win32") return false
     return keys(p).some(
@@ -93,18 +134,35 @@ export namespace ConfigProtection {
   /** Check if an absolute path is inside a known CLI config directory. */
   export function isAbsolute(filepath: string): boolean {
     if (fallback(filepath)) return true
+    const target = physical(filepath)
 
     // ~/.config/kilo/ (XDG config)
     for (const dir of configs()) {
-      if (within(filepath, dir)) return true
+      const root = physical(dir)
+      if (within(filepath, dir) || (target && root && within(target, root))) return true
     }
 
     // ~/.kilo/ and ~/.kilocode/ (legacy global dirs)
     for (const dir of KilocodePaths.globalDirs()) {
-      if (within(filepath, dir)) return true
+      const root = physical(dir)
+      if (within(filepath, dir) || (target && root && within(target, root))) return true
     }
 
     return false
+  }
+
+  /** Return the only persistent rule allowed for one exact global skill subtree. */
+  export function globalSkillPattern(request: { permission: string; patterns: readonly string[] }): string | undefined {
+    if (request.permission !== "external_directory" || request.patterns.length === 0) return
+
+    const roots = request.patterns.map(skillRoot)
+    const first = roots[0]
+    if (!first || roots.some((root) => !root || !within(root, first) || !within(first, root))) return
+    return normalize(path.join(first, "*"))
+  }
+
+  export function isGlobalSkillRequest(request: { permission: string; patterns: readonly string[] }): boolean {
+    return globalSkillPattern(request) !== undefined
   }
 
   /** Check a single path (absolute or relative) against config protection. */
@@ -130,7 +188,8 @@ export namespace ConfigProtection {
       if (request.metadata?.access === "read") return false
       for (const pattern of request.patterns) {
         const dir = pattern.replace(/[\\/]\*$/, "")
-        if (isAbsolute(dir)) return true
+        const target = physical(dir)
+        if (isAbsolute(dir) || (target && isAbsolute(target))) return true
       }
       return false
     }

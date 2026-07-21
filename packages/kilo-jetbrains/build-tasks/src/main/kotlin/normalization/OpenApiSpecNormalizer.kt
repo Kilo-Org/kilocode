@@ -106,7 +106,7 @@ internal object OpenApiSpecNormalizer {
 
     /**
      * Fix the `/kilo/profile` GET 200 response schema: Effect's OpenAPI generator
-     * emits `balance` and `currentOrgId` as non-nullable required fields even
+     * emits `balance`, `kiloPass`, and `currentOrgId` as non-nullable required fields even
      * though the server schema is `Schema.NullOr(...)`.  Wrap each non-nullable
      * property in `anyOf: [<original-schema>, {"type": "null"}]` so the generated
      * Kotlin model uses a nullable type.  Already-nullable properties (those that
@@ -124,16 +124,19 @@ internal object OpenApiSpecNormalizer {
             as? JsonObject ?: return root
         val props = schema["properties"] as? JsonObject ?: return root
 
-        val nullable = setOf("balance", "currentOrgId")
+        val keys = setOf("balance", "kiloPass", "currentOrgId")
         val fixed = JsonObject(props.mapValues { (key, value) ->
-            if (key !in nullable) return@mapValues value
-            val obj = value as? JsonObject ?: return@mapValues value
-            // Skip if already wrapped (has anyOf containing {type:null}).
-            val existing = obj["anyOf"] as? JsonArray
-            if (existing != null && existing.any {
-                    (it as? JsonObject)?.get("type")?.let { t -> (t as? JsonPrimitive)?.content } == "null"
-                }) return@mapValues value
-            JsonObject(mapOf("anyOf" to JsonArray(listOf(obj, JsonObject(mapOf("type" to JsonPrimitive("null")))))))
+            if (key !in keys) return@mapValues value
+            val wrapped = nullable(value)
+            when (key) {
+                "balance" -> nullableProps(wrapped, setOf("balance"))
+                "kiloPass" -> nullableProps(wrapped, setOf(
+                    "currentPeriodBaseCreditsUsd",
+                    "currentPeriodUsageUsd",
+                    "currentPeriodBonusCreditsUsd",
+                ))
+                else -> wrapped
+            }
         })
 
         // Rebuild nested objects up to root.
@@ -151,6 +154,29 @@ internal object OpenApiSpecNormalizer {
         val newPaths = JsonObject(paths + mapOf("/kilo/profile" to newProfile))
         return JsonObject(root + mapOf("paths" to newPaths))
     }
+
+    private fun nullable(value: JsonElement): JsonElement {
+        val obj = value as? JsonObject ?: return value
+        val any = obj["anyOf"] as? JsonArray
+        if (any != null && any.any(::nullSchema)) return obj
+        return JsonObject(mapOf("anyOf" to JsonArray(listOf(obj, JsonObject(mapOf("type" to JsonPrimitive("null")))))))
+    }
+
+    private fun nullableProps(value: JsonElement, names: Set<String>): JsonElement {
+        val obj = value as? JsonObject ?: return value
+        val any = obj["anyOf"] as? JsonArray
+        if (any != null) {
+            return JsonObject(obj + mapOf("anyOf" to JsonArray(any.map { nullableProps(it, names) })))
+        }
+        val props = obj["properties"] as? JsonObject ?: return obj
+        val fixed = JsonObject(props.mapValues { (key, prop) ->
+            if (key in names) nullable(prop) else prop
+        })
+        return JsonObject(obj + mapOf("properties" to fixed))
+    }
+
+    private fun nullSchema(value: JsonElement) =
+        (value as? JsonObject)?.get("type")?.let { (it as? JsonPrimitive)?.content } == "null"
 
     /**
      * Deduplicate the root-level "tags" array by name — the spec validator

@@ -1,16 +1,15 @@
 import { Layer, ManagedRuntime } from "effect"
 import { attach } from "./run-service"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import * as Observability from "@opencode-ai/core/observability"
 
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { Bus } from "@/bus"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { Database } from "@opencode-ai/core/database/database"
+import { Credential } from "@opencode-ai/core/credential" // kilocode_change
 import { Auth } from "@/auth"
 import { Account } from "@/account/account"
 import { Config } from "@/config/config"
 import { Git } from "@/git"
-import { Ripgrep } from "@/file/ripgrep"
-import { File } from "@/file"
-import { FileWatcher } from "@/file/watcher"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Storage } from "@/storage/storage"
 import { Snapshot } from "@/snapshot"
 import { Plugin } from "@/plugin"
@@ -44,33 +43,37 @@ import { Format } from "@/format"
 import { InstanceLayer } from "@/project/instance-layer"
 import { Project } from "@/project/project"
 import { Vcs } from "@/project/vcs"
-import { Reference } from "@/reference/reference"
 import { Workspace } from "@/control-plane/workspace"
 import { Worktree } from "@/worktree"
-import { Pty } from "@/pty"
-import { PtyTicket } from "@/pty/ticket"
 import { Installation } from "@/installation"
+import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
 import { ShareNext } from "@/share/share-next"
 import { SessionShare } from "@/share/session"
-import { SyncEvent } from "@/sync"
 import { Npm } from "@opencode-ai/core/npm"
 import { memoMap } from "@opencode-ai/core/effect/memo-map"
-import { DataMigration } from "@/data-migration"
 import { BackgroundJob } from "@/background/job"
-import { EventV2Bridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+// kilocode_change start
+import { Notebook } from "@/kilocode/notebook/service"
+import { AgentManager } from "@/kilocode/agent-manager/service"
+// kilocode_change end
+import { EventV2Bridge } from "@/event-v2-bridge"
+// kilocode_change start
+import { ProjectV2 } from "@opencode-ai/core/project"
+import { ProjectCopy } from "@opencode-ai/core/project/copy"
+import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
+import { PtyTicket } from "@opencode-ai/core/pty/ticket"
+// kilocode_change end
 
-const CoreLayer = Layer.mergeAll(
+const CoreLayer = Layer.mergeAll( // kilocode_change
   Npm.defaultLayer,
-  AppFileSystem.defaultLayer,
-  Bus.defaultLayer,
+  FSUtil.defaultLayer,
+  Database.defaultLayer,
+  Credential.defaultLayer, // kilocode_change
   Auth.defaultLayer,
   Account.defaultLayer,
   Config.defaultLayer,
   Git.defaultLayer,
-  Ripgrep.defaultLayer,
-  File.defaultLayer,
-  FileWatcher.defaultLayer,
   Storage.defaultLayer,
   Snapshot.defaultLayer,
   Plugin.defaultLayer,
@@ -81,16 +84,21 @@ const CoreLayer = Layer.mergeAll(
   Agent.defaultLayer,
   Skill.defaultLayer,
   Discovery.defaultLayer,
-)
+) // kilocode_change
 
+// kilocode_change start
 const SessionLayer = Layer.mergeAll(
+  AgentManager.defaultLayer,
+// kilocode_change end
   Question.defaultLayer,
+  Notebook.defaultLayer, // kilocode_change
   Permission.defaultLayer,
   Todo.defaultLayer,
   Session.defaultLayer,
   SessionStatus.defaultLayer,
   BackgroundJob.defaultLayer,
   RuntimeFlags.defaultLayer,
+  EventV2Bridge.defaultLayer,
   SessionRunState.defaultLayer,
   SessionProcessor.defaultLayer,
   SessionCompaction.defaultLayer,
@@ -104,27 +112,29 @@ const SessionLayer = Layer.mergeAll(
   McpAuth.defaultLayer,
   Command.defaultLayer,
   Truncate.defaultLayer,
-)
+) // kilocode_change
 
-const FeatureLayer = Layer.mergeAll(
+const FeatureLayer = Layer.mergeAll( // kilocode_change
   ToolRegistry.defaultLayer,
   Format.defaultLayer,
   Project.defaultLayer,
+  // kilocode_change start
+  ProjectV2.defaultLayer,
+  ProjectCopy.defaultLayer,
+  MoveSession.defaultLayer,
+  PtyTicket.defaultLayer,
+  // kilocode_change end
   Vcs.defaultLayer,
-  Reference.defaultLayer,
   Workspace.defaultLayer,
   Worktree.appLayer,
-  Pty.defaultLayer,
-  PtyTicket.defaultLayer,
   Installation.defaultLayer,
+  MemoryService.layer, // kilocode_change
   ShareNext.defaultLayer,
   SessionShare.defaultLayer,
-  SyncEvent.defaultLayer,
-  EventV2Bridge.defaultLayer,
-  DataMigration.defaultLayer,
-)
+) // kilocode_change
 
-export const AppLayer = Layer.mergeAll(CoreLayer, SessionLayer, FeatureLayer).pipe(
+export const AppLayer = Layer.mergeAll(CoreLayer, SessionLayer, FeatureLayer).pipe( // kilocode_change
+  Layer.provideMerge(Ripgrep.defaultLayer),
   Layer.provideMerge(InstanceLayer.layer),
   Layer.provideMerge(Observability.layer),
 )

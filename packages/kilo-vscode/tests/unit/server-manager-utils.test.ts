@@ -7,8 +7,11 @@ import {
   toErrorMessage,
 } from "../../src/services/cli-backend/server-manager"
 import {
+  copyKiloSandboxWorker,
+  copySandboxResources,
   copyTreeSitterResources,
   resolveTreeSitterEnv,
+  kiloSandboxWorkerForBinary,
   treeSitterDirForBinary,
   treeSitterDirForExtension,
 } from "../../src/services/cli-backend/cli-resources"
@@ -67,6 +70,7 @@ describe("cli tree-sitter resources", () => {
 
     expect(treeSitterDirForBinary(bin)).toBe(`${root}/bin/tree-sitter`)
     expect(treeSitterDirForExtension(root)).toBe(`${root}/bin/tree-sitter`)
+    expect(kiloSandboxWorkerForBinary(bin)).toBe(`${root}/bin/kilo-sandbox-mutation-worker.js`)
     expect(resolveTreeSitterEnv(root)).toEqual({ KILO_TREE_SITTER_WASM_DIR: `${root}/bin/tree-sitter` })
   })
 
@@ -76,9 +80,27 @@ describe("cli tree-sitter resources", () => {
 
     expect(treeSitterDirForBinary(bin)).toBe(String.raw`${root}\bin\tree-sitter`)
     expect(treeSitterDirForExtension(root)).toBe(String.raw`${root}\bin\tree-sitter`)
+    expect(kiloSandboxWorkerForBinary(bin)).toBe(String.raw`${root}\bin\kilo-sandbox-mutation-worker.js`)
     expect(resolveTreeSitterEnv(root)).toEqual({
       KILO_TREE_SITTER_WASM_DIR: String.raw`${root}\bin\tree-sitter`,
     })
+  })
+
+  it("copies the Kilo sandbox worker with the packaged CLI binary", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-sandbox-worker-"))
+    try {
+      const source = path.join(root, "dist", "@kilocode", "cli-darwin-arm64", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      await fs.mkdir(path.dirname(source), { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(kiloSandboxWorkerForBinary(source), "worker")
+
+      await copyKiloSandboxWorker(source, target)
+
+      expect(await fs.readFile(kiloSandboxWorkerForBinary(target), "utf8")).toBe("worker")
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
   })
 
   it("copies runtime and language WASMs with the packaged CLI binary", async () => {
@@ -101,6 +123,116 @@ describe("cli tree-sitter resources", () => {
       expect(await fs.readFile(path.join(treeSitterDirForBinary(target), "tree-sitter-typescript.wasm"), "utf8")).toBe(
         "language",
       )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("copies the Linux sandbox helper and license resources", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-sandbox-"))
+    try {
+      const source = path.join(root, "dist", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const helper = path.join(path.dirname(source), "bwrap")
+      const license = path.join(path.dirname(source), "licenses", "bubblewrap", "COPYING")
+      const notice = path.join(path.dirname(license), "NOTICE")
+      const relay = path.join(path.dirname(source), "kilo-sandbox-network-relay.js")
+      const seccomp = path.join(path.dirname(source), "kilo-sandbox-seccomp")
+      const runtimeLicense = path.join(path.dirname(source), "licenses", "sandbox-runtime", "LICENSE")
+
+      await fs.mkdir(path.dirname(license), { recursive: true })
+      await fs.mkdir(path.dirname(runtimeLicense), { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(helper, "helper")
+      await fs.writeFile(license, "LGPL")
+      await fs.writeFile(notice, "SPDX-License-Identifier: LGPL-2.0-or-later")
+      await fs.writeFile(relay, "relay")
+      await fs.writeFile(seccomp, "seccomp")
+      await fs.writeFile(runtimeLicense, "Apache-2.0")
+
+      await copySandboxResources(source, target)
+
+      const copied = path.join(path.dirname(target), "bwrap")
+      expect(await fs.readFile(copied, "utf8")).toBe("helper")
+      expect((await fs.stat(copied)).mode & 0o111).not.toBe(0)
+      expect(await fs.readFile(path.join(path.dirname(target), "licenses", "bubblewrap", "COPYING"), "utf8")).toBe(
+        "LGPL",
+      )
+      expect(await fs.readFile(path.join(path.dirname(target), "licenses", "bubblewrap", "NOTICE"), "utf8")).toBe(
+        "SPDX-License-Identifier: LGPL-2.0-or-later",
+      )
+      expect(await fs.readFile(path.join(path.dirname(target), "kilo-sandbox-network-relay.js"), "utf8")).toBe("relay")
+      const copiedSeccomp = path.join(path.dirname(target), "kilo-sandbox-seccomp")
+      expect(await fs.readFile(copiedSeccomp, "utf8")).toBe("seccomp")
+      expect((await fs.stat(copiedSeccomp)).mode & 0o111).not.toBe(0)
+      expect(await fs.readFile(path.join(path.dirname(target), "licenses", "sandbox-runtime", "LICENSE"), "utf8")).toBe(
+        "Apache-2.0",
+      )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("copies seccomp licensing when bundled Bubblewrap is omitted", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-seccomp-license-"))
+    try {
+      const source = path.join(root, "dist", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const relay = path.join(path.dirname(source), "kilo-sandbox-network-relay.js")
+      const seccomp = path.join(path.dirname(source), "kilo-sandbox-seccomp")
+      const license = path.join(path.dirname(source), "licenses", "sandbox-runtime", "LICENSE")
+
+      await fs.mkdir(path.dirname(license), { recursive: true })
+      await fs.mkdir(path.dirname(target), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(relay, "relay")
+      await fs.writeFile(seccomp, "seccomp")
+      await fs.writeFile(license, "Apache-2.0")
+
+      await copySandboxResources(source, target)
+
+      expect(await fs.readFile(path.join(path.dirname(target), "kilo-sandbox-network-relay.js"), "utf8")).toBe("relay")
+      expect(await fs.readFile(path.join(path.dirname(target), "kilo-sandbox-seccomp"), "utf8")).toBe("seccomp")
+      expect(await fs.readFile(path.join(path.dirname(target), "licenses", "sandbox-runtime", "LICENSE"), "utf8")).toBe(
+        "Apache-2.0",
+      )
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  it("removes stale sandbox resources when the source has none", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "kilo-vscode-sandbox-stale-"))
+    try {
+      const source = path.join(root, "dist", "bin", "kilo")
+      const target = path.join(root, "extension", "bin", "kilo")
+      const helper = path.join(path.dirname(target), "bwrap")
+      const license = path.join(path.dirname(target), "licenses", "bubblewrap", "COPYING")
+
+      await fs.mkdir(path.dirname(source), { recursive: true })
+      await fs.mkdir(path.dirname(license), { recursive: true })
+      await fs.writeFile(source, "binary")
+      await fs.writeFile(target, "binary")
+      await fs.writeFile(helper, "stale helper")
+      await fs.writeFile(license, "stale license")
+
+      await copySandboxResources(source, target)
+
+      expect(
+        await fs.stat(helper).then(
+          () => true,
+          () => false,
+        ),
+      ).toBe(false)
+      expect(
+        await fs.stat(path.dirname(license)).then(
+          () => true,
+          () => false,
+        ),
+      ).toBe(false)
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }

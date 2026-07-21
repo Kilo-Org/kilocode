@@ -1,12 +1,16 @@
 package ai.kilocode.client.session.ui.style
 
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.ide.ui.UISettingsUtils
 import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
+import com.intellij.ui.EditorTextField
 import com.intellij.util.ui.JBFont
+import com.intellij.util.ui.JBUI
 import java.awt.Color
 import java.awt.Font
+import javax.swing.ScrollPaneConstants
 import kotlin.math.roundToInt
 
 /**
@@ -49,11 +53,57 @@ data class SessionEditorStyle(
         }
     }
 
+    /** Apply editor colors while using standard transcript typography for the embedded editor text. */
+    fun applyTranscriptToEditor(editor: EditorEx) {
+        try {
+            if (editor.isDisposed) return
+            applyToEditor(editor)
+            if (editor.isDisposed) return
+            editor.colorsScheme.setEditorFontName(transcriptFont.fontName)
+            editor.colorsScheme.setEditorFontSize(transcriptFont.size)
+        } catch (err: RuntimeException) {
+            if (err.javaClass.name != "com.intellij.openapi.util.TraceableDisposable\$DisposalException") throw err
+        }
+    }
+
+    /** Apply standard transcript typography to an editor text field and its embedded editor when available. */
+    fun applyTranscriptToField(field: EditorTextField) {
+        field.font = transcriptFont
+        field.getEditor(false)?.let(::applyTranscriptToEditor)
+    }
+
+    /** Apply the visible prompt-input text styling to embedded session editor components. */
+    fun applyPromptToEditor(editor: EditorEx) {
+        if (editor.isDisposed) return
+        applyTranscriptToEditor(editor)
+        if (editor.isDisposed) return
+        editor.setBorder(JBUI.Borders.empty())
+        editor.scrollPane.border = JBUI.Borders.empty()
+        editor.scrollPane.viewportBorder = JBUI.Borders.empty(
+            0,
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
+            0,
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_HORIZONTAL_INSET),
+        )
+        editor.backgroundColor = editorBackground
+        editor.component.background = editorBackground
+        editor.contentComponent.background = editorBackground
+        editor.scrollPane.background = editorBackground
+        editor.scrollPane.viewport.background = editorBackground
+        editor.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        editor.scrollPane.revalidate()
+        editor.scrollPane.repaint()
+    }
+
     companion object {
         /** Builds a style snapshot from the current global editor color scheme. */
         fun current(): SessionEditorStyle {
             val scheme = EditorColorsManager.getInstance().globalScheme
-            return create(scheme, scheme.editorFontName, scheme.editorFontSize)
+            val size = UISettingsUtils.getInstance()
+                .scaleFontSize(scheme.editorFontSize.toFloat())
+                .roundToInt()
+                .coerceAtLeast(1)
+            return create(scheme, scheme.editorFontName, size)
         }
 
         internal fun create(

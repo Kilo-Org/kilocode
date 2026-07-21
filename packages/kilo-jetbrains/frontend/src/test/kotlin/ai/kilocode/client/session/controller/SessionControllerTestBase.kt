@@ -13,6 +13,7 @@ import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.AgentDto
 import ai.kilocode.rpc.dto.AgentsDto
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -133,17 +134,20 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         id: String? = null,
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
+        revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         open: (SessionRef) -> Unit = {},
+        log: KiloLog? = null,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs, open = open)
+        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log)
     }
 
     protected fun controller(
         ref: SessionRef,
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
+        revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
     ): SessionController {
-        return controller(ref = ref, flushMs = flushMs, condense = true, displayMs = displayMs)
+        return controller(ref = ref, flushMs = flushMs, condense = true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs)
     }
 
     protected fun controller(
@@ -151,10 +155,12 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long,
         condense: Boolean,
         displayMs: Long = Long.MAX_VALUE,
+        revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         session: SessionDto? = null,
         beforeUpdate: () -> Boolean = { false },
         afterUpdate: (Boolean) -> Unit = {},
         open: (SessionRef) -> Unit = {},
+        log: KiloLog? = null,
         ref: SessionRef? = if (session != null) SessionRef.Local(session) else SessionRef.from(id),
     ): SessionController {
         val root = Root()
@@ -169,11 +175,13 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             flushMs = flushMs,
             condense = condense,
             displayMs = displayMs,
+            revertTimeoutMs = revertTimeoutMs,
             open = open,
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,
             telemetry = { event, props -> appRpc.telemetry.add(TelemetryCaptureDto(event, props)) },
             timers = timers,
+            log = log ?: KiloLog.create(SessionController::class.java),
         )
         controllers.add(m)
         roots[m] = root

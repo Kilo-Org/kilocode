@@ -36,13 +36,18 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     private val workspaces: KiloWorkspaceService = service(),
     private val hint: String? = null,
     private val loginBanner: Boolean = true,
-) : SettingsPanel() {
+) : SettingsPanel(), SettingsDraftPage {
     protected lateinit var form: C
         private set
     protected val jobs = mutableListOf<Job>()
-    protected var draft = initial
-    protected val saving get() = save
-    protected val saveError get() = error
+    private val state = SettingsDraftState(initial) { base, draft -> saved(base, draft) }
+    protected var draft: D
+        get() = state.draft
+        set(value) {
+            state.draft = value
+        }
+    protected val saving get() = state.saving
+    protected val saveError get() = state.error
     protected var appState: KiloAppStateDto = app.state.value
         private set
     protected var modelState: ModelStateDto = app.models.value
@@ -55,10 +60,6 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     protected var workspaceLoaded = false
         private set
 
-    private var baseline = initial
-    private var pending: D? = null
-    private var save = false
-    private var error: String? = null
     private var disposed = false
 
     @RequiresEdt
@@ -79,7 +80,7 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
         jobs += scope.launch { app.connect() }
         val path = hint ?: return
         jobs += scope.launch {
-            val dir = workspaces.resolveProjectDirectory(path)
+            val dir = workspaces.resolveProjectDirectory(null, path)
             withContext(edt) {
                 projectDirectory = dir
                 workspaceLoaded = false
@@ -130,30 +131,25 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     }
 
     @RequiresEdt
-    fun modified(): Boolean {
+    override fun modified(): Boolean {
         checkEdt()
-        return draft != (pending ?: baseline)
+        return state.modified()
     }
 
     @RequiresEdt
-    fun resetDraft() {
+    override fun resetDraft() {
         checkEdt()
-        draft = pending ?: baseline
-        error = null
-        if (!save) clearProgress()
+        state.reset()
+        if (!saving) clearProgress()
         syncContent()
     }
 
     @RequiresEdt
-    fun applyDraft() {
+    override fun applyDraft() {
         checkEdt()
-        val prev = baseline
-        val next = draft
-        val change = change(prev, next) ?: return
+        val change = change(state.baseline, draft) ?: return
+        val token = state.start(force = true) ?: return
         logSaveStarted(change)
-        pending = next
-        save = true
-        error = null
         showProgress(pendingText())
         syncContent()
         save(change) { result ->
@@ -169,23 +165,13 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
                 }
                 if (result != null) {
                     logSaveCompleted(change)
-                    val edit = draft
                     val base = base(result)
-                    baseline = if (saved(base, next)) base else next
-                    draft = if (edit == next) baseline else edit
-                    pending = null
-                    save = false
-                    error = null
+                    state.complete(token, base)
                     clearProgress()
                     syncContent()
                     return@invokeLater
                 }
-                val edit = draft
-                baseline = prev
-                draft = if (edit == next) next else edit
-                pending = null
-                save = false
-                error = failedText()
+                state.fail(token, failedText())
                 logSaveFailed(change)
                 syncContent()
             }, ModalityState.any())
@@ -204,24 +190,14 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     @RequiresEdt
     protected fun updateDraft(fn: D.() -> D) {
         checkEdt()
-        draft = draft.fn()
-        error = null
+        state.update(fn)
         syncContent()
     }
 
     @RequiresEdt
     protected fun acceptBase(base: D) {
         checkEdt()
-        val target = pending
-        if (target == null) {
-            val prev = baseline
-            val edit = draft
-            baseline = base
-            if (edit == prev) draft = base
-            return
-        }
-        if (!saved(base, target)) return
-        baseline = base
+        state.accept(base)
     }
 
     @RequiresEdt

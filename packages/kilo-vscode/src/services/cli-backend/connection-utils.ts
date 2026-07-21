@@ -1,6 +1,6 @@
-import type { GlobalEvent } from "@kilocode/sdk/v2/client"
+import type { SSEPayload } from "./sdk-sse-adapter"
 
-export type SSEPayload = GlobalEvent["payload"]
+export type { SSEPayload } from "./sdk-sse-adapter"
 type SyncPayload = Extract<SSEPayload, { type: "sync" }>
 type TransientPayload = Exclude<SSEPayload, SyncPayload>
 
@@ -20,6 +20,7 @@ export function resolveEventSessionId(
   }
 
   void lookupMessageSessionId
+  if (event.type === "sandbox.status.changed") return event.properties.sessionID
   return resolveTransientSessionId(event)
 }
 

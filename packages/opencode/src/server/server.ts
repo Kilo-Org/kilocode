@@ -1,7 +1,7 @@
 import "./init-projectors"
 
 import { NodeHttpServer } from "@effect/platform-node"
-import * as Log from "@opencode-ai/core/util/log"
+import { serverUrls } from "@/kilocode/cli/server-urls" // kilocode_change
 import { ConfigProvider, Context, Effect, Exit, Layer, Scope } from "effect"
 import { HttpRouter, HttpServer } from "effect/unstable/http"
 import { OpenApi } from "effect/unstable/httpapi"
@@ -18,12 +18,17 @@ import * as KiloListener from "@/kilocode/server/listener" // kilocode_change
 // @ts-ignore This global is needed to prevent ai-sdk from logging warnings to stdout https://github.com/vercel/ai/blob/2dc67e0ef538307f21368db32d5a12345d98831b/packages/ai/src/logger/log-warnings.ts#L85
 globalThis.AI_SDK_LOG_WARNINGS = false
 
-const log = Log.create({ service: "server" })
-
 export type Listener = {
   hostname: string
   port: number
   url: URL
+  // kilocode_change start
+  urls: {
+    local: string
+    network?: string
+    bind: string
+  }
+  // kilocode_change end
   stop: (close?: boolean) => Promise<void>
 }
 
@@ -79,6 +84,7 @@ export async function listen(opts: ListenOptions): Promise<Listener> {
     hostname: listener.hostname,
     port: listener.port,
     url: listener.url,
+    urls: listener.urls, // kilocode_change
     stop: (close?: boolean) => Effect.runPromiseExit(listener.stop(close)).then(() => undefined),
   }
 }
@@ -96,6 +102,7 @@ const listenEffect: (opts: ListenOptions) => Effect.Effect<EffectListener, unkno
       hostname: opts.hostname,
       port: address.port,
       url: listenerUrl,
+      urls: serverUrls(opts.hostname, address.port), // kilocode_change
       stop: yield* makeStop(state, unpublishMdns),
     }
   },
@@ -166,7 +173,9 @@ function setupMdns(opts: ListenOptions, port: number, scope: Scope.Scope) {
       yield* Scope.addFinalizer(scope, unpublish)
       return unpublish
     }
-    if (opts.mdns) log.warn("mDNS enabled but hostname is loopback; skipping mDNS publish")
+    if (opts.mdns) {
+      yield* Effect.logWarning("mDNS enabled but hostname is loopback; skipping mDNS publish")
+    }
     return Effect.void
   })
 }

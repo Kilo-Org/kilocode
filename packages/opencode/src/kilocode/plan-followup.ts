@@ -1,13 +1,13 @@
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
-import { TuiEvent } from "@/cli/cmd/tui/event"
+import { TuiEvent } from "@/server/tui-event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { Provider } from "@/provider/provider"
-import { ProviderID, ModelID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
@@ -35,7 +35,7 @@ export const PlanFollowupRuntime = {
   agent(name: string): Promise<Agent.Info | undefined> {
     return agents().runPromise((svc) => svc.get(name))
   },
-  model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
+  model(providerID: ProviderV2.ID, modelID: ModelV2.ID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
   },
   todo: {
@@ -160,6 +160,7 @@ export namespace PlanFollowup {
   export const PLAN_PREFIX = "Implement the following plan:"
   export const ANSWER_NEW_SESSION = "Start new session"
   export const ANSWER_CONTINUE = "Continue here"
+  export const ANSWER_KEEP_REFINING = "Keep refining"
 
   export function abort(sessionID: SessionID) {
     const ctl = pending.get(sessionID)
@@ -181,8 +182,8 @@ export namespace PlanFollowup {
         .record(
           z.string(),
           z.object({
-            providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
-            modelID: z.custom<ModelID>(Schema.is(ModelID)),
+            providerID: z.custom<ProviderV2.ID>(Schema.is(ProviderV2.ID)),
+            modelID: z.custom<ModelV2.ID>(Schema.is(ModelV2.ID)),
           }),
         )
         .optional(),
@@ -222,6 +223,15 @@ export namespace PlanFollowup {
     return input
   }
 
+  async function locatePlan(sessionID: SessionID, messages: MessageV2.WithParts[]) {
+    const ctx = Instance.current
+    const session = await PlanFollowupRuntime.session((svc) => svc.get(sessionID))
+    const target = PlanFile.resolve(PlanFile.latest(messages), ctx) ?? Session.plan(session, ctx)
+    const agent = messages.findLast((m) => m.info.role === "user")?.info.agent
+    const file = await PlanFile.locate(target, messages, session, ctx, agent)
+    return { target, file }
+  }
+
   async function resolvePlan(input: {
     assistant?: MessageV2.WithParts
     messages: MessageV2.WithParts[]
@@ -242,9 +252,11 @@ export namespace PlanFollowup {
     if (text) return text
 
     // Fall back to plan file on disk
-    const session = await PlanFollowupRuntime.session((svc) => svc.get(SessionID.make(input.sessionID)))
-    const file =
-      PlanFile.resolve(PlanFile.latest(input.messages), Instance.current) ?? Session.plan(session, Instance.current)
+    const { target, file } = await locatePlan(input.sessionID, input.messages)
+    if (!file) {
+      log.warn("resolvePlan: no saved plan file found", { sessionID: input.sessionID, target })
+      return ""
+    }
     const plan = await Bun.file(file)
       .text()
       .catch(() => "")
@@ -320,6 +332,13 @@ export namespace PlanFollowup {
               descriptionKey: "plan.followup.answer.continue.description",
               mode: "code",
             },
+            {
+              label: ANSWER_KEEP_REFINING,
+              labelKey: "plan.followup.answer.keepRefining",
+              description: "Keep planning without implementing yet",
+              descriptionKey: "plan.followup.answer.keepRefining.description",
+              mode: "plan",
+            },
           ],
         },
       ],
@@ -370,9 +389,14 @@ export namespace PlanFollowup {
         const next = await PlanFollowupRuntime.session((svc) => svc.create({}))
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        const { AppRuntime } = await import("@/effect/app-runtime")
+        const [{ AppRuntime }, { EventV2Bridge }] = await Promise.all([
+          import("@/effect/app-runtime"),
+          import("@/event-v2-bridge"),
+        ])
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
-        await Bus.publish(Instance.current, TuiEvent.SessionSelect, { sessionID: next.id })
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })),
+        )
 
         const idle = () =>
           AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {
@@ -514,7 +538,7 @@ export namespace PlanFollowup {
     if (answer === ANSWER_NEW_SESSION) {
       Telemetry.trackPlanFollowup(input.sessionID, "new_session")
       const ctx = Instance.current
-      const file = PlanFile.resolve(PlanFile.latest(input.messages), ctx)
+      const { file } = await locatePlan(input.sessionID, input.messages)
       await startNew({
         sessionID: input.sessionID,
         file: file ? PlanFile.display(file, ctx) : undefined,
@@ -535,6 +559,18 @@ export namespace PlanFollowup {
         agent: "code",
         model: code.model,
         text: "Implement the plan above.",
+      })
+      KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
+      return "continue"
+    }
+
+    if (answer === ANSWER_KEEP_REFINING) {
+      Telemetry.trackPlanFollowup(input.sessionID, "keep_refining")
+      const msg = await inject({
+        sessionID: input.sessionID,
+        agent: "plan",
+        model: user.model,
+        text: "Continue refining the plan. Do not implement yet.",
       })
       KiloSessionPromptQueue.retarget(input.sessionID, msg.id)
       return "continue"

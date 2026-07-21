@@ -59,14 +59,14 @@ describe("Kilo installation upgrade", () => {
       () => "",
       (request) => {
         release.push(request.url)
-        return json({ tag_name: "v8.8.8" })
+        return json({ version: "8.8.8" })
       },
     ),
-  ).effect("reads fallback versions from Kilo GitHub releases", () =>
+  ).effect("reads fallback versions from the Kilo npm registry", () =>
     Effect.gen(function* () {
       const result = yield* Installation.Service.use((svc) => svc.latest("unknown"))
       expect(result).toBe("8.8.8")
-      expect(release).toContain("https://api.github.com/repos/Kilo-Org/kilocode/releases/latest")
+      expect(release).toContain(`https://registry.npmjs.org/@kilocode%2fcli/${InstallationChannel}`)
     }),
   )
 
@@ -214,8 +214,8 @@ describe("Kilo installation upgrade", () => {
   ).effect("uses the Kilo install script for curl upgrades", () =>
     Effect.gen(function* () {
       yield* Installation.Service.use((svc) => svc.upgrade("curl", "9.9.9"))
-      expect(curl).toContain("https://kilo.ai/install")
-      expect(curl).toContain("bash")
+      expect(curl).toContain("https://kilo.ai/cli/install")
+      expect(curl).toContain("sh")
     }),
   )
 })

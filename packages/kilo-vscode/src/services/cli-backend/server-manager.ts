@@ -4,7 +4,7 @@ import * as crypto from "crypto"
 import * as fs from "fs"
 import * as path from "path"
 import * as vscode from "vscode"
-import { resolveTreeSitterEnv } from "./cli-resources"
+import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
 import { t } from "./i18n"
 import { parseServerPort } from "./server-utils"
 
@@ -94,6 +94,10 @@ export class ServerManager {
       const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
       fs.mkdirSync(spawnCwd, { recursive: true })
       const indexingEnv = resolveIndexingEnv(folders)
+      const localCli =
+        this.context.extensionMode === vscode.ExtensionMode.Development ||
+        fs.existsSync(path.join(this.context.extensionPath, "bin", ".cli-version"))
+      const bwrapEnv = process.env.KILO_BWRAP_PATH ? {} : resolveLocalBwrapEnv(this.context.extensionPath, localCli)
       // TLS / corporate-proxy support:
       //   - Default NODE_USE_SYSTEM_CA=1 so the bundled Bun CLI trusts the OS
       //     trust store (Windows cert store, macOS keychain, Linux /etc/ssl).
@@ -127,6 +131,9 @@ export class ServerManager {
           // See oven-sh/bun#18265 and Jarred's workaround note in #21560.
           MIMALLOC_PURGE_DELAY: "0",
           KILO_SERVER_PASSWORD: password,
+          // The CLI watches this PID and exits if the extension host is hard-killed without a
+          // chance to run dispose(), so it is never orphaned. See parent-watchdog.ts.
+          KILO_PARENT_PID: String(process.pid),
           KILO_CLIENT: "vscode",
           KILO_ENABLE_QUESTION_TOOL: "true",
           KILOCODE_FEATURE: "vscode-extension",
@@ -138,9 +145,11 @@ export class ServerManager {
           KILO_MACHINE_ID: vscode.env.machineId,
           KILO_APP_VERSION: this.context.extension.packageJSON.version,
           KILO_VSCODE_VERSION: vscode.version,
+          KILOCODE_VERSION: this.context.extension.packageJSON.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
           ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
           ...resolveTreeSitterEnv(this.context.extensionPath),
+          ...bwrapEnv,
         },
         stdio: ["ignore", "pipe", "pipe"],
         detached: true,

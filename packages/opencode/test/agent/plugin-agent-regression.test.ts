@@ -1,14 +1,17 @@
 import { expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
+import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import path from "path"
 import { pathToFileURL } from "url"
 import { Agent } from "../../src/agent/agent"
-import { Bus } from "../../src/bus"
+import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Config } from "../../src/config/config"
 import { Env } from "../../src/env"
+import { Git } from "../../src/git" // kilocode_change
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
+import { MCP } from "../../src/mcp" // kilocode_change
 import { Plugin } from "../../src/plugin"
 import { AccountTest } from "../fake/account"
 import { AuthTest } from "../fake/auth"
@@ -18,15 +21,16 @@ import { SkillTest } from "../fake/skill"
 import { testEffect } from "../lib/effect"
 import { PLUGIN_AGENT } from "../fixture/agent-plugin.constants"
 
-// `it.instance` skips InstanceBootstrap so FileWatcher / LSP / MCP don't spin
-// up — those services hang during scope teardown on Windows and aren't needed
+// `it.instance` skips InstanceBootstrap so LSP / MCP don't spin up — those
+// services hang during scope teardown on Windows and aren't needed
 // to verify plugin → config hook → Agent.list.
 const pluginUrl = pathToFileURL(path.join(import.meta.dir, "..", "fixture", "agent-plugin.ts")).href
 
 const provider = ProviderTest.fake()
 const configLayer = Config.layer.pipe(
+  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
-  Layer.provide(AppFileSystem.defaultLayer),
+  Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Env.defaultLayer),
   Layer.provide(AuthTest.empty),
   Layer.provide(AccountTest.empty),
@@ -34,14 +38,18 @@ const configLayer = Config.layer.pipe(
   Layer.provide(FetchHttpClient.layer),
 )
 const pluginLayer = Plugin.layer.pipe(
-  Layer.provide(Bus.layer),
+  Layer.provide(EventV2Bridge.defaultLayer),
   Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
 )
 const dependencies = Layer.mergeAll(configLayer, pluginLayer).pipe(Layer.provideMerge(configLayer))
 const agentLayer = Agent.layer.pipe(
   Layer.provide(AuthTest.empty),
   Layer.provide(SkillTest.empty),
+  Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
   Layer.provide(provider.layer),
+  Layer.provide(pluginLayer),
+  Layer.provide(pluginLayer),
+  Layer.provide(LocationServiceMap.layer),
   Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
 )
 const layer = Layer.mergeAll(agentLayer, dependencies).pipe(Layer.provideMerge(dependencies))

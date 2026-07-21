@@ -3,6 +3,7 @@ import { describe, expect, spyOn } from "bun:test"
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
+import { Database } from "@opencode-ai/core/database/database"
 import path from "path"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
@@ -13,8 +14,8 @@ import { Image } from "../../src/image/image"
 import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import type { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
-import { Reference } from "../../src/reference/reference"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Session } from "../../src/session/session"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -27,14 +28,14 @@ import { Snapshot } from "../../src/snapshot"
 import { SyncEvent } from "../../src/sync"
 import * as Log from "@opencode-ai/core/util/log"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
-import { provideTmpdirInstance } from "../fixture/fixture"
+import { provideTmpdirProject } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
 Log.init({ print: false })
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 type Script = Stream.Stream<Event, unknown>
@@ -96,14 +97,7 @@ const llm = Layer.unwrap(
   }),
 )
 
-const reference = Layer.mock(Reference.Service)({
-  init: () => Effect.void,
-  list: () => Effect.succeed([]),
-  get: () => Effect.succeed(undefined),
-  ensure: () => Effect.void,
-  contains: () => Effect.succeed(false),
-})
-const status = SessionStatus.layer.pipe(Layer.provideMerge(Bus.layer))
+const status = Layer.mergeAll(SessionStatus.defaultLayer, Bus.layer)
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 const deps = Layer.mergeAll(
   Session.defaultLayer,
@@ -113,21 +107,21 @@ const deps = Layer.mergeAll(
   Plugin.defaultLayer,
   Config.defaultLayer,
   RuntimeFlags.layer(),
-  reference,
   SessionSummary.defaultLayer,
   Image.defaultLayer,
   SyncEvent.defaultLayer,
   EventV2Bridge.defaultLayer,
+  Database.defaultLayer,
   status,
   llm,
 ).pipe(Layer.provideMerge(infra))
-const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps), Layer.provide(reference))
+const env = SessionProcessor.layer.pipe(Layer.provideMerge(deps))
 
 const it = testEffect(env)
 
 describe("session processor network offline", () => {
   it.effect("enters offline state for provider connection message", () =>
-    provideTmpdirInstance(
+    provideTmpdirProject(
       (dir) =>
         Effect.gen(function* () {
           const test = yield* TestLLM

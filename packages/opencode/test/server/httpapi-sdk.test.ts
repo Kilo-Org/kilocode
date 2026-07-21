@@ -1,20 +1,20 @@
 import { afterEach, describe, expect } from "bun:test"
-import { ConfigProvider, Deferred, Effect, Layer } from "effect"
+import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
+import { Deferred, Effect, Layer } from "effect"
 import type * as Scope from "effect/Scope"
-import { HttpRouter } from "effect/unstable/http"
+import { HttpServer } from "effect/unstable/http"
 import { ChildProcessSpawner } from "effect/unstable/process"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { createKiloClient } from "@kilocode/sdk/v2"
-import { validateSession } from "../../src/cli/cmd/tui/validate-session"
+import { validateSession } from "../../src/cli/tui/validate-session"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { InstanceStore } from "../../src/project/instance-store"
-import { HttpApiApp } from "../../src/server/routes/instance/httpapi/server"
-import { Server } from "../../src/server/server"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { MessageV2 } from "../../src/session/message-v2"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+
 import type { Config } from "@/config/config"
 import { Session as SessionNs } from "@/session/session"
 import { errorMessage } from "../../src/util/error"
@@ -24,13 +24,19 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
 import { testProviderConfig } from "../lib/test-provider"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
+import { Database } from "@opencode-ai/core/database/database"
+import { httpApiLayer } from "./httpapi-layer"
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const it = testEffect(
   Layer.mergeAll(
-    AppFileSystem.defaultLayer,
+    FSUtil.defaultLayer,
     CrossSpawnSpawner.defaultLayer,
     InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap)),
+    Database.defaultLayer,
+    httpApiLayer,
   ),
 )
 
@@ -45,55 +51,58 @@ type SdkResult = { response: Response; data?: unknown; error?: unknown }
 type Captured = { status: number; data?: unknown; error?: unknown }
 type ProjectFixture = { sdk: Sdk; directory: string }
 type LlmProjectFixture = ProjectFixture & { llm: TestLLMServer["Service"] }
-type TestServices = AppFileSystem.Service | ChildProcessSpawner.ChildProcessSpawner | InstanceStore.Service
+type TestServices =
+  | FSUtil.Service
+  | ChildProcessSpawner.ChildProcessSpawner
+  | InstanceStore.Service
+  | HttpServer.HttpServer
 type TestScope = Scope.Scope | TestServices
-
-function app(serverPath: ServerPath, input?: { password?: string; username?: string }) {
-  Flag.KILO_SERVER_PASSWORD = input?.password
-  Flag.KILO_SERVER_USERNAME = input?.username
-  if (serverPath === "default") return Server.Default().app
-
-  const handler = HttpRouter.toWebHandler(
-    HttpApiApp.routes.pipe(
-      Layer.provide(
-        ConfigProvider.layer(
-          ConfigProvider.fromUnknown({
-            KILO_SERVER_PASSWORD: input?.password,
-            KILO_SERVER_USERNAME: input?.username,
-          }),
-        ),
-      ),
-    ),
-    { disableLogger: true },
-  ).handler
-  return {
-    fetch: (request: Request) => handler(request, HttpApiApp.context),
-    request(input: string | URL | Request, init?: RequestInit) {
-      return this.fetch(input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init))
-    },
-  }
-}
 
 function client(
   serverPath: ServerPath,
   directory?: string,
-  input?: { password?: string; username?: string; headers?: Record<string, string> },
+  input?: {
+    password?: string
+    username?: string
+    headers?: Record<string, string>
+    workspaceID?: string
+    onRequest?: (request: Request) => void
+  },
 ) {
-  return createKiloClient({
-    baseUrl: "http://localhost",
-    directory,
-    headers: input?.headers,
-    fetch: serverFetch(serverPath, input),
-  })
+  return serverFetch(serverPath, input).pipe(
+    Effect.map((fetch) =>
+      createKiloClient({
+        baseUrl: "http://localhost",
+        directory,
+        experimental_workspaceID: input?.workspaceID,
+        headers: input?.headers,
+        fetch,
+      }),
+    ),
+  )
 }
 
-function serverFetch(serverPath: ServerPath, input?: { password?: string; username?: string }) {
-  const serverApp = app(serverPath, input)
-  return Object.assign(
-    async (request: RequestInfo | URL, init?: RequestInit) =>
-      await serverApp.fetch(request instanceof Request ? request : new Request(request, init)),
-    { preconnect: globalThis.fetch.preconnect },
-  ) satisfies typeof globalThis.fetch
+function serverFetch(
+  serverPath: ServerPath,
+  input?: { password?: string; username?: string; onRequest?: (request: Request) => void },
+) {
+  return HttpServer.HttpServer.use((server) =>
+    Effect.sync(() => {
+      void serverPath
+      Flag.KILO_SERVER_PASSWORD = input?.password
+      Flag.KILO_SERVER_USERNAME = input?.username
+      const baseUrl = HttpServer.formatAddress(server.address)
+      return Object.assign(
+        async (request: RequestInfo | URL, init?: RequestInit) => {
+          const source = request instanceof Request ? request : new Request(request, init)
+          input?.onRequest?.(source)
+          const url = new URL(source.url)
+          return globalThis.fetch(new Request(new URL(`${url.pathname}${url.search}`, baseUrl), source))
+        },
+        { preconnect: globalThis.fetch.preconnect },
+      ) satisfies typeof globalThis.fetch
+    }),
+  )
 }
 
 function authorization(username: string, password: string) {
@@ -203,7 +212,7 @@ function httpapiInstance<A, E>(
   options: {
     serverPath: ServerPath
     git?: boolean
-    config?: Partial<Config.Info>
+    config?: Partial<ConfigV1.Info>
     setup?: (dir: string) => Effect.Effect<void, E, TestServices>
   },
   run: (input: ProjectFixture) => Effect.Effect<A, E, TestScope>,
@@ -213,29 +222,21 @@ function httpapiInstance<A, E>(
     Effect.gen(function* () {
       const instance = yield* TestInstance
       yield* options.setup?.(instance.directory) ?? Effect.void
-      return yield* run({ sdk: client(options.serverPath, instance.directory), directory: instance.directory })
+      return yield* run({ sdk: yield* client(options.serverPath, instance.directory), directory: instance.directory })
     }),
     { git: options.git ?? true, config: { formatter: false, lsp: false, ...options.config } },
   )
 }
 
 function serverPathParity<A, E>(name: string, scenario: (serverPath: ServerPath) => Effect.Effect<A, E, TestScope>) {
-  it.live(
-    name,
-    Effect.gen(function* () {
-      const standard = yield* scenario("default")
-      yield* resetState()
-      const raw = yield* scenario("raw")
-      expect(raw).toEqual(standard)
-    }),
-  )
+  it.live(name, scenario("raw"))
 }
 
 function withProject<A, E, E2 = never>(
   serverPath: ServerPath,
   options: {
     git?: boolean
-    config?: Partial<Config.Info>
+    config?: Partial<ConfigV1.Info>
     setup?: (dir: string) => Effect.Effect<void, E2, TestServices>
   },
   run: (input: ProjectFixture) => Effect.Effect<A, E, TestScope>,
@@ -246,7 +247,7 @@ function withProject<A, E, E2 = never>(
       config: { formatter: false, lsp: false, ...options.config },
     })
     yield* options.setup?.(directory) ?? Effect.void
-    return yield* run({ sdk: client(serverPath, directory), directory })
+    return yield* run({ sdk: yield* client(serverPath, directory), directory })
   })
 }
 
@@ -283,7 +284,7 @@ function withFakeLlmProject<A, E>(
 }
 
 function writeStandardFiles(dir: string) {
-  return AppFileSystem.Service.use((fs) =>
+  return FSUtil.Service.use((fs) =>
     Effect.all([
       fs.writeWithDirs(path.join(dir, "hello.txt"), "hello"),
       fs.writeWithDirs(path.join(dir, "needle.ts"), "export const needle = 'sdk-parity'\n"),
@@ -292,9 +293,9 @@ function writeStandardFiles(dir: string) {
 }
 
 function writeProjectSkill(dir: string) {
-  return AppFileSystem.Service.use((fs) =>
+  return FSUtil.Service.use((fs) =>
     fs.writeWithDirs(
-      path.join(dir, ".opencode", "skills", "project-rest-skill", "SKILL.md"),
+      path.join(dir, ".kilo", "skills", "project-rest-skill", "SKILL.md"), // kilocode_change
       `---
 name: project-rest-skill
 description: A project skill visible to REST API prompts.
@@ -319,9 +320,9 @@ function seedMessage(directory: string, sessionID: string) {
             role: "user",
             time: { created: Date.now() },
             agent: "test",
-            model: { providerID: ProviderID.make("test"), modelID: ModelID.make("test") },
+            model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test") },
             tools: {},
-          } satisfies MessageV2.User)
+          } satisfies SessionV1.User)
           const part = yield* svc.updatePart({
             id: PartID.ascending(),
             sessionID: id,
@@ -347,7 +348,7 @@ describe("HttpApi SDK", () => {
   httpapi(
     "uses the generated SDK for global and control routes",
     Effect.gen(function* () {
-      const sdk = client("raw")
+      const sdk = yield* client("raw")
       const health = yield* call(() => sdk.global.health())
       const log = yield* call(() => sdk.app.log({ service: "httpapi-sdk-test", level: "info", message: "hello" }))
 
@@ -365,16 +366,28 @@ describe("HttpApi SDK", () => {
   httpapiInstance(
     "uses the generated SDK for safe instance routes",
     { serverPath: "raw", git: false, setup: writeStandardFiles },
-    ({ sdk }) =>
+    ({ sdk, directory }) =>
       Effect.gen(function* () {
         const file = yield* call(() => sdk.file.read({ path: "hello.txt" }))
+        const raw = yield* call(() => sdk.v2.fs.read({ path: "hello.txt" })) // kilocode_change
         const session = yield* call(() => sdk.session.create({ title: "sdk" }))
+        const v2session = yield* call(() => sdk.v2.session.create({ agent: "build" })) // kilocode_change
         const listed = yield* call(() => sdk.session.list({ roots: true, limit: 10 }))
 
         expect(file.response.status).toBe(200)
         expect(file.data).toMatchObject({ content: "hello" })
+        // kilocode_change start
+        expect(raw.response.status).toBe(200)
+        const body = raw.data
+        if (!body) throw new Error("missing V2 file body")
+        const content =
+          body instanceof Blob ? yield* Effect.promise(() => body.text()) : Buffer.from(body as unknown as Uint8Array).toString()
+        expect(content).toBe("hello")
+        // kilocode_change end
         expect(session.response.status).toBe(200)
         expect(session.data).toMatchObject({ title: "sdk" })
+        expect({ status: v2session.response.status, error: v2session.error }).toEqual({ status: 200, error: undefined }) // kilocode_change
+        expect(v2session.data).toMatchObject({ data: { location: { directory } } }) // kilocode_change
         expect(listed.response.status).toBe(200)
         expect(listed.data?.map((item) => item.id)).toContain(session.data?.id)
 
@@ -387,9 +400,43 @@ describe("HttpApi SDK", () => {
       }),
   )
 
+  httpapi(
+    "routes configured SDK directory and workspace for v2 location GETs",
+    withProject("raw", { setup: writeStandardFiles }, ({ directory }) =>
+      Effect.gen(function* () {
+        const workspaceID = "wrk_sdk"
+        let request: Request | undefined
+        const sdk = yield* client("raw", directory, {
+          workspaceID,
+          onRequest: (value) => (request = value),
+        })
+        const found = yield* call(() => sdk.v2.fs.find({ query: "hello", type: "file" }))
+        const url = new URL(request!.url)
+
+        expect(found.response.status).toBe(200)
+        expect(found.data).toMatchObject({ data: [{ path: "hello.txt", type: "file" }] })
+        expect(url.searchParams.get("directory")).toBe(directory)
+        expect(url.searchParams.get("workspace")).toBe(workspaceID)
+        expect(url.searchParams.get("location[directory]")).toBe(directory)
+        expect(url.searchParams.get("location[workspace]")).toBe(workspaceID)
+        expect(request!.headers.has("x-kilo-directory")).toBe(false)
+        expect(request!.headers.has("x-kilo-workspace")).toBe(false)
+
+        // kilocode_change start - encoded legacy directory headers still route on payload requests
+        const legacy = yield* client("raw", undefined, {
+          headers: { "x-kilo-directory": encodeURIComponent(directory) },
+        })
+        const legacySession = yield* call(() => legacy.v2.session.create({ agent: "build" }))
+        expect(legacySession.response.status).toBe(200)
+        expect(legacySession.data).toMatchObject({ data: { location: { directory } } })
+        // kilocode_change end
+      }),
+    ),
+  )
+
   serverPathParity("matches generated SDK global and control behavior", (serverPath) =>
     Effect.gen(function* () {
-      const sdk = client(serverPath)
+      const sdk = yield* client(serverPath)
       const health = yield* capture(() => sdk.global.health())
       const log = yield* capture(() => sdk.app.log({ service: "sdk-parity", level: "info", message: "hello" }))
       const invalidAuth = yield* capture(() => sdk.auth.set({ providerID: "test" }))
@@ -403,9 +450,11 @@ describe("HttpApi SDK", () => {
   )
 
   serverPathParity("matches generated SDK global event stream", (serverPath) =>
-    firstEvent((signal) => client(serverPath).global.event({ signal })).pipe(
-      Effect.map((event) => ({ type: record(record(event).payload).type })),
-    ),
+    Effect.gen(function* () {
+      const sdk = yield* client(serverPath)
+      const event = yield* firstEvent((signal) => sdk.global.event({ signal }))
+      return { type: record(record(event).payload).type }
+    }),
   )
 
   serverPathParity("matches generated SDK instance event stream", (serverPath) =>
@@ -450,12 +499,13 @@ describe("HttpApi SDK", () => {
     withStandardProject(serverPath, ({ directory }) =>
       Effect.gen(function* () {
         const sessionID = "ses_206f84f18ffeZ6hhD7pFYAiW5T"
+        const fetch = yield* serverFetch(serverPath)
         const thrown = yield* captureThrown(() =>
           validateSession({
             url: "http://localhost",
             directory,
             sessionID,
-            fetch: serverFetch(serverPath),
+            fetch,
           }),
         )
         expect(errorMessage(thrown)).toBe(`Session not found: ${sessionID}`)
@@ -469,22 +519,19 @@ describe("HttpApi SDK", () => {
     { serverPath: "raw", setup: writeStandardFiles },
     ({ directory }) =>
       Effect.gen(function* () {
-        const missing = yield* capture(() =>
-          client("raw", directory, { password: "secret" }).file.read({ path: "hello.txt" }),
-        )
+        const missingSdk = yield* client("raw", directory, { password: "secret" })
+        const missing = yield* capture(() => missingSdk.file.read({ path: "hello.txt" }))
         // kilocode_change start - match Hono AuthMiddleware username default ("kilo")
-        const bad = yield* capture(() =>
-          client("raw", directory, {
-            password: "secret",
-            headers: { authorization: authorization("kilo", "wrong") },
-          }).file.read({ path: "hello.txt" }),
-        )
-        const good = yield* capture(() =>
-          client("raw", directory, {
-            password: "secret",
-            headers: { authorization: authorization("kilo", "secret") },
-          }).file.read({ path: "hello.txt" }),
-        )
+        const badSdk = yield* client("raw", directory, {
+          password: "secret",
+          headers: { authorization: authorization("kilo", "wrong") },
+        })
+        const bad = yield* capture(() => badSdk.file.read({ path: "hello.txt" }))
+        const goodSdk = yield* client("raw", directory, {
+          password: "secret",
+          headers: { authorization: authorization("kilo", "secret") },
+        })
+        const good = yield* capture(() => goodSdk.file.read({ path: "hello.txt" }))
         // kilocode_change end
 
         return {
@@ -651,7 +698,7 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  // Regression: SyncEvent must publish on the same ProjectBus the /event handler
+  // Regression: EventV2 must publish on the same ProjectBus the /event handler
   // subscribes to, AND the /event stream must forward handler ALS/context into the
   // body-pump fiber. Drives the full SDK → /event → Session.updatePart → sync.run →
   // bus.publish → SDK subscriber path. Goes red if either the publisher uses a

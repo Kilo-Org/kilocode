@@ -105,7 +105,7 @@ class OpenApiSpecNormalizerTest {
     }
 
     @Test
-    fun `makes balance and currentOrgId nullable in kilo profile response`() {
+    fun `makes nullable profile fields nullable in kilo profile response`() {
         val raw = """
             {
               "paths": {
@@ -121,9 +121,10 @@ class OpenApiSpecNormalizerTest {
                               "properties": {
                                 "profile": { "type": "object", "properties": { "email": { "type": "string" } }, "required": ["email"], "additionalProperties": false },
                                 "balance": { "type": "object", "properties": { "balance": { "type": "number" } }, "required": ["balance"], "additionalProperties": false },
+                                "kiloPass": { "type": "object", "properties": { "currentPeriodBaseCreditsUsd": { "type": "number" } }, "required": ["currentPeriodBaseCreditsUsd"], "additionalProperties": false },
                                 "currentOrgId": { "type": "string" }
                               },
-                              "required": ["profile", "balance", "currentOrgId"],
+                              "required": ["profile", "balance", "kiloPass", "currentOrgId"],
                               "additionalProperties": false
                             }
                           }
@@ -147,6 +148,25 @@ class OpenApiSpecNormalizerTest {
         val balanceTypes = balanceAnyOf.map { (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content } }
         assert("null" in balanceTypes) { "balance anyOf should include null but got $balanceTypes" }
         assert(balanceAnyOf.any { it is JsonObject && "properties" in it }) { "balance anyOf should include the object schema" }
+        val balanceObject = balanceAnyOf.filterIsInstance<JsonObject>().first { "properties" in it }
+        val balanceValue = obj(obj(balanceObject["properties"])["balance"])
+        val balanceValueTypes = arr(balanceValue["anyOf"]).map {
+            (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content }
+        }
+        assert("null" in balanceValueTypes) { "inner balance value should include null but got $balanceValueTypes" }
+
+        // kiloPass must be anyOf [object, null]
+        val pass = obj(props["kiloPass"])
+        val passAnyOf = arr(pass["anyOf"])
+        assertEquals(2, passAnyOf.size, "kiloPass should have anyOf with 2 entries")
+        val passTypes = passAnyOf.map { (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content } }
+        assert("null" in passTypes) { "kiloPass anyOf should include null but got $passTypes" }
+        assert(passAnyOf.any { it is JsonObject && "properties" in it }) { "kiloPass anyOf should include the object schema" }
+        val passObject = passAnyOf.filterIsInstance<JsonObject>().first { "properties" in it }
+        val passProps = obj(passObject["properties"])
+        val base = obj(passProps["currentPeriodBaseCreditsUsd"])
+        val baseTypes = arr(base["anyOf"]).map { (it as? JsonObject)?.get("type").let { t -> (t as? JsonPrimitive)?.content } }
+        assert("null" in baseTypes) { "inner kiloPass value should include null but got $baseTypes" }
 
         // currentOrgId must be anyOf [string, null]
         val orgId = obj(props["currentOrgId"])
@@ -164,7 +184,7 @@ class OpenApiSpecNormalizerTest {
 
     @Test
     fun `leaves already-nullable fields unchanged in kilo profile response`() {
-        // If balance already has anyOf (i.e. the spec was generated correctly), normalizer must not double-wrap it.
+        // If nullable fields already have anyOf (i.e. the spec was generated correctly), normalizer must not double-wrap them.
         val raw = """
             {
               "paths": {
@@ -180,9 +200,10 @@ class OpenApiSpecNormalizerTest {
                               "properties": {
                                 "profile": { "type": "object", "properties": { "email": { "type": "string" } }, "required": ["email"], "additionalProperties": false },
                                 "balance": { "anyOf": [{ "type": "object", "properties": { "balance": { "type": "number" } }, "required": ["balance"], "additionalProperties": false }, { "type": "null" }] },
+                                "kiloPass": { "anyOf": [{ "type": "object", "properties": { "currentPeriodBaseCreditsUsd": { "type": "number" } }, "required": ["currentPeriodBaseCreditsUsd"], "additionalProperties": false }, { "type": "null" }] },
                                 "currentOrgId": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
                               },
-                              "required": ["profile", "balance", "currentOrgId"],
+                              "required": ["profile", "balance", "kiloPass", "currentOrgId"],
                               "additionalProperties": false
                             }
                           }
@@ -203,6 +224,9 @@ class OpenApiSpecNormalizerTest {
         val balance = obj(props["balance"])
         val balanceAnyOf = arr(balance["anyOf"])
         assertEquals(2, balanceAnyOf.size, "balance should still have exactly 2 anyOf entries, not be double-wrapped")
+        val pass = obj(props["kiloPass"])
+        val passAnyOf = arr(pass["anyOf"])
+        assertEquals(2, passAnyOf.size, "kiloPass should still have exactly 2 anyOf entries, not be double-wrapped")
     }
 
     @Test

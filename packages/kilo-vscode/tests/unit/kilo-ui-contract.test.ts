@@ -23,12 +23,14 @@ const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/bas
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
+const KILO_MESSAGE_HIGHLIGHT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-highlight.ts")
 const KILO_MESSAGE_PART_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.css")
 const SHELL_ROLLING_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/shell-rolling-results.tsx")
 const ASSISTANT_MESSAGE_FILE = path.join(
   MONOREPO_ROOT,
   "packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx",
 )
+const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
 
 function check(code: string): { ok: boolean; output: string } {
@@ -223,7 +225,10 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput highlights only while expanded", () => {
     expect(src).toContain("if (!props.active) return")
-    expect(block).toContain("active={open()}")
+    // Also active when forceOpen fires from a virtualized remount that
+    // starts already open — `open()` alone only reflects the toggle
+    // transition, not that initial-mount case.
+    expect(block).toContain("active={open() || !!props.forceOpen}")
   })
 
   it("BashHighlightedOutput keeps command and output in separate terminal containers", () => {
@@ -251,6 +256,11 @@ describe("Bash tool static terminal preview (source)", () => {
   it("bash tool passes outputPath from metadata to BashHighlightedOutput", () => {
     expect(block).toContain("props.metadata.outputPath")
   })
+
+  it("bash tool shows the SWE-Pruner kept-lines indicator", () => {
+    expect(block).toContain("swePruned(props.metadata)")
+    expect(block).toContain('i18n.t("ui.tool.swePruned"')
+  })
 })
 
 describe("Expanded tool motion and typography (source)", () => {
@@ -272,16 +282,18 @@ describe("Expanded tool motion and typography (source)", () => {
 
 describe("HighlightedText @mention regex fallback and click handler (source)", () => {
   const src = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const helper = fs.readFileSync(KILO_MESSAGE_HIGHLIGHT_FILE, "utf-8")
 
   it("detects @path patterns via regex when source offsets are missing", () => {
-    // detectMentions is the regex fallback for when the backend doesn't
-    // populate FilePart.source.text.{start,end}
-    expect(src).toContain("detectMentions")
-    expect(src).toMatch(/MENTION_RE/)
+    // detect is the regex fallback for when the backend doesn't populate FilePart.source.text.{start,end}
+    expect(src).toContain("buildHighlightedTextSegments")
+    expect(helper).toMatch(/MENTION_RE/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
   })
 
   it("prefers source offsets over regex when both are available", () => {
-    expect(src).toMatch(/offset\.length\s*>\s*0\s*\?/)
+    expect(helper).toMatch(/const refs = \[/)
+    expect(helper).toMatch(/refs\.length\s*>\s*0\s*\?\s*resolve\(text,\s*refs\)\s*:\s*detect\(text\)/)
   })
 
   it("file mention spans are clickable via data.openFile", () => {
@@ -300,9 +312,10 @@ describe("HighlightedText @mention regex fallback and click handler (source)", (
 
 describe("AssistantMessage visible row contract (source)", () => {
   const src = fs.readFileSync(ASSISTANT_MESSAGE_FILE, "utf-8")
+  const parts = fs.readFileSync(TRANSCRIPT_PARTS_FILE, "utf-8")
 
   it("filters suppressed tools that have no visible renderer", () => {
-    expect(src).toContain('state.status === "completed" && !!ToolRegistry.render(tool)')
+    expect(parts).toContain('part.state.status === "completed" && !!ToolRegistry.render(part.tool)')
   })
 
   it("filters pending questions until their dock request exists", () => {
@@ -311,8 +324,8 @@ describe("AssistantMessage visible row contract (source)", () => {
   })
 
   it("filters completed synthetic text and redaction-only reasoning", () => {
-    expect(src).toContain('part.type === "text" && part.synthetic && props.message.time.completed')
-    expect(src).toContain('.text?.replace("[REDACTED]", "").trim()')
+    expect(parts).toContain("part.synthetic && message?.time.completed")
+    expect(parts).toContain('.text?.replace("[REDACTED]", "").trim()')
   })
 
   it("uses the plan exit card only when plan metadata is renderable", () => {
@@ -378,7 +391,7 @@ describe("Collapsed deferred tool details contract (source)", () => {
     const block =
       message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
     expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
-    expect(block).toMatch(/if \(open\(\) \|\| pending\(\)\) setMounted\(true\)/)
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
     expect(block).toContain("hasDetails")
     expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
   })

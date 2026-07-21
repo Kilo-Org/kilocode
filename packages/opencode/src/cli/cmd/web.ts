@@ -1,34 +1,10 @@
 import { Effect } from "effect"
-import { Server } from "../../server/server"
 import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstanceRuntime } from "../../project/instance-runtime" // kilocode_change
 import open from "open"
-import { networkInterfaces } from "os"
-
-function getNetworkIPs() {
-  const nets = networkInterfaces()
-  const results: string[] = []
-
-  for (const name of Object.keys(nets)) {
-    const net = nets[name]
-    if (!net) continue
-
-    for (const netInfo of net) {
-      // Skip internal and non-IPv4 addresses
-      if (netInfo.internal || netInfo.family !== "IPv4") continue
-
-      // Skip Docker bridge networks (typically 172.x.x.x)
-      if (netInfo.address.startsWith("172.")) continue
-
-      results.push(netInfo.address)
-    }
-  }
-
-  return results
-}
 
 export const WebCommand = effectCmd({
   command: "web",
@@ -38,6 +14,7 @@ export const WebCommand = effectCmd({
   // ambient project InstanceContext needed at startup.
   instance: false, // kilocode_change
   handler: Effect.fn("Cli.web")(function* (args) {
+    const { Server } = yield* Effect.promise(() => import("../../server/server"))
     if (!Flag.KILO_SERVER_PASSWORD) {
       UI.println(UI.Style.TEXT_WARNING_BOLD + "!  KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }
@@ -47,38 +24,24 @@ export const WebCommand = effectCmd({
     UI.println(UI.logo("  "))
     UI.empty()
 
-    if (opts.hostname === "0.0.0.0") {
-      // Show localhost for local access
-      const localhostUrl = `http://localhost:${server.port}`
-      UI.println(UI.Style.TEXT_INFO_BOLD + "  Local access:      ", UI.Style.TEXT_NORMAL, localhostUrl)
+    // kilocode_change start
+    const urls = server.urls
 
-      // Show network IPs for remote access
-      const networkIPs = getNetworkIPs()
-      if (networkIPs.length > 0) {
-        for (const ip of networkIPs) {
-          UI.println(
-            UI.Style.TEXT_INFO_BOLD + "  Network access:    ",
-            UI.Style.TEXT_NORMAL,
-            `http://${ip}:${server.port}`,
-          )
-        }
-      }
-
-      if (opts.mdns) {
-        UI.println(
-          UI.Style.TEXT_INFO_BOLD + "  mDNS:              ",
-          UI.Style.TEXT_NORMAL,
-          `${opts.mdnsDomain}:${server.port}`,
-        )
-      }
-
-      // Open localhost in browser
-      open(localhostUrl).catch(() => {})
-    } else {
-      const displayUrl = server.url.toString()
-      UI.println(UI.Style.TEXT_INFO_BOLD + "  Web interface:    ", UI.Style.TEXT_NORMAL, displayUrl)
-      open(displayUrl).catch(() => {})
+    UI.println(UI.Style.TEXT_INFO_BOLD + "  Local:   ", UI.Style.TEXT_NORMAL, urls.local)
+    if (urls.network) {
+      UI.println(UI.Style.TEXT_INFO_BOLD + "  Network: ", UI.Style.TEXT_NORMAL, urls.network)
     }
+
+    if (opts.mdns) {
+      UI.println(
+        UI.Style.TEXT_INFO_BOLD + "  mDNS:    ",
+        UI.Style.TEXT_NORMAL,
+        `${opts.mdnsDomain}:${server.port}`,
+      )
+    }
+
+    open(urls.local).catch(() => {})
+    // kilocode_change end
 
     // kilocode_change start - graceful signal shutdown
     yield* Effect.promise(

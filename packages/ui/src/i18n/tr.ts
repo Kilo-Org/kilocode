@@ -127,6 +127,7 @@ export const dict = {
 
   "ui.tool.read": "Oku",
   "ui.tool.loaded": "Yüklendi",
+  "ui.tool.swePruned": "SWE-Pruner · {{total}} satırdan {{kept}} tanesi korundu", // kilocode_change
   "ui.tool.list": "Listele",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -177,7 +178,9 @@ export const dict = {
   "ui.patch.action.patched": "Yamalandı",
 
   "ui.question.subtitle.answered": "{{count}} cevaplandı",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(cevap yok)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(cevaplanmadı)",
   "ui.question.multiHint": "Geçerli tüm cevapları seçin",
   "ui.question.singleHint": "Bir cevap seçin",

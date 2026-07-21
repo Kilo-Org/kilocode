@@ -50,6 +50,7 @@ const EXEMPT_SCOPES = [
   "script/check-opencode-annotations.ts",
   "packages/script/tests/check-opencode-annotations.test.ts",
   ".github/workflows/check-opencode-annotations.yml",
+  ".github/workflows/watch-opencode-releases.yml",
 ]
 
 const args = process.argv.slice(2)
@@ -77,7 +78,9 @@ function isUpstreamMerge() {
     const [parents = "", subject = ""] = line.split("\t")
     if (!parents.includes(" ")) return false
     const s = subject.toLowerCase()
-    return s.startsWith("merge: upstream ") || s.startsWith("resolve merge conflict")
+    return (
+      s.startsWith("merge: upstream ") || s.startsWith("merge: opencode ") || s.startsWith("resolve merge conflict")
+    )
   })
 }
 

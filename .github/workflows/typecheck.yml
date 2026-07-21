@@ -10,7 +10,7 @@ on:
 jobs:
   typecheck-js:
     name: typecheck-js
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change
@@ -27,8 +27,33 @@ jobs:
       # kilocode_change end
 
   # kilocode_change start
+  jetbrains-changes:
+    name: detect JetBrains changes
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    outputs:
+      jetbrains: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.jetbrains }}
+    steps:
+      - name: Checkout repository
+        if: github.event_name != 'workflow_dispatch'
+        uses: actions/checkout@v6
+
+      - name: Detect JetBrains changes
+        if: github.event_name != 'workflow_dispatch'
+        id: filter
+        uses: Kilo-Org/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # v3
+        with:
+          predicate-quantifier: every
+          filters: |
+            jetbrains:
+              - '**'
+              - '!.changeset/**'
+              - '!packages/kilo-vscode/**'
+              - '!packages/kilo-docs/**'
+
   typecheck-jetbrains:
     name: typecheck-jetbrains
+    needs: jetbrains-changes
+    if: github.event_name == 'workflow_dispatch' || needs.jetbrains-changes.outputs.jetbrains == 'true'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
@@ -57,13 +82,21 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
       - typecheck-js
+      - jetbrains-changes
       - typecheck-jetbrains
     if: always()
     steps:
       - name: Verify typecheck jobs passed
         run: |
           echo "typecheck-js=${{ needs.typecheck-js.result }}"
+          echo "jetbrains-changes=${{ needs.jetbrains-changes.result }}"
           echo "typecheck-jetbrains=${{ needs.typecheck-jetbrains.result }}"
           test "${{ needs.typecheck-js.result }}" = "success"
-          test "${{ needs.typecheck-jetbrains.result }}" = "success"
+          test "${{ needs.jetbrains-changes.result }}" = "success"
+          if [ "${{ needs.jetbrains-changes.outputs.jetbrains }}" = "true" ]; then
+            test "${{ needs.typecheck-jetbrains.result }}" = "success"
+          else
+            test "${{ needs.jetbrains-changes.outputs.jetbrains }}" = "false"
+            test "${{ needs.typecheck-jetbrains.result }}" = "skipped"
+          fi
   # kilocode_change end

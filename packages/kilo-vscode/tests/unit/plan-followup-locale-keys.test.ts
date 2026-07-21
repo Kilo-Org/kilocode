@@ -50,6 +50,8 @@ const keys = [
   "plan.followup.answer.newSession.description",
   "plan.followup.answer.continue",
   "plan.followup.answer.continue.description",
+  "plan.followup.answer.keepRefining",
+  "plan.followup.answer.keepRefining.description",
 ]
 
 describe("plan follow-up i18n keys", () => {

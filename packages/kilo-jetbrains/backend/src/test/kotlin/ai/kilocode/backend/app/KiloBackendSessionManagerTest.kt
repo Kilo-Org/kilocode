@@ -29,15 +29,18 @@ class KiloBackendSessionManagerTest {
     private val mock = MockCliServer()
     private val log = TestLog()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val apps = mutableListOf<KiloBackendAppService>()
 
     @AfterTest
     fun tearDown() {
+        apps.forEach { it.dispose() }
+        apps.clear()
         scope.cancel()
         mock.close()
     }
 
     private fun setup(): KiloBackendAppService {
-        return KiloBackendAppService.create(scope, FakeCliServer(mock), log)
+        return KiloBackendAppService.create(scope, FakeCliServer(mock), log).also { apps.add(it) }
     }
 
     private suspend fun ready(app: KiloBackendAppService) {
@@ -613,7 +616,8 @@ class KiloBackendSessionManagerTest {
             "title": "With Summary",
             "version": "1",
             "time": {"created": 1, "updated": 1},
-            "summary": {"additions": 42, "deletions": 7, "files": 3}
+            "summary": {"additions": 42, "deletions": 7, "files": 3},
+            "revert": {"messageID":"msg_1","partID":"prt_1","snapshot":"snap_1","diff":"patch"}
         }]"""
         val app = setup()
         ready(app)
@@ -624,6 +628,8 @@ class KiloBackendSessionManagerTest {
         assertEquals(42, session.summary!!.additions)
         assertEquals(7, session.summary!!.deletions)
         assertEquals(3, session.summary!!.files)
+        assertEquals("msg_1", session.revert?.messageID)
+        assertEquals("prt_1", session.revert?.partID)
     }
 
     @Test

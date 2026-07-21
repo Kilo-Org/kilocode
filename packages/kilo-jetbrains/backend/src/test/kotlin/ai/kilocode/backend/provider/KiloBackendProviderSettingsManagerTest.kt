@@ -5,6 +5,9 @@ import ai.kilocode.backend.app.KiloBackendAppService
 import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
+import ai.kilocode.rpc.dto.CustomModelDto
+import ai.kilocode.rpc.dto.CustomProviderSaveDto
+import ai.kilocode.rpc.dto.ProviderConnectDto
 import ai.kilocode.rpc.dto.ProviderDisconnectDto
 import ai.kilocode.rpc.dto.ProviderEnableDto
 import kotlinx.coroutines.async
@@ -56,6 +59,32 @@ class KiloBackendProviderSettingsManagerTest {
         assertNull(mock.lastConfigPatchBody)
         assertNull(mock.lastAuthDeletePath)
         assertEquals(0, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `connecting provider stores credentials and reloads connected state`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"openai","name":"OpenAI","source":"custom","models":{}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        mock.providersAfterAuthPut = """{
+            "all":[{"id":"openai","name":"OpenAI","source":"custom","models":{}}],
+            "default":{},
+            "connected":["openai"],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.connect(ProviderConnectDto("/test", "openai", "sk-test", mapOf("baseURL" to "https://api.openai.com/v1")))
+
+        assertNull(result.error)
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"key\":\"sk-test\"")
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"baseURL\":\"https://api.openai.com/v1\"")
+        assertEquals(listOf("openai"), result.state.connected)
+        assertEquals(1, mock.requestCount("/global/dispose"))
     }
 
     @Test
@@ -188,6 +217,51 @@ class KiloBackendProviderSettingsManagerTest {
         assertContains(mock.lastWorkspaceConfigPatchBody.orEmpty(), "\"workspace-disabled\"")
         assertFalse(mock.lastWorkspaceConfigPatchBody.orEmpty().contains("anthropic"))
         assertFalse(mock.lastWorkspaceConfigPatchBody.orEmpty().contains("global-disabled"))
+        assertEquals(1, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `saving custom provider without models returns error and does not patch config`() = runBlocking {
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto("/test", "my-openai", "My OpenAI", "https://api.example.com/v1"),
+        )
+
+        assertEquals("At least one model ID is required.", result.error)
+        assertNull(mock.lastConfigPatchBody)
+        assertEquals(0, mock.requestCount("/global/dispose"))
+    }
+
+    @Test
+    fun `saving custom provider with a model patches config and reloads provider`() = runBlocking {
+        mock.providers = """{
+            "all":[{"id":"my-openai","name":"My OpenAI","source":"config","models":{"gpt-4o":{"id":"gpt-4o","name":"gpt-4o"}}}],
+            "default":{},
+            "connected":[],
+            "failed":[]
+        }""".trimIndent()
+        val manager = manager()
+
+        mock.resetCounts()
+        val result = manager.saveCustom(
+            CustomProviderSaveDto(
+                "/test",
+                "my-openai",
+                "My OpenAI",
+                "https://api.example.com/v1",
+                apiKey = "sk-test",
+                models = listOf(CustomModelDto("gpt-4o", "gpt-4o")),
+            ),
+        )
+
+        assertNull(result.error)
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"my-openai\"")
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"@ai-sdk/openai-compatible\"")
+        assertContains(mock.lastConfigPatchBody.orEmpty(), "\"gpt-4o\"")
+        assertContains(mock.lastAuthPutBody.orEmpty(), "\"key\":\"sk-test\"")
+        assertTrue(result.state.providers.any { it.id == "my-openai" })
         assertEquals(1, mock.requestCount("/global/dispose"))
     }
 

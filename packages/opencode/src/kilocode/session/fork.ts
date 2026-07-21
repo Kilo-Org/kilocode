@@ -1,48 +1,14 @@
 import { MessageV2 } from "@/session/message-v2"
-import { SessionID } from "@/session/schema"
-import { Database } from "@/storage/db"
-import { SyncEvent } from "@/sync"
-import { Effect } from "effect"
+import { KiloPartLifecycle } from "./part-lifecycle"
 
 const task = "task"
 const stale = /^[ \t]*task_id:[^\r\n]*(?:(?:\r?\n){1,2}|$)/m
 
-type Item = { type: "message"; info: MessageV2.Info } | { type: "part"; part: MessageV2.Part; time: number }
-
-export function writer(sessionID: SessionID, sync: SyncEvent.Interface) {
-  const items: Item[] = []
-  return {
-    message<T extends MessageV2.Info>(info: T) {
-      items.push({ type: "message", info })
-      return info
-    },
-    part(part: MessageV2.Part) {
-      items.push({ type: "part", part: structuredClone(detachPart(part)), time: Date.now() })
-    },
-    commit() {
-      return Effect.sync(() =>
-        Database.transaction(
-          () => {
-            // sync.run stays synchronous with publishing disabled, and its nested transaction reuses this active transaction.
-            for (const item of items) {
-              if (item.type === "message") {
-                Effect.runSync(sync.run(MessageV2.Event.Updated, { sessionID, info: item.info }, { publish: false }))
-                continue
-              }
-              Effect.runSync(
-                sync.run(
-                  MessageV2.Event.PartUpdated,
-                  { sessionID, part: item.part, time: item.time },
-                  { publish: false },
-                ),
-              )
-            }
-          },
-          { behavior: "immediate" },
-        ),
-      )
-    },
-  }
+// Prepare a source part for a forked transcript copy: drop transient parts (returns undefined) and detach
+// task calls into historical results. The caller assigns fresh ids and publishes via Session.updatePart.
+export function prepareForkedPart(part: MessageV2.Part): MessageV2.Part | undefined {
+  if (KiloPartLifecycle.transient(part)) return undefined
+  return structuredClone(detachPart(part))
 }
 
 function metadata(value: Record<string, unknown> | undefined) {

@@ -35,6 +35,11 @@ class SessionSidePanelManager(
     private val status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activity() },
     private val history: ((Disposable, (SessionRef) -> Unit, (String) -> Unit) -> JComponent)? = null,
     private val timers: UiTimerSource = UiTimers,
+    private val request: (JComponent) -> Unit = { focus ->
+        ApplicationManager.getApplication().invokeLater({
+            IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
+        }, ModalityState.defaultModalityState())
+    },
 ) : SessionManager, Disposable {
     val component: JPanel = object : JPanel(BorderLayout()), DataProvider {
         override fun getData(dataId: String): Any? {
@@ -99,6 +104,11 @@ class SessionSidePanelManager(
         current?.syncActivity()
     }
 
+    @RequiresEdt
+    override fun focusPrompt() {
+        focus(current?.promptFocusedComponent)
+    }
+
     private fun create(ref: SessionRef): SessionUi {
         val workspace = when (ref) {
             is SessionRef.Local -> ref.session?.directory?.let(resolve) ?: root
@@ -120,7 +130,7 @@ class SessionSidePanelManager(
         val view = cached ?: createHistory().also { panel = it }
         if (cached != null && view is HistoryPanel) view.refresh()
         if (current == null && component.componentCount == 1 && component.getComponent(0) === view) {
-            focusHistory(view)
+            focus((view as? HistoryPanel)?.defaultFocusedComponent)
             return
         }
         current = null
@@ -128,14 +138,12 @@ class SessionSidePanelManager(
         component.add(view, BorderLayout.CENTER)
         component.revalidate()
         component.repaint()
-        focusHistory(view)
+        focus((view as? HistoryPanel)?.defaultFocusedComponent)
     }
 
-    private fun focusHistory(view: JComponent) {
-        val focus = (view as? HistoryPanel)?.defaultFocusedComponent ?: return
-        ApplicationManager.getApplication().invokeLater({
-            IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
-        }, ModalityState.defaultModalityState())
+    private fun focus(component: JComponent?) {
+        val focus = component ?: return
+        request(focus)
     }
 
     private fun createHistory(): JComponent {
@@ -181,6 +189,7 @@ class SessionSidePanelManager(
         component.add(ui, BorderLayout.CENTER)
         component.revalidate()
         component.repaint()
+        focus(ui.defaultFocusedComponent)
     }
 
     private fun register(ui: SessionUi?) {

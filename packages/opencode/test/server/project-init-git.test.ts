@@ -1,19 +1,17 @@
 import { afterEach, describe, expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Layer } from "effect"
+import { HttpClientResponse } from "effect/unstable/http"
 import path from "path"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { InstanceStore } from "../../src/project/instance-store"
 import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
 import { Snapshot } from "../../src/snapshot"
-import { Server } from "../../src/server/server"
-import * as Log from "@opencode-ai/core/util/log"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-
-void Log.init({ print: false })
+import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
 
 afterEach(async () => {
   await disposeAllInstances()
@@ -23,18 +21,14 @@ afterEach(async () => {
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const testInstanceStore = InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap))
 
-const it = testEffect(Layer.mergeAll(AppFileSystem.defaultLayer, Snapshot.defaultLayer, testInstanceStore))
+const it = testEffect(Layer.mergeAll(FSUtil.defaultLayer, Snapshot.defaultLayer, testInstanceStore, httpApiLayer))
 
 function request(directory: string, url: string, init: RequestInit = {}) {
-  return Effect.promise(() => {
-    const headers = new Headers(init.headers)
-    headers.set("x-kilo-directory", directory)
-    return Promise.resolve(Server.Default().app.request(url, { ...init, headers }))
-  })
+  return requestInDirectory(url, directory, init)
 }
 
-function json<T>(response: Response) {
-  return Effect.promise(() => response.json() as Promise<T>)
+function json<T>(response: HttpClientResponse.HttpClientResponse) {
+  return response.json.pipe(Effect.map((value) => value as T))
 }
 
 function collectGlobalEvents() {
@@ -58,7 +52,7 @@ describe("project.initGit endpoint", () => {
   it.instance("initializes git and reloads immediately", () =>
     Effect.gen(function* () {
       const tmp = yield* TestInstance
-      const fs = yield* AppFileSystem.Service
+      const fs = yield* FSUtil.Service
       const events = yield* collectGlobalEvents()
 
       const init = yield* request(tmp.directory, "/project/git/init", {
@@ -73,7 +67,7 @@ describe("project.initGit endpoint", () => {
       })
       // Reload behavior: bus emits exactly one server.instance.disposed for the directory.
       expect(disposedEvents(events.seen, tmp.directory)).toBe(1)
-      expect(yield* fs.exists(path.join(tmp.directory, ".git", "opencode"))).toBe(false)
+      expect(yield* fs.exists(path.join(tmp.directory, ".git", "kilo"))).toBe(false) // kilocode_change
 
       const current = yield* request(tmp.directory, "/project/current")
       expect(current.status).toBe(200)

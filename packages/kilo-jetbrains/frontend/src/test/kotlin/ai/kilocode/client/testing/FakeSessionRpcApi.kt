@@ -46,6 +46,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     /** Message history returned by [messages]. */
     val history = mutableListOf<MessageWithPartsDto>()
+    val histories = mutableMapOf<String, MutableList<MessageWithPartsDto>>()
     var historyGate: CompletableDeferred<Unit>? = null
     var historyCalls = 0
         private set
@@ -84,10 +85,18 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     var enhanced = "Enhanced prompt"
     var enhanceGate: CompletableDeferred<Unit>? = null
     var enhanceThrows: Exception? = null
+    var revertGate: CompletableDeferred<Unit>? = null
+    var unrevertGate: CompletableDeferred<Unit>? = null
+    var revertThrows: Exception? = null
+    var unrevertThrows: Exception? = null
+    var commandThrows: Exception? = null
     val prompts = mutableListOf<Triple<String, String, PromptDto>>()
+    val commands = mutableListOf<CommandCall>()
     val attachmentParts = mutableListOf<AttachmentCall>()
     val aborts = mutableListOf<Pair<String, String>>()
     val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
+    val reverts = mutableListOf<RevertCall>()
+    val unreverts = mutableListOf<Pair<String, String>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
     val permissionRulesSaved = mutableListOf<Triple<String, String, PermissionAlwaysRulesDto>>()
@@ -106,6 +115,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     data class CloudCall(val directory: String, val cursor: String?, val limit: Int, val gitUrl: String?)
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
+    data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
+    data class RevertCall(val id: String, val directory: String, val message: String, val part: String?)
 
     // --- Implementation ---
 
@@ -195,6 +206,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         prompts.add(Triple(id, directory, prompt))
     }
 
+    override suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto) {
+        assertNotEdt("command")
+        commandThrows?.let { throw it }
+        commands.add(CommandCall(id, directory, command, arguments, prompt))
+    }
+
     override suspend fun abort(id: String, directory: String) {
         assertNotEdt("abort")
         aborts.add(id to directory)
@@ -205,11 +222,25 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         compacts.add(Triple(id, directory, model))
     }
 
+    override suspend fun revert(id: String, directory: String, messageID: String, partID: String?) {
+        assertNotEdt("revert")
+        revertGate?.await()
+        revertThrows?.let { throw it }
+        reverts.add(RevertCall(id, directory, messageID, partID))
+    }
+
+    override suspend fun unrevert(id: String, directory: String) {
+        assertNotEdt("unrevert")
+        unrevertGate?.await()
+        unrevertThrows?.let { throw it }
+        unreverts.add(id to directory)
+    }
+
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> {
         assertNotEdt("messages")
         historyCalls++
         historyGate?.await()
-        return history.toList()
+        return histories[id]?.toList() ?: history.toList()
     }
 
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? {

@@ -37,6 +37,7 @@ import {
   reviewComposerEdit,
   reviewDraftSpeechKey,
   reviewEditSpeechKey,
+  sendReviewComments,
   type AnnotationLabels,
   type AnnotationMeta,
   type ReviewComposer,
@@ -58,7 +59,8 @@ import { VirtualDiffList } from "../diff-viewer/VirtualDiffList"
 import { treeOrder } from "../diff-viewer/file-tree-utils"
 import { isMarkdownFile, MarkdownDiffView } from "../diff-viewer/MarkdownDiffView"
 import { ImageDiffView } from "../diff-viewer/ImageDiffView"
-import { createDiffRows, diffToken } from "../diff-viewer/diff-state"
+import { createDiffRows } from "../diff-viewer/diff-state"
+import { createDiffRequests } from "../diff-viewer/diff-requests"
 
 // --- Data model ---
 
@@ -104,6 +106,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     placeholder: t("agentManager.review.commentPlaceholder"),
     cancel: t("common.cancel"),
     comment: t("agentManager.review.commentAction"),
+    send: t("prompt.action.send"),
     save: t("common.save"),
     sendToChat: t("agentManager.review.sendToChat"),
     edit: t("common.edit"),
@@ -134,7 +137,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // collapse state while adding and removing files from live summaries.
   let initializedKey: string | undefined
   let known = new Set<string>()
-  const requested = new Map<string, string>()
 
   // Reorder diffs to match the file-tree's depth-first visual order so
   // scrolling through the accordion matches the tree grouping.
@@ -174,7 +176,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
   // row. Raw scrollTop is not stable once the virtualizer remeasures dynamic rows.
   const preserveScroll = (fn: () => void) => {
     const handle = virtualizer()
-    const index = handle?.findStartIndex()
+    const index = handle?.findItemIndex(handle.scrollOffset)
     const file = index === undefined ? undefined : rows()[index]?.file
     const offset = index === undefined ? 0 : (handle?.scrollOffset ?? 0) - (handle?.getItemOffset(index) ?? 0)
     fn()
@@ -238,7 +240,6 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     on(
       () => props.sessionKey,
       () => {
-        requested.clear()
         setDraft(null)
         draftMeta = null
         setEditing(null)
@@ -249,32 +250,13 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
     ),
   )
 
-  const request = (diff: WorktreeFileDiff) => {
-    if (!props.onRequestDiff || props.loadingFiles?.has(diff.file)) return
-    if (!isDiffExpandable(diff) || diff.summarized !== true) return
-    const value = diffToken(diff)
-    if (requested.get(diff.file) === value) return
-    requested.set(diff.file, value)
-    props.onRequestDiff(diff.file)
-  }
-
-  createEffect(
-    on(
-      () => [open(), props.diffs] as const,
-      ([next]) => {
-        const files = new Set(next)
-        for (const file of requested.keys()) {
-          if (!files.has(file)) requested.delete(file)
-        }
-        for (const file of next) {
-          const diff = props.diffs.find((item) => item.file === file)
-          if (!diff || diff.kind === "image") continue
-          request(diff)
-        }
-      },
-      { defer: true },
-    ),
-  )
+  const request = createDiffRequests({
+    key: () => props.sessionKey,
+    diffs: () => props.diffs,
+    open,
+    loading: () => props.loadingFiles,
+    send: () => props.onRequestDiff,
+  })
 
   // --- CRUD ---
 
@@ -286,6 +268,18 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       draftMeta = null
       composer().draft = null
     })
+    focusRoot()
+  }
+
+  const sendComment = (file: string, side: AnnotationSide, line: number, text: string, selectedText: string) => {
+    const comment = { id: `c-${++nextId}-${Date.now()}`, file, side, line, comment: text, selectedText }
+    sendReviewComments([comment], props.activeTerminalId)
+    preserveScroll(() => {
+      setDraft(null)
+      draftMeta = null
+      composer().draft = null
+    })
+    props.onSendClick?.()
     focusRoot()
   }
 
@@ -400,6 +394,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
       editing: editing(),
       setEditing: setEditState,
       addComment,
+      sendComment,
       updateComment,
       deleteComment,
       cancelDraft,

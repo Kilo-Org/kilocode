@@ -1,4 +1,57 @@
+export const anacondaDesktopDict = {
+  "provider.anaconda.title.connect": "توصيل Anaconda Desktop",
+  "provider.anaconda.title.manage": "إدارة Anaconda Desktop",
+  "provider.anaconda.status.checking": "جارٍ التحقق من Anaconda Desktop...",
+  "provider.anaconda.status.opening": "جارٍ فتح Anaconda Desktop...",
+  "provider.anaconda.status.syncing": "جارٍ تحديث نماذج الموفر...",
+  "provider.anaconda.status.ready": "جاهز للتوصيل",
+  "provider.anaconda.status.waiting": "في انتظار Desktop",
+  "provider.anaconda.status.attention": "يحتاج إلى انتباه",
+  "provider.anaconda.status.unavailable": "غير متوفر",
+  "provider.anaconda.state.unsupported": "Anaconda Desktop غير مدعوم على {{platform}}.",
+  "provider.anaconda.state.notInstalled":
+    "ثبّت Anaconda Desktop على هذا الجهاز، ثم عُد إلى هنا. لا يقوم Kilo بتشغيل المثبّت نيابةً عنك.",
+  "provider.anaconda.state.notRunning": "افتح Anaconda Desktop، وأكمل الإعداد وسجّل الدخول، ثم اختر تحقق مرة أخرى.",
+  "provider.anaconda.state.invalidConfig":
+    "إعداد Anaconda Desktop غير مكتمل. افتح Desktop، وأكمل الإعداد، وأعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.signedOut": "افتح Anaconda Desktop وسجّل الدخول قبل توصيل Kilo.",
+  "provider.anaconda.state.unauthorized":
+    "تعذّر على Kilo الوصول إلى Anaconda Desktop. افتح Desktop، وسجّل الدخول مرة أخرى، وأعد تشغيله إذا لزم الأمر.",
+  "provider.anaconda.state.unavailable":
+    "لا يستجيب Anaconda Desktop بعد. افتحه وانتظر حتى ينتهي التطبيق من بدء التشغيل.",
+  "provider.anaconda.state.noModel":
+    "في Anaconda Desktop، نزّل نموذجًا لتوليد النصوص. اختر نموذجًا يدعم استدعاء الأدوات إن أمكن، ثم شغّل خادمه.",
+  "provider.anaconda.state.noServer_one":
+    "يتوفر نموذج واحد مُنزّل لتوليد النصوص. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.noServer_other":
+    "تتوفر نماذج مُنزّلة لتوليد النصوص، وعددها {{count}}. في Anaconda Desktop، شغّل خادم نموذج. يوصى بشدة باستخدام نماذج تدعم استدعاء الأدوات.",
+  "provider.anaconda.state.unhealthy":
+    "خادم الاستدلال النشط ليس في حالة سليمة بعد. تحقق منه في Anaconda Desktop وأعد تشغيل الخادم إذا لزم الأمر.",
+  "provider.anaconda.state.ready":
+    "عثر Kilo على خادم محلي سليم لتوليد النصوص ويمكنه استيراد إعدادات الاتصال الحالية الخاصة به.",
+  "provider.anaconda.server": "خادم الاستدلال النشط",
+  "provider.anaconda.context": "نافذة السياق",
+  "provider.anaconda.contextValue": "{{count}} رمز",
+  "provider.anaconda.tools": "استدعاء الأدوات",
+  "provider.anaconda.tools.supported": "مدعوم",
+  "provider.anaconda.tools.unsupported": "غير مُفعّل",
+  "provider.anaconda.tools.unknown": "غير معروف",
+  "provider.anaconda.warning.title": "دعم الأدوات محدود",
+  "provider.anaconda.warning.description":
+    "لا يؤكد هذا الخادم استدعاء الأدوات. قد تفشل إجراءات وكيل البرمجة أو تكون غير متوفرة. تابع فقط إذا قبلت هذه القيود.",
+  "provider.anaconda.action.download": "تنزيل Anaconda Desktop",
+  "provider.anaconda.action.open": "فتح Anaconda Desktop",
+  "provider.anaconda.action.checkAgain": "تحقق مرة أخرى",
+  "provider.anaconda.action.continue": "تابع على أي حال",
+  "provider.anaconda.action.manage": "إدارة / تحديث",
+  "provider.anaconda.toast.refreshed.title": "تم تحديث Anaconda Desktop",
+  "provider.anaconda.toast.refreshed.description": "الخادم المحلي النشط والنماذج محدّثة في Kilo.",
+  "settings.providers.note.anacondaDesktop": "شغّل نموذجًا يُقدّم محليًا بواسطة Anaconda Desktop.",
+  "settings.providers.tag.local": "محلي",
+} as const
+
 export const dict = {
+  ...anacondaDesktopDict,
   "command.category.suggested": "مقترح",
   "command.category.view": "عرض",
   "command.category.project": "مشروع",
@@ -82,7 +135,12 @@ export const dict = {
   "revert.banner.count_other": "تم التراجع عن {{count}} رسائل",
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
-  "revert.banner.hint": "أرسل رسالة جديدة لجعل هذا دائمًا",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled": "تم التراجع عن المحادثة. لم تُستعَد تغييرات الملفات لأن اللقطات معطّلة.",
+  "revert.banner.workspace.unavailable":
+    "تم التراجع عن المحادثة. لم تكن هناك نقطة تحقق للملفات، لذا لم تُستعَد تغييرات مساحة العمل.",
+  "revert.banner.workspace.legacy": "تم التراجع عن المحادثة. حالة استعادة مساحة العمل غير متاحة لهذا التراجع السابق.",
+  "revert.banner.workspace.enableSnapshots": "تفعيل اللقطات",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
@@ -93,6 +151,30 @@ export const dict = {
   "command.session.unshare": "إلغاء مشاركة الجلسة",
   "command.session.unshare.description": "إيقاف مشاركة هذه الجلسة",
   "command.session.export": "تصدير سجل الجلسة",
+
+  "agentRequirements.skill.installed": "مثبت",
+  "agentRequirements.skill.checkFailed": "فشل فحص المهارة",
+  "agentRequirements.skill.missing": "غير مثبت",
+  "agentRequirements.mcp.connected": "متصل",
+  "agentRequirements.mcp.checkFailed": "فشل فحص MCP",
+  "agentRequirements.mcp.missing": "غير متصل",
+  "agentRequirements.extension.installed": "مثبت",
+  "agentRequirements.extension.checkFailed": "فشل فحص إضافة VS Code",
+  "agentRequirements.extension.missing": "غير مثبت",
+  "agentRequirements.extension.description": "ثبّت الإضافات الناقصة في VS Code.",
+  "agentRequirements.group.skills": "المهارات",
+  "agentRequirements.group.mcps": "MCPs",
+  "agentRequirements.group.extensions": "إضافات VS Code",
+  "agentRequirements.blocked.title": "متطلبات وكيل {{agent}}",
+  "agentRequirements.blocked.description": "يحتاج هذا الوكيل إلى الأدوات التالية قبل أن يتمكن من العمل.",
+  "agentRequirements.prompt.blocked": "أكمل الفحوصات المطلوبة لاستخدام هذا الوكيل أولاً",
+  "agentRequirements.action.openMarketplace": "فتح Marketplace",
+  "agentRequirements.error.unknownAgent": "تعذر العثور على الوكيل المحدد.",
+  "agentRequirements.error.malformedDeclaration": "لدى هذا الوكيل تعريف متطلبات غير صالح.",
+  "agentRequirements.error.discoveryFailed": "تعذر على Kilo فحص المهارات المتاحة.",
+  "agentRequirements.error.mcpStatusFailed": "تعذر على Kilo فحص حالة خادم MCP.",
+  "agentRequirements.error.scopeMismatch": "لم يعد فحص متطلبات هذا الوكيل نشطًا.",
+  "agentRequirements.error.requestFailed": "تعذر على Kilo فحص متطلبات الوكيل.",
 
   "palette.search.placeholder": "البحث في الملفات والأوامر والجلسات",
   "palette.empty": "لا توجد نتائج",
@@ -173,6 +255,7 @@ export const dict = {
   "model.tag.free": "مجاني",
   "model.tag.dataCollected": "قد تُستخدم البيانات للتدريب",
   "model.tag.latest": "الأحدث",
+  "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",
   "model.group.favorites": "المفضلة",
   "model.group.collapse": "طي {{group}}",
@@ -200,6 +283,7 @@ export const dict = {
   "model.preview.label.average": "متوسط التكلفة التقديرية",
   "model.preview.label.context": "السياق",
   "model.preview.group.terminalBench": "Terminal Bench 2.0",
+  "model.preview.group.autoEfficientChoices": "خيارات النماذج",
   "model.preview.label.completion": "الإكمال",
   "model.preview.label.costAttempt": "التكلفة / المحاولة",
   "model.preview.value.notSupported": "غير مدعوم",
@@ -269,6 +353,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "تضمين الملف النشط",
   "prompt.context.removeActiveFile": "إزالة الملف النشط من السياق",
   "prompt.context.removeFile": "إزالة الملف من السياق",
+  "prompt.thinking.tooltip": "جهد الاستدلال",
   "prompt.action.attachFile": "إرفاق ملف",
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
@@ -283,8 +368,26 @@ export const dict = {
   "prompt.action.resetModel": "إعادة تعيين النموذج إلى الافتراضي",
   "prompt.action.enhanceDescription":
     "زر «حسّن الموجه» يطوّر موجهك بإضافة سياق أو توضيح أو إعادة صياغة. جرّب اكتب موجه هنا ثم اضغط الزر مرة ثانية وشوف النتيجة.",
+  "prompt.action.sandbox.enable": "تفعيل sandbox",
+  "prompt.action.sandbox.disable": "تعطيل sandbox",
+  "prompt.action.sandbox.enabled": "sandbox مُفعّل. أوامر shell الخاصة بالوكيل مقتصرة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.disabled":
+    "sandbox مُعطّل. انقر لتقييد كتابة أوامر shell الخاصة بالوكيل على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.status.enabled": "العزل مُفعّل",
+  "prompt.action.sandbox.status.disabled": "العزل مُعطّل",
+  "prompt.action.sandbox.filesystem": "نظام الملفات",
+  "prompt.action.sandbox.network": "الشبكة",
+  "prompt.action.sandbox.filesystem.restricted": "مقيّد",
+  "prompt.action.sandbox.network.blocked": "محظورة",
+  "prompt.action.sandbox.network.allowed": "مسموح بها",
+  "prompt.action.sandbox.unrestricted": "غير مقيّد",
+  "prompt.action.sandbox.description.enabled": "تقتصر عمليات الكتابة على مجلدات المشروع و Kilo.",
+  "prompt.action.sandbox.description.disabled": "انقر لتقييد الكتابة في نظام الملفات والوصول إلى الشبكة.",
+  "prompt.action.sandbox.description.disabledNetworkAllowed":
+    "انقر لتقييد الكتابة في نظام الملفات. يظل الوصول إلى الشبكة مسموحًا وفق إعدادات sandbox.",
 
   "speechToText.tooltip.start": "بدء الإدخال الصوتي باستخدام Kilo Gateway",
+  "speechToText.tooltip.starting": "جارٍ تشغيل الميكروفون... يُرجى الانتظار قبل التحدث.",
   "speechToText.tooltip.stop": "إيقاف التقاط الصوت",
   "speechToText.tooltip.transcribing": "جاري تحويل الصوت إلى نص... انقر للإلغاء.",
   "speechToText.tooltip.error": "فشل الإدخال الصوتي. انقر للمسح.",
@@ -527,7 +630,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "بحث Grep",
   "ui.permission.toolLabel.webSearch": "بحث ويب",
   "ui.permission.toolLabel.list": "قائمة",
-  "ui.permission.toolLabel.externalDirectory": "قراءة دليل خارجي",
+  "ui.permission.toolLabel.externalDirectory": "السماح بالوصول إلى مجلد خارجي",
   "ui.permission.toolLabel.webFetch": "جلب ويب",
   "ui.permission.toolLabel.task": "مهمة",
   "ui.permission.toolLabel.skill": "مهارة",
@@ -811,7 +914,7 @@ export const dict = {
   "settings.providers.tag.customProvider": "مزود مخصص",
   "settings.providers.connected.environmentDescription": "متصل من متغيرات البيئة الخاصة بك",
   "settings.providers.action.signInChatGPT": "تسجيل الدخول باستخدام ChatGPT",
-  "settings.providers.custom.description": "أضف مزوداً متوافقاً مع OpenAI عبر عنوان URL الأساسي.",
+  "settings.providers.custom.description": "أضف مزودًا مخصصًا عبر عنوان URL الأساسي.",
   "settings.providers.subagentModel.title": "نموذج الوكيل الفرعي",
   "settings.providers.subagentModel.description":
     "النموذج الافتراضي وجهد التفكير للوكلاء الفرعيين لـ task-tool. اتركه فارغًا ليرث نموذج الوكيل المستدعي.",
@@ -819,11 +922,11 @@ export const dict = {
   "settings.models.hidePromptTraining.description":
     "إخفاء نماذج Kilo Gateway التي قد يستخدم مزودوها مطالباتك لأغراض التدريب.",
   "settings.providers.modeModels": "نموذج لكل وضع",
-  "settings.providers.custom.note": "أضف موفرًا متوافقًا مع OpenAI عبر عنوان URL الأساسي.",
+  "settings.providers.custom.note": "أضف مزودًا مخصصًا عبر عنوان URL الأساسي.",
   "settings.providers.modeModels.description":
     "تجاوز النموذج الافتراضي لأوضاع محددة. إذا لم يتم التعيين، يتم استخدام النموذج الافتراضي العام.",
   "provider.custom.title": "مزود مخصص",
-  "provider.custom.description.prefix": "قم بتكوين مزود متوافق مع OpenAI. انظر ",
+  "provider.custom.description.prefix": "قم بتكوين مزود مخصص. انظر ",
   "provider.custom.description.link": "وثائق تكوين المزود",
   "provider.custom.description.suffix": ".",
   "provider.custom.field.providerID.label": "معرف المزود",
@@ -843,6 +946,7 @@ export const dict = {
   "provider.custom.models.name.label": "الاسم",
   "provider.custom.models.name.placeholder": "الاسم المعروض",
   "provider.custom.models.reasoning.label": "الاستدلال",
+  "provider.custom.models.modalities.image": "صورة",
   "provider.custom.models.variants.label": "المتغيرات",
   "provider.custom.models.variants.add": "إضافة متغير",
   "provider.custom.models.variants.remove": "إزالة المتغير",
@@ -1087,6 +1191,8 @@ export const dict = {
 
   "common.retry": "إعادة المحاولة",
   "common.refresh": "تحديث",
+  "common.reload": "إعادة التحميل",
+  "common.reloadDescription": "إعادة تحميل التكوين والمهارات والوكلاء والأوامر من القرص",
 
   "profile.title": "الملف الشخصي",
   "profile.notLoggedIn": "لم يتم تسجيل الدخول",
@@ -1094,6 +1200,10 @@ export const dict = {
   "profile.balance.title": "الرصيد",
   "profile.balance.refresh": "تحديث الرصيد",
   "profile.action.dashboard": "لوحة التحكم",
+  "profile.action.topUp": "إضافة رصيد",
+  "profile.pass.subscribe": "احصل على Kilo Pass لإضافة رصيد وكسب مكافآت",
+  "profile.pass.bonus": "مكافأة",
+  "profile.pass.renews": "يتجدد",
   "profile.action.logout": "تسجيل الخروج",
 
   "settings.section.configuration": "الإعدادات",
@@ -1110,6 +1220,9 @@ export const dict = {
   "settings.indexing.title": "الفهرسة",
   "settings.indexing.enable.title": "تمكين الفهرسة",
   "settings.indexing.enable.description": "تشغيل أو إيقاف فهرسة قاعدة الكود الدلالية.",
+  "settings.indexing.showButton.title": "إظهار الزر عند تعطيل الفهرسة",
+  "settings.indexing.showButton.description":
+    "إظهار زر الفهرسة أسفل حقل الإدخال عندما تكون الفهرسة معطلة. إذا كان الزر مخفيًا، فافتح الإعدادات > الفهرسة لتفعيل الفهرسة.",
   "settings.indexing.globalEnable.title": "تمكين عام",
   "settings.indexing.globalEnable.description": "تمكين الفهرسة لكل مساحة عمل.",
   "settings.indexing.projectEnable.title": "تمكين لهذا المشروع",
@@ -1136,6 +1249,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "مفتاح API لـ Qdrant",
   "settings.indexing.qdrantApiKey.description": "مفتاح API اختياري لمثيل Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "مفتاح API اختياري",
+  "settings.indexing.fileExtensions.title": "امتدادات الملفات",
+  "settings.indexing.fileExtensions.description":
+    "قائمة سماح مفصولة بفواصل. اتركها فارغة لاستخدام الإعدادات الافتراضية المضمنة.",
+  "settings.indexing.fileExtensions.invalid": "امتداد غير صالح: {{extension}}",
   "settings.indexing.status.title": "الحالة",
   "settings.indexing.tuning.description": "معامل متقدم للبحث والدفعات.",
   "settings.indexing.providerField.description": "إعداد اتصال خاص بالموفر.",
@@ -1163,6 +1280,11 @@ export const dict = {
   "session.outcome.interrupted": "تمت مقاطعة الدور",
   "session.outcome.error": "فشل الدور",
   "session.outcome.finish": "سبب الإنهاء: {{reason}}",
+  "session.costAlert.header": "تنبيه تكلفة الجلسة",
+  "session.costAlert.continue": "متابعة",
+  "session.costAlert.question":
+    "تجاوزت هذه الجلسة للتو حد التنبيه لكل جلسة البالغ {{limit}} وبلغت تكلفتها {{cost}}. هل تريد المتابعة؟",
+  "session.costAlert.stop": "إيقاف",
 
   "ui.sessionTurn.cancel": "إلغاء",
   "ui.sessionTurn.status.thinking": "...جارٍ التفكير",
@@ -1207,6 +1329,7 @@ export const dict = {
   "settings.aboutKiloCode.resetSettings.description":
     "يؤدي هذا إلى إعادة تعيين الإعدادات الخاصة بامتداد VS Code فقط إلى قيمها الافتراضية. الإعدادات المشتركة مع CLI، مثل الأوضاع وقواعد الموافقة التلقائية، مخزّنة في تكوين CLI ولن تتأثر.",
   "settings.aboutKiloCode.resetSettings.button": "إعادة تعيين جميع الإعدادات",
+  "settings.aboutKiloCode.resetSettings.notificationsButton": "Reset Read Notifications",
   "settings.aboutKiloCode.settingsTransfer.title": "نقل الإعدادات",
   "settings.aboutKiloCode.settingsTransfer.description": "تصدير أو استيراد إعداداتك لنقلها بين نُسخ VS Code.",
   "settings.aboutKiloCode.exportSettings": "تصدير",
@@ -1286,6 +1409,12 @@ export const dict = {
   "settings.experimental.batch.description": "تمكين المعالجة الدفعية لاستدعاءات الأدوات",
   "settings.experimental.codebaseSearch.title": "بحث في قاعدة الكود",
   "settings.experimental.codebaseSearch.description": "تمكين البحث بالذكاء الاصطناعي باللغة الطبيعية عبر قاعدة الكود",
+  "settings.experimental.imageGeneration.title": "توليد الصور",
+  "settings.experimental.imageGeneration.description": "تمكين توليد الصور بالذكاء الاصطناعي",
+  "settings.experimental.imageGenerationModel.title": "نموذج الصور",
+  "settings.experimental.imageGenerationModel.description": "نموذج توليد الصور",
+  "settings.experimental.imageGenerationModel.placeholder": "افتراضي (Auto Router)",
+
   "settings.experimental.speechToText.title": "تحويل الصوت إلى نص",
   "settings.experimental.speechToText.description":
     "تمكين الإدخال الصوتي في حقول المطالبة باستخدام حساب Kilo الخاص بك من خلال Kilo Gateway.",
@@ -1293,8 +1422,28 @@ export const dict = {
     "قم بتمكين وتسجيل الدخول إلى مزود Kilo لاستخدام Speech to Text. ميزة Speech to Text مدعومة حاليًا فقط مع Kilo Gateway.",
   "settings.models.speechToTextModel.title": "نموذج تحويل الصوت إلى نص",
   "settings.models.speechToTextModel.description": "اختر نموذج نسخ Kilo Gateway للإدخال الصوتي.",
+  "settings.experimental.nativeNotebookTools.title": "أدوات الدفاتر الأصلية",
+  "settings.experimental.nativeNotebookTools.description":
+    "تمكين الأدوات التجريبية لقراءة دفاتر VS Code وتحريرها وتنفيذها",
   "settings.experimental.continueOnDeny.title": "المتابعة عند الرفض",
   "settings.experimental.continueOnDeny.description": "متابعة حلقة الوكيل عند رفض الإذن",
+  "settings.sandboxing.title": "العزل",
+  "settings.sandboxing.network.title": "تقييد الوصول إلى الشبكة",
+  "settings.sandboxing.network.description":
+    "حظر الوصول الصادر المباشر من الأوامر الصادرة عن النموذج وأدوات HTTP. تصبح أدوات MCP المحلية والبعيدة غير متاحة أثناء تفعيل التقييد. تظل حركة مرور المزوّد وخطافات الإضافات الموثوقة خارج هذا التقييد.",
+
+  "settings.sandboxing.allowedHosts.title": "وجهات الشبكة المسموح بها",
+  "settings.sandboxing.allowedHosts.description":
+    "وجهات مضيف ومنفذ DNS لحركة مرور وكيل HTTP وHTTPS المعزولة. يحتاج GitHub CLI وHTTPS Git عادةً إلى github.com:443 وapi.github.com:443. تنطبق التغييرات على الجلسات الجديدة.",
+  "settings.sandboxing.writablePaths.title": "مسارات قابلة للكتابة إضافية",
+  "settings.sandboxing.writablePaths.description":
+    "مسارات نظام ملفات إضافية يسمح صندوق الرمل بالكتابة إليها (مثل /tmp، /var/log). يتم دمجها مع مسارات الكتابة الافتراضية عندما يكون صندوق الرمل نشطًا.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "تفعيل SWE-Pruner: تقليم المخرجات الكبيرة لأدوات القراءة والبحث وshell مع مراعاة المهمة، استنادًا إلى سؤال تركيز يقدّمه الوكيل",
+  "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
+  "settings.experimental.swePrunerModel.description":
+    "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",
@@ -1319,11 +1468,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "موجه مخصص",
   "settings.agentBehaviour.prompt.description": "موجه نظام إضافي لهذا الوكيل",
   "settings.agentBehaviour.temperature.title": "الحرارة",
-  "settings.agentBehaviour.temperature.description": "حرارة أخذ العينات (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "يتحكم في مدى عشوائية استجابات الذكاء الاصطناعي (0–2). تنتج القيم الأقل (مثل 0.2) مخرجات مركزة ومتسقة، بينما تنتج القيم الأعلى (مثل 1.0) استجابات أكثر تنوعًا وإبداعًا. اترك الحقل فارغًا لاستخدام القيمة الافتراضية للنموذج.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "معامل أخذ العينات النووي (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "عتبة أخذ العينات النواتية (0–1). تحصر اختيارات الرموز في أصغر مجموعة يصل احتمالها التراكمي إلى P. تجعل القيم الأقل المخرجات أكثر تركيزًا، بينما تسمح القيم الأعلى بتنوع أكبر. اترك الحقل فارغًا لاستخدام القيمة الافتراضية للنموذج.",
   "settings.agentBehaviour.maxSteps.title": "الحد الأقصى للخطوات",
-  "settings.agentBehaviour.maxSteps.description": "الحد الأقصى لتكرارات الوكيل",
+  "settings.agentBehaviour.maxSteps.description":
+    "الحد الأقصى لعدد خطوات الوكيل. عند بلوغ الحد، يُوجَّه الوكيل إلى التوقف عن استخدام الأدوات وتقديم استجابة نهائية. زِد القيمة للمهام المعقدة متعددة الخطوات، وخفّضها لجعل الاستجابات أقصر وأسهل في التنبؤ.",
   "settings.agentBehaviour.hidden.title": "مخفي",
   "settings.agentBehaviour.hidden.description": "إخفاء هذا الوكيل من مبدل الأوضاع في إدخال الدردشة",
   "settings.agentBehaviour.disable.title": "معطل",
@@ -1425,9 +1577,15 @@ export const dict = {
   "settings.agentBehaviour.workflows.empty": "لم يتم تهيئة أوامر مخصصة. أضف أوامر إلى opencode.json لرؤيتها هنا.",
   "settings.agentBehaviour.workflows.detail.description": "الوصف",
   "settings.agentBehaviour.workflows.detail.template": "القالب",
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
+    "تشغيل أوامر shell الخاصة بالوكيل داخل sandbox على مستوى نظام التشغيل يقيّد الكتابة على مجلدات حالة المشروع و Kilo",
 
   "settings.autoApprove.description":
     "تحديد كيفية السماح بتشغيل الأدوات. معظم الأدوات معينة افتراضياً على السماح. doom_loop و external_directory معينة افتراضياً على السؤال.",
+  "settings.autoApprove.maxCost.title": "تنبيه تكلفة الجلسة",
+  "settings.autoApprove.maxCost.description":
+    "نبّه قبل متابعة الجلسة بعد أن يتجاوز إنفاقها هذا المبلغ بالدولار الأمريكي. استخدم أرقامًا صحيحة بالدولار؛ اتركه فارغًا للتعطيل.",
   "settings.autoApprove.level.allow": "سماح",
   "settings.autoApprove.level.ask": "سؤال",
   "settings.autoApprove.level.deny": "رفض",
@@ -1461,6 +1619,7 @@ export const dict = {
   "settings.checkpoints.enable.description": "إنشاء نقاط فحص قبل تحرير الملفات",
   "settings.context.autoCompaction.title": "ضغط تلقائي",
   "settings.context.autoCompaction.description": "ضغط السياق تلقائياً قبل أن يصل إلى الحد",
+  "settings.context.compaction.title": "الضغط",
   "settings.context.compactionLimit.title": "حد الضغط التلقائي",
   "settings.context.compactionLimit.description":
     "اضغط عندما يصل السياق إلى هذه النسبة المئوية من نافذة النموذج. اتركه فارغاً لاستخدام هامش الأمان فقط.",
@@ -1468,6 +1627,42 @@ export const dict = {
   "settings.context.prune.description": "إزالة مخرجات الأدوات القديمة أثناء الضغط",
   "settings.context.watcherPatterns": "أنماط تجاهل مراقب الملفات",
   "settings.context.watcherPatterns.description": "أنماط glob للملفات التي يجب على المراقب تجاهلها",
+
+  "settings.context.memory.title": "الذاكرة",
+  "settings.context.memory.project.title": "ذاكرة المشروع",
+  "settings.context.memory.autoSave.title": "حفظ ذاكرة المشروع تلقائيًا",
+  "settings.context.memory.autoSave.description":
+    "حفظ حقائق المشروع الدائمة تلقائيًا من الجولات المكتملة عند تفعيل الذاكرة.",
+  "settings.context.memory.index.title": "فهرس الذاكرة",
+  "settings.context.memory.status.notLoaded": "غير محمّلة",
+  "settings.context.memory.status.disabled": "معطّلة",
+  "settings.context.memory.status.enabledTokensOps":
+    "مفعّلة - ~{{session}} رموز سياق بدء التشغيل في هذه الجلسة - ~{{tokens}} رموز في الفهرس المخزّن - آخر عملية {{ops}}",
+  "settings.context.memory.index.path": "{{path}}/index.kmem",
+  "settings.context.memory.index.enable": "فعّل الذاكرة لإنشاء ملفات ذاكرة المشروع.",
+  "settings.context.memory.inspect": "فحص",
+  "settings.context.memory.rebuild": "إعادة بناء فهرس الذاكرة",
+  "chat.memory.status.loading": "جارٍ تحميل حالة الذاكرة",
+  "chat.memory.status.active": "الذاكرة نشطة في هذه الجلسة",
+  "chat.memory.project.enabled": "ذاكرة المشروع مفعّلة",
+  "chat.memory.project.disabled": "ذاكرة المشروع معطّلة",
+  "chat.memory.command.failed": "فشل أمر الذاكرة",
+  "chat.memory.inspect": "فحص الذاكرة",
+  "chat.memory.remember": "تذكّر",
+  "chat.memory.forget": "انسَ",
+  "chat.memory.rebuild": "إعادة بناء الفهرس",
+  "chat.memory.disable": "تعطيل الذاكرة",
+  "chat.memory.enable": "تفعيل الذاكرة",
+  "chat.memory.verbose": "تفصيلي",
+  "chat.memory.activity.idle": "لا يوجد نشاط للذاكرة في هذه الجلسة",
+  "chat.memory.activity.loaded": "تم تحميل {{tokens}} رمزًا",
+  "chat.memory.activity.recalled": "تم استدعاء {{count}}",
+  "chat.memory.activity.saved": "تم حفظ {{count}}",
+  "chat.memory.activity.loaded.item": "تم التحميل: {{item}}",
+  "chat.memory.activity.recalled.item": "تم الاستدعاء: {{item}}",
+  "chat.memory.activity.saved.item": "تم الحفظ: {{item}}",
+  "chat.memory.badge.recalled": "تم استدعاء الذاكرة",
+  "chat.memory.badge.items": "{{count}} عناصر",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "استخدام prompt مخصص",
@@ -1479,6 +1674,10 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "على سبيل المثال: قم بإنشاء commit messages باللغة الإسبانية باتباع تنسيق conventional commits. أرجع الـ commit message فقط.",
 
+  "settings.commitMessage.language.sync": "مزامنة مع لغة واجهة المستخدم",
+  "settings.commitMessage.language.title": "اللغة",
+  "settings.commitMessage.language.description": "اختر اللغة المستخدمة لرسائل الالتزام التي تولدها الذكاء الاصطناعي:",
+
   "settings.display.username.title": "اسم المستخدم",
   "settings.display.username.description": "اسم مستخدم مخصص في المحادثات",
   "settings.display.fontSize.title": "حجم الخط",
@@ -1486,6 +1685,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
+  "settings.display.shiftTabCycle.title": "تبديل جهد الاستدلال باستخدام Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "اضغط على Shift+Tab في حقل إدخال الموجه للتبديل إلى مستوى جهد الاستدلال التالي. عطّل هذا الخيار للاحتفاظ بـ Shift+Tab للتنقل بين عناصر التركيز باستخدام لوحة المفاتيح.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1649,4 +1851,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "جارٍ تحميل الفروع…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "الخطة جاهزة:",
+  "chat.search.placeholder": "البحث في المحادثة…",
+  "chat.search.toggle": "البحث في المحادثة",
+  "chat.search.matchCase": "مطابقة حالة الأحرف",
+  "chat.search.matchWholeWord": "مطابقة الكلمة بأكملها",
+  "chat.search.useRegex": "استخدام تعبير عادي",
+  "chat.search.previousMatch": "المطابقة السابقة",
+  "chat.search.nextMatch": "المطابقة التالية",
+  "chat.search.close": "إغلاق البحث",
+  "chat.search.invalidRegex": "تعبير عادي غير صالح",
+  "chat.search.noResults": "لا توجد نتائج",
+  "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
 }

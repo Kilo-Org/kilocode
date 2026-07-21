@@ -1,4 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import path from "path"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import os from "os"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt" // kilocode_change
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
@@ -6,24 +9,29 @@ import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilo
 import { KiloSession } from "@/kilocode/session" // kilocode_change
 import { KiloCostPropagation } from "@/kilocode/session/cost-propagation" // kilocode_change
 import { KiloSessionProcessor } from "@/kilocode/session/processor" // kilocode_change
+import { KiloSessionOverflow } from "@/kilocode/session/overflow" // kilocode_change
+import { KiloReference } from "@/kilocode/reference/contains" // kilocode_change
+import { KiloReadObject } from "@/kilocode/tool/read-object" // kilocode_change
+import { isInterrupted } from "@/kilocode/effect/cause" // kilocode_change
+import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
+import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
+import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
 import type { NotFoundError } from "@/storage/storage"
 import { MessageV2 } from "./message-v2"
-import * as Log from "@opencode-ai/core/util/log"
 import { SessionRevert } from "./revert"
-import * as Session from "./session"
+import { Session } from "./session"
 import { Agent } from "../agent/agent"
 import { Provider } from "@/provider/provider"
-import { ModelID, ProviderID } from "../provider/schema"
+
 import { type Tool as AITool, tool, jsonSchema } from "ai"
 import type { JSONSchema7 } from "@ai-sdk/provider"
 import { SessionCompaction } from "./compaction"
-import { Bus } from "../bus"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
@@ -48,37 +56,40 @@ import { SessionStatus } from "./status"
 import { LLM } from "./llm"
 import { Shell } from "@/shell/shell"
 import { ShellID } from "@/tool/shell/id"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Truncate } from "@/tool/truncate"
 import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
 import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
-import * as EffectLogger from "@opencode-ai/core/effect/logger"
 import { InstanceState } from "@/effect/instance-state"
+import { InstanceRef } from "@/effect/instance-ref"
+import { Instance } from "@/kilocode/instance"
 import { EffectBridge } from "@/effect/bridge"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
+import { assertExternalDirectoryEffect } from "@/tool/external-directory" // kilocode_change
 import { SessionRunState } from "./run-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { SessionEvent } from "@opencode-ai/core/session-event"
+import { Database } from "@opencode-ai/core/database/database"
+import { SessionEvent } from "@opencode-ai/core/session/event"
+import { SessionMessage } from "@opencode-ai/core/session/message"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { AgentAttachment, FileAttachment, ReferenceAttachment, Source } from "@opencode-ai/core/session-prompt"
-import { Reference } from "@/reference/reference"
+import * as KiloConfiguredReference from "@/kilocode/reference" // kilocode_change
+import { AgentAttachment, FileAttachment, Prompt, Source } from "@opencode-ai/core/session/prompt"
 import * as DateTime from "effect/DateTime"
-import { eq } from "@/storage/db"
-import * as Database from "@/storage/db"
-import { SessionTable } from "./session.sql"
-import { referencePromptMetadata, referenceTextPart } from "./prompt/reference"
+import { eq } from "drizzle-orm"
+import { SessionTable } from "@opencode-ai/core/session/sql"
 import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@opencode-ai/llm"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
 
-const decodeMessageInfo = Schema.decodeUnknownExit(MessageV2.Info)
-const decodeMessagePart = Schema.decodeUnknownExit(MessageV2.Part)
+const decodeMessageInfo = Schema.decodeUnknownExit(SessionV1.Info)
+const decodeMessagePart = Schema.decodeUnknownExit(SessionV1.Part)
 
 const STRUCTURED_OUTPUT_DESCRIPTION = `Use this tool to return your final response in the requested structured format.
 
@@ -90,22 +101,31 @@ IMPORTANT:
 
 const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested structured output. You MUST use the StructuredOutput tool to provide your final response. Do NOT respond with plain text - you MUST call the StructuredOutput tool with your answer formatted according to the schema.`
 
-// kilocode_change
-export const shouldAskPlanFollowup = KiloSessionPrompt.shouldAskPlanFollowup
+export const shouldAskPlanFollowup = KiloSessionPrompt.shouldAskPlanFollowup // kilocode_change - retain Kilo plan handoff policy
 
 // kilocode_change start - persistent tool-output pruning when payload is already large
 const REQUEST_PRUNE_BYTES = 1_250_000
 // kilocode_change end
-
-const log = Log.create({ service: "session.prompt" })
-const elog = EffectLogger.create({ service: "session.prompt" })
+function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
+  // cleanup() marks abandoned tool_use blocks this way after retries/aborts.
+  // They are not pending work and must not trigger an assistant-prefill request.
+  return part.state.status === "error" && part.state.metadata?.interrupted === true
+}
 
 export interface Interface {
   readonly cancel: (sessionID: SessionID) => Effect.Effect<void>
-  readonly prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
-  readonly loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts>
-  readonly shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError>
-  readonly command: (input: CommandInput) => Effect.Effect<MessageV2.WithParts, Image.Error>
+  // kilocode_change start - prompt can fail on unmet agent requirements
+  readonly prompt: (
+    input: PromptInput,
+  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
+  readonly loop: (input: LoopInput) => Effect.Effect<SessionV1.WithParts>
+  readonly shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
+  // kilocode_change start - commands can fail on unmet agent requirements
+  readonly command: (
+    input: CommandInput,
+  ) => Effect.Effect<SessionV1.WithParts, Image.Error | Agent.RequirementBlockedError>
+  // kilocode_change end
   readonly resolvePromptParts: (template: string) => Effect.Effect<PromptInput["parts"]>
 }
 
@@ -114,7 +134,6 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Se
 export const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const bus = yield* Bus.Service
     const status = yield* SessionStatus.Service
     const sessions = yield* Session.Service
     const agents = yield* Agent.Service
@@ -126,7 +145,7 @@ export const layer = Layer.effect(
     const config = yield* Config.Service
     const permission = yield* Permission.Service
     const question = yield* Question.Service // kilocode_change - dismiss superseded pending questions through the shared service
-    const fsys = yield* AppFileSystem.Service
+    const fsys = yield* FSUtil.Service
     const mcp = yield* MCP.Service
     const lsp = yield* LSP.Service
     const registry = yield* ToolRegistry.Service
@@ -140,97 +159,79 @@ export const layer = Layer.effect(
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
-    const references = yield* Reference.Service
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
+    const database = yield* Database.Service
+    const cache = Option.getOrUndefined(yield* Effect.serviceOption(RepositoryCache.Service)) // kilocode_change
+    const { db } = database
     const ops = Effect.fn("SessionPrompt.ops")(function* () {
       return {
         cancel: (sessionID: SessionID) => cancel(sessionID),
         resolvePromptParts: (template: string) => resolvePromptParts(template),
         prompt: (input: PromptInput) => prompt(input).pipe(Effect.catch(Effect.die)),
-        loop: (input: LoopInput) => loop(input).pipe(Effect.orDie),
       } satisfies TaskPromptOps
     })
 
     const cancel = Effect.fn("SessionPrompt.cancel")(function* (sessionID: SessionID) {
-      yield* elog.info("cancel", { sessionID })
-      yield* KiloSessionPromptQueue.cancel(sessionID) // kilocode_change - drop queued follow-up loops on abort
-      KiloSessionPrompt.abortPlanFollowup(sessionID) // kilocode_change - abort pending plan-followup handover work
-      yield* state.cancel(sessionID)
+      yield* Effect.logInfo("cancel", { "session.id": sessionID })
+      yield* KiloSessionPrompt.cancelTree({ sessionID, sessions, cancel: state.cancel }) // kilocode_change - stop queued work and subagents
     })
+
+    // kilocode_change start - preserve configured reference mentions on the Core reference architecture
+    const resolveReferenceParts = Effect.fnUntraced(function* (template: string, skip = new Set<string>()) {
+      const ctx = yield* InstanceState.context
+      const cfg = yield* config.get()
+      const refs = KiloConfiguredReference.resolveAll({
+        references: cfg.references ?? cfg.reference ?? {},
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+      }).filter((item) => item.kind !== "invalid")
+      const parts: Types.DeepMutable<PromptInput["parts"]> = []
+      const seen = new Set<string>()
+      for (const match of ConfigMarkdown.files(template)) {
+        const name = match[1]
+        if (!name) continue
+        const alias = name.split("/")[0]
+        if (!alias || seen.has(alias)) continue
+        const reference = refs.find((item) => item.name === alias)
+        if (!reference) continue
+        seen.add(alias)
+        const url = pathToFileURL(reference.path).href
+        if (skip.has(url)) continue
+        if (reference.kind === "git" && cache) yield* KiloConfiguredReference.ensure(cache, reference) // kilocode_change
+        const start = match.index ?? 0
+        parts.push({
+          type: "file",
+          url,
+          filename: alias,
+          mime: "application/x-directory",
+          source: { type: "file", text: { value: match[0], start, end: start + match[0].length }, path: alias },
+        })
+      }
+      return parts
+    })
+    // kilocode_change end
 
     const resolvePromptParts = Effect.fn("SessionPrompt.resolvePromptParts")(function* (template: string) {
       const ctx = yield* InstanceState.context
-      const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }]
+      const roots = yield* resolveReferenceParts(template) // kilocode_change
+      const parts: Types.DeepMutable<PromptInput["parts"]> = [{ type: "text", text: template }, ...roots]
       const files = ConfigMarkdown.files(template)
       const seen = new Set<string>()
-      const mentionSource = (match: RegExpMatchArray) => {
-        const start = match.index ?? 0
-        return { value: match[0], start, end: start + match[0].length }
-      }
+      const configured = new Set(
+        roots.flatMap((part) => (part.type === "file" && part.filename ? [part.filename] : [])),
+      ) // kilocode_change
       yield* Effect.forEach(
         files,
         Effect.fnUntraced(function* (match) {
           const name = match[1]
           if (!name) return
+          // kilocode_change start - configured references were already added above
+          const alias = name.split("/")[0]
+          if (alias && configured.has(alias)) return
+          // kilocode_change end
           if (seen.has(name)) return
           seen.add(name)
-
-          const slash = name.indexOf("/")
-          const alias = slash === -1 ? name : name.slice(0, slash)
-          const reference = yield* references.get(alias)
-          if (reference) {
-            const source = mentionSource(match)
-            if (reference.kind === "invalid") {
-              parts.push(
-                referenceTextPart({ reference, source, target: slash === -1 ? undefined : name.slice(slash + 1) }),
-              )
-              return
-            }
-
-            yield* references.ensure(reference.path)
-            if (slash === -1) {
-              parts.push(referenceTextPart({ reference, source }))
-              return
-            }
-
-            const target = name.slice(slash + 1)
-            const targetPath = path.resolve(reference.path, target)
-            if (!AppFileSystem.contains(reference.path, targetPath)) {
-              parts.push(
-                referenceTextPart({
-                  reference,
-                  source,
-                  target,
-                  targetPath,
-                  problem: `Path escapes configured reference @${alias}: ${target}`,
-                }),
-              )
-              return
-            }
-
-            const info = yield* fsys.stat(targetPath).pipe(Effect.option)
-            if (Option.isNone(info)) {
-              parts.push(
-                referenceTextPart({
-                  reference,
-                  source,
-                  target,
-                  targetPath,
-                  problem: `Path does not exist inside configured reference @${alias}: ${target}`,
-                }),
-              )
-              return
-            }
-
-            parts.push({
-              type: "file",
-              url: pathToFileURL(targetPath).href,
-              filename: name,
-              mime: info.value.type === "Directory" ? "application/x-directory" : "text/plain",
-            })
-            return
-          }
 
           const filepath = name.startsWith("~/")
             ? path.join(os.homedir(), name.slice(2))
@@ -257,14 +258,14 @@ export const layer = Layer.effect(
 
     const title = Effect.fn("SessionPrompt.ensureTitle")(function* (input: {
       session: Session.Info
-      history: MessageV2.WithParts[]
-      providerID: ProviderID
-      modelID: ModelID
+      history: SessionV1.WithParts[]
+      providerID: ProviderV2.ID
+      modelID: ModelV2.ID
     }) {
       if (input.session.parentID) return
       if (!Session.isDefaultTitle(input.session.title)) return
 
-      const real = (m: MessageV2.WithParts) =>
+      const real = (m: SessionV1.WithParts) =>
         m.info.role === "user" && !m.parts.every((p) => "synthetic" in p && p.synthetic)
       const idx = input.history.findIndex(real)
       if (idx === -1) return
@@ -275,7 +276,7 @@ export const layer = Layer.effect(
       if (!firstUser || firstUser.info.role !== "user") return
       const firstInfo = firstUser.info
 
-      const subtasks = firstUser.parts.filter((p): p is MessageV2.SubtaskPart => p.type === "subtask")
+      const subtasks = firstUser.parts.filter((p): p is SessionV1.SubtaskPart => p.type === "subtask")
       const onlySubtasks = subtasks.length > 0 && firstUser.parts.every((p) => p.type === "subtask")
 
       const ag = yield* agents.get("title")
@@ -286,7 +287,9 @@ export const layer = Layer.effect(
           (yield* provider.getModel(input.providerID, input.modelID)))
       const msgs = onlySubtasks
         ? [{ role: "user" as const, content: subtasks.map((p) => p.prompt).join("\n") }]
-        : yield* MessageV2.toModelMessagesEffect(context, mdl)
+        : yield* MessageV2.toModelMessagesEffect(context, mdl).pipe(
+            Effect.provideService(Database.Service, database), // kilocode_change - provide the migrated message store
+          )
       const text = yield* llm
         .stream({
           agent: ag,
@@ -314,23 +317,23 @@ export const layer = Layer.effect(
       const t = cleaned.length > 100 ? cleaned.substring(0, 97) + "..." : cleaned
       yield* sessions
         .setTitle({ sessionID: input.session.id, title: t })
-        .pipe(Effect.catchCause((cause) => elog.error("failed to generate title", { error: Cause.squash(cause) })))
+        .pipe(Effect.catchCause((cause) => Effect.logError("failed to generate title", { error: Cause.squash(cause) })))
     })
 
     const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {
-      task: MessageV2.SubtaskPart
+      task: SessionV1.SubtaskPart
       model: Provider.Model
-      lastUser: MessageV2.User
+      lastUser: SessionV1.User
       sessionID: SessionID
       session: Session.Info
-      msgs: MessageV2.WithParts[]
+      msgs: SessionV1.WithParts[]
     }) {
       const { task, model, lastUser, sessionID, session, msgs } = input
       const ctx = yield* InstanceState.context
       const promptOps = yield* ops()
       const { task: taskTool } = yield* registry.named()
       const taskModel = task.model ? yield* getModel(task.model.providerID, task.model.modelID, sessionID) : model
-      const assistantMessage: MessageV2.Assistant = yield* sessions.updateMessage({
+      const assistantMessage: SessionV1.Assistant = yield* sessions.updateMessage({
         id: MessageID.ascending(),
         role: "assistant",
         parentID: lastUser.id,
@@ -345,7 +348,7 @@ export const layer = Layer.effect(
         providerID: taskModel.providerID,
         time: { created: Date.now() },
       })
-      let part: MessageV2.ToolPart = yield* sessions.updatePart({
+      let part: SessionV1.ToolPart = yield* sessions.updatePart({
         id: PartID.ascending(),
         messageID: assistantMessage.id,
         sessionID: assistantMessage.sessionID,
@@ -380,7 +383,7 @@ export const layer = Layer.effect(
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Agent not found: "${task.agent}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+        yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
         throw error
       }
 
@@ -407,7 +410,7 @@ export const layer = Layer.effect(
                 ...part,
                 type: "tool",
                 state: { ...part.state, ...val },
-              } satisfies MessageV2.ToolPart)
+              } satisfies SessionV1.ToolPart)
             }),
           // kilocode_change start - resolve permissions at ask time so active tools see config edits
           ask: (req: any) =>
@@ -428,8 +431,11 @@ export const layer = Layer.effect(
           Effect.catchCause((cause) => {
             const defect = Cause.squash(cause)
             error = defect instanceof Error ? defect : new Error(String(defect))
-            log.error("subtask execution failed", { error, agent: task.agent, description: task.description })
-            return Effect.void
+            return Effect.logError("subtask execution failed", {
+              error,
+              agent: task.agent,
+              description: task.description,
+            })
           }),
           Effect.onInterrupt(() =>
             Effect.gen(function* () {
@@ -453,7 +459,7 @@ export const layer = Layer.effect(
                     metadata: part.state.metadata,
                     input: part.state.input,
                   },
-                } satisfies MessageV2.ToolPart)
+                } satisfies SessionV1.ToolPart)
               }
             }),
           ),
@@ -494,7 +500,7 @@ export const layer = Layer.effect(
             attachments,
             time: { ...part.state.time, end: Date.now() },
           },
-        } satisfies MessageV2.ToolPart)
+        } satisfies SessionV1.ToolPart)
       }
 
       if (!result) {
@@ -510,12 +516,12 @@ export const layer = Layer.effect(
             metadata: part.state.status === "pending" ? undefined : part.state.metadata,
             input: part.state.input,
           },
-        } satisfies MessageV2.ToolPart)
+        } satisfies SessionV1.ToolPart)
       }
 
       if (!task.command) return
 
-      const summaryUserMsg: MessageV2.User = {
+      const summaryUserMsg: SessionV1.User = {
         id: MessageID.ascending(),
         sessionID,
         role: "user",
@@ -532,7 +538,7 @@ export const layer = Layer.effect(
         type: "text",
         text: "Summarize the task tool output above and continue with your task.",
         synthetic: true,
-      } satisfies MessageV2.TextPart)
+      } satisfies SessionV1.TextPart)
     })
 
     const shellImpl = Effect.fn("SessionPrompt.shellImpl")(function* (input: ShellInput, ready?: Latch.Latch) {
@@ -550,11 +556,11 @@ export const layer = Layer.effect(
               const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
               const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
               const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
-              yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+              yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
             const model = input.model ?? agent.model ?? (yield* currentModel(input.sessionID))
-            const userMsg: MessageV2.User = {
+            const userMsg: SessionV1.User = {
               id: input.messageID ?? MessageID.ascending(),
               sessionID: input.sessionID,
               time: { created: Date.now() },
@@ -563,7 +569,7 @@ export const layer = Layer.effect(
               model: { providerID: model.providerID, modelID: model.modelID },
             }
             yield* sessions.updateMessage(userMsg)
-            const userPart: MessageV2.Part = {
+            const userPart: SessionV1.Part = {
               type: "text",
               id: PartID.ascending(),
               messageID: userMsg.id,
@@ -573,7 +579,7 @@ export const layer = Layer.effect(
             }
             yield* sessions.updatePart(userPart)
 
-            const msg: MessageV2.Assistant = {
+            const msg: SessionV1.Assistant = {
               id: MessageID.ascending(),
               sessionID: input.sessionID,
               parentID: userMsg.id,
@@ -590,7 +596,7 @@ export const layer = Layer.effect(
             yield* sessions.updateMessage(msg)
             const callID = ulid() // kilocode_change - correlate v2 shell events with the persisted tool part
             const started = Date.now()
-            const part: MessageV2.ToolPart = {
+            const part: SessionV1.ToolPart = {
               type: "tool",
               id: PartID.ascending(),
               messageID: msg.id,
@@ -607,6 +613,7 @@ export const layer = Layer.effect(
             if (flags.experimentalEventSystem) {
               yield* events.publish(SessionEvent.Shell.Started, {
                 sessionID: input.sessionID,
+                messageID: SessionMessage.ID.create(),
                 timestamp: DateTime.makeUnsafe(started),
                 callID: part.callID,
                 command: input.command,
@@ -703,17 +710,18 @@ export const layer = Layer.effect(
     })
 
     const getModel = Effect.fn("SessionPrompt.getModel")(function* (
-      providerID: ProviderID,
-      modelID: ModelID,
+      providerID: ProviderV2.ID,
+      modelID: ModelV2.ID,
       sessionID: SessionID,
     ) {
       const exit = yield* provider.getModel(providerID, modelID).pipe(Effect.exit)
       if (Exit.isSuccess(exit)) return exit.value
+      if (isInterrupted(exit.cause)) return yield* Effect.interrupt // kilocode_change
       const err = Cause.squash(exit.cause)
       if (Provider.ModelNotFoundError.isInstance(err)) {
         const hint = err.suggestions?.length ? ` Did you mean: ${err.suggestions.join(", ")}?` : ""
         const empty = err.modelsEmpty ? " No models are currently available." : "" // kilocode_change
-        yield* bus.publish(Session.Event.Error, {
+        yield* events.publish(Session.Event.Error, {
           sessionID,
           error: new NamedError.Unknown({
             message: `Model not found: ${err.providerID}/${err.modelID}.${hint}${empty}`, // kilocode_change
@@ -724,13 +732,16 @@ export const layer = Layer.effect(
     })
 
     const currentModel = Effect.fnUntraced(function* (sessionID: SessionID) {
-      const current = Database.use((db) =>
-        db.select({ model: SessionTable.model }).from(SessionTable).where(eq(SessionTable.id, sessionID)).get(),
-      )
+      const current = yield* db
+        .select({ model: SessionTable.model })
+        .from(SessionTable)
+        .where(eq(SessionTable.id, sessionID))
+        .get()
+        .pipe(Effect.orDie)
       if (current?.model) {
         return {
-          providerID: ProviderID.make(current.model.providerID),
-          modelID: ModelID.make(current.model.id),
+          providerID: ProviderV2.ID.make(current.model.providerID),
+          modelID: ModelV2.ID.make(current.model.id),
           ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
         }
       }
@@ -743,23 +754,25 @@ export const layer = Layer.effect(
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
       const agentName = input.agent
-      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!ag) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
+      yield* agents.guardRequirements(ag) // kilocode_change - enforce requirements before creating a turn
 
-      const current = Database.use((db) =>
-        db
-          .select({ agent: SessionTable.agent, model: SessionTable.model })
-          .from(SessionTable)
-          .where(eq(SessionTable.id, input.sessionID))
-          .get(),
-      )
+      const current = yield* db
+        .select({ agent: SessionTable.agent, model: SessionTable.model })
+        .from(SessionTable)
+        .where(eq(SessionTable.id, input.sessionID))
+        .get()
+        .pipe(Effect.orDie)
       const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
+      // kilocode_change start - retain the source session variant across Agent Manager's model-less fork handoff
+      const stored = !input.model && !ag.model ? model : undefined
       const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
       const full =
         !input.variant && ag.variant && same
@@ -767,14 +780,18 @@ export const layer = Layer.effect(
               .getModel(model.providerID, model.modelID)
               .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
-      const variant = input.variant ?? (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      const variant =
+        input.variant ??
+        (stored && "variant" in stored && typeof stored.variant === "string" ? stored.variant : undefined) ??
+        (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      // kilocode_change end
 
-      const info: MessageV2.User = {
+      const info: SessionV1.User = {
         id: input.messageID ?? MessageID.ascending(),
         role: "user",
         sessionID: input.sessionID,
         time: { created: Date.now() },
-        tools: input.tools,
+        tools: { ...input.tools, ...input.ephemeralTools }, // kilocode_change - apply non-persistent remote tool restrictions
         agent: ag.name,
         model: {
           providerID: model.providerID,
@@ -789,6 +806,7 @@ export const layer = Layer.effect(
       if (current?.agent !== info.agent) {
         yield* events.publish(SessionEvent.AgentSwitched, {
           sessionID: input.sessionID,
+          messageID: SessionMessage.ID.create(),
           timestamp: DateTime.makeUnsafe(info.time.created),
           agent: info.agent,
         })
@@ -800,6 +818,7 @@ export const layer = Layer.effect(
       ) {
         yield* events.publish(SessionEvent.ModelSwitched, {
           sessionID: input.sessionID,
+          messageID: SessionMessage.ID.create(),
           timestamp: DateTime.makeUnsafe(info.time.created),
           model: {
             id: ModelV2.ID.make(info.model.modelID),
@@ -811,11 +830,18 @@ export const layer = Layer.effect(
 
       yield* Effect.addFinalizer(() => instruction.clear(info.id))
 
-      type Draft<T> = T extends MessageV2.Part ? Omit<T, "id"> & { id?: string } : never
-      const assign = (part: Draft<MessageV2.Part>): MessageV2.Part => ({
+      type Draft<T> = T extends SessionV1.Part ? Omit<T, "id"> & { id?: string } : never
+      const assign = (part: Draft<SessionV1.Part>): SessionV1.Part => ({
         ...part,
         id: part.id ? PartID.make(part.id) : PartID.ascending(),
       })
+
+      const ctx = yield* InstanceState.context // kilocode_change - resolve V1 reference roots for attachment authorization
+      const references = KiloConfiguredReference.resolveAll({
+        references: (yield* config.get()).reference ?? {},
+        directory: ctx.directory,
+        worktree: ctx.worktree,
+      }).filter((item) => item.kind !== "invalid")
 
       const referenceContextFromFilePart = Effect.fnUntraced(function* (
         part: Extract<PromptInput["parts"][number], { type: "file" }>,
@@ -826,29 +852,28 @@ export const layer = Layer.effect(
         const slash = name.indexOf("/")
         if (slash === -1) return
 
-        const reference = yield* references.get(name.slice(0, slash))
-        if (!reference || reference.kind === "invalid") return
-        if (!AppFileSystem.contains(reference.path, filepath)) return
+        const reference = references.find((item) => item.name === name.slice(0, slash))
+        if (!reference) return
+        if (!FSUtil.contains(reference.path, filepath)) return
 
-        const target = path.relative(reference.path, filepath).split(path.sep).join("/")
-        if (!target || target.startsWith("../") || target === "..") return
-
-        return referenceTextPart({
-          reference,
-          source: part.source?.text ?? { value: `@${name}`, start: 0, end: name.length + 1 },
-          target,
-          targetPath: filepath,
-        })
+        return { root: reference.path } // kilocode_change - carry the Core reference root for authorization
       })
 
-      const resolvePart: (part: PromptInput["parts"][number]) => Effect.Effect<Draft<MessageV2.Part>[]> = Effect.fn(
+      // kilocode_change start
+      const networkRestricted = yield* SandboxPolicy.networkRestricted(input.sessionID).pipe(
+        Effect.provideService(Config.Service, config),
+        Effect.provideService(Database.Service, database),
+        Effect.provideService(InstanceRef, Instance.current),
+      )
+      // kilocode_change end
+      const resolvePart: (part: PromptInput["parts"][number]) => Effect.Effect<Draft<SessionV1.Part>[]> = Effect.fn(
         "SessionPrompt.resolveUserPart",
       )(function* (part) {
         if (part.type === "file") {
           if (part.source?.type === "resource") {
             const { clientName, uri } = part.source
-            log.info("mcp resource", { clientName, uri, mime: part.mime })
-            const pieces: Draft<MessageV2.Part>[] = [
+            yield* Effect.logInfo("mcp resource", { clientName, uri, mime: part.mime })
+            const pieces: Draft<SessionV1.Part>[] = [
               {
                 messageID: info.id,
                 sessionID: input.sessionID,
@@ -857,7 +882,13 @@ export const layer = Layer.effect(
                 text: `Reading MCP resource: ${part.filename} (${uri})`,
               },
             ]
-            const exit = yield* mcp.readResource(clientName, uri).pipe(Effect.exit)
+            // kilocode_change start
+            const exit = yield* (
+              networkRestricted
+                ? Effect.fail(new Error("Sandbox denied MCP resource access"))
+                : mcp.readResource(clientName, uri)
+            ).pipe(Effect.exit)
+            // kilocode_change end
             if (Exit.isSuccess(exit)) {
               const content = exit.value
               if (!content) throw new Error(`Resource not found: ${clientName}/${uri}`)
@@ -885,7 +916,7 @@ export const layer = Layer.effect(
               pieces.push({ ...part, messageID: info.id, sessionID: input.sessionID })
             } else {
               const error = Cause.squash(exit.cause)
-              log.error("failed to read MCP resource", { error, clientName, uri })
+              yield* Effect.logError("failed to read MCP resource", { error, clientName, uri })
               const message = error instanceof Error ? error.message : String(error)
               pieces.push({
                 messageID: info.id,
@@ -932,25 +963,45 @@ export const layer = Layer.effect(
               // kilocode_change end
               break
             case "file:": {
-              log.info("file", { mime: part.mime })
+              yield* Effect.logInfo("file", { mime: part.mime })
               const filepath = fileURLToPath(part.url)
-              const referenceContext = yield* referenceContextFromFilePart(part, filepath)
+              // kilocode_change start
+              const reference = yield* referenceContextFromFilePart(part, filepath)
+              // kilocode_change end
               const mime = (yield* fsys.isDir(filepath)) ? "application/x-directory" : part.mime
 
               const { read } = yield* registry.named()
-              const execRead = (args: Parameters<typeof read.execute>[0], extra?: Tool.Context["extra"]) => {
-                const controller = new AbortController()
-                return read
-                  .execute(args, {
-                    sessionID: input.sessionID,
-                    abort: controller.signal,
-                    agent: input.agent!,
-                    messageID: info.id,
-                    extra: { bypassCwdCheck: true, ...extra },
-                    messages: [],
-                    metadata: () => Effect.void,
-                    ask: () => Effect.void,
+              // kilocode_change start - authorize prompt attachments like model-issued read calls
+              const controller = new AbortController()
+              const ask: Tool.Context["ask"] = (request) =>
+                Effect.gen(function* () {
+                  const session = yield* sessions.get(input.sessionID)
+                  yield* KiloSessionPrompt.askPermission({
+                    permission,
+                    agents,
+                    sessions,
+                    agent: ag,
+                    session,
+                    request: {
+                      ...request,
+                      sessionID: input.sessionID,
+                    },
                   })
+                }).pipe(Effect.orDie)
+              const ctx = (extra?: Tool.Context["extra"]): Tool.Context => ({
+                sessionID: input.sessionID,
+                abort: controller.signal,
+                agent: ag.name,
+                messageID: info.id,
+                extra: { ...extra, referenceRoot: reference?.root, includeInstructions: false, denyDirectory: true },
+                messages: [],
+                metadata: () => Effect.void,
+                ask,
+              })
+              // kilocode_change end
+              const execRead = (args: Parameters<typeof read.execute>[0], extra?: Tool.Context["extra"]) => {
+                return read
+                  .execute(args, ctx(extra)) // kilocode_change - enforce read and external_directory permissions
                   .pipe(Effect.onInterrupt(() => Effect.sync(() => controller.abort())))
               }
 
@@ -979,10 +1030,7 @@ export const layer = Layer.effect(
                   if (end) limit = end - (offset - 1)
                 }
                 const args = { filePath: filepath, offset, limit }
-                const pieces: Draft<MessageV2.Part>[] = [
-                  ...(referenceContext
-                    ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }]
-                    : []),
+                const pieces: Draft<SessionV1.Part>[] = [
                   {
                     messageID: info.id,
                     sessionID: input.sessionID,
@@ -1019,9 +1067,9 @@ export const layer = Layer.effect(
                   }
                 } else {
                   const error = Cause.squash(exit.cause)
-                  log.error("failed to read file", { error })
+                  yield* Effect.logError("failed to read file", { error, filepath })
                   const message = error instanceof Error ? error.message : String(error)
-                  yield* bus.publish(Session.Event.Error, {
+                  yield* events.publish(Session.Event.Error, {
                     sessionID: input.sessionID,
                     error: new NamedError.Unknown({ message }).toObject(),
                   })
@@ -1038,19 +1086,16 @@ export const layer = Layer.effect(
 
               if (mime === "application/x-directory") {
                 const args = { filePath: filepath }
-                const exit = yield* execRead(args, { includeDirectoryFiles: true }).pipe(Effect.exit) // kilocode_change inline folder files
+                const exit = yield* execRead(args).pipe(Effect.exit) // kilocode_change - list only; child bytes need separate reads
                 if (Exit.isFailure(exit)) {
                   const error = Cause.squash(exit.cause)
-                  log.error("failed to read directory", { error })
+                  yield* Effect.logError("failed to read directory", { error, filepath })
                   const message = error instanceof Error ? error.message : String(error)
-                  yield* bus.publish(Session.Event.Error, {
+                  yield* events.publish(Session.Event.Error, {
                     sessionID: input.sessionID,
                     error: new NamedError.Unknown({ message }).toObject(),
                   })
                   return [
-                    ...(referenceContext
-                      ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }]
-                      : []),
                     {
                       messageID: info.id,
                       sessionID: input.sessionID,
@@ -1061,9 +1106,6 @@ export const layer = Layer.effect(
                   ]
                 }
                 return [
-                  ...(referenceContext
-                    ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }]
-                    : []),
                   {
                     messageID: info.id,
                     sessionID: input.sessionID,
@@ -1082,41 +1124,87 @@ export const layer = Layer.effect(
                 ]
               }
 
-              // kilocode_change start - reject oversized user image files before reading and base64 allocation
-              if (mime.startsWith("image/")) {
-                const limit = (yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES
-                const stat = yield* fsys.stat(filepath).pipe(Effect.catch(Effect.die))
-                const encoded = ((stat.size + 2n) / 3n) * 4n
-                if (encoded > BigInt(limit))
-                  return yield* Effect.die(
-                    new Image.SizeError({
-                      bytes: Number(encoded > BigInt(Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : encoded),
-                      max: limit,
-                      width: 0,
-                      height: 0,
-                      max_width: 0,
-                      max_height: 0,
-                    }),
-                  )
+              // kilocode_change start - authorize metadata, then reopen and verify before consuming bytes
+              const access = yield* Effect.gen(function* () {
+                const file = yield* KiloReadObject.file(filepath)
+                const instance = yield* InstanceState.context
+                const context = ctx()
+                const explicit = reference ? yield* KiloReference.path(fsys, reference.root, file.target) : false
+                const referenced =
+                  explicit || (yield* KiloReference.contains({ fs: fsys, references, target: file.target }))
+                yield* assertExternalDirectoryEffect(context, file.target, { bypass: referenced, kind: "file" })
+                yield* context.ask({
+                  permission: "read",
+                  patterns: [...new Set([filepath, file.target].map((item) => path.relative(instance.worktree, item)))],
+                  always: ["*"],
+                  metadata: {},
+                })
+
+                return yield* KiloReadObject.use(file, (bound) =>
+                  Effect.gen(function* () {
+                    const limit = mime.startsWith("image/")
+                      ? ((yield* config.get()).attachment?.image?.max_base64_bytes ?? Image.MAX_BASE64_BYTES)
+                      : undefined
+                    const raw = limit === undefined ? undefined : Math.floor(limit / 4) * 3 + 1
+                    const bytes = yield* Effect.tryPromise({
+                      try: (signal) => bound.read(raw, AbortSignal.any([context.abort, signal])),
+                      catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                    })
+                    if (limit !== undefined) {
+                      const encoded = Math.ceil(bytes.byteLength / 3) * 4
+                      if (encoded > limit) {
+                        return yield* Effect.fail(
+                          new Image.SizeError({
+                            bytes: encoded,
+                            max: limit,
+                            width: 0,
+                            height: 0,
+                            max_width: 0,
+                            max_height: 0,
+                          }),
+                        )
+                      }
+                    }
+                    const file: MessageV2.FilePart = {
+                      id: part.id ? PartID.make(part.id) : PartID.ascending(),
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "file",
+                      url: `data:${mime};base64,${bytes.toString("base64")}`,
+                      mime,
+                      filename: part.filename!,
+                      source: part.source,
+                    }
+                    return mime.startsWith("image/") ? yield* image.normalize(file) : file
+                  }),
+                )
+              }).pipe(Effect.exit)
+              if (Exit.isFailure(access)) {
+                const error = Cause.squash(access.cause)
+                if (
+                  error instanceof Image.InvalidDataUrlError ||
+                  error instanceof Image.DecodeError ||
+                  error instanceof Image.SizeError
+                )
+                  return yield* Effect.die(error)
+                yield* Effect.logError("failed to read file", { error, filepath })
+                const message = error instanceof Error ? error.message : String(error)
+                yield* events.publish(Session.Event.Error, {
+                  sessionID: input.sessionID,
+                  error: new NamedError.Unknown({ message }).toObject(),
+                })
+                return [
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: `Read tool failed to read ${filepath} with the following error: ${message}`,
+                  },
+                ]
               }
-              // kilocode_change end
-              const file: MessageV2.FilePart = {
-                id: part.id ? PartID.make(part.id) : PartID.ascending(),
-                messageID: info.id,
-                sessionID: input.sessionID,
-                type: "file",
-                url:
-                  `data:${mime};base64,` +
-                  Buffer.from(yield* fsys.readFile(filepath).pipe(Effect.catch(Effect.die))).toString("base64"),
-                mime,
-                filename: part.filename!,
-                source: part.source,
-              }
-              // kilocode_change start - apply image limits after resolving user file URLs
-              const attachment = mime.startsWith("image/") ? yield* image.normalize(file).pipe(Effect.orDie) : file
               // kilocode_change end
               return [
-                ...(referenceContext ? [{ ...referenceContext, messageID: info.id, sessionID: input.sessionID }] : []),
                 {
                   messageID: info.id,
                   sessionID: input.sessionID,
@@ -1124,7 +1212,7 @@ export const layer = Layer.effect(
                   synthetic: true,
                   text: `Called the Read tool with the following input: {"filePath":"${filepath}"}`,
                 },
-                attachment,
+                access.value, // kilocode_change - retain the attachment read through the authorized object
               ]
             }
           }
@@ -1151,8 +1239,26 @@ export const layer = Layer.effect(
         return [{ ...part, messageID: info.id, sessionID: input.sessionID }]
       })
 
-      // kilocode_change start - resolve and persist the exact transformed Kilo prompt parts
-      const resolvedParts = yield* Effect.forEach(input.parts, resolvePart, { concurrency: "unbounded" }).pipe(
+      // kilocode_change start - expand references from direct prompt text, not only command templates
+      const submittedParts: Types.DeepMutable<PromptInput["parts"]> = [...input.parts]
+      const attached = new Set(
+        input.parts.flatMap((part) =>
+          part.type === "file" && part.mime === "application/x-directory" ? [part.url] : [],
+        ),
+      )
+      for (const part of input.parts) {
+        if (part.type !== "text" || part.synthetic) continue
+        for (const reference of yield* resolveReferenceParts(part.text, attached)) {
+          if (reference.type === "file" && attached.has(reference.url)) continue
+          if (reference.type === "file") {
+            attached.add(reference.url)
+          }
+          submittedParts.push(reference)
+        }
+      }
+      // kilocode_change end
+
+      const resolvedParts = yield* Effect.forEach(submittedParts, resolvePart, { concurrency: "unbounded" }).pipe(
         Effect.map((x) => x.flat().map(assign)),
       )
 
@@ -1168,12 +1274,12 @@ export const layer = Layer.effect(
         { message: info, parts: resolvedParts },
       )
 
+      // kilocode_change - kilo normalizes images inside resolvePart, so there is no separate normalization pass here (unlike upstream)
       const parts = resolvedParts
-      // kilocode_change end
 
       const parsed = decodeMessageInfo(info, { errors: "all", propertyOrder: "original" })
       if (Exit.isFailure(parsed)) {
-        log.error("invalid user message before save", {
+        yield* Effect.logError("invalid user message before save", {
           sessionID: input.sessionID,
           messageID: info.id,
           agent: info.agent,
@@ -1181,10 +1287,10 @@ export const layer = Layer.effect(
           cause: Cause.pretty(parsed.cause),
         })
       }
-      parts.forEach((part, index) => {
+      for (const [index, part] of parts.entries()) {
         const p = decodeMessagePart(part, { errors: "all", propertyOrder: "original" })
-        if (Exit.isSuccess(p)) return
-        log.error("invalid user part before save", {
+        if (Exit.isSuccess(p)) continue
+        yield* Effect.logError("invalid user part before save", {
           sessionID: input.sessionID,
           messageID: info.id,
           partID: part.id,
@@ -1193,7 +1299,7 @@ export const layer = Layer.effect(
           cause: Cause.pretty(p.cause),
           part,
         })
-      })
+      }
 
       yield* sessions.updateMessage(info)
       for (const part of parts) yield* sessions.updatePart(part)
@@ -1202,26 +1308,6 @@ export const layer = Layer.effect(
           if (part.type === "text") {
             if (part.synthetic) result.synthetic.push(part.text)
             else result.text.push(part.text)
-            const reference = referencePromptMetadata(part.metadata?.reference)
-            if (reference) {
-              result.references.push(
-                new ReferenceAttachment({
-                  name: reference.name,
-                  kind: reference.kind,
-                  uri: reference.path ? pathToFileURL(reference.path).href : undefined,
-                  repository: reference.repository,
-                  branch: reference.branch,
-                  target: reference.target,
-                  targetUri: reference.targetPath ? pathToFileURL(reference.targetPath).href : undefined,
-                  problem: reference.problem,
-                  source: new Source({
-                    start: reference.source.start,
-                    end: reference.source.end,
-                    text: reference.source.value,
-                  }),
-                }),
-              )
-            }
           }
           if (part.type === "file") {
             result.files.push(
@@ -1259,7 +1345,6 @@ export const layer = Layer.effect(
           text: [] as string[],
           files: [] as FileAttachment[],
           agents: [] as AgentAttachment[],
-          references: [] as ReferenceAttachment[],
           synthetic: [] as string[],
         },
       )
@@ -1267,13 +1352,14 @@ export const layer = Layer.effect(
       if (flags.experimentalEventSystem) {
         yield* events.publish(SessionEvent.Prompted, {
           sessionID: input.sessionID,
+          messageID: SessionMessage.ID.create(),
           timestamp: DateTime.makeUnsafe(info.time.created),
-          prompt: {
+          delivery: "steer",
+          prompt: new Prompt({
             text: nextPrompt.text.join("\n"),
             files: nextPrompt.files,
             agents: nextPrompt.agents,
-            references: nextPrompt.references,
-          },
+          }),
         })
       }
       for (const text of nextPrompt.synthetic) {
@@ -1281,6 +1367,7 @@ export const layer = Layer.effect(
         if (flags.experimentalEventSystem) {
           yield* events.publish(SessionEvent.Synthetic, {
             sessionID: input.sessionID,
+            messageID: SessionMessage.ID.create(),
             timestamp: DateTime.makeUnsafe(info.time.created),
             text,
           })
@@ -1290,7 +1377,7 @@ export const layer = Layer.effect(
       return { info, parts }
     }, Effect.scoped)
 
-    const prompt: (input: PromptInput) => Effect.Effect<MessageV2.WithParts> = Effect.fn("SessionPrompt.prompt")(
+    const prompt: Interface["prompt"] = Effect.fn("SessionPrompt.prompt")(
       function* (input: PromptInput) {
         const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
         yield* revert.cleanup(session)
@@ -1298,10 +1385,10 @@ export const layer = Layer.effect(
         yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
         yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
         // kilocode_change end
-        const message = yield* createUserMessage(input)
+        const message = yield* KiloSessionPrompt.intake(input.sessionID, createUserMessage(input)) // kilocode_change
         yield* sessions.touch(input.sessionID)
 
-        const permissions: Permission.Rule[] = []
+        const permissions: PermissionV1.Rule[] = []
         for (const [t, enabled] of Object.entries(input.tools ?? {})) {
           permissions.push({ permission: t, action: enabled ? "allow" : "deny", pattern: "*" })
         }
@@ -1369,19 +1456,23 @@ export const layer = Layer.effect(
       // kilocode_change end
       // kilocode_change — cache environment details per turn (prompt caching)
       const envCache: KiloSessionPrompt.EnvCache = {}
+      const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
-      const slog = elog.with({ sessionID })
       let structured: unknown
       let step = 0
       const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
 
       while (true) {
         yield* status.set(sessionID, { type: "busy" })
-        yield* slog.info("loop", { step })
+        yield* Effect.logInfo("loop", { "session.id": sessionID, step })
 
-        let msgs = yield* MessageV2.filterCompactedEffect(sessionID)
+        // kilocode_change start - provide the upstream Effect database to Kilo's retained prompt loop
+        let msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+          Effect.provideService(Database.Service, database),
+        )
+        // kilocode_change end
         msgs = KiloSessionPromptQueue.scope(sessionID, msgs) // kilocode_change - hide later queued prompts
         msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs) // kilocode_change - trim on any completed summary (e.g. manual /compact against a text user)
 
@@ -1408,12 +1499,13 @@ export const layer = Layer.effect(
           ) ?? KiloSessionProcessor.extractSuggestionReviewTelemetry(lastAssistantMsg?.parts ?? [])
         // kilocode_change end
 
-        // Some providers return "stop" even when the assistant message contains tool calls.
-        // Keep the loop running so tool results can be sent back to the model.
-        // Skip provider-executed tool parts — those were fully handled within the
-        // provider's stream (e.g. DWS Agent Platform) and don't need a re-loop.
+        // Some providers return "stop" even when the assistant message contains
+        // tool calls. Keep the loop running so tool results can be sent back to
+        // the model, but ignore cleanup-marked interrupted orphans.
         const hasToolCalls =
-          lastAssistantMsg?.parts.some((part) => part.type === "tool" && !part.metadata?.providerExecuted) ?? false
+          lastAssistantMsg?.parts.some(
+            (part) => part.type === "tool" && !part.metadata?.providerExecuted && !isOrphanedInterruptedTool(part),
+          ) ?? false
 
         // kilocode_change start - plan_exit is a hard stop before another model call
         if (
@@ -1427,7 +1519,7 @@ export const layer = Layer.effect(
             KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
           )
           if (action === "continue") continue
-          yield* slog.info("exiting loop")
+          yield* Effect.logInfo("exiting loop", { "session.id": sessionID })
           break
         }
         // kilocode_change end
@@ -1439,13 +1531,18 @@ export const layer = Layer.effect(
           lastAssistant.parentID === lastUser.id && // kilocode_change - unrelated later assistants do not answer this turn
           userBeforeAssistant // kilocode_change - compare chronology, not generated IDs
         ) {
-          // kilocode_change start - ask follow-up when plan_exit tool was called
-          const action = yield* Effect.promise((signal) =>
-            KiloSessionPrompt.askPlanFollowup({ sessionID, messages: msgs, abort: signal, question }),
+          const orphan = lastAssistantMsg?.parts.find(
+            (part): part is MessageV2.ToolPart => part.type === "tool" && isOrphanedInterruptedTool(part),
           )
-          if (action === "continue") continue
-          // kilocode_change end
-          yield* slog.info("exiting loop")
+          if (orphan) {
+            yield* Effect.logWarning("loop exit with orphaned interrupted tool", {
+              "session.id": sessionID,
+              messageID: lastAssistant.id,
+              tool: orphan.tool,
+              callID: orphan.callID,
+            })
+          }
+          yield* Effect.logInfo("exiting loop", { "session.id": sessionID })
           break
         }
 
@@ -1500,7 +1597,7 @@ export const layer = Layer.effect(
             // lastFinished is a prior turn's assistant — record exhaustion on the
             // message whose size tipped us past the compaction cap.
             yield* sessions.updateMessage(lastFinished)
-            yield* bus.publish(Session.Event.Error, { sessionID, error: guard.error })
+            yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
             break
           }
           compactionAttempts++
@@ -1514,14 +1611,14 @@ export const layer = Layer.effect(
           const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
           const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
           const error = new NamedError.Unknown({ message: `Agent not found: "${lastUser.agent}".${hint}` })
-          yield* bus.publish(Session.Event.Error, { sessionID, error: error.toObject() })
+          yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
           throw error
         }
         const maxSteps = agent.steps ?? Infinity
         const isLastStep = step >= maxSteps
         msgs = yield* SessionReminders.apply({ messages: msgs, agent, session }).pipe(
           Effect.provideService(RuntimeFlags.Service, flags),
-          Effect.provideService(AppFileSystem.Service, fsys),
+          Effect.provideService(FSUtil.Service, fsys),
           Effect.provideService(Session.Service, sessions),
         )
 
@@ -1573,6 +1670,7 @@ export const layer = Layer.effect(
             bypassAgentCheck,
             messages: msgs,
             promptOps,
+            memoryCache, // kilocode_change
           }).pipe(
             Effect.provideService(Plugin.Service, plugin),
             Effect.provideService(Permission.Service, permission),
@@ -1581,6 +1679,11 @@ export const layer = Layer.effect(
             Effect.provideService(ToolRegistry.Service, registry),
             Effect.provideService(MCP.Service, mcp),
             Effect.provideService(Truncate.Service, truncate),
+            // kilocode_change start - SWE-Pruner (experimental)
+            Effect.provideService(Config.Service, config),
+            Effect.provideService(Provider.Service, provider),
+            Effect.provideService(Database.Service, database),
+            // kilocode_change end
           )
 
           if (lastUser.format?.type === "json_schema") {
@@ -1627,27 +1730,35 @@ export const layer = Layer.effect(
           // kilocode_change end
 
           // kilocode_change start - persistently prune stale tool outputs when payload is already large
-          const [skills, env, instructions] = yield* Effect.all([
+          const [skills, env, mem, instructions] = yield* Effect.all([
             sys.skills(agent),
             sys.environment(model, lastUser.editorContext), // kilocode_change
+            KiloSessionPrompt.memoryInject({ ctx, sessionID, record: step === 1, cache: memoryCache }), // kilocode_change
             instruction.system().pipe(Effect.orDie),
           ])
-          let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
+          let modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
+            Effect.provideService(Database.Service, database),
+          )
           const size = Buffer.byteLength(JSON.stringify(modelMsgs))
           if (size > REQUEST_PRUNE_BYTES) {
             yield* compaction.prune({ sessionID, reason: "payload-limit" })
-            msgs = yield* MessageV2.filterCompactedEffect(sessionID)
+            msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+              Effect.provideService(Database.Service, database),
+            )
             msgs = KiloSessionPromptQueue.scope(sessionID, msgs)
             msgs = KiloSessionPrompt.trimBeforeLastSummary(msgs)
             yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
             KiloSessionPrompt.injectEditorContext({ msgs, lastUser, sessionID, cache: envCache })
             msgs = KiloSessionPrompt.maybeStripHistoricalMedia(msgs)
-            modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model)
+            modelMsgs = yield* MessageV2.toModelMessagesEffect(msgs, model).pipe(
+              Effect.provideService(Database.Service, database),
+            )
             const nextSize = Buffer.byteLength(JSON.stringify(modelMsgs))
-            if (nextSize > REQUEST_PRUNE_BYTES) log.warn("payload still large after pruning", { size: nextSize })
+            if (nextSize > REQUEST_PRUNE_BYTES)
+              yield* Effect.logWarning("payload still large after pruning", { "session.id": sessionID, size: nextSize })
           }
           // kilocode_change end
-          const system = [...env, ...instructions, ...(skills ? [skills] : [])]
+          const system = [...env, ...mem, ...instructions, ...(skills ? [skills] : [])] // kilocode_change
           const format = lastUser.format ?? { type: "text" as const }
           if (format.type === "json_schema") system.push(STRUCTURED_OUTPUT_SYSTEM_PROMPT)
           const result = yield* handle.process({
@@ -1663,7 +1774,22 @@ export const layer = Layer.effect(
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,
+            // kilocode_change start - feed the provider-reported context size from the last finished
+            // turn into the output-token cap, so image/vision input is measured by the provider
+            // rather than by encoded payload bytes (see KiloLLM.capOutputTokens). Summary messages
+            // are skipped like in the isOverflow check above: their reported input reflects the
+            // pre-compaction history, not the trimmed context of the next request.
+            reportedContextTokens:
+              lastFinished && lastFinished.summary !== true
+                ? KiloSessionOverflow.count(lastFinished.tokens)
+                : undefined,
+            // kilocode_change end
           })
+
+          // kilocode_change start - persist a lightweight marker when this assistant step had memory context
+          const marker = KiloSessionPrompt.memoryPart({ sessionID, message: handle.message, cache: memoryCache })
+          if (marker) yield* sessions.updatePart(marker)
+          // kilocode_change end
 
           if (structured !== undefined) {
             handle.message.structured = structured
@@ -1674,6 +1800,15 @@ export const layer = Layer.effect(
 
           const finished = handle.message.finish && !["tool-calls", "unknown"].includes(handle.message.finish)
           if (finished && !handle.message.error) {
+            if (handle.message.finish === "content-filter") {
+              handle.message.error = new SessionV1.ContentFilterError({
+                message: "The response was blocked by the provider's content filter",
+              }).toObject()
+              yield* sessions.updateMessage(handle.message)
+              yield* events.publish(Session.Event.Error, { sessionID, error: handle.message.error })
+              closeReasons.set(sessionID, "error") // kilocode_change - retain Kilo close-reason propagation
+              return "break" as const
+            }
             if (format.type === "json_schema") {
               handle.message.error = new MessageV2.StructuredOutputError({
                 message: "Model did not produce structured output",
@@ -1708,7 +1843,7 @@ export const layer = Layer.effect(
             })
             if (guard.exhausted) {
               yield* sessions.updateMessage(handle.message)
-              yield* bus.publish(Session.Event.Error, { sessionID, error: guard.error })
+              yield* events.publish(Session.Event.Error, { sessionID, error: guard.error })
               return "break" as const
             }
             compactionAttempts++
@@ -1763,9 +1898,10 @@ export const layer = Layer.effect(
       "SessionPrompt.loop",
     )(function* (input: LoopInput) {
       // kilocode_change start
+      const session = yield* sessions.get(input.sessionID)
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
-      yield* bus.publish(KiloSession.Event.TurnOpen, { sessionID: input.sessionID })
+      yield* KiloSession.publishTurnOpen({ sessionID: input.sessionID })
       return yield* Effect.onExit(
         state.ensureRunning(
           input.sessionID,
@@ -1773,8 +1909,9 @@ export const layer = Layer.effect(
           runLoop(input).pipe(Effect.orDie),
         ), // kilocode_change
         Effect.fnUntraced(function* (exit) {
-          yield* bus.publish(KiloSession.Event.TurnClose, {
+          yield* KiloSession.publishTurnClose({
             sessionID: input.sessionID,
+            parentID: session.parentID,
             reason: KiloSessionPrompt.resolveCloseReason({
               sessionID: input.sessionID,
               closeReasons,
@@ -1786,7 +1923,7 @@ export const layer = Layer.effect(
       // kilocode_change end
     })
 
-    const shell: (input: ShellInput) => Effect.Effect<MessageV2.WithParts, Session.BusyError> = Effect.fn(
+    const shell: (input: ShellInput) => Effect.Effect<SessionV1.WithParts, Session.BusyError> = Effect.fn(
       "SessionPrompt.shell",
     )(function* (input: ShellInput) {
       const ready = yield* Latch.make()
@@ -1799,16 +1936,88 @@ export const layer = Layer.effect(
     })
 
     const command = Effect.fn("SessionPrompt.command")(function* (input: CommandInput) {
-      yield* elog.info("command", { sessionID: input.sessionID, command: input.command, agent: input.agent })
+      yield* Effect.logInfo("command", {
+        "session.id": input.sessionID,
+        command: input.command,
+        agent: input.agent,
+      })
       const cmd = yield* commands.get(input.command)
       if (!cmd) {
         const available = (yield* commands.list()).map((c) => c.name)
+        available.push(...BUILTIN_COMMANDS) // kilocode_change - surface built-in session commands in error hint
+        available.sort() // kilocode_change - alphabetical for stable, easy-to-scan output
         const hint = available.length ? ` Available commands: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Command not found: "${input.command}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
       const agentName = cmd.agent ?? input.agent
+      // kilocode_change start - deprecated review aliases should display a static notice without an LLM turn
+      const legacy = legacyReviewMessage(input.command)
+      if (legacy) {
+        const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+        if (!agent) {
+          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
+          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+          throw error
+        }
+        const model = yield* Effect.gen(function* () {
+          if (cmd.model) return Provider.parseModel(cmd.model)
+          if (cmd.agent && agent.model) return agent.model
+          if (input.model) return Provider.parseModel(input.model)
+          return yield* currentModel(input.sessionID)
+        })
+        yield* getModel(model.providerID, model.modelID, input.sessionID)
+        const text = `/${input.command}${input.arguments ? ` ${input.arguments}` : ""}`
+        const user = yield* KiloSessionPrompt.intake(
+          input.sessionID,
+          createUserMessage({
+            sessionID: input.sessionID,
+            messageID: input.messageID,
+            model,
+            agent: agent.name,
+            variant: input.variant,
+            parts: [{ type: "text", text }, ...(input.parts ?? [])],
+          }),
+        )
+        yield* sessions.touch(input.sessionID)
+        const ctx = yield* InstanceState.context
+        const completed = Date.now()
+        const info: MessageV2.Assistant = yield* sessions.updateMessage({
+          id: MessageID.ascending(),
+          role: "assistant",
+          parentID: user.info.id,
+          sessionID: input.sessionID,
+          mode: agent.name,
+          agent: agent.name,
+          variant: user.info.model.variant,
+          path: { cwd: ctx.directory, root: ctx.worktree },
+          cost: 0,
+          tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+          modelID: user.info.model.modelID,
+          providerID: user.info.model.providerID,
+          time: { created: completed, completed },
+          finish: "stop",
+        })
+        const part: MessageV2.TextPart = yield* sessions.updatePart({
+          id: PartID.ascending(),
+          messageID: info.id,
+          sessionID: input.sessionID,
+          type: "text",
+          text: legacy,
+        })
+        const result = { info, parts: [part] }
+        yield* events.publish(Command.Event.Executed, {
+          name: input.command,
+          sessionID: input.sessionID,
+          arguments: input.arguments,
+          messageID: result.info.id,
+        })
+        return result
+      }
+      // kilocode_change end
 
       const raw = input.arguments.match(argsRegex) ?? []
       const args = raw.map((arg) => arg.replace(quoteTrimRegex, ""))
@@ -1862,14 +2071,15 @@ export const layer = Layer.effect(
 
       yield* getModel(taskModel.providerID, taskModel.modelID, input.sessionID)
 
-      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
+      const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!agent) {
         const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
         const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
         const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* bus.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
         throw error
       }
+      yield* agents.guardRequirements(agent) // kilocode_change - command agent overrides must satisfy requirements
 
       const templateParts = yield* resolvePromptParts(template)
       KiloSessionProcessor.markReviewTelemetry(templateParts, input.command) // kilocode_change - mark review commands for completion telemetry
@@ -1909,7 +2119,7 @@ export const layer = Layer.effect(
         variant: input.variant,
         snapshotInitialization: input.snapshotInitialization, // kilocode_change
       })
-      yield* bus.publish(Command.Event.Executed, {
+      yield* events.publish(Command.Event.Executed, {
         name: input.command,
         sessionID: input.sessionID,
         arguments: input.arguments,
@@ -1929,7 +2139,9 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = Layer.suspend(() =>
+// kilocode_change start - keep prompt runtime requirements type-checked
+export const defaultLayer: Layer.Layer<Service> = Layer.suspend(() =>
+  // kilocode_change end
   layer
     .pipe(
       Layer.provide(SessionRunState.defaultLayer),
@@ -1943,12 +2155,14 @@ export const defaultLayer = Layer.suspend(() =>
       Layer.provide(LSP.defaultLayer),
       Layer.provide(ToolRegistry.defaultLayer),
       Layer.provide(Truncate.defaultLayer),
+      Layer.provide(RepositoryCache.defaultLayer), // kilocode_change
     )
     .pipe(
       Layer.provide(Provider.defaultLayer),
       Layer.provide(Config.defaultLayer),
       Layer.provide(Instruction.defaultLayer),
-      Layer.provide(AppFileSystem.defaultLayer),
+      Layer.provide(Database.defaultLayer),
+      Layer.provide(FSUtil.defaultLayer),
       Layer.provide(Plugin.defaultLayer),
       Layer.provide(Session.defaultLayer),
       Layer.provide(SessionRevert.defaultLayer),
@@ -1960,8 +2174,6 @@ export const defaultLayer = Layer.suspend(() =>
           Agent.defaultLayer,
           SystemPrompt.defaultLayer,
           LLM.defaultLayer,
-          Reference.defaultLayer,
-          Bus.layer,
           CrossSpawnSpawner.defaultLayer,
           RuntimeFlags.defaultLayer,
         ),
@@ -1969,8 +2181,8 @@ export const defaultLayer = Layer.suspend(() =>
     ),
 )
 const ModelRef = Schema.Struct({
-  providerID: ProviderID,
-  modelID: ModelID,
+  providerID: ProviderV2.ID,
+  modelID: ModelV2.ID,
 })
 
 export const PromptInput = Schema.Struct({
@@ -1983,9 +2195,11 @@ export const PromptInput = Schema.Struct({
     description:
       "@deprecated tools and permissions have been merged, you can set permissions on the session itself now",
   }),
-  format: Schema.optional(MessageV2.Format),
+  // kilocode_change start - keep internal ephemeral tool controls out of the public prompt schema
+  format: Schema.optional(SessionV1.Format),
   system: Schema.optional(Schema.String),
   variant: Schema.optional(Schema.String),
+  // kilocode_change end
   // kilocode_change start - managed product slow-snapshot policy
   snapshotInitialization: Schema.optional(Schema.Literal("wait")).annotate({
     description: "Wait silently if snapshot initialization is slow instead of asking the user.",
@@ -1996,10 +2210,10 @@ export const PromptInput = Schema.Struct({
   // kilocode_change end
   parts: Schema.Array(
     Schema.Union([
-      MessageV2.TextPartInput,
-      MessageV2.FilePartInput,
-      MessageV2.AgentPartInput,
-      MessageV2.SubtaskPartInput,
+      SessionV1.TextPartInput,
+      SessionV1.FilePartInput,
+      SessionV1.AgentPartInput,
+      SessionV1.SubtaskPartInput,
     ]).annotate({ discriminator: "type" }),
   ),
 }).pipe(withStatics((s) => ({ zod: zod(s) })))
@@ -2016,6 +2230,7 @@ type PartInputUnion =
 export type PromptInput = Omit<Schema.Schema.Type<typeof PromptInput>, "parts" | "editorContext"> & {
   parts: PartInputUnion[]
   editorContext?: MessageV2.EditorContext
+  ephemeralTools?: Record<string, boolean>
 }
 // kilocode_change end
 
@@ -2060,7 +2275,7 @@ export const CommandInput = Schema.Struct({
           mime: Schema.String,
           filename: Schema.optional(Schema.String),
           url: Schema.String,
-          source: Schema.optional(MessageV2.FilePartSource),
+          source: Schema.optional(SessionV1.FilePartSource),
         }),
       ]).annotate({ discriminator: "type" }),
     ),
@@ -2101,5 +2316,38 @@ const bashRegex = /!`([^`]+)`/g
 const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g
+
+const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, []) // kilocode_change
+
+export const node = LayerNode.make(layer, [
+  SessionStatus.node,
+  Session.node,
+  Agent.node,
+  Provider.node,
+  SessionProcessor.node,
+  SessionCompaction.node,
+  Plugin.node,
+  Command.node,
+  Config.node,
+  Permission.node,
+  FSUtil.node,
+  MCP.node,
+  LSP.node,
+  ToolRegistry.node,
+  Truncate.node,
+  Image.node,
+  CrossSpawnSpawner.node,
+  Instruction.node,
+  SessionRunState.node,
+  SessionRevert.node,
+  SessionSummary.node,
+  SystemPrompt.node,
+  LLM.node,
+  EventV2Bridge.node,
+  RuntimeFlags.node,
+  Database.node,
+  Question.node, // kilocode_change
+  repositoryCacheNode, // kilocode_change
+])
 
 export * as SessionPrompt from "./prompt"

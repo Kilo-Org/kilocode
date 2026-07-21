@@ -23,6 +23,7 @@ import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.util.UiTimer
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.ChatEventDto
@@ -48,12 +49,16 @@ import ai.kilocode.rpc.dto.QuestionRequestDto
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionStatusDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionManager
+import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.actionSystem.IdeActions
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
@@ -81,10 +86,11 @@ class SessionController(
   private val workspace: Workspace,
   private val app: KiloAppService,
   private val cs: CoroutineScope,
-  comp: Component? = null,
+  private val comp: Component? = null,
   private val flushMs: Long = EVENT_FLUSH_MS,
   private val condense: Boolean = true,
   private val displayMs: Long = DISPLAY_DELAY_MS,
+  private val revertTimeoutMs: Long = REVERT_TIMEOUT_MS,
   private val open: (SessionRef) -> Unit = {},
   private val beforeUpdate: () -> Boolean = { false },
   private val afterUpdate: (Boolean) -> Unit = {},
@@ -92,16 +98,27 @@ class SessionController(
   private val openProfileAction: () -> Unit = {},
   private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
   private val timers: UiTimerSource = UiTimers,
+  private val log: KiloLog = LOG,
 ) : Disposable {
 
     private data class OrganizationTarget(val org: String?)
     private data class Followup(val dir: String, val time: Long)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
+    private data class RevertOp(val key: Long)
+    private data class Dispatch(
+        val kind: String,
+        val source: String,
+        val text: String,
+        val props: Map<String, String>,
+        val start: String,
+        val exists: Boolean,
+    )
 
     companion object {
         private val LOG = KiloLog.create(SessionController::class.java)
         internal const val RECENT_LIMIT = 5
         internal const val DISPLAY_DELAY_MS = 1_000L
+        internal const val REVERT_TIMEOUT_MS = 30_000L
         private const val FOLLOWUP_TTL_MS = 30_000L
         private const val FOLLOWUP_NEW_SESSION = "Start new session"
     }
@@ -134,8 +151,17 @@ class SessionController(
     private var tool: String? = null
     private var eventJob: Job? = null
     private var drainJob: Job? = null
+    private var revertJob: Job? = null
+    private var revertOp: RevertOp? = null
+    private var revertSeq = 0L
+    private var revertWatchdog: UiTimer? = null
+    // While a revert is in flight, turn/status transitions are deferred here instead of dropped,
+    // then reconciled when the operation releases so an underlying server turn is not lost.
+    private var revertDeferred: SessionState? = null
+    private var creating: CompletableDeferred<String?>? = null
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
     private val childIds: MutableSet<String> = mutableSetOf()
+    private val childParts: MutableMap<PartKey, String> = mutableMapOf()
     private var sessionLoadState: SessionLoadState = SessionLoadState.Idle
     private var recentsState: RecentsState = RecentsState.Idle
     private var viewState: SessionControllerEvent.ViewChanged? = null
@@ -154,8 +180,6 @@ class SessionController(
     private var prefAgent: String? = null
     private var modelTime: Double? = null
     private val snapshots = mutableMapOf<PartKey, String>()
-
-    private data class PartKey(val messageId: String, val partId: String)
 
     val ready: Boolean get() = model.isReady()
     val autoApprove: Boolean get() = KiloPluginSettings.getAutoApprove()
@@ -239,40 +263,43 @@ class SessionController(
         val dto = promptDto(text, files)
         val props = promptProps(files)
         LOG.debug { "${ChatLogSummary.sid(start)} ${ChatLogSummary.prompt(dto)} ${ChatLogSummary.dir(directory)}" }
+        dispatch(Dispatch("prompt", "user", text, props, start, exists)) { id ->
+            sessions.prompt(id, directory, dto)
+        }
+    }
+
+    fun command(command: String, args: String, files: List<PromptPartDto> = emptyList()) {
+        assertEdt()
+        val start = sid ?: ref?.key ?: "pending"
+        val exists = sid != null
+        val dto = promptDto("", files)
+        val props = promptProps(files)
+        LOG.debug { "${ChatLogSummary.sid(start)} kind=command command=$command args=${args.length} ${ChatLogSummary.dir(directory)}" }
+        dispatch(Dispatch("command", "command", args, props, start, exists)) { id ->
+            sessions.command(id, directory, command, args, dto)
+        }
+    }
+
+    private fun dispatch(data: Dispatch, send: suspend (String) -> Unit) {
+        assertEdt()
+        if (revertOp != null) return
+        val props = data.props + if (data.kind == "command") slashProps() else emptyMap()
         capture("Conversation Send Clicked", sessionProps(sid ?: ref?.key) + mapOf(
-            "source" to "user",
-            "hasExistingSession" to exists.toString(),
-            "textLength" to bucket(text),
+            "source" to data.source,
+            "hasExistingSession" to data.exists.toString(),
+            "textLength" to bucket(data.text),
         ) + props)
         showSession()
+        val pending = sid?.let { CompletableDeferred(it) } ?: session()
         cs.launch {
             try {
-                val id = sid ?: run {
-                    val session = sessions.create(directory)
-                    runEdt {
-                        if (disposed) return@runEdt
-                        ref = SessionRef.Local(session)
-                        setRecentSessionsState(RecentsState.Idle)
-                        updateModel {
-                            model.setSession(session)
-                        }
-                    }
-                    if (disposed) return@launch
-                    val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
-                    LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
-                    capture("Task Created", sessionProps(session.id) + mapOf("source" to "jetbrains"))
-                    runEdt {
-                        if (disposed) return@runEdt
-                        subscribeEvents()
-                    }
-                    session.id
-                }
-                sessions.prompt(id, directory, dto)
-                capture("Conversation Message", sessionProps(id) + mapOf("source" to "user", "hasExistingSession" to exists.toString()) + props)
-                LOG.debug { "${ChatLogSummary.sid(id)} kind=prompt dispatched=true" }
+                val id = pending.await() ?: return@launch
+                send(id)
+                capture("Conversation Message", sessionProps(id) + mapOf("source" to data.source, "hasExistingSession" to data.exists.toString()) + props)
+                LOG.debug { "${ChatLogSummary.sid(id)} kind=${data.kind} dispatched=true" }
             } catch (e: Exception) {
-                capture("Session Error", sessionProps(sid ?: ref?.key ?: start) + mapOf("context" to "prompt", "errorClass" to e::class.java.name))
-                LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: start)} kind=prompt dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                capture("Session Error", sessionProps(sid ?: ref?.key ?: data.start) + mapOf("context" to data.kind, "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(sid ?: ref?.key ?: data.start)} kind=${data.kind} dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
                 edt {
                     if (disposed) return@edt
                     val msg = e.message ?: KiloBundle.message("session.error.prompt")
@@ -284,9 +311,54 @@ class SessionController(
         }
     }
 
+    private fun session(): CompletableDeferred<String?> {
+        assertEdt()
+        val pending = creating
+        if (pending != null) return pending
+        val next = CompletableDeferred<String?>()
+        creating = next
+        cs.launch {
+            try {
+                next.complete(createSession())
+            } catch (e: Exception) {
+                next.completeExceptionally(e)
+            } finally {
+                edt {
+                    if (creating === next) creating = null
+                }
+            }
+        }
+        return next
+    }
+
+    private suspend fun createSession(): String? {
+        val session = sessions.create(directory)
+        runEdt {
+            if (disposed) return@runEdt
+            ref = SessionRef.Local(session)
+            setRecentSessionsState(RecentsState.Idle)
+            updateModel {
+                model.setSession(session)
+            }
+        }
+        if (disposed) return null
+        val meta = if (LOG.isDebugEnabled) ChatLogSummary.dir(directory) else "kind=session"
+        LOG.info("${ChatLogSummary.sid(session.id)} kind=session $meta created=true")
+        capture("Task Created", sessionProps(session.id) + mapOf("source" to "jetbrains"))
+        runEdt {
+            if (disposed) return@runEdt
+            subscribeEvents()
+        }
+        return session.id
+    }
+
     fun abort() {
         assertEdt()
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=abort" }
+        if (revertOp != null) {
+            cancelRevert()
+            return
+        }
         val id = sid ?: return
         capture("Session Stop Clicked", sessionProps(id))
         cs.launch {
@@ -323,7 +395,7 @@ class SessionController(
     fun compact() {
         assertEdt()
         val id = sid ?: return
-        if (model.state.isBusy()) return
+        if (revertOp != null || model.state.isBusy()) return
         if (model.isEmpty()) return
         val parsed = model.model?.let(::parseModel) ?: return
         val sel = ModelSelectionDto(parsed.first, parsed.second)
@@ -341,6 +413,157 @@ class SessionController(
                         model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.compact")))
                     }
                 }
+            }
+        }
+    }
+
+    fun revert(message: String, part: String? = null) {
+        assertEdt()
+        val id = sid
+        if (id == null) {
+            LOG.info(
+                "${ChatLogSummary.sid(ref?.key ?: "pending")} kind=revert ignored=no-session " +
+                    "message=$message part=${part ?: "none"}",
+            )
+            return
+        }
+        val state = model.state
+        if (revertOp != null) return
+        val busy = state.isBusy()
+        LOG.info(
+            "${ChatLogSummary.sid(id)} kind=revert clicked=true message=$message " +
+                "part=${part ?: "none"} busy=$busy",
+        )
+        val op = beginReverting(
+            KiloBundle.message("session.status.rollingback"),
+            SessionState.Reverting.Kind.ROLLBACK,
+            message,
+        ) ?: return
+        revertJob = cs.launch {
+            try {
+                if (busy) {
+                    LOG.info("${ChatLogSummary.sid(id)} kind=revert abort=true reason=busy")
+                    sessions.abort(id, directory)
+                    LOG.info("${ChatLogSummary.sid(id)} kind=revert abort=true ok=true")
+                }
+                sessions.revert(id, directory, message, part)
+                capture("Session Rollback", sessionProps(id))
+                synchronizeFromDisk(id, "revert")
+                LOG.info("${ChatLogSummary.sid(id)} kind=revert ok=true")
+                edt { clearReverting(op) }
+            } catch (e: CancellationException) {
+                edt { cancelReverting(op) }
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "revert", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=revert dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { failReverting(op, e) }
+            }
+        }
+    }
+
+    fun unrevert() {
+        assertEdt()
+        val id = sid ?: return
+        if (revertOp != null) return
+        val op = beginReverting(
+            KiloBundle.message("session.status.redoing"),
+            SessionState.Reverting.Kind.REDO,
+        ) ?: return
+        revertJob = cs.launch {
+            try {
+                sessions.unrevert(id, directory)
+                capture("Session Unrevert", sessionProps(id))
+                synchronizeFromDisk(id, "unrevert")
+                edt { clearReverting(op) }
+            } catch (e: CancellationException) {
+                edt { cancelReverting(op) }
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "unrevert", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=unrevert dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+                edt { failReverting(op, e) }
+            }
+        }
+    }
+
+    fun redo() {
+        assertEdt()
+        val mark = model.revert() ?: return
+        val msgs = model.messages().toList()
+        val pos = msgs.indexOfFirst { it.info.id == mark.messageID }
+        if (pos < 0) {
+            sid?.let { capture("Session Redo", sessionProps(it)) }
+            unrevert()
+            return
+        }
+        val next = msgs.drop(pos + 1).firstOrNull { it.info.role == "user" }
+        if (next == null) {
+            sid?.let { capture("Session Redo", sessionProps(it)) }
+            unrevert()
+            return
+        }
+        sid?.let { capture("Session Redo", sessionProps(it)) }
+        redoTo(next.info.id)
+    }
+
+    private fun redoTo(message: String) {
+        assertEdt()
+        val id = sid ?: return
+        val state = model.state
+        if (revertOp != null) return
+        val busy = state.isBusy()
+        val op = beginReverting(
+            KiloBundle.message("session.status.redoing"),
+            SessionState.Reverting.Kind.REDO,
+            message,
+        ) ?: return
+        revertJob = cs.launch {
+            try {
+                if (busy) {
+                    LOG.info("${ChatLogSummary.sid(id)} kind=redo abort=true reason=busy")
+                    sessions.abort(id, directory)
+                    LOG.info("${ChatLogSummary.sid(id)} kind=redo abort=true ok=true")
+                }
+                sessions.revert(id, directory, message, null)
+                synchronizeFromDisk(id, "redo")
+                edt { clearReverting(op) }
+            } catch (e: CancellationException) {
+                edt { cancelReverting(op) }
+            } catch (e: Exception) {
+                edt { failReverting(op, e) }
+            }
+        }
+    }
+
+    fun redoAll() {
+        assertEdt()
+        sid?.let { capture("Session Redo All", sessionProps(it)) }
+        unrevert()
+    }
+
+    fun cancelRevert() {
+        assertEdt()
+        if (revertOp == null) return
+        LOG.info("${ChatLogSummary.sid(sid ?: "?")} kind=revert cancelRequested=true")
+        sid?.let { capture("Session Revert Cancel Requested", sessionProps(it)) }
+        val state = model.state
+        if (state is SessionState.Reverting) {
+            model.setState(state.copy(text = KiloBundle.message("session.status.operation.finishing")))
+        }
+        revertJob?.cancel()
+    }
+
+    private fun synchronizeFromDisk(id: String, kind: String) {
+        ApplicationManager.getApplication().invokeLater {
+            runCatching {
+                val action = ActionManager.getInstance().getAction(IdeActions.ACTION_SYNCHRONIZE)
+                if (action == null) {
+                    LOG.info("${ChatLogSummary.sid(id)} kind=$kind sync=synchronize skipped=no-action")
+                    return@invokeLater
+                }
+                ActionManager.getInstance().tryToExecute(action, null, comp, ActionPlaces.UNKNOWN, true)
+                LOG.info("${ChatLogSummary.sid(id)} kind=$kind sync=synchronize ok=true")
+            }.onFailure { err ->
+                LOG.warn("${ChatLogSummary.sid(id)} kind=$kind sync=synchronize failed message=${err.message}", err)
             }
         }
     }
@@ -657,16 +880,29 @@ class SessionController(
                             .flatMap { provider ->
                                 provider.models.map { (id, info) ->
                                     ModelItem(
-                                        id,
-                                        info.name,
-                                        provider.id,
-                                        provider.name,
-                                         info.recommendedIndex,
-                                         info.free,
-                                         info.variants,
-                                         info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
-                                         info.attachment,
-                                     )
+                                        id = id,
+                                        display = info.name,
+                                        provider = provider.id,
+                                        providerName = provider.name,
+                                        inputPrice = info.inputPrice,
+                                        outputPrice = info.outputPrice,
+                                        contextLength = info.contextLength,
+                                        releaseDate = info.releaseDate,
+                                        latest = info.latest,
+                                        recommendedIndex = info.recommendedIndex,
+                                        free = info.free,
+                                        byok = info.byok,
+                                        variants = info.variants,
+                                        limit = info.limit?.let { ModelLimitItem(it.context, it.input, it.output) },
+                                        cost = info.cost,
+                                        capabilities = info.capabilities,
+                                        options = info.options,
+                                        autoRouting = info.autoRouting,
+                                        terminalBench = info.terminalBench,
+                                        reasoning = info.reasoning,
+                                        attachment = info.attachment,
+                                        mayTrainOnYourPrompts = info.mayTrainOnYourPrompts,
+                                    )
                                 }
                             }
                     } ?: emptyList()
@@ -696,12 +932,14 @@ class SessionController(
                 val session = target.session ?: runCatching { sessions.get(id, directory) }.getOrNull()
                 val items = sessions.messages(id, directory)
                 LOG.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(items)}" }
-                val discovered = items.flatMap { it.parts }.mapNotNull { childID(it) }.toSet()
+                val discovered = children(items)
                 runEdt {
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
                     updateModel {
                         snapshots.clear()
+                        childParts.clear()
+                        childParts.putAll(discovered)
                         this@SessionController.model.loadHistory(items)
                         syncHistoryAgent(items)
                         if (session != null) this@SessionController.model.setSession(session)
@@ -711,7 +949,7 @@ class SessionController(
                 runEdt {
                     if (disposed) return@runEdt
                     if (sid != id) return@runEdt
-                    for (child in discovered) trackChild(child)
+                    for (child in discovered.values.toSet()) trackChild(child)
                     showSession()
                     loaded(!model.isEmpty())
                 }
@@ -744,7 +982,7 @@ class SessionController(
                 val session = sessions.importCloudSession(id, directory)
                 val items = sessions.messages(session.id, directory)
                 LOG.debug { "${ChatLogSummary.sid(session.id)} ${ChatLogSummary.history(items)}" }
-                val discovered = items.flatMap { it.parts }.mapNotNull { childID(it) }.toSet()
+                val discovered = children(items)
                 runEdt {
                     if (disposed) return@runEdt
                     ref = SessionRef.Local(session)
@@ -759,8 +997,10 @@ class SessionController(
                 recoverPending(session.id)
                 runEdt {
                     if (disposed) return@runEdt
-                    for (child in discovered) trackChild(child)
                     subscribeEvents()
+                    childParts.clear()
+                    childParts.putAll(discovered)
+                    for (child in discovered.values.toSet()) trackChild(child)
                     showSession()
                     loaded(!model.isEmpty())
                 }
@@ -809,6 +1049,10 @@ class SessionController(
                     LOG.debug { "${ChatLogSummary.sid(id)} pass=true ${ChatLogSummary.eventBody(event)}" }
                     updates.enqueue(event)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(id)} kind=subscription route=controller-events failed message=${e.message}", e)
             } finally {
                 LOG.debug { "${ChatLogSummary.sid(id)} kind=subscription subscribe=false" }
             }
@@ -823,10 +1067,14 @@ class SessionController(
         val job = cs.launch {
             try {
                 sessions.events(child, directory).collect { event ->
-                    if (!isChildPermissionEvent(event, child)) return@collect
+                    if (!isChildEvent(event, child)) return@collect
                     LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-event child=$child ${ChatLogSummary.eventBody(event)}" }
                     updates.enqueue(event)
                 }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-subscription child=$child failed message=${e.message}", e)
             } finally {
                 LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-subscription child=$child subscribe=false" }
             }
@@ -839,7 +1087,30 @@ class SessionController(
         assertEdt()
         if (!childIds.add(child)) return
         subscribeChild(child)
+        cs.launch { seedChild(child) }
         cs.launch { recoverChildPermissions(child) }
+    }
+
+    @RequiresEdt
+    private fun trackChild(key: PartKey, child: String) {
+        assertEdt()
+        childParts[key] = child
+        trackChild(child)
+    }
+
+    @RequiresEdt
+    private fun untrackChild(key: PartKey) {
+        assertEdt()
+        val child = childParts.remove(key) ?: return
+        if (child in childParts.values) return
+        childIds.remove(child)
+        childJobs.remove(child)?.cancel()
+    }
+
+    @RequiresEdt
+    private fun untrackChildren(messageId: String) {
+        assertEdt()
+        childParts.keys.filter { it.messageId == messageId }.forEach(::untrackChild)
     }
 
     @RequiresEdt
@@ -850,6 +1121,7 @@ class SessionController(
         childJobs.values.forEach { it.cancel() }
         childJobs.clear()
         childIds.clear()
+        childParts.clear()
     }
 
     private suspend fun recoverChildPermissions(child: String) {
@@ -864,12 +1136,35 @@ class SessionController(
             val last = toPermission(permissions.last())
             runEdt {
                 if (disposed) return@runEdt
+                if (child !in childIds) return@runEdt
                 // Do not overwrite an existing root or other child AwaitingPermission state
                 if (model.state is SessionState.AwaitingPermission) return@runEdt
                 updateModel { model.setState(SessionState.AwaitingPermission(last)) }
             }
         } catch (e: Exception) {
             LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
+        }
+    }
+
+    private suspend fun seedChild(child: String) {
+        try {
+            val items = sessions.messages(child, directory)
+            runEdt {
+                if (disposed) return@runEdt
+                if (child !in childIds) return@runEdt
+                updateModel {
+                    for (msg in items) {
+                        if (msg.info.role != "assistant") continue
+                        for (part in msg.parts) {
+                            if (part.type == "tool") model.upsertChildTool(child, part, replace = false)
+                        }
+                    }
+                }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-history child=$child dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
         }
     }
 
@@ -951,10 +1246,17 @@ class SessionController(
             }
 
             is ChatEventDto.PartUpdated -> {
+                if (childIds.contains(event.sessionID)) {
+                    if (event.part.type == "tool") model.upsertChildTool(event.sessionID, event.part)
+                    return
+                }
                 partType = event.part.type
                 tool = event.part.tool
                 val key = PartKey(event.part.messageID, event.part.id)
                 val prev = content(event.part.messageID, event.part.id)
+                val child = childID(event.part)
+                val old = childParts[key]
+                if (old != null && old != child) untrackChild(key)
                 model.updateContent(event.part.messageID, event.part)
                 val next = content(event.part.messageID, event.part.id)
                 if (next != null && next != prev) {
@@ -962,10 +1264,11 @@ class SessionController(
                 } else {
                     snapshots.remove(key)
                 }
-                if (model.state is SessionState.Busy) {
+                val s = model.state
+                if (s is SessionState.Busy || s is SessionState.Retry || s is SessionState.Offline) {
                     model.setState(SessionState.Busy(status()))
                 }
-                childID(event.part)?.let { child -> trackChild(child) }
+                if (child != null) trackChild(key, child)
             }
 
             is ChatEventDto.PartDelta -> {
@@ -976,19 +1279,33 @@ class SessionController(
             }
 
             is ChatEventDto.PartRemoved -> {
-                snapshots.remove(PartKey(event.messageID, event.partID))
+                if (childIds.contains(event.sessionID)) {
+                    model.removeChildTool(event.sessionID, event.partID)
+                    return
+                }
+                val key = PartKey(event.messageID, event.partID)
+                snapshots.remove(key)
+                untrackChild(key)
                 model.removeContent(event.messageID, event.partID)
             }
 
             is ChatEventDto.TurnOpen -> {
                 partType = null
                 tool = null
+                if (revertOp != null) {
+                    revertDeferred = SessionState.Busy(KiloBundle.message("session.status.considering"))
+                    return
+                }
                 model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
             }
 
             is ChatEventDto.TurnClose -> {
                 partType = null
                 tool = null
+                if (revertOp != null) {
+                    revertDeferred = SessionState.Idle
+                    return
+                }
                 // Keep pending questions visible for follow-up flows that arrive just before close.
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
@@ -1011,6 +1328,7 @@ class SessionController(
 
             is ChatEventDto.MessageRemoved -> {
                 snapshots.keys.removeAll { it.messageId == event.messageID }
+                untrackChildren(event.messageID)
                 model.removeMessage(event.messageID)
             }
 
@@ -1160,10 +1478,20 @@ class SessionController(
     }
 
     private fun status(dto: SessionStatusDto) {
+        if (revertOp != null) {
+            revertDeferred = when (dto.type) {
+                "idle" -> SessionState.Idle
+                "busy" -> SessionState.Busy(KiloBundle.message("session.status.considering"))
+                "retry" -> SessionState.Retry(dto.message ?: "", dto.attempt ?: 0, dto.next ?: 0L)
+                "offline" -> SessionState.Offline(dto.message ?: "", dto.requestID ?: "")
+                else -> revertDeferred
+            }
+            return
+        }
         val state = when (dto.type) {
             "idle" -> {
                 val current = model.state
-                if (current is SessionState.LoginRequired) return
+                if (current is SessionState.LoginRequired || current is SessionState.Reverting) return
                 SessionState.Idle
             }
             "busy" -> {
@@ -1186,7 +1514,85 @@ class SessionController(
         model.setState(state)
     }
 
+    private fun beginReverting(text: String, kind: SessionState.Reverting.Kind, message: String? = null): RevertOp? {
+        assertEdt()
+        if (revertOp != null) return null
+        val op = RevertOp(++revertSeq)
+        revertOp = op
+        // Start with no deferred state; only turn/status transitions that actually arrive while the
+        // revert is held are recorded, so an aborted turn releases to Idle and a still-active turn
+        // (e.g. one that opened after the busy check) releases back to Busy.
+        revertDeferred = null
+        model.setState(SessionState.Reverting(text, kind, message))
+        startRevertWatchdog(op)
+        return op
+    }
+
+    private fun startRevertWatchdog(op: RevertOp) {
+        assertEdt()
+        stopRevertWatchdog()
+        val ms = revertTimeoutMs.coerceIn(1, Int.MAX_VALUE.toLong()).toInt()
+        revertWatchdog = timers.timer(ms, repeats = false) { onRevertTimeout(op) }.also { it.start() }
+    }
+
+    private fun stopRevertWatchdog() {
+        revertWatchdog?.stop()
+        revertWatchdog = null
+    }
+
+    private fun onRevertTimeout(op: RevertOp) {
+        assertEdt()
+        if (revertOp?.key != op.key) return
+        LOG.warn("${ChatLogSummary.sid(sid ?: "?")} kind=revert timeout=true after=${revertTimeoutMs}ms")
+        stopRevertWatchdog()
+        sid?.let { capture("Session Revert Timeout", sessionProps(it)) }
+        revertJob?.cancel()
+        failReverting(op, RuntimeException(KiloBundle.message("session.error.revert.timeout")))
+    }
+
+    private fun clearReverting(op: RevertOp) {
+        assertEdt()
+        if (revertOp?.key != op.key) return
+        stopRevertWatchdog()
+        revertJob = null
+        revertOp = null
+        reconcileReverting()
+    }
+
+    private fun cancelReverting(op: RevertOp) {
+        assertEdt()
+        if (revertOp?.key != op.key) return
+        stopRevertWatchdog()
+        revertJob = null
+        revertOp = null
+        reconcileReverting()
+    }
+
+    // Release the revert lock back to whatever turn/status transition arrived while it was held,
+    // so an underlying server turn is restored instead of leaving an idle prompt over an active turn.
+    private fun reconcileReverting() {
+        assertEdt()
+        val next = revertDeferred ?: SessionState.Idle
+        revertDeferred = null
+        if (model.state is SessionState.Reverting) model.setState(next)
+    }
+
+    private fun failReverting(op: RevertOp, e: Exception) {
+        assertEdt()
+        if (revertOp?.key != op.key) return
+        stopRevertWatchdog()
+        revertJob = null
+        revertOp = null
+        // A failed revert surfaces the error explicitly; drop any deferred turn state.
+        revertDeferred = null
+        model.setState(SessionState.Error(e.message ?: KiloBundle.message("session.error.unknown")))
+    }
+
     private fun idle() {
+        if (revertOp != null) {
+            revertDeferred = SessionState.Idle
+            return
+        }
         // Treat session.idle as an explicit signal to return to Idle.
         // Only apply if we're not in a more specific non-terminal state.
         val current = model.state
@@ -1194,6 +1600,7 @@ class SessionController(
             && current !is SessionState.AwaitingPermission
             && current !is SessionState.AwaitingQuestion
             && current !is SessionState.LoginRequired
+            && current !is SessionState.Reverting
         ) {
             model.setState(SessionState.Idle)
         }
@@ -1477,7 +1884,17 @@ class SessionController(
             put("attachmentCount", files.size.toString())
             put("mediaAttachmentCount", files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
         }
+        val mentions = files.filter { it.source?.text?.value?.startsWith("@") == true }
+        if (mentions.isNotEmpty()) {
+            val resources = mentions.count { it.source?.path == "git-changes" }
+            put("hasMentions", "true")
+            put("mentionCount", mentions.size.toString())
+            put("fileMentionCount", (mentions.size - resources).toString())
+            put("resourceMentionCount", resources.toString())
+        }
     }
+
+    private fun slashProps() = mapOf("hasSlashCommand" to "true", "slashCommandType" to "server")
 
     private fun bucket(text: String): String = when (text.length) {
         0 -> "empty"
@@ -1684,6 +2101,14 @@ class SessionController(
             )
         }
 
+        if (app.status == KiloAppStatusDto.DOWNLOADING) {
+            return SessionControllerEvent.ConnectionChanged.ShowDownloading(
+                app.downloadPercent ?: 0,
+                app.downloadVersion,
+                app.downloadPlatform,
+            )
+        }
+
         if (workspace.status == KiloWorkspaceStatusDto.ERROR) {
             return SessionControllerEvent.ConnectionChanged.ShowError(
                 KiloBundle.message("session.connection.error.workspace"),
@@ -1768,6 +2193,12 @@ class SessionController(
             cancelSubscriptions()
             drainJob?.cancel()
             drainJob = null
+            revertWatchdog?.stop()
+            revertWatchdog = null
+            revertJob?.cancel()
+            revertJob = null
+            revertOp = null
+            revertDeferred = null
             val callbacks = enhancements.values.toList()
             enhancements.clear()
             cs.cancel()
@@ -1803,6 +2234,10 @@ class SessionController(
                 out.add("[busy]")
                 out.add("[${state.text.toDumpText()}]")
             }
+            is SessionState.Reverting -> {
+                out.add("[reverting]")
+                out.add("[${state.text.toDumpText()}]")
+            }
             is SessionState.AwaitingQuestion -> out.add("[awaiting-question]")
             is SessionState.AwaitingPermission -> out.add("[awaiting-permission]")
             is SessionState.Retry -> {
@@ -1833,8 +2268,20 @@ private fun childID(part: PartDto): String? {
     return part.metadata["sessionId"]
 }
 
-/** Returns true when [event] is a permission event for [child] (used by child subscriptions). */
-private fun isChildPermissionEvent(event: ChatEventDto, child: String): Boolean = when (event) {
+private data class PartKey(val messageId: String, val partId: String)
+
+private fun children(items: List<MessageWithPartsDto>): Map<PartKey, String> = buildMap {
+    for (msg in items) {
+        for (part in msg.parts) {
+            childID(part)?.let { put(PartKey(msg.info.id, part.id), it) }
+        }
+    }
+}
+
+/** Returns true when [event] should be routed from a child subscription. */
+private fun isChildEvent(event: ChatEventDto, child: String): Boolean = when (event) {
+    is ChatEventDto.PartUpdated -> event.sessionID == child
+    is ChatEventDto.PartRemoved -> event.sessionID == child
     is ChatEventDto.PermissionAsked -> event.sessionID == child
     is ChatEventDto.PermissionReplied -> event.sessionID == child
     else -> false

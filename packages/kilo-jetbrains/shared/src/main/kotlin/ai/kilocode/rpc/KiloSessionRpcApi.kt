@@ -78,11 +78,20 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Send a prompt to a session (fire-and-forget). */
     suspend fun prompt(id: String, directory: String, prompt: PromptDto)
 
+    /** Run a configured slash command/workflow in a session. */
+    suspend fun command(id: String, directory: String, command: String, arguments: String, prompt: PromptDto)
+
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, directory: String)
 
     /** Summarize/compact a session using the selected model. */
     suspend fun compact(id: String, directory: String, model: ModelSelectionDto)
+
+    /** Revert a session to a prior user message or part. */
+    suspend fun revert(id: String, directory: String, messageID: String, partID: String?)
+
+    /** Redo all reverted changes for a session. */
+    suspend fun unrevert(id: String, directory: String)
 
     /** Load message history for a session. */
     suspend fun messages(id: String, directory: String): List<MessageWithPartsDto>

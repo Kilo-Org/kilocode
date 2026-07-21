@@ -28,7 +28,7 @@ Your sessions sync across all of these, so you can start a task on your phone an
 ## Quick Start
 
 1. [Install Kilo Code](/docs/getting-started/installing) in your preferred environment
-2. [Connect an AI provider](/docs/ai-providers) or use Kilo's built-in provider & credits
+2. [Set up authentication](/docs/getting-started/setup-authentication) or use Kilo's built-in provider
 3. [Run your first task](/docs/getting-started/quickstart)
 
 {% callout type="tip" %}

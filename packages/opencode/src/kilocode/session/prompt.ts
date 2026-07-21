@@ -2,7 +2,7 @@
 import path from "path"
 import fs from "fs/promises"
 import { StringDecoder } from "string_decoder"
-import { Cause, Effect, Exit } from "effect"
+import { Cause, Effect, Exit, Fiber, Scope } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
@@ -14,17 +14,59 @@ import { PlanFollowup } from "@/kilocode/plan-followup"
 import { PlanFile } from "@/kilocode/plan-file"
 import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
-import { environmentDetails, type EditorContext } from "@/kilocode/editor-context"
+import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
 import { Filesystem } from "@/util/filesystem"
-import { InstanceState } from "@/effect/instance-state"
 import NATIVE_PLAN_PROMPT from "@/kilocode/session/native-plan-prompt.txt"
+import { KiloMemory } from "@kilocode/kilo-memory/effect"
+import { MemoryPaths } from "@kilocode/kilo-memory/effect/paths"
+import { MemoryMarker } from "@/kilocode/memory/marker"
+import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
+import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
+  type Intake = { cancelled: boolean; fiber?: Fiber.Fiber<unknown, unknown> }
+  const intakes = new Map<SessionID, Set<Intake>>()
+
+  export function intake<A, E, R>(sessionID: SessionID, work: Effect.Effect<A, E, R>) {
+    return Effect.scoped(
+      Effect.uninterruptibleMask((restore) =>
+        Effect.gen(function* () {
+          const scope = yield* Scope.Scope
+          const entry: Intake = { cancelled: false }
+          const cleanup = Effect.sync(() => {
+            const entries = intakes.get(sessionID)
+            entries?.delete(entry)
+            if (entries?.size === 0) intakes.delete(sessionID)
+          })
+          const entries = intakes.get(sessionID) ?? new Set()
+          entries.add(entry)
+          intakes.set(sessionID, entries)
+          const fiber = yield* work.pipe(Effect.ensuring(cleanup), Effect.forkIn(scope, { startImmediately: true }))
+          entry.fiber = fiber
+          if (entry.cancelled) yield* Fiber.interrupt(fiber)
+          return yield* restore(Fiber.join(fiber))
+        }),
+      ),
+    )
+  }
+
+  export const abortIntakes = Effect.fn("KiloSessionPrompt.abortIntakes")(function* (sessionID: SessionID) {
+    const entries = [...(intakes.get(sessionID) ?? [])]
+    yield* Effect.forEach(
+      entries,
+      (entry) => {
+        entry.cancelled = true
+        return entry.fiber ? Fiber.interrupt(entry.fiber) : Effect.void
+      },
+      { concurrency: "unbounded", discard: true },
+    )
+  })
 
   export function titleID(sessionID: SessionID) {
     return `title-${sessionID}`
@@ -40,6 +82,10 @@ export namespace KiloSessionPrompt {
     return id === "architect" || name === "plan" || name === "architect"
   }
 
+  function supportsPlanFollowup() {
+    return ["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)
+  }
+
   /**
    * Determines whether the plan follow-up prompt should be shown.
    * Checks if the plan_exit tool was called in the last assistant turn.
@@ -47,7 +93,7 @@ export namespace KiloSessionPrompt {
    */
   export function shouldAskPlanFollowup(input: { messages: MessageV2.WithParts[]; abort: AbortSignal }) {
     if (input.abort.aborted) return false
-    if (!["cli", "vscode", "jetbrains"].includes(Flag.KILO_CLIENT)) return false
+    if (!supportsPlanFollowup()) return false
     const idx = input.messages.findLastIndex((m) => m.info.role === "user")
     return input.messages
       .slice(idx + 1)
@@ -86,9 +132,32 @@ export namespace KiloSessionPrompt {
     return action === "continue" ? "continue" : "break"
   }
 
-  export function abortPlanFollowup(sessionID: SessionID) {
-    return PlanFollowup.abort(sessionID)
-  }
+  export const cancelTree = Effect.fn("KiloSessionPrompt.cancelTree")(function* (input: {
+    sessionID: SessionID
+    sessions: Pick<Session.Interface, "children">
+    cancel: (sessionID: SessionID) => Effect.Effect<void>
+  }) {
+    function descendants(sessionID: SessionID): Effect.Effect<SessionID[]> {
+      return Effect.gen(function* () {
+        const children = yield* input.sessions.children(sessionID)
+        const nested = yield* Effect.forEach(children, (child) => descendants(child.id), { concurrency: "unbounded" })
+        return [...children.map((child) => child.id), ...nested.flat()]
+      })
+    }
+
+    const children = yield* descendants(input.sessionID)
+    yield* Effect.forEach(
+      [input.sessionID, ...children],
+      (sessionID) =>
+        Effect.gen(function* () {
+          yield* KiloSessionPromptQueue.cancel(sessionID)
+          PlanFollowup.abort(sessionID)
+          yield* abortIntakes(sessionID)
+          yield* input.cancel(sessionID)
+        }),
+      { concurrency: "unbounded", discard: true },
+    )
+  })
 
   export const recoverDanglingAssistant = Effect.fn("KiloSessionPrompt.recoverDanglingAssistant")(function* (input: {
     sessionID: SessionID
@@ -182,6 +251,74 @@ export namespace KiloSessionPrompt {
   export interface EnvCache {
     block?: string
     user?: string
+  }
+
+  export function memoryToolEnabled(input: { ctx: MemoryPaths.Ctx }) {
+    return KiloToolRegistry.memoryToolsEnabled({ ctx: input.ctx })
+  }
+
+  export function memoryCache(): MemoryMarker.Cache {
+    return {}
+  }
+
+  // Pin the injected memory block per session. Reading the live index every step/turn
+  // (each session digest rewrites it) busts the provider prompt cache for instructions +
+  // the whole history. Build once at session start and reuse the same block verbatim,
+  // which also excludes this session's own digest from its index.
+  type PinnedMemory = { blocks: string[]; enabled: boolean; marker?: MemoryMarker.Info }
+  const PINNED_MEMORY_MAX = 512
+  const pinnedMemory = new Map<string, PinnedMemory>()
+
+  function writePinnedMemory(sessionID: string, value: PinnedMemory) {
+    pinnedMemory.set(sessionID, value)
+    if (pinnedMemory.size > PINNED_MEMORY_MAX) {
+      const oldest = pinnedMemory.keys().next().value
+      if (oldest !== undefined) pinnedMemory.delete(oldest)
+    }
+  }
+
+  /** Test-only: drop the per-session pinned memory block cache. */
+  export function clearPinnedMemory() {
+    pinnedMemory.clear()
+  }
+
+  // Returns the injected memory blocks only; the caller keeps upstream's env line untouched and appends
+  // these. Pinned per session (built once at the first step, reused byte-identically after).
+  export const memoryInject = Effect.fn("KiloSessionPrompt.memoryInject")(function* (input: {
+    ctx: MemoryPaths.Ctx
+    sessionID: SessionID
+    record: boolean
+    cache: MemoryMarker.Cache
+  }) {
+    const enabled = yield* memoryToolEnabled({ ctx: input.ctx })
+    const verbose =
+      input.cache.verbose ??
+      (enabled
+        ? yield* Effect.tryPromise(() => KiloMemory.status({ ctx: input.ctx })).pipe(
+            Effect.map((item) => item.state.verbose),
+            // Fail closed: unavailable state must not persist memory snippets.
+            Effect.catch(() => Effect.succeed(false)),
+          )
+        : false)
+    const cached = pinnedMemory.get(input.sessionID)
+    const built =
+      cached?.enabled === enabled
+        ? cached
+        : yield* KilocodeSystemPrompt.memoryBlocks({
+            ctx: input.ctx,
+            sessionID: input.sessionID,
+            record: input.record,
+            enabled,
+          }).pipe(
+            Effect.map((mem) => ({ blocks: mem.blocks, enabled, marker: mem.marker })),
+            Effect.tap((mem) => Effect.sync(() => writePinnedMemory(input.sessionID, mem))),
+          )
+    MemoryMarker.startup({ marker: built.marker, cache: input.cache, verbose })
+    return built.blocks
+  })
+
+  export function memoryPart(input: { sessionID: SessionID; message: MessageV2.Assistant; cache: MemoryMarker.Cache }) {
+    return MemoryMarker.part(input)
   }
 
   /**
@@ -289,7 +426,7 @@ export namespace KiloSessionPrompt {
     const target = saved ?? plan
     const time = input.session.time.created
     const dir = path.dirname(target)
-    if (saved && !(await Filesystem.exists(target))) await ensurePlanDir(dir)
+    if (!saved || !(await Filesystem.exists(target))) await ensurePlanDir(dir)
 
     const info = saved
       ? `The current saved plan file is ${target}. Read and edit this file when refining the plan.`
@@ -299,7 +436,9 @@ export namespace KiloSessionPrompt {
       info,
       "Use the chosen plan path as the main plan file. Do not write or edit other files unless the user explicitly asks and your permissions allow it.",
       "Project/user instructions about plan location (for example plans/ or .plans/) are authorized when permissions allow them; they do not conflict with this reminder. When finalizing, call plan_exit with the path of the plan file you wrote.",
-      'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
+      supportsPlanFollowup()
+        ? "When the plan is implementation-ready, write the main plan file and call plan_exit. Do not ask the user to choose between finalizing and refining in chat; the client follow-up after plan_exit asks whether to implement the saved plan or keep refining."
+        : 'Before creating or updating the plan file, or calling plan_exit, ask the user to choose exactly one of: "Finalize and save the plan" or "Continue refining". If the user chooses to finalize, write the main plan file, then call plan_exit.',
     ].join("\n")
     add(`<system-reminder>\n${body}\n</system-reminder>`)
   }

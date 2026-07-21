@@ -1,7 +1,7 @@
 import { Effect, Fiber, Layer, ManagedRuntime } from "effect"
 import * as Context from "effect/Context"
 import { InstanceRef, WorkspaceRef } from "./instance-ref"
-import * as Observability from "@opencode-ai/core/effect/observability"
+import * as Observability from "@opencode-ai/core/observability"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 import type { InstanceContext } from "@/project/instance-context"
 import { context as instanceContext } from "@/project/instance-context" // kilocode_change
@@ -56,5 +56,12 @@ export function makeRuntime<I, S, E>(service: Context.Service<I, S>, layer: Laye
     runFork: <A, Err>(fn: (svc: S) => Effect.Effect<A, Err, I>) => getRuntime().runFork(attach(service.use(fn))),
     runCallback: <A, Err>(fn: (svc: S) => Effect.Effect<A, Err, I>) =>
       getRuntime().runCallback(attach(service.use(fn))),
+    // kilocode_change start - allow Kilo-owned service runtimes to release persistent resources
+    dispose: async () => {
+      const current = rt
+      rt = undefined
+      await current?.dispose()
+    },
+    // kilocode_change end
   }
 }

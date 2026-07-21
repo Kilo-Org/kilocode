@@ -8,13 +8,13 @@ export const OpenRouterPlugin = PluginV2.define({
   effect: Effect.gen(function* () {
     return {
       "catalog.transform": Effect.fn(function* (evt) {
-        for (const item of evt.data) {
-          if (item.provider.endpoint.type !== "aisdk") continue
-          if (item.provider.endpoint.package !== "@openrouter/ai-sdk-provider") continue
+        for (const item of evt.provider.list()) {
+          if (item.provider.api.type !== "aisdk") continue
+          if (item.provider.api.package !== "@openrouter/ai-sdk-provider") continue
           if (item.provider.id !== ProviderV2.ID.openrouter) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
-            provider.options.headers["HTTP-Referer"] = "https://kilo.ai/" // kilocode_change
-            provider.options.headers["X-Title"] = "Kilo Code" // kilocode_change
+            provider.request.headers["HTTP-Referer"] = "https://kilo.ai/" // kilocode_change
+            provider.request.headers["X-Title"] = "Kilo Code" // kilocode_change
           })
           for (const modelID of [ModelV2.ID.make("gpt-5-chat-latest"), ModelV2.ID.make("openai/gpt-5-chat")]) {
             if (!item.models.has(modelID)) continue

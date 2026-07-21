@@ -2,6 +2,7 @@ import { createMemo, createSignal } from "solid-js"
 import type { Model, Provider } from "@kilocode/sdk/v2/client"
 import { saveModelState, type ModelRef } from "../../../client"
 import { useConfig } from "../../../context/config"
+import { hasGateway, visible } from "./privacy"
 
 export const capabilities = [
   "toolcall",
@@ -60,6 +61,7 @@ export function useModelSettings() {
   const [low, setLow] = createSignal(0)
   const [high, setHigh] = createSignal(0)
   const [reason, setReason] = createSignal("all")
+  const [privacy, setPrivacy] = createSignal(false)
   const [caps, setCaps] = createSignal<Capability[]>([])
   const [starred, setStarred] = createSignal(false)
   const [mode, setMode] = createSignal<"closed" | "select">("closed")
@@ -86,6 +88,7 @@ export function useModelSettings() {
       })),
     )
   })
+  const gateway = createMemo(() => hasGateway(providers()))
 
   const max = createMemo(() => {
     const values = all().map((item) => item.model.limit.context)
@@ -108,6 +111,7 @@ export function useModelSettings() {
       .filter((item) => (upper() !== undefined ? item.model.limit.context <= upper()! : true))
       .filter((item) => (reason() === "reasoning" ? item.model.capabilities.reasoning : true))
       .filter((item) => (reason() === "standard" ? !item.model.capabilities.reasoning : true))
+      .filter((item) => visible(item.provider, item.model, privacy()))
       .filter((item) => (starred() ? fav(item) : true))
       .filter((item) => caps().every((cap) => has(item.model, cap)))
       .filter((item) => {
@@ -221,6 +225,8 @@ export function useModelSettings() {
     setMax,
     reason,
     setReason,
+    privacy,
+    setPrivacy,
     caps,
     setCaps,
     starred,
@@ -228,6 +234,7 @@ export function useModelSettings() {
     fav,
     favorite,
     max,
+    gateway,
     providers,
     capabilities,
     toggle,

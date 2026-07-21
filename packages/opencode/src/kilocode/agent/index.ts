@@ -8,6 +8,8 @@ import type { Info as AgentInfo } from "../../agent/agent"
 import { Schema } from "effect"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
+import { Flag } from "@opencode-ai/core/flag/flag"
+import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -108,24 +110,37 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "git branch -r *": "allow",
   "git remote -v *": "allow",
   "gh *": "ask",
+  // Everything below is a blocklist layered on the allowlist above: it catches ways
+  // an "allowed" read-only command can still write files, chain commands, or exec an
+  // arbitrary program. This is defense-in-depth, not a sandbox — the durable fix is
+  // OS-level sandboxing, not command-line string matching.
+  // `*` matches any run of characters (including spaces and empty), so each rule
+  // catches its operator anywhere. Broad forms subsume narrow ones: `*&*` covers
+  // `&&`, and `*>*` covers `>`, `>>`, `>|`, and `>(` in any spacing.
   "*\n*": "deny",
   "*<(*": "deny",
   "*|*": "deny",
   "*;*": "deny",
-  "*&&*": "deny",
   "*&*": "deny",
   "*$(*": "deny",
   "*`*": "deny",
   "*>*": "deny",
-  "* > *": "deny",
-  "*>>*": "deny",
-  "* >> *": "deny",
-  "*>|*": "deny",
-  "* >| *": "deny",
+  // Short -o is space-anchored (two forms) so it never matches filenames like
+  // `foo-o bar`; long flags use `*--flag*`, which is specific enough to bridge both
+  // "flag first" and "flag after args" positions in one rule.
   "sort -o *": "deny",
   "sort * -o *": "deny",
-  "sort --output*": "deny",
-  "sort * --output*": "deny",
+  "sort *--output*": "deny",
+  // Flags that make otherwise "read-only" commands exec an arbitrary program.
+  "sort *--compress-program*": "deny",
+  "sort *--files0-from*": "deny",
+  "rg *--pre *": "deny",
+  "rg *--pre=*": "deny",
+  "rg *--hostname-bin*": "deny",
+  "ag *--pager*": "deny",
+  "man *-P*": "deny",
+  "man *--pager*": "deny",
+  "man *-H*": "deny",
 }
 
 function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
@@ -187,6 +202,10 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
     suggest: "allow",
     skill: "allow",
     plan_exit: "allow",
+    task: {
+      "*": "allow",
+      general: "deny",
+    },
     bash: readOnlyBash,
     read: {
       "*": "allow",
@@ -228,7 +247,15 @@ export interface KiloData {
 // Prepare kilo-specific data derived from config. Call once per state initialization.
 export function prepare(cfg: Config.Info): KiloData {
   const mcpRules = getMcpRules(cfg)
-  const defaultsPatch = Permission.fromConfig({ bash, recall: "ask" })
+  const defaultsPatch = Permission.fromConfig({
+    bash,
+    recall: "ask",
+    ...(Flag.KILO_CLIENT === "vscode" && cfg.experimental?.native_notebook_tools === true
+      ? { notebook_read: "ask" as const, notebook_edit: "ask" as const, notebook_execute: "ask" as const }
+      : {}),
+    kilo_memory_recall: "ask",
+    kilo_memory_save: "ask",
+  })
   return { mcpRules, defaultsPatch }
 }
 
@@ -239,6 +266,9 @@ export function cacheKey(cfg: Config.Info) {
     mcp: cfg.mcp,
     mode: cfg.mode,
     permission: cfg.permission,
+    native_notebook_tools: cfg.experimental?.native_notebook_tools,
+    references: cfg.references,
+    reference: cfg.reference,
   })
 }
 
@@ -256,14 +286,26 @@ export function preprocessConfig<T>(agentConfig: Record<string, T>): Record<stri
   return result
 }
 
-// Set displayName and deprecated from options after config item is processed.
+// Lift Kilo-internal metadata onto typed agent fields and remove it from `options`.
+// Older org modes and marketplace agents stored `displayName`/`source` inside the
+// `options` record, which is otherwise forwarded verbatim to the provider as request
+// parameters. Promoting then deleting them keeps `options` provider-clean at the source
+// (the request boundary still strips as a safety net).
 export function processConfigItem(item: {
   options: Record<string, unknown>
   displayName?: string
+  source?: string
   deprecated?: boolean
 }) {
-  if (item.options?.displayName && typeof item.options.displayName === "string") {
+  if (!item.displayName && typeof item.options?.displayName === "string") {
     item.displayName = item.options.displayName
+  }
+  if (!item.source && typeof item.options?.source === "string") {
+    item.source = item.options.source
+  }
+  if (item.options) {
+    delete item.options.displayName
+    delete item.options.source
   }
 }
 
@@ -311,6 +353,7 @@ export function patchAgents(
     {
       name: string
       displayName?: string
+      source?: string
       description?: string
       deprecated?: boolean
       mode: "subagent" | "primary" | "all"
@@ -478,8 +521,8 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
 })
 
 /**
- * Remove a custom agent by deleting its markdown source file and/or
- * removing it from legacy .kilocodemodes YAML files.
+ * Remove a custom agent by deleting its markdown source file, removing it from
+ * config-backed agent entries, and/or removing it from legacy .kilocodemodes YAML files.
  * Scans all config directories for agent/mode .md files matching the name,
  * then also checks the .kilocodemodes files the ModesMigrator reads.
  */
@@ -487,7 +530,7 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
   if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
   if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
-  if (input.agent.options?.source === "organization")
+  if (input.agent.source === "organization" || input.agent.options?.source === "organization")
     throw new RemoveError({
       name: input.name,
       message: "cannot remove organization agent — manage it from the cloud dashboard",
@@ -509,6 +552,8 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
       }
     }
   }
+
+  if (await removeConfigAgent(input.name, input.directory)) found = true
 
   // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
   const { ModesMigrator } = await import("@/kilocode/modes-migrator")
@@ -540,4 +585,33 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
   }
 
   if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
+}
+
+async function removeConfigAgent(name: string, directory: string) {
+  const { KilocodeConfigOverlay } = await import("@/kilocode/config/overlay")
+  const files = [
+    KilocodeConfigOverlay.globalTarget(),
+    await KilocodeConfigOverlay.projectTarget({ directory }),
+  ]
+  let found = false
+
+  for (const file of new Set(files)) {
+    const cfg = Bun.file(file)
+    if (!(await cfg.exists())) continue
+
+    const text = await cfg.text()
+    const root = parseJsonc(text)
+    if (!root?.agent || !Object.hasOwn(root.agent, name)) continue
+
+    const opts = { formattingOptions: { insertSpaces: true, tabSize: 2 } }
+    const next = applyEdits(text, modify(text, ["agent", name], undefined, opts))
+    const parsed = parseJsonc(next)
+    const final = parsed.default_agent === name
+      ? applyEdits(next, modify(next, ["default_agent"], undefined, opts))
+      : next
+    await Bun.write(file, final)
+    found = true
+  }
+
+  return found
 }

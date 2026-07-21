@@ -18,7 +18,7 @@
 // without changing the fixture. Long-lived commands like `serve` will need a
 // different return shape — see the TODO at the bottom of OpencodeCli.
 import { test, type TestOptions } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
 import { Deferred, Duration, Effect, Layer, Queue, Scope, Stream } from "effect"
 import { FetchHttpClient, HttpClient } from "effect/unstable/http"
@@ -30,6 +30,7 @@ import { it } from "./effect"
 
 const opencodeRoot = path.resolve(import.meta.dir, "../../")
 const cliEntry = path.join(opencodeRoot, "src/index.ts")
+const cliArgs = ["run", "--conditions=browser", "--preload=@opentui/solid/preload", cliEntry] // kilocode_change
 
 export const testModelID = "test/test-model"
 
@@ -182,7 +183,7 @@ export function withCliFixture<A, E>(
 ): Effect.Effect<A, E | unknown, Scope.Scope> {
   return Effect.gen(function* () {
     const llm = yield* TestLLMServer
-    const fs = yield* AppFileSystem.Service
+    const fs = yield* FSUtil.Service
     const appProc = yield* AppProcess.Service
 
     // FileSystem.makeTempDirectoryScoped handles both creation and scope-tied
@@ -199,7 +200,7 @@ export function withCliFixture<A, E>(
       // on `Bun.stdin.text()` (see src/cli/cmd/run.ts — non-TTY stdin is
       // consumed as the prompt). The old Process.run wrapper defaulted to
       // ignore; ChildProcess.make defaults to pipe, so we set it explicitly.
-      const command = ChildProcess.make("bun", ["run", "--conditions=browser", cliEntry, ...args], {
+      const command = ChildProcess.make("bun", [...cliArgs, ...args], {
         cwd: home,
         env: { ...env, ...opts?.env },
         extendEnv: true,
@@ -261,7 +262,7 @@ export function withCliFixture<A, E>(
       // as a finalizer error during test teardown.
       const proc = yield* Effect.acquireRelease(
         Effect.sync(() =>
-          Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...argv], {
+          Bun.spawn(["bun", ...cliArgs, ...argv], {
             cwd: home,
             env: { ...process.env, ...env, ...opts?.env },
             stdout: "pipe",
@@ -332,7 +333,7 @@ export function withCliFixture<A, E>(
       // Either way we await proc.exited so the test scope doesn't leak.
       const proc = yield* Effect.acquireRelease(
         Effect.sync(() =>
-          Bun.spawn(["bun", "run", "--conditions=browser", cliEntry, ...argv], {
+          Bun.spawn(["bun", ...cliArgs, ...argv], {
             cwd: opts?.cwd ?? home,
             env: { ...process.env, ...env, ...opts?.env },
             stdin: "pipe",
@@ -408,7 +409,7 @@ export function withCliFixture<A, E>(
     // and hit endpoints on `opencode.serve()` without rolling their own fetch.
   }).pipe(
     Effect.provide(
-      Layer.mergeAll(TestLLMServer.layer, FetchHttpClient.layer, AppFileSystem.defaultLayer, AppProcess.defaultLayer),
+      Layer.mergeAll(TestLLMServer.layer, FetchHttpClient.layer, FSUtil.defaultLayer, AppProcess.defaultLayer),
     ),
   )
 }

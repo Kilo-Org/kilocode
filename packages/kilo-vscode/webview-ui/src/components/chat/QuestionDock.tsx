@@ -4,7 +4,7 @@
  * Uses kilo-ui's DockPrompt component for proper surface styling.
  */
 
-import { For, Show, createMemo, createEffect } from "solid-js"
+import { For, Show, createMemo, createEffect, onCleanup } from "solid-js"
 import type { Component } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Button } from "@kilocode/kilo-ui/button"
@@ -13,9 +13,11 @@ import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import type { QuestionRequest } from "../../types/messages"
 import {
+  clearActiveQuestionTab,
   pickOutcome,
   resolveOptimisticQuestionAgent,
   resolveSelectedQuestionMode,
+  setActiveQuestionTab,
   toggleAnswer,
   tr,
 } from "./question-dock-utils"
@@ -24,6 +26,7 @@ import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
+  const id = props.request.id
 
   const questions = createMemo(() => props.request.questions)
   const single = createMemo(() => questions().length === 1 && questions()[0]?.multiple !== true)
@@ -51,6 +54,12 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       }
     }
   })
+
+  // Chat search indexes only the mounted page's options, and there's no
+  // other signal exposing which page that is — publish it here so search
+  // stays in sync as the user navigates instead of always assuming page 0.
+  createEffect(() => setActiveQuestionTab(id, store.tab))
+  onCleanup(() => clearActiveQuestionTab(id))
 
   const question = createMemo(() => questions()[store.tab])
   const confirm = createMemo(() => !single() && store.tab === questions().length)
@@ -152,6 +161,13 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
     }
 
     syncAgent(answers, kinds)
+
+    // Cost alerts use a single affirmative option and should respond on click.
+    // Normal questions keep the explicit Submit flow.
+    if (single() && props.request.autoSubmit) {
+      reply(answers)
+      return
+    }
 
     const outcome = pickOutcome({ single: single(), multi: multi(), custom })
     if (outcome.kind === "advance") {
@@ -286,6 +302,10 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
         close()
         return
       }
+      if (props.request.dismissResponse === "continue") {
+        session.closeQuestion(props.request.id)
+        return
+      }
       reject()
       return
     }
@@ -319,6 +339,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       ref={root}
       data-component="question-dock"
       data-collapsed={store.collapsed ? "true" : "false"}
+      data-tone={props.request.tone}
       onClick={(e: MouseEvent) => e.stopPropagation()}
       onKeyDown={onRoot}
     >
@@ -491,7 +512,7 @@ export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => 
           {/* Footer row — inside the same box */}
           <div data-slot="question-dock-footer">
             <Button variant="ghost" size="small" onClick={reject} disabled={store.sending}>
-              {language.t("ui.common.dismiss")}
+              {props.request.rejectLabel ?? language.t("ui.common.dismiss")}
             </Button>
             <Show when={!store.editing}>
               <div data-slot="question-footer-actions">

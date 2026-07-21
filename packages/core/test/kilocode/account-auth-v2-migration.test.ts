@@ -1,18 +1,26 @@
 import path from "path"
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
-import { AccountV2 } from "@opencode-ai/core/account"
+import { Connector } from "@opencode-ai/core/connector"
+import { Credential } from "@opencode-ai/core/credential"
+import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
 import { tmpdir } from "../fixture/tmpdir"
 import { it } from "../lib/effect"
 
 function layer(dir: string) {
-  return AccountV2.layer.pipe(
-    Layer.provide(AppFileSystem.defaultLayer),
-    Layer.provideMerge(EventV2.defaultLayer),
+  const database = Database.layerFromPath(path.join(dir, "credential.db")).pipe(Layer.fresh)
+  const importer = Credential.legacyImportLayer.pipe(
+    Layer.provide(database),
+    Layer.provide(FSUtil.defaultLayer),
     Layer.provide(Global.layerWith({ data: dir })),
+  )
+  return Credential.layer.pipe(
+    Layer.provide(database),
+    Layer.provide(EventV2.defaultLayer),
+    Layer.provideMerge(importer),
   )
 }
 
@@ -29,7 +37,7 @@ const auth = Effect.acquireRelease(
     }),
 )
 
-describe("AccountV2 auth-v2 migration", () => {
+describe("Credential auth-v2 migration", () => {
   it.live("preserves multiple accounts, active selection, and Kilo organization", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -72,22 +80,20 @@ describe("AccountV2 auth-v2 migration", () => {
               yield* Effect.promise(() => Bun.write(path.join(tmp.path, "auth-v2.json"), JSON.stringify(store)))
 
               const result = yield* Effect.gen(function* () {
-                const accounts = yield* AccountV2.Service
+                const credentials = yield* Credential.Service
                 return {
-                  all: yield* accounts.all(),
-                  active: yield* accounts.active(AccountV2.ServiceID.make("kilo")),
+                  all: yield* credentials.all(),
+                  active: yield* credentials.active(Connector.ID.make("kilo")),
                 }
               }).pipe(Effect.provide(layer(tmp.path)))
 
-              expect(result.all.map((item) => String(item.id))).toEqual(["acc_first", "acc_second"])
-              expect(String(result.active?.id)).toBe("acc_second")
-              expect(result.active?.credential.type).toBe("oauth")
-              if (result.active?.credential.type === "oauth") {
-                expect(result.active.credential.access).toBe("access-second")
-                expect(result.active.credential.accountId).toBe("org-second")
+              expect(result.all.map((item) => item.label)).toEqual(["first", "second"])
+              expect(result.active?.label).toBe("second")
+              expect(result.active?.value.type).toBe("oauth")
+              if (result.active?.value.type === "oauth") {
+                expect(result.active.value.access).toBe("access-second")
+                expect(result.active.value.metadata?.accountID).toBe("org-second")
               }
-              const saved = yield* Effect.promise(() => Bun.file(path.join(tmp.path, "account.json")).json())
-              expect(saved).toEqual(store)
             }),
           ),
         ),
