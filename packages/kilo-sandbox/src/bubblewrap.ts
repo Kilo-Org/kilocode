@@ -98,6 +98,26 @@ function validate(allow: ReadonlyArray<PathRule>, executable: string, mounts: Re
   }
 }
 
+function code(cause: unknown) {
+  if (typeof cause !== "object" || cause === null || !("code" in cause)) return undefined
+  const value = (cause as { code: unknown }).code
+  return typeof value === "string" ? value : undefined
+}
+
+// Lists one directory during the deny-name scan. A directory that vanished mid-scan
+// (ENOENT/ENOTDIR) is treated as empty, and an unreadable directory (EACCES/EPERM)
+// yields undefined so the caller can protect it instead of failing the whole scan.
+function list(dir: string) {
+  try {
+    return readdirSync(dir, { withFileTypes: true })
+  } catch (cause) {
+    const tag = code(cause)
+    if (tag === "ENOENT" || tag === "ENOTDIR") return []
+    if (tag === "EACCES" || tag === "EPERM") return undefined
+    throw cause
+  }
+}
+
 function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
   if (names.has(path.basename(root))) {
     found.add(root)
@@ -109,7 +129,16 @@ function scan(root: string, names: ReadonlySet<string>, found: Set<string>) {
   while (pending.length > 0) {
     const dir = pending.pop()
     if (!dir) continue
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const entries = list(dir)
+    if (!entries) {
+      // Fail closed: a nested directory that cannot be enumerated might hide a deny-name
+      // match, so it is re-bound read-only as a whole rather than aborting sandbox setup.
+      // The writable root itself must stay readable, or there is nothing to scan.
+      if (dir === root) throw new Error(`Writable root is not readable: ${root}`)
+      found.add(dir)
+      continue
+    }
+    for (const entry of entries) {
       const target = path.join(dir, entry.name)
       if (names.has(entry.name)) {
         found.add(target)
