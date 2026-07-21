@@ -316,7 +316,7 @@ export const dict = {
   "common.attachment": "پیوست",
 
   "prompt.placeholder.shell": "دستور شل را وارد کنید...",
-  "prompt.placeholder.normal": 'Ask anything... "{{example}}"',
+  "prompt.placeholder.normal": 'هر چیزی بپرسید... "{{example}}"',
   "prompt.placeholder.summarizeComments": "خلاصه‌سازی نظرات…",
   "prompt.placeholder.summarizeComment": "خلاصه‌سازی نظر…",
   "prompt.mode.shell": "Shell",
@@ -472,7 +472,7 @@ export const dict = {
   "dialog.project.edit.worktree.startup.placeholder": "مثال: bun install",
 
   "context.breakdown.title": "تفکیک زمینه",
-  "context.breakdown.note": 'Approximate breakdown of input tokens. "Other" includes tool definitions and overhead.',
+  "context.breakdown.note": "تفکیک تقریبی توکن‌های ورودی. «Other» شامل تعاریف ابزار و سربار است.",
   "context.breakdown.system": "سیستم",
   "context.breakdown.user": "کاربر",
   "context.breakdown.assistant": "دستیار",
@@ -608,10 +608,10 @@ export const dict = {
   "error.chain.didYouMean": "آیا منظورتان این بود: {{suggestions}}",
   "error.chain.modelNotFound": "مدل یافت نشد: {{provider}}/{{model}}",
   "error.chain.checkConfig": "نام‌های provider/model را در فایل پیکربندی (opencode.json) بررسی کنید",
-  "error.chain.mcpFailed": 'MCP server "{{name}}" failed. Note, Kilo does not support MCP authentication yet.',
+  "error.chain.mcpFailed": "سرور MCP «{{name}}» با شکست مواجه شد. توجه: Kilo هنوز از احراز هویت MCP پشتیبانی نمی‌کند.",
   "error.chain.providerAuthFailed": "احراز هویت provider ناموفق بود ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
-    'Failed to initialize provider "{{provider}}". Check credentials and configuration.',
+    "مقداردهی اولیه provider «{{provider}}» ناموفق بود. اعتبارنامه‌ها و پیکربندی را بررسی کنید.",
   "error.chain.configJsonInvalid": "فایل پیکربندی در {{path}} یک JSON(C) معتبر نیست",
   "error.chain.configJsonInvalidWithMessage": "فایل پیکربندی در {{path}} یک JSON(C) معتبر نیست: {{message}}",
   "error.chain.configDirectoryTypo":
@@ -1069,7 +1069,7 @@ export const dict = {
 
   "session.delete.failed.title": "حذف نشست با شکست مواجه شد",
   "session.delete.title": "حذف جلسه",
-  "session.delete.confirm": 'Delete session "{{name}}"?',
+  "session.delete.confirm": "جلسه «{{name}}» حذف شود؟",
   "session.delete.button": "حذف جلسه",
   "session.untitled": "بدون عنوان",
   "session.current": "جلسه فعلی",
@@ -1136,10 +1136,10 @@ export const dict = {
   "workspace.status.clean": "هیچ تغییر ادغام‌نشده‌ای شناسایی نشد.",
   "workspace.status.dirty": "تغییرات ادغام‌نشده در این فضای کاری شناسایی شد.",
   "workspace.delete.title": "حذف فضای کاری",
-  "workspace.delete.confirm": 'Delete workspace "{{name}}"?',
+  "workspace.delete.confirm": "فضای کاری «{{name}}» حذف شود؟",
   "workspace.delete.button": "حذف فضای کاری",
   "workspace.reset.title": "بازنشانی فضای کاری",
-  "workspace.reset.confirm": 'Reset workspace "{{name}}"?',
+  "workspace.reset.confirm": "فضای کاری «{{name}}» بازنشانی شود؟",
   "workspace.reset.button": "بازنشانی فضای کاری",
   "workspace.reset.archived.none": "هیچ جلسه فعالی بایگانی نخواهد شد.",
   "workspace.reset.archived.one": "۱ جلسه بایگانی خواهد شد.",
@@ -1354,7 +1354,7 @@ export const dict = {
 
   "settings.aboutKiloCode.telemetry.title": "تله‌متری",
   "settings.aboutKiloCode.telemetry.description":
-    'Telemetry is controlled by VS Code\'s built-in telemetry setting. To disable it, go to Settings > Telemetry > Telemetry Level and set it to "off". Restart VS Code to apply the change.',
+    "تله‌متری توسط تنظیم تله‌متری داخلی VS Code کنترل می‌شود. برای غیرفعال کردن آن، به Settings > Telemetry > Telemetry Level بروید و آن را روی «off» تنظیم کنید. برای اعمال تغییر، VS Code را مجدداً راه‌اندازی کنید.",
   "settings.aboutKiloCode.telemetry.openSettings": "باز کردن تنظیمات تله‌متری",
 
   "settings.agentBehaviour.subtab.agents": "عوامل",
@@ -1374,7 +1374,7 @@ export const dict = {
   "settings.browser.headless.description": "در حالت headless اجرا شود (بدون پنجره مرورگر قابل مشاهده).",
 
   "settings.language.description":
-    'Choose the language for the Kilo Code UI. "Auto" uses your VS Code display language.',
+    "زبان رابط کاربری Kilo Code را انتخاب کنید. «خودکار» از زبان نمایش VS Code شما استفاده می‌کند.",
   "settings.language.auto": "خودکار (زبان VS Code)",
   "settings.language.current": "فعلی:",
 
@@ -1511,12 +1511,13 @@ export const dict = {
   "settings.agentBehaviour.noAgentsFound": "هیچ عاملی یافت نشد.",
   "settings.agentBehaviour.removeAgent.title": "حذف عامل",
   "settings.agentBehaviour.removeAgent.confirm":
-    'Remove agent "{{name}}"? This will disable the agent by updating your config.',
+    "عامل «{{name}}» حذف شود؟ این کار با به‌روزرسانی پیکربندی شما، عامل را غیرفعال می‌کند.",
   "settings.agentBehaviour.removeAgent.button": "حذف",
   "settings.agentBehaviour.skillPaths": "مسیرهای پوشه مهارت",
   "settings.agentBehaviour.skillUrls": "URL های مهارت",
   "settings.agentBehaviour.removeSkill.title": "حذف مهارت",
-  "settings.agentBehaviour.removeSkill.confirm": 'Remove skill "{{name}}"? This will delete the skill files from disk.',
+  "settings.agentBehaviour.removeSkill.confirm":
+    "مهارت «{{name}}» حذف شود؟ این کار فایل‌های مهارت را از دیسک حذف می‌کند.",
   "settings.agentBehaviour.removeSkill.button": "حذف",
   "settings.agentBehaviour.rules.description":
     "قوانین، فایل‌های دستورالعملی هستند که رفتار عامل را هدایت می‌کنند. این قوانین در پرامپت سیستم برای هر مکالمه گنجانده می‌شوند. برای افزودن قوانین بیشتر، مسیرهای فایل را در زیر وارد کنید.",
@@ -1528,7 +1529,7 @@ export const dict = {
   "settings.agentBehaviour.claudeCompat.description":
     "دستورالعمل‌ها و مهارت‌های CLAUDE.md را از پوشه پیکربندی Claude Code شما در جلسات بارگذاری می‌کند. اگر می‌خواهید Kilo از دستورالعمل‌ها و مهارت‌های Claude Code شما استفاده کند، این گزینه را فعال کنید. نیاز به راه‌اندازی مجدد دارد.",
   "settings.agentBehaviour.removeMcp.title": "حذف سرور MCP",
-  "settings.agentBehaviour.removeMcp.confirm": 'Remove MCP server "{{name}}"? This will remove it from your config.',
+  "settings.agentBehaviour.removeMcp.confirm": "سرور MCP «{{name}}» حذف شود؟ این کار آن را از پیکربندی شما حذف می‌کند.",
   "settings.agentBehaviour.removeMcp.button": "حذف",
   "settings.agentBehaviour.mcpDetail.command": "دستور",
   "settings.agentBehaviour.mcpDetail.args": "آرگومان‌ها",
