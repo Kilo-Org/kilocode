@@ -1,60 +1,76 @@
 import { describe, expect, test } from "bun:test"
 import {
   aggregateMetrics,
-  formatPP,
-  formatTG,
+  formatRateValue,
   hasMetrics,
+  throughputLabel,
 } from "../../../src/kilocode/plugins/model-usage"
 
+const step = (metrics: { prompt?: number; generation?: number }) => ({
+  metrics: { source: "computed" as const, ...metrics },
+  generated: 0,
+})
+
 describe("kilocode.plugins.model-usage throughput helpers", () => {
-  test("formats positive PP/TG values with grouping", () => {
-    expect(formatPP(412)).toBe("412 t/s")
-    expect(formatPP(412.5)).toBe("412.5 t/s")
-    expect(formatPP(12345)).toBe("12,345 t/s")
-    expect(formatTG(28.7)).toBe("28.7 t/s")
+  test("formatRateValue renders positive values with grouping", () => {
+    expect(formatRateValue(412)).toBe("412 t/s")
+    expect(formatRateValue(412.5)).toBe("412.5 t/s")
+    expect(formatRateValue(12345)).toBe("12,345 t/s")
+    expect(formatRateValue(28.7)).toBe("28.7 t/s")
   })
 
-  test("falls back to dash for missing or bogus values", () => {
-    expect(formatPP(undefined)).toBe("-")
-    expect(formatPP(0)).toBe("-")
-    expect(formatPP(-5)).toBe("-")
-    expect(formatPP(Number.NaN)).toBe("-")
-    expect(formatTG(undefined)).toBe("-")
-    expect(formatTG(0)).toBe("-")
-    expect(formatTG(Infinity)).toBe("-")
+  test("formatRateValue falls back to dash for missing or bogus values", () => {
+    expect(formatRateValue(undefined)).toBe("-")
+    expect(formatRateValue(0)).toBe("-")
+    expect(formatRateValue(-5)).toBe("-")
+    expect(formatRateValue(Number.NaN)).toBe("-")
+    expect(formatRateValue(Infinity)).toBe("-")
   })
 
-  test("aggregates per-step metrics weighted by generated tokens", () => {
+  test("throughputLabel centralizes the PP/TG labels so a future i18n sweep is one file", () => {
+    expect(throughputLabel.prompt).toBe("PP")
+    expect(throughputLabel.generation).toBe("TG")
+  })
+
+  test("aggregates per-step generation weighted by generated tokens", () => {
     const aggregated = aggregateMetrics([
-      { metrics: { generation: 20, source: "computed" }, generated: 100 },
-      { metrics: { generation: 60, source: "computed" }, generated: 300 },
+      { ...step({ generation: 20 }), generated: 100 },
+      { ...step({ generation: 60 }), generated: 300 },
     ])
     expect(aggregated.generation).toBeCloseTo((20 * 100 + 60 * 300) / (100 + 300))
   })
 
   test("aggregates prompt and generation independently", () => {
     const aggregated = aggregateMetrics([
-      { metrics: { prompt: 1000, generation: 20, source: "provider" }, generated: 100 },
-      { metrics: { prompt: 500, generation: 60, source: "provider" }, generated: 300 },
+      { ...step({ prompt: 1000, generation: 20 }), generated: 100 },
+      { ...step({ prompt: 500, generation: 60 }), generated: 300 },
     ])
-    expect(aggregated.prompt).toBeCloseTo((1000 * 100 + 500 * 300) / 400)
+    expect(aggregated.prompt).toBeCloseTo((1000 + 500) / 2)
     expect(aggregated.generation).toBeCloseTo((20 * 100 + 60 * 300) / 400)
+  })
+
+  test("includes prompt from a zero-generated step so it isn't silently dropped", () => {
+    const aggregated = aggregateMetrics([
+      { ...step({ prompt: 9999, generation: 9999 }), generated: 0 },
+      { ...step({ generation: 25 }), generated: 50 },
+    ])
+    expect(aggregated.prompt).toBe(9999)
+    expect(aggregated.generation).toBe(25)
   })
 
   test("skips samples without metrics", () => {
     const aggregated = aggregateMetrics([
       { metrics: undefined, generated: 100 },
-      { metrics: { generation: 40, source: "computed" }, generated: 50 },
+      { ...step({ generation: 40 }), generated: 50 },
     ])
     expect(aggregated.generation).toBe(40)
   })
 
-  test("skips samples with zero weight so prompt/generation stay valid", () => {
+  test("skips zero-weight samples for the generation average", () => {
     const aggregated = aggregateMetrics([
-      { metrics: { prompt: 9999, generation: 9999, source: "provider" }, generated: 0 },
-      { metrics: { generation: 25, source: "computed" }, generated: 50 },
+      { ...step({ generation: 9999 }), generated: 0 },
+      { ...step({ generation: 25 }), generated: 50 },
     ])
-    expect(aggregated.prompt).toBeUndefined()
     expect(aggregated.generation).toBe(25)
   })
 
@@ -65,9 +81,9 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
 
   test("ignores bogus per-call values without poisoning the aggregate", () => {
     const aggregated = aggregateMetrics([
-      { metrics: { generation: -1, source: "computed" }, generated: 100 },
-      { metrics: { generation: Number.POSITIVE_INFINITY, source: "computed" }, generated: 100 },
-      { metrics: { generation: 30, source: "computed" }, generated: 50 },
+      { ...step({ generation: -1 }), generated: 100 },
+      { ...step({ generation: Number.POSITIVE_INFINITY }), generated: 100 },
+      { ...step({ generation: 30 }), generated: 50 },
     ])
     expect(aggregated.generation).toBe(30)
   })

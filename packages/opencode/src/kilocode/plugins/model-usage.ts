@@ -68,15 +68,18 @@ export function formatRate(tokens: SessionModelUsage["totals"]["tokens"]) {
   return `${((tokens.cache.read / total) * 100).toFixed(1)}%`
 }
 
-export function formatPP(value: number | undefined) {
+export function formatRateValue(value: number | undefined) {
   if (!Number.isFinite(value) || value === undefined || value <= 0) return "-"
-  return `${throughput.format(value)} t/s`
+  return `${throughput.format(value as number)} t/s`
 }
 
-export function formatTG(value: number | undefined) {
-  if (!Number.isFinite(value) || value === undefined || value <= 0) return "-"
-  return `${throughput.format(value)} t/s`
-}
+// Throughput labels used by the sidebar / usage panel. Centralized here so a
+// future i18n sweep only touches one file — the opencode CLI does not yet
+// wire a translation layer, so today these are literal English labels.
+export const throughputLabel = {
+  prompt: "PP",
+  generation: "TG",
+} as const
 
 export function formatCost(input: number) {
   const value = Math.max(0, Number.isFinite(input) ? input : 0)
@@ -84,29 +87,37 @@ export function formatCost(input: number) {
 }
 
 // Local aggregation of step-finish metrics for the sidebar/usage panel.
-// We weight by generated tokens so longer generations pull the average
-// toward their reported rate, matching how llama.cpp's per-call timings
-// average into a session-wide figure.
+//
+// We weight the *generation* rate by generated tokens (longer generations
+// pull the average toward their own reported rate). The *prompt* rate comes
+// from llama.cpp's `prompt_per_second`, which is a property of the timing
+// not the generated output — when a step finishes before tokens are
+// emitted (e.g. a tool-only step) the per-step generated count is zero and
+// a generated-weighted average would silently drop that step. We fall back
+// to a simple mean over the steps that did report a positive prompt rate
+// so a zero-weight step still contributes.
 export function aggregateMetrics(
   samples: ReadonlyArray<{ metrics?: StepMetrics; generated: number }>,
 ): AggregatedMetrics {
-  const totals = { promptSum: 0, promptWeight: 0, generationSum: 0, generationWeight: 0 }
+  let promptSum = 0
+  let promptCount = 0
+  let generationSum = 0
+  let generationWeight = 0
   for (const sample of samples) {
-    const rate = sample.metrics
-    if (!rate) continue
-    const weight = sample.generated > 0 ? sample.generated : 0
-    if (Number.isFinite(rate.prompt) && (rate.prompt ?? 0) > 0 && weight > 0) {
-      totals.promptSum += (rate.prompt as number) * weight
-      totals.promptWeight += weight
+    const metrics = sample.metrics
+    if (!metrics) continue
+    if (Number.isFinite(metrics.prompt) && (metrics.prompt as number) > 0) {
+      promptSum += metrics.prompt as number
+      promptCount += 1
     }
-    if (Number.isFinite(rate.generation) && (rate.generation ?? 0) > 0 && weight > 0) {
-      totals.generationSum += (rate.generation as number) * weight
-      totals.generationWeight += weight
+    const generated = sample.generated
+    if (Number.isFinite(metrics.generation) && (metrics.generation as number) > 0 && generated > 0) {
+      generationSum += (metrics.generation as number) * generated
+      generationWeight += generated
     }
   }
-  const prompt = totals.promptWeight > 0 ? totals.promptSum / totals.promptWeight : undefined
-  const generation =
-    totals.generationWeight > 0 ? totals.generationSum / totals.generationWeight : undefined
+  const prompt = promptCount > 0 ? promptSum / promptCount : undefined
+  const generation = generationWeight > 0 ? generationSum / generationWeight : undefined
   return {
     ...(prompt !== undefined ? { prompt } : {}),
     ...(generation !== undefined ? { generation } : {}),

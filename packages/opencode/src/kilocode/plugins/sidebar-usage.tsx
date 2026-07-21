@@ -10,13 +10,13 @@ import {
   failed,
   formatCost,
   formatCount,
-  formatPP,
   formatRate,
-  formatTG,
+  formatRateValue,
   groupModelsByProvider,
   hasMetrics,
   isSessionTreeMember,
   select,
+  throughputLabel,
   type StepMetrics,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
@@ -122,8 +122,8 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                 <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
                 <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
                 <Show when={hasMetrics(throughput())}>
-                  <Row label="PP" value={formatPP(throughput().prompt)} />
-                  <Row label="TG" value={formatTG(throughput().generation)} />
+                  <Row label={throughputLabel.prompt} value={formatRateValue(throughput().prompt)} />
+                  <Row label={throughputLabel.generation} value={formatRateValue(throughput().generation)} />
                 </Show>
                 <Row label="Cost" value={formatCost(data().totals.cost)} />
               </>
@@ -225,10 +225,8 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
 
 function isStepMetrics(value: unknown): value is StepMetrics {
   if (!value || typeof value !== "object") return false
-  const record = value as Record<string, unknown>
-  const source = record.source
-  if (source !== "provider" && source !== "computed") return false
-  return true
+  const source = (value as { source?: unknown }).source
+  return source === "computed"
 }
 
 function generatedTokens(value: unknown): number {
