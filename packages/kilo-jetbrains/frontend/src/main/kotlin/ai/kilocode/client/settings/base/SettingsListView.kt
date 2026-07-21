@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.session.ui.model.ModelSearch
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
@@ -8,23 +9,27 @@ import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.xml.util.XmlStringUtil
 import com.intellij.util.ui.UIUtil
+import java.awt.Dimension
+import java.awt.Rectangle
 import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
+import javax.swing.Scrollable
+import javax.swing.SwingConstants
 import javax.swing.event.ListSelectionEvent
 
 internal class SettingsListView(
     empty: String,
     private val cfg: SettingsListConfig = SettingsListConfig.Equal,
     private val onCell: (String, String) -> Unit,
-) : BaseContentPanel() {
+) : BaseContentPanel(), Scrollable {
     private val model = CollectionListModel<SettingsListItem>()
     internal val list = object : JBList<SettingsListItem>(model) {
         override fun getToolTipText(event: MouseEvent): String? {
-            if (!cfg.description) return null
+            if (!cfg.description || !cfg.tooltip) return null
             val idx = locationToIndex(event.point)
             if (idx < 0) return null
             val bounds = getCellBounds(idx, idx) ?: return null
@@ -34,7 +39,7 @@ internal class SettingsListView(
             return XmlStringUtil.wrapInHtml(text)
         }
     }.apply {
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
+        selectionMode = cfg.selection
         setExpandableItemsEnabled(false)
         emptyText.text = empty
     }
@@ -67,6 +72,11 @@ internal class SettingsListView(
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
                 val item = hit.item
+                item.doubleClick?.let { id ->
+                    onCell(item.key, id)
+                    e.consume()
+                    return
+                }
                 primary(item)
                 e.consume()
             }
@@ -92,6 +102,12 @@ internal class SettingsListView(
     fun selected(): SettingsListItem? {
         checkEdt()
         return list.selectedValue
+    }
+
+    @RequiresEdt
+    fun selectedItems(): List<SettingsListItem> {
+        checkEdt()
+        return list.selectedValuesList
     }
 
     @RequiresEdt
@@ -121,6 +137,7 @@ internal class SettingsListView(
     @RequiresEdt
     fun setBusy(value: Boolean) {
         checkEdt()
+        list.setPaintBusy(value)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
         list.repaint()
@@ -191,9 +208,15 @@ internal class SettingsListView(
     private fun primary(item: SettingsListItem) {
         val cells = settingsListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
-            ?: cells.firstOrNull { it.enabled }
-            ?: return
-        onCell(item.key, cell.id)
+        if (cell != null) {
+            onCell(item.key, cell.id)
+            return
+        }
+        item.doubleClick?.let { id ->
+            onCell(item.key, id)
+            return
+        }
+        cells.firstOrNull { it.enabled }?.let { onCell(item.key, it.id) }
     }
 
     private fun hit(e: MouseEvent, enabled: Boolean = true): Hit? {
@@ -201,7 +224,7 @@ internal class SettingsListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return null
         if (!bounds.contains(e.point)) return null
         val item = model.getElementAt(idx)
-        val selected = idx == list.selectedIndex
+        val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
             settingsListCellAt(list, idx, e.point, selected)
         } else {
@@ -216,6 +239,27 @@ internal class SettingsListView(
     private fun checkEdt() {
         check(ApplicationManager.getApplication().isDispatchThread) { "Settings list updates must run on EDT" }
     }
+
+    override fun getScrollableTracksViewportWidth() = true
+
+    override fun getScrollableTracksViewportHeight() = false
+
+    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+
+    override fun getScrollableUnitIncrement(
+        visibleRect: Rectangle,
+        orientation: Int,
+        direction: Int,
+    ): Int {
+        if (orientation != SwingConstants.VERTICAL) return UiStyle.Gap.pad()
+        return list.fixedCellHeight.takeIf { it > 0 } ?: UiStyle.Gap.xl()
+    }
+
+    override fun getScrollableBlockIncrement(
+        visibleRect: Rectangle,
+        orientation: Int,
+        direction: Int,
+    ) = if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width
 
     private data class Hit(val item: SettingsListItem, val id: String?)
 

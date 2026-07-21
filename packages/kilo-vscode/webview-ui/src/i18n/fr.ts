@@ -138,6 +138,13 @@ export const dict = {
   "revert.banner.redo": "Rétablir",
   "revert.banner.redo.all": "Tout rétablir",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversation annulée. Les modifications de fichiers n’ont pas été restaurées, car les instantanés sont désactivés.",
+  "revert.banner.workspace.unavailable":
+    "Conversation annulée. Aucun point de contrôle de fichiers n’était disponible, les modifications de l’espace de travail n’ont donc pas été restaurées.",
+  "revert.banner.workspace.legacy":
+    "Conversation annulée. L’état de restauration de l’espace de travail n’est pas disponible pour cette annulation antérieure.",
+  "revert.banner.workspace.enableSnapshots": "Activer les instantanés",
   "revert.disabled.agentBusy": "Attendre la fin de l'agent",
   "command.session.compact": "Compacter la session",
   "command.session.compact.description": "Résumer la session pour réduire la taille du contexte",
@@ -352,6 +359,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Inclure le fichier actif",
   "prompt.context.removeActiveFile": "Retirer le fichier actif du contexte",
   "prompt.context.removeFile": "Retirer le fichier du contexte",
+  "prompt.thinking.tooltip": "Effort de raisonnement",
   "prompt.action.attachFile": "Joindre un fichier",
   "prompt.attachment.remove": "Supprimer la pièce jointe",
   "prompt.action.send": "Envoyer",
@@ -1755,6 +1763,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Réduire automatiquement le raisonnement",
   "settings.display.reasoningAutoCollapse.description":
     "Réduit les blocs de raisonnement une fois que l'agent a fini de les écrire. Laissez désactivé pour garder le raisonnement développé, sauf si vous le réduisez manuellement.",
+  "settings.display.shiftTabCycle.title": "Parcourir l'effort de raisonnement avec Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Appuyez sur Shift+Tab dans un champ de saisie de prompt pour passer au niveau d'effort de raisonnement suivant. Désactivez cette option pour conserver Shift+Tab pour la navigation du focus au clavier.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

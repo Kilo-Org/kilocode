@@ -18,6 +18,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
     fun `test child ids match xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.agents", AgentsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.mcp", McpConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.skills", SkillsConfigurable.ID)
     }
 
     fun `test createComponent contains child links in order`() {
@@ -26,7 +27,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("Agents", "MCP Servers"), labels)
+            assertEquals(listOf("Agents", "MCP Servers", "Skills"), labels)
         }
     }
 

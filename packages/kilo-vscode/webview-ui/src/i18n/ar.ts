@@ -136,6 +136,11 @@ export const dict = {
   "revert.banner.redo": "إعادة",
   "revert.banner.redo.all": "إعادة الكل",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled": "تم التراجع عن المحادثة. لم تُستعَد تغييرات الملفات لأن اللقطات معطّلة.",
+  "revert.banner.workspace.unavailable":
+    "تم التراجع عن المحادثة. لم تكن هناك نقطة تحقق للملفات، لذا لم تُستعَد تغييرات مساحة العمل.",
+  "revert.banner.workspace.legacy": "تم التراجع عن المحادثة. حالة استعادة مساحة العمل غير متاحة لهذا التراجع السابق.",
+  "revert.banner.workspace.enableSnapshots": "تفعيل اللقطات",
   "revert.disabled.agentBusy": "انتظر انتهاء الوكيل",
   "command.session.compact": "ضغط الجلسة",
   "command.session.compact.description": "تلخيص الجلسة لتقليل حجم السياق",
@@ -348,6 +353,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "تضمين الملف النشط",
   "prompt.context.removeActiveFile": "إزالة الملف النشط من السياق",
   "prompt.context.removeFile": "إزالة الملف من السياق",
+  "prompt.thinking.tooltip": "جهد الاستدلال",
   "prompt.action.attachFile": "إرفاق ملف",
   "prompt.attachment.remove": "إزالة المرفق",
   "prompt.action.send": "إرسال",
@@ -1677,6 +1683,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "طي الاستدلال تلقائيًا",
   "settings.display.reasoningAutoCollapse.description":
     "يطوي كتل الاستدلال بعد أن ينتهي الوكيل من كتابتها. اتركه معطلاً لإبقاء الاستدلال موسعًا ما لم تطوه يدويًا.",
+  "settings.display.shiftTabCycle.title": "تبديل جهد الاستدلال باستخدام Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "اضغط على Shift+Tab في حقل إدخال الموجه للتبديل إلى مستوى جهد الاستدلال التالي. عطّل هذا الخيار للاحتفاظ بـ Shift+Tab للتنقل بين عناصر التركيز باستخدام لوحة المفاتيح.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

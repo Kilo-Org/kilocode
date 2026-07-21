@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Ponów",
   "revert.banner.redo.all": "Ponów wszystko",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Rozmowa została cofnięta. Zmiany w plikach nie zostały przywrócone, ponieważ migawki są wyłączone.",
+  "revert.banner.workspace.unavailable":
+    "Rozmowa została cofnięta. Żaden punkt kontrolny plików nie był dostępny, więc zmiany w obszarze roboczym nie zostały przywrócone.",
+  "revert.banner.workspace.legacy":
+    "Konwersacja została cofnięta. Stan przywracania obszaru roboczego nie jest dostępny dla tego wcześniejszego cofnięcia.",
+  "revert.banner.workspace.enableSnapshots": "Włącz migawki",
   "revert.disabled.agentBusy": "Poczekaj aż agent zakończy",
   "command.session.compact": "Kompaktuj sesję",
   "command.session.compact.description": "Podsumuj sesję, aby zmniejszyć rozmiar kontekstu",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Dołącz aktywny plik",
   "prompt.context.removeActiveFile": "Usuń aktywny plik z kontekstu",
   "prompt.context.removeFile": "Usuń plik z kontekstu",
+  "prompt.thinking.tooltip": "Wysiłek rozumowania",
   "prompt.action.attachFile": "Załącz plik",
   "prompt.attachment.remove": "Usuń załącznik",
   "prompt.action.send": "Wyślij",
@@ -1717,6 +1725,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Automatycznie zwijaj rozumowanie",
   "settings.display.reasoningAutoCollapse.description":
     "Zwija bloki rozumowania po zakończeniu ich pisania przez agenta. Pozostaw wyłączone, aby rozumowanie pozostało rozwinięte, chyba że zwiniesz je ręcznie.",
+  "settings.display.shiftTabCycle.title": "Przełączaj wysiłek rozumowania za pomocą Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Naciśnij Shift+Tab w polu wprowadzania promptu, aby przełączyć się na następny poziom wysiłku rozumowania. Wyłącz tę opcję, aby zachować Shift+Tab do nawigacji fokusem za pomocą klawiatury.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",

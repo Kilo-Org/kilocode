@@ -139,6 +139,7 @@ class KiloWorkspaceService internal constructor(
     }
 
     suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto {
+        LOG.debug { "workspace file search directory=$directory query=$query limit=$limit" }
         return try {
             call { searchFiles(directory, query, limit) }
         } catch (e: CancellationException) {
@@ -164,6 +165,15 @@ class KiloWorkspaceService internal constructor(
             call { openFile(match.path, line, column) }
         } catch (e: Exception) {
             LOG.warn("workspace file open failed for path=${match.path}", e)
+            false
+        }
+    }
+
+    suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean {
+        return try {
+            call { openFile(path, line, column) }
+        } catch (e: Exception) {
+            LOG.warn("workspace file open failed for path=$path", e)
             false
         }
     }

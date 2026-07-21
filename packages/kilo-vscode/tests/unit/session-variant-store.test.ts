@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import {
+  cycleVariant,
   getVariant,
   sessionVariantKeys,
   sessionVariants,
@@ -90,5 +91,25 @@ describe("per-session variant selection", () => {
     store[variantKey(model, "code", "pending-local-2")] = "high"
 
     expect(sessionVariantKeys(store, "pending-local-1")).toEqual(["session/pending-local-1/anthropic/claude-sonnet-4"])
+  })
+})
+
+describe("cycleVariant", () => {
+  it("advances to the next variant", () => {
+    expect(cycleVariant("low", variants)).toBe("medium")
+    expect(cycleVariant("medium", variants)).toBe("high")
+  })
+
+  it("wraps back to the first variant after the last", () => {
+    expect(cycleVariant("high", variants)).toBe("low")
+  })
+
+  it("starts at the first variant when current is missing or unknown", () => {
+    expect(cycleVariant(undefined, variants)).toBe("low")
+    expect(cycleVariant("bogus", variants)).toBe("low")
+  })
+
+  it("returns undefined when no variants exist", () => {
+    expect(cycleVariant("low", [])).toBeUndefined()
   })
 })

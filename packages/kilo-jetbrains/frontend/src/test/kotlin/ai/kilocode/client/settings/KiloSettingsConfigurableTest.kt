@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings
 
 import ai.kilocode.client.settings.profile.UserProfileConfigurable
+import ai.kilocode.client.settings.context.ContextConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
@@ -27,6 +28,10 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
 
     fun `test child models id matches xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.models", ModelsConfigurable.ID)
+    }
+
+    fun `test child context id matches xml registration`() {
+        assertEquals("ai.kilocode.jetbrains.settings.context", ContextConfigurable.ID)
     }
 
     fun `test child provider and behavior ids match xml registration`() {
@@ -79,12 +84,21 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test createComponent contains Context link`() {
+        val cfg = KiloSettingsConfigurable()
+        edt {
+            val panel = cfg.createComponent()
+            val links = links(panel as Container)
+            assertTrue("expected a link labeled 'Context'", links.any { it.text == "Context" })
+        }
+    }
+
     fun `test createComponent contains settings links in order`() {
         val cfg = KiloSettingsConfigurable()
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior"), labels)
+            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior", "Context"), labels)
         }
     }
 
