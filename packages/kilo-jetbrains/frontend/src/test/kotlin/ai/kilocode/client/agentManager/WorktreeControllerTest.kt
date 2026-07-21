@@ -1,5 +1,8 @@
-package ai.kilocode.client.worktree
+package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeRenderer
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.rpc.dto.WorktreeDto
@@ -83,7 +86,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertFalse(renderer.deleteVisible())
     }
 
-    private fun controller() = WorktreeController(service, "/test", coroutines.scope)
+    private fun controller() =
+        WorktreeController(service, "/test", coroutines.scope)
 
     private fun flush() = coroutines.drain(::pump)
 

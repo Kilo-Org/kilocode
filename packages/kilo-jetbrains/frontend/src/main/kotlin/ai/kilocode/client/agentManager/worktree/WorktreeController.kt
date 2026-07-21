@@ -1,4 +1,4 @@
-package ai.kilocode.client.worktree
+package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto

@@ -2,8 +2,8 @@ package ai.kilocode.client.actions
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
-import ai.kilocode.client.worktree.SidePanelKeys
-import ai.kilocode.client.worktree.SidePanelMode
+import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -20,7 +20,7 @@ class NewWorktreeAction : AnAction(
     }
 
     override fun update(e: AnActionEvent) {
-        e.presentation.isVisible = e.getData(SidePanelKeys.MODE) == SidePanelMode.WORKTREES
+        e.presentation.isVisible = e.getData(SidePanelKeys.MODE) == SidePanelMode.AGENT_MANAGER
         e.presentation.isEnabled = e.getData(SidePanelKeys.WORKTREE_PANEL) != null
     }
 }

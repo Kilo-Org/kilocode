@@ -1,6 +1,6 @@
 @file:Suppress("UnstableApiUsage")
 
-package ai.kilocode.client.worktree
+package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
@@ -12,7 +12,7 @@ import fleet.rpc.client.durable
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * App-level service wrapping [KiloWorktreeRpcApi]. Mirrors [ai.kilocode.client.app.KiloWorkspaceService]:
+ * App-level service wrapping [ai.kilocode.rpc.KiloWorktreeRpcApi]. Mirrors [ai.kilocode.client.app.KiloWorkspaceService]:
  * a light `@Service` with a `call {}` helper that routes through `durable {}` in split mode and
  * to an injected RPC directly in tests.
  */

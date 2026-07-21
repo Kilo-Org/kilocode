@@ -1,5 +1,7 @@
-package ai.kilocode.client.worktree
+package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeRenderer
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.ide.ui.LafManagerListener
@@ -12,7 +14,6 @@ import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
-import java.awt.BorderLayout
 import java.awt.Cursor
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -21,10 +22,10 @@ import javax.swing.ListSelectionModel
 import javax.swing.SwingUtilities
 
 /**
- * Simple git-worktree list. Mirrors the History stack: a [JBList] with a delete strip revealed on
- * selection, plus a create prompt driven from the tool-window action.
+ * Agent Manager panel: a git-worktree list. Mirrors the History stack: a [JBList] with a delete
+ * strip revealed on selection, plus a create prompt driven from the tool-window action.
  */
-class WorktreePanel(
+class AgentManagerPanel(
     parent: Disposable,
     private val controller: WorktreeController,
 ) : BorderLayoutPanel(), Disposable {

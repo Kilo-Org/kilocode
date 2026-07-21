@@ -5,11 +5,11 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionSidePanelManager
 import ai.kilocode.client.telemetry.Telemetry
-import ai.kilocode.client.worktree.KiloWorktreeService
-import ai.kilocode.client.worktree.SidePanelKeys
-import ai.kilocode.client.worktree.SidePanelMode
-import ai.kilocode.client.worktree.WorktreeController
-import ai.kilocode.client.worktree.WorktreePanel
+import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
+import ai.kilocode.client.agentManager.SidePanelKeys
+import ai.kilocode.client.agentManager.SidePanelMode
+import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.AgentManagerPanel
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.ActionManager
@@ -88,45 +88,45 @@ internal class KiloToolWindowSetupService(
             val manager = SessionSidePanelManager(project, workspace)
 
             val worktrees = WorktreeController(service<KiloWorktreeService>(), workspace.directory, cs)
-            val worktreePanel = WorktreePanel(manager, worktrees)
+            val agentManagerPanel = AgentManagerPanel(manager, worktrees)
 
-            val branch = object : JPanel(BorderLayout()), DataProvider {
+            val chat = object : JPanel(BorderLayout()), DataProvider {
                 override fun getData(dataId: String): Any? {
                     if (SessionManager.KEY.`is`(dataId)) return manager
                     if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return workspace
-                    if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.BRANCH
+                    if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.CHAT
                     return null
                 }
             }
-            branch.add(manager.component, BorderLayout.CENTER)
+            chat.add(manager.component, BorderLayout.CENTER)
             val agent = object : JPanel(BorderLayout()), DataProvider {
                 override fun getData(dataId: String): Any? {
                     if (SessionManager.WORKSPACE_KEY.`is`(dataId)) return workspace
-                    if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.WORKTREES
-                    if (SidePanelKeys.WORKTREE_PANEL.`is`(dataId)) return worktreePanel
+                    if (SidePanelKeys.MODE.`is`(dataId)) return SidePanelMode.AGENT_MANAGER
+                    if (SidePanelKeys.WORKTREE_PANEL.`is`(dataId)) return agentManagerPanel
                     return null
                 }
             }
-            agent.add(worktreePanel.component, BorderLayout.CENTER)
+            agent.add(agentManagerPanel.component, BorderLayout.CENTER)
 
             val factory = ContentFactory.getInstance()
-            val branchContent = factory.createContent(branch, KiloBundle.message("sidePanel.mode.branch"), false)
-            branchContent.setDisposer(manager)
-            branchContent.setPreferredFocusedComponent { manager.defaultFocusedComponent }
+            val chatContent = factory.createContent(chat, KiloBundle.message("sidePanel.mode.branch"), false)
+            chatContent.setDisposer(manager)
+            chatContent.setPreferredFocusedComponent { manager.defaultFocusedComponent }
             val agentContent = factory.createContent(agent, KiloBundle.message("sidePanel.mode.agentManager"), false)
-            agentContent.setPreferredFocusedComponent { worktreePanel.component }
-            toolWindow.contentManager.addContent(branchContent)
+            agentContent.setPreferredFocusedComponent { agentManagerPanel.component }
+            toolWindow.contentManager.addContent(chatContent)
             toolWindow.contentManager.addContent(agentContent)
             val listener = object : ContentManagerListener {
                 override fun selectionChanged(event: ContentManagerEvent) {
                     if (event.operation == ContentManagerEvent.ContentOperation.add && event.content === agentContent) {
-                        worktreePanel.refresh()
+                        agentManagerPanel.refresh()
                     }
                 }
             }
             toolWindow.contentManager.addContentManagerListener(listener)
             Disposer.register(manager) { toolWindow.contentManager.removeContentManagerListener(listener) }
-            toolWindow.contentManager.setSelectedContent(branchContent)
+            toolWindow.contentManager.setSelectedContent(chatContent)
             manager.newSession()
 
             val actions = listOfNotNull(
