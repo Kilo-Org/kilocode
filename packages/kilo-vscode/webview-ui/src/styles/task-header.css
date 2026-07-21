@@ -186,6 +186,85 @@
   }
 }
 
+.task-timeline-divider {
+  position: absolute;
+  bottom: 0;
+  box-sizing: border-box;
+  border-radius: 1px;
+  background: color-mix(in srgb, var(--vscode-foreground) 25%, transparent);
+  pointer-events: none;
+}
+
+.task-timeline-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+  padding: 0 20px 20px;
+  box-sizing: border-box;
+}
+
+.task-timeline-detail-summary {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 85%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 65%, transparent);
+}
+
+.task-timeline-detail-body {
+  padding: 0 14px 12px;
+  border-top: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 75%, transparent);
+}
+
+.task-timeline-detail-summary-body {
+  padding-top: 12px;
+  border-top: none;
+}
+
+.task-timeline-detail-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 20px;
+  margin: 0;
+  font-size: var(--kilo-font-size-13);
+}
+
+.task-timeline-detail-grid dt {
+  color: var(--vscode-descriptionForeground);
+}
+
+.task-timeline-detail-grid dd {
+  margin: 0;
+  justify-self: end;
+  color: var(--vscode-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-timeline-detail-tokens {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--vscode-panel-border, transparent) 75%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-timeline-detail-token-label {
+  color: var(--vscode-descriptionForeground);
+  font-size: var(--kilo-font-size-13);
+}
+
+.task-timeline-detail-token-line {
+  color: var(--vscode-foreground);
+  font-size: var(--kilo-font-size-13);
+}
+
 /* ============================================
    Context Progress Bar
    ============================================ */

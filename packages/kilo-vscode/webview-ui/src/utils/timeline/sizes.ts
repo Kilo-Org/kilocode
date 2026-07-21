@@ -10,6 +10,8 @@ import type { Part, ToolPart, TextPart, ReasoningPart, StepFinishPart } from "..
 // ── Constants ────────────────────────────────────────────────────────
 
 export const MAX_HEIGHT = 26
+export const DIVIDER_W = 2
+export const DIVIDER_SLOT_W = 12
 const BAR_W = 12
 const MIN_H = 8
 const PAD = 4

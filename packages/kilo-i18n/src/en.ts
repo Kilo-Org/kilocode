@@ -142,4 +142,21 @@ export const dict = {
   "ui.message.feedback.helpful": "This was helpful",
   "ui.message.feedback.notHelpful": "This wasn't helpful",
   "ui.message.feedback.clearRating": "Clear rating",
+
+  // Timeline step details
+  "timeline.menu.goToPart": "Go to part",
+  "timeline.menu.stepDetails": "Step details",
+  "timeline.step.label": "Step {{step}}",
+  "timeline.step.inProgress": "in progress",
+  "timeline.details.title": "Details - {{step}}",
+  "timeline.details.agent": "Agent",
+  "timeline.details.provider": "Provider",
+  "timeline.details.model": "Model",
+  "timeline.details.started": "Started",
+  "timeline.details.finished": "Finished",
+  "timeline.details.duration": "Duration",
+  "timeline.details.totalCost": "Total cost",
+  "timeline.details.tokens": "Tokens",
+  "timeline.details.tokens.summary": "In {{input}} · Out {{output}} · Reason {{reasoning}}",
+  "timeline.details.tokens.cacheSummary": "Cache R {{read}} · W {{write}} · Hit Rate {{rate}}",
 }

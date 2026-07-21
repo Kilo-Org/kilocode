@@ -2,6 +2,7 @@ export interface TimelineGeometryBar {
   bg: string
   width: number
   height: number
+  divider?: boolean
 }
 
 export interface TimelineGeometryItem extends TimelineGeometryBar {
@@ -9,9 +10,16 @@ export interface TimelineGeometryItem extends TimelineGeometryBar {
   x: number
 }
 
+export interface TimelineGeometryDivider {
+  x: number
+  width: number
+  height: number
+}
+
 export interface TimelineGeometry {
   items: TimelineGeometryItem[]
   paths: Array<{ bg: string; d: string }>
+  dividers: TimelineGeometryDivider[]
   width: number
 }
 
@@ -24,20 +32,29 @@ const shape = (x: number, width: number, height: number, max: number) => {
 export function geometry(bars: TimelineGeometryBar[], max: number, gap = 1): TimelineGeometry {
   const paths = new Map<string, string[]>()
   const items: TimelineGeometryItem[] = []
+  const dividers: TimelineGeometryDivider[] = []
   let x = 0
+  let real = 0
 
-  for (const [idx, bar] of bars.entries()) {
-    const item = { ...bar, idx, x }
+  for (const bar of bars) {
+    if (bar.divider) {
+      dividers.push({ x, width: bar.width, height: bar.height })
+      x += bar.width + gap
+      continue
+    }
+    const item = { ...bar, idx: real, x }
     items.push(item)
     const path = paths.get(bar.bg) ?? []
     path.push(shape(x, bar.width, bar.height, max))
     paths.set(bar.bg, path)
     x += bar.width + gap
+    real++
   }
 
   return {
     items,
     paths: Array.from(paths, ([bg, parts]) => ({ bg, d: parts.join("") })),
+    dividers,
     width: x,
   }
 }

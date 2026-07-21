@@ -62,6 +62,11 @@ export interface ReasoningPart extends BasePart {
 // Step parts from the backend
 export interface StepStartPart extends BasePart {
   type: "step-start"
+  snapshot?: string
+  time?: {
+    start: number
+    end?: number
+  }
 }
 
 export interface StepFinishPart extends BasePart {
@@ -77,6 +82,10 @@ export interface StepFinishPart extends BasePart {
     output: number
     reasoning?: number
     cache?: { read: number; write: number }
+  }
+  time?: {
+    start: number
+    end: number
   }
 }
 
