@@ -23,6 +23,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.platform.project.projectIdOrNull
+import com.intellij.openapi.wm.impl.content.ToolWindowContentUi
 import com.intellij.ui.content.ContentManagerEvent
 import com.intellij.ui.content.ContentManagerListener
 import com.intellij.ui.content.ContentFactory
@@ -108,6 +109,9 @@ internal class KiloToolWindowSetupService(
                 }
             }
             agent.add(agentManagerPanel.component, BorderLayout.CENTER)
+
+            // Hide the "Kilo Code" id label in the header so only the content tabs remain.
+            toolWindow.component.putClientProperty(ToolWindowContentUi.HIDE_ID_LABEL, "true")
 
             val factory = ContentFactory.getInstance()
             val chatContent = factory.createContent(chat, KiloBundle.message("sidePanel.mode.branch"), false)
