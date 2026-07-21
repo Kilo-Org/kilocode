@@ -223,7 +223,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
 
   // Determine capabilities
   const supportsImages = inputModalities.includes("image")
-  const supportsTools = supportedParameters.includes("tools")
+  const supportsTools = !model.supported_parameters || supportedParameters.includes("tools")
   const supportsReasoning = supportedParameters.includes("reasoning")
   const supportsTemperature = supportedParameters.includes("temperature")
 
