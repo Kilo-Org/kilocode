@@ -252,14 +252,8 @@ class SettingsInlineListTest : BasePlatformTestCase() {
         jList.selectedIndex = idx
         jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
         jList.doLayout()
-        cell(list, key, "level")
-    }
-
-    private fun cell(list: SettingsInlineList, key: String, id: String) {
-        val method = SettingsInlineList::class.java.getDeclaredMethod("onCell", String::class.java, String::class.java)
-        method.isAccessible = true
-        method.invoke(list, key, id)
-        UIUtil.dispatchAllInvocationEvents()
+        val bounds = settingsListCellBounds(jList, idx, true)["level"] ?: error("missing level cell for $key")
+        click(jList, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
     }
 
     private fun click(target: JComponent, point: Point) {
