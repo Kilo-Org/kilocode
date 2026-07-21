@@ -379,7 +379,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <Show when={throughputVisible() && throughputText()}>
             {(t) => (
               <Tooltip value={throughputTooltip() ?? ""} placement="bottom">
-                <div data-slot="task-header-throughput" data-source={t().source}>
+                <div data-slot="task-header-throughput">
                   {t().label}
                 </div>
               </Tooltip>

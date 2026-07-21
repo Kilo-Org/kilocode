@@ -186,7 +186,7 @@ function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof message
   })
   return (
     <Tooltip value={tooltip()} placement="top">
-      <span data-component="assistant-throughput-badge" data-source={props.metrics.source}>
+      <span data-component="assistant-throughput-badge">
         {label()}
       </span>
     </Tooltip>

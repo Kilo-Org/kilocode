@@ -248,6 +248,8 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+
+.vscode-session-turn-diffs {
 .vscode-session-turn-diffs {
   width: 100%;
 }
