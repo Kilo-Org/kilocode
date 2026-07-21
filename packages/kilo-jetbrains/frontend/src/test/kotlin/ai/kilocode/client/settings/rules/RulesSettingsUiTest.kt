@@ -243,15 +243,26 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test content editor dialog exposes save button and content`() {
+    fun `test content editor dialog exposes content`() {
         edt {
             val dialog = InstructionEditDialog("./RULES.md", "# Rules")
             try {
-                assertTrue(components(dialog.component()).any { it is com.intellij.ui.EditorTextField })
                 assertEquals("# Rules", dialog.content())
             } finally {
                 dialog.close(0)
             }
+        }
+    }
+
+    fun `test content scroll renders an editor field`() {
+        edt {
+            val field = ai.kilocode.client.settings.base.SettingsContentField(
+                "# Rules",
+                ai.kilocode.client.settings.base.settingsEditorFileType("./RULES.md", "# Rules"),
+                true,
+            )
+            val scroll = ai.kilocode.client.settings.base.settingsContentScroll(field)
+            assertTrue(components(scroll).any { it is com.intellij.ui.EditorTextField })
         }
     }
 

@@ -36,8 +36,6 @@ internal class SettingsPathDialog(
 
     override fun getPreferredFocusedComponent(): JComponent = field
 
-    internal fun component(): JComponent = createCenterPanel()
-
     override fun value(): String = field.text
 
     private companion object {

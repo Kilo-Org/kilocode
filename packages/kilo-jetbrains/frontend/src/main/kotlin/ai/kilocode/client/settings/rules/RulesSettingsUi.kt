@@ -310,8 +310,6 @@ internal class InstructionEditDialog(
 
     override fun createCenterPanel(): JComponent = settingsContentScroll(field)
 
-    internal fun component(): JComponent = createCenterPanel()
-
     override fun content() = field.text
 }
 
