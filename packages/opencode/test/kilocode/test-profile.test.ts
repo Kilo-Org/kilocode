@@ -11,12 +11,12 @@ describe("test profiles", () => {
     const result = TestProfile.resolve("darwin", all)
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.files.length).toBeGreaterThan(50)
+    expect(result.files.length).toBeGreaterThan(20)
     expect(result.files).toContain("pty/pty-shell.test.ts")
     expect(result.files).toContain("kilocode/cli/install-artifact.test.ts")
     expect(result.files).toContain("kilocode/sandbox/macos-confinement.test.ts")
     expect(result.files).toContain("kilocode/core-watcher.test.ts")
-    expect(result.files).toContain("kilocode/tool/repo_clone.test.ts")
+    expect(result.files).toContain("kilocode/background-process.test.ts")
     expect(result.files).toContain("filesystem/filesystem.test.ts")
     expect(result.files).toContain("kilocode/interactive-terminal.test.ts")
     const sandbox = all.filter((file) => file.startsWith("kilocode/sandbox/"))
@@ -27,6 +27,17 @@ describe("test profiles", () => {
     expect(result.files).not.toContain("shell/shell.test.ts")
     expect(result.files).not.toContain("kilocode/sessions/remote-ws.test.ts")
     expect(result.files).not.toContain("provider/header-timeout.test.ts")
+    // Platform-neutral application logic is covered by the full Linux and
+    // Windows suites. Keep these heavy, darwin-agnostic files out of the
+    // profile so the single macOS shard stays fast.
+    expect(result.files).not.toContain("session/prompt.test.ts")
+    expect(result.files).not.toContain("snapshot/snapshot.test.ts")
+    expect(result.files).not.toContain("kilocode/daemon.test.ts")
+    expect(result.files).not.toContain("cli/smokes/read-only.test.ts")
+    expect(result.files).not.toContain("cli/acp/lifecycle.test.ts")
+    expect(result.files).not.toContain("cli/run/run-process.test.ts")
+    expect(result.files).not.toContain("kilocode/server/config-overlay.test.ts")
+    expect(result.files).not.toContain("server/httpapi-listen.test.ts")
   })
 
   test("normalizes Windows test paths", () => {
