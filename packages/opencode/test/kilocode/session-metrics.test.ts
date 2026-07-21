@@ -10,22 +10,8 @@ const tokens = {
 }
 
 describe("kilocode.session.metrics.computeMetrics", () => {
-  test("preserves llama.cpp provider-reported timings", () => {
+  test("derives generation rate from elapsed time", () => {
     const metrics = computeMetrics({
-      providerMetadata: {
-        llama: { prompt_per_second: 412.3, predicted_per_second: 28.7 },
-      },
-      tokens,
-      elapsedMs: 1000,
-    })
-    expect(metrics?.source).toBe("provider")
-    expect(metrics?.prompt).toBeCloseTo(412.3)
-    expect(metrics?.generation).toBeCloseTo(28.7)
-  })
-
-  test("derives generation rate when no provider timing is present", () => {
-    const metrics = computeMetrics({
-      providerMetadata: { openai: { finish_reason: "stop" } },
       tokens: { ...tokens, output: 100 },
       elapsedMs: 1000,
     })
@@ -50,16 +36,21 @@ describe("kilocode.session.metrics.computeMetrics", () => {
     expect(metrics).toBeUndefined()
   })
 
-  test("falls back to computed when provider rates are bogus", () => {
+  test("ignores providerMetadata until the upstream wiring lands (see #6579)", () => {
+    // llama.cpp surfaces prompt_per_second / predicted_per_second, but the
+    // upstream AI SDK drops them before the raw usage reaches our adapter.
+    // Until a metadataExtractor is wired into createOpenAICompatible, the
+    // provider source is unreachable — exercise the tolerance here.
     const metrics = computeMetrics({
       providerMetadata: {
-        llama: { prompt_per_second: -5, predicted_per_second: Number.POSITIVE_INFINITY },
+        llama: { prompt_per_second: 412.3, predicted_per_second: 28.7 },
       },
-      tokens,
-      elapsedMs: 1000,
+      tokens: { ...tokens, output: 100 },
+      elapsedMs: 2000,
     })
     expect(metrics?.source).toBe("computed")
     expect(metrics?.generation).toBeCloseTo(50)
+    expect(metrics?.prompt).toBeUndefined()
   })
 
   test("tolerates missing providerMetadata", () => {
@@ -69,6 +60,7 @@ describe("kilocode.session.metrics.computeMetrics", () => {
     })
     expect(metrics?.source).toBe("computed")
     expect(metrics?.generation).toBeCloseTo(50)
+    expect(metrics?.prompt).toBeUndefined()
   })
 })
 

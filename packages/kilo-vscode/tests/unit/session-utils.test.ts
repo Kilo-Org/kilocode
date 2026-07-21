@@ -6,6 +6,8 @@ import {
   calcTokenUsage,
   aggregateMetrics,
   messageMetrics,
+  formatPP,
+  formatTG,
   buildFamilyCosts,
   buildFamilyParents,
   buildFamilyParentsFromTools,
@@ -722,7 +724,7 @@ describe("collapseCostBreakdown", () => {
 
 // ── Throughput aggregation ─────────────────────────────────────────────
 
-function stepFinish(id: string, metrics?: Part["metrics"]): Part {
+function stepFinish(id: string, metrics?: NonNullable<Part["metrics"]>): Part {
   return {
     type: "step-finish",
     id,
@@ -740,39 +742,51 @@ describe("aggregateMetrics", () => {
     expect(aggregateMetrics(parts)).toBeUndefined()
   })
 
-  it("returns the metrics block from the last step-finish with metrics", () => {
+  it("merges the first non-empty metrics across every step in the session", () => {
     const parts: Part[] = [
       stepFinish("f1", { prompt: 100, generation: 20, source: "computed" }),
       { type: "text", id: "t1", text: "mid" },
-      stepFinish("f2", { prompt: 412, generation: 38, source: "provider" }),
+      stepFinish("f2", { prompt: 412, generation: 38, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ prompt: 412, generation: 38, source: "provider" })
+    expect(aggregateMetrics(parts)).toEqual({ prompt: 100, generation: 20, source: "computed" })
   })
 
-  it("prefers provider-reported metrics over computed ones regardless of order", () => {
+  it("keeps the first computed sample for each field when later steps report zero", () => {
     const parts: Part[] = [
-      stepFinish("f1", { prompt: 500, generation: 50, source: "provider" }),
+      stepFinish("f1", { prompt: 500, generation: 50, source: "computed" }),
       stepFinish("f2", { generation: 30, source: "computed" }),
     ]
     const result = aggregateMetrics(parts)
-    expect(result?.source).toBe("provider")
+    expect(result?.source).toBe("computed")
     expect(result?.prompt).toBe(500)
+    expect(result?.generation).toBe(50)
   })
 
-  it("falls back to computed metrics when no provider metrics exist", () => {
+  it("uses the first computed value per field when no earlier value is present", () => {
     const parts: Part[] = [
       stepFinish("f1", { generation: 12, source: "computed" }),
       stepFinish("f2", { generation: 18, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ generation: 18, source: "computed" })
+    expect(aggregateMetrics(parts)).toEqual({ generation: 12, source: "computed" })
   })
 
   it("ignores non-step-finish parts even when they look like metrics", () => {
     const parts: Part[] = [
       { type: "text", id: "t1", text: "noise" },
-      stepFinish("f1", { prompt: 200, generation: 22, source: "provider" }),
+      stepFinish("f1", { prompt: 200, generation: 22, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ prompt: 200, generation: 22, source: "provider" })
+    expect(aggregateMetrics(parts)).toEqual({ prompt: 200, generation: 22, source: "computed" })
+  })
+
+  it("combines multi-step metrics into a single snapshot per message", () => {
+    // An assistant turn that runs reasoning + answer produces two step-finish
+    // parts; the badge should merge them so a prompt sample from the first
+    // step and a generation sample from the second coexist in the snapshot.
+    const parts: Part[] = [
+      stepFinish("f1", { prompt: 200, source: "computed" }),
+      stepFinish("f2", { generation: 25, source: "computed" }),
+    ]
+    expect(messageMetrics(parts)).toEqual({ prompt: 200, generation: 25, source: "computed" })
   })
 })
 
@@ -780,7 +794,7 @@ describe("messageMetrics", () => {
   it("matches aggregateMetrics behavior on the same input", () => {
     const parts: Part[] = [
       stepFinish("f1", { generation: 8, source: "computed" }),
-      stepFinish("f2", { prompt: 99, generation: 33, source: "provider" }),
+      stepFinish("f2", { prompt: 99, generation: 33, source: "computed" }),
     ]
     expect(messageMetrics(parts)).toEqual(aggregateMetrics(parts))
   })
@@ -788,5 +802,23 @@ describe("messageMetrics", () => {
   it("returns undefined when no throughput metrics are present", () => {
     expect(messageMetrics([])).toBeUndefined()
     expect(messageMetrics([{ type: "text", id: "t1", text: "no metrics here" }])).toBeUndefined()
+  })
+})
+
+describe("throughput formatters", () => {
+  const locale = "en-US"
+
+  it("renders the value with a t/s suffix", () => {
+    expect(formatPP(412, locale)).toBe("412 t/s")
+    expect(formatTG(28.7, locale)).toBe("28.7 t/s")
+  })
+
+  it("falls back to dash for missing or bogus values", () => {
+    expect(formatPP(undefined, locale)).toBe("–")
+    expect(formatPP(0, locale)).toBe("–")
+    expect(formatPP(-5, locale)).toBe("–")
+    expect(formatPP(Number.NaN, locale)).toBe("–")
+    expect(formatPP(Number.POSITIVE_INFINITY, locale)).toBe("–")
+    expect(formatTG(undefined, locale)).toBe("–")
   })
 })

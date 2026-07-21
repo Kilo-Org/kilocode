@@ -15,6 +15,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
 import { useMemory } from "../../context/memory"
+import { useDisplay } from "../../context/display"
 import { calcTokenUsage, collapseCostBreakdown, latestMetrics } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -36,6 +37,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const search = useTranscriptSearch()
+  const display = useDisplay()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
@@ -171,6 +173,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   )
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
+  // Throughput row visibility is shared with AssistantMessage via the
+  // DisplayProvider so the setting toggles both surfaces together.
+  const throughputVisible = createMemo(() => display.throughputVisible())
 
   // Read initial value from VS Code settings
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
@@ -371,13 +376,11 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             <ContextProgress />
           </div>
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
-          <Show when={throughputText()}>
+          <Show when={throughputVisible() && throughputText()}>
             {(t) => (
               <Tooltip value={throughputTooltip() ?? ""} placement="bottom">
                 <div data-slot="task-header-throughput" data-source={t().source}>
-                  <span data-slot="task-header-throughput-pp">{`PP ${t().pp}`}</span>
-                  <span data-slot="task-header-throughput-sep"> · </span>
-                  <span data-slot="task-header-throughput-tg">{`TG ${t().tg}`}</span>
+                  {t().label}
                 </div>
               </Tooltip>
             )}

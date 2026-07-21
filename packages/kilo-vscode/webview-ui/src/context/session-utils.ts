@@ -208,41 +208,63 @@ export function calcTokenUsage(
  * Aggregate tokens-per-second throughput across the step-finish parts of a
  * session.
  *
- * Strategy: "last wins". The most recent step-finish with a `metrics` block
- * is treated as the current throughput snapshot — that's the same number the
- * per-message badge surfaces, so the aggregated header and per-message rows
- * always agree. Provider-reported (llama.cpp / Ollama) values win over
- * computed values when both appear in the same session, because provider
- * timings reflect the model's actual rate rather than wall-clock duration.
+ * Combines every step-finish that carries a `metrics` block so the header
+ * reflects all of the assistant's reasoning + answer steps, not just the last
+ * one. Each field adopts the first non-empty sample we see — that gives a
+ * stable "snapshot" view of the session pace that won't double-count when
+ * later steps report zero on a particular field.
  *
  * Returns `undefined` when no step-finish part in the input carries metrics,
  * which is the signal callers use to hide the throughput UI.
  */
 export function aggregateMetrics(
   parts: readonly Part[],
-): { prompt?: number; generation?: number; source: "provider" | "computed" } | undefined {
-  let best: { prompt?: number; generation?: number; source: "provider" | "computed" } | undefined
+): { prompt?: number; generation?: number; source: "computed" } | undefined {
+  let prompt: number | undefined
+  let generation: number | undefined
   for (const part of parts) {
     if (part.type !== "step-finish") continue
     const metrics = part.metrics
     if (!metrics) continue
-    // Provider-reported metrics outrank computed ones even if they appear
-    // later in the timeline.
-    if (metrics.source === "computed" && best?.source === "provider") continue
-    best = metrics
+    if (metrics.prompt !== undefined && prompt === undefined) prompt = metrics.prompt
+    if (metrics.generation !== undefined && generation === undefined) generation = metrics.generation
   }
-  return best
+  if (prompt === undefined && generation === undefined) return undefined
+  return {
+    ...(prompt !== undefined ? { prompt } : {}),
+    ...(generation !== undefined ? { generation } : {}),
+    source: "computed",
+  }
 }
 
 /**
  * Pick the throughput snapshot from a single assistant message's parts.
- * Uses the same last-wins strategy as `aggregateMetrics` so the per-message
- * badge and the header row stay consistent.
+ * Same aggregation strategy as `aggregateMetrics` so the per-message badge
+ * and the header row stay consistent.
  */
 export function messageMetrics(
   parts: readonly Part[],
-): { prompt?: number; generation?: number; source: "provider" | "computed" } | undefined {
+): { prompt?: number; generation?: number; source: "computed" } | undefined {
   return aggregateMetrics(parts)
+}
+
+/**
+ * Format a throughput rate (prompt or generation) for display. Shared by
+ * every rendering site so the same value reads the same in the per-message
+ * badge and the aggregated header row.
+ */
+function formatRateValue(value: number | undefined, locale: string): string {
+  if (!Number.isFinite(value) || value === undefined || value <= 0) return "–"
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} t/s`
+}
+
+// Convenience labels: PP for prompt, TG for generation. Both delegate to the
+// shared formatter — the label is owned by the rendering site, not by us.
+export function formatPP(value: number | undefined, locale: string) {
+  return formatRateValue(value, locale)
+}
+export function formatTG(value: number | undefined, locale: string) {
+  return formatRateValue(value, locale)
 }
 
 /**

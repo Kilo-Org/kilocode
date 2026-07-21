@@ -1,10 +1,17 @@
 // kilocode_change - new file
-import { isRecord } from "@/util/record"
-
+// Wire shape mirrors the SDK schema (packages/sdk/js/src/v2/gen/types.gen.ts
+// StepFinishPart.metrics). `source` stays on the wire for backward
+// compatibility with downstream consumers — see packages/kilo-vscode/
+// webview-ui/src/context/session-utils.ts and AssistantMessage.tsx —
+// but only the "computed" literal is reachable here because llama.cpp's
+// `prompt_per_second` / `predicted_per_second` are dropped upstream by
+// `@ai-sdk/openai-compatible` before the raw usage reaches our adapter.
+// Follow-up: wire `metadataExtractor` into the shared
+// `createOpenAICompatible` call so the provider source is reachable again.
 export type TokenRates = {
   prompt?: number
   generation?: number
-  source: "provider" | "computed"
+  source: "computed"
 }
 
 export type ComputeInput = {
@@ -18,41 +25,8 @@ export type ComputeInput = {
   elapsedMs: number
 }
 
-// kilocode_change start - tokens/second through-putation for #6579.
-const safe = (value: unknown): number | undefined => {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return undefined
-  return value
-}
-
-// llama.cpp surfaces timing under provider-specific metadata keys. We look at
-// the most common shapes; providers without timing fields return undefined.
-const providerRate = (metadata: unknown, key: string): number | undefined => {
-  if (!isRecord(metadata)) return undefined
-  for (const namespace of Object.values(metadata)) {
-    if (!isRecord(namespace)) continue
-    for (const [name, value] of Object.entries(namespace)) {
-      if (name.toLowerCase() === key.toLowerCase()) {
-        return safe(value)
-      }
-    }
-  }
-  return undefined
-}
-
+// kilocode_change start - tokens/second throughput for #6579.
 export function computeMetrics(input: ComputeInput): TokenRates | undefined {
-  const providerPrompt = providerRate(input.providerMetadata, "prompt_per_second")
-  const providerGeneration = providerRate(
-    input.providerMetadata,
-    "predicted_per_second",
-  )
-
-  if (providerPrompt !== undefined || providerGeneration !== undefined) {
-    const result: TokenRates = { source: "provider" }
-    if (providerPrompt !== undefined) result.prompt = providerPrompt
-    if (providerGeneration !== undefined) result.generation = providerGeneration
-    return result
-  }
-
   if (!Number.isFinite(input.elapsedMs) || input.elapsedMs <= 0) return undefined
 
   const generated = input.tokens.output + input.tokens.reasoning
