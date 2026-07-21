@@ -1,46 +1,69 @@
 package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.session.ui.model.ModelSearch
+import ai.kilocode.client.ui.UiStyle
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.ui.popup.JBPopup
+import com.intellij.openapi.ui.popup.JBPopupListener
+import com.intellij.openapi.ui.popup.LightweightWindowEvent
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.xml.util.XmlStringUtil
 import com.intellij.util.ui.UIUtil
+import com.intellij.xml.util.XmlStringUtil
+import java.awt.Dimension
+import java.awt.Rectangle
 import java.awt.event.KeyEvent
+import java.awt.event.FocusAdapter
+import java.awt.event.FocusEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.ListSelectionModel
+import javax.swing.Scrollable
+import javax.swing.SwingConstants
 import javax.swing.event.ListSelectionEvent
 
 internal class SettingsListView(
     empty: String,
     private val cfg: SettingsListConfig = SettingsListConfig.Equal,
     private val onCell: (String, String) -> Unit,
-) : BaseContentPanel() {
+) : BaseContentPanel(), Scrollable {
     private val model = CollectionListModel<SettingsListItem>()
-    internal val list = object : JBList<SettingsListItem>(model) {
+    internal val list: JBList<SettingsListItem> = object : JBList<SettingsListItem>(model), SettingsListActive {
+        override fun active(): Boolean = popups > 0
+
         override fun getToolTipText(event: MouseEvent): String? {
-            if (!cfg.description) return null
+            val tip = super.getToolTipText(event)
+            if (tip != null) return tip
             val idx = locationToIndex(event.point)
             if (idx < 0) return null
             val bounds = getCellBounds(idx, idx) ?: return null
             if (!bounds.contains(event.point)) return null
-            val note = model.getElementAt(idx).description?.takeIf { it.isNotBlank() } ?: return null
+            val item = model.getElementAt(idx)
+            val selected = isSelectedIndex(idx)
+            val id = settingsListCellBounds(this, idx, selected)
+                .entries
+                .firstOrNull { it.value.contains(event.point) }
+                ?.key
+            val cell = settingsListVisibleCells(item, selected).firstOrNull { it.id == id }
+            if (cell != null) return cell.label.takeIf { it.isNotBlank() }
+            if (!cfg.description || !cfg.tooltip) return null
+            val note = item.description?.takeIf { it.isNotBlank() } ?: return null
             val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
             return XmlStringUtil.wrapInHtml(text)
         }
     }.apply {
-        selectionMode = ListSelectionModel.SINGLE_SELECTION
+        selectionMode = cfg.selection
         setExpandableItemsEnabled(false)
         emptyText.text = empty
     }
     private var items = emptyList<SettingsListItem>()
     private var filter = ""
     private var press: Press? = null
+    private var popups = 0
     internal var onSelect: (() -> Unit)? = null
 
     fun setEmptyText(text: String) {
@@ -57,6 +80,7 @@ internal class SettingsListView(
         list.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) return
+                list.requestFocusInWindow()
                 press = null
                 val hit = hit(e) ?: return
                 press = Press(hit.item.key, hit.id ?: return)
@@ -67,6 +91,11 @@ internal class SettingsListView(
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
                 val item = hit.item
+                item.doubleClick?.let { id ->
+                    onCell(item.key, id)
+                    e.consume()
+                    return
+                }
                 primary(item)
                 e.consume()
             }
@@ -84,6 +113,11 @@ internal class SettingsListView(
         list.addListSelectionListener { e: ListSelectionEvent ->
             if (!e.valueIsAdjusting) onSelect?.invoke()
         }
+        list.addFocusListener(object : FocusAdapter() {
+            override fun focusGained(e: FocusEvent) = list.repaint()
+
+            override fun focusLost(e: FocusEvent) = list.repaint()
+        })
         ScrollingUtil.installActions(list)
         next(list)
     }
@@ -95,9 +129,31 @@ internal class SettingsListView(
     }
 
     @RequiresEdt
+    fun selectedItems(): List<SettingsListItem> {
+        checkEdt()
+        return list.selectedValuesList
+    }
+
+    @RequiresEdt
     fun selectedIndex(): Int {
         checkEdt()
         return list.selectedIndex
+    }
+
+    @RequiresEdt
+    fun select(key: String, scroll: Boolean = true): Boolean {
+        checkEdt()
+        val idx = settingsListIndex(model.items, key)
+        if (idx < 0) return false
+        choose(idx, scroll)
+        return true
+    }
+
+    @RequiresEdt
+    fun focusList() {
+        checkEdt()
+        list.requestFocusInWindow()
+        list.repaint()
     }
 
     @RequiresEdt
@@ -107,23 +163,49 @@ internal class SettingsListView(
         val key = when (selection) {
             is SettingsListSelection.Key -> selection.key
             is SettingsListSelection.Index -> null
+            SettingsListSelection.PreserveNoScroll,
             SettingsListSelection.Preserve -> list.selectedValue?.key
         }
         val idx = when (selection) {
             is SettingsListSelection.Index -> selection.index
             is SettingsListSelection.Key,
+            SettingsListSelection.PreserveNoScroll,
             SettingsListSelection.Preserve,
             -> null
         }
-        sync(key, idx)
+        sync(key, idx, selection != SettingsListSelection.PreserveNoScroll)
     }
 
     @RequiresEdt
     fun setBusy(value: Boolean) {
         checkEdt()
+        list.setPaintBusy(value)
         if (list.isEnabled == !value) return
         list.isEnabled = !value
         list.repaint()
+    }
+
+    @RequiresEdt
+    fun trackPopup(popup: JBPopup) {
+        checkEdt()
+        var tracked = false
+        fun activate() {
+            if (tracked) return
+            tracked = true
+            popups++
+            list.repaint()
+        }
+        popup.addListener(object : JBPopupListener {
+            override fun beforeShown(event: LightweightWindowEvent) = activate()
+
+            override fun onClosed(event: LightweightWindowEvent) {
+                if (!tracked) return
+                tracked = false
+                popups = maxOf(0, popups - 1)
+                list.repaint()
+            }
+        })
+        if (popup.isVisible) activate()
     }
 
     @RequiresEdt
@@ -135,7 +217,7 @@ internal class SettingsListView(
     }
 
     @RequiresEdt
-    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null) {
+    private fun sync(prefer: String? = list.selectedValue?.key, at: Int? = null, scroll: Boolean = true) {
         checkEdt()
         val q = filter.trim()
         val rows = if (q.isBlank()) items else items.filter { ModelSearch.matches(q, it.title) }
@@ -145,7 +227,7 @@ internal class SettingsListView(
             ?: settingsListIndex(rows, prefer).takeIf { it >= 0 }
             ?: rows.indices.firstOrNull()
             ?: -1
-        if (idx >= 0) choose(idx) else list.clearSelection()
+        if (idx >= 0) choose(idx, scroll) else list.clearSelection()
     }
 
     @RequiresEdt
@@ -166,10 +248,10 @@ internal class SettingsListView(
     }
 
     @RequiresEdt
-    private fun choose(idx: Int) {
+    private fun choose(idx: Int, scroll: Boolean = true) {
         checkEdt()
         list.selectedIndex = idx
-        ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
+        if (scroll) ScrollingUtil.ensureIndexIsVisible(list, idx, 0)
     }
 
     @RequiresEdt
@@ -191,9 +273,15 @@ internal class SettingsListView(
     private fun primary(item: SettingsListItem) {
         val cells = settingsListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
-            ?: cells.firstOrNull { it.enabled }
-            ?: return
-        onCell(item.key, cell.id)
+        if (cell != null) {
+            onCell(item.key, cell.id)
+            return
+        }
+        item.doubleClick?.let { id ->
+            onCell(item.key, id)
+            return
+        }
+        cells.firstOrNull { it.enabled }?.let { onCell(item.key, it.id) }
     }
 
     private fun hit(e: MouseEvent, enabled: Boolean = true): Hit? {
@@ -201,7 +289,7 @@ internal class SettingsListView(
         val bounds = idx.takeIf { it >= 0 }?.let { list.getCellBounds(it, it) } ?: return null
         if (!bounds.contains(e.point)) return null
         val item = model.getElementAt(idx)
-        val selected = idx == list.selectedIndex
+        val selected = list.isSelectedIndex(idx)
         val id = if (enabled) {
             settingsListCellAt(list, idx, e.point, selected)
         } else {
@@ -216,6 +304,27 @@ internal class SettingsListView(
     private fun checkEdt() {
         check(ApplicationManager.getApplication().isDispatchThread) { "Settings list updates must run on EDT" }
     }
+
+    override fun getScrollableTracksViewportWidth() = true
+
+    override fun getScrollableTracksViewportHeight() = false
+
+    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+
+    override fun getScrollableUnitIncrement(
+        visibleRect: Rectangle,
+        orientation: Int,
+        direction: Int,
+    ): Int {
+        if (orientation != SwingConstants.VERTICAL) return UiStyle.Gap.pad()
+        return list.fixedCellHeight.takeIf { it > 0 } ?: UiStyle.Gap.xl()
+    }
+
+    override fun getScrollableBlockIncrement(
+        visibleRect: Rectangle,
+        orientation: Int,
+        direction: Int,
+    ) = if (orientation == SwingConstants.VERTICAL) visibleRect.height else visibleRect.width
 
     private data class Hit(val item: SettingsListItem, val id: String?)
 
@@ -234,6 +343,7 @@ private fun settingsListIndex(items: List<SettingsListItem>, index: Int): Int {
 
 internal sealed interface SettingsListSelection {
     data object Preserve : SettingsListSelection
+    data object PreserveNoScroll : SettingsListSelection
     data class Key(val key: String) : SettingsListSelection
     data class Index(val index: Int) : SettingsListSelection
 }

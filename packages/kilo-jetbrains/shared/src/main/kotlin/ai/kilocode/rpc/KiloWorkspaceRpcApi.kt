@@ -48,7 +48,7 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     /** Resolve [path] to matching files, scoped primarily to [directory]. */
     suspend fun files(directory: String, path: String): List<WorkspaceFileDto>
 
-    /** Fuzzy file/folder search via the backend IDE index. */
+    /** Fuzzy file/folder search via Kilo Core. */
     suspend fun searchFiles(directory: String, query: String, limit: Int = 50): FileSearchResultDto
 
     /** Current uncommitted git changes as a unified diff for @git-changes mentions. */
@@ -62,6 +62,9 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
 
     /** Resolve the editable global config target. */
     suspend fun globalConfigTarget(): ConfigTargetDto
+
+    /** Refresh local and global config files after external CLI writes. */
+    suspend fun refreshConfigFiles(directory: String)
 
     /** Open or create the local config file in the IDE. */
     suspend fun openLocalConfig(directory: String): Boolean

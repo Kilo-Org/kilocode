@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.4.11",
+  "version": "7.4.13",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -1129,6 +1129,11 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.chat.shiftTabCyclesVariant": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
+        },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
           "scope": "application",
@@ -1167,7 +1172,7 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
-    "check-types:webview": "bun script/typecheck.ts --project webview-ui/tsconfig.json",
+    "check-types:webview": "tsc --noEmit --project webview-ui/tsconfig.json",
     "typecheck": "bun run check-types && bun run check-types:webview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

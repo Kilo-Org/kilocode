@@ -1,5 +1,11 @@
 # Changelog
 
+## 7.4.12
+
+### Patch Changes
+
+- [#12191](https://github.com/Kilo-Org/kilocode/pull/12191) [`4d676b6`](https://github.com/Kilo-Org/kilocode/commit/4d676b68d2d0dd025c7d1a6684f49f3d03e9d12d) - Use Kilo Core for JetBrains @ file completion.
+
 ## 7.4.10
 
 ### Patch Changes
@@ -63,6 +69,21 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.0.8] - 2026-07-21
+
+### Added
+
+- Add settings for context controls, including context mentions and ignore patterns.
+- Add settings for skills, including editing local skills and viewing remote skills as read-only.
+- Add auto-approve settings for permission rules, with filters and wildcard labels.
+- Use Kilo Core for JetBrains file mention search so @-mentions match CLI indexing behavior.
+
+### Fixed
+
+### Changed
+
+- Update the JetBrains CLI pin from Kilo Core 7.4.5 to 7.4.11.
 
 ## [7.0.7] - 2026-07-15
 

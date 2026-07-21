@@ -1037,7 +1037,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             reject = { _ -> },
         )
         val p = PermissionView(
-            reply = { _, _ -> },
+            reply = { _, _, _ -> },
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
         return SessionMessageListPanel(model, parent, q, p, l, openFile)

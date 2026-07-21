@@ -1124,7 +1124,7 @@ function McpTool(props: ToolProps) {
         if (typeof value === "boolean") return [`${key}=${value}`]
         return []
       })
-      .slice(0, 3)
+      .slice(0, 1)
   }
 
   const formatted = createMemo(() => {

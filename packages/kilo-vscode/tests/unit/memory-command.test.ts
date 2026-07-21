@@ -4,7 +4,7 @@ import { parseMemoryCommand, type ParsedMemoryCommand } from "../../webview-ui/s
 type MemoryOperation =
   | "enable"
   | "status"
-  | "edit"
+  | "inspect"
   | "disable"
   | "rebuild"
   | "remember"
@@ -12,7 +12,6 @@ type MemoryOperation =
   | "forget"
   | "purge"
   | "auto"
-  | "verbose"
 type Case = {
   name: string
   input: string
@@ -43,7 +42,7 @@ function expected(item: Case): ParsedMemoryCommand | undefined {
     if (!item.query) throw new Error(`Missing query for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, query: item.query }
   }
-  if (item.operation === "auto" || item.operation === "verbose") {
+  if (item.operation === "auto") {
     if (!item.mode) throw new Error(`Missing mode for fixture: ${item.name}`)
     return { kind: "operation", operation: item.operation, mode: item.mode }
   }

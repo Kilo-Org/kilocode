@@ -130,6 +130,8 @@ export const dict = {
     "Sonuçları karşılaştırmak için agent'ları paralel olarak farklı modellerde çalıştırın",
   "agentManager.dialog.compareModels.searchModels": "Modelleri ara...",
   "agentManager.dialog.compareModels.selectModels": "Modelleri seç...",
+  "agentManager.dialog.compareModels.effort": "Akıl yürütme çabası",
+  "agentManager.dialog.compareModels.effortDefault": "Varsayılan",
   "agentManager.dialog.creating": "Oluşturuluyor...",
   "agentManager.dialog.createWorktree": "Worktree Oluştur",
   "agentManager.dialog.removeImage": "Görüntüyü kaldır",
