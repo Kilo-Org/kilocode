@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@opencode-ai/tui",
-  "version": "7.4.11",
+  "version": "7.4.13",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -69,6 +69,5 @@
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
     "@typescript/native-preview": "catalog:"
-  },
-  "peerDependencies": {}
+  }
 }

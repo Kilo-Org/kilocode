@@ -1,5 +1,46 @@
 # kilo-code
 
+## 7.4.13
+
+### Minor Changes
+
+- [#12271](https://github.com/Kilo-Org/kilocode/pull/12271) [`38013f7`](https://github.com/Kilo-Org/kilocode/commit/38013f70fad82f55b9ebe02d8d6883a26d791934) - Allow agents to stop and remove a targeted Agent Manager session.
+
+- [#12401](https://github.com/Kilo-Org/kilocode/pull/12401) [`210a6bb`](https://github.com/Kilo-Org/kilocode/commit/210a6bbf9b89b30b408d744cf0f253482370eed6) - Support choosing a reasoning effort per model in the Agent Manager Compare Models picker, so compared worktrees can run the same prompt at different effort levels. The selected effort is shown next to the model name in the collapsed selector.
+
+- [#12306](https://github.com/Kilo-Org/kilocode/pull/12306) [`c081f58`](https://github.com/Kilo-Org/kilocode/commit/c081f582abecaba98a303069140d014a9ee90ca9) - Configure a custom file extension allowlist for codebase indexing to limit scans to relevant project files and support additional text formats.
+
+- [#12292](https://github.com/Kilo-Org/kilocode/pull/12292) [`6dcaeb3`](https://github.com/Kilo-Org/kilocode/commit/6dcaeb3e97f256e9e98d5093610a0a02aedf84de) - Add JetBrains Context settings for compaction and file watcher ignore patterns.
+
+- [#12403](https://github.com/Kilo-Org/kilocode/pull/12403) [`5819c68`](https://github.com/Kilo-Org/kilocode/commit/5819c689961ccf61f510896c5477a96e9d2a3459) - Cycle reasoning effort variants with Shift+Tab in prompt inputs. Works in the sidebar chat, Agent Manager, and the New Worktree dialog. The variant selector tooltip shows the shortcut on hover, and the behavior can be turned off with the `kilo-code.new.chat.shiftTabCyclesVariant` setting (also available under Settings > Display) to restore Shift+Tab focus navigation.
+
+### Patch Changes
+
+- [#12301](https://github.com/Kilo-Org/kilocode/pull/12301) [`d854c10`](https://github.com/Kilo-Org/kilocode/commit/d854c1077da0b55afe454c86b43c3240cdac053c) - Respect the Terminal Command Blocks display setting for background process tool cards.
+
+- [#12304](https://github.com/Kilo-Org/kilocode/pull/12304) [`79fe757`](https://github.com/Kilo-Org/kilocode/commit/79fe75745fc6abd7bd3aad0c079e8f5150751a2c) - Display here-document content as plain text in terminal approval prompts.
+
+- [#11944](https://github.com/Kilo-Org/kilocode/pull/11944) [`f857248`](https://github.com/Kilo-Org/kilocode/commit/f85724830c6483d22368d3ad75d12639e1488733) Thanks [@mjnaderi](https://github.com/mjnaderi)! - Support bidirectional text in chat messages so right-to-left and mixed-language conversations render in the correct direction.
+
+- [#12302](https://github.com/Kilo-Org/kilocode/pull/12302) [`ad66c90`](https://github.com/Kilo-Org/kilocode/commit/ad66c908a4bec5f29e6d83fa9efbd1f6cc2cd416) - Clarify when reverting a conversation does not restore workspace changes and link disabled snapshots to the Checkpoints setting.
+
+- [#12279](https://github.com/Kilo-Org/kilocode/pull/12279) [`6ce16e7`](https://github.com/Kilo-Org/kilocode/commit/6ce16e7cae1c58b545d5eaf00f1c6c44830e22e6) - Open the Agent Manager new-worktree dialog from primary actions and keyboard shortcuts, with an explicit quick-create action in its dropdown.
+
+- [#12415](https://github.com/Kilo-Org/kilocode/pull/12415) [`a695930`](https://github.com/Kilo-Org/kilocode/commit/a695930d792ce3882cf3d7231ebc9be0e2adfa13) - Fix diff content painting through and above the sticky headers of expanded Edit, Write, and Apply Patch tool cards when scrolling large diffs.
+
+- [#12213](https://github.com/Kilo-Org/kilocode/pull/12213) [`55fe160`](https://github.com/Kilo-Org/kilocode/commit/55fe1608fb24705258232665f1adfff0b4227e24) - Keep sessions usable after deprecated local review commands complete without a session status transition.
+
+- [#12378](https://github.com/Kilo-Org/kilocode/pull/12378) [`b402cc2`](https://github.com/Kilo-Org/kilocode/commit/b402cc2635c1dae836a684f9d7a981c05491a930) - Include image-output models in the Kilo Gateway chat model list.
+
+- [#12401](https://github.com/Kilo-Org/kilocode/pull/12401) [`210a6bb`](https://github.com/Kilo-Org/kilocode/commit/210a6bbf9b89b30b408d744cf0f253482370eed6) - Fix double scrollbars in the Agent Manager new-worktree prompt field and widen the dialog so longer prompts stay readable. The prompt box now grows with its content like the sidebar chat input, the textarea is the only element that scrolls, and manual resize of the prompt area keeps working.
+
+- Updated dependencies [[`084bcea`](https://github.com/Kilo-Org/kilocode/commit/084bceadaedf193568ccf71256bd299c0d11e90c), [`c081f58`](https://github.com/Kilo-Org/kilocode/commit/c081f582abecaba98a303069140d014a9ee90ca9), [`ff703fb`](https://github.com/Kilo-Org/kilocode/commit/ff703fba621e35a4a5d8e4801620502228cca5bf)]:
+  - @kilocode/kilo-gateway@7.4.12
+  - @kilocode/kilo-indexing@7.5.0
+  - @opencode-ai/core@7.4.12
+  - @kilocode/kilo-ui@7.4.12
+  - @opencode-ai/ui@7.4.12
+
 ## 7.4.11
 
 ### Minor Changes

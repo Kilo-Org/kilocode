@@ -820,11 +820,13 @@ class KiloBackendAppService private constructor(
                             }
                         }
                         "global.disposed" -> {
+                            logSessionDisposalRisk("global.disposed")
                             log.info("SSE global.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
                         }
                         "server.instance.disposed" -> {
+                            logSessionDisposalRisk("server.instance.disposed")
                             log.info("SSE server.instance.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
@@ -833,6 +835,12 @@ class KiloBackendAppService private constructor(
                 }
             }
         }
+    }
+
+    private fun logSessionDisposalRisk(event: String) {
+        val active = sessions.statuses.value.filterValues { it.type != "idle" }
+        if (active.isEmpty()) return
+        log.warn("SSE $event while sessions are active; sessions may be cancelled count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
     }
 
     private suspend fun clear() {

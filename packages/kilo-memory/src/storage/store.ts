@@ -27,6 +27,7 @@ export namespace MemoryFiles {
   export const indexExpired = MemoryState.indexExpired
   export const scaffold = MemoryState.scaffold
   export const owned = MemoryState.owned
+  export const cleanup = MemoryState.cleanup
 
   export const writeSession = MemorySessions.writeSession
   export const readSession = MemorySessions.readSession

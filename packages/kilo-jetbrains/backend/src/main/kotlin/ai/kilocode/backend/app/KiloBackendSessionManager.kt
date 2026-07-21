@@ -86,6 +86,10 @@ class KiloBackendSessionManager(
     }
 
     fun stop() {
+        val active = _statuses.value.filterValues { it.type != "idle" }
+        if (active.isNotEmpty()) {
+            log.warn("Session manager stopping with active sessions count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
+        }
         watcher?.cancel()
         watcher = null
         client = null

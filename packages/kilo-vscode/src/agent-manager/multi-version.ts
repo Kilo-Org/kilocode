@@ -4,11 +4,13 @@ export interface ModelAllocation {
   providerID: string
   modelID: string
   count: number
+  variant?: string
 }
 
 interface ModelRef {
   providerID: string
   modelID: string
+  variant?: string
 }
 
 /**
@@ -32,7 +34,7 @@ export function resolveVersionModels(
     for (const alloc of allocations) {
       const clamped = Math.min(Math.max(Math.floor(alloc.count) || 0, 0), MAX_MULTI_VERSIONS)
       for (let c = 0; c < clamped; c++) {
-        models.push({ providerID: alloc.providerID, modelID: alloc.modelID })
+        models.push({ providerID: alloc.providerID, modelID: alloc.modelID, variant: alloc.variant })
       }
       if (models.length >= MAX_MULTI_VERSIONS) break
     }
@@ -98,7 +100,8 @@ export function buildInitialMessages(
     if (prompt) {
       msg.text = prompt
       msg.agent = agent
-      msg.variant = variant
+      // A per-allocation effort pick wins over the dialog-level variant.
+      msg.variant = model?.variant ?? variant
       msg.files = files
     }
     return msg
