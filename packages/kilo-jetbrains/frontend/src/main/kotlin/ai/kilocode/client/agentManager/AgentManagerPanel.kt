@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeRenderer
 import ai.kilocode.client.plugin.KiloBundle
@@ -59,14 +60,16 @@ class AgentManagerPanel(
 
     fun refresh() = controller.reload()
 
-    fun requestCreate() {
-        val name = Messages.showInputDialog(
-            this,
-            KiloBundle.message("worktree.create.prompt"),
-            KiloBundle.message("worktree.create.title"),
-            null,
-        )?.trim().orEmpty()
-        if (name.isNotEmpty()) controller.create(name, null)
+    /** Branch shown in the quick "New Worktree from …" menu item. */
+    fun defaultBranch(): String = controller.defaultBranch
+
+    /** Immediately creates a worktree with a generated friendly name off [defaultBranch]. */
+    fun quickCreate() = controller.quickCreate()
+
+    /** Opens the advanced dialog to pick a branch name and base branch. */
+    fun configure() {
+        val dialog = ConfigureWorktreeDialog(this, controller.defaultBranch)
+        if (dialog.showAndGet()) controller.create(dialog.branch, dialog.baseBranch)
     }
 
     private fun confirm(item: WorktreeDto) {

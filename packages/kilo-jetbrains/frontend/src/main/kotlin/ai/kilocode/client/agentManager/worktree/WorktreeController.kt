@@ -20,14 +20,27 @@ class WorktreeController(
 ) {
     val model = CollectionListModel<WorktreeDto>()
 
+    /** Branch checked out in the main worktree; used as the base for quick worktree creation. */
+    @Volatile
+    var defaultBranch: String = "main"
+        private set
+
     fun reload() {
         cs.launch {
             val result = service.list(directory)
             edt {
                 model.replaceAll(result.worktrees)
+                defaultBranch = result.worktrees.firstOrNull { it.main }?.branch
+                    ?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
                 telemetry("Worktree List Loaded", mapOf("count" to result.worktrees.size.toString()))
             }
         }
+    }
+
+    /** Creates a worktree immediately with a generated friendly name, based on [defaultBranch]. */
+    fun quickCreate() {
+        val taken = (0 until model.size).mapTo(HashSet()) { model.getElementAt(it).branch }
+        create(WorktreeNames.generate(taken), defaultBranch)
     }
 
     fun create(branch: String, base: String?) {

@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeNames
 import ai.kilocode.client.agentManager.worktree.WorktreeRenderer
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
@@ -68,6 +69,42 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
         assertEquals(listOf(Triple("/test", item.path, "feature/x")), rpc.removes.toList())
         assertEquals(0, controller.model.size)
+    }
+
+    fun `test reload derives default branch from the main worktree`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "trunk", "/repo", main = true)
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val controller = controller()
+
+        controller.reload()
+        flush()
+
+        assertEquals("trunk", controller.defaultBranch)
+    }
+
+    fun `test quick create generates a friendly name based on the default branch`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "trunk", "/repo", main = true)
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        controller.quickCreate()
+        flush()
+
+        assertEquals(1, rpc.creates.size)
+        val req = rpc.creates.first()
+        assertEquals("trunk", req.baseBranch)
+        assertTrue("generated '${req.branch}'", req.branch.matches(Regex("[a-z]+-[a-z]+(-\\d+)?")))
+        assertEquals(2, controller.model.size)
+    }
+
+    fun `test name generator avoids taken names`() {
+        val taken = setOf("ambitious-keyboard", "brave-otter")
+        repeat(50) {
+            val name = WorktreeNames.generate(taken)
+            assertFalse(name in taken)
+            assertTrue("generated '$name'", name.matches(Regex("[a-z]+-[a-z]+(-\\d+)?")))
+        }
     }
 
     fun `test renderer shows delete icon only when selected and not main`() {
