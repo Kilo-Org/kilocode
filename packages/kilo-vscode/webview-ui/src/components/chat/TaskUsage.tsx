@@ -11,6 +11,10 @@ import { formatCompactCount } from "../../utils/format"
 interface TaskUsageProps {
   tokens: TokenSummary
   usage?: SessionModelUsage
+  /** Aggregated text-generation rate (tokens/sec) for the session.
+   *  Renders inline in the summary row when defined, matching the existing
+   *  token-value spans so the row reads as one line of secondary info. */
+  throughput?: number
   defaultOpen?: boolean
 }
 
@@ -18,6 +22,11 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
   const language = useLanguage()
   const provider = useProvider()
   const groups = createMemo(() => groupModelUsage(props.usage?.models ?? [], provider.providers()))
+  const tgText = createMemo(() => {
+    const v = props.throughput
+    if (v === undefined || !Number.isFinite(v) || v <= 0) return undefined
+    return `${new Intl.NumberFormat(language.locale(), { maximumFractionDigits: 1 }).format(v)} t/s`
+  })
   const money = createMemo(
     () =>
       new Intl.NumberFormat(language.locale(), {
@@ -61,6 +70,9 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
           <Icon name="arrow-down-to-line" size="small" />
           {number(props.tokens.output)}
         </span>
+      </Show>
+      <Show when={tgText()}>
+        <span class="task-header-tokens-value">TG {tgText()}</span>
       </Show>
     </>
   )

@@ -166,10 +166,12 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
   )
 }
 
-/** Compact tokens-per-second badge shown beneath the last assistant message.
+/** Compact tokens-per-second line shown beneath the last assistant message.
  * Only renders when the user has opted in via the
  * `kilo-code.new.showTokenThroughput` setting and the message has a
- * step-finish part that carries throughput metrics. */
+ * step-finish part that carries throughput metrics. Renders as plain text
+ * that matches the description-foreground tone of the Tokens row in the
+ * task header — no pill, no border. */
 function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof messageMetrics>> }) {
   const language = useLanguage()
   const tgText = createMemo(() => formatTG(props.metrics.generation, language.locale()))

@@ -237,13 +237,15 @@
 }
 
 [data-component="assistant-throughput-badge"] {
-  align-self: flex-start;
+  /* Plain-text throughput display — matches the muted descriptionForeground
+   * the Tokens row uses so the two read as the same family of secondary
+   * info. No pill, no border, no background; just text. */
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: var(--vscode-descriptionForeground);
-  font-family: var(--font-family-sans);
-  font-size: var(--font-size-small);
+font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-11);
   line-height: var(--line-height-normal);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

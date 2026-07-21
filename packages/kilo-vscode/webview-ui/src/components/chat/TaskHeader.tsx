@@ -375,14 +375,13 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
           <div data-slot="task-header-graph-row">
             <ContextProgress />
           </div>
-          <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
-          <Show when={throughputVisible() && throughputText()}>
-            {(t) => (
-              <Tooltip value={throughputTooltip() ?? ""} placement="bottom">
-                <div data-slot="task-header-throughput">
-                  {t().label}
-                </div>
-              </Tooltip>
+          <Show when={tokens()}>
+            {(tk) => (
+              <TaskUsage
+                tokens={tk()}
+                usage={session.modelUsage()}
+                throughput={throughputVisible() ? throughput()?.generation : undefined}
+              />
             )}
           </Show>
         </div>
