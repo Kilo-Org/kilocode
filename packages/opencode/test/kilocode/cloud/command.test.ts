@@ -188,8 +188,8 @@ it.instance(
               }),
               streamAgentEvents: async (options) => {
                 streamCalls.push(options.streamUrl)
-                options.writeLine('{"event":"one"}')
-                options.writeLine('{"streamEventType":"complete","data":{"exitCode":0}}')
+                await options.writeLine('{"event":"one"}')
+                await options.writeLine('{"streamEventType":"complete","data":{"exitCode":0}}')
               },
               write: (text) => output.push(text),
             },
@@ -277,7 +277,7 @@ it.instance(
               }),
               streamAgentEvents: async (options) => {
                 streamCalls.push(options.streamUrl)
-                options.writeLine('{"event":"derived"}')
+                await options.writeLine('{"event":"derived"}')
               },
               write: (text) => output.push(text),
             },

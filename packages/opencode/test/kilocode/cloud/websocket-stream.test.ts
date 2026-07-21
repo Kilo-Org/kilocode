@@ -51,7 +51,9 @@ describe("streamAgentEvents", () => {
     await streamAgentEvents({
       streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
       origin: "https://agent.example",
-      writeLine: (line) => lines.push(line),
+      writeLine: (line) => {
+        lines.push(line)
+      },
       WebSocket: Socket as unknown as typeof WebSocket,
     })
 
@@ -168,7 +170,9 @@ describe("streamAgentEvents", () => {
     await streamAgentEvents({
       streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
       origin: "https://agent.example",
-      writeLine: (line) => lines.push(line),
+      writeLine: (line) => {
+        lines.push(line)
+      },
       WebSocket: Socket as unknown as typeof WebSocket,
     })
 
@@ -176,4 +180,63 @@ describe("streamAgentEvents", () => {
     expect(codes).toEqual([1000])
     expect(lines).toEqual(['{"event":"running"}', '{"streamEventType":"complete","data":{"exitCode":0}}'])
   }, 10_000)
+
+  test("flushes slow writes in order before resolving", async () => {
+    const lines: string[] = []
+    const Socket = mockWebSocket([
+      { type: "message", data: '{"event":"one"}' },
+      { type: "message", data: '{"event":"two"}' },
+      { type: "close" },
+    ])
+
+    await streamAgentEvents({
+      streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
+      origin: "https://agent.example",
+      writeLine: async (line) => {
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        lines.push(line)
+      },
+      WebSocket: Socket as unknown as typeof WebSocket,
+    })
+
+    expect(lines).toEqual(['{"event":"one"}', '{"event":"two"}'])
+  })
+
+  test("rejects when a stream output write fails", async () => {
+    const lines: string[] = []
+    const Socket = mockWebSocket([
+      { type: "message", data: '{"event":"one"}' },
+      { type: "message", data: '{"event":"two"}' },
+      { type: "close" },
+    ])
+
+    await expect(
+      streamAgentEvents({
+        streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
+        origin: "https://agent.example",
+        writeLine: (line) => {
+          if (lines.length > 0) throw new Error("EPIPE")
+          lines.push(line)
+        },
+        WebSocket: Socket as unknown as typeof WebSocket,
+      }),
+    ).rejects.toThrow("WebSocket stream output failed")
+    expect(lines).toEqual(['{"event":"one"}'])
+  })
+
+  test("rejects when queued stream output exceeds the memory bound", async () => {
+    const line = "x".repeat(1024)
+    const Socket = mockWebSocket(
+      Array.from({ length: 9000 }, () => ({ type: "message" as const, data: line })),
+    )
+
+    await expect(
+      streamAgentEvents({
+        streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
+        origin: "https://agent.example",
+        writeLine: () => new Promise(() => {}),
+        WebSocket: Socket as unknown as typeof WebSocket,
+      }),
+    ).rejects.toThrow("WebSocket stream output consumer is too slow")
+  })
 })

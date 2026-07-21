@@ -3,11 +3,14 @@ import { CloudError } from "./errors"
 const COMPLETE_GRACE_PERIOD_MS = 3000
 const DEFAULT_STREAM_TIMEOUT_MS = 30_000
 const CLOSE_TIMEOUT_MS = 1000
+// Measured via text.length (UTF-16 units), so queued string memory can reach
+// roughly twice this for non-Latin-1 payloads; the goal is boundedness, not precision.
+const MAX_QUEUED_BYTES = 8 * 1024 * 1024
 
 export interface StreamAgentEventsOptions {
   readonly streamUrl: string
   readonly origin: string
-  readonly writeLine: (line: string) => void
+  readonly writeLine: (line: string) => void | Promise<void>
   readonly WebSocket?: typeof WebSocket | undefined
   readonly timeoutMs?: number
 }
@@ -30,6 +33,9 @@ export function streamAgentEvents(options: StreamAgentEventsOptions): Promise<vo
     let completeTimer: ReturnType<typeof setTimeout> | undefined
     let closeTimer: ReturnType<typeof setTimeout> | undefined
     let idleTimer: ReturnType<typeof setTimeout> | undefined
+    let pending: Promise<void> = Promise.resolve()
+    let queued = 0
+    let writeError = false
 
     function clear() {
       if (completeTimer !== undefined) {
@@ -48,10 +54,15 @@ export function streamAgentEvents(options: StreamAgentEventsOptions): Promise<vo
 
     function finish() {
       clear()
-      if (!settled) {
-        settled = true
+      if (settled) return
+      settled = true
+      void pending.then(() => {
+        if (writeError) {
+          reject(new CloudError("WebSocket stream output failed"))
+          return
+        }
         resolve()
-      }
+      })
     }
 
     function fail(message: string) {
@@ -83,8 +94,22 @@ export function streamAgentEvents(options: StreamAgentEventsOptions): Promise<vo
 
     socket.onmessage = (event: MessageEvent) => {
       arm()
+      if (settled) return
       const text = normalizeMessageData(event.data)
-      options.writeLine(text)
+      if (queued >= MAX_QUEUED_BYTES) {
+        fail("WebSocket stream output consumer is too slow")
+        return
+      }
+      queued += text.length
+      pending = pending
+        .then(() => options.writeLine(text))
+        .catch(() => {
+          writeError = true
+          fail("WebSocket stream output failed")
+        })
+        .finally(() => {
+          queued -= text.length
+        })
       if (isCompleteEvent(text) && completeTimer === undefined) {
         completeTimer = setTimeout(initiateClose, COMPLETE_GRACE_PERIOD_MS)
       }

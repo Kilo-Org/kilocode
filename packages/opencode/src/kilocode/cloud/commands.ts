@@ -107,14 +107,16 @@ export namespace CloudCommands {
     })
   }
 
-  function writeLine(text: string, deps: Deps) {
+  async function writeLine(text: string, deps: Deps) {
     const line = `${text}\n`
     const write = deps.write
     if (write) {
-      write(line)
+      await write(line)
       return
     }
-    process.stdout.write(line)
+    await new Promise<void>((resolve, reject) => {
+      process.stdout.write(line, (error) => (error ? reject(error) : resolve()))
+    })
   }
 
   function notice(error: unknown, deps: Deps) {
