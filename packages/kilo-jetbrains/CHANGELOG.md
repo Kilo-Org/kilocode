@@ -70,6 +70,26 @@
 
 ## [Unreleased]
 
+## [7.0.9] - 2026-07-21
+
+### Added
+- feat(jetbrains): add Rules settings page; pin CLI to v7.4.13 by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12437
+
+### Fixed
+- fix(vscode): enforce unfiltered webview typechecks by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12402
+- fix(sandbox): tolerate unreadable directories during Linux writable-root scan by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12414
+- fix(gateway): optimistically assume tools support when supported_parameters is missing by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12426
+- fix(cli): allow openrouter models in routed model resolution by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12430
+- fix(script): add worktree mode to annotation check by @mjnaderi in https://github.com/Kilo-Org/kilocode/pull/11842
+- fix: improve xai cache hit rate by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12427
+- fix(cli): prevent stalled agent streams by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12249
+- fix(cli): re-land stalled-stream watchdog with post-v1.17.4 test wiring by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12438
+
+### Changed
+- release(jetbrains): v7.0.8 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12429
+- chore(ci): trim darwin test profile by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12405
+
+
 ## [7.0.8] - 2026-07-21
 
 ### Added
