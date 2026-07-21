@@ -63,9 +63,9 @@ currently disabled, so the audit did not rely on that pass alone.
 
 ## Notable Non-Findings
 
-- No added OpenCode web-property URL or legacy `sst/opencode` /
-  `anomalyco/opencode` repository link was found in merge-added lines after
-  excluding explicit upstream context and package/type namespaces.
+- No added OpenCode web-property URL or legacy repository link (the old
+  upstream org path or `anomalyco/opencode`) was found in merge-added lines
+  after excluding explicit upstream context and package/type namespaces.
 - No added match was found in the changed `packages/kilo-docs/`,
   `packages/opencode/src/cli/cmd/tui/`, `packages/opencode/src/server/`,
   `packages/sdk/openapi.json`, `packages/sdk/js/src/v2/gen/`, `packages/ui/`,
