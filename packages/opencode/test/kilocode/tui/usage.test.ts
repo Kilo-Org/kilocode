@@ -6,7 +6,7 @@ import {
   throughputLabel,
 } from "../../../src/kilocode/plugins/model-usage"
 
-const step = (metrics: { prompt?: number; generation?: number }) => ({
+const step = (metrics: { generation?: number }) => ({
   metrics: { source: "computed" as const, ...metrics },
   generated: 0,
 })
@@ -27,8 +27,7 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
     expect(formatRateValue(Infinity)).toBe("-")
   })
 
-  test("throughputLabel centralizes the PP/TG labels so a future i18n sweep is one file", () => {
-    expect(throughputLabel.prompt).toBe("PP")
+  test("throughputLabel centralizes the TG label so a future i18n sweep is one file", () => {
     expect(throughputLabel.generation).toBe("TG")
   })
 
@@ -38,24 +37,6 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
       { ...step({ generation: 60 }), generated: 300 },
     ])
     expect(aggregated.generation).toBeCloseTo((20 * 100 + 60 * 300) / (100 + 300))
-  })
-
-  test("aggregates prompt and generation independently", () => {
-    const aggregated = aggregateMetrics([
-      { ...step({ prompt: 1000, generation: 20 }), generated: 100 },
-      { ...step({ prompt: 500, generation: 60 }), generated: 300 },
-    ])
-    expect(aggregated.prompt).toBeCloseTo((1000 + 500) / 2)
-    expect(aggregated.generation).toBeCloseTo((20 * 100 + 60 * 300) / 400)
-  })
-
-  test("includes prompt from a zero-generated step so it isn't silently dropped", () => {
-    const aggregated = aggregateMetrics([
-      { ...step({ prompt: 9999, generation: 9999 }), generated: 0 },
-      { ...step({ generation: 25 }), generated: 50 },
-    ])
-    expect(aggregated.prompt).toBe(9999)
-    expect(aggregated.generation).toBe(25)
   })
 
   test("skips samples without metrics", () => {
@@ -92,6 +73,5 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
     expect(hasMetrics(undefined)).toBeFalse()
     expect(hasMetrics({})).toBeFalse()
     expect(hasMetrics({ generation: 12 })).toBeTrue()
-    expect(hasMetrics({ prompt: 12 })).toBeTrue()
   })
 })

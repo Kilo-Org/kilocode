@@ -4,7 +4,7 @@ export type SessionModelUsage = KilocodeSessionModelUsageResponse
 export type UsageResult = { sessionID: string; data?: SessionModelUsage }
 
 export type StepMetrics = NonNullable<StepFinishPart["metrics"]>
-export type AggregatedMetrics = { prompt?: number; generation?: number }
+export type AggregatedMetrics = { generation?: number }
 
 export function select(result: UsageResult | undefined, sessionID: string) {
   if (result?.sessionID !== sessionID) return undefined
@@ -73,11 +73,15 @@ export function formatRateValue(value: number | undefined) {
   return `${throughput.format(value as number)} t/s`
 }
 
-// Throughput labels used by the sidebar / usage panel. Centralized here so a
+// Throughput label used by the sidebar / usage panel. Centralized here so a
 // future i18n sweep only touches one file — the opencode CLI does not yet
-// wire a translation layer, so today these are literal English labels.
+// wire a translation layer, so today this is a literal English label.
+// PP (prompt-processing) is intentionally omitted: llama.cpp's
+// `prompt_per_second` is dropped upstream by the AI SDK adapter before it
+// reaches providerMetadata, so the current build can only emit the
+// generation rate. The PP row lands alongside TG once the upstream
+// metadataExtractor wiring ships.
 export const throughputLabel = {
-  prompt: "PP",
   generation: "TG",
 } as const
 
@@ -88,42 +92,29 @@ export function formatCost(input: number) {
 
 // Local aggregation of step-finish metrics for the sidebar/usage panel.
 //
-// We weight the *generation* rate by generated tokens (longer generations
-// pull the average toward their own reported rate). The *prompt* rate comes
-// from llama.cpp's `prompt_per_second`, which is a property of the timing
-// not the generated output — when a step finishes before tokens are
-// emitted (e.g. a tool-only step) the per-step generated count is zero and
-// a generated-weighted average would silently drop that step. We fall back
-// to a simple mean over the steps that did report a positive prompt rate
-// so a zero-weight step still contributes.
+// We weight the *generation* rate by generated tokens so longer generations
+// pull the average toward their own reported rate. Steps with no generated
+// output (e.g. tool-only steps) contribute nothing to the weighted average.
 export function aggregateMetrics(
   samples: ReadonlyArray<{ metrics?: StepMetrics; generated: number }>,
 ): AggregatedMetrics {
-  let promptSum = 0
-  let promptCount = 0
   let generationSum = 0
   let generationWeight = 0
   for (const sample of samples) {
     const metrics = sample.metrics
     if (!metrics) continue
-    if (Number.isFinite(metrics.prompt) && (metrics.prompt as number) > 0) {
-      promptSum += metrics.prompt as number
-      promptCount += 1
-    }
     const generated = sample.generated
     if (Number.isFinite(metrics.generation) && (metrics.generation as number) > 0 && generated > 0) {
       generationSum += (metrics.generation as number) * generated
       generationWeight += generated
     }
   }
-  const prompt = promptCount > 0 ? promptSum / promptCount : undefined
   const generation = generationWeight > 0 ? generationSum / generationWeight : undefined
   return {
-    ...(prompt !== undefined ? { prompt } : {}),
     ...(generation !== undefined ? { generation } : {}),
   }
 }
 
 export function hasMetrics(value: AggregatedMetrics | undefined): value is AggregatedMetrics {
-  return value !== undefined && (value.prompt !== undefined || value.generation !== undefined)
+  return value !== undefined && value.generation !== undefined
 }

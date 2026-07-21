@@ -6,7 +6,6 @@ import {
   calcTokenUsage,
   aggregateMetrics,
   messageMetrics,
-  formatPP,
   formatTG,
   buildFamilyCosts,
   buildFamilyParents,
@@ -748,21 +747,20 @@ describe("aggregateMetrics", () => {
       { type: "text", id: "t1", text: "mid" },
       stepFinish("f2", { prompt: 412, generation: 38, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ prompt: 100, generation: 20, source: "computed" })
+    expect(aggregateMetrics(parts)).toEqual({ generation: 20, source: "computed" })
   })
 
-  it("keeps the first computed sample for each field when later steps report zero", () => {
+  it("keeps the first computed sample when later steps report zero", () => {
     const parts: Part[] = [
       stepFinish("f1", { prompt: 500, generation: 50, source: "computed" }),
       stepFinish("f2", { generation: 30, source: "computed" }),
     ]
     const result = aggregateMetrics(parts)
     expect(result?.source).toBe("computed")
-    expect(result?.prompt).toBe(500)
     expect(result?.generation).toBe(50)
   })
 
-  it("uses the first computed value per field when no earlier value is present", () => {
+  it("uses the first computed value when no earlier value is present", () => {
     const parts: Part[] = [
       stepFinish("f1", { generation: 12, source: "computed" }),
       stepFinish("f2", { generation: 18, source: "computed" }),
@@ -775,18 +773,18 @@ describe("aggregateMetrics", () => {
       { type: "text", id: "t1", text: "noise" },
       stepFinish("f1", { prompt: 200, generation: 22, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ prompt: 200, generation: 22, source: "computed" })
+    expect(aggregateMetrics(parts)).toEqual({ generation: 22, source: "computed" })
   })
 
-  it("combines multi-step metrics into a single snapshot per message", () => {
+  it("merges multi-step metrics into a single snapshot per message", () => {
     // An assistant turn that runs reasoning + answer produces two step-finish
-    // parts; the badge should merge them so a prompt sample from the first
-    // step and a generation sample from the second coexist in the snapshot.
+    // parts; the badge should merge them so the generation rate from the
+    // final step wins.
     const parts: Part[] = [
-      stepFinish("f1", { prompt: 200, source: "computed" }),
-      stepFinish("f2", { generation: 25, source: "computed" }),
+      stepFinish("f1", { generation: 25, source: "computed" }),
+      stepFinish("f2", { generation: 12, source: "computed" }),
     ]
-    expect(messageMetrics(parts)).toEqual({ prompt: 200, generation: 25, source: "computed" })
+    expect(messageMetrics(parts)).toEqual({ generation: 25, source: "computed" })
   })
 })
 
@@ -809,16 +807,15 @@ describe("throughput formatters", () => {
   const locale = "en-US"
 
   it("renders the value with a t/s suffix", () => {
-    expect(formatPP(412, locale)).toBe("412 t/s")
+    expect(formatTG(412, locale)).toBe("412 t/s")
     expect(formatTG(28.7, locale)).toBe("28.7 t/s")
   })
 
   it("falls back to dash for missing or bogus values", () => {
-    expect(formatPP(undefined, locale)).toBe("–")
-    expect(formatPP(0, locale)).toBe("–")
-    expect(formatPP(-5, locale)).toBe("–")
-    expect(formatPP(Number.NaN, locale)).toBe("–")
-    expect(formatPP(Number.POSITIVE_INFINITY, locale)).toBe("–")
     expect(formatTG(undefined, locale)).toBe("–")
+    expect(formatTG(0, locale)).toBe("–")
+    expect(formatTG(-5, locale)).toBe("–")
+    expect(formatTG(Number.NaN, locale)).toBe("–")
+    expect(formatTG(Number.POSITIVE_INFINITY, locale)).toBe("–")
   })
 })

@@ -210,31 +210,31 @@ export function calcTokenUsage(
  *
  * Combines every step-finish that carries a `metrics` block so the header
  * reflects all of the assistant's reasoning + answer steps, not just the last
- * one. Each field adopts the first non-empty sample we see — that gives a
+ * one. Generation adopts the first non-empty sample we see — that gives a
  * stable "snapshot" view of the session pace that won't double-count when
- * later steps report zero on a particular field.
+ * later steps report zero.
+ *
+ * PP (prompt-processing) is intentionally not aggregated here: the AI SDK
+ * adapter drops llama.cpp's `prompt_per_second` before providerMetadata
+ * reaches computeMetrics, so the wire shape stays `{ prompt?, generation? }`
+ * for future use but only `generation` is populated today. PP support lands
+ * when the upstream metadataExtractor wiring ships.
  *
  * Returns `undefined` when no step-finish part in the input carries metrics,
  * which is the signal callers use to hide the throughput UI.
  */
 export function aggregateMetrics(
   parts: readonly Part[],
-): { prompt?: number; generation?: number; source: "computed" } | undefined {
-  let prompt: number | undefined
+): { generation?: number; source: "computed" } | undefined {
   let generation: number | undefined
   for (const part of parts) {
     if (part.type !== "step-finish") continue
     const metrics = part.metrics
     if (!metrics) continue
-    if (metrics.prompt !== undefined && prompt === undefined) prompt = metrics.prompt
     if (metrics.generation !== undefined && generation === undefined) generation = metrics.generation
   }
-  if (prompt === undefined && generation === undefined) return undefined
-  return {
-    ...(prompt !== undefined ? { prompt } : {}),
-    ...(generation !== undefined ? { generation } : {}),
-    source: "computed",
-  }
+  if (generation === undefined) return undefined
+  return { generation, source: "computed" }
 }
 
 /**
@@ -244,25 +244,20 @@ export function aggregateMetrics(
  */
 export function messageMetrics(
   parts: readonly Part[],
-): { prompt?: number; generation?: number; source: "computed" } | undefined {
+): { generation?: number; source: "computed" } | undefined {
   return aggregateMetrics(parts)
 }
 
 /**
- * Format a throughput rate (prompt or generation) for display. Shared by
- * every rendering site so the same value reads the same in the per-message
- * badge and the aggregated header row.
+ * Format a text-generation rate for display. Shared by every rendering site
+ * so the same value reads the same in the per-message badge and the
+ * aggregated header row.
  */
 function formatRateValue(value: number | undefined, locale: string): string {
   if (!Number.isFinite(value) || value === undefined || value <= 0) return "–"
   return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(value)} t/s`
 }
 
-// Convenience labels: PP for prompt, TG for generation. Both delegate to the
-// shared formatter — the label is owned by the rendering site, not by us.
-export function formatPP(value: number | undefined, locale: string) {
-  return formatRateValue(value, locale)
-}
 export function formatTG(value: number | undefined, locale: string) {
   return formatRateValue(value, locale)
 }

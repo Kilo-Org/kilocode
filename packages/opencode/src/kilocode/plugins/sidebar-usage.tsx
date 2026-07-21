@@ -122,7 +122,6 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                 <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
                 <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
                 <Show when={hasMetrics(throughput())}>
-                  <Row label={throughputLabel.prompt} value={formatRateValue(throughput().prompt)} />
                   <Row label={throughputLabel.generation} value={formatRateValue(throughput().generation)} />
                 </Show>
                 <Row label="Cost" value={formatCost(data().totals.cost)} />

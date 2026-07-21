@@ -3,4 +3,4 @@
 "@kilocode/sdk": minor
 ---
 
-Show tokens-per-second throughput (PP prompt-processing and TG text-generation) on each assistant message and in the usage sidebar, when the provider supplies timing data or the step took a measurable amount of time.
+Show tokens-per-second text-generation throughput (TG) on each assistant message and in the usage sidebar, computed from step duration and tokens. The toggle "Show Token Throughput" in Display settings controls both surfaces. PP (prompt-processing) support lands in a follow-up once the upstream llama.cpp metadata wiring ships.
