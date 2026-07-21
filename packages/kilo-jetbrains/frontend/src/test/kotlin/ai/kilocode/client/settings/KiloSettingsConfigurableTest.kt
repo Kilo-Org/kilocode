@@ -6,6 +6,7 @@ import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
 import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
+import ai.kilocode.client.settings.rules.RulesConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.SearchableConfigurable
@@ -38,6 +39,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
     fun `test child provider and behavior ids match xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.providers", ProvidersConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior", AgentBehaviorConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.rules", RulesConfigurable.ID)
     }
 
     fun `test auto approve opts out of platform scrollpane`() {
