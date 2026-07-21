@@ -68,7 +68,7 @@ class AgentManagerPanel(
 
     /** Opens the advanced dialog to pick a branch name and base branch. */
     fun configure() {
-        val dialog = ConfigureWorktreeDialog(this, controller.defaultBranch)
+        val dialog = ConfigureWorktreeDialog(this, controller.suggestName(), controller.defaultBranch, controller.branches)
         if (dialog.showAndGet()) controller.create(dialog.branch, dialog.baseBranch)
     }
 

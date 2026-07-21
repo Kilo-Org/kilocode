@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
@@ -38,6 +39,13 @@ class KiloWorktreeService internal constructor(
     } catch (e: Exception) {
         LOG.warn("worktree list failed for $directory", e)
         WorktreeListDto()
+    }
+
+    suspend fun listBranches(directory: String): WorktreeBranchesDto = try {
+        call { listBranches(directory) }
+    } catch (e: Exception) {
+        LOG.warn("branch list failed for $directory", e)
+        WorktreeBranchesDto()
     }
 
     suspend fun create(directory: String, req: CreateWorktreeRequestDto): CreateWorktreeResultDto =

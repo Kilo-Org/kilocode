@@ -25,23 +25,31 @@ class WorktreeController(
     var defaultBranch: String = "main"
         private set
 
+    /** Local branches, for the base-branch picker. Refreshed alongside the worktree list. */
+    @Volatile
+    var branches: List<String> = emptyList()
+        private set
+
     fun reload() {
         cs.launch {
             val result = service.list(directory)
+            val branchInfo = service.listBranches(directory)
             edt {
                 model.replaceAll(result.worktrees)
                 defaultBranch = result.worktrees.firstOrNull { it.main }?.branch
                     ?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
+                branches = branchInfo.branches
                 telemetry("Worktree List Loaded", mapOf("count" to result.worktrees.size.toString()))
             }
         }
     }
 
+    /** A generated friendly branch name not already used by an existing worktree. */
+    fun suggestName(): String =
+        WorktreeNames.generate((0 until model.size).mapTo(HashSet()) { model.getElementAt(it).branch })
+
     /** Creates a worktree immediately with a generated friendly name, based on [defaultBranch]. */
-    fun quickCreate() {
-        val taken = (0 until model.size).mapTo(HashSet()) { model.getElementAt(it).branch }
-        create(WorktreeNames.generate(taken), defaultBranch)
-    }
+    fun quickCreate() = create(suggestName(), defaultBranch)
 
     fun create(branch: String, base: String?) {
         cs.launch {

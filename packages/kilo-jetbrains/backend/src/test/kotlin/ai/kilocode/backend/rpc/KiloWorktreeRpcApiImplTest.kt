@@ -71,6 +71,18 @@ class KiloWorktreeRpcApiImplTest {
         assertFalse(after.any { it.branch == "feature/x" }, "removed worktree should be gone")
     }
 
+    @Test
+    fun `listBranches returns local branches and the current one`() = runBlocking {
+        initRepo()
+        git(repo, "branch", "feature/x")
+
+        val result = api.listBranches(repo.toString())
+
+        assertTrue(result.branches.contains("feature/x"), "should list feature/x: ${result.branches}")
+        assertNotNull(result.current, "current branch should be reported")
+        assertTrue(result.branches.contains(result.current), "current should be among branches")
+    }
+
     private fun initRepo() {
         git(repo, "init")
         git(repo, "config", "user.email", "test@kilo.ai")

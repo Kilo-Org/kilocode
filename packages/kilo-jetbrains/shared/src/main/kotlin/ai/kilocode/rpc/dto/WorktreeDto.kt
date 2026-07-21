@@ -15,6 +15,12 @@ data class WorktreeDto(
 data class WorktreeListDto(val worktrees: List<WorktreeDto> = emptyList())
 
 @Serializable
+data class WorktreeBranchesDto(
+    val branches: List<String> = emptyList(),
+    val current: String? = null,
+)
+
+@Serializable
 data class CreateWorktreeRequestDto(
     val branch: String,
     val baseBranch: String? = null,

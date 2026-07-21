@@ -82,6 +82,17 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals("trunk", controller.defaultBranch)
     }
 
+    fun `test reload caches the local branch list`() {
+        rpc.listed += WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        rpc.branchesList += listOf("main", "feature/x", "release/1.0")
+        val controller = controller()
+
+        controller.reload()
+        flush()
+
+        assertEquals(listOf("main", "feature/x", "release/1.0"), controller.branches)
+    }
+
     fun `test quick create generates a friendly name based on the default branch`() {
         rpc.listed += WorktreeDto("/repo", "repo", "trunk", "/repo", main = true)
         val controller = controller()

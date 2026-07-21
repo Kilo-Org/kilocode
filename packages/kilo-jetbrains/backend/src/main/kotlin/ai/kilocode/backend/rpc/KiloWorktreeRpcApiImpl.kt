@@ -3,6 +3,7 @@ package ai.kilocode.backend.rpc
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import com.intellij.execution.configurations.GeneralCommandLine
@@ -18,6 +19,14 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         val base = Path.of(directory).normalize()
         val res = runGit(base, "worktree", "list", "--porcelain")
         if (!res.ok) WorktreeListDto() else WorktreeListDto(parseWorktreeList(res.stdout))
+    }
+
+    override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {
+        val base = Path.of(directory).normalize()
+        val refs = runGit(base, "for-each-ref", "--format=%(refname:short)", "refs/heads")
+        val branches = if (!refs.ok) emptyList() else refs.stdout.lines().map { it.trim() }.filter { it.isNotEmpty() }
+        val current = runGit(base, "branch", "--show-current").stdout.trim().takeIf { it.isNotEmpty() }
+        WorktreeBranchesDto(branches, current)
     }
 
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto =
