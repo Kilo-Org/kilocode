@@ -3,84 +3,36 @@ import { Effect, Stream } from "effect"
 import { LLMEvent } from "@opencode-ai/llm"
 import { KiloLLM } from "@/kilocode/session/llm"
 
-describe("kilocode.session.llm.resolveIdleMs", () => {
+describe("kilocode.session.llm.timeout", () => {
   test("uses prepared options before the provider fallback", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: 15_000 },
-        fallback: { chunkTimeout: 30_000 },
-      }),
-    ).toBe(15_000)
+    const result = KiloLLM.timeout({
+      options: { chunkTimeout: 15_000 },
+      fallback: { chunkTimeout: 30_000 },
+    })
+
+    expect(result).toEqual({ timeout: { chunkMs: 15_000 } })
   })
 
   test("uses the provider fallback when prepared options omit the timeout", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: {},
-        fallback: { chunkTimeout: 30_000 },
-      }),
-    ).toBe(30_000)
+    const result = KiloLLM.timeout({
+      options: {},
+      fallback: { chunkTimeout: 30_000 },
+    })
+
+    expect(result).toEqual({ timeout: { chunkMs: 30_000 } })
   })
 
   test("uses the provider fallback when the prepared value is not a number", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: "15_000" },
-        fallback: { chunkTimeout: 30_000 },
-      }),
-    ).toBe(30_000)
+    const result = KiloLLM.timeout({
+      options: { chunkTimeout: "15_000" },
+      fallback: { chunkTimeout: 30_000 },
+    })
+
+    expect(result).toEqual({ timeout: { chunkMs: 30_000 } })
   })
 
-  test("defaults the chunk idle timeout to 60_000 ms when no override is configured", () => {
-    expect(KiloLLM.resolveIdleMs({ options: {} })).toBe(60_000)
-  })
-
-  test("returns undefined when prepared is false (disabled)", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: false },
-        fallback: { chunkTimeout: 30_000 },
-      }),
-    ).toBeUndefined()
-  })
-
-  test("returns undefined when prepared is 0 (internal disable)", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: 0 },
-        fallback: { chunkTimeout: 30_000 },
-      }),
-    ).toBeUndefined()
-  })
-
-  test("returns undefined when provider fallback is false", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: {},
-        fallback: { chunkTimeout: false },
-      }),
-    ).toBeUndefined()
-  })
-
-  test("falls through invalid prepared values to provider fallback", () => {
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: -1 },
-        fallback: { chunkTimeout: 5_000 },
-      }),
-    ).toBe(5_000)
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: Number.POSITIVE_INFINITY },
-        fallback: { chunkTimeout: 5_000 },
-      }),
-    ).toBe(5_000)
-    expect(
-      KiloLLM.resolveIdleMs({
-        options: { chunkTimeout: Number.NaN },
-        fallback: { chunkTimeout: 5_000 },
-      }),
-    ).toBe(5_000)
+  test("omits the timeout when it is not configured", () => {
+    expect(KiloLLM.timeout({ options: {} })).toEqual({})
   })
 })
 
