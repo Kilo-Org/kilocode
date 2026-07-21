@@ -72,6 +72,7 @@ describe("ProviderTransform.options - setCacheKey", () => {
     expect(result.promptCacheKey).toBeUndefined()
   })
 
+  // kilocode_change start
   test("should set promptCacheKey for openai provider by default", () => {
     const openaiModel = {
       ...mockModel,
@@ -135,6 +136,7 @@ describe("ProviderTransform.options - setCacheKey", () => {
     })
     expect(result.promptCacheKey).toBeUndefined()
   })
+  // kilocode_change end
 
   test("should set store=false for openai provider", () => {
     const openaiModel = {
