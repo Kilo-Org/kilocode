@@ -6,6 +6,7 @@ import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.fire
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -389,10 +390,18 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
             false,
             MouseEvent.BUTTON1,
         )
-        target.dispatchEvent(press)
-        target.dispatchEvent(release)
-        target.dispatchEvent(clicked)
+        dispatch(target, press)
+        dispatch(target, release)
+        dispatch(target, clicked)
         UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private fun dispatch(target: JComponent, event: MouseEvent) {
+        if (target is JBList<*>) {
+            fire(target, event)
+            return
+        }
+        target.dispatchEvent(event)
     }
 
     private fun doubleClickRow(list: JBList<*>, idx: Int) {
