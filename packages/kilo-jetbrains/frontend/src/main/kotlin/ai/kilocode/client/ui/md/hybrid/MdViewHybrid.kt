@@ -718,19 +718,7 @@ internal open class MdViewHybrid(
 
     private fun applyShell(field: CodeField, display: ShellDisplay) {
         val editor = field.getEditor(false) ?: return
-        val size = editor.document.textLength
-        for (range in display.ranges) {
-            val start = range.start.coerceAtMost(size)
-            val end = range.end.coerceAtMost(size)
-            if (start >= end) continue
-            editor.markupModel.addRangeHighlighter(
-                range.key,
-                start,
-                end,
-                HighlighterLayer.SYNTAX + 1,
-                HighlighterTargetArea.EXACT_RANGE,
-            )
-        }
+        MdShellHighlight.apply(editor, display)
     }
 
     private fun dispatch(event: MdView.LinkEvent) {

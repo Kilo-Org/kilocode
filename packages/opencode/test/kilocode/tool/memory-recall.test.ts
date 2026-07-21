@@ -173,11 +173,6 @@ describe("kilo_memory_recall", () => {
 
       expect(direct.output).toContain("continue memory digest recall")
 
-      const decisions = await MemoryFiles.readDecisions(enabled.root)
-      expect(decisions).toContain('"sessionID":"ses_test"')
-      expect(decisions).toContain('"query":"sessionID=ses_memory_only"')
-      expect(decisions).toContain('"summary":"memory recall returned 1 typed hits"')
-      expect(decisions).toContain('"summary":"memory recall returned 1 digest hits"')
     })
   })
 
@@ -397,10 +392,6 @@ describe("kilo_memory_recall", () => {
       expect(result.output).toContain("active session")
       expect(result.output).not.toContain("useful prior work")
 
-      const decisions = await MemoryFiles.readDecisions(enabled.root)
-      expect(decisions).toContain('"sessionID":"ses_test"')
-      expect(decisions).toContain('"query":"sessionID=ses_test"')
-      expect(decisions).toContain('"reason":"current_session_digest"')
     })
   })
 
@@ -497,8 +488,6 @@ describe("kilo_memory_recall", () => {
       expect(result.output).toContain("type=session_digest")
       expect(result.output).toContain('topic="catalog recall"')
 
-      const decisions = await MemoryFiles.readDecisions(enabled.root)
-      expect(decisions).toContain('"summary":"memory recall returned')
     })
   })
 

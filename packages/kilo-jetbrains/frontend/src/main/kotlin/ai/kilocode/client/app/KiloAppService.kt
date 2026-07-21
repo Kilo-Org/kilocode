@@ -366,5 +366,6 @@ data class CoreInfo(val version: String, val platform: String)
 
 private fun summary(patch: ConfigPatchDto): String {
     val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }
-    return "values=$values agents=${patch.agents.size}"
+    val permission = if (patch.permission != null) " permission" else ""
+    return "values=$values agents=${patch.agents.size}$permission"
 }
