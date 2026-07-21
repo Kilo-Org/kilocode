@@ -10,14 +10,17 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import { DiffChanges } from "@kilocode/kilo-ui/diff-changes"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
+import { useVSCode } from "../../context/vscode"
 
 export const RevertBanner: Component = () => {
   const session = useSession()
   const language = useLanguage()
+  const vscode = useVSCode()
 
   const info = () => session.revert()
   const count = () => session.revertedCount()
   const diffs = () => session.summary()?.diffs
+  const workspace = () => info()?.workspace
 
   const users = () => session.userMessages()
 
@@ -65,6 +68,31 @@ export const RevertBanner: Component = () => {
                 </div>
               )}
             </For>
+          </div>
+        </Show>
+        <Show when={workspace() && workspace() !== "restored"}>
+          <div class="revert-banner-notice" role="status">
+            <span>
+              {language.t(
+                workspace() === "snapshots-disabled"
+                  ? "revert.banner.workspace.snapshotsDisabled"
+                  : "revert.banner.workspace.unavailable",
+              )}
+            </span>
+            <Show when={workspace() === "snapshots-disabled"}>
+              <Button
+                variant="ghost"
+                size="small"
+                onClick={() => vscode.postMessage({ type: "openSettingsPanel", tab: "checkpoints" })}
+              >
+                {language.t("revert.banner.workspace.enableSnapshots")}
+              </Button>
+            </Show>
+          </div>
+        </Show>
+        <Show when={!workspace()}>
+          <div class="revert-banner-notice" role="status">
+            <span>{language.t("revert.banner.workspace.legacy")}</span>
           </div>
         </Show>
         <div class="revert-banner-hint">{language.t("revert.banner.hint")}</div>
