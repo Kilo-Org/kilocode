@@ -27,6 +27,7 @@ interface VSCodeContext {
 export interface SlashCommandEntry extends SlashCommandInfo {
   action?: () => void
   enabled?: Accessor<boolean>
+  nested?: boolean
 }
 
 export interface SlashCommand {
@@ -120,6 +121,24 @@ export function useSlashCommand(
       },
     },
     {
+      name: "memory",
+      description: "Manage project memory",
+      hints: ["mem"],
+      nested: true,
+    },
+    { name: "memory status", description: "Show project memory status", hints: [] },
+    { name: "memory show", description: "Show stored project memory", hints: [] },
+    { name: "memory on", description: "Enable project memory", hints: [] },
+    { name: "memory off", description: "Disable project memory", hints: [] },
+    { name: "memory inspect", description: "Reveal the project memory folder", hints: [] },
+    { name: "memory rebuild", description: "Rebuild the memory index", hints: [] },
+    { name: "memory remember", description: "Save a project memory note", hints: [] },
+    { name: "memory correct", description: "Save a correction to project memory", hints: [] },
+    { name: "memory forget", description: "Remove matching project memory", hints: [] },
+    { name: "memory auto on", description: "Enable automatic memory saves", hints: [] },
+    { name: "memory auto off", description: "Disable automatic memory saves", hints: [] },
+    { name: "memory purge confirm", description: "Delete all project memory files", hints: [] },
+    {
       name: "export",
       description: "Export the current session transcript as Markdown",
       hints: ["markdown", "transcript"],
@@ -198,10 +217,20 @@ export function useSlashCommand(
   const results = () => {
     const q = query()
     if (q === null) return []
-    const all = commands()
-    if (!q) return all
+    const list = commands()
+    if (q.startsWith("memory ")) {
+      const matches = list.filter((cmd) => cmd.name.startsWith("memory "))
+      if (q === "memory ") return matches
+      const lower = q.toLowerCase()
+      return sortByScore(
+        matches.filter((cmd) => cmd.name.toLowerCase().startsWith(lower)),
+        lower,
+      )
+    }
+    const root = list.filter((cmd) => !cmd.name.includes(" "))
+    if (!q) return root
     const lower = q.toLowerCase()
-    const matches = all.filter(
+    const matches = root.filter(
       (cmd) =>
         cmd.name.toLowerCase().includes(lower) ||
         cmd.description?.toLowerCase().includes(lower) ||
@@ -230,9 +259,15 @@ export function useSlashCommand(
       request()
       setQuery(match[1])
       setIndex(0)
-    } else {
-      close()
+      return
     }
+    const memory = before.match(/^\/(?:memory|mem)\s+([^\n]*)$/i)
+    if (!memory) return close()
+    const value = `memory ${memory[1]}`.toLowerCase()
+    if (!commands().some((cmd) => cmd.name.toLowerCase().startsWith(value))) return close()
+    request()
+    setQuery(value)
+    setIndex(0)
   }
 
   const select = (
@@ -256,7 +291,11 @@ export function useSlashCommand(
     const pos = text.length
     textarea.setSelectionRange(pos, pos)
     textarea.focus()
-    close()
+    if (cmd.nested) {
+      setQuery(`${cmd.name} `)
+      setIndex(0)
+    }
+    if (!cmd.nested) close()
     onSelect?.()
   }
 
