@@ -28,8 +28,7 @@ import { Permission } from "../../src/permission"
 import { Plugin } from "../../src/plugin"
 import { Provider as ProviderSvc } from "../../src/provider/provider"
 import { Question } from "../../src/question"
-import { Reference } from "../../src/reference/reference"
-import { RepositoryCache } from "../../src/reference/repository-cache"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { SessionCompaction } from "../../src/session/compaction"
 import { Instruction } from "../../src/session/instruction"
 import { LLM } from "../../src/session/llm"
@@ -46,7 +45,7 @@ import { Skill } from "../../src/skill"
 import { Snapshot } from "../../src/snapshot"
 import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
-import { Ripgrep } from "@opencode-ai/core/filesystem/ripgrep"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
@@ -135,7 +134,6 @@ function makeHttp() {
     lsp,
     mcp,
     FSUtil.defaultLayer,
-    Reference.defaultLayer,
     SyncEvent.defaultLayer,
     EventV2Bridge.defaultLayer,
     Database.defaultLayer,
@@ -152,7 +150,6 @@ function makeHttp() {
     Layer.provide(Ripgrep.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provide(Git.defaultLayer),
-    Layer.provide(Reference.defaultLayer),
     Layer.provide(Command.defaultLayer),
     Layer.provide(Auth.defaultLayer),
     Layer.provideMerge(todo),
@@ -193,7 +190,6 @@ function makeHttp() {
         Bus.layer,
         infra,
         Storage.defaultLayer,
-        Reference.defaultLayer,
       ),
     ),
   )
