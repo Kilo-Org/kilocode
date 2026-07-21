@@ -1268,7 +1268,14 @@ export const dict = {
   "settings.section.configuration": "Конфигурация",
   "settings.agentBehaviour.title": "Поведение агента",
   "settings.autoApprove.title": "Автоодобрение",
-  "settings.browser.title": "Браузер",
+  "settings.webTools.title": "Веб-инструменты",
+  "settings.webTools.description":
+    "Настройте веб-поиск и автоматизацию браузера. Поисковые запросы отправляются напрямую в Exa или Parallel.",
+  "settings.webTools.webSearch.enable": "Включить для всех провайдеров",
+  "settings.webTools.browserAutomation": "Автоматизация браузера",
+  "settings.webTools.webSearch.title": "Веб-поиск",
+  "settings.webTools.webSearch.description":
+    "Сделайте веб-поиск доступным для моделей всех провайдеров. Поисковые запросы отправляются напрямую в Exa или Parallel.",
   "settings.checkpoints.title": "Контрольные точки",
   "settings.display.title": "Отображение",
   "settings.autocomplete.title": "Автодополнение",

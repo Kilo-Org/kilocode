@@ -26905,6 +26905,9 @@
               "type": "boolean"
             }
           },
+          "web_search": {
+            "type": "boolean"
+          },
           "attachment": {
             "$ref": "#/components/schemas/AttachmentConfig"
           },
@@ -26998,9 +27001,6 @@
                 "type": "boolean"
               },
               "codebase_search": {
-                "type": "boolean"
-              },
-              "websearch": {
                 "type": "boolean"
               },
               "image_generation": {

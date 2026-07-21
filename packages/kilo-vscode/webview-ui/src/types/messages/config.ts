@@ -39,7 +39,6 @@ export interface WatcherConfig {
 
 export interface ExperimentalConfig {
   batch_tool?: boolean
-  websearch?: boolean
   codebase_search?: boolean
   image_generation?: boolean
   image_generation_model?: string
@@ -155,6 +154,7 @@ export interface Config {
   compaction?: CompactionConfig
   commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
+  web_search?: boolean
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig

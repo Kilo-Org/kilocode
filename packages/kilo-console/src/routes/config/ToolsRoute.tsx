@@ -11,7 +11,7 @@ export function ToolsRoute() {
   const ctx = useConfig()
   const [search, setSearch] = createSignal("")
   const snap = () => ctx.data()
-  const websearch = createMemo(() => snap()?.overlay.fields["experimental.websearch"])
+  const websearch = createMemo(() => snap()?.overlay.fields.web_search)
   const searchEnabled = createMemo(() => websearch()?.value === true)
   const rows = createMemo(() => {
     const data = snap()
@@ -66,7 +66,7 @@ export function ToolsRoute() {
                 <Button
                   variant="secondary"
                   disabled={Boolean(ctx.saving())}
-                  onClick={() => ctx.unset([["experimental", "websearch"]])}
+                  onClick={() => ctx.unset([["web_search"]])}
                 >
                   Revert
                 </Button>
@@ -79,7 +79,7 @@ export function ToolsRoute() {
                 type="button"
                 aria-pressed={searchEnabled()}
                 disabled={Boolean(ctx.saving()) || websearch()?.editable === false}
-                onClick={() => ctx.save({ experimental: { websearch: !searchEnabled() } })}
+                onClick={() => ctx.save({ web_search: !searchEnabled() })}
               >
                 <span>
                   <strong>Enable for all providers</strong>

@@ -1257,7 +1257,14 @@ export const dict = {
   "settings.section.configuration": "設定",
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
-  "settings.browser.title": "ブラウザ",
+  "settings.webTools.title": "ウェブツール",
+  "settings.webTools.description":
+    "ウェブ検索とブラウザ自動化を設定します。検索リクエストは Exa または Parallel に直接接続されます。",
+  "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
+  "settings.webTools.browserAutomation": "ブラウザ自動化",
+  "settings.webTools.webSearch.title": "ウェブ検索",
+  "settings.webTools.webSearch.description":
+    "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。検索は Exa または Parallel に直接接続されます。",
   "settings.checkpoints.title": "チェックポイント",
   "settings.display.title": "表示",
   "settings.autocomplete.title": "オートコンプリート",

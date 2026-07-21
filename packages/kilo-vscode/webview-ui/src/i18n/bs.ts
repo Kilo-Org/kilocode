@@ -1269,7 +1269,14 @@ export const dict = {
   "settings.section.configuration": "Konfiguracija",
   "settings.agentBehaviour.title": "Ponašanje agenta",
   "settings.autoApprove.title": "Automatsko odobravanje",
-  "settings.browser.title": "Preglednik",
+  "settings.webTools.title": "Web alati",
+  "settings.webTools.description":
+    "Konfigurišite web pretragu i automatizaciju preglednika. Zahtjevi za pretragu povezuju se direktno s Exa ili Parallel.",
+  "settings.webTools.webSearch.enable": "Omogući za sve pružaoce",
+  "settings.webTools.browserAutomation": "Automatizacija preglednika",
+  "settings.webTools.webSearch.title": "Web pretraga",
+  "settings.webTools.webSearch.description":
+    "Omogućite web pretragu modelima svih pružalaca. Pretrage se povezuju direktno s Exa ili Parallel.",
   "settings.checkpoints.title": "Kontrolne tačke",
   "settings.display.title": "Prikaz",
   "settings.autocomplete.title": "Automatsko dovršavanje",

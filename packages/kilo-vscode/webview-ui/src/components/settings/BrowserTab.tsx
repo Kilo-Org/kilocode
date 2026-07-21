@@ -52,7 +52,7 @@ const BrowserTab: Component = () => {
   }
 
   const updateWebsearch = (checked: boolean) => {
-    updateConfig({ experimental: { ...config().experimental, websearch: checked } })
+    updateConfig({ web_search: checked })
   }
 
   return (
@@ -79,15 +79,15 @@ const BrowserTab: Component = () => {
       </div>
 
       <div>
-        <Header title={t("settings.experimental.websearch.title")} />
+        <Header title={t("settings.webTools.webSearch.title")} />
         <Card>
           <SettingsRow
-            title={t("settings.webTools.websearchEnable")}
-            description={t("settings.experimental.websearch.description")}
+            title={t("settings.webTools.webSearch.enable")}
+            description={t("settings.webTools.webSearch.description")}
             last
           >
-            <Switch checked={config().experimental?.websearch ?? false} onChange={updateWebsearch} hideLabel>
-              {t("settings.experimental.websearch.title")}
+            <Switch checked={config().web_search ?? false} onChange={updateWebsearch} hideLabel>
+              {t("settings.webTools.webSearch.title")}
             </Switch>
           </SettingsRow>
         </Card>

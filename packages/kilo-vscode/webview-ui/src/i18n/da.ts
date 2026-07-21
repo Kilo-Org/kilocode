@@ -1262,7 +1262,14 @@ export const dict = {
   "settings.section.configuration": "Konfiguration",
   "settings.agentBehaviour.title": "Agentadfærd",
   "settings.autoApprove.title": "Automatisk godkendelse",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Webværktøjer",
+  "settings.webTools.description":
+    "Konfigurer websøgning og browserautomatisering. Søgeanmodninger sendes direkte til Exa eller Parallel.",
+  "settings.webTools.webSearch.enable": "Aktivér for alle udbydere",
+  "settings.webTools.browserAutomation": "Browserautomatisering",
+  "settings.webTools.webSearch.title": "Websøgning",
+  "settings.webTools.webSearch.description":
+    "Gør websøgning tilgængelig for modeller fra alle udbydere. Søgninger sendes direkte til Exa eller Parallel.",
   "settings.checkpoints.title": "Kontrolpunkter",
   "settings.display.title": "Visning",
   "settings.autocomplete.title": "Autofuldførelse",

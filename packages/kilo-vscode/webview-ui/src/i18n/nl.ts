@@ -1218,7 +1218,14 @@ export const dict = {
   "settings.section.configuration": "Configuratie",
   "settings.agentBehaviour.title": "Agent Gedrag",
   "settings.autoApprove.title": "Automatisch Goedkeuren",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Webtools",
+  "settings.webTools.description":
+    "Configureer zoeken op internet en browserautomatisering. Zoekopdrachten maken rechtstreeks verbinding met Exa of Parallel.",
+  "settings.webTools.webSearch.enable": "Inschakelen voor alle providers",
+  "settings.webTools.browserAutomation": "Browserautomatisering",
+  "settings.webTools.webSearch.title": "Zoeken op internet",
+  "settings.webTools.webSearch.description":
+    "Maak zoeken op internet beschikbaar voor modellen van alle providers. Zoekopdrachten maken rechtstreeks verbinding met Exa of Parallel.",
   "settings.checkpoints.title": "Controlepunten",
   "settings.display.title": "Weergave",
   "settings.autocomplete.title": "Automatisch Aanvullen",

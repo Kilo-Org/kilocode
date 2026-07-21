@@ -151,13 +151,15 @@ describe("global config updates", () => {
   })
 })
 
-describe("kilocode indexing config", () => {
+describe("kilocode web search config", () => {
   test("accepts the websearch availability setting", () => {
-    const config = Schema.decodeUnknownSync(Config.Info)({ experimental: { websearch: true } })
+    const config = Schema.decodeUnknownSync(Config.Info)({ web_search: true })
 
-    expect(config.experimental?.websearch).toBe(true)
+    expect(config.web_search).toBe(true)
   })
+})
 
+describe("kilocode indexing config", () => {
   test("ignores retired semantic indexing flags in existing configs", async () => {
     await using tmp = await tmpdir({ git: true })
     await writeConfig(tmp.path, {

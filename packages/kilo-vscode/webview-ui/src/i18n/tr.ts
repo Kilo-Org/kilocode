@@ -1215,7 +1215,14 @@ export const dict = {
   "settings.section.configuration": "Yapılandırma",
   "settings.agentBehaviour.title": "Ajan Davranışı",
   "settings.autoApprove.title": "Otomatik Onay",
-  "settings.browser.title": "Tarayıcı",
+  "settings.webTools.title": "Web Araçları",
+  "settings.webTools.description":
+    "Web aramasını ve tarayıcı otomasyonunu yapılandırın. Arama istekleri doğrudan Exa veya Parallel'e bağlanır.",
+  "settings.webTools.webSearch.enable": "Tüm Sağlayıcılar İçin Etkinleştir",
+  "settings.webTools.browserAutomation": "Tarayıcı Otomasyonu",
+  "settings.webTools.webSearch.title": "Web Araması",
+  "settings.webTools.webSearch.description":
+    "Web aramasını tüm sağlayıcıların modelleri için kullanılabilir hale getirin. Aramalar doğrudan Exa veya Parallel'e bağlanır.",
   "settings.checkpoints.title": "Kontrol Noktaları",
   "settings.display.title": "Görünüm",
   "settings.autocomplete.title": "Otomatik Tamamlama",

@@ -1283,7 +1283,14 @@ export const dict = {
   "settings.section.configuration": "Konfiguration",
   "settings.agentBehaviour.title": "Agentenverhalten",
   "settings.autoApprove.title": "Automatisch genehmigen",
-  "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web-Tools",
+  "settings.webTools.description":
+    "Konfigurieren Sie Websuche und Browserautomatisierung. Suchanfragen werden direkt an Exa oder Parallel gesendet.",
+  "settings.webTools.webSearch.enable": "Für alle Anbieter aktivieren",
+  "settings.webTools.browserAutomation": "Browserautomatisierung",
+  "settings.webTools.webSearch.title": "Websuche",
+  "settings.webTools.webSearch.description":
+    "Machen Sie die Websuche für Modelle aller Anbieter verfügbar. Suchanfragen werden direkt an Exa oder Parallel gesendet.",
   "settings.checkpoints.title": "Prüfpunkte",
   "settings.display.title": "Anzeige",
   "settings.autocomplete.title": "Autovervollständigung",

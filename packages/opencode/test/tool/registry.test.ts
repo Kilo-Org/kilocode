@@ -52,12 +52,13 @@ const configLayer = TestConfig.layer({
 type RegistryLayerOptions = {
   flags?: Partial<RuntimeFlags.Info>
   plugin?: Layer.Layer<Plugin.Service>
+  config?: Parameters<typeof TestConfig.layer>[0] // kilocode_change
 }
 
 const registryLayer = (opts: RegistryLayerOptions = {}) =>
   ToolRegistry.layer
     .pipe(
-      Layer.provide(configLayer),
+      Layer.provide(opts.config ? TestConfig.layer(opts.config) : configLayer), // kilocode_change
       Layer.provide(opts.plugin ?? Plugin.defaultLayer),
       Layer.provide(Question.defaultLayer),
       Layer.provide(Todo.defaultLayer),
@@ -118,6 +119,21 @@ const withBrokenPlugin = testEffect(
   Layer.mergeAll(registryLayer({ plugin: brokenPluginLayer }), node, Agent.defaultLayer),
 )
 // kilocode_change start
+const websearch = testEffect(
+  Layer.mergeAll(
+    registryLayer({
+      config: {
+        get: () =>
+          Effect.succeed({
+            web_search: true,
+            provider: { openai: { options: { apiKey: "test-openai-key" } } },
+          }),
+      },
+    }),
+    node,
+    Agent.defaultLayer,
+  ),
+)
 const sandboxed = testEffect(
   Layer.mergeAll(registryLayer({ flags: { experimentalLspTool: true } }), node, Agent.defaultLayer),
 )
@@ -139,6 +155,38 @@ function sandboxProfile(): Profile {
 
 describe("tool.registry", () => {
   // kilocode_change start
+  it.instance("hides websearch for a third-party provider by default", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) return yield* Effect.die(new Error("build agent not found"))
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.openai,
+        modelID: ModelV2.ID.make("test"),
+        agent: build,
+      })
+
+      expect(tools.map((tool) => tool.id)).not.toContain("websearch")
+    }),
+  )
+
+  websearch.instance("shows websearch for a configured third-party provider when enabled", () =>
+    Effect.gen(function* () {
+      const registry = yield* ToolRegistry.Service
+      const agent = yield* Agent.Service
+      const build = yield* agent.get("build")
+      if (!build) return yield* Effect.die(new Error("build agent not found"))
+      const tools = yield* registry.tools({
+        providerID: ProviderV2.ID.openai,
+        modelID: ModelV2.ID.make("test"),
+        agent: build,
+      })
+
+      expect(tools.map((tool) => tool.id)).toContain("websearch")
+    }),
+  )
+
   sandboxed.instance("preserves built-in network classification through production tool definition processing", () =>
     Effect.gen(function* () {
       const registry = yield* ToolRegistry.Service
