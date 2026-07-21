@@ -282,7 +282,10 @@ export function init() {
             ? "Disable auto-approve mode"
             : "Enable auto-approve mode"
         },
+        desc: "Toggle auto-approve for all permission prompts in the current session",
         category: "System",
+        slashName: "auto-approve",
+        slashAliases: ["autoapprove", "approve-all", "approveall"],
         run: async () => {
           const enabled = isAllowEverything(sync.data.config.permission)
           const result = await sdk.client.permission.allowEverything({ enable: !enabled })
