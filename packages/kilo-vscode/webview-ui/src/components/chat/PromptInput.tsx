@@ -36,6 +36,7 @@ import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
+import { cycleVariant } from "../../context/session-variant-store"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
 import {
   fileName,
@@ -863,7 +864,20 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       }
     }
 
-    if (e.key === "Tab" && ghost.text()) {
+    // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
+    // When disabled or no variants exist, fall through to default focus navigation.
+    if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (settings()["chat.shiftTabCyclesVariant"] === false) return
+      const list = session.variantList(sid())
+      if (list.length === 0) return
+      const next = cycleVariant(session.currentVariant(sid()), list)
+      if (!next) return
+      e.preventDefault()
+      session.selectVariant(next, sid())
+      return
+    }
+
+    if (e.key === "Tab" && !e.shiftKey && ghost.text()) {
       if (!isAtEnd()) return
       e.preventDefault()
       acceptSuggestion()
