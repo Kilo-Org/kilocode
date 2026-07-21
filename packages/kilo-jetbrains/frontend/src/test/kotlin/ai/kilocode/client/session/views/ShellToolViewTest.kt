@@ -45,7 +45,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals("pwd", view.bodyText())
         view.toggle()
 
-        assertEquals("**Command**\n\n```shell-command\npwd\n```", view.markdown())
+        assertEquals("**Command**\n\n```bash\npwd\n```", view.markdown())
         assertEquals(listOf("pwd"), view.codeTexts())
     }
 
@@ -73,7 +73,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         view.toggle()
 
         assertEquals(
-            "**Command**\n\n```shell-command\ngit status\n```\n\n**Output**\n\n```shell-output\nclean\n```",
+            "**Command**\n\n```bash\ngit status\n```\n\n**Output**\n\n```shell-output\nclean\n```",
             view.markdown(),
         )
         assertEquals(listOf("git status", "clean"), view.codeTexts())
@@ -91,7 +91,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         assertEquals("printf 'one\ntwo'\n\none\ntwo", view.bodyText())
         view.toggle()
 
-        assertTrue(view.markdown().contains("```shell-command\nprintf 'one\ntwo'\n```"))
+        assertTrue(view.markdown().contains("```bash\nprintf 'one\ntwo'\n```"))
         assertTrue(view.markdown().contains("```shell-output\none\ntwo\n```"))
     }
 
@@ -155,7 +155,7 @@ class ShellToolViewTest : BasePlatformTestCase() {
         view.toggle()
 
         assertEquals(
-            "**Command**\n\n```shell-command\nfail\n```\n\n**Error**\n\n```ansi-stderr\nboom\n```",
+            "**Command**\n\n```bash\nfail\n```\n\n**Error**\n\n```ansi-stderr\nboom\n```",
             view.markdown(),
         )
         assertEquals(listOf("fail", "boom"), view.codeTexts())
@@ -305,8 +305,8 @@ class ShellToolViewTest : BasePlatformTestCase() {
             field.text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
         }
 
-        assertTrue(view.markdown().contains("```shell-command\ngit log -30 --oneline --decorate\n```"))
-        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.FUNCTION_CALL))
+        assertTrue(view.markdown().contains("```bash\ngit log -30 --oneline --decorate\n```"))
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("-30" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--oneline" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--decorate" to DefaultLanguageHighlighterColors.KEYWORD))

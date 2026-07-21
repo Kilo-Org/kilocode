@@ -47,6 +47,7 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.ui.TextFieldWithBrowseButton
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.TitledSeparator
@@ -59,7 +60,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.BorderLayout
-import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
@@ -523,14 +523,11 @@ private class SkillSourceDialog(
 
     override fun createCenterPanel(): JComponent {
         if (!path) return field.apply { columns = SOURCE_COLUMNS }
-        return JPanel(BorderLayout(UiStyle.Gap.sm(), 0)).apply {
-            add(field.apply { columns = SOURCE_COLUMNS }, BorderLayout.CENTER)
-            add(JButton("...").apply {
-                addActionListener {
-                    choose(this)?.let { field.text = it }
-                }
-            }, BorderLayout.EAST)
+        val component = TextFieldWithBrowseButton(field.apply { columns = SOURCE_COLUMNS })
+        component.addActionListener {
+            choose(component)?.let { field.text = it }
         }
+        return component
     }
 
     fun value() = field.text

@@ -3962,7 +3962,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
             detail,
           })
         }
-        void this.memory.fetch(sessionID, false)
+        void this.memory.fetch(sessionID)
       }
       return
     }

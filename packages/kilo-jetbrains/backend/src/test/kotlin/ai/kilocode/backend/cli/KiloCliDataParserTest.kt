@@ -1236,6 +1236,23 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseConfig - top-level permission map`() {
+            val cfg = KiloCliDataParser.parseConfig(
+                """{"permission":{"bash":"ask","read":{"*":"allow","*.env":"deny"},"webfetch":null}}"""
+            )
+            val bash = cfg.permission?.get("bash")
+            val read = cfg.permission?.get("read")
+            val webfetch = cfg.permission?.get("webfetch")
+
+            assertIs<PermissionRuleDto.Level>(bash)
+            assertEquals("ask", bash.value)
+            assertIs<PermissionRuleDto.Patterns>(read)
+            assertEquals(mapOf("*" to "allow", "*.env" to "deny"), read.map)
+            assertIs<PermissionRuleDto.Level>(webfetch)
+            assertNull(webfetch.value)
+        }
+
+        @Test
         fun `parseConfig - empty and missing blocks`() {
             val cfg = KiloCliDataParser.parseConfig("{}")
 
@@ -2223,6 +2240,21 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `buildConfigPatch - full top-level permission object with null deletes`() {
+            val patch = ConfigPatchDto(
+                permission = linkedMapOf(
+                    "bash" to PermissionRuleDto.Patterns(linkedMapOf("*" to "ask", "npm test" to "allow")),
+                    "read" to PermissionRuleDto.Level(null),
+                ),
+            )
+
+            assertEquals(
+                "{\"permission\":{\"bash\":{\"*\":\"ask\",\"npm test\":\"allow\"},\"read\":null}}",
+                KiloCliDataParser.buildConfigPatch(patch),
+            )
+        }
+
+        @Test
         fun `buildConfigPatch - empty patch`() {
             assertEquals("{}", KiloCliDataParser.buildConfigPatch(ConfigPatchDto()))
         }
@@ -2388,6 +2420,86 @@ class KiloCliDataParserTest {
         val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
         assertEquals("git status --short", asked.request.command)
         assertEquals("git status --short", asked.request.metadata["command"])
+    }
+
+    @Test
+    fun `parsePermissionRequest - parses rule decisions`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_rules",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git add ."],
+                "always": ["git *", "git add *", "git add ."],
+                "metadata": {
+                    "rules": [
+                        {"pattern": "git *", "decision": "approved", "defaultAction": "ask"},
+                        {"pattern": "git add *", "action": "deny", "defaultDecision": "allow"},
+                        "git add ."
+                    ]
+                }
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        assertEquals(listOf("git *", "git add *", "git add ."), asked.request.rules)
+        assertEquals(asked.request.rules, asked.request.ruleDecisions.map { it.pattern })
+        assertEquals("git *", asked.request.ruleDecisions[0].pattern)
+        assertEquals("approved", asked.request.ruleDecisions[0].decision)
+        assertEquals("pending", asked.request.ruleDecisions[0].defaultDecision)
+        assertEquals("git add *", asked.request.ruleDecisions[1].pattern)
+        assertEquals("denied", asked.request.ruleDecisions[1].decision)
+        assertEquals("approved", asked.request.ruleDecisions[1].defaultDecision)
+        assertEquals("git add .", asked.request.ruleDecisions[2].pattern)
+        assertEquals("pending", asked.request.ruleDecisions[2].decision)
+        assertEquals("pending", asked.request.ruleDecisions[2].defaultDecision)
+    }
+
+    @Test
+    fun `parsePermissionRequest - uses always when metadata rules are absent`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_always",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git add ."],
+                "always": ["git add *"],
+                "metadata": {}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        assertEquals(emptyList(), asked.request.rules)
+        assertEquals(listOf("git add *"), asked.request.ruleDecisions.map { it.pattern })
+        assertEquals(listOf("pending"), asked.request.ruleDecisions.map { it.decision })
+    }
+
+    @Test
+    fun `parsePermissionRequest - uses always when metadata rules are empty`() {
+        val data = globalEvent("""
+            "type": "permission.asked",
+            "properties": {
+                "id": "perm_empty_rules",
+                "sessionID": "ses_1",
+                "permission": "bash",
+                "patterns": ["git add ."],
+                "always": ["git add *"],
+                "metadata": {"rules": []}
+            }
+        """)
+
+        val result = KiloCliDataParser.parseChatEvent("permission.asked", data)
+        assertNotNull(result)
+        val asked = result as? ChatEventDto.PermissionAsked ?: error("Expected PermissionAsked")
+        assertEquals(emptyList(), asked.request.rules)
+        assertEquals(listOf("git add *"), asked.request.ruleDecisions.map { it.pattern })
+        assertEquals(listOf("pending"), asked.request.ruleDecisions.map { it.decision })
     }
 
     @Test
