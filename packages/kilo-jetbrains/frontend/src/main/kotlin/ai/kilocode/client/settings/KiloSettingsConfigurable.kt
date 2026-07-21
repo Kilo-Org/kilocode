@@ -2,6 +2,7 @@ package ai.kilocode.client.settings
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
+import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
 import ai.kilocode.client.settings.context.ContextConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
@@ -73,6 +74,14 @@ class KiloSettingsConfigurable : SearchableConfigurable {
         }
         behavior.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
         panel.next(behavior)
+
+        val autoApprove = ActionLink(KiloBundle.message("settings.autoApprove.displayName")) { e ->
+            val src = e.source as? JComponent ?: return@ActionLink
+            val settings = Settings.KEY.getData(DataManager.getInstance().getDataContext(src)) ?: return@ActionLink
+            open(settings, AutoApproveConfigurable.ID)
+        }
+        autoApprove.border = JBUI.Borders.emptyBottom(UiStyle.Gap.sm())
+        panel.next(autoApprove)
 
         val context = ActionLink(KiloBundle.message("settings.context.displayName")) { e ->
             val src = e.source as? JComponent ?: return@ActionLink

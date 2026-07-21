@@ -4,6 +4,7 @@ import ai.kilocode.client.settings.profile.UserProfileConfigurable
 import ai.kilocode.client.settings.context.ContextConfigurable
 import ai.kilocode.client.settings.models.ModelsConfigurable
 import ai.kilocode.client.settings.agents.AgentBehaviorConfigurable
+import ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable
 import ai.kilocode.client.settings.providers.ProvidersConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.Configurable
@@ -37,6 +38,15 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
     fun `test child provider and behavior ids match xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.providers", ProvidersConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior", AgentBehaviorConfigurable.ID)
+    }
+
+    fun `test auto approve opts out of platform scrollpane`() {
+        // Auto-Approve renders its own fixed search field and scrollable body, so it must not be
+        // wrapped in the platform configurable scrollpane.
+        val auto: Configurable = AutoApproveConfigurable()
+        val context: Configurable = ContextConfigurable()
+        assertTrue(auto is Configurable.NoScroll)
+        assertTrue(context is Configurable.NoScroll)
     }
 
     fun `test root implements SearchableConfigurable but not Parent`() {
@@ -98,7 +108,7 @@ class KiloSettingsConfigurableTest : BasePlatformTestCase() {
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior", "Context"), labels)
+            assertEquals(listOf("User Profile", "Models", "Providers", "Agent Behavior", "Auto-Approve", "Context"), labels)
         }
     }
 
