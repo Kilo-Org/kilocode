@@ -3,6 +3,8 @@ package ai.kilocode.client.actions
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.worktree.SidePanelKeys
+import ai.kilocode.client.worktree.SidePanelMode
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
@@ -19,6 +21,7 @@ class HistoryAction : AnAction(
     }
 
     override fun update(e: AnActionEvent) {
+        e.presentation.isVisible = e.getData(SidePanelKeys.MODE) != SidePanelMode.WORKTREES
         e.presentation.isEnabled = e.getData(SessionManager.KEY) != null
     }
 }
