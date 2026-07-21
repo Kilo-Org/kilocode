@@ -243,6 +243,13 @@ export const StepFinishPart = Schema.Struct({
       modelID: ModelV2.ID,
     }),
   ),
+  metrics: Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.Finite),
+      generation: Schema.optional(Schema.Finite),
+      source: Schema.Literals(["provider", "computed"]),
+    }),
+  ),
   // kilocode_change end
   cost: Schema.Finite,
   tokens: Schema.Struct({

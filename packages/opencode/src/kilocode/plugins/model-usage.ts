@@ -1,7 +1,10 @@
-import type { KilocodeSessionModelUsageResponse, Session } from "@kilocode/sdk/v2"
+import type { KilocodeSessionModelUsageResponse, Session, StepFinishPart } from "@kilocode/sdk/v2"
 
 export type SessionModelUsage = KilocodeSessionModelUsageResponse
 export type UsageResult = { sessionID: string; data?: SessionModelUsage }
+
+export type StepMetrics = NonNullable<StepFinishPart["metrics"]>
+export type AggregatedMetrics = { prompt?: number; generation?: number }
 
 export function select(result: UsageResult | undefined, sessionID: string) {
   if (result?.sessionID !== sessionID) return undefined
@@ -53,6 +56,7 @@ const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 })
+const throughput = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 })
 
 export function formatCount(value: number) {
   return count.format(value)
@@ -64,7 +68,51 @@ export function formatRate(tokens: SessionModelUsage["totals"]["tokens"]) {
   return `${((tokens.cache.read / total) * 100).toFixed(1)}%`
 }
 
+export function formatPP(value: number | undefined) {
+  if (!Number.isFinite(value) || value === undefined || value <= 0) return "-"
+  return `${throughput.format(value)} t/s`
+}
+
+export function formatTG(value: number | undefined) {
+  if (!Number.isFinite(value) || value === undefined || value <= 0) return "-"
+  return `${throughput.format(value)} t/s`
+}
+
 export function formatCost(input: number) {
   const value = Math.max(0, Number.isFinite(input) ? input : 0)
   return currency.format(value)
+}
+
+// Local aggregation of step-finish metrics for the sidebar/usage panel.
+// We weight by generated tokens so longer generations pull the average
+// toward their reported rate, matching how llama.cpp's per-call timings
+// average into a session-wide figure.
+export function aggregateMetrics(
+  samples: ReadonlyArray<{ metrics?: StepMetrics; generated: number }>,
+): AggregatedMetrics {
+  const totals = { promptSum: 0, promptWeight: 0, generationSum: 0, generationWeight: 0 }
+  for (const sample of samples) {
+    const rate = sample.metrics
+    if (!rate) continue
+    const weight = sample.generated > 0 ? sample.generated : 0
+    if (Number.isFinite(rate.prompt) && (rate.prompt ?? 0) > 0 && weight > 0) {
+      totals.promptSum += (rate.prompt as number) * weight
+      totals.promptWeight += weight
+    }
+    if (Number.isFinite(rate.generation) && (rate.generation ?? 0) > 0 && weight > 0) {
+      totals.generationSum += (rate.generation as number) * weight
+      totals.generationWeight += weight
+    }
+  }
+  const prompt = totals.promptWeight > 0 ? totals.promptSum / totals.promptWeight : undefined
+  const generation =
+    totals.generationWeight > 0 ? totals.generationSum / totals.generationWeight : undefined
+  return {
+    ...(prompt !== undefined ? { prompt } : {}),
+    ...(generation !== undefined ? { generation } : {}),
+  }
+}
+
+export function hasMetrics(value: AggregatedMetrics | undefined): value is AggregatedMetrics {
+  return value !== undefined && (value.prompt !== undefined || value.generation !== undefined)
 }

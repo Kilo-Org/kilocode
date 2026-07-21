@@ -4,6 +4,8 @@ import {
   calcTotalCost,
   calcContextUsage,
   calcTokenUsage,
+  aggregateMetrics,
+  messageMetrics,
   buildFamilyCosts,
   buildFamilyParents,
   buildFamilyParentsFromTools,
@@ -715,5 +717,76 @@ describe("collapseCostBreakdown", () => {
 
     expect(hidden).toEqual({ label: "2 older sessions", cost: 2 + 3 })
     expect(shown).toBe(1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10 + 11)
+  })
+})
+
+// ── Throughput aggregation ─────────────────────────────────────────────
+
+function stepFinish(id: string, metrics?: Part["metrics"]): Part {
+  return {
+    type: "step-finish",
+    id,
+    ...(metrics ? { metrics } : {}),
+  }
+}
+
+describe("aggregateMetrics", () => {
+  it("returns undefined when no step-finish parts carry metrics", () => {
+    const parts: Part[] = [
+      { type: "step-start", id: "s1" },
+      stepFinish("f1"),
+      { type: "text", id: "t1", text: "hello" },
+    ]
+    expect(aggregateMetrics(parts)).toBeUndefined()
+  })
+
+  it("returns the metrics block from the last step-finish with metrics", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { prompt: 100, generation: 20, source: "computed" }),
+      { type: "text", id: "t1", text: "mid" },
+      stepFinish("f2", { prompt: 412, generation: 38, source: "provider" }),
+    ]
+    expect(aggregateMetrics(parts)).toEqual({ prompt: 412, generation: 38, source: "provider" })
+  })
+
+  it("prefers provider-reported metrics over computed ones regardless of order", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { prompt: 500, generation: 50, source: "provider" }),
+      stepFinish("f2", { generation: 30, source: "computed" }),
+    ]
+    const result = aggregateMetrics(parts)
+    expect(result?.source).toBe("provider")
+    expect(result?.prompt).toBe(500)
+  })
+
+  it("falls back to computed metrics when no provider metrics exist", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { generation: 12, source: "computed" }),
+      stepFinish("f2", { generation: 18, source: "computed" }),
+    ]
+    expect(aggregateMetrics(parts)).toEqual({ generation: 18, source: "computed" })
+  })
+
+  it("ignores non-step-finish parts even when they look like metrics", () => {
+    const parts: Part[] = [
+      { type: "text", id: "t1", text: "noise" },
+      stepFinish("f1", { prompt: 200, generation: 22, source: "provider" }),
+    ]
+    expect(aggregateMetrics(parts)).toEqual({ prompt: 200, generation: 22, source: "provider" })
+  })
+})
+
+describe("messageMetrics", () => {
+  it("matches aggregateMetrics behavior on the same input", () => {
+    const parts: Part[] = [
+      stepFinish("f1", { generation: 8, source: "computed" }),
+      stepFinish("f2", { prompt: 99, generation: 33, source: "provider" }),
+    ]
+    expect(messageMetrics(parts)).toEqual(aggregateMetrics(parts))
+  })
+
+  it("returns undefined when no throughput metrics are present", () => {
+    expect(messageMetrics([])).toBeUndefined()
+    expect(messageMetrics([{ type: "text", id: "t1", text: "no metrics here" }])).toBeUndefined()
   })
 })

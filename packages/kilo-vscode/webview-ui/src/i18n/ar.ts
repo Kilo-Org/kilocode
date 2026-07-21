@@ -1679,6 +1679,16 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display tokens-per-second (prompt-processing / text-generation) on each assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.badge.provider": "PP {{pp}} · TG {{tg}}",
+  "chat.throughput.badge.computed": "PP – · TG {{tg}}",
+  "chat.throughput.badge.tooltip.provider": "Prompt-processing {{pp}} t/s · text-generation {{tg}} t/s (reported by provider)",
+  "chat.throughput.badge.tooltip.computed": "Prompt-processing unavailable · text-generation {{tg}} t/s (computed from step duration)",
+  "chat.throughput.badge.tooltip.missing": "Throughput metrics unavailable for this step",
   "settings.providers.defaultModel.title": "النموذج الافتراضي",
   "settings.providers.defaultModel.description": "النموذج الأساسي للمحادثات",
   "settings.providers.smallModel.title": "نموذج صغير",

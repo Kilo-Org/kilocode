@@ -64,6 +64,16 @@ export interface StepStartPart extends BasePart {
   type: "step-start"
 }
 
+// Tokens-per-second throughput metrics reported by the backend on step-finish.
+// `source: "provider"` means the provider returned timings directly (llama.cpp
+// prompt_per_second / predicted_per_second); `"computed"` means the backend
+// derived the rate from server-side step duration and output tokens.
+export interface StepThroughputMetrics {
+  prompt?: number
+  generation?: number
+  source: "provider" | "computed"
+}
+
 export interface StepFinishPart extends BasePart {
   type: "step-finish"
   reason?: string
@@ -78,6 +88,7 @@ export interface StepFinishPart extends BasePart {
     reasoning?: number
     cache?: { read: number; write: number }
   }
+  metrics?: StepThroughputMetrics
 }
 
 export interface CompactionPart extends BasePart {

@@ -205,6 +205,47 @@ export function calcTokenUsage(
 }
 
 /**
+ * Aggregate tokens-per-second throughput across the step-finish parts of a
+ * session.
+ *
+ * Strategy: "last wins". The most recent step-finish with a `metrics` block
+ * is treated as the current throughput snapshot — that's the same number the
+ * per-message badge surfaces, so the aggregated header and per-message rows
+ * always agree. Provider-reported (llama.cpp / Ollama) values win over
+ * computed values when both appear in the same session, because provider
+ * timings reflect the model's actual rate rather than wall-clock duration.
+ *
+ * Returns `undefined` when no step-finish part in the input carries metrics,
+ * which is the signal callers use to hide the throughput UI.
+ */
+export function aggregateMetrics(
+  parts: readonly Part[],
+): { prompt?: number; generation?: number; source: "provider" | "computed" } | undefined {
+  let best: { prompt?: number; generation?: number; source: "provider" | "computed" } | undefined
+  for (const part of parts) {
+    if (part.type !== "step-finish") continue
+    const metrics = part.metrics
+    if (!metrics) continue
+    // Provider-reported metrics outrank computed ones even if they appear
+    // later in the timeline.
+    if (metrics.source === "computed" && best?.source === "provider") continue
+    best = metrics
+  }
+  return best
+}
+
+/**
+ * Pick the throughput snapshot from a single assistant message's parts.
+ * Uses the same last-wins strategy as `aggregateMetrics` so the per-message
+ * badge and the header row stay consistent.
+ */
+export function messageMetrics(
+  parts: readonly Part[],
+): { prompt?: number; generation?: number; source: "provider" | "computed" } | undefined {
+  return aggregateMetrics(parts)
+}
+
+/**
  * Build a map of session ID → **own cost** for each session in the family
  * that has non-zero own cost.
  *

@@ -860,12 +860,20 @@ export const layer = Layer.effect(
             // kilocode_change start - guard against finish-step without start-step:
             // ctx.stepStart is 0 until `start-step` fires, which would feed a
             // huge bogus `elapsed` into telemetry. Fall back to now().
+            const elapsedMs = Math.round(
+              performance.now() - (ctx.stepStart || performance.now()),
+            )
+            const metrics = KiloSessionProcessor.computeMetrics({
+              providerMetadata: value.providerMetadata,
+              tokens: usage.tokens,
+              elapsedMs,
+            })
             KiloSessionProcessor.trackStep({
               sessionID: ctx.sessionID,
               model: ctx.model,
               tokens: usage.tokens,
               cost: usage.cost,
-              elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
+              elapsed: elapsedMs,
               telemetry: ctx.telemetry,
             })
             // kilocode_change end
@@ -898,6 +906,7 @@ export const layer = Layer.effect(
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
               ...(model ? { model } : {}), // kilocode_change
+              ...(metrics ? { metrics } : {}), // kilocode_change
               tokens: usage.tokens,
               cost: usage.cost,
             })

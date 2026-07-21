@@ -1351,6 +1351,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
+        case "requestThroughputSetting":
+          this.sendThroughputSetting()
+          break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
             console.error("[Kilo New] fetchAndSendNotifications failed:", e),
@@ -2709,6 +2712,14 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "timelineSettingLoaded",
       visible: config.get<boolean>("showTaskTimeline", true),
+    })
+  }
+
+  private sendThroughputSetting(): void {
+    const config = vscode.workspace.getConfiguration("kilo-code.new")
+    this.postMessage({
+      type: "throughputSettingLoaded",
+      visible: config.get<boolean>("showTokenThroughput", false),
     })
   }
 

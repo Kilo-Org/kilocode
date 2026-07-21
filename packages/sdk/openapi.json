@@ -26064,6 +26064,23 @@
             "required": ["providerID", "modelID"],
             "additionalProperties": false
           },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "number"
+              },
+              "generation": {
+                "type": "number"
+              },
+              "source": {
+                "type": "string",
+                "enum": ["provider", "computed"]
+              }
+            },
+            "required": ["source"],
+            "additionalProperties": false
+          },
           "cost": {
             "type": "number"
           },

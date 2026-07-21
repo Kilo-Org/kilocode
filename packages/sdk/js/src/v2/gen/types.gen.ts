@@ -779,6 +779,11 @@ export type StepFinishPart = {
     providerID: string
     modelID: string
   }
+  metrics?: {
+    prompt?: number
+    generation?: number
+    source: "provider" | "computed"
+  }
   cost: number
   tokens: {
     total?: number

@@ -433,6 +433,10 @@ export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
 }
 
+export interface RequestThroughputSettingMessage {
+  type: "requestThroughputSetting"
+}
+
 export interface RequestWorkStyleMessage {
   type: "requestWorkStyle"
 }
@@ -1277,6 +1281,7 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestThroughputSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage

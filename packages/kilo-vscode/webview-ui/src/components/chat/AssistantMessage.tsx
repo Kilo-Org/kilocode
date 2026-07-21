@@ -7,7 +7,7 @@
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, onMount, onCleanup } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
@@ -23,8 +23,11 @@ import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
 import { useServer } from "../../context/server"
+import { useVSCode } from "../../context/vscode"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
+import { messageMetrics } from "../../context/session-utils"
+import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
@@ -164,13 +167,81 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
   )
 }
 
+/** Compact tokens-per-second badge shown beneath the last assistant message.
+ * Only renders when the user has opted in via the
+ * `kilo-code.new.showTokenThroughput` setting and the message has a
+ * step-finish part that carries throughput metrics. */
+function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof messageMetrics>> }) {
+  const language = useLanguage()
+  const formatter = createMemo(
+    () =>
+      new Intl.NumberFormat(language.locale(), {
+        maximumFractionDigits: 1,
+      }),
+  )
+  const ppText = createMemo(() => {
+    const prompt = props.metrics.prompt
+    if (prompt === undefined) return "–"
+    return formatter().format(prompt)
+  })
+  const tgText = createMemo(() => {
+    const gen = props.metrics.generation
+    if (gen === undefined) return "–"
+    return formatter().format(gen)
+  })
+  const label = createMemo(() =>
+    props.metrics.source === "provider"
+      ? language.t("chat.throughput.badge.provider", { pp: ppText(), tg: tgText() })
+      : language.t("chat.throughput.badge.computed", { tg: tgText() }),
+  )
+  const tooltip = createMemo(() => {
+    const prompt = props.metrics.prompt
+    const gen = props.metrics.generation
+    if (props.metrics.source === "provider" && prompt !== undefined && gen !== undefined) {
+      return language.t("chat.throughput.badge.tooltip.provider", {
+        pp: formatter().format(prompt),
+        tg: formatter().format(gen),
+      })
+    }
+    if (gen !== undefined) {
+      return language.t("chat.throughput.badge.tooltip.computed", { tg: formatter().format(gen) })
+    }
+    return language.t("chat.throughput.badge.tooltip.missing")
+  })
+  return (
+    <Tooltip value={tooltip()} placement="top">
+      <span
+        data-component="assistant-throughput-badge"
+        data-source={props.metrics.source}
+        style={{ "white-space": "nowrap" }}
+      >
+        {label()}
+      </span>
+    </Tooltip>
+  )
+}
+
 export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
   const display = useDisplay()
+const mem = useMemory()
+  const language = useLanguage()
+  const vscode = useVSCode()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
   const edit = createMemo(() => config().code_edit_display === "expanded")
+
+  // Per-message throughput toggle. Mirrors the showTaskTimeline pattern:
+  // request once on mount and react to the extension's reply.
+  const [throughputVisible, setThroughputVisible] = createSignal(false)
+  onMount(() => vscode.postMessage({ type: "requestThroughputSetting" }))
+  const handler = (e: MessageEvent) => {
+    const data = e.data as { type?: string; visible?: boolean }
+    if (data?.type === "throughputSettingLoaded") setThroughputVisible(Boolean(data.visible))
+  }
+  window.addEventListener("message", handler)
+  onCleanup(() => window.removeEventListener("message", handler))
 
   const parts = createMemo(() => {
     const stored = props.parts ?? data.store.part?.[props.message.id]
@@ -182,6 +253,39 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
+const meta = createMemo(() =>
+    MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
+  )
+  const recall = createMemo(() => {
+    const item = meta()
+    if (item?.type === "recall") return item
+  })
+  // Pull the latest step-finish metrics for this message so the per-message
+  // badge can render its PP/TG rates when the toggle is on.
+  const throughput = createMemo(() =>
+    messageMetrics(
+      (props.parts ?? (data.store.part?.[props.message.id] as TimelinePart[] | undefined) ?? []) as TimelinePart[],
+    ),
+  )
+  const fmt = (value: number) => value.toLocaleString(language.locale())
+  const count = (item: MemoryItem) => fmt(item.count)
+  const items = (item: MemoryItem) => item.items ?? []
+  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
+  const tip = (item: MemoryItem) => {
+    const values = MemoryMarkerMeta.snippets(item, verbose())
+    return (
+      <div style={{ "text-align": "left", "white-space": "normal", "max-width": "280px" }}>
+        <Show
+          when={values.length > 0}
+          fallback={
+            <div>{`${language.t("chat.memory.badge.recalled")} · ${language.t("chat.memory.badge.items", { count: count(item) })}`}</div>
+          }
+        >
+          <For each={values}>{(value) => <div>{value}</div>}</For>
+        </Show>
+      </div>
+    )
+  }
   return (
     <>
       <For each={parts()}>
@@ -297,6 +401,20 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
+<Show when={mem.enabled() && recall()}>
+        {(item) => (
+          <Tooltip value={tip(item())} placement="top">
+            <div data-component="assistant-memory-badge">
+              {language.t("chat.memory.badge.recalled")} ·{" "}
+              {language.t("chat.memory.badge.items", { count: count(item()) })}
+              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
+            </div>
+          </Tooltip>
+        )}
+      </Show>
+      <Show when={throughputVisible() && throughput()}>
+        {(metrics) => <ThroughputBadge metrics={metrics()} />}
+      </Show>
     </>
   )
 }

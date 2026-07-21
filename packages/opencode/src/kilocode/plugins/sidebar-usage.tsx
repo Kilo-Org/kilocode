@@ -6,24 +6,32 @@ import { Locale } from "@/util/locale"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { fmtAttemptCost, fmtScore } from "@/kilocode/components/model-info-panel-utils"
 import {
+  aggregateMetrics,
   failed,
   formatCost,
   formatCount,
+  formatPP,
   formatRate,
+  formatTG,
   groupModelsByProvider,
+  hasMetrics,
   isSessionTreeMember,
   select,
+  type StepMetrics,
   type UsageResult,
 } from "@/kilocode/plugins/model-usage"
 import { ModelRow, UsageRow } from "@/kilocode/plugins/sidebar-usage-row"
 
 const id = "internal:kilo-sidebar-usage"
 
+type MetricSample = { metrics?: StepMetrics; generated: number }
+
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const [usageOpen, setUsageOpen] = createSignal(true)
   const [modelsOpen, setModelsOpen] = createSignal(true)
   const [benchOpen, setBenchOpen] = createSignal(true)
   const [expanded, setExpanded] = createSignal(new Set<string>())
+  const [samples, setSamples] = createSignal<MetricSample[]>([])
   const theme = () => props.api.theme.current
   const local = useLocal()
   const [result, { refetch }] = createResource(
@@ -38,6 +46,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const unavailable = createMemo(() => failed(result(), props.session_id))
   const providers = createMemo(() => Model.index([...props.api.state.provider]))
   const groups = createMemo(() => groupModelsByProvider(usage()?.models ?? [], props.api.state.provider))
+  const throughput = createMemo(() => aggregateMetrics(samples()))
   const bench = createMemo(() => {
     const current = local.model.current()
     if (!current) return undefined
@@ -59,8 +68,16 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     const refresh = () => void refetch()
     const related = (sessionID: string, info?: ReturnType<typeof props.api.state.session.get>) =>
       isSessionTreeMember({ root: props.session_id, sessionID, info, get: props.api.state.session.get })
+    const recordSample = (sessionID: string, part: { type?: string; metrics?: unknown; tokens?: unknown }) => {
+      if (part.type !== "step-finish") return
+      if (!related(sessionID)) return
+      const metrics = isStepMetrics(part.metrics) ? part.metrics : undefined
+      const generated = generatedTokens(part.tokens)
+      setSamples((current) => [...current, { ...(metrics ? { metrics } : {}), generated }])
+    }
     const offs = [
       props.api.event.on("message.part.updated", (event) => {
+        recordSample(event.properties.sessionID, event.properties.part)
         if (event.properties.part.type === "step-finish" && related(event.properties.sessionID)) refresh()
       }),
       props.api.event.on("message.part.removed", (event) => {
@@ -104,6 +121,10 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                 <Row label="Cache read" value={formatCount(data().totals.tokens.cache.read)} />
                 <Row label="Cache write" value={formatCount(data().totals.tokens.cache.write)} />
                 <Row label="Cache rate" value={formatRate(data().totals.tokens)} />
+                <Show when={hasMetrics(throughput())}>
+                  <Row label="PP" value={formatPP(throughput().prompt)} />
+                  <Row label="TG" value={formatTG(throughput().generation)} />
+                </Show>
                 <Row label="Cost" value={formatCost(data().totals.cost)} />
               </>
             )}
@@ -200,6 +221,22 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
       </Show>
     </box>
   )
+}
+
+function isStepMetrics(value: unknown): value is StepMetrics {
+  if (!value || typeof value !== "object") return false
+  const record = value as Record<string, unknown>
+  const source = record.source
+  if (source !== "provider" && source !== "computed") return false
+  return true
+}
+
+function generatedTokens(value: unknown): number {
+  if (!value || typeof value !== "object") return 0
+  const record = value as Record<string, unknown>
+  const output = typeof record.output === "number" ? record.output : 0
+  const reasoning = typeof record.reasoning === "number" ? record.reasoning : 0
+  return output + reasoning
 }
 
 const tui: TuiPlugin = async (api) => {
