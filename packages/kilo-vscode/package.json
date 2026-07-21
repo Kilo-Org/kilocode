@@ -1172,7 +1172,7 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
-    "check-types:webview": "bun script/typecheck.ts --project webview-ui/tsconfig.json",
+    "check-types:webview": "tsc --noEmit --project webview-ui/tsconfig.json",
     "typecheck": "bun run check-types && bun run check-types:webview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
