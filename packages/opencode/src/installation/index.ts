@@ -60,7 +60,10 @@ export const Info = Schema.Struct({
 export type Info = Schema.Schema.Type<typeof Info>
 
 export function userAgent(client = "cli") {
-  return `kilo/${InstallationChannel}/${InstallationVersion}/${client}` // kilocode_change
+  // kilocode_change start - drop redundant "latest" channel, keep it for beta/prod/local
+  const channel = InstallationChannel === "latest" ? "" : `${InstallationChannel}/`
+  return `kilo/${channel}${InstallationVersion}/${client}`
+  // kilocode_change end
 }
 
 export const USER_AGENT = userAgent()
