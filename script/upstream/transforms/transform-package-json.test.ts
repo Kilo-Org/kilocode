@@ -7,6 +7,7 @@ import {
   fixScripts,
   fixTrustedDependencies,
   mergeWithNewestVersions,
+  prunePatchedDependencies,
   selectBunPackageManager,
 } from "./transform-package-json"
 
@@ -87,6 +88,27 @@ test("fixTrustedDependencies removes native-build permissions against Kilo polic
   fixTrustedDependencies(pkg, "package.json", changes)
   expect(pkg.trustedDependencies).toEqual(["bun-pty"])
   expect(changes.some((c) => c.includes("tree-sitter-powershell"))).toBe(true)
+})
+
+test("prunePatchedDependencies drops superseded and missing-file entries", async () => {
+  const ours = {
+    patchedDependencies: {
+      "pacote@21.5.1": "patches/pacote@21.5.1.patch",
+      "keep@1.0.0": import.meta.path,
+    },
+  }
+  const pkg: Record<string, unknown> = {
+    patchedDependencies: {
+      "pacote@21.5.0": "patches/pacote@21.5.0.patch",
+      "gcp-metadata@8.1.2": "patches/__does-not-exist__.patch",
+      "unrelated@2.0.0": import.meta.path,
+    },
+  }
+  const changes: string[] = []
+  await prunePatchedDependencies(pkg, ours, changes)
+  expect(pkg.patchedDependencies).toEqual({ "unrelated@2.0.0": import.meta.path })
+  expect(changes.some((c) => c.includes("pacote@21.5.0"))).toBe(true)
+  expect(changes.some((c) => c.includes("gcp-metadata@8.1.2"))).toBe(true)
 })
 
 test("fixScripts leaves unknown packages untouched", () => {

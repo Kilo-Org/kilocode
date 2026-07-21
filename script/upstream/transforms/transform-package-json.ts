@@ -351,6 +351,34 @@ export function fixTrustedDependencies(pkg: Record<string, unknown>, path: strin
 }
 
 /**
+ * Drop upstream patchedDependencies entries that conflict with Kilo's pins or
+ * whose patch file did not come over. Kilo pins newer patched versions of some
+ * packages (e.g. fff-bun, pacote, xai), and stale upstream entries for the
+ * same package, or entries with a missing patch file, break bun install.
+ */
+export async function prunePatchedDependencies(
+  pkg: Record<string, unknown>,
+  ours: Record<string, unknown> | null,
+  changes: string[],
+): Promise<void> {
+  const patched = pkg.patchedDependencies as Record<string, string> | undefined
+  const ourPatched = (ours?.patchedDependencies as Record<string, string> | undefined) || {}
+  if (!patched || Object.keys(ourPatched).length === 0) return
+  const ourPackages = new Set(Object.keys(ourPatched).map((key) => key.replace(/@[^@]+$/, "")))
+  for (const [key, patch] of Object.entries(patched)) {
+    if (!(key in ourPatched) && ourPackages.has(key.replace(/@[^@]+$/, ""))) {
+      delete patched[key]
+      changes.push(`patchedDependencies: dropped upstream ${key} (Kilo pins a different version)`)
+      continue
+    }
+    if (patch && !(await Bun.file(patch).exists())) {
+      delete patched[key]
+      changes.push(`patchedDependencies: dropped ${key} (patch file ${patch} not present)`)
+    }
+  }
+}
+
+/**
  * Prune upstream-only catalog entries that have no consumers in Kilo.
  */
 export function fixCatalog(pkg: Record<string, unknown>, path: string, changes: string[]): void {
@@ -512,22 +540,7 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
       const ourPatchedDeps = ourPkg.patchedDependencies as Record<string, string> | undefined
       if (ourPatchedDeps) {
         pkg.patchedDependencies = pkg.patchedDependencies || {}
-        // Kilo pins newer patched versions of some packages (e.g. fff-bun,
-        // pacote, xai), so drop upstream's entries for the same package, and
-        // drop any entry whose patch file did not come over. Both leave bun
-        // install looking for nonexistent patch files.
-        const ourPackages = new Set(Object.keys(ourPatchedDeps).map((key) => key.replace(/@[^@]+$/, "")))
-        for (const [key, patch] of Object.entries(pkg.patchedDependencies)) {
-          if (!(key in ourPatchedDeps) && ourPackages.has(key.replace(/@[^@]+$/, ""))) {
-            delete pkg.patchedDependencies[key]
-            changes.push(`patchedDependencies: dropped upstream ${key} (Kilo pins a different version)`)
-            continue
-          }
-          if (patch && !(await Bun.file(patch).exists())) {
-            delete pkg.patchedDependencies[key]
-            changes.push(`patchedDependencies: dropped ${key} (patch file ${patch} not present)`)
-          }
-        }
+        await prunePatchedDependencies(pkg, ourPkg, changes)
         for (const [name, patch] of Object.entries(ourPatchedDeps)) {
           if (!pkg.patchedDependencies[name]) {
             pkg.patchedDependencies[name] = patch
@@ -751,6 +764,7 @@ export async function transformAllPackageJson(options: PackageJsonOptions = {}):
         const kiloPatchedDeps = kiloPkg.patchedDependencies as Record<string, string> | undefined
         if (kiloPatchedDeps) {
           pkg.patchedDependencies = pkg.patchedDependencies || {}
+          await prunePatchedDependencies(pkg, kiloPkg, changes)
           for (const [name, patch] of Object.entries(kiloPatchedDeps)) {
             if (!pkg.patchedDependencies[name]) {
               pkg.patchedDependencies[name] = patch
@@ -965,6 +979,7 @@ export async function reconcilePackageJsonFromRefs(
     const ourPatched = ourPkg.patchedDependencies as Record<string, string> | undefined
     if (ourPatched) {
       pkg.patchedDependencies = (pkg.patchedDependencies as Record<string, string>) || {}
+      await prunePatchedDependencies(pkg, ourPkg, changes)
       const patched = pkg.patchedDependencies as Record<string, string>
       for (const [name, patch] of Object.entries(ourPatched)) {
         if (!patched[name]) {
