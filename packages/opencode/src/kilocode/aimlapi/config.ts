@@ -63,6 +63,27 @@ export function resolvePartnerId(explicit?: string): string {
   return explicit?.trim() || process.env["AIMLAPI_PARTNER_ID"]?.trim() || DEFAULT_PARTNER_ID
 }
 
+/** Attribution header names (AIMLAPI backend contract). */
+export const AIMLAPI_SOURCE_HEADER = "X-AIMLAPI-Source"
+export const AIMLAPI_PARTNER_HEADER = "X-AIMLAPI-Partner-ID"
+/** Marks the request/sign-up as agent-originated (analytics + segmentation). */
+export const AIMLAPI_SOURCE_VALUE = "agent"
+
+/**
+ * Headers every request to aimlapi.com must carry so the traffic is tagged as
+ * agent-originated and attributed to the Kilo Code partner — inference, catalog,
+ * auth and checkout alike, not just sign-up. Set once in each shared HTTP client
+ * so no individual call site can forget them. `X-AIMLAPI-Source` is always sent;
+ * `X-AIMLAPI-Partner-ID` is added only when a partner id is known (empty default
+ * until the production id ships, overridable via AIMLAPI_PARTNER_ID).
+ */
+export function aimlapiAttributionHeaders(partnerId?: string): Record<string, string> {
+  const headers: Record<string, string> = { [AIMLAPI_SOURCE_HEADER]: AIMLAPI_SOURCE_VALUE }
+  const partner = resolvePartnerId(partnerId)
+  if (partner) headers[AIMLAPI_PARTNER_HEADER] = partner
+  return headers
+}
+
 /**
  * Build the co-branded checkout return URLs the hosted payment page redirects
  * to after the user pays or cancels. `sessionToken` + `partnerCheckout=1` make

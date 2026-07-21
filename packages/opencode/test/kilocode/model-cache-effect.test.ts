@@ -7,7 +7,7 @@ import { ModelCache } from "../../src/provider/model-cache"
 import { TestConfig } from "../fixture/config"
 import { pollWithTimeout, testEffect } from "../lib/effect"
 
-type Hit = { readonly url: string }
+type Hit = { readonly url: string; readonly headers: Record<string, string> }
 
 const auth = Layer.mock(Auth.Service)({
   get: () => Effect.succeed(undefined),
@@ -28,7 +28,7 @@ function layer(
 ) {
   const http = HttpClient.make((request) =>
     Effect.gen(function* () {
-      yield* Ref.update(hits, (list) => [...list, { url: request.url }])
+      yield* Ref.update(hits, (list) => [...list, { url: request.url, headers: request.headers }])
       const count = (yield* Ref.get(hits)).length
       if (gates && count === (gates.count ?? 1)) {
         yield* Deferred.succeed(gates.started, undefined)
@@ -318,7 +318,7 @@ it.live("does not resolve auth or config for unsupported providers", () =>
 function aimlapiLayer(hits: Ref.Ref<Hit[]>, item: unknown) {
   const http = HttpClient.make((request) =>
     Effect.gen(function* () {
-      yield* Ref.update(hits, (list) => [...list, { url: request.url }])
+      yield* Ref.update(hits, (list) => [...list, { url: request.url, headers: request.headers }])
       return HttpClientResponse.fromWeb(request, Response.json({ data: [item] }))
     }),
   )
@@ -388,5 +388,31 @@ it.live("exposes the catalog description via model options", () =>
 
     const model = models["vendor/described"] as { options?: { description?: string } }
     expect(model.options?.description).toBe("A capable coding model.")
+  }),
+)
+
+it.live("tags the catalog fetch and every model with the attribution headers", () =>
+  Effect.gen(function* () {
+    const prev = process.env["AIMLAPI_PARTNER_ID"]
+    process.env["AIMLAPI_PARTNER_ID"] = "part_test123"
+    try {
+      const hits = yield* Ref.make<Hit[]>([])
+      const item = { id: "vendor/tagged", type: "openai/chat-completions", info: { name: "Tagged" } }
+      const models = yield* ModelCache.Service.use((cache) =>
+        cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+      ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+      // The public catalog request carries the attribution headers.
+      const headers = (yield* Ref.get(hits))[0]!.headers
+      expect(headers["x-aimlapi-source"]).toBe("agent")
+      expect(headers["x-aimlapi-partner-id"]).toBe("part_test123")
+
+      // Every model carries them too, so getSDK stamps them on inference calls.
+      const model = models["vendor/tagged"] as { headers?: Record<string, string> }
+      expect(model.headers).toEqual({ "X-AIMLAPI-Source": "agent", "X-AIMLAPI-Partner-ID": "part_test123" })
+    } finally {
+      if (prev === undefined) delete process.env["AIMLAPI_PARTNER_ID"]
+      else process.env["AIMLAPI_PARTNER_ID"] = prev
+    }
   }),
 )

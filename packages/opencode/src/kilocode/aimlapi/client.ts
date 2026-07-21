@@ -3,7 +3,7 @@
 // AI/ML API passwordless onboarding and partner-checkout HTTP client.
 // Protocol mirrors the AIMLAPI integrations shipped in Zero and OpenClaude.
 
-import type { AimlapiEndpoints } from "./config"
+import { aimlapiAttributionHeaders, type AimlapiEndpoints } from "./config"
 
 export type PartnerCheckoutSessionStatus =
   | "pending_auth"
@@ -266,7 +266,9 @@ export class AimlapiClient {
     },
   ): Promise<T> {
     const label = requestLabel(url)
-    const headers: Record<string, string> = { Accept: "application/json" }
+    // Attribution headers (source: agent + partner id) belong on every call, not
+    // just sign-up — set here so no endpoint method can forget them.
+    const headers: Record<string, string> = { Accept: "application/json", ...aimlapiAttributionHeaders() }
     if (options.body !== undefined) headers["Content-Type"] = "application/json"
     if (options.bearer) headers["Authorization"] = `Bearer ${options.bearer.trim()}`
 

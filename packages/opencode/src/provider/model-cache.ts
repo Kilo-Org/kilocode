@@ -9,6 +9,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder" // kilocode_change
 import { httpClient } from "@opencode-ai/core/effect/app-node-platform" // kilocode_change
+import { aimlapiAttributionHeaders } from "../kilocode/aimlapi/config"
 
 type Models = Provider["models"]
 type KiloOptions = NonNullable<Parameters<typeof fetchKiloModels>[0]>
@@ -191,7 +192,10 @@ export const layer: Layer.Layer<
       const capabilities = item.capabilities ?? []
       const input = aimlapiModalities(item.modalities?.input ?? [])
       const output = aimlapiModalities(item.modalities?.output ?? [])
-      const model: Models[string] & { options?: Record<string, string> } = {
+      const model: Models[string] & {
+        options?: Record<string, string>
+        headers?: Record<string, string>
+      } = {
         id: item.id,
         name: item.info?.name ?? item.id,
         family: item.info?.developer ?? "",
@@ -214,6 +218,10 @@ export const layer: Layer.Layer<
       // convention — models.dev catalog entries carry none).
       const description = item.info?.description?.trim()
       if (description) model.options = { description }
+      // Attribution headers ride on every inference request: getSDK merges
+      // model.headers into the openai-compatible client, and patchModelsDevModel
+      // carries them onto the resolved model.
+      model.headers = aimlapiAttributionHeaders()
       return model
     }
 
@@ -224,7 +232,10 @@ export const layer: Layer.Layer<
       // the catalog renders before the provider is connected. Capability,
       // modality and pricing metadata are opt-in per section via `include`.
       const url = `${baseURL.replace(/\/+$/, "")}/models?include=capabilities,modalities,pricing`
-      let request = HttpClientRequest.get(url).pipe(HttpClientRequest.acceptJson)
+      let request = HttpClientRequest.get(url).pipe(
+        HttpClientRequest.acceptJson,
+        HttpClientRequest.setHeaders(aimlapiAttributionHeaders()),
+      )
       if (options.apiKey) {
         request = request.pipe(HttpClientRequest.bearerToken(options.apiKey))
       }
