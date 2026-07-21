@@ -1212,6 +1212,7 @@ export function options(input: {
     }
   }
 
+  // kilocode_change start
   if (
     input.providerOptions?.setCacheKey !== false &&
     (input.model.providerID === "openai" ||
@@ -1220,6 +1221,7 @@ export function options(input: {
   ) {
     result["promptCacheKey"] = input.sessionID
   }
+  // kilocode_change end
 
   if (input.model.api.npm === "@ai-sdk/google" || input.model.api.npm === "@ai-sdk/google-vertex") {
     if (input.model.capabilities.reasoning) {
