@@ -70,6 +70,64 @@
 
 ## [Unreleased]
 
+## [7.0.8] - 2026-07-21
+
+### Added
+- feat(memory): add verbose flag and marker content snippets by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12250
+- feat(cli): improve memory CLI UX by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12255
+- feat(memory): improve extension UX and activity details by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12254
+- feat(cli): support remote slash commands and session creation by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12224
+- feat(agent-manager): stop managed sessions from tool by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12271
+- feat(indexing): support custom file extensions by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12306
+- feat(agent-manager): effort selection in compare models, fix worktree prompt scrollbars by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12401
+- feat(vscode): cycle reasoning effort variants with Shift+Tab by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12403
+- feat(jetbrains): add Context settings parity by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12292
+- feat(jetbrains): migration from JetBrains file search to CLI by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12191
+- feat(jetbrains): add skills settings by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12416
+- feat(jetbrains): add auto-approve settings by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12291
+
+### Fixed
+- fix(provider): enable reasoning variants for Grok 4.5 by @rakshith1928 in https://github.com/Kilo-Org/kilocode/pull/12086
+- fix(vscode): preserve chat auto-scroll pause after wheel up by @Githubguy132010 in https://github.com/Kilo-Org/kilocode/pull/12103
+- fix(cli): retry empty incomplete responses by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12267
+- fix(cli): restore directory @-mention expansion by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12252
+- fix(gateway): surface routed model and cost by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12233
+- fix(cli): clean test runner temp environments by @dengbushi in https://github.com/Kilo-Org/kilocode/pull/12232
+- fix: show messages after reverting and resubmitting by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12274
+- fix(vscode): prevent question submission freeze by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12285
+- fix(vscode): group context controls in task header and use distinct icons by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12287
+- fix(gateway): support ES2022 metadata consumers by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12289
+- fix(ui): support bidirectional chat markdown by @mjnaderi in https://github.com/Kilo-Org/kilocode/pull/11944
+- fix(indexing): allow validation timeout retries by @shssoichiro in https://github.com/Kilo-Org/kilocode/pull/12263
+- fix(vscode): respect terminal display for background processes by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12301
+- fix(vscode): finish deprecated review commands by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12213
+- fix(agent-manager): open worktree dialog by default by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12279
+- fix(cli): improve sidebar usage display by @jeanduplessis in https://github.com/Kilo-Org/kilocode/pull/12303
+- fix: skip unused PowerShell native build by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12395
+- fix(vscode): render heredoc approvals as plain text by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12304
+- fix(cli): explain missing Zig build dependency by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12397
+- fix(cli): repair cloud session imports by @eshurakov in https://github.com/Kilo-Org/kilocode/pull/12329
+- fix: allow ES2023 library APIs by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12294
+- fix(revert): clarify workspace restoration by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12302
+- fix(gateway): keep image-output models in chat list by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12378
+- fix(ui): stop diff content bleeding through sticky tool card headers by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12415
+- fix: keep CLI sidebar branch label in sync with git by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12314
+- fix(cli): avoid standalone TUI preload lookup by @shssoichiro in https://github.com/Kilo-Org/kilocode/pull/12335
+- fix(vscode): reset scroll position on diff change by @jhapate0704 in https://github.com/Kilo-Org/kilocode/pull/11928
+- fix(memory): refine CLI and extension experience by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12422
+
+### Changed
+- release(jetbrains): v7.0.7 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12258
+- perf(cli): speed up local recall searches by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12242
+- test(cli): stabilize global skill permission test on slow CI by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12248
+- ci: guard Kilo-only workflows in forks by @maphew in https://github.com/Kilo-Org/kilocode/pull/11210
+- chore(jetbrains): bump CLI pin to v7.4.9 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12251
+- ci(vscode): align typecheck with release build by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12296
+- test(cli): stabilize compaction interruption tests on loaded CI runners by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12311
+- chore(jetbrains): bump CLI pin to v7.4.11 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12295
+- OpenCode v1.17.4 by @johnnyeric in https://github.com/Kilo-Org/kilocode/pull/12204
+
+
 ## [7.0.7] - 2026-07-15
 
 ### Added
