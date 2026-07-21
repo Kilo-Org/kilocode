@@ -5,6 +5,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import type { KiloPassState } from "@kilocode/kilo-gateway"
 import type { Message } from "@kilocode/sdk/v2"
 import { onBalanceRefresh } from "../balance-refresh"
+import { REDACTED_BALANCE } from "../pii"
 
 const id = "internal:kilo-sidebar-footer"
 const TEAM_POLL_MS = 5 * 60_000
@@ -37,8 +38,9 @@ export function scope(org: string | null | undefined, list?: readonly { id: stri
   }
 }
 
-export function creditLabel(value: ReturnType<typeof scope>) {
+export function creditLabel(value: ReturnType<typeof scope>, masked = false) {
   if (value.kind === "Personal") return "Personal credits"
+  if (masked) return "Team credits"
   return value.name ? `${value.name} team` : "Team credits"
 }
 
@@ -98,6 +100,8 @@ function View(props: { api: TuiPluginApi }) {
       name: list.at(-1) ?? "",
     }
   })
+  const privacyMode = createMemo(() => props.api.state.config.privacy_mode === true)
+  const balanceText = createMemo(() => (privacyMode() ? REDACTED_BALANCE : null))
   const refresh = () => {
     const id = ++seq
     // Cancel any prior request and time this one out — the client path has no fetch timeout,
@@ -167,19 +171,20 @@ function View(props: { api: TuiPluginApi }) {
             {(() => {
               const balance = data().balance
               if (balance === undefined) return null
+              const masked = balanceText()
               return (
                 <box flexDirection="row" justifyContent="space-between">
                   <box flexDirection="row" gap={1}>
                     <text fg={tone()}>•</text>
                     <text fg={theme().text}>
-                      <b>{creditLabel(data().scope)}</b>
+                      <b>{creditLabel(data().scope, privacyMode())}</b>
                     </text>
                   </box>
-                  <text fg={tone()}>{format(balance)}</text>
+                  <text fg={tone()}>{masked ?? format(balance)}</text>
                 </box>
               )
             })()}
-            <Show when={data().scope.kind === "Personal" ? data().pass : null}>
+            <Show when={privacyMode() ? null : data().scope.kind === "Personal" ? data().pass : null}>
               {(pass) => (
                 <box gap={0}>
                   <box flexDirection="row" justifyContent="space-between" gap={1}>

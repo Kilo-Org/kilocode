@@ -28115,6 +28115,9 @@
           "hide_prompt_training_models": {
             "type": "boolean"
           },
+          "privacy_mode": {
+            "type": "boolean"
+          },
           "sandbox": {
             "type": "object",
             "properties": {

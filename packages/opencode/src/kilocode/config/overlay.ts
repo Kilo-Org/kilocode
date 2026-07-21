@@ -80,6 +80,7 @@ export namespace KilocodeConfigOverlay {
     ["model"],
     ["small_model"],
     ["hide_prompt_training_models"],
+    ["privacy_mode"],
     ["default_agent"],
     ["snapshot"],
     ["share"],
