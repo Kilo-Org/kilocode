@@ -169,14 +169,18 @@ export class DirectoryScanner implements IDirectoryScanner {
         discoveredCount: 0,
         candidateCount: 0,
       })
-      const patterns = [...this.extensions].map((ext) => `**/*${ext}`)
+      // RATIONALE: Fold only extension letters so built-in ignores remain case-sensitive.
+      const patterns = [...this.extensions].map(
+        (ext) => `**/*${ext.replace(/[A-Za-z]/g, (char) => `[${char.toLowerCase()}${char.toUpperCase()}]`)}`,
+      )
       const allPaths = patterns.length
         ? await glob(patterns, {
             cwd: directoryPath,
             absolute: true,
             nodir: true,
             dot: false,
-            nocase: true,
+            ignore: FileIgnore.PATTERNS,
+            nocase: false,
             maxDepth: Infinity,
           })
         : []
