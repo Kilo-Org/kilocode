@@ -44,15 +44,17 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.HighlighterColors
 import com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider
 import com.intellij.openapi.editor.actions.PasteAction
 import com.intellij.openapi.editor.colors.CodeInsightColors
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
-import com.intellij.openapi.fileEditor.TextEditor
+import com.intellij.openapi.editor.markup.TextAttributes
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
@@ -67,6 +69,7 @@ import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -80,6 +83,7 @@ import java.awt.Color
 import java.awt.Component
 import java.awt.Container
 import java.awt.DefaultKeyboardFocusManager
+import java.awt.Font
 import java.awt.KeyboardFocusManager
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.StringSelection
@@ -92,6 +96,7 @@ import java.io.File
 import java.util.Base64
 import javax.imageio.ImageIO
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ImageIcon
 import javax.swing.ScrollPaneConstants
@@ -187,6 +192,16 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertEquals(pad, ins.right)
     }
 
+    fun `test prompt shell right padding matches bottom padding`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val shell = panel.shellForTest()
+        val ins = shell.border.getBorderInsets(shell)
+
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING), ins.left)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING), ins.bottom)
+        assertEquals(ins.bottom, ins.right)
+    }
+
     fun `test prompt focus outline follows editor focus`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 260, 400)
@@ -199,7 +214,6 @@ class PromptPanelTest : BasePlatformTestCase() {
         KeyboardFocusManager.setCurrentKeyboardFocusManager(focus)
         try {
             assertEquals(SessionUiStyle.View.Prompt.separator().rgb, paint(panel, panel.width / 2, 0).rgb)
-            assertTrue(JBUI.CurrentTheme.Focus.focusColor().rgb != paint(panel, panel.width / 2, 1).rgb)
 
             focus.focus(editor.contentComponent)
             editor.contentComponent.focusListeners.forEach {
@@ -208,6 +222,8 @@ class PromptPanelTest : BasePlatformTestCase() {
 
             assertTrue(SessionUiStyle.View.Prompt.separator().rgb != paint(panel, panel.width / 2, 0).rgb)
             assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width / 2, 1).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, 1, panel.height / 2).rgb)
+            assertEquals(JBUI.CurrentTheme.Focus.focusColor().rgb, paint(panel, panel.width - 1, panel.height / 2).rgb)
         } finally {
             KeyboardFocusManager.setCurrentKeyboardFocusManager(current)
         }
@@ -224,6 +240,31 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(panel.preferredSize.height >= 26)
     }
 
+    fun `test applyStyle refreshes prompt editor chrome colors`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val bg = Color(0x21, 0x32, 0x43)
+        val scheme = EditorColorsManager.getInstance().globalScheme.clone() as EditorColorsScheme
+        scheme.setAttributes(
+            HighlighterColors.TEXT,
+            TextAttributes(Color(0xEA, 0xEA, 0xEA), bg, null, null, Font.PLAIN),
+        )
+        val style = SessionEditorStyle.create(scheme = scheme)
+
+        realize(panel, 260, 400)
+        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        editor.scrollPane.background = Color.BLACK
+        editor.scrollPane.viewport.background = Color.BLACK
+        editor.contentComponent.background = Color.BLACK
+
+        panel.applyStyle(style)
+
+        assertEquals(bg, panel.defaultFocusedComponent.background)
+        assertEquals(bg, editor.backgroundColor)
+        assertEquals(bg, editor.scrollPane.background)
+        assertEquals(bg, editor.scrollPane.viewport.background)
+        assertEquals(bg, editor.contentComponent.background)
+    }
+
     fun `test prompt editor grows when lines are added`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
@@ -235,7 +276,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(editor.preferredSize.height > min)
     }
 
-    fun `test prompt editor keeps three line minimum`() {
+    fun `test prompt editor keeps compact empty minimum`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
 
@@ -245,6 +286,53 @@ class PromptPanelTest : BasePlatformTestCase() {
             JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
 
         assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt ignores narrow placeholder preferred height`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val view = editor.getEditor(false)!!
+        val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt minimum ignores user scale factor`() {
+        // The empty-prompt minimum is line height (ide scale) plus scaled chrome. Under a
+        // raised user scale factor it must equal that computed minimum, not a doubled value.
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+            val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+            val editor = panel.defaultFocusedComponent as EditorTextField
+
+            realize(panel, 400, 400)
+            UIUtil.dispatchAllInvocationEvents()
+            val view = editor.getEditor(false)!!
+            val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+                JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+            assertEquals(min, editor.preferredSize.height)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
+
+    fun `test empty prompt panel stays compact at narrow width`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 900)
+        UIUtil.dispatchAllInvocationEvents()
+        val chrome = (panel.shellForTest().preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = panel.insets
+
+        assertEquals(editor.preferredSize.height + chrome + ins.top + ins.bottom, panel.preferredSize.height)
+        assertTrue(panel.preferredSize.height < 180)
     }
 
     fun `test prompt editor grows when single line wraps`() {
@@ -301,6 +389,10 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         val chrome = (panel.preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
         assertTrue(editor.preferredSize.height <= root.height / 3 - chrome + 1)
+        assertEquals(
+            ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+            editor.getEditor(false)!!.scrollPane.verticalScrollBarPolicy,
+        )
     }
 
     fun `test attachment strip is included in session root cap`() {
@@ -319,16 +411,29 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(attachedEditor.preferredSize.height < plainEditor.preferredSize.height)
     }
 
-    fun `test prompt editor scroll policy keeps horizontal disabled`() {
+    fun `test prompt editor hides scrollbars until content overflows cap`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         realize(panel, 180, 400)
 
-        val editor = (panel.defaultFocusedComponent as EditorTextField).getEditor(false)!!
+        val field = panel.defaultFocusedComponent as EditorTextField
+        val editor = field.getEditor(false)!!
 
-        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
         assertTrue(editor.settings.isUseSoftWraps)
         assertFalse(editor.settings.isPaintSoftWraps)
+        assertFalse(editor.settings.isBlockCursor)
+
+        field.text = (1..40).joinToString("\n") { "line $it" }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED, editor.scrollPane.verticalScrollBarPolicy)
+        assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, editor.scrollPane.horizontalScrollBarPolicy)
+
+        field.text = "short"
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(ScrollPaneConstants.VERTICAL_SCROLLBAR_NEVER, editor.scrollPane.verticalScrollBarPolicy)
     }
 
     fun `test prompt editor highlights validated commands and mentions`() {
@@ -348,28 +453,20 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
     }
 
-    fun `test prompt editor exposes file editor for undo redo`() {
+    fun `test prompt editor does not expose file editor for platform undo`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
         realize(panel, 260, 400)
         val editor = field.getEditor(false)!!
-        WriteCommandAction.runWriteCommandAction(project) {
-            editor.document.insertString(0, "hello")
-        }
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
 
-        assertNotNull(file)
-        assertSame(editor.document, file.editor.document)
-        UndoManager.getInstance(project).undo(file)
-        assertEquals("", editor.document.text)
-        UndoManager.getInstance(project).redo(file)
-        assertEquals("hello", editor.document.text)
+        assertNull(sink.file)
+        assertSame(true, editor.getUserData(EditorTextField.SUPPLEMENTARY_KEY))
     }
 
-    fun `test prompt editor platform undo redo actions target prompt editor`() {
+    fun `test prompt editor platform undo redo actions do not throw`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
@@ -381,13 +478,10 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(true, editor.contentComponent.getClientProperty(UndoRedoAction.IGNORE_SWING_UNDO_MANAGER))
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
-        assertSame(editor.document, file.editor.document)
-        assertTrue("prompt file editor should have undo", UndoManager.getInstance(project).isUndoAvailable(file))
+        assertNull(sink.file)
 
-        invokeAction(IdeActions.ACTION_UNDO, editor.contentComponent, file)
-        assertEquals("", editor.document.text)
-        invokeAction(IdeActions.ACTION_REDO, editor.contentComponent, file)
+        updatePlatformAction(IdeActions.ACTION_UNDO, editor)
+        updatePlatformAction(IdeActions.ACTION_REDO, editor)
         assertEquals("hello", editor.document.text)
     }
 
@@ -953,6 +1047,25 @@ class PromptPanelTest : BasePlatformTestCase() {
         panel.setBusy(true)
 
         assertEquals("Stop", panel.buttonForTest().toolTipText)
+        assertSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
+        assertTrue(panel.isStopEnabled)
+    }
+
+    fun `test send icon matches scroll button theme colors`() {
+        assertTrue(resource("/icons/send.svg").contains("fill=\"#0066B8\""))
+        assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
+    }
+
+    fun `test busy disables send button`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        panel.setReady(true)
+        ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
+        UIUtil.dispatchAllInvocationEvents()
+        assertTrue(panel.isSendEnabled)
+
+        panel.setBusy(true)
+
+        assertFalse(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
     }
 
@@ -987,18 +1100,21 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(icon, button.icon)
     }
 
-    fun `test auto approve and enhance buttons sit next to send button`() {
+    fun `test auto approve enhance separator and send buttons sit in order`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val auto = autoApproveButton(panel)
         val enhance = enhanceButton(panel)
         val send = panel.buttonForTest()
         val items = auto.parent.components.toList()
+        val sep = items[items.indexOf(enhance) + 2] as JComponent
 
         assertTrue(SwingUtilities.isDescendingFrom(auto, panel.shellForTest()))
         assertSame(auto.parent, enhance.parent)
         assertSame(auto.parent, send.parent)
         assertEquals(2, items.indexOf(enhance) - items.indexOf(auto))
-        assertEquals(2, items.indexOf(send) - items.indexOf(enhance))
+        assertEquals(4, items.indexOf(send) - items.indexOf(enhance))
+        assertEquals(JBUI.scale(1), sep.preferredSize.width)
+        assertNotNull(sep.border)
     }
 
     fun `test enhance button follows connection and busy state`() {
@@ -1235,21 +1351,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun invokeAction(id: String, component: java.awt.Component, file: TextEditor) {
+    private fun updatePlatformAction(id: String, editor: Editor) {
         val action = ActionManager.getInstance().getAction(id) ?: error("missing action $id")
         val ctx = DataContext { data ->
             when (data) {
                 CommonDataKeys.PROJECT.name -> project
-                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> component
-                PlatformCoreDataKeys.FILE_EDITOR.name -> file
+                CommonDataKeys.EDITOR.name -> editor
+                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> editor.contentComponent
                 else -> null
             }
         }
         val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
         ActionUtil.updateAction(action, event)
-        assertTrue("action $id should be enabled", event.presentation.isEnabled)
-        ActionUtil.performAction(action, event)
-        UIUtil.dispatchAllInvocationEvents()
     }
 
     private fun waitForLookupItems(editor: Editor): List<String> {
@@ -1316,6 +1429,11 @@ class PromptPanelTest : BasePlatformTestCase() {
             PasteAction.TRANSFERABLE_PROVIDER.name -> Producer { item }
             else -> null
         }
+    }
+
+    private fun resource(path: String): String {
+        val stream = PromptPanel::class.java.getResourceAsStream(path) ?: error("missing resource $path")
+        return stream.use { it.readBytes().decodeToString() }
     }
 
     private class FileListTransferable(private val files: List<File>) : Transferable {

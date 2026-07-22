@@ -38,6 +38,8 @@ export interface Worktree {
   branchOwned?: boolean
   /** Initial session whose prompts may name this placeholder branch once. */
   autoNameSessionId?: string
+  /** Number of prompts observed for the armed session; bounds rename attempts. */
+  autoNamePromptCount?: number
   /** Section this worktree belongs to, or undefined for ungrouped. */
   sectionId?: string
 }
@@ -234,6 +236,7 @@ export class WorktreeStateManager {
     this.log(`Updated worktree ${id} branch: ${wt.branch} → ${branch}`)
     wt.branch = branch
     wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
     void this.save()
     return true
   }
@@ -242,6 +245,7 @@ export class WorktreeStateManager {
     const wt = this.worktrees.get(id)
     if (!wt || wt.branchOwned !== true) return
     wt.autoNameSessionId = sessionId
+    wt.autoNamePromptCount = 0
     void this.save()
   }
 
@@ -249,7 +253,18 @@ export class WorktreeStateManager {
     const wt = this.worktrees.get(id)
     if (!wt?.autoNameSessionId) return
     wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
     void this.save()
+  }
+
+  /** Increment the prompt counter for an armed worktree and return the new
+   *  count, or undefined when the worktree is no longer armed. */
+  incrementAutoNameCount(id: string): number | undefined {
+    const wt = this.worktrees.get(id)
+    if (!wt?.autoNameSessionId) return undefined
+    wt.autoNamePromptCount = (wt.autoNamePromptCount ?? 0) + 1
+    void this.save()
+    return wt.autoNamePromptCount
   }
 
   renameOwnedBranch(id: string, current: string, branch: string): boolean {
@@ -258,6 +273,7 @@ export class WorktreeStateManager {
     wt.branch = branch
     wt.originalBranch = undefined
     wt.autoNameSessionId = undefined
+    wt.autoNamePromptCount = undefined
     this.log(`Automatically renamed worktree ${id} branch: ${current} → ${branch}`)
     void this.save()
     return true
@@ -310,6 +326,7 @@ export class WorktreeStateManager {
     const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
     if (worktree?.autoNameSessionId && worktreeId && this.getSessions(worktreeId).length > 1) {
       worktree.autoNameSessionId = undefined
+      worktree.autoNamePromptCount = undefined
     }
     this.log(`Added session ${sessionId} to worktree ${worktreeId ?? "local"}`)
     void this.save()
@@ -321,10 +338,16 @@ export class WorktreeStateManager {
     const session = this.sessions.get(sessionId)
     if (!session) return
     const previous = session.worktreeId ? this.worktrees.get(session.worktreeId) : undefined
-    if (previous?.autoNameSessionId === sessionId) previous.autoNameSessionId = undefined
+    if (previous?.autoNameSessionId === sessionId) {
+      previous.autoNameSessionId = undefined
+      previous.autoNamePromptCount = undefined
+    }
     session.worktreeId = worktreeId
     const worktree = worktreeId ? this.worktrees.get(worktreeId) : undefined
-    if (worktree?.autoNameSessionId) worktree.autoNameSessionId = undefined
+    if (worktree?.autoNameSessionId) {
+      worktree.autoNameSessionId = undefined
+      worktree.autoNamePromptCount = undefined
+    }
     this.log(`Moved session ${sessionId} to ${worktreeId ?? "local"}`)
     void this.save()
   }

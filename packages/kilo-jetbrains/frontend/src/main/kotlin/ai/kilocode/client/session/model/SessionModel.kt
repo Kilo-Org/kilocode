@@ -14,6 +14,7 @@ import ai.kilocode.rpc.dto.ModelOptionsDto
 import ai.kilocode.rpc.dto.ModelTerminalBenchDto
 import ai.kilocode.rpc.dto.PartDto
 import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TokensDto
 import com.intellij.openapi.Disposable
@@ -71,6 +72,8 @@ class SessionModel {
     var session: SessionDto? = null
         private set
 
+    private var revert: SessionRevertDto? = null
+
     var header: SessionHeaderSnapshot = emptyHeader()
         private set
 
@@ -102,6 +105,25 @@ class SessionModel {
 
     @RequiresEdt
     fun turns(): Collection<Turn> = turnEntries.values
+
+    @RequiresEdt
+    fun revert(): SessionRevertDto? = revert
+
+    @RequiresEdt
+    fun revertedCount(): Int {
+        val mark = revert ?: return 0
+        val idx = entries.keys.indexOf(mark.messageID)
+        if (idx < 0) return 0
+        return entries.values.drop(idx).count { it.info.role == "user" }
+    }
+
+    @RequiresEdt
+    fun isRevertedMessage(id: String): Boolean {
+        val mark = revert ?: return false
+        val idx = entries.keys.indexOf(mark.messageID)
+        val pos = entries.keys.indexOf(id)
+        return idx >= 0 && pos >= idx
+    }
 
     @RequiresEdt
     fun turn(id: String): Turn? = turnEntries[id]
@@ -262,7 +284,15 @@ class SessionModel {
         if (this.session == session) return
         this.session = session
         fire(SessionModelEvent.SessionUpdated(session))
+        setRevert(session.revert)
         updateHeader()
+    }
+
+    @RequiresEdt
+    fun setRevert(revert: SessionRevertDto?) {
+        if (this.revert == revert) return
+        this.revert = revert
+        fire(SessionModelEvent.RevertChanged(revert))
     }
 
     @RequiresEdt
@@ -298,6 +328,7 @@ class SessionModel {
         childRemoved.clear()
         hiddenText.clear()
         session = null
+        revert = null
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()
@@ -331,6 +362,7 @@ class SessionModel {
         childRemoved.clear()
         hiddenText.clear()
         session = null
+        revert = null
         state = SessionState.Idle
         diff = emptyList()
         todos = emptyList()

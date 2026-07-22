@@ -80,7 +80,7 @@ function run(input: {
 }
 
 describe("MemoryCapture (fake ports)", () => {
-  test("turn-close typed LLM saves environment memory and audit records", async () => {
+  test("turn-close typed LLM saves environment memory", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -102,9 +102,6 @@ describe("MemoryCapture (fake ports)", () => {
 
       const shown = await KiloMemory.show({ root: t.root })
       expect(shown.sources.environment).toContain("cli_memory_tests")
-      expect(shown.decisions).toContain('"kind":"digest"')
-      expect(shown.decisions).toContain('"kind":"typed"')
-      expect(shown.decisions).toContain('"result":"saved"')
     } finally {
       await t.done()
     }
@@ -138,9 +135,6 @@ describe("MemoryCapture (fake ports)", () => {
       const shown = await KiloMemory.show({ root: t.root })
       expect(shown.sources.environment).toContain("cli_tests")
       expect(shown.sources.environment).not.toContain(secret)
-      expect(shown.decisions).toContain('"reason":"secret"')
-      // The audit record itself must not carry the raw secret (decisions are exposed via /memory/show).
-      expect(shown.decisions).not.toContain(secret)
       const detail = events.find((item) => item.detail?.type === "saved")?.detail
       expect(detail?.message).toContain("environment.md:cli_tests")
       expect(detail?.message).not.toContain(secret)
@@ -173,18 +167,15 @@ describe("MemoryCapture (fake ports)", () => {
         sessionID: "ses_effect",
         max: MemorySchema.maxStoredDigestSummary,
       })
-      const shown = await KiloMemory.show({ root: t.root })
       expect(saved?.summary).toContain("[redacted]")
       expect(saved?.summary).not.toContain(secret)
       expect(saved?.summary).not.toContain(secret.slice(0, 20))
-      expect(shown.decisions).not.toContain(secret)
-      expect(shown.decisions).not.toContain(secret.slice(0, 20))
     } finally {
       await t.done()
     }
   })
 
-  test("turn-close surfaces content-gate rejections in the audit with redacted text", async () => {
+  test("turn-close rejects self-referential content while applying safe operations", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -206,10 +197,6 @@ describe("MemoryCapture (fake ports)", () => {
       expect(result).toMatchObject({ skipped: false, operationCount: 1 })
       const shown = await KiloMemory.show({ root: t.root })
       expect(shown.sources.project).not.toContain("gate_check")
-      // The apply-time content gate is visible in the audit, and its recorded text is redacted.
-      expect(shown.decisions).toContain('"reason":"self_referential"')
-      expect(shown.decisions).toContain("[redacted]")
-      expect(shown.decisions).not.toContain("password=hunter2")
     } finally {
       await t.done()
     }
@@ -312,7 +299,41 @@ describe("MemoryCapture (fake ports)", () => {
     }
   })
 
-  test("interrupted close records a non-LLM fallback digest tagged with the reason", async () => {
+  test("small file edit with recalled memory still records digest (edit defeats echo, any file type)", async () => {
+    const t = await tmp()
+    try {
+      await KiloMemory.enable({ root: t.root })
+      await KiloMemory.configure({ root: t.root, settings: { autoConsolidate: true } })
+
+      let runs = 0
+      const result = await run({
+        root: t.root,
+        session: session(
+          view({
+            assistant: "Fixed the parser.",
+            recalledMemory: true,
+            diffs: [{ file: "src/parser", additions: 4, deletions: 0 }],
+          }),
+        ),
+        model: model({
+          digest: '{"topic":"parser","summary":"Fixed the parser in src/parser."}',
+          typed: '{"operations":[],"skipped":[]}',
+          onRun: (system) => {
+            if (system === digestPrompt) runs++
+          },
+        }),
+      })
+
+      expect(result).toMatchObject({ skipped: false })
+      expect(runs).toBe(1)
+      const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_effect", max: 480 })
+      expect(saved?.summary).toContain("Fixed the parser")
+    } finally {
+      await t.done()
+    }
+  })
+
+  test("interrupted close records a non-LLM fallback digest", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -333,9 +354,6 @@ describe("MemoryCapture (fake ports)", () => {
       const raw = await Bun.file(path.join(MemoryPaths.files(t.root).sessions, file)).text()
       expect(saved?.fallback).toBe(true)
       expect(raw).toContain("Fallback: true")
-      const shown = await KiloMemory.show({ root: t.root })
-      expect(shown.decisions).toContain("session digest fallback on interrupted")
-      expect(shown.decisions).toContain('"fallback":true')
     } finally {
       await t.done()
     }
@@ -423,7 +441,7 @@ describe("MemoryCapture (fake ports)", () => {
     }
   })
 
-  test("template echo digest output falls back and records template_echo", async () => {
+  test("template echo digest output falls back", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -439,16 +457,13 @@ describe("MemoryCapture (fake ports)", () => {
       })
 
       const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_effect", max: 480 })
-      const shown = await KiloMemory.show({ root: t.root })
       expect(saved?.fallback).toBe(true)
-      expect(shown.decisions).toContain('"reason":"template_echo"')
-      expect(shown.decisions).toContain('"fallback":true')
     } finally {
       await t.done()
     }
   })
 
-  test("empty digest output falls back and records empty_digest", async () => {
+  test("empty digest output falls back", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -464,11 +479,8 @@ describe("MemoryCapture (fake ports)", () => {
       })
 
       const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_effect", max: 480 })
-      const shown = await KiloMemory.show({ root: t.root })
       expect(saved?.fallback).toBe(true)
       expect(saved?.summary).toContain("User:")
-      expect(shown.decisions).toContain('"reason":"empty_digest"')
-      expect(shown.decisions).toContain('"fallback":true')
     } finally {
       await t.done()
     }
@@ -569,7 +581,7 @@ describe("MemoryCapture (fake ports)", () => {
     }
   })
 
-  test("records audit when configured memory model is unavailable", async () => {
+  test("configured memory model fallback still captures memory", async () => {
     const t = await tmp()
     try {
       await KiloMemory.enable({ root: t.root })
@@ -586,8 +598,8 @@ describe("MemoryCapture (fake ports)", () => {
         }),
       })
 
-      const shown = await KiloMemory.show({ root: t.root })
-      expect(shown.changes).toContain("memory_model_config reason=model unavailable fallback=1")
+      const saved = await MemoryFiles.readSession(t.root, { sessionID: "ses_effect", max: 480 })
+      expect(saved?.summary).toContain("Explored repo setup")
     } finally {
       await t.done()
     }
@@ -720,17 +732,63 @@ describe("MemoryService digest-only commit", () => {
 })
 
 describe("MemoryService recordRecall", () => {
-  test("records the last active recall (session, count, time) into stats", async () => {
+  test("records the last active recall and publishes its persisted status", async () => {
     const t = await tmp()
+    const events: MemoryEvents.Status[] = []
     try {
       await KiloMemory.enable({ root: t.root })
+      MemoryEvents.setSink((input) => {
+        events.push(input.payload)
+      })
       const svc = MemoryService.make()
       await Effect.runPromise(svc.recordRecall({ root: t.root, sessionID: "ses_recall", now: 4242, count: 3 }))
       const state = await MemoryFiles.readState(t.root)
       expect(state.stats.lastRecallAt).toBe(4242)
       expect(state.stats.lastRecallCount).toBe(3)
       expect(state.stats.lastRecallSessionID).toBe("ses_recall")
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          sessionID: "ses_recall",
+          state: "injecting",
+          detail: expect.objectContaining({ type: "recalled", message: "Memory recalled · 3 items" }),
+        }),
+      )
     } finally {
+      MemoryEvents.setSink(() => {})
+      await t.done()
+    }
+  })
+})
+
+describe("MemoryService state events", () => {
+  test("publishes status after enabling, configuring, and disabling memory", async () => {
+    const t = await tmp()
+    const events: { event?: MemoryEvents.Event; payload: MemoryEvents.Status }[] = []
+    try {
+      MemoryEvents.setSink((input) => {
+        events.push(input)
+      })
+      const svc = MemoryService.make()
+      await Effect.runPromise(svc.enable({ root: t.root }))
+      await Effect.runPromise(svc.configure({ root: t.root, settings: { verbose: true } }))
+      await Effect.runPromise(svc.disable({ root: t.root }))
+
+      expect(events).toEqual([
+        expect.objectContaining({
+          event: "status",
+          payload: expect.objectContaining({ directory: t.root, enabled: true, state: "idle" }),
+        }),
+        expect.objectContaining({
+          event: "status",
+          payload: expect.objectContaining({ directory: t.root, enabled: true, state: "idle" }),
+        }),
+        expect.objectContaining({
+          event: "status",
+          payload: expect.objectContaining({ directory: t.root, enabled: false, state: "idle" }),
+        }),
+      ])
+    } finally {
+      MemoryEvents.setSink(() => {})
       await t.done()
     }
   })

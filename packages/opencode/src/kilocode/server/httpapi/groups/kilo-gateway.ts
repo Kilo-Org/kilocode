@@ -122,6 +122,11 @@ export const CloudSessionImportBody = Schema.Struct({
   sessionId: Schema.String,
 })
 
+export class CloudSessionImportError extends Schema.ErrorClass<CloudSessionImportError>("CloudSessionImportError")(
+  { error: Schema.String },
+  { httpApiStatus: 500 },
+) {}
+
 const GroupEntry = Schema.Union([
   Schema.String,
   Schema.Tuple([
@@ -207,6 +212,12 @@ export const TranscriptionResponse = Schema.Struct({
   usage: Schema.optional(Schema.Unknown),
 })
 
+export const ImageModel = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  description: Schema.optional(Schema.String),
+})
+
 const UnknownRecord = Schema.Record(Schema.String, Schema.Unknown)
 
 export const CloudMessage = Schema.StructWithRest(
@@ -260,6 +271,7 @@ export const KiloGatewayPaths = {
   fim: `${root}/fim`,
   edit: `${root}/edit`,
   audioTranscriptions: `${root}/audio/transcriptions`,
+  imageModels: `${root}/models/images`,
   notifications: `${root}/notifications`,
   organization: `${root}/organization`,
   clawStatus: `${root}/claw/status`,
@@ -343,6 +355,17 @@ export const KiloGatewayApi = HttpApi.make("kilo")
             description: "Proxy an audio transcription request to the Kilo Gateway",
           }),
         ),
+        HttpApiEndpoint.get("imageModels", KiloGatewayPaths.imageModels, {
+          query: WorkspaceRoutingQuery,
+          success: described(Schema.Array(ImageModel), "Image-capable model list"),
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "kilo.models.images",
+            summary: "Image generation models",
+            description: "List image-capable models from the Kilo Gateway OpenRouter passthrough",
+          }),
+        ),
         HttpApiEndpoint.get("notifications", KiloGatewayPaths.notifications, {
           query: WorkspaceRoutingQuery,
           success: described(Schema.Array(Notification), "Notifications list"),
@@ -423,7 +446,7 @@ export const KiloGatewayApi = HttpApi.make("kilo")
           query: WorkspaceRoutingQuery,
           payload: CloudSessionImportBody,
           success: described(CloudSessionData.fields.info, "Imported session info"),
-          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized, HttpApiError.NotFound],
+          error: [HttpApiError.BadRequest, HttpApiError.Unauthorized, HttpApiError.NotFound, CloudSessionImportError],
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "kilo.cloud.session.import",

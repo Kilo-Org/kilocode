@@ -2,12 +2,12 @@
 
 import type { SuggestionRequest } from "@kilocode/sdk/v2"
 import { createMemo, createSignal, For } from "solid-js"
-import { SplitBorder } from "../../../cli/cmd/tui/component/border"
-import { useSDK } from "../../../cli/cmd/tui/context/sdk"
-import { useTuiConfig } from "../../../cli/cmd/tui/context/tui-config"
-import { useBindings } from "../../../cli/cmd/tui/keymap"
-import { tint, useTheme } from "../../../cli/cmd/tui/context/theme"
-import { useDialog } from "../../../cli/cmd/tui/ui/dialog"
+import { SplitBorder } from "@tui/ui/border"
+import { useSDK } from "@tui/context/sdk"
+import { useTuiConfig } from "@tui/config"
+import { useBindings } from "@tui/keymap"
+import { tint, useTheme } from "@tui/context/theme"
+import { useDialog } from "@tui/ui/dialog"
 
 // The footer-mounted overlay only ever hosts blocking suggestions now; the
 // built-in suggest tool emits non-blocking requests that render inline at

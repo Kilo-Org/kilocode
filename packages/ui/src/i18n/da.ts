@@ -120,6 +120,7 @@ export const dict = {
 
   "ui.tool.read": "Læs",
   "ui.tool.loaded": "Indlæst",
+  "ui.tool.swePruned": "SWE-Pruner · {{kept}} af {{total}} linjer beholdt", // kilocode_change
   "ui.tool.list": "Liste",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -170,7 +171,9 @@ export const dict = {
   "ui.patch.action.patched": "Patchet",
 
   "ui.question.subtitle.answered": "{{count}} besvaret",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(intet svar)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ikke besvaret)",
   "ui.question.multiHint": "Vælg alle der gælder",
   "ui.question.singleHint": "Vælg ét svar",

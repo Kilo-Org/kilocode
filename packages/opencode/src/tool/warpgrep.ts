@@ -3,8 +3,8 @@ import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Instance } from "../kilocode/instance" // kilocode_change
-import { Bus } from "../bus"
-import { TuiEvent } from "../cli/cmd/tui/event"
+import { EventV2Bridge } from "@/event-v2-bridge" // kilocode_change
+import { TuiEvent } from "@/server/tui-event" // kilocode_change
 import DESCRIPTION from "./warpgrep.txt"
 
 // FREE_PERIOD_TODO: Remove KILO_WARPGREP_PROXY_URL constant and the proxy
@@ -21,6 +21,7 @@ const Parameters = Schema.Struct({
 export const CodebaseSearchTool = Tool.define(
   "codebase_search",
   Effect.gen(function* () {
+    const events = yield* EventV2Bridge.Service // kilocode_change
     return {
       description: DESCRIPTION,
       parameters: Parameters,
@@ -60,16 +61,16 @@ export const CodebaseSearchTool = Tool.define(
             const apiKeyMsg =
               "Codebase search unavailable: free period ended. Set MORPH_API_KEY to continue. Get your key at https://www.morphllm.com/"
             if (isAuthOrRateLimit) {
-              yield* Effect.promise(() =>
-                // kilocode_change start
-                Bus.publish(Instance.current, TuiEvent.ToastShow, {
-                  // kilocode_change end
+              // kilocode_change start - publish Kilo's toast through upstream EventV2
+              yield* events
+                .publish(TuiEvent.ToastShow, {
                   title: "Codebase Search Unavailable",
                   message: "Free period has ended. Set MORPH_API_KEY to continue. Get your key at morphllm.com",
                   variant: "error",
                   duration: 10000,
-                }).catch(() => {}),
-              )
+                })
+                .pipe(Effect.ignore)
+              // kilocode_change end
             }
             return {
               title: `Codebase Search: ${params.query}`,

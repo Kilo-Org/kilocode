@@ -1251,6 +1251,19 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
 }
 
+.am-tab-target {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+}
+
+.am-tab:has(.am-tab-target:focus-visible) {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+  color: var(--text-base);
+}
+
 .am-tab-icon {
   display: inline-flex;
   align-items: center;
@@ -1286,8 +1299,6 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   height: 100%;
   flex: 1;
-  padding-right: 27px;
-  margin-right: -27px;
 }
 
 .am-tab-close-wrap {
@@ -2647,10 +2658,13 @@ body.am-wt-dragging-active * {
   min-height: 0;
 }
 
-/* Allow portal-based dropdowns to escape the dialog bounds */
+/* Allow portal-based dropdowns to escape the dialog bounds.
+   Wider than the kilo-ui default so the prompt stays readable for long input. */
 [data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
   overflow: visible;
   max-height: 85vh;
+  width: 640px;
+  max-width: 92vw;
 }
 
 /* Scrollable form content area — keeps submit button always visible */
@@ -2691,7 +2705,10 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
-/* Dialog overrides for prompt-input-container — resizable from bottom edge */
+/* Dialog overrides for prompt-input-container — resizable from bottom edge.
+   The container is the only element that changes size (auto-grow + manual
+   resize); the textarea always fills it and is the only element that scrolls,
+   so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
@@ -2705,8 +2722,7 @@ body.am-wt-dragging-active * {
 .am-nv-dialog .am-prompt-input-wrapper {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* While any inline (non-portaled) selector popover is open, let it escape the
@@ -2729,8 +2745,9 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   max-height: none;
+  overflow-y: auto;
 }
 
 .am-nv-config-label {
@@ -2907,6 +2924,7 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   padding: 4px 10px;
   min-height: 30px;
   transition: background 80ms;
@@ -3001,6 +3019,11 @@ body.am-wt-dragging-active * {
 
 .am-mm-count-select:focus {
   border-color: var(--border-focus);
+}
+
+.am-mm-variant-select {
+  max-width: 110px;
+  text-overflow: ellipsis;
 }
 
 .am-nv-spinner {

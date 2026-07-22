@@ -29,6 +29,16 @@ describe("RemoteProtocol", () => {
     }
   })
 
+  test("heartbeat serializes sessions only", () => {
+    const msg = { type: "heartbeat", sessions: [{ id: "ses_1", status: "idle", title: "t" }] }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data).not.toHaveProperty("focused")
+      expect(result.data).not.toHaveProperty("open")
+    }
+  })
+
   test("valid event parses", () => {
     const msg = {
       type: "event",
@@ -253,6 +263,62 @@ describe("RemoteProtocol", () => {
     expect(result.success).toBe(true)
     if (result.success) {
       expect(result.data.type).toBe("heartbeat_ack")
+    }
+  })
+
+  test("heartbeat without capabilities parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.capabilities).toBeUndefined()
+    }
+  })
+
+  test("heartbeat with capabilities.attachments parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: { attachments: true },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.capabilities?.attachments).toBe(true)
+    }
+  })
+
+  test("heartbeat with capabilities and no attachments key parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: {},
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.capabilities?.attachments).toBeUndefined()
+    }
+  })
+
+  test("heartbeat rejects non-boolean capabilities.attachments", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: { attachments: "yes" },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  test("outbound union accepts heartbeat with capabilities", () => {
+    const result = RemoteProtocol.Outbound.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      capabilities: { attachments: true },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.type).toBe("heartbeat")
     }
   })
 })

@@ -52,6 +52,10 @@ export namespace IngestQueue {
         type: "session_status"
         data: { status: "idle" | "busy" | "question" | "permission" | "retry" }
       }
+    | {
+        type: "agent_notification"
+        data: { id: string; message: string }
+      }
 
   type Share = {
     ingestPath: string
@@ -139,6 +143,10 @@ export namespace IngestQueue {
         return value ? `part:${value}` : ulid()
       }
 
+      if (item.type === "agent_notification") {
+        return `agent_notification:${item.data.id}`
+      }
+
       const models = item.data
         .map((m) => `${m.providerID}:${m.id}`)
         .sort()
@@ -208,14 +216,14 @@ export namespace IngestQueue {
           const types = items.map((d) => d.type).join(",")
           options.log.info("ingest flush", {
             sessionId,
-            url: `${client.url}${share.ingestPath}?v=1`,
+            url: `${client.url}${share.ingestPath}?v=2`,
             items: items.length,
             types,
           })
         }
 
         const response = await client
-          .fetch(`${client.url}${share.ingestPath}?v=1`, {
+          .fetch(`${client.url}${share.ingestPath}?v=2`, {
             method: "POST",
             body: JSON.stringify({
               data: items,

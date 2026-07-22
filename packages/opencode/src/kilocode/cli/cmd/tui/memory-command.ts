@@ -1,13 +1,5 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
-import type { CliRenderer } from "@opentui/core"
-import path from "path"
-import { Process } from "@/util/process"
-import { splitCommand } from "@/kilocode/util/split-command"
-import {
-  MEMORY_USAGE,
-  parseMemoryCommand,
-  type ParsedMemoryCommand,
-} from "@kilocode/kilo-memory/commands"
+import { MEMORY_USAGE, parseMemoryCommand, type ParsedMemoryCommand } from "@kilocode/kilo-memory/commands"
 import { errorMessage } from "@/util/error"
 
 export { MEMORY_USAGE }
@@ -48,29 +40,6 @@ function auto(input: boolean) {
   return `Memory auto-save ${input ? "on" : "off"}`
 }
 
-async function edit(input: { file: string; cwd?: string; renderer?: CliRenderer }) {
-  const editor = (process.env["VISUAL"] || process.env["EDITOR"])?.trim()
-  if (!editor) throw new Error("Set $VISUAL or $EDITOR to use /memory edit")
-
-  input.renderer?.suspend()
-  input.renderer?.currentRenderBuffer.clear()
-  try {
-    const proc = Process.spawn([...splitCommand(editor), input.file], {
-      cwd: input.cwd,
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-      shell: process.platform === "win32",
-    })
-    const code = await proc.exited
-    if (code !== 0) throw new Error(`Editor exited with code ${code}`)
-  } finally {
-    input.renderer?.currentRenderBuffer.clear()
-    input.renderer?.resume()
-    input.renderer?.requestRender()
-  }
-}
-
 export function parseMemoryInput(input: string): MemoryCommand | undefined {
   return parseMemoryCommand(input)
 }
@@ -80,8 +49,9 @@ export async function runMemoryCommand(input: {
   client: KiloClient
   workspace?: string
   directory?: string
+  sessionID?: string
   toast: Toast
-  renderer?: CliRenderer
+  inspect?(root: string): void | Promise<void>
   show(): void
   status(): void
   usage(message?: string): void
@@ -104,10 +74,10 @@ export async function runMemoryCommand(input: {
     }
     const name = "Memory"
     if (parsed.operation === "enable") {
-      const result = read(await input.client.memory.enable(route(input)))
+      read(await input.client.memory.enable(route(input)))
       input.toast.show({
         variant: "success",
-        message: `${name} enabled (${tokens(result.index.tokens)}). Files: ${result.root}. Edit sources, then run /memory rebuild. Auto-save sends best-effort-redacted turn context to your configured model provider; disable with /memory auto off.`,
+        message: `${name} enabled`,
       })
       return true
     }
@@ -115,12 +85,12 @@ export async function runMemoryCommand(input: {
       input.status()
       return true
     }
-    if (parsed.operation === "edit") {
+    if (parsed.operation === "inspect") {
       const status = read(await input.client.memory.status(route(input)))
       if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-      await edit({ file: path.join(status.root, "project.md"), cwd: input.directory, renderer: input.renderer })
-      const result = read(await input.client.memory.rebuild(route(input)))
-      input.toast.show({ variant: "success", message: `${name} rebuilt (${tokens(result.index.tokens)})` })
+      if (!input.inspect) throw new Error("Memory folder inspection is unavailable")
+      input.toast.show({ variant: "info", message: `Memory folder: ${status.root}` })
+      await input.inspect(status.root)
       return true
     }
     if (parsed.operation === "auto") {
@@ -150,18 +120,36 @@ export async function runMemoryCommand(input: {
     }
     // Wording mirrors the server memory event messages so chat-intent and command saves read the same.
     if (parsed.operation === "remember") {
-      const result = read(await input.client.memory.remember({ ...route(input), text: parsed.text }))
+      const result = read(
+        await input.client.memory.remember({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          text: parsed.text,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Memory saved · ${changeCount(result.operationCount)}` })
       return true
     }
     if (parsed.operation === "correct") {
-      const result = read(await input.client.memory.correct({ ...route(input), text: parsed.text }))
+      const result = read(
+        await input.client.memory.correct({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          text: parsed.text,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Correction saved · ${changeCount(result.operationCount)}` })
       return true
     }
 
     if (parsed.operation === "forget") {
-      const result = read(await input.client.memory.forget({ ...route(input), query: parsed.query }))
+      const result = read(
+        await input.client.memory.forget({
+          ...route(input),
+          ...(input.sessionID ? { sessionID: input.sessionID } : {}),
+          query: parsed.query,
+        }),
+      )
       input.toast.show({ variant: "success", message: `Memory updated · ${result.removed.toLocaleString()} removed` })
     }
     return true

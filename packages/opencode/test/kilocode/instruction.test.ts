@@ -5,24 +5,16 @@ import { Effect, FileSystem, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { NodeFileSystem } from "@effect/platform-node"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { Reference } from "../../src/reference/reference"
 import { Instruction } from "../../src/session/instruction"
 import { Global } from "@opencode-ai/core/global"
 import { TestConfig } from "../fixture/config"
-import { provideInstance, tmpdirScoped } from "../fixture/fixture"
+import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const reference = Layer.mock(Reference.Service)({
-  init: () => Effect.void,
-  list: () => Effect.succeed([]),
-  get: () => Effect.succeed(undefined),
-  ensure: () => Effect.void,
-  contains: () => Effect.succeed(false),
-})
 const it = testEffect(
-  Layer.mergeAll(CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, reference, RuntimeFlags.layer()),
+  Layer.mergeAll(CrossSpawnSpawner.defaultLayer, NodeFileSystem.layer, RuntimeFlags.layer(), testInstanceStoreLayer),
 )
 
 const configLayer = TestConfig.layer()
@@ -30,7 +22,7 @@ const configLayer = TestConfig.layer()
 const instructionLayer = (global: Partial<Global.Interface>) =>
   Instruction.layer.pipe(
     Layer.provide(configLayer),
-    Layer.provide(AppFileSystem.defaultLayer),
+    Layer.provide(FSUtil.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(Global.layerWith(global)),
   )

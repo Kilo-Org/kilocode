@@ -373,7 +373,7 @@ describe("share ingest queue", () => {
     expect((statuses[0]!.data as { status: string }).status).toBe("idle")
   })
 
-  test("flush sends request with ?v=1 query parameter", async () => {
+  test("flush sends request with ?v=2 query parameter", async () => {
     const urls: string[] = []
     const sched = scheduler(() => clock.now)
 
@@ -397,6 +397,74 @@ describe("share ingest queue", () => {
     sched.run()
     await Bun.sleep(0)
     expect(urls.length).toBe(1)
-    expect(urls[0]).toBe("https://ingest.test/ingest?v=1")
+    expect(urls[0]).toBe("https://ingest.test/ingest?v=2")
+  })
+
+  test("agent_notification distinct ids survive one debounce batch", async () => {
+    const sent: unknown[] = []
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-notify", [
+      { type: "agent_notification", data: { id: "n1", message: "first" } },
+      { type: "agent_notification", data: { id: "n2", message: "second" } },
+    ])
+
+    clock.now = 1000
+    sched.run()
+    await Bun.sleep(0)
+
+    expect(sent.length).toBe(1)
+    const payload = sent[0] as { data: { type: string; data: { id: string; message: string } }[] }
+    expect(payload.data.length).toBe(2)
+    const ids = payload.data.map((d) => d.data.id).sort()
+    expect(ids).toEqual(["n1", "n2"])
+  })
+
+  test("agent_notification with the same id coalesces", async () => {
+    const sent: unknown[] = []
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: { error: () => {} },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async (_input, init) => {
+          sent.push(JSON.parse((init?.body as string) ?? "{}"))
+          return new Response("{}", { status: 200 })
+        },
+      }),
+    })
+
+    await q.sync("s-notify", [{ type: "agent_notification", data: { id: "n1", message: "first" } }])
+    clock.now = 100
+    await q.sync("s-notify", [{ type: "agent_notification", data: { id: "n1", message: "second" } }])
+
+    clock.now = 1000
+    sched.run()
+    await Bun.sleep(0)
+
+    expect(sent.length).toBe(1)
+    const payload = sent[0] as { data: { type: string; data: { id: string; message: string } }[] }
+    expect(payload.data.length).toBe(1)
+    expect(payload.data[0].data.message).toBe("second")
   })
 })

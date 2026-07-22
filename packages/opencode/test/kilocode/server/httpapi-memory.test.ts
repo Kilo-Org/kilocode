@@ -85,10 +85,11 @@ describe("HttpApi memory", () => {
     const status = await json("GET", MemoryPaths.status)
     expect(keys(status)).toEqual(["exists", "index", "root", "state"].sort())
     expect(keys(status.state)).toEqual(
-      ["autoConsolidate", "autoInject", "capture", "enabled", "limits", "scope", "stats", "version"].sort(),
+      ["autoConsolidate", "autoInject", "capture", "enabled", "limits", "scope", "stats", "verbose", "version"].sort(),
     )
     expect(rec(status.state).enabled).toBe(false)
     expect(rec(status.state).autoConsolidate).toBe(true)
+    expect(rec(status.state).verbose).toBe(false)
     expect(rec(status.index).estimatedTokens).toBe(0)
     const stats = rec(rec(status.state).stats)
     expectStats(stats)
@@ -101,9 +102,14 @@ describe("HttpApi memory", () => {
     expect(rec(enable.state).enabled).toBe(true)
     expect(rec(rec(enable.state).stats).lastInjectedSessionID).toBe("")
 
-    const configured = await json("POST", MemoryPaths.configure, { autoConsolidate: false })
+    const configured = await json("POST", MemoryPaths.configure, { autoConsolidate: false, verbose: true })
     expect(rec(configured.state).enabled).toBe(true)
     expect(rec(configured.state).autoConsolidate).toBe(false)
+    expect(rec(configured.state).verbose).toBe(true)
+
+    const updated = await json("GET", MemoryPaths.status)
+    expect(rec(updated.state).autoConsolidate).toBe(false)
+    expect(rec(updated.state).verbose).toBe(true)
 
     const remembered = await json("POST", MemoryPaths.remember, {
       key: "httpapi_memory",
@@ -145,8 +151,8 @@ describe("HttpApi memory", () => {
     expect(String(show.index)).toContain("httpapi_memory")
     expect(String(show.items)).toContain("httpapi_memory")
     expect(String(rec(show.sources).project)).toContain("httpapi_memory")
-    expect(typeof show.decisions).toBe("string")
-    expect(String(show.decisions)).toContain('"sessionID":"ses_http_memory"')
+    expect(show.changes).toBe("")
+    expect(show.decisions).toBe("")
 
     const forgotten = await json("POST", MemoryPaths.forget, { query: "httpapi_memory" })
     expectOperation(forgotten)

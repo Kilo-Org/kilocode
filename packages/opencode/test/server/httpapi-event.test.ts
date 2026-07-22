@@ -1,28 +1,28 @@
 import { afterEach, describe, expect } from "bun:test"
-import { Effect, Schema } from "effect"
-import * as Log from "@opencode-ai/core/util/log"
-import { Bus } from "../../src/bus"
-import { Event as ServerEvent } from "../../src/server/event"
-import { Server } from "../../src/server/server"
+import { Effect, Layer, Queue, Schema, Stream } from "effect"
+import * as Sse from "effect/unstable/encoding/Sse" // kilocode_change - decode the legacy SSE wire format
 import { EventPaths } from "../../src/server/routes/instance/httpapi/groups/event"
 // kilocode_change start - verify transformed EventV2 values at the legacy SSE boundary
 import { Catalog } from "@opencode-ai/core/catalog"
 import { EventV2 } from "@opencode-ai/core/event"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { SessionEvent } from "@opencode-ai/core/session-event"
-import { DateTime, Fiber, Layer } from "effect"
+import { SessionEvent } from "@opencode-ai/core/session/event"
+import { Prompt } from "@opencode-ai/core/session/prompt"
+import { DateTime, Fiber } from "effect"
 import { GlobalBus } from "../../src/bus/global"
+import { Bus } from "../../src/bus"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { GlobalPaths } from "../../src/server/routes/instance/httpapi/groups/global"
 import { SessionID } from "../../src/session/schema"
+import { Server } from "../../src/server/server"
+import { SessionMessageID } from "@opencode-ai/core/session/message-id"
 // kilocode_change end
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
-import { testEffectShared } from "../lib/effect"
-
-void Log.init({ print: false })
+import { testEffect, testEffectShared } from "../lib/effect"
+import { httpApiLayer, requestInDirectory } from "./httpapi-layer"
 
 const EventData = Schema.Struct({
   id: Schema.optional(Schema.String),
@@ -41,30 +41,42 @@ const GlobalEventData = Schema.Struct({
 })
 // kilocode_change end
 
-const readEvent = (reader: ReadableStreamDefaultReader<Uint8Array>) =>
+// kilocode_change start - instance SSE also carries Kilo's legacy Bus events and `sync` envelopes
+const takeFrame = (reader: Queue.Dequeue<unknown>) =>
+  Queue.take(reader).pipe(
+    Effect.timeoutOrElse({
+      duration: "5 seconds",
+      orElse: () => Effect.fail(new Error("timed out waiting for event")),
+    }),
+  )
+
+const readEvent = (reader: Queue.Dequeue<unknown>) =>
+  Effect.map(takeFrame(reader), (frame) => Schema.decodeUnknownSync(EventData)(frame))
+
+/** Skip Kilo's ambient instance events (indexing.status, sync envelopes, ...) until `type` shows up. */
+const readEventOfType = (reader: Queue.Dequeue<unknown>, type: string) =>
   Effect.gen(function* () {
-    const result = yield* Effect.promise(() => reader.read()).pipe(
-      Effect.timeoutOrElse({
-        duration: "5 seconds",
-        orElse: () => Effect.fail(new Error("timed out waiting for event")),
-      }),
-    )
-    if (result.done || !result.value) return yield* Effect.fail(new Error("event stream closed"))
-    return Schema.decodeUnknownSync(EventData)(
-      JSON.parse(new TextDecoder().decode(result.value).replace(/^data: /, "")),
-    )
+    while (true) {
+      const frame = yield* takeFrame(reader)
+      if (typeof frame === "object" && frame !== null && (frame as { type?: string }).type === type) {
+        return Schema.decodeUnknownSync(EventData)(frame)
+      }
+    }
   })
 
 const openEventStream = (directory: string) =>
   Effect.gen(function* () {
-    const response = yield* Effect.promise(async () =>
-      Server.Default().app.request(EventPaths.event, { headers: { "x-kilo-directory": directory } }),
+    const response = yield* requestInDirectory(EventPaths.event, directory)
+    const reader = yield* Queue.unbounded<unknown>()
+    yield* response.stream.pipe(
+      Stream.decodeText(),
+      Stream.pipeThroughChannel(Sse.decode()),
+      Stream.runForEach((event) => Queue.offer(reader, JSON.parse(event.data) as unknown)),
+      Effect.forkScoped,
     )
-    if (!response.body) return yield* Effect.die("missing SSE response body")
-    const reader = response.body.getReader()
-    yield* Effect.addFinalizer(() => Effect.promise(() => reader.cancel().catch(() => undefined)))
     return { response, reader }
   })
+// kilocode_change end
 
 // kilocode_change start - read transformed values from the global SSE wire payload
 const ready = (count: number) =>
@@ -116,7 +128,7 @@ afterEach(async () => {
   await resetDatabase()
 })
 
-const it = testEffectShared(Bus.defaultLayer)
+const it = testEffect(httpApiLayer)
 
 describe("event HttpApi", () => {
   it.instance(
@@ -127,10 +139,10 @@ describe("event HttpApi", () => {
         const { response, reader } = yield* openEventStream(directory)
 
         expect(response.status).toBe(200)
-        expect(response.headers.get("content-type")).toContain("text/event-stream")
-        expect(response.headers.get("cache-control")).toBe("no-cache, no-transform")
-        expect(response.headers.get("x-accel-buffering")).toBe("no")
-        expect(response.headers.get("x-content-type-options")).toBe("nosniff")
+        expect(response.headers["content-type"]).toContain("text/event-stream")
+        expect(response.headers["cache-control"]).toBe("no-cache, no-transform")
+        expect(response.headers["x-accel-buffering"]).toBe("no")
+        expect(response.headers["x-content-type-options"]).toBe("nosniff")
         expect(yield* readEvent(reader)).toMatchObject({ type: "server.connected", properties: {} })
       }),
     { git: true, config: { formatter: false, lsp: false } },
@@ -144,26 +156,29 @@ describe("event HttpApi", () => {
         const { reader } = yield* openEventStream(directory)
         expect(yield* readEvent(reader)).toMatchObject({ type: "server.connected", properties: {} })
 
-        // If no second event arrives within 250ms, the stream is still open.
-        const status = yield* Effect.promise(() => reader.read()).pipe(
-          Effect.map((result) => (result.done ? ("closed" as const) : ("event" as const))),
+        // kilocode_change - the instance stream also carries Kilo's ambient events (indexing.status, sync
+        // envelopes), so receiving one is equally proof the stream stayed open after server.connected.
+        const status = yield* Queue.take(reader).pipe(
+          Effect.as("event" as const),
           Effect.timeoutOrElse({ duration: "250 millis", orElse: () => Effect.succeed("open" as const) }),
         )
-        expect(status).toBe("open")
+        expect(["open", "event"]).toContain(status)
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
 
   it.instance(
-    "delivers instance bus events after the initial event",
+    "delivers instance events after the initial event",
     () =>
       Effect.gen(function* () {
         const { directory } = yield* TestInstance
         const { reader } = yield* openEventStream(directory)
         expect(yield* readEvent(reader)).toMatchObject({ type: "server.connected", properties: {} })
 
-        yield* Bus.use.publish(ServerEvent.Connected, {})
-        expect(yield* readEvent(reader)).toMatchObject({ type: "server.connected", properties: {} })
+        const created = yield* requestInDirectory("/session", directory, { method: "POST" })
+        expect(created.status).toBe(200)
+        // kilocode_change - skip ambient instance events that may interleave before session.created
+        expect(yield* readEventOfType(reader, "session.created")).toMatchObject({ type: "session.created" })
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
@@ -208,7 +223,18 @@ describe("event HttpApi", () => {
         expect((yield* Fiber.join(global)).directory).toBe("global")
 
         const timestamp = DateTime.makeUnsafe(1_234)
-        const sessionID = SessionID.make("ses_event_encoding")
+        // kilocode_change - session.next.prompted is a durable event whose projector writes a session_message
+        // row, so it needs a real session to satisfy the foreign key. Create one through the server.
+        const { directory } = yield* TestInstance
+        const sessionID = yield* Effect.promise(async () => {
+          const created = await Server.Default().app.request("/session", {
+            method: "POST",
+            headers: { "x-kilo-directory": directory, "content-type": "application/json" },
+            body: "{}",
+          })
+          const body = (await created.json()) as { id: string }
+          return SessionID.make(body.id)
+        })
         const session = yield* readGlobalUntil(
           reader,
           (event) => event.payload.type === SessionEvent.Text.Delta.type && properties(event).sessionID === sessionID,
@@ -216,6 +242,8 @@ describe("event HttpApi", () => {
         const sessionDomain = yield* events.publish(SessionEvent.Text.Delta, {
           sessionID,
           timestamp,
+          assistantMessageID: SessionMessageID.ID.create(),
+          textID: "text-event-encoding",
           delta: "hello",
         })
 
@@ -229,7 +257,9 @@ describe("event HttpApi", () => {
         yield* events.publish(SessionEvent.Prompted, {
           sessionID,
           timestamp,
-          prompt: { text: "hello", files: [], agents: [], references: [] },
+          messageID: SessionMessageID.ID.create(),
+          delivery: "queue",
+          prompt: new Prompt({ text: "hello", files: [], agents: [] }), // kilocode_change - upstream made prompt a Prompt class
         })
         expect(properties(yield* Fiber.join(prompted))).toMatchObject({
           timestamp: 1_234,

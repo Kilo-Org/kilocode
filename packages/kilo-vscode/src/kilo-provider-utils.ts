@@ -1,16 +1,5 @@
-import type {
-  Session,
-  Agent,
-  Event,
-  ProviderListResponse,
-  SyncEventMessageUpdated,
-  SyncEventMessageRemoved,
-  SyncEventMessagePartUpdated,
-  SyncEventMessagePartRemoved,
-  SyncEventSessionCreated,
-  SyncEventSessionUpdated,
-  SyncEventSessionDeleted,
-} from "@kilocode/sdk/v2/client"
+import type { Session, Agent, Event, ProviderListResponse } from "@kilocode/sdk/v2/client"
+import type { SyncPayload } from "./services/cli-backend/sdk-sse-adapter"
 import { prettifyError } from "zod/v4"
 import type { CloudSessionMessage, IndexingStatus } from "./services/cli-backend/types"
 import type { PartBatch, PartUpdate } from "./kilo-provider/session-stream-scheduler"
@@ -18,6 +7,14 @@ import type { PartRemove } from "./shared/stream-messages"
 import * as path from "path"
 
 export { SessionStreamScheduler } from "./kilo-provider/session-stream-scheduler"
+
+type SyncEventMessageUpdated = Extract<SyncPayload, { name: "message.updated.1" }>
+type SyncEventMessageRemoved = Extract<SyncPayload, { name: "message.removed.1" }>
+type SyncEventMessagePartUpdated = Extract<SyncPayload, { name: "message.part.updated.1" }>
+type SyncEventMessagePartRemoved = Extract<SyncPayload, { name: "message.part.removed.1" }>
+type SyncEventSessionCreated = Extract<SyncPayload, { name: "session.created.1" }>
+type SyncEventSessionUpdated = Extract<SyncPayload, { name: "session.updated.1" }>
+type SyncEventSessionDeleted = Extract<SyncPayload, { name: "session.deleted.1" }>
 
 /** A single provider entry as returned by the /provider list endpoint. */
 export type ProviderInfo = ProviderListResponse["all"][number]
@@ -197,7 +194,7 @@ export async function runWithMessageConfirmation<T>(
   }
 }
 
-export function sessionToWebview(session: Session) {
+export function sessionToWebview(session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert">) {
   return {
     id: session.id,
     parentID: session.parentID ?? null,
@@ -209,73 +206,6 @@ export function sessionToWebview(session: Session) {
     // SolidJS store merge never clears the existing revert state.
     revert: session.revert ?? null,
     summary: session.summary ?? null,
-  }
-}
-
-type SessionPatch = SyncEventSessionUpdated["data"]["info"]
-export type WebviewSessionPatch = Partial<ReturnType<typeof sessionToWebview>> & { id: string }
-
-function set<T extends object, K extends keyof T>(target: T, key: K, value: T[K] | null | undefined): void {
-  if (value === undefined || value === null) return
-  target[key] = value
-}
-
-function update<T extends object, K extends keyof T>(target: T, key: K, value: T[K] | null | undefined): void {
-  if (value === undefined) return
-  if (value === null) {
-    Reflect.deleteProperty(target, key)
-    return
-  }
-  target[key] = value
-}
-
-function share(session: Session, url: string | null | undefined): void {
-  if (url === undefined) return
-  if (url === null) {
-    delete session.share
-    return
-  }
-  session.share = { url }
-}
-
-export function applySessionPatch(current: Session, patch: SessionPatch): Session {
-  const next: Session = { ...current, time: { ...current.time } }
-
-  set(next, "slug", patch.slug)
-  set(next, "projectID", patch.projectID)
-  set(next, "directory", patch.directory)
-  set(next, "title", patch.title)
-  set(next, "version", patch.version)
-  update(next, "workspaceID", patch.workspaceID)
-  update(next, "path", patch.path)
-  update(next, "parentID", patch.parentID)
-  update(next, "summary", patch.summary)
-  update(next, "cost", patch.cost)
-  update(next, "tokens", patch.tokens)
-  share(next, patch.share?.url)
-  update(next, "agent", patch.agent)
-  update(next, "model", patch.model)
-  update(next, "permission", patch.permission)
-  update(next, "revert", patch.revert)
-  set(next.time, "created", patch.time?.created)
-  set(next.time, "updated", patch.time?.updated)
-  update(next.time, "compacting", patch.time?.compacting)
-  update(next.time, "archived", patch.time?.archived)
-
-  return next
-}
-
-export function sessionPatchToWebview(sessionID: string, patch: SessionPatch): WebviewSessionPatch {
-  return {
-    id: sessionID,
-    ...(patch.parentID !== undefined && { parentID: patch.parentID }),
-    ...(patch.title !== undefined && patch.title !== null && { title: patch.title }),
-    ...(patch.time?.created !== undefined &&
-      patch.time.created !== null && { createdAt: new Date(patch.time.created).toISOString() }),
-    ...(patch.time?.updated !== undefined &&
-      patch.time.updated !== null && { updatedAt: new Date(patch.time.updated).toISOString() }),
-    ...(patch.revert !== undefined && { revert: patch.revert }),
-    ...(patch.summary !== undefined && { summary: patch.summary }),
   }
 }
 
@@ -514,7 +444,7 @@ export type WebviewMessage =
   | { type: "permissionResolved"; permissionID: string }
   | { type: "permissionError"; permissionID: string; stale?: boolean }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
-  | { type: "sessionUpdated"; session: WebviewSessionPatch }
+  | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }

@@ -190,6 +190,11 @@ interface SessionForkedMessage {
   worktreeId?: string
 }
 
+interface SessionClosedMessage {
+  type: "agentManager.sessionClosed"
+  sessionId: string
+}
+
 interface MultiVersionProgressMessage {
   type: "agentManager.multiVersionProgress"
   status: "creating" | "done"
@@ -307,6 +312,7 @@ export type AgentManagerOutMessage =
   | ErrorOutMessage
   | SessionAddedMessage
   | SessionForkedMessage
+  | SessionClosedMessage
   | MultiVersionProgressMessage
   | SetSessionModelMessage
   | SendInitialMessage
@@ -373,6 +379,7 @@ interface CloseSessionIn {
 interface PersistSessionIn {
   type: "agentManager.persistSession"
   sessionId: string
+  draftID?: string
 }
 
 /** Remove a non-worktree session from agent-manager.json. */
@@ -438,7 +445,7 @@ interface CreateMultiVersionIn {
   files?: Array<{ mime: string; url: string }>
   baseBranch?: string
   branchName?: string
-  modelAllocations?: Array<{ providerID: string; modelID: string; count: number }>
+  modelAllocations?: Array<{ providerID: string; modelID: string; count: number; variant?: string }>
   /** When set, reconcile each created session's sandbox override to this state. */
   sandbox?: boolean
 }
@@ -562,6 +569,11 @@ interface OpenPRIn {
 interface OpenSessionsIn {
   type: "agentManager.openSessions"
   sessionIDs: string[]
+}
+
+interface VisibleSessionIn {
+  type: "agentManager.visibleSession"
+  sessionID: string | null
 }
 
 interface OpenFileIn {
@@ -809,6 +821,7 @@ export type AgentManagerInMessage =
   | RefreshPRIn
   | OpenPRIn
   | OpenSessionsIn
+  | VisibleSessionIn
   | OpenFileIn
   | GenericOpenFileIn
   | PreviewImageIn

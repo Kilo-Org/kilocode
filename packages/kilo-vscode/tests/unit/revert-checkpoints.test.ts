@@ -5,9 +5,15 @@ import path from "node:path"
 const ROOT = path.resolve(import.meta.dir, "../..")
 const TURN_FILE = path.join(ROOT, "webview-ui/src/components/chat/VscodeSessionTurn.tsx")
 const PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const BANNER_FILE = path.join(ROOT, "webview-ui/src/components/chat/RevertBanner.tsx")
+const SESSION_FILE = path.join(ROOT, "webview-ui/src/types/messages/sessions.ts")
+const SDK_FILE = path.join(ROOT, "../sdk/js/src/v2/gen/types.gen.ts")
 
 const src = fs.readFileSync(TURN_FILE, "utf-8")
 const provider = fs.readFileSync(PROVIDER_FILE, "utf-8")
+const banner = fs.readFileSync(BANNER_FILE, "utf-8")
+const session = fs.readFileSync(SESSION_FILE, "utf-8")
+const sdk = fs.readFileSync(SDK_FILE, "utf-8")
 
 function method(name: string, next: string) {
   const start = provider.indexOf(`  private async ${name}`)
@@ -40,14 +46,35 @@ describe("revert session synchronization", () => {
     expect(unrevert).toContain('type: "sessionUpdated"')
   })
 
-  it("uses ordered sync patches instead of duplicate bus snapshots", () => {
+  it("uses ordered sync snapshots instead of duplicate bus snapshots", () => {
     expect(provider).toMatch(/source: "sync"/)
     expect(provider).toMatch(
       /if \(event\.type === "session\.updated"\) return "source" in event && event\.source === "sync"/,
     )
-    expect(provider).toMatch(/if \(isFullSessionUpdatedEvent\(event\)\) return/)
-    expect(provider).toMatch(
-      /this\.setCurrentSession\(applySessionPatch\(this\.currentSession, event\.properties\.info\)\)/,
+    expect(provider).toMatch(/if \(!isLegacySyncEvent\(event\)\) return/)
+    expect(provider).toMatch(/this\.setCurrentSession\(event\.properties\.info\)/)
+  })
+})
+
+describe("revert workspace restoration status", () => {
+  it("renders explicit conversation-only outcomes", () => {
+    expect(session).toContain('workspace?: "restored" | "snapshots-disabled" | "unavailable"')
+    expect(sdk).toMatch(
+      /export type Session = \{[\s\S]*?workspace\?: "restored" \| "snapshots-disabled" \| "unavailable"/,
     )
+    expect(sdk).toMatch(
+      /export type KilocodeSessionImportSessionData = \{[\s\S]*?workspace\?: "restored" \| "snapshots-disabled" \| "unavailable"/,
+    )
+    expect(banner).toContain('"revert.banner.workspace.snapshotsDisabled"')
+    expect(banner).toContain('"revert.banner.workspace.unavailable"')
+  })
+
+  it("opens the checkpoints settings tab when snapshots are disabled", () => {
+    expect(banner).toContain('{ type: "openSettingsPanel", tab: "checkpoints" }')
+    expect(banner).toContain('"revert.banner.workspace.enableSnapshots"')
+  })
+
+  it("uses a legacy notice for reverts without an explicit outcome", () => {
+    expect(banner).toContain('"revert.banner.workspace.legacy"')
   })
 })

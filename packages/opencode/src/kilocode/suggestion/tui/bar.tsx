@@ -3,8 +3,8 @@
 
 import type { SuggestionRequest } from "@kilocode/sdk/v2"
 import { createMemo, createSignal, For } from "solid-js"
-import { useSDK } from "../../../cli/cmd/tui/context/sdk"
-import { selectedForeground, useTheme } from "../../../cli/cmd/tui/context/theme"
+import { useSDK } from "@tui/context/sdk"
+import { selectedForeground, useTheme } from "@tui/context/theme"
 
 export function SuggestBar(props: { request: SuggestionRequest }) {
   const sdk = useSDK()

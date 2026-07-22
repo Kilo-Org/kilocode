@@ -125,6 +125,7 @@ export const dict = {
 
   "ui.tool.read": "Čitanje",
   "ui.tool.loaded": "Učitano",
+  "ui.tool.swePruned": "SWE-Pruner · zadržano {{kept}} od {{total}} redova", // kilocode_change
   "ui.tool.list": "Listanje",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -175,7 +176,9 @@ export const dict = {
   "ui.patch.action.patched": "Primijenjeno",
 
   "ui.question.subtitle.answered": "{{count}} odgovoreno",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(nema odgovora)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(nije odgovoreno)",
   "ui.question.multiHint": "Odaberi sve što važi",
   "ui.question.singleHint": "Odaberi jedan odgovor",

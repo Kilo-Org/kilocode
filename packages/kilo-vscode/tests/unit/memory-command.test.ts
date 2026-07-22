@@ -4,7 +4,7 @@ import { parseMemoryCommand, type ParsedMemoryCommand } from "../../webview-ui/s
 type MemoryOperation =
   | "enable"
   | "status"
-  | "edit"
+  | "inspect"
   | "disable"
   | "rebuild"
   | "remember"

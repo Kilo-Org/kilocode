@@ -1,43 +1,32 @@
 export namespace TestProfile {
   // Broad globs keep platform coverage maintainable as tests are added or renamed.
-  // Full macOS runs on main remain the backstop for tests outside these areas.
+  // Full Linux and Windows runs remain the backstop for platform-neutral behavior.
   const profiles = {
     darwin: {
-      description: "Darwin-native process, terminal, filesystem, worktree, and runtime coverage",
+      // Only tests whose failure would indicate a macOS-specific problem belong
+      // here: the seatbelt sandbox, node-pty, FSEvents watching, process/terminal
+      // spawning, and the darwin runtime artifact. Platform-neutral application
+      // logic (session loops, snapshots, HTTP routing, config, worktrees) is
+      // covered by the full Linux and Windows suites and must stay out — every
+      // file in this profile costs ~3x its Linux duration on the macos-15 runner.
+      description: "Darwin seatbelt sandbox, PTY, filesystem, and process runtime coverage",
       groups: {
-        cli: [
-          "cli/acp/*.test.ts",
-          "cli/run/{footer.view,run-process,scrollback.surface}.test.{ts,tsx}",
-          "cli/serve/*.test.ts",
-          "cli/smokes/*.test.ts",
-          "cli/tui/{app-lifecycle,dialog-prompt,diff-viewer-file-tree,diff-viewer,inline-tool-wrap-snapshot,keymap,plugin-loader-entrypoint,slot-replace,thread,use-event}.test.{ts,tsx}",
-        ],
         filesystem: [
-          "file/{index,path-traversal,ripgrep}.test.ts",
-          "git/*.test.ts",
-          "image/*.test.ts",
-          "plugin/{install-concurrency,loader-shared}.test.ts",
-          "reference/*.test.ts",
-          "snapshot/*.test.ts",
-          "tool/{external-directory,glob,grep,read,repo_clone,repo_overview,shell}.test.ts",
-          "util/{filesystem,module,process,which}.test.ts",
+          "filesystem/*.test.ts",
+          "kilocode/{external-directory-boundary,read-directory}.test.ts",
+          "util/filesystem.test.ts",
         ],
-        kilo: [
-          "kilocode/{background-process,bin-tree-sitter-env,daemon,external-directory-boundary,indexing-worker,indexing-worktree,mcp-oauth-callback,primary-worktree,snapshot-freeze-repro,snapshot-revert-move,snapshot-seed}.test.ts",
+        pty: ["pty/*.test.ts", "server/httpapi-pty.test.ts"],
+        runtime: [
+          "cli/serve/*.test.ts",
+          "kilocode/background-process.test.ts",
           "kilocode/cli/install-artifact.test.ts",
-          "kilocode/sandbox/*.test.ts",
-          "kilocode/server/{listener-runtime,worktree-list}.test.ts",
-          "kilocode/session-export/{e2e,sequence,worker,workspace-provider}.test.ts",
-          "kilocode/session-export/worker/{storage,zstd}.test.ts",
-          "kilocode/sessions/*.test.ts",
-          "kilocode/worktree*.test.ts",
+          "kilocode/core-watcher.test.ts",
+          "kilocode/interactive-terminal.test.ts",
+          "tool/shell.test.ts",
+          "util/{process,which}.test.ts",
         ],
-        process: ["provider/header-timeout.test.ts", "session/{prompt,retry}.test.ts", "shell/*.test.ts"],
-        project: ["project/*.test.ts"],
-        pty: ["pty/pty-*.test.ts", "server/httpapi-pty*.test.ts"],
-        server: [
-          "server/{httpapi-compression,httpapi-experimental,httpapi-file,httpapi-listen,httpapi-workspace-routing,project-init-git,workspace-proxy,worktree-endpoint-repro}.test.ts",
-        ],
+        sandbox: ["kilocode/sandbox/*.test.ts"],
       },
     },
   } as const

@@ -214,6 +214,20 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test action button click returns focus to session prompt`() {
+        edt {
+            var focused = false
+            val panel = BaseQuestionView(focus = { focused = true })
+            val root = JPanel(BorderLayout())
+            root.add(panel)
+            panel.setActions(listOf(BaseQuestionView.Action("ok", "OK", primary = true) {}))
+
+            actionButton(panel, "OK").doClick()
+
+            assertTrue("button action should request prompt focus through the session manager", focused)
+        }
+    }
+
     fun `test setActionEnabled disables and enables button`() {
         edt {
             val panel = BaseQuestionView()
@@ -261,6 +275,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val icon = west as JBLabel
             assertEquals("icon should be horizontally centered", JBLabel.CENTER, icon.horizontalAlignment)
             assertEquals("icon should be vertically centered", JBLabel.CENTER, icon.verticalAlignment)
+            assertEquals("icon gap should use the next standard spacing step", UiStyle.Gap.md(), layout.hgap)
             assertTrue("center should contain header and description text", findAll<JBTextArea>(center).size >= 2)
         }
     }

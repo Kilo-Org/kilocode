@@ -9,7 +9,9 @@ import ai.kilocode.backend.testing.FakeCliServer
 import ai.kilocode.backend.testing.MockCliServer
 import ai.kilocode.backend.testing.TestLog
 import ai.kilocode.rpc.dto.AgentConfigPatchDto
+import ai.kilocode.rpc.dto.CompactionPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.WatcherPatchDto
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -167,6 +169,21 @@ class KiloBackendAppServiceTest {
     }
 
     @Test
+    fun `shutdown for app close fast-closes server once without blocking dispose`() {
+        val server = FakeCliServer(mock)
+        val svc = KiloBackendAppService.create(scope, server, log)
+
+        svc.shutdownForAppClose()
+        svc.shutdownForAppClose()
+        svc.dispose()
+
+        assertEquals(KiloAppState.Disconnected, svc.appState.value)
+        // App close uses the non-blocking fast path, not the confirming dispose path.
+        assertEquals(1, server.closeCount)
+        assertEquals(0, server.disposeCount)
+    }
+
+    @Test
     fun `config is loaded`() = runBlocking {
         mock.config = """{"model":"claude-4","username":"testuser"}"""
         val svc = create()
@@ -205,6 +222,28 @@ class KiloBackendAppServiceTest {
         assertEquals("high", cfg?.subagentVariant)
         assertEquals("google/gemini", cfg?.agent?.get("code")?.model)
         assertEquals("fast", svc.config?.agent?.get("code")?.variant)
+    }
+
+    @Test
+    fun `update config patches context settings and reloads`() = runBlocking {
+        val svc = create()
+        svc.connect()
+        ready(svc)
+
+        val state = svc.updateConfig(ConfigPatchDto(
+            watcher = WatcherPatchDto(ignore = listOf("**/dist/**", "tmp/**")),
+            compaction = CompactionPatchDto(auto = false, threshold_percent = 75.5, prune = false),
+        ))
+
+        assertEquals(
+            "{\"watcher\":{\"ignore\":[\"**/dist/**\",\"tmp/**\"]},\"compaction\":{\"auto\":false,\"threshold_percent\":75.5,\"prune\":false}}",
+            mock.lastConfigPatchBody,
+        )
+        val cfg = appStateDto(state).config
+        assertEquals(listOf("**/dist/**", "tmp/**"), cfg?.watcher?.ignore)
+        assertEquals(false, cfg?.compaction?.auto)
+        assertEquals(75.5, cfg?.compaction?.threshold_percent)
+        assertEquals(false, svc.config?.compaction?.prune)
     }
 
     @Test
@@ -629,6 +668,9 @@ class KiloBackendAppServiceTest {
 
             assertIs<KiloAppState.Ready>(svc.appState.value)
             assertFalse(log.messages.any { it.contains("Application start timed out") })
+            assertTrue(log.messages.any { it.contains("restart: requested") && it.contains("waiting for lifecycle mutex") })
+            assertTrue(log.messages.any { it.contains("restart: acquired lifecycle mutex") })
+            assertTrue(log.messages.any { it.contains("restart: complete") })
         } finally {
             gate.countDown()
         }
@@ -654,6 +696,9 @@ class KiloBackendAppServiceTest {
 
             assertIs<KiloAppState.Ready>(svc.appState.value)
             assertFalse(log.messages.any { it.contains("Application start timed out") })
+            assertTrue(log.messages.any { it.contains("reinstall: requested") && it.contains("waiting for lifecycle mutex") })
+            assertTrue(log.messages.any { it.contains("reinstall: acquired lifecycle mutex") })
+            assertTrue(log.messages.any { it.contains("reinstall: complete") })
         } finally {
             gate.countDown()
         }
@@ -790,6 +835,9 @@ class KiloBackendAppServiceTest {
 
         assertIs<KiloAppState.Ready>(svc.appState.value)
         assertNotNull(svc.config)
+        assertTrue(log.messages.any { it.contains("restart: requested") && it.contains("waiting for lifecycle mutex") })
+        assertTrue(log.messages.any { it.contains("restart: acquired lifecycle mutex") })
+        assertTrue(log.messages.any { it.contains("restart: complete") })
     }
 
     @Test

@@ -4,16 +4,20 @@ import { Effect, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Auth } from "../../src/auth"
 import { Bus } from "../../src/bus"
+import { GlobalBus } from "../../src/bus/global"
 import type { Config } from "../../src/config/config"
 import { clearInFlightCache } from "../../src/kilo-sessions/inflight-cache"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
-import { ProjectID } from "../../src/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { Session } from "../../src/session/session"
 import { SessionID } from "../../src/session/schema"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
+import { InstanceStore } from "../../src/project/instance-store"
+import { TestInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 
 const it = testEffect(CrossSpawnSpawner.defaultLayer)
+const multi = testEffect(Layer.merge(CrossSpawnSpawner.defaultLayer, testInstanceStoreLayer))
 
 function layer(overrides: Partial<Config.Interface> = {}) {
   return Layer.merge(
@@ -154,26 +158,104 @@ it.instance("does not duplicate created-session subscribers when init is repeate
 
   return Effect.gen(function* () {
     const auth = yield* Auth.Service
-    const bus = yield* Bus.Service
+    const instance = yield* TestInstance
     const sessions = yield* KiloSessions.Service
     yield* auth.set("kilo", { type: "api", key: "test-token" })
     yield* sessions.init()
     yield* sessions.init()
     yield* Effect.sleep(50)
-    yield* bus.publish(Session.Event.Created, {
-      sessionID: id,
-      info: {
-        id,
-        slug: "test",
-        projectID: ProjectID.make("project-test"),
-        directory: "/tmp/test",
-        title: "test",
-        version: "test",
-        time: { created: Date.now(), updated: Date.now() },
+    GlobalBus.emit("event", {
+      directory: instance.directory,
+      payload: {
+        id: "test-event",
+        type: Session.Event.Created.type,
+        properties: {
+          sessionID: id,
+          info: {
+            id,
+            slug: "test",
+            projectID: ProjectV2.ID.make("project-test"),
+            directory: instance.directory,
+            title: "test",
+            version: "test",
+            time: { created: Date.now(), updated: Date.now() },
+          },
+        },
       },
     })
     yield* Effect.sleep(50)
     expect(calls).toHaveLength(1)
+  }).pipe(
+    Effect.ensuring(
+      Effect.gen(function* () {
+        const auth = yield* Auth.Service
+        yield* auth.remove("kilo").pipe(Effect.orDie)
+        reset("test-token")
+        request.mockRestore()
+      }),
+    ),
+    Effect.provide(layer()),
+  )
+})
+
+multi.live("isolates the process-wide listener by instance directory", () => {
+  const calls: string[] = []
+  const fetch: typeof globalThis.fetch = Object.assign(
+    async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith("/api/user")) return new Response("{}", { status: 200 })
+      if (url.endsWith("/api/session")) {
+        calls.push(url)
+        return Response.json({ id: "remote-1", ingestPath: "/api/ingest/session-1" })
+      }
+      return new Response("{}", { status: 200 })
+    },
+    { preconnect: globalThis.fetch.preconnect },
+  )
+  const request = spyOn(globalThis, "fetch").mockImplementation(fetch)
+
+  reset("test-token")
+
+  return Effect.gen(function* () {
+    const first = yield* tmpdirScoped()
+    const second = yield* tmpdirScoped()
+    const auth = yield* Auth.Service
+    const store = yield* InstanceStore.Service
+    const sessions = yield* KiloSessions.Service
+    yield* auth.set("kilo", { type: "api", key: "test-token" })
+    yield* store.provide({ directory: first }, sessions.init())
+    yield* store.provide({ directory: second }, sessions.init())
+
+    const emit = (directory: string, value: string) => {
+      const id = SessionID.descending(`session-${value}`)
+      GlobalBus.emit("event", {
+        directory,
+        payload: {
+          id: `event-${value}`,
+          type: Session.Event.Created.type,
+          properties: {
+            sessionID: id,
+            info: {
+              id,
+              slug: value,
+              projectID: ProjectV2.ID.make(`project-${value}`),
+              directory,
+              title: value,
+              version: "test",
+              time: { created: Date.now(), updated: Date.now() },
+            },
+          },
+        },
+      })
+    }
+
+    emit(first, "first")
+    yield* Effect.sleep(50)
+    expect(calls).toHaveLength(1)
+
+    emit(second, "second")
+    yield* Effect.sleep(50)
+    expect(calls).toHaveLength(2)
   }).pipe(
     Effect.ensuring(
       Effect.gen(function* () {

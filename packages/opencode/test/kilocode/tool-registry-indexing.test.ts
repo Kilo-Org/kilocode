@@ -5,13 +5,15 @@ import { Agent } from "../../src/agent/agent"
 import { Bus } from "../../src/bus"
 import { KiloIndexing } from "../../src/kilocode/indexing"
 import { KilocodeBootstrap } from "../../src/kilocode/bootstrap"
+import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { KiloMemory } from "@kilocode/kilo-memory/effect"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { InstanceState } from "../../src/effect/instance-state"
 import { KiloToolRegistry } from "../../src/kilocode/tool/registry"
 import { Provider } from "../../src/provider/provider"
-import { ModelID, ProviderID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Session } from "../../src/session/session"
 import { SessionSummary } from "../../src/session/summary"
 import { ToolRegistry } from "../../src/tool/registry"
@@ -23,8 +25,8 @@ import { testEffect } from "../lib/effect"
 const node = CrossSpawnSpawner.defaultLayer
 const it = testEffect(Layer.mergeAll(Agent.defaultLayer, ToolRegistry.defaultLayer, node))
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
 afterEach(async () => {
@@ -337,7 +339,9 @@ describe("kilocode tool registry indexing", () => {
       save: def("kilo_memory_save"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      image: def("generate_image"),
       terminal: def("interactive_terminal"),
+      notify: def("notify_user"),
       notebookRead: def("notebook_read"),
       notebookEdit: def("notebook_edit"),
       notebookExecute: def("notebook_execute"),
@@ -352,6 +356,7 @@ describe("kilocode tool registry indexing", () => {
         "recall",
         "background_process",
         "interactive_terminal",
+        "notify_user",
       ])
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
         [
@@ -362,8 +367,25 @@ describe("kilocode tool registry indexing", () => {
           "recall",
           "background_process",
           "interactive_terminal",
+          "notify_user",
         ],
       )
+      expect(
+        KiloToolRegistry.extra(tools, { experimental: { codebase_search: true, image_generation: true } }).map(
+          (tool) => tool.id,
+        ),
+      ).toEqual([
+        "codebase_search",
+        "generate_image",
+        "semantic_search",
+        "kilo_memory_recall",
+        "kilo_memory_save",
+        "recall",
+        "background_process",
+        "interactive_terminal",
+        "notify_user",
+      ])
+
       process.env["KILO_CLIENT"] = "vscode"
       expect(KiloToolRegistry.extra(tools, { experimental: { codebase_search: true } }).map((tool) => tool.id)).toEqual(
         [
@@ -375,6 +397,7 @@ describe("kilocode tool registry indexing", () => {
           "background_process",
           "agent_manager_models",
           "agent_manager",
+          "notify_user",
         ],
       )
       expect(
@@ -393,6 +416,7 @@ describe("kilocode tool registry indexing", () => {
         "notebook_read",
         "notebook_edit",
         "notebook_execute",
+        "notify_user",
       ])
       expect(KiloToolRegistry.extra({ ...tools, semantic: undefined }, {}).map((tool) => tool.id)).toEqual([
         "kilo_memory_recall",
@@ -401,6 +425,7 @@ describe("kilocode tool registry indexing", () => {
         "background_process",
         "agent_manager_models",
         "agent_manager",
+        "notify_user",
       ])
 
       process.env["KILO_CLIENT"] = "desktop"
@@ -409,6 +434,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "notify_user",
       ])
 
       process.env["KILO_CLIENT"] = "run"
@@ -417,6 +443,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "notify_user",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
@@ -425,6 +452,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "notify_user",
       ])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
@@ -438,7 +466,10 @@ describe("kilocode tool registry indexing", () => {
     const calls: string[] = []
     const sessions = Layer.succeed(
       KiloSessions.Service,
-      KiloSessions.Service.of({ init: () => Effect.sync(() => calls.push("sessions")) }),
+      KiloSessions.Service.of({
+        init: () => Effect.sync(() => calls.push("sessions")),
+        sendAgentNotification: () => Effect.succeed({ ok: false as const, reason: "not_connected" }),
+      }),
     )
     const bus = Layer.succeed(
       Bus.Service,
@@ -454,6 +485,7 @@ describe("kilocode tool registry indexing", () => {
     const session = Layer.succeed(Session.Service, {} as Session.Interface)
     const summary = Layer.succeed(SessionSummary.Service, {} as SessionSummary.Interface)
     const provider = Layer.succeed(Provider.Service, {} as Provider.Interface)
+    const watcher = Layer.succeed(KilocodeWatcher.Service, KilocodeWatcher.Service.of({ init: () => Effect.void }))
     const indexing = spyOn(KiloIndexing, "init").mockRejectedValue(err)
     const warn = spyOn(logger, "warn").mockImplementation(() => {})
 
@@ -461,7 +493,7 @@ describe("kilocode tool registry indexing", () => {
       await Effect.runPromise(
         KilocodeBootstrap.Service.use((svc) => svc.init()).pipe(
           Effect.provide(
-            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider])),
+            KilocodeBootstrap.layer.pipe(Layer.provide([sessions, bus, memory, session, summary, provider, watcher])),
           ),
           Effect.scoped,
         ),

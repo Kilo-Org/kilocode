@@ -1,13 +1,13 @@
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Agent } from "@/agent/agent"
-import { Bus } from "@/bus"
-import { TuiEvent } from "@/cli/cmd/tui/event"
+import { TuiEvent } from "@/server/tui-event"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Global } from "@opencode-ai/core/global"
 import { Identifier } from "@/id/id"
 import { Instance } from "@/kilocode/instance"
 import { Provider } from "@/provider/provider"
-import { ProviderID, ModelID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { SessionID, MessageID, PartID } from "@/session/schema"
@@ -35,7 +35,7 @@ export const PlanFollowupRuntime = {
   agent(name: string): Promise<Agent.Info | undefined> {
     return agents().runPromise((svc) => svc.get(name))
   },
-  model(providerID: ProviderID, modelID: ModelID): Promise<Provider.Model> {
+  model(providerID: ProviderV2.ID, modelID: ModelV2.ID): Promise<Provider.Model> {
     return providers().runPromise((svc) => svc.getModel(providerID, modelID))
   },
   todo: {
@@ -182,8 +182,8 @@ export namespace PlanFollowup {
         .record(
           z.string(),
           z.object({
-            providerID: z.custom<ProviderID>(Schema.is(ProviderID)),
-            modelID: z.custom<ModelID>(Schema.is(ModelID)),
+            providerID: z.custom<ProviderV2.ID>(Schema.is(ProviderV2.ID)),
+            modelID: z.custom<ModelV2.ID>(Schema.is(ModelV2.ID)),
           }),
         )
         .optional(),
@@ -389,9 +389,14 @@ export namespace PlanFollowup {
         const next = await PlanFollowupRuntime.session((svc) => svc.create({}))
         const ctl = new AbortController()
         pending.set(next.id, ctl)
-        const { AppRuntime } = await import("@/effect/app-runtime")
+        const [{ AppRuntime }, { EventV2Bridge }] = await Promise.all([
+          import("@/effect/app-runtime"),
+          import("@/event-v2-bridge"),
+        ])
         await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "busy" })))
-        await Bus.publish(Instance.current, TuiEvent.SessionSelect, { sessionID: next.id })
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) => events.publish(TuiEvent.SessionSelect, { sessionID: next.id })),
+        )
 
         const idle = () =>
           AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(next.id, { type: "idle" }))).catch((err) => {

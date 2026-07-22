@@ -1,4 +1,4 @@
-import { BusEvent } from "@/bus/bus-event"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
 import { EffectBridge } from "@/effect/bridge"
 import type { InstanceContext } from "@/project/instance-context"
@@ -8,6 +8,7 @@ import { Config } from "@/config/config"
 import { MCP } from "../mcp"
 import { Skill } from "../skill"
 import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
+import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
 
 type State = {
@@ -15,15 +16,15 @@ type State = {
 }
 
 export const Event = {
-  Executed: BusEvent.define(
-    "command.executed",
-    Schema.Struct({
+  Executed: EventV2.define({
+    type: "command.executed",
+    schema: {
       name: Schema.String,
       sessionID: SessionID,
       arguments: Schema.String,
       messageID: MessageID,
-    }),
-  ),
+    },
+  }),
 }
 
 export const Info = Schema.Struct({
@@ -214,5 +215,7 @@ export const defaultLayer = layer.pipe(
   Layer.provide(MCP.defaultLayer),
   Layer.provide(Skill.defaultLayer),
 )
+
+export const node = LayerNode.make(layer, [Config.node, MCP.node, Skill.node])
 
 export * as Command from "."

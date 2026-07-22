@@ -3,14 +3,14 @@ name: test
 on:
   push:
     branches:
-      - main
+      - main # kilocode_change
   pull_request:
   workflow_dispatch:
 
 concurrency:
-  # Keep every run on main so cancelled checks do not pollute the default branch
+  # Keep every run on main so cancelled checks do not pollute the default branch # kilocode_change
   # commit history. PRs and other branches still share a group and cancel stale runs.
-  group: ${{ case(github.ref == 'refs/heads/main', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }}
+  group: ${{ case(github.ref == 'refs/heads/main', format('{0}-{1}', github.workflow, github.run_id), format('{0}-{1}', github.workflow, github.event.pull_request.number || github.ref)) }} # kilocode_change
   cancel-in-progress: true
 
 permissions:
@@ -30,6 +30,7 @@ jobs:
       pull-requests: read
     outputs:
       settings: ${{ steps.matrix.outputs.settings }}
+      general: ${{ steps.matrix.outputs.general }}
     steps:
       - name: Checkout repository
         if: github.event_name != 'workflow_dispatch'
@@ -57,31 +58,38 @@ jobs:
         env:
           GENERAL: ${{ github.event_name != 'pull_request' || steps.filter.outputs.general == 'true' }}
         run: |
-          if [ "$GENERAL" = "true" ]; then
-            echo 'settings=[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404","run":true},{"name":"macos","host":"macos-15","run":true},{"name":"windows","host":"blacksmith-4vcpu-windows-2025","run":true}]' >> "$GITHUB_OUTPUT"
+          if [ "$GENERAL" != "true" ]; then
+            echo 'general=false' >> "$GITHUB_OUTPUT"
+            echo 'settings=[{"os":"linux","index":1,"total":1,"host":"blacksmith-4vcpu-ubuntu-2404","run":false,"packages":false}]' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          echo 'settings=[{"name":"linux","host":"blacksmith-4vcpu-ubuntu-2404","run":false}]' >> "$GITHUB_OUTPUT"
+          echo 'general=true' >> "$GITHUB_OUTPUT"
+          echo 'settings=[{"os":"linux","index":1,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":true},{"os":"linux","index":2,"total":2,"host":"blacksmith-4vcpu-ubuntu-2404","run":true,"packages":false},{"os":"macos","index":1,"total":1,"host":"macos-15","run":true,"packages":true},{"os":"windows","index":1,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":true},{"os":"windows","index":2,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":3,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false},{"os":"windows","index":4,"total":4,"host":"blacksmith-4vcpu-windows-2025","run":true,"packages":false}]' >> "$GITHUB_OUTPUT"
+  # kilocode_change end
 
   unit:
-    name: unit (${{ matrix.settings.name }})
+    # kilocode_change start
+    name: ${{ !matrix.settings.run && 'unit (unchanged)' || matrix.settings.total > 1 && format('unit ({0}, {1}/{2})', matrix.settings.os, matrix.settings.index, matrix.settings.total) || format('unit ({0})', matrix.settings.os) }}
     needs: changes
+    # kilocode_change end
     strategy:
       fail-fast: false
       matrix:
-        settings: ${{ fromJSON(needs.changes.outputs.settings) }}
+        settings: ${{ fromJSON(needs.changes.outputs.settings) }} # kilocode_change
     runs-on: ${{ matrix.settings.host }}
     timeout-minutes: 45 # kilocode_change
     defaults:
       run:
         shell: bash
     steps:
+      # kilocode_change start
       - name: Skip unchanged general unit tests
         if: ${{ !matrix.settings.run }}
         run: echo "Only isolated product, documentation, or metadata files changed; general unit tests are unchanged."
+      # kilocode_change end
 
       - name: Checkout repository
-        if: matrix.settings.run
+        if: matrix.settings.run # kilocode_change
         uses: actions/checkout@v6 # kilocode_change
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -91,10 +99,12 @@ jobs:
         if: matrix.settings.run
         id: setup-node
         continue-on-error: ${{ runner.os == 'Windows' }}
-        uses: actions/setup-node@v6 # kilocode_change
+        uses: actions/setup-node@v6
         with:
           node-version: "24"
+      # kilocode_change end
 
+      # kilocode_change start
       - name: Retry Setup Node on Windows
         if: matrix.settings.run && runner.os == 'Windows' && steps.setup-node.outcome == 'failure'
         uses: actions/setup-node@v6
@@ -103,75 +113,119 @@ jobs:
       # kilocode_change end
 
       - name: Setup Bun
-        if: matrix.settings.run
+        if: matrix.settings.run # kilocode_change
         uses: ./.github/actions/setup-bun
 
       # kilocode_change start
-      - name: Setup Zig for Linux sandbox helper
+      - name: Setup Linux sandbox helper
         if: matrix.settings.run && runner.os == 'Linux'
-        run: |
-          curl --fail --location --retry 3 \
-            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
-            --output "$RUNNER_TEMP/zig.tar.xz"
-          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
-          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
-
-      - name: Build Linux sandbox helper
-        if: matrix.settings.run && runner.os == 'Linux'
-        run: |
-          bun packages/opencode/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
-          echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
+        uses: ./.github/actions/setup-linux-sandbox
       # kilocode_change end
       - name: Configure git identity
-        if: matrix.settings.run
+        if: matrix.settings.run # kilocode_change
+        # kilocode_change start
         run: |
           git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
           git config --global user.name "kilo-maintainer[bot]"
+        # kilocode_change end
 
       - name: Cache Turbo
-        if: matrix.settings.run
+        if: matrix.settings.run # kilocode_change
         uses: actions/cache@v5 # kilocode_change
         with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-${{ github.sha }}
+          path: .turbo/cache # kilocode_change
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.sha }} # kilocode_change
+          # kilocode_change start
           restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', '**/package.json') }}-
+            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-${{ matrix.settings.os }}-${{ matrix.settings.index }}-
+            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
             turbo-${{ runner.os }}-
+          # kilocode_change end
 
-      - name: Run unit tests
-        if: matrix.settings.run
-        run: bun turbo test:ci --filter='!@kilocode/kilo-jetbrains'
-        env:
-          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
-          KILO_TEST_PROFILE: ${{ runner.os == 'macOS' && github.event_name == 'pull_request' && 'darwin' || '' }} # kilocode_change
-
-      # kilocode_change start
-      - name: Run HttpApi exerciser gates
-        if: matrix.settings.run && runner.os == 'Linux'
-        working-directory: packages/opencode
-        run: bun run test:httpapi
+      # kilocode_change start - test non-CLI packages separately from sharded CLI tests
+      - name: Run non-CLI unit tests
+        if: matrix.settings.run && matrix.settings.packages
+        run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='!@kilocode/cli' --filter='!@kilocode/kilo-jetbrains'
       # kilocode_change end
 
-      - name: Publish unit reports # kilocode_change
+      # kilocode_change start - ensure the Darwin profile cannot suppress its own validation
+      - name: Validate Darwin CLI test profile
+        if: matrix.settings.run && matrix.settings.os == 'macos'
+        working-directory: packages/opencode
+        run: bun test test/kilocode/test-profile.test.ts
+      # kilocode_change end
+
+      # kilocode_change start - run Kilo CLI tests through platform-specific shards
+      - name: Run CLI unit tests
+        if: matrix.settings.run
+        run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
+        env:
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
+          KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
+          KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
+      # kilocode_change end
+
+      # kilocode_change start
+      - name: Publish unit reports
         if: always() && matrix.settings.run
         uses: mikepenz/action-junit-report@bccf2e31636835cf0874589931c4116687171386 # v6.4.0
         with:
           report_paths: packages/*/.artifacts/unit/junit.xml
-          check_name: "unit results (${{ matrix.settings.name }})"
+          annotate_only: true
           detailed_summary: true
           include_time_in_summary: true
           fail_on_failure: false
 
       - name: Upload unit artifacts
         if: always() && matrix.settings.run
-        uses: actions/upload-artifact@v7 # kilocode_change
+        uses: actions/upload-artifact@v7
         with:
-          name: unit-${{ matrix.settings.name }}-${{ github.run_attempt }}
+          name: unit-${{ matrix.settings.os }}-${{ matrix.settings.index }}-${{ github.run_attempt }}
           include-hidden-files: true
           if-no-files-found: ignore
           retention-days: 7
           path: packages/*/.artifacts/unit/junit.xml
+      # kilocode_change end
+
+  # kilocode_change start
+  httpapi:
+    name: HttpApi exerciser
+    needs: changes
+    if: needs.changes.outputs.general == 'true'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Setup Linux sandbox helper
+        uses: ./.github/actions/setup-linux-sandbox
+
+      - name: Configure git identity
+        run: |
+          git config --global user.email "kilo-maintainer[bot]@users.noreply.github.com"
+          git config --global user.name "kilo-maintainer[bot]"
+
+      - name: Cache Turbo
+        uses: actions/cache@v5
+        with:
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-httpapi-
+            turbo-${{ runner.os }}-${{ hashFiles('turbo.json', 'bun.lock') }}-
+            turbo-${{ runner.os }}-
+
+      - name: Run HttpApi exerciser gates
+        run: bun turbo test:httpapi --filter='@kilocode/cli'
+        env:
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - same rationale as the CLI unit step: a watcher per scenario instance is too heavy for the exerciser
   # kilocode_change end
 
   # kilocode_change start
@@ -185,18 +239,40 @@ jobs:
   # kilocode_change end
 
   # kilocode_change start
+  unit-required:
+    name: unit (linux)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs:
+      - unit
+    if: always()
+    steps:
+      - name: Verify unit matrix passed
+        run: |
+          echo "unit=${{ needs.unit.result }}"
+          test "${{ needs.unit.result }}" = "success"
+  # kilocode_change end
+
+  # kilocode_change start
   required:
     name: test (linux)
     runs-on: blacksmith-4vcpu-ubuntu-2404
     needs:
+      - changes
       - unit
+      - httpapi
       - jetbrains
     if: always()
     steps:
-      - name: Verify upstream test jobs passed
+      - name: Verify upstream test jobs passed # kilocode_change
         run: |
           echo "unit=${{ needs.unit.result }}"
+          echo "httpapi=${{ needs.httpapi.result }}"
           echo "jetbrains=${{ needs.jetbrains.result }}"
           test "${{ needs.unit.result }}" = "success"
+          if [ "${{ needs.changes.outputs.general }}" = "true" ]; then
+            test "${{ needs.httpapi.result }}" = "success"
+          else
+            test "${{ needs.httpapi.result }}" = "skipped"
+          fi
           test "${{ needs.jetbrains.result }}" = "success"
   # kilocode_change end

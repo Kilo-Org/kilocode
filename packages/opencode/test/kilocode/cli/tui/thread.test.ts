@@ -2,7 +2,12 @@ import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
 import { tmpdir } from "../../../fixture/fixture"
-import { resolveThreadDirectory } from "../../../../src/cli/cmd/tui/thread"
+import {
+  embeddedRemoteExitClient,
+  resolveThreadDirectory,
+  runEmbeddedRemoteExitBridge,
+} from "../../../../src/cli/cmd/tui"
+import { preload } from "../../../../src/kilocode/cli/cmd/tui"
 import { KiloTuiThreadDaemon } from "../../../../src/kilocode/cli/cmd/tui/thread"
 import { DaemonClient } from "../../../../src/kilocode/daemon/client"
 
@@ -11,6 +16,31 @@ afterEach(() => {
 })
 
 describe("kilo tui thread", () => {
+  test("skips preload resolver invocation in compiled mode", () => {
+    let calls = 0
+
+    expect(
+      preload(true, () => {
+        calls++
+        return "/resolved/preload"
+      }),
+    ).toEqual([])
+    expect(calls).toBe(0)
+  })
+
+  test("resolves the preload once in source mode", () => {
+    let calls = 0
+    const path = "/resolved/preload"
+
+    expect(
+      preload(false, () => {
+        calls++
+        return path
+      }),
+    ).toEqual([path])
+    expect(calls).toBe(1)
+  })
+
   test("ignores stale PWD after cwd is changed by a process wrapper", async () => {
     await using root = await tmpdir()
     const pkg = path.join(root.path, "packages", "opencode")
@@ -33,6 +63,47 @@ describe("kilo tui thread", () => {
       if (prev === undefined) delete process.env.KILO_DEV_CWD
       else process.env.KILO_DEV_CWD = prev
     }
+  })
+
+  test("enables remote exit only for the embedded worker transport", () => {
+    const client = { marker: "worker" }
+
+    expect(embeddedRemoteExitClient(false, client)).toBe(client)
+    expect(embeddedRemoteExitClient(true, client)).toBeUndefined()
+    expect(embeddedRemoteExitClient(false, undefined)).toBeUndefined()
+  })
+
+  test("continues TUI startup when remote-exit readiness and cleanup never reply", async () => {
+    const calls: string[] = []
+    let handler: (() => void) | undefined
+    let tuiContinued = false
+    const done = Promise.resolve().then(() => {
+      tuiContinued = true
+    })
+
+    await runEmbeddedRemoteExitBridge({
+      client: {
+        on(_event, next) {
+          calls.push("subscribe")
+          handler = next
+          return () => {
+            calls.push("unsubscribe")
+            handler = undefined
+          }
+        },
+        async call(method) {
+          calls.push(method)
+          await new Promise(() => {})
+        },
+      },
+      exit: () => {},
+      done,
+      timeoutMs: 5,
+    })
+
+    expect(tuiContinued).toBe(true)
+    expect(calls).toEqual(["subscribe", "tuiReady", "tuiGone", "unsubscribe"])
+    expect(handler).toBeUndefined()
   })
 
   test("validates imported daemon session over HTTP after importing from cloud", async () => {
@@ -106,12 +177,12 @@ describe("kilo tui thread", () => {
         },
       }),
     }))
-    mock.module("@/cli/cmd/tui/validate-session", () => ({
+    mock.module("@/cli/tui/validate-session", () => ({
       validateSession: async (input: { sessionID?: string }) => {
         seen.push(input.sessionID ?? "")
       },
     }))
-    mock.module("@/cli/cmd/tui/config/tui", () => ({
+    mock.module("@/config/tui", () => ({
       TuiConfig: {
         get: async () => ({}),
       },

@@ -136,7 +136,14 @@ export const dict = {
   "revert.banner.count_other": "{{count}} berichten teruggedraaid",
   "revert.banner.redo": "Opnieuw uitvoeren",
   "revert.banner.redo.all": "Alles opnieuw uitvoeren",
-  "revert.banner.hint": "Stuur een nieuw bericht om dit definitief te maken",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversatie teruggedraaid. Bestandswijzigingen zijn niet hersteld omdat snapshots zijn uitgeschakeld.",
+  "revert.banner.workspace.unavailable":
+    "Conversatie teruggedraaid. Er was geen bestandscheckpoint beschikbaar, dus wijzigingen in de werkruimte zijn niet hersteld.",
+  "revert.banner.workspace.legacy":
+    "Gesprek teruggedraaid. De herstelstatus van de werkruimte is niet beschikbaar voor deze eerdere terugdraaiing.",
+  "revert.banner.workspace.enableSnapshots": "Snapshots inschakelen",
   "revert.disabled.agentBusy": "Wacht tot de agent klaar is",
   "command.session.compact": "Sessie comprimeren",
   "command.session.compact.description": "De sessie samenvatten om de contextgrootte te verkleinen",
@@ -352,6 +359,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Actief bestand opnemen",
   "prompt.context.removeActiveFile": "Actief bestand uit context verwijderen",
   "prompt.context.removeFile": "Bestand uit context verwijderen",
+  "prompt.thinking.tooltip": "Redeneringsinspanning",
   "prompt.action.attachFile": "Bestand bijvoegen",
   "prompt.attachment.remove": "Bijlage verwijderen",
   "prompt.action.send": "Verzenden",
@@ -636,7 +644,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep Zoeken",
   "ui.permission.toolLabel.webSearch": "Web Zoeken",
   "ui.permission.toolLabel.list": "Lijst",
-  "ui.permission.toolLabel.externalDirectory": "Externe map lezen",
+  "ui.permission.toolLabel.externalDirectory": "Externe map openen",
   "ui.permission.toolLabel.webFetch": "Web Ophalen",
   "ui.permission.toolLabel.task": "Taak",
   "ui.permission.toolLabel.skill": "Vaardigheid",
@@ -950,6 +958,7 @@ export const dict = {
   "provider.custom.models.name.label": "Naam",
   "provider.custom.models.name.placeholder": "Weergavenaam",
   "provider.custom.models.reasoning.label": "Redeneren",
+  "provider.custom.models.modalities.image": "Afbeelding",
   "provider.custom.models.variants.label": "Varianten",
   "provider.custom.models.variants.add": "Variant toevoegen",
   "provider.custom.models.variants.remove": "Variant verwijderen",
@@ -1259,6 +1268,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API-sleutel",
   "settings.indexing.qdrantApiKey.description": "Optionele API-sleutel voor de Qdrant-instantie.",
   "settings.indexing.qdrantApiKey.placeholder": "Optionele API-sleutel",
+  "settings.indexing.fileExtensions.title": "Bestandsextensies",
+  "settings.indexing.fileExtensions.description":
+    "Door komma's gescheiden lijst met toegestane items. Laat leeg om de ingebouwde standaardwaarden te gebruiken.",
+  "settings.indexing.fileExtensions.invalid": "Ongeldige extensie: {{extension}}",
   "settings.indexing.tuning.description": "Geavanceerde parameter voor zoeken en batching.",
 
   "settings.experimental.title": "Experimenteel",
@@ -1427,6 +1440,12 @@ export const dict = {
   "settings.experimental.codebaseSearch.title": "Codebase Zoeken",
   "settings.experimental.codebaseSearch.description":
     "Schakel AI-aangedreven zoeken in natuurlijke taal door je codebase in",
+  "settings.experimental.imageGeneration.title": "Afbeeldingsgeneratie",
+  "settings.experimental.imageGeneration.description": "AI-afbeeldingsgeneratie inschakelen",
+  "settings.experimental.imageGenerationModel.title": "Afbeeldingsmodel",
+  "settings.experimental.imageGenerationModel.description": "Afbeeldingsgeneratiemodel",
+  "settings.experimental.imageGenerationModel.placeholder": "Standaard (Auto Router)",
+
   "settings.experimental.speechToText.title": "Spraak naar tekst",
   "settings.experimental.speechToText.description":
     "Schakel spraakinvoer in promptvelden in met uw Kilo-account via Kilo Gateway.",
@@ -1443,11 +1462,20 @@ export const dict = {
   "settings.sandboxing.title": "Sandbox",
   "settings.sandboxing.network.title": "Netwerktoegang beperken",
   "settings.sandboxing.network.description":
-    "Blokkeer uitgaande netwerktoegang voor door het model geïnitieerde opdrachten en HTTP-tools. Lokale MCP-servers en plugin-hooks vallen buiten deze beperking. Netwerkverkeer voor providers en modelinferentie blijft beschikbaar.",
+    "Blokkeer directe uitgaande toegang vanuit opdrachten die door het model zijn geïnitieerd en HTTP-hulpprogramma's. Lokale en externe MCP-hulpprogramma's zijn niet beschikbaar zolang deze beperking actief is. Verkeer van providers en hooks van vertrouwde plug-ins vallen buiten deze beperking.",
 
+  "settings.sandboxing.allowedHosts.title": "Toegestane netwerkbestemmingen",
+  "settings.sandboxing.allowedHosts.description":
+    "DNS-host- en poortbestemmingen voor HTTP- en HTTPS-proxyverkeer in een sandbox. GitHub CLI en HTTPS Git hebben doorgaans github.com:443 en api.github.com:443 nodig. Wijzigingen gelden voor nieuwe sessies.",
   "settings.sandboxing.writablePaths.title": "Extra schrijfbare paden",
   "settings.sandboxing.writablePaths.description":
     "Extra bestandssysteempaden waar de sandbox schrijftoestemming voor geeft (bijv. /tmp, /var/log). Deze worden samengevoegd met de standaard schrijfbare paden wanneer de sandbox actief is.",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner inschakelen: taakgericht snoeien van grote uitvoer van lees-, zoek- en shelltools, gestuurd door een focusvraag van de agent",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner-model",
+  "settings.experimental.swePrunerModel.description":
+    "Model dat wordt gebruikt om tooluitvoer te snoeien; standaard het geconfigureerde kleine model",
   "settings.experimental.mcpTimeout.title": "MCP Timeout (ms)",
   "settings.experimental.mcpTimeout.description": "Timeout voor MCP-serververzoeken in milliseconden",
   "settings.experimental.remote.title": "Remote-bediening",
@@ -1459,8 +1487,8 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inactief",
   "settings.experimental.remote.hint": "Gebruik /remote in de chat om te schakelen",
   "settings.experimental.toolToggles": "Tool Schakelaars",
-  "settings.experimental.sandbox.title": "Sandbox",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "Sandbox",
+  "settings.sandboxing.enabled.description":
     "Shell-opdrachten van de agent uitvoeren in een sandbox op besturingssysteemniveau die schrijfbewerkingen beperkt tot de project- en Kilo-statusmappen",
 
   "settings.agentBehaviour.defaultAgent.title": "Standaard Agent",
@@ -1476,11 +1504,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Aangepaste Prompt",
   "settings.agentBehaviour.prompt.description": "Aanvullende systeem prompt voor deze agent",
   "settings.agentBehaviour.temperature.title": "Temperatuur",
-  "settings.agentBehaviour.temperature.description": "Sampling temperatuur (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Bepaalt hoe willekeurig AI-antwoorden zijn (0–2). Lagere waarden (bijv. 0.2) leveren gerichte, consistente uitvoer op. Hogere waarden (bijv. 1.0) leveren gevarieerdere, creatievere antwoorden op. Laat leeg om de standaardwaarde van het model te gebruiken.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Nucleus-samplingparameter (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Drempel voor nucleus-sampling (0–1). Beperkt de tokenkeuze tot de kleinste verzameling waarvan de cumulatieve waarschijnlijkheid P bereikt. Lagere waarden maken de uitvoer gerichter; hogere waarden laten meer variatie toe. Laat leeg om de standaardwaarde van het model te gebruiken.",
   "settings.agentBehaviour.maxSteps.title": "Max Stappen",
-  "settings.agentBehaviour.maxSteps.description": "Maximale agent iteraties",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maximaal aantal agentstappen. Bij het bereiken van de limiet krijgt de agent de instructie om geen tools meer te gebruiken en een definitief antwoord te geven. Verhoog dit voor complexe taken met meerdere stappen; verlaag het om antwoorden korter en voorspelbaarder te houden.",
   "settings.agentBehaviour.hidden.title": "Verborgen",
   "settings.agentBehaviour.hidden.description": "Verberg deze agent uit de modusschakelaar in de chatinvoer",
   "settings.agentBehaviour.disable.title": "Uitgeschakeld",
@@ -1612,36 +1643,18 @@ export const dict = {
   "settings.context.memory.autoSave.title": "Projectgeheugen automatisch opslaan",
   "settings.context.memory.autoSave.description":
     "Sla duurzame projectfeiten automatisch op uit voltooide beurten wanneer geheugen is ingeschakeld.",
-  "settings.context.memory.index.title": "Geheugenindex",
+  "settings.context.memory.storage.title": "Storage",
   "settings.context.memory.status.notLoaded": "Niet geladen",
   "settings.context.memory.status.disabled": "Uitgeschakeld",
-  "settings.context.memory.status.enabledTokensOps":
-    "Ingeschakeld - ~{{session}} startcontexttokens in deze sessie - ~{{tokens}} tokens in opgeslagen index - laatste bewerking {{ops}}",
-  "settings.context.memory.index.path": "{{path}}/index.kmem",
-  "settings.context.memory.index.enable": "Schakel geheugen in om projectgeheugenbestanden te maken.",
+  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.storage.path": "{{path}}",
+  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
   "settings.context.memory.inspect": "Inspecteren",
-  "settings.context.memory.rebuild": "Geheugenindex opnieuw opbouwen",
-  "chat.memory.on": "Geheugen aan",
-  "chat.memory.label": "Geheugen · {{tokens}} tokens",
-  "chat.memory.status.loading": "Geheugenstatus laden",
-  "chat.memory.session.tokens": "Startcontext deze sessie: {{tokens}} tokens",
-  "chat.memory.total.tokens": "Opgeslagen index: {{tokens}} tokens",
-  "chat.memory.project.enabled": "Projectgeheugen ingeschakeld",
   "chat.memory.project.disabled": "Projectgeheugen uitgeschakeld",
+  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
   "chat.memory.command.failed": "Geheugenopdracht mislukt",
-  "chat.memory.savedOperations": "Laatste geheugenbewerking: {{count}} bewerkingen",
-  "chat.memory.inspect": "Geheugen inspecteren",
-  "chat.memory.remember": "Onthouden",
-  "chat.memory.forget": "Vergeten",
-  "chat.memory.rebuild": "Index opnieuw opbouwen",
-  "chat.memory.disable": "Geheugen uitschakelen",
-  "chat.memory.badge.injected": "Geheugen geïnjecteerd",
-  "chat.memory.badge.recalled": "Geheugen opgehaald",
-  "chat.memory.badge.startupCtx": "startctx",
-  "chat.memory.badge.items": "{{count}} items",
-  "chat.memory.badge.tokens": "{{tokens}} tokens",
-  "chat.memory.badge.recalledDetail": "Geheugen opgehaald: {{count}} items - {{tokens}} tokens",
-  "chat.memory.badge.files": "Geheugenbestanden: {{files}}",
+  "chat.memory.updated": "Memory updated",
+  "chat.memory.rebuild": "Memory index rebuilt",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Aangepaste prompt gebruiken",
@@ -1653,6 +1666,11 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "bijv. Genereer commit messages in het Spaans volgens het conventional commits formaat. Retourneer ALLEEN de commit message.",
 
+  "settings.commitMessage.language.sync": "Synchroniseren met UI taal",
+  "settings.commitMessage.language.title": "Taal",
+  "settings.commitMessage.language.description":
+    "Kies welke taal je wilt gebruiken voor AI-gegenereerde commitberichten:",
+
   "settings.display.username.title": "Gebruikersnaam",
   "settings.display.username.description": "Aangepaste gebruikersnaam weergegeven in gesprekken",
   "settings.display.fontSize.title": "Lettergrootte",
@@ -1660,6 +1678,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Redenering automatisch inklappen",
   "settings.display.reasoningAutoCollapse.description":
     "Klapt redeneerblokken in nadat de agent klaar is met schrijven. Laat uitgeschakeld om redenering uitgeklapt te houden, tenzij je die handmatig inklapt.",
+  "settings.display.shiftTabCycle.title": "Doorloop niveaus van redeneringsinspanning met Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Druk op Shift+Tab in een promptinvoerveld om naar het volgende niveau van redeneringsinspanning te gaan. Schakel dit uit om Shift+Tab te behouden voor focusnavigatie via het toetsenbord.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1882,4 +1903,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "Loading branches…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "Plan is klaar:",
+  "chat.search.placeholder": "Chat doorzoeken…",
+  "chat.search.toggle": "Chat doorzoeken",
+  "chat.search.matchCase": "Hoofdlettergevoelig",
+  "chat.search.matchWholeWord": "Heel woord",
+  "chat.search.useRegex": "Reguliere expressie gebruiken",
+  "chat.search.previousMatch": "Vorige overeenkomst",
+  "chat.search.nextMatch": "Volgende overeenkomst",
+  "chat.search.close": "Zoeken sluiten",
+  "chat.search.invalidRegex": "Ongeldige reguliere expressie",
+  "chat.search.noResults": "Geen resultaten",
+  "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
 }

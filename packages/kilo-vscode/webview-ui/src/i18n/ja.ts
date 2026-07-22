@@ -136,7 +136,14 @@ export const dict = {
   "revert.banner.count_other": "{{count}} 件のメッセージが元に戻されました",
   "revert.banner.redo": "やり直し",
   "revert.banner.redo.all": "すべてやり直し",
-  "revert.banner.hint": "新しいメッセージを送信してこれを永続させてください",
+  "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "会話を元に戻しました。スナップショットが無効になっているため、ファイルの変更は復元されませんでした。",
+  "revert.banner.workspace.unavailable":
+    "会話を元に戻しました。利用可能なファイルのチェックポイントがなかったため、ワークスペースの変更は復元されませんでした。",
+  "revert.banner.workspace.legacy":
+    "会話を元に戻しました。この以前の復元では、ワークスペースの復元状態を利用できません。",
+  "revert.banner.workspace.enableSnapshots": "スナップショットを有効にする",
   "revert.disabled.agentBusy": "エージェントの完了を待ってください",
   "command.session.compact": "セッションを圧縮",
   "command.session.compact.description": "セッションを要約してコンテキストサイズを削減",
@@ -349,6 +356,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "アクティブなファイルを含める",
   "prompt.context.removeActiveFile": "コンテキストからアクティブなファイルを削除",
   "prompt.context.removeFile": "コンテキストからファイルを削除",
+  "prompt.thinking.tooltip": "推論の強度",
   "prompt.action.attachFile": "ファイルを添付",
   "prompt.attachment.remove": "添付ファイルを削除",
   "prompt.action.send": "送信",
@@ -629,7 +637,7 @@ export const dict = {
   "ui.permission.toolLabel.grepSearch": "Grep検索",
   "ui.permission.toolLabel.webSearch": "Web検索",
   "ui.permission.toolLabel.list": "一覧",
-  "ui.permission.toolLabel.externalDirectory": "外部ディレクトリ読み取り",
+  "ui.permission.toolLabel.externalDirectory": "外部ディレクトリにアクセス",
   "ui.permission.toolLabel.webFetch": "Web取得",
   "ui.permission.toolLabel.task": "タスク",
   "ui.permission.toolLabel.skill": "スキル",
@@ -912,6 +920,10 @@ export const dict = {
   "settings.indexing.providerField.description": "プロバイダー固有の接続設定。",
   "settings.indexing.qdrantApiKey.description": "QdrantインスタンスのオプションのAPIキー。",
   "settings.indexing.qdrantApiKey.placeholder": "オプションのAPIキー",
+  "settings.indexing.fileExtensions.title": "ファイル拡張子",
+  "settings.indexing.fileExtensions.description":
+    "カンマ区切りの許可リストです。空欄のままにすると、組み込みのデフォルトが使用されます。",
+  "settings.indexing.fileExtensions.invalid": "無効な拡張子: {{extension}}",
   "settings.indexing.qdrantApiKey.title": "Qdrant APIキー",
   "settings.indexing.qdrantUrl.description": "QdrantインスタンスのサーバーURL。",
   "settings.indexing.qdrantUrl.title": "Qdrant URL",
@@ -989,6 +1001,7 @@ export const dict = {
   "provider.custom.models.name.label": "名前",
   "provider.custom.models.name.placeholder": "表示名",
   "provider.custom.models.reasoning.label": "推論",
+  "provider.custom.models.modalities.image": "画像",
   "provider.custom.models.variants.label": "バリアント",
   "provider.custom.models.variants.add": "バリアントを追加",
   "provider.custom.models.variants.remove": "バリアントを削除",
@@ -1419,6 +1432,12 @@ export const dict = {
   "settings.experimental.batch.description": "複数のツール呼び出しのバッチ処理を有効にする",
   "settings.experimental.codebaseSearch.title": "コードベース検索",
   "settings.experimental.codebaseSearch.description": "コードベース全体でAIによる自然言語検索を有効にする",
+  "settings.experimental.imageGeneration.title": "画像生成",
+  "settings.experimental.imageGeneration.description": "AI画像生成を有効にする",
+  "settings.experimental.imageGenerationModel.title": "画像モデル",
+  "settings.experimental.imageGenerationModel.description": "画像生成モデル",
+  "settings.experimental.imageGenerationModel.placeholder": "デフォルト (Auto Router)",
+
   "settings.experimental.speechToText.title": "音声認識",
   "settings.experimental.speechToText.description":
     "Kilo Gateway経由でKiloアカウントを使用して、プロンプトフィールドでの音声入力を有効にします。",
@@ -1434,11 +1453,20 @@ export const dict = {
   "settings.sandboxing.title": "サンドボックス化",
   "settings.sandboxing.network.title": "ネットワークアクセスを制限",
   "settings.sandboxing.network.description":
-    "モデルから発行されたコマンドと HTTP ツールによる外部ネットワークアクセスをブロックします。ローカル MCP サーバーとプラグインフックは、この制限の対象外です。プロバイダーおよびモデルへの推論通信は引き続き利用できます。",
+    "モデル起点のコマンドと HTTP ツールによる直接のアウトバウンドアクセスをブロックします。この制限が適用されている間、ローカルおよびリモートの MCP ツールは利用できません。プロバイダーのトラフィックと信頼済みプラグインフックは、この制限の対象外です。",
 
+  "settings.sandboxing.allowedHosts.title": "許可されたネットワーク接続先",
+  "settings.sandboxing.allowedHosts.description":
+    "サンドボックス化された HTTP および HTTPS プロキシトラフィックの DNS ホストとポートの宛先。GitHub CLI と HTTPS Git では通常、github.com:443 と api.github.com:443 が必要です。変更は新しいセッションに適用されます。",
   "settings.sandboxing.writablePaths.title": "追加の書き込み可能パス",
   "settings.sandboxing.writablePaths.description":
     "サンドボックスでの書き込みを許可する追加のファイルシステムパス（例: /tmp、/var/log）。サンドボックス有効時、デフォルトの書き込み可能パスと統合されます。",
+  "settings.experimental.swePruner.title": "SWE-Pruner",
+  "settings.experimental.swePruner.description":
+    "SWE-Pruner を有効にする: エージェントが提供するフォーカス質問に基づき、タスクを考慮して、読み取り、検索、シェルツールのサイズの大きい出力をプルーニングします",
+  "settings.experimental.swePrunerModel.title": "SWE-Pruner モデル",
+  "settings.experimental.swePrunerModel.description":
+    "ツール出力の剪定に使用するモデル。既定では設定済みのスモールモデルを使用します",
   "settings.experimental.mcpTimeout.title": "MCPタイムアウト（ミリ秒）",
   "settings.experimental.mcpTimeout.description": "MCPサーバーリクエストのタイムアウト（ミリ秒）",
   "settings.experimental.remote.title": "Remote コントロール",
@@ -1463,11 +1491,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "カスタムプロンプト",
   "settings.agentBehaviour.prompt.description": "このエージェントの追加システムプロンプト",
   "settings.agentBehaviour.temperature.title": "温度",
-  "settings.agentBehaviour.temperature.description": "サンプリング温度（0-2）",
+  "settings.agentBehaviour.temperature.description":
+    "AI の応答のランダム性を制御します（0–2）。低い値（例: 0.2）では、焦点の定まった一貫性のある出力になります。高い値（例: 1.0）では、より多様で創造的な応答になります。モデルのデフォルト値を使用する場合は空欄にしてください。",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "核サンプリングパラメータ（0-1）",
+  "settings.agentBehaviour.topP.description":
+    "核サンプリングのしきい値です（0–1）。累積確率が P に達する最小のトークン集合に選択肢を制限します。低い値では出力がより集中的になり、高い値では多様性が増します。モデルのデフォルト値を使用する場合は空欄にしてください。",
   "settings.agentBehaviour.maxSteps.title": "最大ステップ数",
-  "settings.agentBehaviour.maxSteps.description": "最大エージェント反復回数",
+  "settings.agentBehaviour.maxSteps.description":
+    "エージェントの最大ステップ数です。上限に達すると、エージェントはツールの使用を停止して最終応答を返すよう指示されます。複雑な複数ステップのタスクでは増やし、応答を短く予測しやすくするには減らしてください。",
   "settings.agentBehaviour.hidden.title": "非表示",
   "settings.agentBehaviour.hidden.description": "チャット入力のモード切り替えからこのエージェントを非表示にする",
   "settings.agentBehaviour.disable.title": "無効",
@@ -1572,8 +1603,8 @@ export const dict = {
     "カスタムコマンドが設定されていません。opencode.json にコマンドを追加するとここに表示されます。",
   "settings.agentBehaviour.workflows.detail.description": "説明",
   "settings.agentBehaviour.workflows.detail.template": "テンプレート",
-  "settings.experimental.sandbox.title": "サンドボックス",
-  "settings.experimental.sandbox.description":
+  "settings.sandboxing.enabled.title": "サンドボックス",
+  "settings.sandboxing.enabled.description":
     "エージェントのシェルコマンドを、プロジェクトおよびKiloの状態ディレクトリへの書き込みを制限するOSレベルのサンドボックス内で実行",
 
   "settings.autoApprove.description":
@@ -1631,36 +1662,18 @@ export const dict = {
   "settings.context.memory.autoSave.title": "プロジェクトメモリを自動保存",
   "settings.context.memory.autoSave.description":
     "メモリが有効なとき、完了したターンから永続的なプロジェクト情報を自動保存します。",
-  "settings.context.memory.index.title": "メモリインデックス",
+  "settings.context.memory.storage.title": "Storage",
   "settings.context.memory.status.notLoaded": "未読み込み",
   "settings.context.memory.status.disabled": "無効",
-  "settings.context.memory.status.enabledTokensOps":
-    "有効 - このセッションの起動コンテキスト ~{{session}} トークン - 保存済みインデックス ~{{tokens}} トークン - 最後の操作 {{ops}}",
-  "settings.context.memory.index.path": "{{path}}/index.kmem",
-  "settings.context.memory.index.enable": "メモリを有効にしてプロジェクトメモリファイルを作成します。",
+  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.storage.path": "{{path}}",
+  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
   "settings.context.memory.inspect": "検査",
-  "settings.context.memory.rebuild": "メモリインデックスを再構築",
-  "chat.memory.on": "メモリ オン",
-  "chat.memory.label": "メモリ · {{tokens}} トークン",
-  "chat.memory.status.loading": "メモリ状態を読み込み中",
-  "chat.memory.session.tokens": "このセッションの起動コンテキスト: {{tokens}} トークン",
-  "chat.memory.total.tokens": "保存済みインデックス: {{tokens}} トークン",
-  "chat.memory.project.enabled": "プロジェクトメモリが有効です",
   "chat.memory.project.disabled": "プロジェクトメモリが無効です",
+  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
   "chat.memory.command.failed": "メモリコマンドに失敗しました",
-  "chat.memory.savedOperations": "最後のメモリ操作: {{count}} 件",
-  "chat.memory.inspect": "メモリを検査",
-  "chat.memory.remember": "記憶",
-  "chat.memory.forget": "忘れる",
-  "chat.memory.rebuild": "インデックスを再構築",
-  "chat.memory.disable": "メモリを無効化",
-  "chat.memory.badge.injected": "メモリを注入しました",
-  "chat.memory.badge.recalled": "メモリを呼び出しました",
-  "chat.memory.badge.startupCtx": "起動ctx",
-  "chat.memory.badge.items": "{{count}} 件",
-  "chat.memory.badge.tokens": "{{tokens}} トークン",
-  "chat.memory.badge.recalledDetail": "メモリを呼び出しました: {{count}} 件 - {{tokens}} トークン",
-  "chat.memory.badge.files": "メモリファイル: {{files}}",
+  "chat.memory.updated": "Memory updated",
+  "chat.memory.rebuild": "Memory index rebuilt",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "カスタム prompt を使用",
@@ -1672,6 +1685,10 @@ export const dict = {
   "settings.commitMessage.prompt.placeholder":
     "例: スペイン語で conventional commits 形式に従って commit messages を生成して。commit message のみを返して。",
 
+  "settings.commitMessage.language.sync": "UI言語と同期",
+  "settings.commitMessage.language.title": "言語",
+  "settings.commitMessage.language.description": "AIが生成するコミットメッセージに使用する言語を選択:",
+
   "settings.display.username.title": "ユーザー名",
   "settings.display.username.description": "会話に表示されるカスタムユーザー名",
   "settings.display.fontSize.title": "フォントサイズ",
@@ -1679,6 +1696,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "推論を自動で折りたたむ",
   "settings.display.reasoningAutoCollapse.description":
     "エージェントが推論の書き込みを終えた後に推論ブロックを自動で折りたたみます。手動で折りたたむまでは推論を展開したままにするには、オフのままにしてください。",
+  "settings.display.shiftTabCycle.title": "Shift+Tab で推論の強度を切り替える",
+  "settings.display.shiftTabCycle.description":
+    "プロンプト入力欄で Shift+Tab を押すと、次の推論の強度レベルに切り替わります。Shift+Tab をキーボードフォーカスの移動に使用する場合は、無効にしてください。",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1841,4 +1861,15 @@ export const dict = {
   "diffViewer.baseBranch.loading": "ブランチを読み込み中…",
   "diffViewer.baseBranch.none": "—",
   "plan.exit.ready": "プランの準備ができました:",
+  "chat.search.placeholder": "チャットを検索…",
+  "chat.search.toggle": "チャットを検索",
+  "chat.search.matchCase": "大文字と小文字を区別する",
+  "chat.search.matchWholeWord": "単語単位で検索する",
+  "chat.search.useRegex": "正規表現を使用する",
+  "chat.search.previousMatch": "前の一致",
+  "chat.search.nextMatch": "次の一致",
+  "chat.search.close": "検索を閉じる",
+  "chat.search.invalidRegex": "正規表現が無効です",
+  "chat.search.noResults": "見つかりませんでした",
+  "chat.search.searchingHistory": "以前のメッセージを検索しています…",
 }

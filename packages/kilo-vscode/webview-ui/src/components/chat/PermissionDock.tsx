@@ -269,7 +269,9 @@ export const PermissionDock: Component<{
         }
       >
         <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
-        <Show when={command()}>{(cmd) => <PermissionCommand command={cmd()} />}</Show>
+        <Show when={command()}>
+          {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+        </Show>
 
         {(() => {
           const desc = description()
@@ -309,7 +311,7 @@ export const PermissionDock: Component<{
             }}
             disabled={props.responding}
           >
-            {language.t("ui.permission.run")}
+            {language.t("ui.permission.allowOnce")}
           </Button>
           <Button
             variant="ghost"

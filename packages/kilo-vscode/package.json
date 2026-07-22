@@ -2,7 +2,7 @@
   "name": "kilo-code",
   "displayName": "Kilo Code: AI Coding Agent, Copilot, and Autocomplete",
   "description": "Open Source AI coding agent that generates code from natural language, automates tasks, and runs terminal commands. Features inline autocomplete, browser automation, automated refactoring, and custom modes for planning, coding, and debugging. Supports 500+ AI models including Claude (Anthropic), Gemini, Grok, GPT, Codex and GLM.",
-  "version": "7.4.1",
+  "version": "7.4.15",
   "icon": "assets/icons/logo-outline-black.png",
   "galleryBanner": {
     "color": "#FFFFFF",
@@ -291,6 +291,11 @@
       },
       {
         "command": "kilo-code.new.agentManager.newWorktree",
+        "title": "Agent Manager: Configure New Worktree",
+        "category": "Kilo Code"
+      },
+      {
+        "command": "kilo-code.new.agentManager.quickWorktree",
         "title": "Agent Manager: New Worktree",
         "category": "Kilo Code"
       },
@@ -311,7 +316,7 @@
       },
       {
         "command": "kilo-code.new.agentManager.advancedWorktree",
-        "title": "Agent Manager: Advanced New Worktree",
+        "title": "Agent Manager: Configure New Worktree",
         "category": "Kilo Code"
       },
       {
@@ -409,6 +414,11 @@
         "category": "Kilo Code"
       },
       {
+        "command": "kilo-code.new.toggleChatSearch",
+        "title": "Toggle Chat Search",
+        "category": "Kilo Code"
+      },
+      {
         "command": "kilo-code.new.cycleAgentMode",
         "title": "Cycle Agent Mode",
         "category": "Kilo Code"
@@ -465,6 +475,10 @@
         },
         {
           "command": "kilo-code.new.sidebarTitle.kiloClawOpen",
+          "when": "false"
+        },
+        {
+          "command": "kilo-code.new.agentManager.advancedWorktree",
           "when": "false"
         },
         {
@@ -709,6 +723,12 @@
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
+        "command": "kilo-code.new.agentManager.quickWorktree",
+        "key": "ctrl+shift+n",
+        "mac": "cmd+shift+n",
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+      },
+      {
         "command": "kilo-code.new.agentManager.openWorktree",
         "key": "ctrl+shift+o",
         "mac": "cmd+shift+o",
@@ -724,12 +744,6 @@
         "command": "kilo-code.new.agentManager.closeWorktree",
         "key": "ctrl+shift+w",
         "mac": "cmd+shift+w",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
-      },
-      {
-        "command": "kilo-code.new.agentManager.advancedWorktree",
-        "key": "ctrl+shift+n",
-        "mac": "cmd+shift+n",
         "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
       },
       {
@@ -858,6 +872,57 @@
           ],
           "enumDescriptions": [
             "Auto (VS Code language)",
+            "English",
+            "简体中文",
+            "繁體中文",
+            "한국어",
+            "Deutsch",
+            "Español",
+            "Français",
+            "Dansk",
+            "日本語",
+            "Polski",
+            "Русский",
+            "العربية",
+            "Norsk",
+            "Português (Brasil)",
+            "ภาษาไทย",
+            "Bosanski",
+            "Türkçe",
+            "Nederlands",
+            "Українська",
+            "Italiano"
+          ]
+        },
+        "kilo-code.new.languageCommitMessage": {
+          "type": "string",
+          "default": "sync",
+          "description": "Language used for AI-generated commit messages. Choose 'sync' to follow the Kilo Code UI language, or select a specific language.",
+          "enum": [
+            "sync",
+            "en",
+            "zh",
+            "zht",
+            "ko",
+            "de",
+            "es",
+            "fr",
+            "da",
+            "ja",
+            "pl",
+            "ru",
+            "ar",
+            "no",
+            "br",
+            "th",
+            "bs",
+            "tr",
+            "nl",
+            "uk",
+            "it"
+          ],
+          "enumDescriptions": [
+            "跟随界面语言 (Sync with UI language)",
             "English",
             "简体中文",
             "繁體中文",
@@ -1064,6 +1129,11 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.chat.shiftTabCyclesVariant": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cycle through reasoning effort variants with Shift+Tab in prompt inputs. Disable to keep Shift+Tab for keyboard focus navigation."
+        },
         "kilo-code.new.agentWorkStyle": {
           "type": "string",
           "scope": "application",
@@ -1102,9 +1172,8 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
-    "check-types:webview": "bun script/typecheck.ts --project webview-ui/tsconfig.json",
-    "typecheck": "bun run check-types:extension && bun run check-types:webview",
-    "check-types:extension": "bun script/typecheck.ts",
+    "check-types:webview": "tsc --noEmit --project webview-ui/tsconfig.json",
+    "typecheck": "bun run check-types && bun run check-types:webview",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "knip": "knip",

@@ -162,6 +162,39 @@ describe("sanitizeCustomProviderConfig", () => {
     })
   })
 
+  it("preserves core custom model modalities", () => {
+    const result = sanitizeCustomProviderConfig({
+      name: "Media Provider",
+      options: { baseURL: "https://example.com/v1" },
+      models: {
+        "model-1": {
+          name: "Model One",
+          modalities: {
+            input: ["text", "audio", "image", "video", "pdf"],
+            output: ["text", "audio"],
+          },
+        },
+      },
+    })
+
+    expect(result).toEqual({
+      value: {
+        npm: "@ai-sdk/openai-compatible",
+        name: "Media Provider",
+        options: { baseURL: "https://example.com/v1" },
+        models: {
+          "model-1": {
+            name: "Model One",
+            modalities: {
+              input: ["text", "audio", "image", "video", "pdf"],
+              output: ["text", "audio"],
+            },
+          },
+        },
+      },
+    })
+  })
+
   it("rejects unknown fields", () => {
     const result = sanitizeCustomProviderConfig({
       name: "Bad Provider",
