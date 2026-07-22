@@ -581,7 +581,7 @@ internal suspend fun awaitReady(
     }
 }
 
-private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask","bash":"ask"}}"""
+private const val DEFAULT_CONFIG = """{"permission":{"edit":"ask"}}"""
 
 // Must be called from a background thread — devStorageEnv() performs blocking I/O (mkdirs).
 internal fun buildKiloCliEnv(

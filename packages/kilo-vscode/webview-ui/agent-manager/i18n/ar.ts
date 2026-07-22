@@ -121,6 +121,8 @@ export const dict = {
   "agentManager.dialog.compareModels.tooltip": "تشغيل الوكلاء على نماذج مختلفة بالتوازي لمقارنة النتائج",
   "agentManager.dialog.compareModels.searchModels": "البحث عن النماذج...",
   "agentManager.dialog.compareModels.selectModels": "اختر النماذج...",
+  "agentManager.dialog.compareModels.effort": "جهد الاستدلال",
+  "agentManager.dialog.compareModels.effortDefault": "افتراضي",
   "agentManager.dialog.creating": "جارٍ الإنشاء...",
   "agentManager.dialog.createWorktree": "إنشاء شجرة العمل",
   "agentManager.dialog.removeImage": "إزالة الصورة",

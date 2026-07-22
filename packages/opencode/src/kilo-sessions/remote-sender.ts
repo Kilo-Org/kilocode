@@ -10,6 +10,7 @@ import type { MessageV2 } from "@/session/message-v2"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { SessionID } from "@/session/schema"
@@ -396,6 +397,19 @@ export namespace RemoteSender {
           data: p,
         })
       }
+      // Always send the current queue snapshot, including
+      // empty, so a resubscribing client can reconcile stale "Queued" badges.
+      // Uses send() directly (not publishQueueChanged) to avoid re-broadcasting
+      // to every other subscriber. The forwarder already routes live
+      // session.queue.changed events to subscribed clients via extractSessionId.
+      const queued = KiloSessionPromptQueue.snapshot(SessionID.make(sessionId))
+      options.conn.send({
+        type: "event",
+        sessionId,
+        ...(root ? { parentSessionId: root } : {}),
+        event: "session.queue.changed",
+        data: { sessionID: sessionId, queued },
+      })
     }
 
     async function backfillPendingState(sessionId: string) {

@@ -68,6 +68,15 @@ export async function disposeAllInstances() {
   await Promise.all([InstanceRuntime.disposeAllInstances(), runTestInstanceStore((store) => store.disposeAll())])
 }
 
+// kilocode_change start - dispose a directory's instance (and its watchers) before the directory is deleted
+async function disposeInstancesFor(directory: string) {
+  await Promise.allSettled([
+    InstanceRuntime.disposeDirectory(directory),
+    runTestInstanceStore((store) => store.disposeDirectory(directory)),
+  ])
+}
+// kilocode_change end
+
 // Strip null bytes from paths (defensive fix for CI environment issues)
 function sanitizePath(p: string): string {
   return p.replace(/\0/g, "")
@@ -122,6 +131,7 @@ export async function tmpdir<T>(options?: TmpDirOptions<T>) {
       try {
         await options?.dispose?.(realpath)
       } finally {
+        await disposeInstancesFor(realpath) // kilocode_change - see disposeInstancesFor
         if (options?.git) await stop(realpath).catch(() => undefined)
         await clean(realpath).catch(() => undefined)
       }
@@ -146,6 +156,7 @@ export function tmpdirScoped<E = never, R = never>(options?: {
 
     yield* Effect.addFinalizer(() =>
       Effect.promise(async () => {
+        await disposeInstancesFor(dir) // kilocode_change - see disposeInstancesFor
         if (options?.git) await stop(dir).catch(() => undefined)
         await clean(dir).catch(() => undefined)
       }),

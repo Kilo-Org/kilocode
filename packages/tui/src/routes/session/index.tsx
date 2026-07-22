@@ -93,7 +93,7 @@ import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
-import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 
@@ -339,7 +339,6 @@ export function Session() {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
   const sdk = useSDK()
-  const memory = MemorySessionTui.verbose({ sessionID: () => route.sessionID }) // kilocode_change
   const editor = useEditorContext()
   onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
@@ -1416,7 +1415,6 @@ export function Session() {
                           last={lastAssistant()?.id === message.id}
                           message={message as AssistantMessage}
                           parts={sync.data.part[message.id] ?? []}
-                          memory={memory /* kilocode_change */}
                         />
                       </Match>
                     </Switch>
@@ -1629,7 +1627,6 @@ function AssistantMessage(props: {
   message: AssistantMessage
   parts: Part[]
   last: boolean
-  memory(): boolean // kilocode_change
 }) {
   const ctx = use()
   const local = useLocal()
@@ -1703,6 +1700,7 @@ function AssistantMessage(props: {
           error={props.message.error!}
           fallback={
             <box
+              id={`assistant-error-${props.message.id}`}
               border={["left"]}
               paddingTop={1}
               paddingBottom={1}
@@ -1720,7 +1718,7 @@ function AssistantMessage(props: {
       {/* kilocode_change end */}
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
+          <box id={`assistant-summary-${props.message.id}`} paddingLeft={3}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1742,9 +1740,6 @@ function AssistantMessage(props: {
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
-              {/* kilocode_change start */}
-              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={props.memory} />{" "}
-              {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
@@ -1821,7 +1816,13 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
 
   return (
     <Show when={content()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexDirection="column" flexShrink={0}>
+      <box
+        id={`text-${props.part.messageID}-${props.part.id}`}
+        paddingLeft={3}
+        marginTop={1}
+        flexDirection="column"
+        flexShrink={0}
+      >
         <box onMouseUp={toggle}>
           <ReasoningHeader
             /* kilocode_change start */
@@ -1908,7 +1909,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   // kilocode_change end
   return (
     <Show when={props.part.text.trim()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
+      <box id={`text-${props.part.messageID}-${props.part.id}`} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
@@ -2216,7 +2217,7 @@ function InlineTool(props: {
 
   return (
     <InlineToolRow
-      id={`tool-inline-${props.subagent ? "subagent-" : ""}${props.part.id}`}
+      id={`tool-inline-${props.subagent ? "subagent-" : ""}${props.part.messageID}-${props.part.id}`}
       icon={props.icon}
       iconColor={props.iconColor}
       color={fg()}
@@ -2281,6 +2282,8 @@ export function InlineToolRow(props: {
           const previousSubagent = previous?.id.startsWith("tool-inline-subagent-") ?? false
           return previous?.id.startsWith("text-") ||
             previous?.id.startsWith("tool-block-") ||
+            previous?.id.startsWith("assistant-error-") ||
+            previous?.id.startsWith("assistant-summary-") ||
             (previousInline && previousSubagent !== Boolean(props.subagent)) ||
             props.separateAfter?.(previous?.id)
             ? 1
@@ -2346,7 +2349,7 @@ function BlockTool(props: {
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
   return (
     <box
-      id={props.part ? "tool-block-" + props.part.id : undefined}
+      id={props.part ? `tool-block-${props.part.messageID}-${props.part.id}` : undefined}
       border={["left"]}
       paddingTop={1}
       paddingBottom={1}
@@ -2516,7 +2519,7 @@ function Read(props: ToolProps) {
       </InlineTool>
       <For each={loaded()}>
         {(filepath, index) => (
-          <box id={`tool-inline-loaded-${props.part.id}-${index()}`} paddingLeft={3}>
+          <box id={`tool-inline-loaded-${props.part.messageID}-${props.part.id}-${index()}`} paddingLeft={3}>
             <text paddingLeft={3} fg={theme.textMuted}>
               ↳ Loaded {pathFormatter.format(filepath)}
             </text>
