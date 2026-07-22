@@ -6,7 +6,6 @@ import * as TestClock from "effect/testing/TestClock"
 import * as TestConsole from "effect/testing/TestConsole"
 import { memoMap } from "@opencode-ai/core/effect/memo-map"
 import type { Config } from "@/config/config"
-import { Reference } from "@/reference/reference" // kilocode_change
 import { TestInstance, withTmpdirInstance } from "../fixture/fixture"
 import { InstanceStore } from "@/project/instance-store"
 
@@ -138,10 +137,8 @@ const liveEnv = TestConsole.layer
 export const it = make<never, never>(testEnv, liveEnv)
 
 // kilocode_change start
-export const testEffect = <R, E>(layer: Layer.Layer<R, E>) => {
-  const full = Layer.merge(layer, Reference.defaultLayer)
-  return make(Layer.provideMerge(full, testEnv), Layer.provideMerge(full, liveEnv))
-}
+export const testEffect = <R, E>(layer: Layer.Layer<R, E>) =>
+  make<R, E>(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv))
 export const testEffectBare = <R, E>(layer: Layer.Layer<R, E>) =>
   make<R, E>(Layer.provideMerge(layer, testEnv), Layer.provideMerge(layer, liveEnv))
 // kilocode_change end

@@ -1,8 +1,10 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { llmClient } from "@opencode-ai/core/effect/layer-node-platform"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Provider } from "@/provider/provider"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
-import { Log } from "@opencode-ai/core/util/log"
+import { Log } from "@opencode-ai/core/util/log" // kilocode_change
 import { Context, Effect, Layer } from "effect"
 import * as Stream from "effect/Stream"
 import { streamText, wrapLanguageModel, type ModelMessage, type Tool } from "ai"
@@ -38,7 +40,8 @@ import { LLMAISDK } from "./llm/ai-sdk"
 import { LLMNativeRuntime } from "./llm/native-runtime"
 import { LLMRequestPrep } from "./llm/request"
 
-const log = Log.create({ service: "llm" })
+const log = Log.create({ service: "llm" }) // kilocode_change
+
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 
 export type StreamInput = {
@@ -94,17 +97,14 @@ const live: Layer.Layer<
     const flags = yield* RuntimeFlags.Service
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
-      const l = log
-        .clone()
-        .tag("providerID", input.model.providerID)
-        .tag("modelID", input.model.id)
-        .tag("session.id", input.sessionID)
-        .tag("small", (input.small ?? false).toString())
-        .tag("agent", input.agent.name)
-        .tag("mode", input.agent.mode)
-      l.info("stream", {
-        modelID: input.model.id,
+      const l = log.clone().tag("providerID", input.model.providerID).tag("modelID", input.model.id) // kilocode_change
+      yield* Effect.logInfo("stream", {
         providerID: input.model.providerID,
+        modelID: input.model.id,
+        "session.id": input.sessionID,
+        small: (input.small ?? false).toString(),
+        agent: input.agent.name,
+        mode: input.agent.mode,
       })
 
       const [language, cfg, item, info] = yield* Effect.all(
@@ -169,6 +169,7 @@ const live: Layer.Layer<
       // Wire up toolExecutor for DWS workflow models so that tool calls
       // from the workflow service are executed via opencode's tool system
       // and results sent back over the WebSocket.
+      const bridge = yield* EffectBridge.make()
       if (language instanceof GitLabWorkflowLanguageModel) {
         const workflowModel = language as GitLabWorkflowLanguageModel & {
           sessionID?: string
@@ -205,7 +206,6 @@ const live: Layer.Layer<
           return !match || match.action !== "ask"
         })
 
-        const bridge = yield* EffectBridge.make()
         const approvedToolsForSession = new Set<string>()
         workflowModel.approvalHandler = bridge.bind(async (approvalTools) => {
           const uniqueNames = [...new Set(approvalTools.map((t: { name: string }) => t.name))] as string[]
@@ -318,58 +318,61 @@ const live: Layer.Layer<
           abort: input.abort,
         })
         if (native.type === "supported") {
-          yield* Effect.logInfo("llm runtime selected").pipe(
-            Effect.annotateLogs({
-              "llm.runtime": "native",
-              "llm.provider": input.model.providerID,
-              "llm.model": input.model.id,
-            }),
-          )
+          yield* Effect.logInfo("llm runtime selected", {
+            "llm.runtime": "native",
+            "llm.provider": input.model.providerID,
+            "llm.model": input.model.id,
+          })
           return {
             type: "native" as const,
             stream: native.stream,
           }
         }
-        yield* Effect.logInfo("llm runtime selected").pipe(
-          Effect.annotateLogs({
-            "llm.runtime": "ai-sdk",
-            "llm.provider": input.model.providerID,
-            "llm.model": input.model.id,
-            "llm.native_unsupported_reason": native.reason,
-          }),
-        )
-        l.info("native runtime unavailable; falling back to ai-sdk", { reason: native.reason })
-      }
-
-      yield* Effect.logInfo("llm runtime selected").pipe(
-        Effect.annotateLogs({
+        yield* Effect.logInfo("llm runtime selected", {
           "llm.runtime": "ai-sdk",
           "llm.provider": input.model.providerID,
           "llm.model": input.model.id,
-        }),
-      )
+          "llm.native_unsupported_reason": native.reason,
+        })
+        yield* Effect.logInfo("native runtime unavailable; falling back to ai-sdk", {
+          providerID: input.model.providerID,
+          modelID: input.model.id,
+          "session.id": input.sessionID,
+          small: (input.small ?? false).toString(),
+          agent: input.agent.name,
+          mode: input.agent.mode,
+          reason: native.reason,
+        })
+      }
+
+      yield* Effect.logInfo("llm runtime selected", {
+        "llm.runtime": "ai-sdk",
+        "llm.provider": input.model.providerID,
+        "llm.model": input.model.id,
+      })
       // Default runtime path: AI SDK owns provider execution and tool dispatch;
       // LLMAISDK.toLLMEvents below normalizes fullStream parts for the processor.
       const result = streamText({
-        // kilocode_change
+        onError(error) {
+          bridge.fork(
+            Effect.logError("stream error", {
+              providerID: input.model.providerID,
+              modelID: input.model.id,
+              "session.id": input.sessionID,
+              small: (input.small ?? false).toString(),
+              agent: input.agent.name,
+              mode: input.agent.mode,
+              error,
+            }),
+          )
+        },
         // Copilot returns the authoritative billed amount only in provider-specific response fields.
         includeRawChunks: input.model.providerID.includes("github-copilot"),
-        onError(error) {
-          l.error("stream error", {
-            error,
-          })
-        },
         async experimental_repairToolCall(failed) {
           const lower = failed.toolCall.toolName.trim().toLowerCase() // kilocode_change
           if (lower !== failed.toolCall.toolName && prepared.tools[lower]) {
-            l.info("repairing tool call", {
-              tool: failed.toolCall.toolName,
-              repaired: lower,
-            })
-            return {
-              ...failed.toolCall,
-              toolName: lower,
-            }
+            l.info("repairing tool call", { tool: failed.toolCall.toolName, repaired: lower }) // kilocode_change
+            return { ...failed.toolCall, toolName: lower }
           }
           return {
             ...failed.toolCall,
@@ -389,7 +392,9 @@ const live: Layer.Layer<
         toolChoice: input.toolChoice,
         maxOutputTokens: prepared.params.maxOutputTokens,
         abortSignal: input.abort,
-        ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
+        // kilocode_change: AI SDK's built-in chunk timeout is removed in favor
+        // of a Kilo-owned per-event watchdog applied to the raw fullStream
+        // before LLMAISDK.toLLMEvents normalization (see below).
         headers: prepared.headers,
         maxRetries: input.retries ?? 0,
         messages: prepared.messages,
@@ -417,7 +422,14 @@ const live: Layer.Layer<
       })
       // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
-      if (!exportable) return { type: "ai-sdk" as const, result }
+      // kilocode_change: resolve per-subscription idle watchdog so concurrent
+      // sessions each get their own timer. Computed here (not at the stream
+      // consumer) so the resolved value travels with the returned fullStream.
+      const idleMs = KiloLLM.resolveIdleMs({
+        options: prepared.params.options,
+        fallback: item.options,
+      })
+      if (!exportable) return { type: "ai-sdk" as const, result, idleMs }
       return {
         type: "ai-sdk" as const,
         result: {
@@ -431,6 +443,7 @@ const live: Layer.Layer<
             retries: input.retries ?? 0,
           }),
         },
+        idleMs,
       }
       // kilocode_change end
     })
@@ -451,10 +464,22 @@ const live: Layer.Layer<
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
-            return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
-              e instanceof Error ? e : new Error(String(e)),
-            ).pipe(
-              Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
+            // kilocode_change: wrap the raw AI SDK fullStream with the Kilo
+            // idle watchdog before normalization. Per-subscription timer was
+            // resolved inside `run` and travels with the result. Pass the
+            // scoped controller so the watchdog can abort a stalled source
+            // and avoid hanging cleanup.
+            const watched = KiloLLM.watchdogAsyncIterable(
+              result.result.fullStream as AsyncIterable<import("@ai-sdk/provider").LanguageModelV2StreamPart>,
+              result.idleMs,
+              ctrl,
+            )
+            return Stream.fromAsyncIterable(watched, (e) => (e instanceof Error ? e : new Error(String(e)))).pipe(
+              // kilocode_change: the watchdog consumes raw LanguageModelV2 parts;
+              // cast back to the TextStreamPart shape LLMAISDK.toLLMEvents expects.
+              Stream.mapEffect((event) =>
+                LLMAISDK.toLLMEvents(state, event as Parameters<typeof LLMAISDK.toLLMEvents>[1]),
+              ),
               Stream.flatMap((events) => Stream.fromIterable(events)),
             )
           }),
@@ -484,5 +509,16 @@ export const defaultLayer = Layer.suspend(() =>
 export { normalizeUsageForExport, observeFullStreamForExport }
 // kilocode_change end
 export const hasToolCalls = LLMRequestPrep.hasToolCalls
+
+export const node = LayerNode.make(layer, [
+  Auth.node,
+  Config.node,
+  Provider.node,
+  Plugin.node,
+  Permission.node,
+  EventV2Bridge.node,
+  llmClient,
+  RuntimeFlags.node,
+])
 
 export * as LLM from "./llm"

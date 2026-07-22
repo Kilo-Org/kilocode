@@ -34,10 +34,10 @@ class MdShellHighlightTest : BasePlatformTestCase() {
     }
 
     fun `test command highlights commands flags strings and env vars`() {
-        val display = MdShellHighlight.command("FOO=bar; git commit -m 'hello world' --amend")
+        val display = MdShellHighlight.command("$ FOO=bar; git commit -m 'hello world' --amend")
         val spans = spans(display)
 
-        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.FUNCTION_CALL))
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("-m" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--amend" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("'hello world'" to DefaultLanguageHighlighterColors.STRING))

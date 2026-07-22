@@ -1,5 +1,6 @@
 import { expect } from "bun:test"
 import { FSUtil } from "@opencode-ai/core/fs-util"
+import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import path from "path"
@@ -46,6 +47,9 @@ const agentLayer = Agent.layer.pipe(
   Layer.provide(SkillTest.empty),
   Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
   Layer.provide(provider.layer),
+  Layer.provide(pluginLayer),
+  Layer.provide(pluginLayer),
+  Layer.provide(LocationServiceMap.layer),
   Layer.provide(RuntimeFlags.layer({ disableDefaultPlugins: true })),
 )
 const layer = Layer.mergeAll(agentLayer, dependencies).pipe(Layer.provideMerge(dependencies))

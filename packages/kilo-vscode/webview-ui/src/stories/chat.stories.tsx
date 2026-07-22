@@ -9,8 +9,6 @@
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
 import type { AssistantMessage } from "@kilocode/sdk/v2"
-import { MemoryContract } from "@kilocode/kilo-memory/effect/httpapi"
-import { MemorySchema } from "@kilocode/kilo-memory/schema"
 import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
 import { ChatView } from "../components/chat/ChatView"
 import { ErrorDisplay } from "../components/chat/ErrorDisplay"
@@ -22,7 +20,6 @@ import { MessageList } from "../components/chat/MessageList"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
-import { MemoryContext, type MemoryContextValue } from "../context/memory"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
@@ -985,79 +982,6 @@ export const TaskHeaderWithTodosAllDone: Story = {
           <div style={{ width: "380px" }}>
             <TaskHeader />
           </div>
-        </SessionContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
-const state = MemorySchema.create()
-const mockMemory: MemoryContextValue = {
-  status: () => ({
-    root: "/project",
-    state: MemoryContract.state({
-      ...state,
-      enabled: true,
-      stats: {
-        ...state.stats,
-        lastInjectedAt: headerNow,
-        lastInjectedBytes: 2_132,
-        lastInjectedTokens: 533,
-        lastInjectedSessionID: SESSION_ID,
-      },
-    }),
-    exists: { state: true, index: true },
-    index: { bytes: 49_600, estimatedTokens: 12_400, preview: "" },
-  }),
-  show: () => undefined,
-  loading: () => false,
-  pending: () => false,
-  error: () => undefined,
-  enabled: () => true,
-  sessionTokens: () => 533,
-  totalTokens: () => 12_400,
-  activity: () => [
-    {
-      type: "loaded",
-      at: headerNow,
-      tokens: 533,
-      count: 1,
-      items: [],
-      refs: ["project.md"],
-    },
-  ],
-  refresh: () => {},
-  showMemory: () => {},
-  enable: () => {},
-  disable: () => {},
-  auto: () => {},
-  verbose: () => {},
-  rebuild: () => {},
-  remember: () => {},
-  forget: () => {},
-}
-
-export const TaskHeaderWithMemory: Story = {
-  name: "TaskHeader — with memory enabled",
-  render: () => {
-    const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => [{ id: "msg-001" }] as any[],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Integrate project memory",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <SessionContext.Provider value={session as any}>
-          <MemoryContext.Provider value={mockMemory}>
-            <div style={{ width: "380px" }}>
-              <TaskHeader />
-            </div>
-          </MemoryContext.Provider>
         </SessionContext.Provider>
       </StoryProviders>
     )

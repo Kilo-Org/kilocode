@@ -11,7 +11,6 @@ import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import type {
   AssistantMessage as SDKAssistantMessage,
   Part as SDKPart,
@@ -23,24 +22,15 @@ import { useSession } from "../../context/session"
 import { useDisplay } from "../../context/display"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
-import { useMemory } from "../../context/memory"
 import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
-import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
-
-const EDIT_TOOLS = new Set(["edit", "write", "apply_patch"])
-
-function editOpen(part: SDKPart, open: boolean) {
-  if (part.type !== "tool") return undefined
-  const tool = (part as unknown as ToolPart).tool
-  return EDIT_TOOLS.has(tool) ? open : undefined
-}
+import { toolDefaultOpen } from "./tool-default-open"
 
 /** Extract plan path from a completed plan_exit tool part. */
 function planExitInfo(part: SDKPart): { plan: string } | undefined {
@@ -124,8 +114,6 @@ type ToolStateProps = {
   status?: string
 }
 
-type MemoryItem = MemoryMarkerMeta.Decoded
-
 function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   const render = ToolRegistry.render(props.part.tool)
   const state = () => props.part.state as ToolStateProps
@@ -180,8 +168,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
   const display = useDisplay()
-  const mem = useMemory()
-  const language = useLanguage()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
   const edit = createMemo(() => config().code_edit_display === "expanded")
@@ -196,33 +182,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
-  const meta = createMemo(() =>
-    MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
-  )
-  const recall = createMemo(() => {
-    const item = meta()
-    if (item?.type === "recall") return item
-  })
-  const fmt = (value: number) => value.toLocaleString(language.locale())
-  const count = (item: MemoryItem) => fmt(item.count)
-  const items = (item: MemoryItem) => item.items ?? []
-  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
-  const tip = (item: MemoryItem) => {
-    const values = MemoryMarkerMeta.snippets(item, verbose())
-    return (
-      <div style={{ "text-align": "left", "white-space": "normal", "max-width": "280px" }}>
-        <Show
-          when={values.length > 0}
-          fallback={
-            <div>{`${language.t("chat.memory.badge.recalled")} · ${language.t("chat.memory.badge.items", { count: count(item) })}`}</div>
-          }
-        >
-          <For each={values}>{(value) => <div>{value}</div>}</For>
-        </Show>
-      </div>
-    )
-  }
-
   return (
     <>
       <For each={parts()}>
@@ -296,7 +255,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       part={part}
                                       message={props.message as SDKMessage}
                                       showAssistantCopyPartID={props.showAssistantCopyPartID}
-                                      defaultOpen={editOpen(part, edit())}
+                                      defaultOpen={toolDefaultOpen(part, open(), edit())}
                                       forceOpen={forceOpen()}
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
@@ -338,17 +297,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={mem.enabled() && recall()}>
-        {(item) => (
-          <Tooltip value={tip(item())} placement="top">
-            <div data-component="assistant-memory-badge">
-              {language.t("chat.memory.badge.recalled")} ·{" "}
-              {language.t("chat.memory.badge.items", { count: count(item()) })}
-              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
-            </div>
-          </Tooltip>
-        )}
-      </Show>
     </>
   )
 }
