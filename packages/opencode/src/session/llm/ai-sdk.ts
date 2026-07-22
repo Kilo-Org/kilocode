@@ -2,7 +2,6 @@ import { FinishReason, LLMEvent, ProviderMetadata, ToolResultValue } from "@open
 import { Effect, Schema } from "effect"
 import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
-import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -52,7 +51,6 @@ function usage(value: unknown) {
     cachedInputTokens?: number
     inputTokenDetails?: { cacheReadTokens?: number; cacheWriteTokens?: number }
     outputTokenDetails?: { reasoningTokens?: number }
-    raw?: Record<string, unknown> // kilocode_change - preserve provider billing details
   }
   const entries = Object.entries({
     inputTokens: item.inputTokens,
@@ -61,7 +59,6 @@ function usage(value: unknown) {
     reasoningTokens: item.outputTokenDetails?.reasoningTokens ?? item.reasoningTokens,
     cacheReadInputTokens: item.inputTokenDetails?.cacheReadTokens ?? item.cachedInputTokens,
     cacheWriteInputTokens: item.inputTokenDetails?.cacheWriteTokens,
-    providerMetadata: item.raw ? { aiSdk: item.raw } : undefined, // kilocode_change - retain Kilo billing details
   }).filter((entry) => entry[1] !== undefined)
   return entries.length === 0 ? undefined : Object.fromEntries(entries)
 }
@@ -106,7 +103,7 @@ export function toLLMEvents(
             index: state.step++,
             reason: finishReason(event.finishReason),
             usage: usage(event.usage),
-            providerMetadata: KiloRoutedModel.write(metadata, event.response?.modelId), // kilocode_change
+            providerMetadata: metadata,
           }),
         ]
       })

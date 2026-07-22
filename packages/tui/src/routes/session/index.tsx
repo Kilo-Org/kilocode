@@ -3,11 +3,11 @@ import {
   createContext,
   createEffect,
   createMemo,
-  onCleanup, // kilocode_change
   createSignal,
   For,
   Match,
   on,
+  onCleanup,
   onMount,
   Show,
   Switch,
@@ -36,7 +36,6 @@ import type {
   TextPart,
   ReasoningPart,
   SessionStatus,
-  StepFinishPart, // kilocode_change
 } from "@kilocode/sdk/v2"
 import { useLocal } from "../../context/local"
 import { Locale } from "../../util/locale"
@@ -67,12 +66,6 @@ import { useEpilogue } from "../../context/epilogue"
 import { normalizePath } from "../../util/path"
 import { PermissionPrompt } from "./permission"
 import { QuestionPrompt } from "./question"
-// kilocode_change start
-import { Suggest } from "@/kilocode/suggestion/tui/render"
-import { SuggestPrompt } from "@/kilocode/suggestion/tui/prompt"
-import { NetworkPrompt } from "./network"
-import { TerminalPrompt } from "./terminal"
-// kilocode_change end
 import { DialogExportOptions } from "../../ui/dialog-export-options"
 import * as Model from "../../util/model"
 import { formatTranscript } from "../../util/transcript"
@@ -88,14 +81,6 @@ import { DialogRetryAction } from "../../component/dialog-retry-action"
 import { getRevertDiffFiles } from "../../util/revert-diff"
 import { KILO_BASE_MODE, useBindings, useCommandShortcut, useOpencodeKeymap } from "../../keymap"
 import { PathFormatterProvider, usePathFormatter } from "../../context/path-format"
-// kilocode_change start
-import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display"
-import { splitDiffHunks } from "@/kilocode/tui/diff"
-import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
-import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
-import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
-import { formatMarkdownTables } from "../../util/markdown"
-// kilocode_change end
 
 addDefaultParsers(parsers.parsers)
 
@@ -105,6 +90,8 @@ const GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_
 const GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
 const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
 const GO_UPSELL_PROVIDERS = new Set(["opencode", "opencode-go"])
+
+export const alwaysSeparate = new WeakSet<BoxRenderable>()
 
 type RetryAction = Extract<SessionStatus, { type: "retry" }>["action"]
 
@@ -147,10 +134,6 @@ const sessionBindingCommands = [
   "session.message.next",
   "session.message.previous",
   "messages.copy",
-  // kilocode_change start - message feedback
-  "messages.feedback.up",
-  "messages.feedback.down",
-  // kilocode_change end
   "session.copy",
   "session.export",
   "session.child.first",
@@ -179,7 +162,6 @@ const context = createContext<{
   showTimestamps: () => boolean
   showDetails: () => boolean
   showGenericToolOutput: () => boolean
-  userMessageIDs: () => ReadonlySet<string>
   diffWrapMode: () => "word" | "none"
   providers: () => ReadonlyMap<string, Provider>
   sync: ReturnType<typeof useSync>
@@ -225,23 +207,17 @@ export function Session() {
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const foregroundTasks = createMemo(() =>
-    messages().flatMap((message) =>
-      (sync.data.part[message.id] ?? []).filter(
-        (part): part is ToolPart =>
-          part.type === "tool" &&
-          part.tool === "task" &&
-          part.state.status === "running" &&
-          part.state.metadata?.background !== true,
-      ),
-    ),
-  )
-  const userMessageIDs = createMemo(
-    () =>
-      new Set(
-        messages()
-          .filter((message) => message.role === "user")
-          .map((message) => message.id),
-      ),
+    sync.data.capabilities.experimentalBackgroundSubagents
+      ? messages().flatMap((message) =>
+          (sync.data.part[message.id] ?? []).filter(
+            (part): part is ToolPart =>
+              part.type === "tool" &&
+              part.tool === "task" &&
+              part.state.status === "running" &&
+              part.state.metadata?.background !== true,
+          ),
+        )
+      : [],
   )
   const permissions = createMemo(() => {
     if (session()?.parentID) return []
@@ -251,54 +227,8 @@ export function Session() {
     if (session()?.parentID) return []
     return children().flatMap((x) => sync.data.question[x.id] ?? [])
   })
-  // kilocode_change start
-  const suggestions = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.suggestion[x.id] ?? [])
-  })
-  const network = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.network[x.id] ?? [])
-  })
-  const terminals = createMemo(() => {
-    if (session()?.parentID) return []
-    return children().flatMap((x) => sync.data.interactive_terminal[x.id] ?? [])
-  })
-  const terminal = createMemo(() => terminals()[0])
-  const blockingQuestions = createMemo(() => questions().filter((q) => q.blocking !== false))
-  const nonBlockingQuestions = createMemo(() => questions().filter((q) => q.blocking === false))
-  const question = createMemo(
-    () => blockingQuestions()[0] ?? (network().length === 0 ? nonBlockingQuestions()[0] : undefined),
-  )
-  const blockingSuggestions = createMemo(() => suggestions().filter((s) => s.blocking !== false))
-  // non-blocking ones render inline at the tool-part slot via `SuggestBar`.
-  const blockingSuggestion = createMemo(() => blockingSuggestions()[0])
-  const visible = createMemo(
-    () =>
-      !session()?.parentID &&
-      permissions().length === 0 &&
-      blockingQuestions().length === 0 &&
-      blockingSuggestions().length === 0 &&
-      network().length === 0 &&
-      terminals().length === 0,
-  )
-  const networkVisible = createMemo(
-    () =>
-      permissions().length === 0 &&
-      blockingQuestions().length === 0 &&
-      blockingSuggestions().length === 0 &&
-      terminals().length === 0 &&
-      network().length > 0,
-  )
-  const disabled = createMemo(
-    () =>
-      permissions().length > 0 ||
-      blockingQuestions().length > 0 ||
-      blockingSuggestions().length > 0 ||
-      network().length > 0 ||
-      terminals().length > 0,
-  )
-  // kilocode_change end
+  const visible = createMemo(() => !session()?.parentID && permissions().length === 0 && questions().length === 0)
+  const disabled = createMemo(() => permissions().length > 0 || questions().length > 0)
 
   const pending = createMemo(() => {
     const completed = messages().findLast((x) => x.role === "assistant" && x.time.completed)?.id
@@ -339,47 +269,7 @@ export function Session() {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
   const sdk = useSDK()
-  const memory = MemorySessionTui.verbose({ sessionID: () => route.sessionID }) // kilocode_change
   const editor = useEditorContext()
-  onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
-
-  // kilocode_change start - background processes are scoped to the visible session
-  function processGroup(sessionID: string) {
-    const info = sync.session.get(sessionID)
-    return info?.parentID ?? info?.id ?? sessionID
-  }
-
-  function processSessions(sessionID: string) {
-    const group = processGroup(sessionID)
-    const ids = new Set([sessionID, group])
-    for (const item of sync.data.session) {
-      if (item.id === group || item.parentID === group) ids.add(item.id)
-    }
-    return Array.from(ids)
-  }
-
-  function stopProcesses(sessionID: string) {
-    const workspace = project.workspace.current()
-    for (const id of processSessions(sessionID)) {
-      void sdk.client.backgroundProcess.stopSession({ sessionID: id, workspace }).catch((err) => {
-        console.warn("Failed to stop session background processes", { sessionID: id, err })
-      })
-    }
-  }
-
-  let processSessionID = route.sessionID
-  createEffect(() => {
-    const next = route.sessionID
-    if (processSessionID === next) return
-    const prev = processSessionID
-    processSessionID = next
-    if (processGroup(prev) === processGroup(next)) return
-    stopProcesses(prev)
-  })
-  onCleanup(() => {
-    stopProcesses(processSessionID)
-  })
-  // kilocode_change end
 
   createEffect(() => {
     const sessionID = route.sessionID
@@ -422,15 +312,17 @@ export function Session() {
   })
 
   let lastSwitch: string | undefined = undefined
-  event.onSync("message.part.updated.1", (evt) => {
-    const part = evt.data.part
+  event.on("message.part.updated", (evt) => {
+    const part = evt.properties.part
     if (part.type !== "tool") return
     if (part.sessionID !== route.sessionID) return
     if (part.state.status !== "completed") return
     if (part.id === lastSwitch) return
 
-    if (part.tool === "plan_enter") {
-      // kilocode_change
+    if (part.tool === "plan_exit") {
+      local.agent.set("build")
+      lastSwitch = part.id
+    } else if (part.tool === "plan_enter") {
       local.agent.set("plan")
       lastSwitch = part.id
     }
@@ -974,11 +866,6 @@ export function Session() {
       title: "Copy last assistant message",
       value: "messages.copy",
       category: "Session",
-      // kilocode_change start - /copy copies the latest assistant response
-      slash: {
-        name: "copy",
-      },
-      // kilocode_change end
       run: () => {
         const revertID = session()?.revert?.messageID
         const lastAssistantMessage = messages().findLast(
@@ -1018,41 +905,21 @@ export function Session() {
         dialog.clear()
       },
     },
-    // kilocode_change start - message feedback
-    {
-      title: "Rate last assistant message helpful",
-      value: "messages.feedback.up",
-      category: "Session",
-      run: () => submitFeedback("up", dialog, { toast, session, messages }),
-    },
-    {
-      title: "Rate last assistant message not helpful",
-      value: "messages.feedback.down",
-      category: "Session",
-      run: () => submitFeedback("down", dialog, { toast, session, messages }),
-    },
-    // kilocode_change end
     {
       title: "Copy session transcript",
       value: "session.copy",
       category: "Session",
       slash: {
-        name: "copy-session", // kilocode_change - transcript copy moved off /copy
+        name: "copy",
       },
       run: async () => {
         try {
           const sessionData = session()
           if (!sessionData) return
-          // kilocode_change start - fetch all messages from server instead of truncated sync store
-          const allMessages = await sdk.client.session.messages({ sessionID: sessionData.id }, { throwOnError: true })
-          const sessionMessages = allMessages.data.map((msg) => ({
-            info: msg.info,
-            parts: msg.parts,
-          }))
-          // kilocode_change end
+          const sessionMessages = messages()
           const transcript = formatTranscript(
             sessionData,
-            sessionMessages, // kilocode_change
+            sessionMessages.map((msg) => ({ info: msg, parts: sync.data.part[msg.id] ?? [] })),
             {
               thinking: showThinking(),
               toolDetails: showDetails(),
@@ -1079,6 +946,7 @@ export function Session() {
         try {
           const sessionData = session()
           if (!sessionData) return
+          const sessionMessages = messages()
 
           const defaultFilename = `session-${sessionData.id.slice(0, 8)}.md`
 
@@ -1093,17 +961,9 @@ export function Session() {
 
           if (options === null) return
 
-          // kilocode_change start - fetch all messages from server instead of truncated sync store
-          const allMessages = await sdk.client.session.messages({ sessionID: sessionData.id }, { throwOnError: true })
-          const sessionMessages = allMessages.data.map((msg) => ({
-            info: msg.info,
-            parts: msg.parts,
-          }))
-          // kilocode_change end
-
           const transcript = formatTranscript(
             sessionData,
-            sessionMessages, // kilocode_change
+            sessionMessages.map((msg) => ({ info: msg, parts: sync.data.part[msg.id] ?? [] })),
             {
               thinking: options.thinking,
               toolDetails: options.toolDetails,
@@ -1291,7 +1151,6 @@ export function Session() {
           showTimestamps,
           showDetails,
           showGenericToolOutput,
-          userMessageIDs,
           diffWrapMode,
           providers,
           sync,
@@ -1320,13 +1179,6 @@ export function Session() {
                 scrollAcceleration={scrollAcceleration()}
               >
                 <box height={1} />
-                {/* kilocode_change start */}
-                <Show when={session()?.parentID && messages().length === 0}>
-                  <box paddingLeft={3}>
-                    <text fg={theme.textMuted}>↳ Initializing...</text>
-                  </box>
-                </Show>
-                {/* kilocode_change end */}
                 <For each={messages()}>
                   {(message, index) => (
                     <Switch>
@@ -1416,7 +1268,6 @@ export function Session() {
                           last={lastAssistant()?.id === message.id}
                           message={message as AssistantMessage}
                           parts={sync.data.part[message.id] ?? []}
-                          memory={memory /* kilocode_change */}
                         />
                       </Match>
                     </Switch>
@@ -1424,36 +1275,20 @@ export function Session() {
                 </For>
               </scrollbox>
               <box flexShrink={0}>
-                {/* kilocode_change start - arbitrate Kilo terminal, question, suggestion, and network input */}
-                <Show when={!terminal() && permissions().length > 0}>
+                <Show when={permissions().length > 0}>
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
                   />
                 </Show>
-                <Show when={terminal()} keyed>
-                  {(value) => <TerminalPrompt sessionID={value.info.sessionID} terminalID={value.info.id} />}
-                </Show>
-                <Show when={!terminal() && permissions().length === 0 ? question() : undefined} keyed>
-                  {(request) => (
-                    <QuestionPrompt
-                      request={request}
-                      nonBlocking={request.blocking === false}
-                      inputFocused={() => prompt?.focused ?? false}
-                      directory={sync.session.get(request.sessionID)?.directory}
-                    />
-                  )}
-                </Show>
-                <Show when={!terminal() && permissions().length === 0 && !question()}>
-                  <Show when={blockingSuggestion()} keyed>
-                    {(request) => <SuggestPrompt request={request} />}
-                  </Show>
+                <Show when={permissions().length === 0 && questions().length > 0}>
+                  <QuestionPrompt
+                    request={questions()[0]}
+                    directory={sync.session.get(questions()[0].sessionID)?.directory}
+                  />
                 </Show>
                 <Show when={session()?.parentID}>
                   <SubagentFooter />
-                </Show>
-                <Show when={networkVisible()}>
-                  <NetworkPrompt request={network()[0]} />
                 </Show>
                 <Show when={visible()}>
                   <pluginRuntime.Slot
@@ -1473,12 +1308,10 @@ export function Session() {
                         toBottom()
                       }}
                       sessionID={route.sessionID}
-                      directory={session()?.directory}
                       right={<pluginRuntime.Slot name="session_prompt_right" session_id={route.sessionID} />}
                     />
                   </pluginRuntime.Slot>
                 </Show>
-                {/* kilocode_change end */}
               </box>
             </Show>
             <Toast />
@@ -1554,6 +1387,7 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
+          ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
           border={["left"]}
           borderColor={color()}
           customBorderChars={SplitBorder.customBorderChars}
@@ -1625,20 +1459,13 @@ function UserMessage(props: {
   )
 }
 
-function AssistantMessage(props: {
-  message: AssistantMessage
-  parts: Part[]
-  last: boolean
-  memory(): boolean // kilocode_change
-}) {
+function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; last: boolean }) {
   const ctx = use()
   const local = useLocal()
   const { theme } = useTheme()
   const sync = useSync()
   const messages = createMemo(() => sync.data.message[props.message.sessionID] ?? [])
   const model = createMemo(() => Model.name(ctx.providers(), props.message.providerID, props.message.modelID))
-  const routed = createMemo(() => RoutedModelMeta.info(ctx.providers(), props.parts, ctx.showDetails(), props.message)) // kilocode_change
-  const route = createMemo(() => routed().footer) // kilocode_change
 
   const final = createMemo(() => {
     return props.message.finish && !["tool-calls", "unknown"].includes(props.message.finish)
@@ -1657,38 +1484,37 @@ function AssistantMessage(props: {
 
   return (
     <>
-      {/* kilocode_change start - provide compact routed-model metadata to part renderers */}
-      <RoutedModelMeta.Context.Provider value={routed}>
-        <For each={props.parts}>
-          {(part, index) => {
-            const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
-            return (
-              <Show when={component()}>
-                <Dynamic
-                  last={index() === props.parts.length - 1}
-                  component={component()}
-                  part={part as any}
-                  message={props.message}
-                />
-              </Show>
-            )
-          }}
-        </For>
-      </RoutedModelMeta.Context.Provider>
-      {/* kilocode_change end */}
+      <For each={props.parts}>
+        {(part, index) => {
+          const component = createMemo(() => PART_MAPPING[part.type as keyof typeof PART_MAPPING])
+          return (
+            <Show when={component()}>
+              <Dynamic
+                last={index() === props.parts.length - 1}
+                component={component()}
+                part={part as any}
+                message={props.message}
+              />
+            </Show>
+          )
+        }}
+      </For>
       <Show when={props.parts.some((x) => x.type === "tool" && x.tool === "task")}>
         <box paddingTop={1} paddingLeft={3}>
           <text fg={theme.text}>
             {childShortcut()}
             <span style={{ fg: theme.textMuted }}> view subagents</span>
             <Show
-              when={props.parts.some(
-                (x) =>
-                  x.type === "tool" &&
-                  x.tool === "task" &&
-                  x.state.status === "running" &&
-                  x.state.metadata?.background !== true,
-              )}
+              when={
+                sync.data.capabilities.experimentalBackgroundSubagents &&
+                props.parts.some(
+                  (x) =>
+                    x.type === "tool" &&
+                    x.tool === "task" &&
+                    x.state.status === "running" &&
+                    x.state.metadata?.background !== true,
+                )
+              }
             >
               <span style={{ fg: theme.textMuted }}> · </span>
               {backgroundShortcut()}
@@ -1697,31 +1523,24 @@ function AssistantMessage(props: {
           </text>
         </box>
       </Show>
-      {/* kilocode_change start - Kilo-specific error display */}
       <Show when={props.message.error && props.message.error.name !== "MessageAbortedError"}>
-        <KiloErrorBlock
-          error={props.message.error!}
-          fallback={
-            <box
-              id={`assistant-error-${props.message.id}`}
-              border={["left"]}
-              paddingTop={1}
-              paddingBottom={1}
-              paddingLeft={2}
-              marginTop={1}
-              backgroundColor={theme.backgroundPanel}
-              customBorderChars={SplitBorder.customBorderChars}
-              borderColor={theme.error}
-            >
-              <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
-            </box>
-          }
-        />
+        <box
+          ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
+          border={["left"]}
+          paddingTop={1}
+          paddingBottom={1}
+          paddingLeft={2}
+          marginTop={1}
+          backgroundColor={theme.backgroundPanel}
+          customBorderChars={SplitBorder.customBorderChars}
+          borderColor={theme.error}
+        >
+          <text fg={theme.textMuted}>{props.message.error?.data.message}</text>
+        </box>
       </Show>
-      {/* kilocode_change end */}
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box id={`assistant-summary-${props.message.id}`} paddingLeft={3}>
+          <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1735,17 +1554,9 @@ function AssistantMessage(props: {
               </span>{" "}
               <span style={{ fg: theme.text }}>{Locale.titlecase(props.message.mode)}</span>
               <span style={{ fg: theme.textMuted }}> · {model()}</span>
-              {/* kilocode_change start - show routed model in regular assistant footer */}
-              <Show when={route()}>
-                <span style={{ fg: theme.textMuted }}> · {route()}</span>
-              </Show>
-              {/* kilocode_change end */}
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
-              {/* kilocode_change start */}
-              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={props.memory} />{" "}
-              {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
@@ -1755,43 +1566,15 @@ function AssistantMessage(props: {
       </Switch>
     </>
   )
-} // kilocode_change
+}
 
-// kilocode_change start - register rendered step-finish parts
 const PART_MAPPING = {
   text: TextPart,
   tool: ToolPart,
   reasoning: ReasoningPart,
-  "step-finish": StepFinishPart,
 }
-// kilocode_change end
 
-const INLINE_TOOL_ICON_WIDTH = 2 // kilocode_change
-
-// kilocode_change start - show concrete routed models reported by gateway/provider responses
-function StepFinishPart(props: { last: boolean; part: StepFinishPart; message: AssistantMessage }) {
-  const ctx = use()
-  const { theme } = useTheme()
-  const info = useContext(RoutedModelMeta.Context)
-  const routed = createMemo(() => {
-    if (props.message.providerID !== "kilo") return undefined
-    if (!props.message.modelID.startsWith("kilo-auto/")) return undefined
-    const model = props.part.model
-    if (!model) return undefined
-    if (model.providerID === props.message.providerID && model.modelID === props.message.modelID) return undefined
-    return RoutedModelMeta.label(ctx.providers(), model)
-  })
-  const consumed = createMemo(() => info().consumed.has(props.part.id))
-
-  return (
-    <Show when={routed() && !consumed()}>
-      <box paddingLeft={3} marginTop={1}>
-        <text fg={theme.textMuted}>Routed to {routed()}</text>
-      </box>
-    </Show>
-  )
-}
-// kilocode_change end
+const INLINE_TOOL_ICON_WIDTH = 2
 
 function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: AssistantMessage }) {
   const { theme } = useTheme()
@@ -1823,7 +1606,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
   return (
     <Show when={content()}>
       <box
-        id={`text-${props.part.messageID}-${props.part.id}`}
+        ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
         paddingLeft={3}
         marginTop={1}
         flexDirection="column"
@@ -1831,9 +1614,6 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
       >
         <box onMouseUp={toggle}>
           <ReasoningHeader
-            /* kilocode_change start */
-            partID={props.part.id}
-            /* kilocode_change end */
             toggleable={inMinimal()}
             open={!inMinimal() || expanded()}
             done={isDone()}
@@ -1860,7 +1640,6 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
 }
 
 function ReasoningHeader(props: {
-  partID: string // kilocode_change
   toggleable: boolean
   open: boolean
   done: boolean
@@ -1898,9 +1677,6 @@ function ReasoningHeader(props: {
               {props.duration}
             </span>
           </Show>
-          {/* kilocode_change start */}
-          <RoutedModelMeta.View id={props.partID} />
-          {/* kilocode_change end */}
         </text>
       </Match>
     </Switch>
@@ -1910,17 +1686,14 @@ function ReasoningHeader(props: {
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
-  // kilocode_change start - format markdown tables with fixed-width columns
-  const content = createMemo(() => formatMarkdownTables(props.part.text.trim()))
-  // kilocode_change end
   return (
     <Show when={props.part.text.trim()}>
-      <box id={`text-${props.part.messageID}-${props.part.id}`} paddingLeft={3} marginTop={1} flexShrink={0}>
+      <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
           internalBlockMode="top-level"
-          content={content()} // kilocode_change
+          content={props.part.text.trim()}
           tableOptions={{ style: "grid" }}
           conceal={ctx.conceal()}
           fg={theme.markdownText}
@@ -1977,17 +1750,6 @@ function ToolPart(props: { last: boolean; part: ToolPart; message: AssistantMess
         <Match when={display() === "grep"}>
           <Grep {...toolprops} />
         </Match>
-        {/* kilocode_change start - preserve Kilo tool-specific status rendering */}
-        <Match when={display() === "background_process"}>
-          <BackgroundProcess {...toolprops} />
-        </Match>
-        <Match when={display() === "interactive_terminal"}>
-          <InteractiveTerminal {...toolprops} />
-        </Match>
-        <Match when={display() === "semantic_search"}>
-          <SemanticSearch {...toolprops} />
-        </Match>
-        {/* kilocode_change end */}
         <Match when={display() === "webfetch"}>
           <WebFetch {...toolprops} />
         </Match>
@@ -2068,112 +1830,6 @@ function GenericTool(props: ToolProps) {
   )
 }
 
-// kilocode_change start - Kilo tool-specific status rendering
-function BackgroundProcess(props: ToolProps) {
-  const sync = useSync()
-  const paths = usePathFormatter()
-  const running = createMemo(() => props.part.state.status === "running")
-  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
-  const action = createMemo(() => stringValue(props.input.action) ?? "start")
-  const desc = createMemo(
-    () => stringValue(props.input.description) || cmd() || stringValue(props.input.id) || "background process",
-  )
-  const dir = createMemo(() => {
-    const raw = stringValue(props.input.workdir)
-    if (!raw || raw === ".") return
-    const base = sync.path.directory
-    if (!base) return paths.format(raw)
-    const abs = path.resolve(base, raw)
-    if (abs === base) return
-    return paths.format(abs)
-  })
-  const status = createMemo(() => {
-    const value = stringValue(props.metadata.status)
-    if (value) return value
-    const count = numberValue(props.metadata.count)
-    if (count !== undefined) return `${count} running`
-  })
-  const title = createMemo(() => {
-    if (action() === "list") return "List background processes"
-    if (action() === "logs") return `View background logs: ${desc()}`
-    if (action() === "status") return `Check background process: ${desc()}`
-    if (action() === "stop") return `Stop background process: ${desc()}`
-    if (action() === "restart") return `Restart background process: ${desc()}`
-    return `Start background process: ${desc()}`
-  })
-
-  return (
-    <InlineTool
-      icon="$"
-      pending="Preparing background process..."
-      complete={desc()}
-      spinner={running()}
-      part={props.part}
-    >
-      {title()}
-      <Show when={dir()}> in {dir()}</Show>
-      <Show when={cmd()}> · $ {cmd()}</Show>
-      <Show when={status()}> ({status()})</Show>
-    </InlineTool>
-  )
-}
-
-function InteractiveTerminal(props: ToolProps) {
-  const sync = useSync()
-  const paths = usePathFormatter()
-  const running = createMemo(() => props.part.state.status === "running")
-  const cmd = createMemo(() => stringValue(props.input.command) ?? "")
-  const desc = createMemo(() => stringValue(props.input.description) || cmd() || "interactive command")
-  const dir = createMemo(() => {
-    const raw = stringValue(props.input.workdir)
-    if (!raw || raw === ".") return
-    const base = sync.path.directory
-    if (!base) return paths.format(raw)
-    const abs = path.resolve(base, raw)
-    if (abs === base) return
-    return paths.format(abs)
-  })
-  const status = createMemo(() => {
-    if (props.metadata.closedBy === "user") return "closed by user"
-    if (props.metadata.closedBy === "abort") return "cancelled"
-    if (props.metadata.closedBy !== "exit") return
-    const code = numberValue(props.metadata.exitCode)
-    return code === undefined ? "completed" : `exit ${code}`
-  })
-
-  return (
-    <InlineTool
-      icon="$"
-      pending="Opening interactive terminal..."
-      complete={desc()}
-      spinner={running()}
-      part={props.part}
-    >
-      Interactive terminal: {desc()}
-      <Show when={dir()}> in {dir()}</Show>
-      <Show when={cmd()}> · $ {cmd()}</Show>
-      <Show when={status()}> ({status()})</Show>
-    </InlineTool>
-  )
-}
-
-function SemanticSearch(props: ToolProps) {
-  const paths = usePathFormatter()
-  const query = createMemo(() => stringValue(props.input.query))
-  const target = createMemo(() => stringValue(props.input.path))
-  const count = createMemo(() => (Array.isArray(props.metadata.results) ? props.metadata.results.length : 0))
-
-  return (
-    <InlineTool icon="✱" pending="Searching codebase..." complete={query()} part={props.part}>
-      Codebase Search "{query()}" <Show when={target()}>in {paths.format(target()!)} </Show>
-      <Show when={count() > 0}>
-        ({count()} {count() === 1 ? "result" : "results"})
-      </Show>
-    </InlineTool>
-  )
-}
-// kilocode_change end
-
 function InlineTool(props: {
   icon: string
   iconColor?: RGBA
@@ -2182,7 +1838,7 @@ function InlineTool(props: {
   pending: string
   failure?: string
   spinner?: boolean
-  subagent?: boolean
+  separate?: boolean
   children: JSX.Element
   part: ToolPart
   onClick?: () => void
@@ -2223,7 +1879,6 @@ function InlineTool(props: {
 
   return (
     <InlineToolRow
-      id={`tool-inline-${props.subagent ? "subagent-" : ""}${props.part.messageID}-${props.part.id}`}
       icon={props.icon}
       iconColor={props.iconColor}
       color={fg()}
@@ -2236,8 +1891,7 @@ function InlineTool(props: {
       pending={props.pending}
       failure={props.failure}
       spinner={props.spinner}
-      subagent={props.subagent}
-      separateAfter={(id) => id !== undefined && ctx.userMessageIDs().has(id)}
+      separate={props.separate}
       onMouseOver={() => clickable() && setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={() => {
@@ -2255,7 +1909,6 @@ function InlineTool(props: {
 }
 
 export function InlineToolRow(props: {
-  id?: string
   icon: string
   iconColor?: RGBA
   color?: RGBA
@@ -2268,30 +1921,23 @@ export function InlineToolRow(props: {
   pending: string
   failure?: string
   spinner?: boolean
-  subagent?: boolean
+  separate?: boolean
   children: JSX.Element
-  separateAfter?: (id: string | undefined) => boolean
   onMouseOver?: () => void
   onMouseOut?: () => void
   onMouseUp?: () => void
 }) {
   return (
     <box
-      id={props.id}
       paddingLeft={3}
       onMouseOver={props.onMouseOver}
       onMouseOut={props.onMouseOut}
       onMouseUp={props.onMouseUp}
       ref={(el: BoxRenderable) => {
+        if (props.separate) alwaysSeparate.add(el)
         setPreLayoutSiblingMargin(el, (previous) => {
-          const previousInline = previous?.id.startsWith("tool-inline-") ?? false
-          const previousSubagent = previous?.id.startsWith("tool-inline-subagent-") ?? false
-          return previous?.id.startsWith("text-") ||
-            previous?.id.startsWith("tool-block-") ||
-            previous?.id.startsWith("assistant-error-") ||
-            previous?.id.startsWith("assistant-summary-") ||
-            (previousInline && previousSubagent !== Boolean(props.subagent)) ||
-            props.separateAfter?.(previous?.id)
+          return props.separate ||
+            (previous instanceof BoxRenderable && (previous.height > 1 || alwaysSeparate.has(previous)))
             ? 1
             : 0
         })
@@ -2355,7 +2001,7 @@ function BlockTool(props: {
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
   return (
     <box
-      id={props.part ? `tool-block-${props.part.messageID}-${props.part.id}` : undefined}
+      ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
       border={["left"]}
       paddingTop={1}
       paddingBottom={1}
@@ -2377,9 +2023,6 @@ function BlockTool(props: {
         fallback={
           <text paddingLeft={3} fg={theme.textMuted}>
             {props.title}
-            {/* kilocode_change start */}
-            <RoutedModelMeta.View id={props.part?.id} />
-            {/* kilocode_change end */}
           </text>
         }
       >
@@ -2524,8 +2167,8 @@ function Read(props: ToolProps) {
         Read {pathFormatter.format(stringValue(props.input.filePath))} {input(props.input, ["filePath"])}
       </InlineTool>
       <For each={loaded()}>
-        {(filepath, index) => (
-          <box id={`tool-inline-loaded-${props.part.messageID}-${props.part.id}-${index()}`} paddingLeft={3}>
+        {(filepath) => (
+          <box paddingLeft={3}>
             <text paddingLeft={3} fg={theme.textMuted}>
               ↳ Loaded {pathFormatter.format(filepath)}
             </text>
@@ -2633,7 +2276,7 @@ function Task(props: ToolProps) {
         const title = state.status === "running" || state.status === "completed" ? state.title : undefined
         content.push(`↳ ${Locale.titlecase(current()!.tool)} ${title}`)
       } else content.push(`↳ ${formatSubagentToolcalls(tools().length)}`)
-    } else if (isRunning()) content.push(`↳ Starting...`) // kilocode_change
+    }
 
     if (!isRunning() && props.part.state.status === "completed") {
       content.push(`↳ ${formatCompletedSubagentDetail(tools().length, Locale.duration(duration()))}`)
@@ -2645,7 +2288,7 @@ function Task(props: ToolProps) {
   return (
     <InlineTool
       icon={props.part.state.status === "completed" ? "✓" : "│"}
-      subagent={true}
+      separate={true}
       color={retry() ? theme.error : undefined}
       spinner={isRunning()}
       complete={stringValue(props.input.description)}
@@ -2696,46 +2339,32 @@ function Edit(props: ToolProps) {
   const ft = createMemo(() => filetype(stringValue(props.input.filePath)))
 
   const diffContent = createMemo(() => stringValue(props.metadata.diff) ?? "")
-  const hunks = createMemo(() => splitDiffHunks(diffContent())) // kilocode_change
 
   return (
     <Switch>
       <Match when={stringValue(props.metadata.diff) !== undefined}>
         <BlockTool title={"← Edit " + pathFormatter.format(stringValue(props.input.filePath))} part={props.part}>
-          {/* kilocode_change start - preserve separated multi-hunk edit rendering */}
-          <box paddingLeft={1} flexDirection="column">
-            <For each={hunks()}>
-              {(hunk, i) => (
-                <>
-                  <Show when={i() > 0}>
-                    <text fg={theme.textMuted} alignSelf="center" height={2}>
-                      ...
-                    </text>
-                  </Show>
-                  <diff
-                    diff={hunk}
-                    view={view()}
-                    filetype={ft()}
-                    syntaxStyle={syntax()}
-                    showLineNumbers={true}
-                    width="100%"
-                    wrapMode={ctx.diffWrapMode()}
-                    fg={theme.text}
-                    addedBg={theme.diffAddedBg}
-                    removedBg={theme.diffRemovedBg}
-                    contextBg={theme.diffContextBg}
-                    addedSignColor={theme.diffHighlightAdded}
-                    removedSignColor={theme.diffHighlightRemoved}
-                    lineNumberFg={theme.diffLineNumber}
-                    lineNumberBg={theme.diffContextBg}
-                    addedLineNumberBg={theme.diffAddedLineNumberBg}
-                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
-                  />
-                </>
-              )}
-            </For>
+          <box paddingLeft={1}>
+            <diff
+              diff={diffContent()}
+              view={view()}
+              filetype={ft()}
+              syntaxStyle={syntax()}
+              showLineNumbers={true}
+              width="100%"
+              wrapMode={ctx.diffWrapMode()}
+              fg={theme.text}
+              addedBg={theme.diffAddedBg}
+              removedBg={theme.diffRemovedBg}
+              contextBg={theme.diffContextBg}
+              addedSignColor={theme.diffHighlightAdded}
+              removedSignColor={theme.diffHighlightRemoved}
+              lineNumberFg={theme.diffLineNumber}
+              lineNumberBg={theme.diffContextBg}
+              addedLineNumberBg={theme.diffAddedLineNumberBg}
+              removedLineNumberBg={theme.diffRemovedLineNumberBg}
+            />
           </box>
-          {/* kilocode_change end */}
           <Diagnostics diagnostics={props.metadata.diagnostics} filePath={stringValue(props.input.filePath) ?? ""} />
         </BlockTool>
       </Match>
@@ -2762,43 +2391,29 @@ function ApplyPatch(props: ToolProps) {
   })
 
   function Diff(p: { diff: string; filePath: string }) {
-    // kilocode_change start
-    const hunks = createMemo(() => splitDiffHunks(p.diff))
     return (
-      <box paddingLeft={1} flexDirection="column">
-        <For each={hunks()}>
-          {(hunk, i) => (
-            <>
-              <Show when={i() > 0}>
-                <text fg={theme.textMuted} alignSelf="center" height={2}>
-                  ...
-                </text>
-              </Show>
-              <diff
-                diff={hunk}
-                view={view()}
-                filetype={filetype(p.filePath)}
-                syntaxStyle={syntax()}
-                showLineNumbers={true}
-                width="100%"
-                wrapMode={ctx.diffWrapMode()}
-                fg={theme.text}
-                addedBg={theme.diffAddedBg}
-                removedBg={theme.diffRemovedBg}
-                contextBg={theme.diffContextBg}
-                addedSignColor={theme.diffHighlightAdded}
-                removedSignColor={theme.diffHighlightRemoved}
-                lineNumberFg={theme.diffLineNumber}
-                lineNumberBg={theme.diffContextBg}
-                addedLineNumberBg={theme.diffAddedLineNumberBg}
-                removedLineNumberBg={theme.diffRemovedLineNumberBg}
-              />
-            </>
-          )}
-        </For>
+      <box paddingLeft={1}>
+        <diff
+          diff={p.diff}
+          view={view()}
+          filetype={filetype(p.filePath)}
+          syntaxStyle={syntax()}
+          showLineNumbers={true}
+          width="100%"
+          wrapMode={ctx.diffWrapMode()}
+          fg={theme.text}
+          addedBg={theme.diffAddedBg}
+          removedBg={theme.diffRemovedBg}
+          contextBg={theme.diffContextBg}
+          addedSignColor={theme.diffHighlightAdded}
+          removedSignColor={theme.diffHighlightRemoved}
+          lineNumberFg={theme.diffLineNumber}
+          lineNumberBg={theme.diffContextBg}
+          addedLineNumberBg={theme.diffAddedLineNumberBg}
+          removedLineNumberBg={theme.diffRemovedLineNumberBg}
+        />
       </box>
     )
-    // kilocode_change end
   }
 
   function title(file: { type: string; relativePath: string; filePath: string; deletions: number }) {
@@ -2869,59 +2484,28 @@ function Question(props: ToolProps) {
   const questions = createMemo(() => parseQuestions(props.input.questions))
   const answers = createMemo(() => parseQuestionAnswers(props.metadata.answers))
   const count = createMemo(() => questions().length)
-  // kilocode_change start - preserve dismissed content and the compact expandable summary
-  const dismissed = createMemo(
-    () =>
-      props.metadata.dismissed === true ||
-      (props.part.state.status === "error" && String(props.part.state.error ?? "").includes("dismissed")),
-  )
-  const [expanded, setExpanded] = createSignal(false)
 
   function format(answer?: ReadonlyArray<string>) {
-    if (dismissed()) return "Dismissed"
     if (!answer?.length) return "(no answer)"
     return answer.join(", ")
   }
 
-  const title = createMemo(() => (dismissed() ? "# Questions (dismissed)" : "# Questions"))
-  const subtitle = createMemo(() => {
-    if (dismissed()) return `${count()} dismissed`
-    if ((answers()?.length ?? 0) > 0) return `${count()} answered`
-    return `${count()} question${count() !== 1 ? "s" : ""}`
-  })
-
   return (
     <Switch>
-      <Match when={count() > 0}>
-        <Show
-          when={expanded()}
-          fallback={
-            <InlineTool
-              icon="→"
-              complete={count()}
-              pending="Asking questions..."
-              part={props.part}
-              onClick={() => setExpanded(true)}
-            >
-              {subtitle()}
-            </InlineTool>
-          }
-        >
-          <BlockTool title={title()} part={props.part} onClick={() => setExpanded(false)}>
-            <box gap={1}>
-              <For each={questions()}>
-                {(q, i) => (
-                  <box flexDirection="column">
-                    <text fg={theme.textMuted}>{q.question}</text>
-                    <text fg={theme.text}>{format(answers()?.[i()])}</text>
-                  </box>
-                )}
-              </For>
-            </box>
-          </BlockTool>
-        </Show>
+      <Match when={answers()}>
+        <BlockTool title="# Questions" part={props.part}>
+          <box gap={1}>
+            <For each={questions()}>
+              {(q, i) => (
+                <box flexDirection="column">
+                  <text fg={theme.textMuted}>{q.question}</text>
+                  <text fg={theme.text}>{format(answers()?.[i()])}</text>
+                </box>
+              )}
+            </For>
+          </box>
+        </BlockTool>
       </Match>
-      {/* kilocode_change end */}
       <Match when={true}>
         <InlineTool icon="→" pending="Asking questions..." complete={count()} part={props.part}>
           Asked {count()} question{count() !== 1 ? "s" : ""}
@@ -2996,11 +2580,6 @@ const toolDisplays = new Set([
   "todowrite",
   "question",
   "skill",
-  // kilocode_change start - retain dedicated Kilo tool renderers
-  "background_process",
-  "interactive_terminal",
-  "semantic_search",
-  // kilocode_change end
 ])
 
 export function toolDisplay(tool: string) {

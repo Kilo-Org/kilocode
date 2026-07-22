@@ -51,20 +51,15 @@ export class ListPage extends Schema.Class<ListPage>("ReadTool.ListPage")({
   next: PositiveInt.pipe(Schema.optional),
 }) {}
 
-// kilocode_change start - bind approved reads to filesystem identity
-export interface Target {
-  readonly path: AbsolutePath
-  readonly type: "file" | "directory"
-  readonly dev: number
-  readonly ino: number
-}
-
 export interface Interface {
-  readonly inspect: (path: AbsolutePath) => Effect.Effect<Target>
-  readonly read: (target: Target, resource: string, page?: PageInput) => Effect.Effect<FileSystem.Content | TextPage>
-  readonly list: (target: Target, page?: PageInput) => Effect.Effect<ListPage>
+  readonly inspect: (path: AbsolutePath) => Effect.Effect<"file" | "directory">
+  readonly read: (
+    path: AbsolutePath,
+    resource: string,
+    page?: PageInput,
+  ) => Effect.Effect<FileSystem.Content | TextPage>
+  readonly list: (path: AbsolutePath, page?: PageInput) => Effect.Effect<ListPage>
 }
-// kilocode_change end
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/ReadToolFileSystem") {}
 
@@ -121,33 +116,20 @@ export const inspect = Effect.fn("ReadTool.inspect")(function* (fs: FSUtil.Inter
   const info = yield* fs.stat(input).pipe(Effect.orDie)
   const type = info.type === "File" ? "file" : info.type === "Directory" ? "directory" : undefined
   if (!type) return yield* Effect.die(new Error("Path is not a file or directory"))
-  // kilocode_change start - retain the approved identity for descriptor verification
-  const ino = Option.getOrUndefined(info.ino)
-  if (ino === undefined) return yield* Effect.die(new Error("Filesystem identity is unavailable"))
-  const target = { path: AbsolutePath.make(input), type, dev: info.dev, ino } satisfies Target
-  // kilocode_change end
-  return target
+  return type
 })
-
-// kilocode_change - reject targets replaced after permission approval
-const verify = (target: Target, info: { readonly dev: number; readonly ino: Option.Option<number> }) => {
-  if (target.dev === info.dev && target.ino === Option.getOrUndefined(info.ino)) return
-  throw new Error("Path changed after approval")
-}
 
 export const read = Effect.fn("ReadTool.read")(function* (
   fs: FSUtil.Interface,
-  target: Target,
+  input: string,
   resource: string,
   page: PageInput = {},
 ) {
+  const real = yield* fs.realPath(input).pipe(Effect.orDie)
   return yield* Effect.scoped(
     Effect.gen(function* () {
-      // kilocode_change start - open the approved path and verify the descriptor identity
-      const file = yield* fs.open(target.path, { flag: "r" }).pipe(Effect.orDie)
+      const file = yield* fs.open(real, { flag: "r" }).pipe(Effect.orDie)
       const info = yield* file.stat.pipe(Effect.orDie)
-      yield* Effect.sync(() => verify(target, info))
-      // kilocode_change end
       if (info.type !== "File") return yield* Effect.die(new Error("Path is not a file"))
       const first = Option.getOrElse(
         yield* file.readAlloc(Math.min(64 * 1024, Number(info.size) || 4 * 1024)).pipe(Effect.orDie),
@@ -170,8 +152,8 @@ export const read = Effect.fn("ReadTool.read")(function* (
         if (total > MAX_MEDIA_INGEST_BYTES)
           return yield* Effect.die(new MediaIngestLimitError(resource, MAX_MEDIA_INGEST_BYTES))
         return {
-          uri: pathToFileURL(target.path).href,
-          name: path.basename(target.path),
+          uri: pathToFileURL(real).href,
+          name: path.basename(real),
           content: Buffer.concat(
             chunks.map((chunk) => Buffer.from(chunk)),
             total,
@@ -194,11 +176,11 @@ export const read = Effect.fn("ReadTool.read")(function* (
         }
         text.push(yield* Effect.sync(() => decoder.decode()))
         return {
-          uri: pathToFileURL(target.path).href,
-          name: path.basename(target.path),
+          uri: pathToFileURL(real).href,
+          name: path.basename(real),
           content: text.join(""),
           encoding: "utf8" as const,
-          mime: FSUtil.mimeType(target.path),
+          mime: FSUtil.mimeType(real),
         }
       }
       const offset = page.offset ?? 1
@@ -254,28 +236,22 @@ export const read = Effect.fn("ReadTool.read")(function* (
           discard = false
           text = text.slice(index + 1)
           append(current.endsWith("\r") ? current.slice(0, -1) : current)
-          if (truncated) break // kilocode_change - stop after the first extra line proves another page exists
         }
       }
       yield* Effect.sync(() => consume(first))
       while (true) {
-        if (truncated) break // kilocode_change
         const chunk = yield* file.readAlloc(64 * 1024).pipe(Effect.orDie)
         if (Option.isNone(chunk)) break
         yield* Effect.sync(() => consume(chunk.value))
       }
-      // kilocode_change start - a completed page must not decode the rest of the file
-      if (!truncated) {
-        const tail = yield* Effect.sync(() => decoder.decode())
-        if (!discard) pending += tail
-        if (pending) append(pending.endsWith("\r") ? pending.slice(0, -1) : pending)
-      }
-      // kilocode_change end
+      const tail = yield* Effect.sync(() => decoder.decode())
+      if (!discard) pending += tail
+      if (pending) append(pending.endsWith("\r") ? pending.slice(0, -1) : pending)
       if (!found && offset !== 1) return yield* Effect.die(new Error(`Offset ${offset} is out of range`))
       return new TextPage({
         type: "text-page",
         content: lines.join("\n"),
-        mime: FSUtil.mimeType(target.path),
+        mime: FSUtil.mimeType(real),
         offset,
         truncated,
         ...(next === undefined ? {} : { next }),
@@ -284,21 +260,18 @@ export const read = Effect.fn("ReadTool.read")(function* (
   )
 })
 
-// kilocode_change - verify approved directory identity before listing
-export const list = Effect.fn("ReadTool.list")(function* (fs: FSUtil.Interface, target: Target, page: PageInput = {}) {
-  const info = yield* fs.stat(target.path).pipe(Effect.orDie)
-  yield* Effect.sync(() => verify(target, info))
-  const root = target.path
-  const items = yield* fs.readDirectoryEntries(root).pipe(Effect.orDie)
+export const list = Effect.fn("ReadTool.list")(function* (fs: FSUtil.Interface, input: string, page: PageInput = {}) {
+  const real = yield* fs.realPath(input).pipe(Effect.orDie)
+  const items = yield* fs.readDirectoryEntries(real).pipe(Effect.orDie)
   const offset = page.offset ?? 1
   const limit = Math.min(page.limit ?? MAX_READ_LINES, MAX_READ_LINES)
   const entries = yield* Effect.forEach(
     items,
     (item) =>
       Effect.gen(function* () {
-        const absolute = path.join(root, item.name)
+        const absolute = path.join(real, item.name)
         const target = yield* fs.realPath(absolute).pipe(Effect.catch(() => Effect.void))
-        if (!target || !FSUtil.contains(root, target)) return
+        if (!target || !FSUtil.contains(real, target)) return
         const info = yield* fs.stat(target).pipe(Effect.catch(() => Effect.void))
         const type = info?.type === "Directory" ? "directory" : info?.type === "File" ? "file" : undefined
         if (!type) return

@@ -16,7 +16,6 @@ import { useTuiConfig } from "../../config"
 import { useTheme, selectedForeground } from "../../context/theme"
 import { SplitBorder } from "../../ui/border"
 import { useTerminalDimensions } from "@opentui/solid"
-import { slashDisplay } from "@/kilocode/cli/cmd/command-display" // kilocode_change
 import { Locale } from "../../util/locale"
 import type { PromptInfo } from "../../prompt/history"
 import { useFrecency } from "../../prompt/frecency"
@@ -57,10 +56,6 @@ function extractLineRange(input: string) {
 
 export type AutocompleteRef = {
   onInput: (value: string) => void
-  // kilocode_change start - validate cursor moves and close overlays without mutating draft text
-  onCursorChange: () => void
-  dismiss: () => void
-  // kilocode_change end
   visible: false | "@" | "/"
 }
 
@@ -367,7 +362,8 @@ export function Autocomplete(props: {
       const text = `${res.name} (${res.uri})`
       options.push({
         display: Locale.truncateMiddle(text, width),
-        value: text,
+        // Match the name only; matching the URI caused unrelated fuzzy hits.
+        value: res.name,
         description: res.description,
         onSelect: () => {
           insertPart(res.name, {
@@ -442,20 +438,19 @@ export function Autocomplete(props: {
     const results: AutocompleteOption[] = [...slashes()]
 
     for (const serverCommand of sync.data.command) {
-      // kilocode_change start - preserve suffixes like :skill when inserting selected slash commands
-      const display = slashDisplay(serverCommand)
+      if (serverCommand.source === "skill") continue
+      const label = serverCommand.source === "mcp" ? ":mcp" : ""
       results.push({
-        display,
+        display: "/" + serverCommand.name + label,
         description: serverCommand.description,
         onSelect: () => {
-          const newText = display + " "
+          const newText = "/" + serverCommand.name + " "
           const cursor = props.input().logicalCursor
           props.input().deleteRange(0, 0, cursor.row, cursor.col)
           props.input().insertText(newText)
           props.input().cursorOffset = Bun.stringWidth(newText)
         },
       })
-      // kilocode_change end
     }
 
     results.sort((a, b) => a.display.localeCompare(b.display))
@@ -498,7 +493,8 @@ export function Autocomplete(props: {
       .go(removeLineRange(searchValue), nonFileOptions, {
         keys: [
           (obj) => removeLineRange((obj.value ?? obj.display).trimEnd()),
-          "description",
+          // Match description for slash commands only; for "@" it surfaced unrelated items.
+          ...(store.visible === "/" ? ["description" as const] : []),
           (obj) => obj.aliases?.join(" ") ?? "",
         ],
         limit: 10,
@@ -624,24 +620,13 @@ export function Autocomplete(props: {
         },
       },
     ],
-    bindings: [
-      ...tuiConfig.keybinds.gather("prompt.autocomplete", [
-        "prompt.autocomplete.prev",
-        "prompt.autocomplete.next",
-        "prompt.autocomplete.hide",
-        "prompt.autocomplete.select",
-        "prompt.autocomplete.complete",
-      ]),
-      // kilocode_change start - close stale suggestions while allowing normal cursor movement
-      {
-        key: "right",
-        fallthrough: true,
-        cmd: () => {
-          if (props.input().cursorOffset <= store.index) dismiss()
-        },
-      },
-      // kilocode_change end
-    ],
+    bindings: tuiConfig.keybinds.gather("prompt.autocomplete", [
+      "prompt.autocomplete.prev",
+      "prompt.autocomplete.next",
+      "prompt.autocomplete.hide",
+      "prompt.autocomplete.select",
+      "prompt.autocomplete.complete",
+    ]),
   }))
 
   function show(mode: "@" | "/") {
@@ -650,14 +635,6 @@ export function Autocomplete(props: {
       index: props.input().cursorOffset,
     })
   }
-
-  // kilocode_change start - keep slash text intact when overlays hide the prompt,
-  // but still allow normal autocomplete dismissal to clean it up.
-  function dismiss() {
-    if (!store.visible) return
-    setStore("visible", false)
-  }
-  // kilocode_change end
 
   function hide() {
     const text = props.input().plainText
@@ -685,11 +662,6 @@ export function Autocomplete(props: {
       get visible() {
         return store.visible
       },
-      // kilocode_change start
-      dismiss() {
-        dismiss()
-      },
-      // kilocode_change end
       onInput(value) {
         if (store.visible) {
           if (
@@ -723,20 +695,6 @@ export function Autocomplete(props: {
           setStore("index", idx)
         }
       },
-      // kilocode_change start - dismiss stale popup after cursor leaves active filter region
-      onCursorChange() {
-        if (!store.visible) return
-        const cursor = props.input().cursorOffset
-        const value = props.input().plainText
-        if (
-          cursor <= store.index ||
-          props.input().getTextRange(store.index, cursor).match(/\s/) ||
-          (store.visible === "/" && value.match(/^\S+\s+\S+\s*$/))
-        ) {
-          hide()
-        }
-      },
-      // kilocode_change end
     })
   })
 

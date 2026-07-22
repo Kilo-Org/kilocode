@@ -44,7 +44,7 @@ const tui: TuiPlugin = async (api) => {
             (item) => item.id !== "opencode" || Object.values(item.models).some((model) => model.cost?.input !== 0),
           ),
         )
-        const show = createMemo(() => !hidden()) // kilocode_change - always show tips regardless of first-time status
+        const show = createMemo(() => (!first() || !connected()) && !hidden())
         return <View api={api} hidden={hidden()} show={show()} connected={connected()} />
       },
     },

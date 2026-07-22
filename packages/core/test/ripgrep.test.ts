@@ -55,8 +55,8 @@ describe("Ripgrep", () => {
           expect(observed).toEqual(limited.map((item) => item.path))
 
           const matches = yield* ripgrep.grep({ cwd: tmp.path, pattern: "needle", include: "config", limit: 10 })
-          expect(matches.items.map((item) => item.entry.path)).toContain(RelativePath.make(".opencode/config")) // kilocode_change
-          expect(matches.items.map((item) => item.entry.path)).not.toContain(RelativePath.make(".git/config")) // kilocode_change
+          expect(matches.map((item) => item.entry.path)).toContain(RelativePath.make(".opencode/config"))
+          expect(matches.map((item) => item.entry.path)).not.toContain(RelativePath.make(".git/config"))
         }),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),

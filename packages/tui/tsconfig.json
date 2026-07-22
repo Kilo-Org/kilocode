@@ -5,13 +5,6 @@
     "jsx": "preserve",
     "jsxImportSource": "@opentui/solid",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "noUncheckedIndexedAccess": false,
-    // kilocode_change - resolve Kilo integrations retained during upstream's standalone TUI extraction
-    "paths": {
-      "@/*": ["../opencode/src/*"],
-      "@tui/*": ["./src/*"]
-    }
-  },
-  // kilocode_change - include ambient declarations used by retained Kilo imports from opencode
-  "include": ["src", "test", "../opencode/src/*.d.ts"]
+    "noUncheckedIndexedAccess": false
+  }
 }

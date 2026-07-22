@@ -10,7 +10,7 @@ import { Hash } from "@opencode-ai/core/util/hash"
 import { Plugin } from "../plugin"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import { type LanguageModelV3 } from "@ai-sdk/provider"
-import * as ModelsDev from "./models" // kilocode_change - assemble dynamic Kilo models around upstream core catalog
+import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Auth } from "../auth"
 import { Env } from "../env"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
@@ -30,20 +30,6 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ModelStatus } from "./model-status"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-// kilocode_change start
-import {
-  KILO_BUNDLED_PROVIDERS,
-  kiloCustomLoaders,
-  KILO_MODEL_SCHEMA_EXTENSIONS,
-  patchModelsDevModel as patchKiloModel,
-  patchConfigModel as patchKiloConfigModel,
-  patchCustomLoaderResult,
-  patchKiloProviderPrivacy,
-  kiloSmallModelPriority,
-  buildTimeoutSignal,
-} from "@/kilocode/provider/provider"
-import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
-// kilocode_change end
 import { ProviderError } from "./error"
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
@@ -145,7 +131,6 @@ const BUNDLED_PROVIDERS: Record<string, () => Promise<(opts: any) => BundledSDK>
   "@ai-sdk/github-copilot": () =>
     import("@opencode-ai/core/github-copilot/copilot-provider").then((m) => m.createOpenaiCompatible),
   "venice-ai-sdk-provider": () => import("venice-ai-sdk-provider").then((m) => m.createVenice),
-  ...KILO_BUNDLED_PROVIDERS, // kilocode_change
 }
 
 type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>, model?: Model) => Promise<any>
@@ -244,33 +229,20 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     azure: Effect.fnUntraced(function* (provider: Info) {
       const env = yield* dep.env()
       const auth = yield* dep.auth(provider.id)
-      // kilocode_change start - prefer explicit Azure endpoint over resource name to avoid conflicting SDK options
-      const endpoint = iife(() => {
+      const resource = iife(() => {
         return [
-          provider.options?.baseURL,
-          auth?.type === "api" ? auth.metadata?.baseURL : undefined,
-          env["AZURE_OPENAI_ENDPOINT"],
-        ].find((url) => typeof url === "string" && url.trim() !== "")
+          provider.options?.resourceName,
+          auth?.type === "api" ? auth.metadata?.resourceName : undefined,
+          env["AZURE_RESOURCE_NAME"],
+        ].find((name) => typeof name === "string" && name.trim() !== "")
       })
-      const resource = endpoint
-        ? undefined
-        : iife(() => {
-            return [
-              provider.options?.resourceName,
-              auth?.type === "api" ? auth.metadata?.resourceName : undefined,
-              env["AZURE_RESOURCE_NAME"],
-              env["AZURE_OPENAI_RESOURCE_NAME"],
-            ].find((name) => typeof name === "string" && name.trim() !== "")
-          })
-      // kilocode_change end
 
-      if (!resource && !endpoint) {
-        // kilocode_change
+      if (!resource && !provider.options?.baseURL) {
         return {
           autoload: false,
           async getModel() {
             throw new Error(
-              "Azure resource name or endpoint is missing. Set AZURE_RESOURCE_NAME, AZURE_OPENAI_RESOURCE_NAME, AZURE_OPENAI_ENDPOINT, or reconnect the azure provider.", // kilocode_change
+              "AZURE_RESOURCE_NAME is missing, set it using env var or reconnecting the azure provider and setting it",
             )
           },
         }
@@ -282,7 +254,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
           return selectAzureLanguageModel(sdk, modelID, Boolean(options?.["useCompletionUrls"]))
         },
         options: {
-          ...(endpoint ? { baseURL: endpoint } : { resourceName: resource }), // kilocode_change
+          resourceName: resource,
         },
         vars(_options): Record<string, string> {
           if (resource) {
@@ -473,9 +445,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
-            "X-Source": "kilo", // kilocode_change
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
+            "X-Source": "opencode",
           },
         },
       }),
@@ -484,8 +456,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
           },
         },
       }),
@@ -494,9 +466,9 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
-            "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
+            "X-BILLING-INVOKE-ORIGIN": "OpenCode",
           },
         },
       }),
@@ -505,8 +477,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://kilo.ai/", // kilocode_change
-            "x-title": "Kilo Code", // kilocode_change
+            "http-referer": "https://opencode.ai/",
+            "x-title": "opencode",
           },
         },
       }),
@@ -611,8 +583,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
           },
         },
       }),
@@ -633,7 +605,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const directory = yield* InstanceState.directory
 
       const aiGatewayHeaders = {
-        "User-Agent": `kilo/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`, // kilocode_change
+        "User-Agent": `opencode/${InstallationVersion} gitlab-ai-provider/${GITLAB_PROVIDER_VERSION} (${os.platform()} ${os.release()}; ${os.arch()})`,
         "anthropic-beta": "context-1m-2025-08-07",
         ...providerConfig?.options?.aiGatewayHeaders,
       }
@@ -811,7 +783,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       if (!apiToken) {
         throw new Error(
           "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.", // kilocode_change
+            "Set it via environment variable or run `opencode auth cloudflare-ai-gateway`.",
         )
       }
 
@@ -844,7 +816,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         apiKey: apiToken,
         ...(Object.values(opts).some((v) => v !== undefined) ? { options: opts } : {}),
       })
-      const unified = createUnified()
+      const unified = createUnified({ apiKey: apiToken })
 
       return {
         autoload: true,
@@ -860,7 +832,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "X-Cerebras-3rd-Party-Integration": "Kilo Code", // kilocode_change
+            "X-Cerebras-3rd-Party-Integration": "opencode",
           },
         },
       }),
@@ -869,8 +841,8 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-            "X-Title": "Kilo Code", // kilocode_change
+            "HTTP-Referer": "https://opencode.ai/",
+            "X-Title": "opencode",
           },
         },
       }),
@@ -881,17 +853,23 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const account =
         env["SNOWFLAKE_ACCOUNT"] ??
         (auth?.type === "api" ? auth.metadata?.account : undefined) ??
+        (auth?.type === "oauth" ? auth.accountId : undefined) ??
         input.options?.account
 
-      const pat = env["SNOWFLAKE_CORTEX_PAT"] ?? (auth?.type === "api" ? auth.key : undefined) ?? input.options?.apiKey
+      const envToken = env["SNOWFLAKE_CORTEX_TOKEN"] ?? env["SNOWFLAKE_CORTEX_PAT"]
+      const apiKeyToken = auth?.type === "api" ? auth.key : undefined
+      const oauthToken = auth?.type === "oauth" ? auth.access : undefined
+      const configToken = input.options?.token ?? input.options?.apiKey
 
-      if (!account || !pat) {
-        const missing = [!account && "SNOWFLAKE_ACCOUNT", !pat && "SNOWFLAKE_CORTEX_PAT"].filter(Boolean).join(", ")
+      const token = envToken ?? apiKeyToken ?? oauthToken ?? configToken
+
+      if (!account || !token) {
+        const missing = [!account && "SNOWFLAKE_ACCOUNT", !token && "SNOWFLAKE_CORTEX_TOKEN"].filter(Boolean).join(", ")
         return {
           autoload: false,
           async getModel() {
             throw new Error(
-              `Snowflake Cortex: missing credentials (${missing}). Set via env var, kilo auth, or provider options.`, // kilocode_change
+              `Snowflake Cortex: missing credentials (${missing}). Provide a bearer token (OAuth, JWT, or PAT) via env var, opencode auth, or provider options.`,
             )
           },
         }
@@ -899,66 +877,73 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const baseURL = `https://${account}.snowflakecomputing.com/api/v2/cortex/v1`
 
+      const options: Record<string, any> = { baseURL, apiKey: token }
+
+      // Only skip provider-level fetch when the token is from OAuth with no override.
+      // For OAuth tokens, the plugin auth loader's combined fetch handles
+      // OAuth refresh + snowflake transformations in one place.
+      // For env/config/API-key tokens, the provider fetch applies snowflake
+      // transformations directly.
+      const useOAuthHandler =
+        oauthToken !== undefined && envToken === undefined && apiKeyToken === undefined && configToken === undefined
+      if (!useOAuthHandler) {
+        options.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
+          if (init?.body && typeof init.body === "string") {
+            try {
+              const body = JSON.parse(init.body)
+              if ("max_tokens" in body) {
+                body.max_completion_tokens = body.max_tokens
+                delete body.max_tokens
+                init = { ...init, body: JSON.stringify(body) }
+              }
+            } catch {}
+          }
+
+          const response = await fetch(url, init)
+
+          if (!response.ok && response.status === 400) {
+            try {
+              const errorData = await response.clone().json()
+              const errorMessage = String(errorData.message || errorData.error || "")
+              if (errorMessage.toLowerCase().includes("conversation complete")) {
+                return new Response(
+                  JSON.stringify({
+                    choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
+                  }),
+                  { status: 200, headers: new Headers({ "content-type": "application/json" }) },
+                )
+              }
+            } catch {}
+          }
+
+          if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
+            const reader = response.body.getReader()
+            const encoder = new TextEncoder()
+            const decoder = new TextDecoder()
+            const stream = new ReadableStream({
+              async pull(ctrl) {
+                const { done, value } = await reader.read()
+                if (done) {
+                  ctrl.close()
+                  return
+                }
+                const text = decoder.decode(value, { stream: true })
+                ctrl.enqueue(encoder.encode(text.replace(/"role"\s*:\s*""/g, '"role":"assistant"')))
+              },
+              cancel() {
+                reader.cancel()
+              },
+            })
+            return new Response(stream, { headers: response.headers, status: response.status })
+          }
+
+          return response
+        }
+      }
+
       return {
         autoload: input.source === "config",
-        options: {
-          baseURL,
-          apiKey: pat,
-          fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
-            if (init?.body && typeof init.body === "string") {
-              try {
-                const body = JSON.parse(init.body)
-                if ("max_tokens" in body) {
-                  body.max_completion_tokens = body.max_tokens
-                  delete body.max_tokens
-                  init = { ...init, body: JSON.stringify(body) }
-                }
-              } catch {}
-            }
-
-            const response = await fetch(url, init)
-
-            // Cortex returns 400 "conversation complete" as a normal stop condition
-            if (!response.ok && response.status === 400) {
-              try {
-                const errorData = await response.clone().json()
-                const errorMessage = String(errorData.message || errorData.error || "")
-                if (errorMessage.toLowerCase().includes("conversation complete")) {
-                  return new Response(
-                    JSON.stringify({
-                      choices: [{ finish_reason: "stop", message: { content: "", role: "assistant" } }],
-                    }),
-                    { status: 200, headers: new Headers({ "content-type": "application/json" }) },
-                  )
-                }
-              } catch {}
-            }
-
-            // Cortex returns role:"" in streaming deltas; the AI SDK schema requires "assistant"
-            if (response.body && response.headers.get("content-type")?.includes("text/event-stream")) {
-              const reader = response.body.getReader()
-              const encoder = new TextEncoder()
-              const decoder = new TextDecoder()
-              const stream = new ReadableStream({
-                async pull(ctrl) {
-                  const { done, value } = await reader.read()
-                  if (done) {
-                    ctrl.close()
-                    return
-                  }
-                  const text = decoder.decode(value, { stream: true })
-                  ctrl.enqueue(encoder.encode(text.replace(/"role"\s*:\s*""/g, '"role":"assistant"')))
-                },
-                cancel() {
-                  reader.cancel()
-                },
-              })
-              return new Response(stream, { headers: response.headers, status: response.status })
-            }
-
-            return response
-          },
-        },
+        options,
       }
     }),
   }
@@ -1030,14 +1015,6 @@ const ProviderLimit = Schema.Struct({
   output: Schema.Finite,
 })
 
-// kilocode_change start
-const ProviderMetadata = Schema.Struct({
-  noteKey: optionalOmitUndefined(Schema.String),
-  icon: optionalOmitUndefined(Schema.String),
-  priority: optionalOmitUndefined(Schema.Int),
-})
-// kilocode_change end
-
 export const Model = Schema.Struct({
   id: ModelV2.ID,
   providerID: ProviderV2.ID,
@@ -1052,18 +1029,15 @@ export const Model = Schema.Struct({
   headers: Schema.Record(Schema.String, Schema.String),
   release_date: Schema.String,
   variants: optionalOmitUndefined(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Any))),
-  ...KILO_MODEL_SCHEMA_EXTENSIONS, // kilocode_change
 }).annotate({ identifier: "Model" })
 export type Model = Types.DeepMutable<Schema.Schema.Type<typeof Model>>
 
 export const Info = Schema.Struct({
   id: ProviderV2.ID,
   name: Schema.String,
-  description: optionalOmitUndefined(Schema.String), // kilocode_change
   source: Schema.Literals(["env", "config", "custom", "api"]),
   env: Schema.Array(Schema.String),
-  key: optionalOmitUndefined(Schema.String), // kilocode_change
-  metadata: optionalOmitUndefined(ProviderMetadata), // kilocode_change
+  key: optionalOmitUndefined(Schema.String),
   options: Schema.Record(Schema.String, Schema.Any),
   models: Schema.Record(Schema.String, Model),
 }).annotate({ identifier: "Provider" })
@@ -1075,7 +1049,6 @@ export const ListResult = Schema.Struct({
   all: Schema.Array(Info),
   default: DefaultModelIDs,
   connected: Schema.Array(Schema.String),
-  failed: Schema.Array(Schema.String), // kilocode_change
 })
 export type ListResult = Types.DeepMutable<Schema.Schema.Type<typeof ListResult>>
 
@@ -1103,7 +1076,6 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
   providerID: ProviderV2.ID,
   modelID: ModelV2.ID,
   suggestions: Schema.optional(Schema.Array(Schema.String)),
-  modelsEmpty: Schema.optional(Schema.Boolean), // kilocode_change
   cause: Schema.optional(Schema.Defect),
 }) {
   static isInstance(input: unknown): input is ModelNotFoundError {
@@ -1240,7 +1212,6 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
     release_date: model.release_date ?? "",
     variants: {},
   }
-  Object.assign(base, patchKiloModel(provider.id, model)) // kilocode_change
 
   return {
     ...base,
@@ -1276,7 +1247,6 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     id: ProviderV2.ID.make(provider.id),
     source: "custom",
     name: provider.name,
-    description: provider.description, // kilocode_change
     env: [...(provider.env ?? [])],
     options: {},
     models,
@@ -1406,7 +1376,6 @@ export const layer = Layer.effect(
 
         // extend database from config
         for (const [providerID, provider] of configProviders) {
-          if (!provider) continue // kilocode_change - null entries are transient delete sentinels
           const existing = database[providerID]
           const parsed: Info = {
             id: ProviderV2.ID.make(providerID),
@@ -1418,7 +1387,6 @@ export const layer = Layer.effect(
           }
 
           for (const [modelID, model] of Object.entries(provider.models ?? {})) {
-            if (!model) continue // kilocode_change - null entries are transient delete sentinels
             const existingModel = parsed.models[model.id ?? modelID]
             const apiID = model.id ?? existingModel?.api.id ?? modelID
             const apiNpm =
@@ -1488,12 +1456,11 @@ export const layer = Layer.effect(
               headers: mergeDeep(existingModel?.headers ?? {}, model.headers ?? {}),
               family: model.family ?? existingModel?.family ?? "",
               release_date: model.release_date ?? existingModel?.release_date ?? "",
-              // variants: {}, // kilocode_change, moved into patchKiloConfigModel
-              ...patchKiloConfigModel(model, existingModel), // kilocode_change
+              variants: {},
             }
             const merged = mergeDeep(ProviderTransform.variants(parsedModel), model.variants ?? {})
             parsedModel.variants = mapValues(
-              pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
+              pickBy(merged, (v) => !v.disabled),
               (v) => omit(v, ["disabled"]),
             )
             parsed.models[modelID] = parsedModel
@@ -1501,22 +1468,12 @@ export const layer = Layer.effect(
           database[providerID] = parsed
         }
 
-        // kilocode_change start - load auths before env so OAuth plugins can override inherited credentials
-        const auths = yield* auth.all().pipe(Effect.orDie)
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {
           const providerID = ProviderV2.ID.make(id)
           if (disabled.has(providerID)) continue
-          // kilocode_change start - prefer explicit OAuth auth over inherited env credentials
-          if (
-            auths[providerID]?.type === "oauth" &&
-            plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
-          ) {
-            continue
-          }
           const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
-          // kilocode_change end
           if (!apiKey) continue
           mergeProvider(providerID, {
             source: "env",
@@ -1525,6 +1482,7 @@ export const layer = Layer.effect(
         }
 
         // load apikeys
+        const auths = yield* auth.all().pipe(Effect.orDie)
         for (const [id, provider] of Object.entries(auths)) {
           const providerID = ProviderV2.ID.make(id)
           if (disabled.has(providerID)) continue
@@ -1557,11 +1515,7 @@ export const layer = Layer.effect(
           mergeProvider(providerID, patch)
         }
 
-        // kilocode_change start - resolve env once for patchCustomLoaderResult (azure env fallback)
-        const kiloEnv = yield* env.all()
-        // kilocode_change end
-        for (const [id, fn] of Object.entries({ ...custom(dep), ...kiloCustomLoaders(dep) })) {
-          // kilocode_change
+        for (const [id, fn] of Object.entries(custom(dep))) {
           const providerID = ProviderV2.ID.make(id)
           if (disabled.has(providerID)) continue
           const data = database[providerID]
@@ -1569,7 +1523,6 @@ export const layer = Layer.effect(
             continue
           }
           const result = yield* fn(data)
-          if (result) patchCustomLoaderResult(id, result, kiloEnv) // kilocode_change
           if (result && (result.autoload || providers[providerID])) {
             if (result.getModel) modelLoaders[providerID] = result.getModel
             if (result.vars) varsLoaders[providerID] = result.vars
@@ -1582,32 +1535,26 @@ export const layer = Layer.effect(
 
         // load config - re-apply with updated data
         for (const [id, provider] of configProviders) {
-          if (!provider) continue // kilocode_change - null entries are transient delete sentinels
           const providerID = ProviderV2.ID.make(id)
-          // kilocode_change start - keep OAuth plugin source when config and Codex auth coexist
-          const oauth =
-            auths[providerID]?.type === "oauth" && plugins.some((x) => x.auth?.provider === providerID && x.auth.loader)
-          const partial: Partial<Info> = oauth ? {} : { source: "config" }
+          const partial: Partial<Info> = { source: "config" }
           if (provider.env) partial.env = provider.env
-          // kilocode_change end
           if (provider.name) partial.name = provider.name
           if (provider.options) partial.options = provider.options
           mergeProvider(providerID, partial)
         }
-        patchKiloProviderPrivacy(providers[ProviderV2.ID.make("kilo")], cfg) // kilocode_change
 
         const gitlab = ProviderV2.ID.make("gitlab")
         if (discoveryLoaders[gitlab] && providers[gitlab] && isProviderAllowed(gitlab)) {
-          // kilocode_change start - keep discovery failures visible instead of swallowing them
-          const discovered = yield* Effect.tryPromise(() => discoveryLoaders[gitlab]()).pipe(
-            Effect.catch((err) =>
-              Effect.logWarning("gitlab model discovery failed", { err }).pipe(Effect.as({} as Record<string, Model>)),
-            ),
-          )
-          for (const [modelID, model] of Object.entries(discovered)) {
-            if (!providers[gitlab].models[modelID]) providers[gitlab].models[modelID] = model
-          }
-          // kilocode_change end
+          yield* Effect.promise(async () => {
+            try {
+              const discovered = await discoveryLoaders[gitlab]()
+              for (const [modelID, model] of Object.entries(discovered)) {
+                if (!providers[gitlab].models[modelID]) {
+                  providers[gitlab].models[modelID] = model
+                }
+              }
+            } catch (e) {}
+          })
         }
 
         for (const [id, provider] of Object.entries(providers)) {
@@ -1647,7 +1594,7 @@ export const layer = Layer.effect(
             if (configVariants && model.variants) {
               const merged = mergeDeep(model.variants, configVariants)
               model.variants = mapValues(
-                pickBy(merged, (v): v is NonNullable<typeof v> => !!v && !v.disabled), // kilocode_change - drop null delete sentinels
+                pickBy(merged, (v) => !v.disabled),
                 (v) => omit(v, ["disabled"]),
               )
             }
@@ -1669,7 +1616,6 @@ export const layer = Layer.effect(
         }
       }),
     )
-    yield* ModelsRefresh.watch(state) // kilocode_change
 
     const list = Effect.fn("Provider.list")(() => InstanceState.use(state, (s) => s.providers))
 
@@ -1747,7 +1693,6 @@ export const layer = Layer.effect(
           const fetchFn = customFetch ?? fetch
           const opts = init ?? {}
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
-          const timeout = buildTimeoutSignal(options) // kilocode_change - use cancellable timeout for connection phase
           const headerTimeoutMs = headerTimeout === false ? undefined : headerTimeout
           const headerTimeoutCtl = typeof headerTimeoutMs === "number" ? timeoutController(headerTimeoutMs) : undefined
           const signals: AbortSignal[] = []
@@ -1755,26 +1700,20 @@ export const layer = Layer.effect(
           if (opts.signal) signals.push(opts.signal)
           if (chunkAbortCtl) signals.push(chunkAbortCtl.signal)
           if (headerTimeoutCtl) signals.push(headerTimeoutCtl.signal)
-          if (timeout.signal) signals.push(timeout.signal) // kilocode_change
+          if (options["timeout"] !== undefined && options["timeout"] !== null && options["timeout"] !== false)
+            signals.push(AbortSignal.timeout(options["timeout"]))
 
           const combined = signals.length === 0 ? null : signals.length === 1 ? signals[0] : AbortSignal.any(signals)
           if (combined) opts.signal = combined
 
-          // kilocode_change start - clear connection-phase timeout once headers arrive
-          try {
-            const res = await fetchFn(input, {
-              ...opts,
-              // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
-              timeout: false,
-            }).finally(() => headerTimeoutCtl?.clear())
-            timeout.clear()
-            if (!chunkAbortCtl) return res
-            return wrapSSE(res, chunkTimeout, chunkAbortCtl)
-          } catch (err) {
-            timeout.clear()
-            throw err
-          }
-          // kilocode_change end
+          const res = await fetchFn(input, {
+            ...opts,
+            // @ts-ignore see here: https://github.com/oven-sh/bun/issues/16682
+            timeout: false,
+          }).finally(() => headerTimeoutCtl?.clear())
+
+          if (!chunkAbortCtl) return res
+          return wrapSSE(res, chunkTimeout, chunkAbortCtl)
         }
 
         const bundledLoader = BUNDLED_PROVIDERS[model.api.npm]
@@ -1828,8 +1767,7 @@ export const layer = Layer.effect(
           : fuzzysort
               .go(providerID, Object.keys({ ...s.catalog, ...s.providers }), { limit: 3, threshold: -10000 })
               .map((m) => m.target)
-        const empty = false // kilocode_change
-        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
+        return yield* new ModelNotFoundError({ providerID, modelID, suggestions })
       }
 
       const info = provider.models[modelID]
@@ -1838,8 +1776,7 @@ export const layer = Layer.effect(
         const suggestions = current.length
           ? current
           : modelSuggestions(s.catalog[providerID], modelID, runtimeFlags.enableExperimentalModels)
-        const empty = Object.keys(provider.models).length === 0 // kilocode_change
-        return yield* new ModelNotFoundError({ providerID, modelID, suggestions, modelsEmpty: empty }) // kilocode_change
+        return yield* new ModelNotFoundError({ providerID, modelID, suggestions })
       }
       return info
     })
@@ -1923,16 +1860,11 @@ export const layer = Layer.effect(
         "gemini-2.5-flash",
         "gpt-5-nano",
       ]
-      // kilocode_change - `let` (was upstream `const`) so the Kilo override below can reassign
-      let priority = providerID.startsWith("opencode")
+      const priority = providerID.startsWith("opencode")
         ? ["gpt-5-nano"]
         : providerID.startsWith("github-copilot")
           ? ["gpt-5-mini", "claude-haiku-4.5", ...defaultPriority]
           : defaultPriority
-      // kilocode_change start
-      const kiloPriority = kiloSmallModelPriority(providerID)
-      if (kiloPriority) priority = kiloPriority
-      // kilocode_change end
       for (const item of priority) {
         if (providerID === ProviderV2.ID.amazonBedrock) {
           const crossRegionPrefixes = ["global.", "us.", "eu."]
@@ -1958,11 +1890,6 @@ export const layer = Layer.effect(
           }
         }
       }
-
-      // kilocode_change start - fall back to kilo's auto small model
-      const kiloFallback = s.providers[ProviderV2.ID.make("kilo")]
-      if (kiloFallback?.models["kilo-auto/small"]) return kiloFallback.models["kilo-auto/small"]
-      // kilocode_change end
 
       return undefined
     })

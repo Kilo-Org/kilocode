@@ -1,6 +1,5 @@
 import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
-// kilocode_change start - use Kilo CLI branding
-// CLI entry point for `kilo run`.
+// CLI entry point for `opencode run`.
 //
 // Handles three modes:
 //   1. Non-interactive (default): sends a single prompt, streams events to
@@ -8,8 +7,7 @@ import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
 //   2. Interactive local (`--interactive`): boots the split-footer direct mode
 //      with an in-process server (no external HTTP).
 //   3. Interactive attach (`--interactive --attach`): connects to a running
-//      kilo server and runs interactive mode against it.
-// kilocode_change end
+//      opencode server and runs interactive mode against it.
 //
 // Also supports `--command` for slash-command execution, `--format json` for
 // raw event streaming, `--continue` / `--session` for session resumption,
@@ -20,19 +18,11 @@ import { pathToFileURL } from "url"
 import { Effect } from "effect"
 import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
-import { buildRunMessage } from "@/kilocode/cli/cmd/run-message" // kilocode_change
 import { EOL } from "os"
 import { Filesystem } from "@/util/filesystem"
-import { createKiloClient, type KiloClient, type Session, type ToolPart } from "@kilocode/sdk/v2"
-import { Agent } from "@/agent/agent"
-import { RuntimeFlags } from "@/effect/runtime-flags"
+import { createKiloClient, type KiloClient, type ToolPart } from "@kilocode/sdk/v2"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { event as normalizeEvent } from "./run/event"
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
-import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
-import { KiloRun, KiloRunDaemon } from "@/kilocode/cli/cmd/run" // kilocode_change
 
 type ModelInput = Parameters<KiloClient["session"]["prompt"]>[0]["model"]
 
@@ -74,7 +64,6 @@ type SessionInfo = {
   id: string
   title?: string
   directory?: string
-  model?: Session["model"]
 }
 
 function inline(info: Inline) {
@@ -132,7 +121,7 @@ async function toolError(part: ToolPart) {
 
 export const RunCommand = effectCmd({
   command: "run [message..]",
-  describe: "run kilo with a message", // kilocode_change
+  describe: "run opencode with a message",
   // --attach connects to a remote server (no local instance needed); the
   // default path runs an in-process server and needs the project instance.
   instance: (args) => !args.attach,
@@ -165,12 +154,6 @@ export const RunCommand = effectCmd({
         describe: "fork the session before continuing (requires --continue or --session)",
         type: "boolean",
       })
-      // kilocode_change start - support cloud fork in run command
-      .option("cloud-fork", {
-        type: "boolean",
-        describe: "fetch session from cloud and continue locally (use with --session)",
-      })
-      // kilocode_change end
       .option("share", {
         type: "boolean",
         describe: "share the session",
@@ -202,7 +185,7 @@ export const RunCommand = effectCmd({
       })
       .option("attach", {
         type: "string",
-        describe: "attach to a running kilo server (e.g., http://localhost:4096)",
+        describe: "attach to a running opencode server (e.g., http://localhost:4096)",
       })
       .option("password", {
         alias: ["p"],
@@ -212,7 +195,7 @@ export const RunCommand = effectCmd({
       .option("username", {
         alias: ["u"],
         type: "string",
-        describe: "basic auth username (defaults to KILO_SERVER_USERNAME or 'kilo')", // kilocode_change
+        describe: "basic auth username (defaults to KILO_SERVER_USERNAME or 'opencode')",
       })
       .option("dir", {
         type: "string",
@@ -250,13 +233,6 @@ export const RunCommand = effectCmd({
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
         default: false,
       })
-      // kilocode_change start - auto approve tracked task sessions
-      .option("auto", {
-        type: "boolean",
-        describe: "auto-approve all permissions (for autonomous/pipeline usage)",
-        default: false,
-      })
-      // kilocode_change end
       .option("demo", {
         type: "boolean",
         default: false,
@@ -285,7 +261,9 @@ export const RunCommand = effectCmd({
         throw error
       }
 
-      let message = buildRunMessage(args.message, args["--"]) // kilocode_change
+      let message = [...args.message, ...(args["--"] || [])]
+        .map((arg) => (arg.includes(" ") ? `"${arg.replace(/"/g, '\\"')}"` : arg))
+        .join(" ")
 
       if (args.interactive && args.command) {
         die("--interactive cannot be used with --command")
@@ -370,37 +348,19 @@ export const RunCommand = effectCmd({
         }
       }
 
-      // kilocode_change start - defer stdin until endpoint-backed commands are classified
-      const input = { initial: undefined as string | undefined, loaded: false }
-      async function loadInput() {
-        if (input.loaded) return
-        const piped = process.stdin.isTTY ? undefined : await Bun.stdin.text()
-        message = resolveRunInput(message, piped) ?? ""
-        input.initial = resolveRunInput(rawMessage, piped)
-        input.loaded = true
-        if (message.trim().length > 0 || args.command || args.interactive) return
+      const piped = process.stdin.isTTY ? undefined : await Bun.stdin.text()
+      message = resolveRunInput(message, piped) ?? ""
+      const initialInput = resolveRunInput(rawMessage, piped)
+
+      if (message.trim().length === 0 && !args.command && !args.interactive) {
         UI.error("You must provide a message or a command")
         process.exit(1)
       }
-      // kilocode_change end
 
       if (args.fork && !args.continue && !args.session) {
         UI.error("--fork requires --continue or --session")
         process.exit(1)
       }
-
-      // kilocode_change start - validate cloud session imports before local lookup
-      const cloudForkError = validateCloudFork({
-        cloudFork: args["cloud-fork"],
-        fork: args.fork,
-        continue: args.continue,
-        session: args.session,
-      })
-      if (cloudForkError) {
-        UI.error(cloudForkError)
-        process.exit(1)
-      }
-      // kilocode_change end
 
       const rules: PermissionV1.Ruleset = args.interactive
         ? []
@@ -410,13 +370,6 @@ export const RunCommand = effectCmd({
               action: "deny",
               pattern: "*",
             },
-            // kilocode_change start - non-interactive runs cannot take over a terminal
-            {
-              permission: "interactive_terminal",
-              action: "deny",
-              pattern: "*",
-            },
-            // kilocode_change end
             {
               permission: "plan_enter",
               action: "deny",
@@ -436,34 +389,6 @@ export const RunCommand = effectCmd({
       }
 
       async function session(sdk: KiloClient): Promise<SessionInfo | undefined> {
-        // kilocode_change start - import cloud session before local lookup
-        if (args.session && args["cloud-fork"]) {
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
-            process.exit(1)
-          }
-
-          const current = await sdk.session
-            .get({
-              sessionID: id,
-            })
-            .catch(() => undefined)
-
-          if (!current?.data) {
-            UI.error("Session not found")
-            process.exit(1)
-          }
-
-          return {
-            id: current.data.id,
-            title: current.data.title,
-            directory: current.data.directory,
-            model: current.data.model,
-          }
-        }
-        // kilocode_change end
-
         if (args.session) {
           const current = await sdk.session
             .get({
@@ -489,7 +414,6 @@ export const RunCommand = effectCmd({
               id,
               title: forked.data?.title ?? current.data.title,
               directory: forked.data?.directory ?? current.data.directory,
-              model: forked.data?.model ?? current.data.model,
             }
           }
 
@@ -497,7 +421,6 @@ export const RunCommand = effectCmd({
             id: current.data.id,
             title: current.data.title,
             directory: current.data.directory,
-            model: current.data.model,
           }
         }
 
@@ -516,7 +439,6 @@ export const RunCommand = effectCmd({
             id,
             title: forked.data?.title ?? base.title,
             directory: forked.data?.directory ?? base.directory,
-            model: forked.data?.model ?? base.model,
           }
         }
 
@@ -525,7 +447,6 @@ export const RunCommand = effectCmd({
             id: base.id,
             title: base.title,
             directory: base.directory,
-            model: base.model,
           }
         }
 
@@ -543,7 +464,6 @@ export const RunCommand = effectCmd({
           id,
           title: result.data?.title ?? name,
           directory: result.data?.directory,
-          model: result.data?.model,
         }
       }
 
@@ -683,25 +603,12 @@ export const RunCommand = effectCmd({
       }
 
       async function execute(sdk: KiloClient) {
-        // kilocode_change start - preserve custom command precedence and avoid reading stdin for built-ins
-        const deferred = Boolean(args.attach && args.session && !directory)
-        const initial = deferred ? undefined : await KiloRun.resolveBuiltin(sdk, args.command, directory)
-        if (!deferred) {
-          KiloRun.validateBuiltin({ command: initial, continue: args.continue, session: args.session })
-          if (!initial) await loadInput()
-        }
-        // kilocode_change end
-
         const sess = await session(sdk)
         if (!sess?.id) {
           UI.error("Session not found")
           process.exit(1)
         }
         const sessionID = sess.id
-        // kilocode_change start - track Task children; plain headless runs deny subagent asks instead of hanging (#11903)
-        const auto = KiloRunAuto.create(sessionID)
-        if (!args.attach && !args.auto && !args["dangerously-skip-permissions"]) KiloHeadless.mark(sessionID)
-        // kilocode_change end
 
         function emit(type: string, data: Record<string, unknown>) {
           if (args.format === "json") {
@@ -724,14 +631,9 @@ export const RunCommand = effectCmd({
         // created, and replies issued from inside the loop must use that client.
         async function loop(client: KiloClient, events: Awaited<ReturnType<typeof sdk.event.subscribe>>) {
           const toggles = new Map<string, boolean>()
-          const MAX_RETRIES = 3 // kilocode_change
-          let retries = 0 // kilocode_change
           let error: string | undefined
 
-          for await (const payload of events.stream) {
-            const event = normalizeEvent(payload)
-            if (!event) continue
-
+          for await (const event of events.stream) {
             if (
               event.type === "message.updated" &&
               event.properties.sessionID === sessionID &&
@@ -747,9 +649,6 @@ export const RunCommand = effectCmd({
 
             if (event.type === "message.part.updated") {
               const part = event.properties.part
-              // kilocode_change start - track Task child sessions so permission replies can target them
-              KiloRunAuto.track(auto, part)
-              // kilocode_change end
               if (part.sessionID !== sessionID) continue
 
               if (part.type === "tool" && (part.state.status === "completed" || part.state.status === "error")) {
@@ -821,16 +720,6 @@ export const RunCommand = effectCmd({
               UI.error(err)
             }
 
-            // kilocode_change start - reset retry budget only after resumed work becomes busy
-            if (
-              event.type === "session.status" &&
-              event.properties.sessionID === sessionID &&
-              event.properties.status.type === "busy"
-            ) {
-              retries = 0
-            }
-            // kilocode_change end
-
             if (
               event.type === "session.status" &&
               event.properties.sessionID === sessionID &&
@@ -841,42 +730,6 @@ export const RunCommand = effectCmd({
 
             if (event.type === "permission.asked") {
               const permission = event.properties
-              // kilocode_change start - approve root and tracked Task child permissions in auto mode
-              if (args.auto) {
-                if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
-                await client.permission.reply({
-                  requestID: permission.id,
-                  reply: "once",
-                })
-                continue
-              }
-              // kilocode_change end
-
-              // kilocode_change start - answer tracked Task child asks too, so subagents don't hang (#11903)
-              // Covers daemon/attach modes where the server evaluates permissions in another
-              // process and the in-process KiloHeadless deny cannot apply.
-              if (permission.sessionID !== sessionID) {
-                if (!KiloRunAuto.allowed(auto, permission.sessionID)) continue
-                if (args["dangerously-skip-permissions"]) {
-                  await client.permission.reply({
-                    requestID: permission.id,
-                    reply: "once",
-                  })
-                  continue
-                }
-                UI.println(
-                  UI.Style.TEXT_WARNING_BOLD + "!",
-                  UI.Style.TEXT_NORMAL +
-                    `subagent permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting`,
-                )
-                await client.permission.reply({
-                  requestID: permission.id,
-                  reply: "reject",
-                })
-                continue
-              }
-              // kilocode_change end
-
               if (permission.sessionID !== sessionID) continue
 
               if (args["dangerously-skip-permissions"]) {
@@ -896,37 +749,11 @@ export const RunCommand = effectCmd({
                 })
               }
             }
-
-            // kilocode_change start - bounded network retry handling
-            if (event.type === "session.network.asked") {
-              const request = event.properties
-              if (request.sessionID !== sessionID) continue
-              retries++
-              if (retries > MAX_RETRIES) {
-                UI.println(
-                  UI.Style.TEXT_WARNING_BOLD + "!",
-                  UI.Style.TEXT_NORMAL + `network retry limit reached (${MAX_RETRIES}); rejecting`,
-                )
-                await client.network.reject({ requestID: request.id })
-                continue
-              }
-              const delay = Math.min(5000 * Math.pow(2, retries - 1), 60000)
-              await new Promise((resolve) => setTimeout(resolve, delay))
-              await client.network.reply({ requestID: request.id })
-            }
-            // kilocode_change end
           }
           return error
         }
         const cwd = args.attach ? (directory ?? sess.directory ?? (await current(sdk))) : (directory ?? root)
         const client = args.attach ? attachSDK(cwd) : sdk
-        // kilocode_change start - classify deferred attach commands in the session directory
-        const builtin = deferred ? await KiloRun.resolveBuiltin(client, args.command, cwd) : initial
-        if (deferred) {
-          KiloRun.validateBuiltin({ command: builtin, continue: args.continue, session: args.session })
-          if (!builtin) await loadInput()
-        }
-        // kilocode_change end
 
         // Validate agent if specified
         const agent = await pickAgent(client)
@@ -944,17 +771,6 @@ export const RunCommand = effectCmd({
             const error = await completed
             if (error) process.exitCode = 1
           }
-
-          // kilocode_change start - handle built-in session commands
-          if (builtin) {
-            const result = await KiloRun.runBuiltin(client, sessionID, builtin, args.model, sess.model, cwd)
-            if (result.error) {
-              if (!emit("error", { error: result.error })) UI.error(formatRunError(result.error))
-              process.exitCode = 1
-            }
-            return
-          }
-          // kilocode_change end
 
           if (args.command) {
             const result = await client.session.command({
@@ -1006,7 +822,7 @@ export const RunCommand = effectCmd({
             model,
             variant: args.variant,
             files,
-            initialInput: input.initial,
+            initialInput,
             createSession: createFreshSession,
             thinking,
             backgroundSubagents: flags.experimentalBackgroundSubagents,
@@ -1019,7 +835,6 @@ export const RunCommand = effectCmd({
       }
 
       if (args.interactive && !args.attach && !args.session && !args.continue) {
-        await loadInput() // kilocode_change - interactive local mode still consumes its initial input
         const model = pick(args.model)
         const { runInteractiveLocalMode } = await import("./run/runtime")
         const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -1045,7 +860,7 @@ export const RunCommand = effectCmd({
             replay,
             replayLimit: args["replay-limit"],
             files,
-            initialInput: input.initial,
+            initialInput,
             thinking,
             backgroundSubagents: flags.experimentalBackgroundSubagents,
             demo: args.demo,
@@ -1059,8 +874,6 @@ export const RunCommand = effectCmd({
         const sdk = attachSDK(directory)
         return await execute(sdk)
       }
-
-      if (await KiloRunDaemon.attach({ directory, execute })) return // kilocode_change
 
       const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
         const { Server } = await import("@/server/server")

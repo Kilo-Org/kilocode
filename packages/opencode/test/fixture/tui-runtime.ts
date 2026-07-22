@@ -23,17 +23,8 @@ export function createTuiResolvedKeybinds(input: Partial<TuiKeybind.Keybinds> = 
 }
 
 export function createTuiResolvedConfig(input: ResolvedInput = {}): HostResolved {
-  const attention = {
-    enabled: false,
-    notifications: true,
-    sound: true,
-    volume: 0.4,
-    sound_pack: "kilo.default", // kilocode_change
-    sounds: {},
-    ...input.attention,
-  }
   return {
-    ...resolve({ ...input, attention }, { terminalSuspend: process.platform !== "win32" }),
+    ...resolve(input, { terminalSuspend: process.platform !== "win32" }),
     plugin_origins: input.plugin_origins,
   }
 }

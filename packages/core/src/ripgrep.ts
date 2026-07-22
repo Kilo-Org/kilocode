@@ -6,7 +6,6 @@ import path from "path"
 import { LayerNode } from "./effect/layer-node"
 import { Entry, Match } from "./filesystem/schema"
 import { FSUtil } from "./fs-util"
-import * as SpawnValidation from "./kilocode/spawn-validation" // kilocode_change
 import { AppProcess, collectStream, waitForAbort } from "./process"
 import { NonNegativeInt, PositiveInt, RelativePath } from "./schema"
 import { RipgrepBinary } from "./ripgrep/binary"
@@ -68,7 +67,6 @@ export interface GlobInput {
   readonly hidden?: boolean
   readonly follow?: boolean
   readonly signal?: AbortSignal
-  readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
 }
 
 export interface GrepInput {
@@ -78,22 +76,13 @@ export interface GrepInput {
   readonly include?: string
   readonly limit: number
   readonly signal?: AbortSignal
-  readonly validate?: Effect.Effect<void, unknown> // kilocode_change - bind approved searches at spawn
 }
 
 export interface Interface {
   readonly find: (input: FindInput) => Effect.Effect<readonly Entry[], Error>
-  readonly glob: (input: GlobInput) => Effect.Effect<SearchResult<Entry>, Error> // kilocode_change
-  readonly grep: (input: GrepInput) => Effect.Effect<SearchResult<Match>, Error | InvalidPatternError> // kilocode_change
+  readonly glob: (input: GlobInput) => Effect.Effect<readonly Entry[], Error>
+  readonly grep: (input: GrepInput) => Effect.Effect<readonly Match[], Error | InvalidPatternError>
 }
-
-// kilocode_change start - retain truncation state through model-facing tools
-export interface SearchResult<A> {
-  readonly items: readonly A[]
-  readonly truncated: boolean
-  readonly partial: boolean
-}
-// kilocode_change end
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/v2/Ripgrep") {}
 
@@ -116,21 +105,12 @@ export const layer = Layer.effect(
       readonly parse: (line: string) => Effect.Effect<A | undefined, Error>
       readonly pattern?: string
       readonly onItem?: (item: A) => Effect.Effect<void>
-      readonly validate?: Effect.Effect<void, unknown> // kilocode_change - spawn-bound target validation
     }) => {
       const program = Effect.scoped(
         Effect.gen(function* () {
-          const filepath = yield* binary.filepath
-          // kilocode_change start - validate approved targets after all spawn preparation
-          const command = ChildProcess.make(filepath, input.args, {
-            cwd: input.cwd,
-            extendEnv: true,
-            stdin: "ignore",
-          })
           const handle = yield* process.spawn(
-            input.validate ? SpawnValidation.attach(command, input.validate) : command,
+            ChildProcess.make(yield* binary.filepath, input.args, { cwd: input.cwd, extendEnv: true, stdin: "ignore" }),
           )
-          // kilocode_change end
           const stderrFiber = yield* collectStream(handle.stderr, ERROR_BYTES).pipe(
             Effect.map((output) => output.buffer.toString("utf8")),
             Effect.forkScoped,
@@ -179,7 +159,6 @@ export const layer = Layer.effect(
           cwd: input.cwd,
           limit: input.limit,
           signal: input.signal,
-          validate: input.validate, // kilocode_change - preserve spawn-bound target validation
           args: [
             "--no-config",
             "--files",
@@ -197,10 +176,8 @@ export const layer = Layer.effect(
                 .replaceAll("\\", "/"),
             ),
         }).pipe(
-          // kilocode_change start - retain spawn metadata after mapping paths
-          Effect.map((result) => ({
-            ...result,
-            items: result.items.map((relative) => {
+          Effect.map((result) =>
+            result.items.map((relative) => {
               const absolute = path.resolve(input.cwd, relative)
               return new Entry({
                 path: RelativePath.make(relative),
@@ -208,8 +185,7 @@ export const layer = Layer.effect(
                 mime: FSUtil.mimeType(absolute),
               })
             }),
-          })),
-          // kilocode_change end
+          ),
           Effect.catchTag("Ripgrep.InvalidPatternError", (cause) => Effect.fail(failure(cause.message, cause))),
         ),
       find: (input) =>
@@ -280,10 +256,8 @@ export const layer = Layer.effect(
               }),
             ),
         }).pipe(
-          // kilocode_change start - retain spawn metadata after mapping matches
-          Effect.map((result) => ({
-            ...result,
-            items: result.items.map((match) => {
+          Effect.map((result) =>
+            result.items.map((match) => {
               const relative = match.path.text
                 .replace(/^(?:\.[\\/])+/u, "")
                 .replace(/^[\\/]+/u, "")
@@ -305,8 +279,7 @@ export const layer = Layer.effect(
                 })),
               })
             }),
-          })),
-          // kilocode_change end
+          ),
         ),
     })
   }),

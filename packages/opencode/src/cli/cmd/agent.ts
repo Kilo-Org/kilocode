@@ -108,10 +108,7 @@ const AgentCreateCommand = effectCmd({
           if (prompts.isCancel(scopeResult)) throw new UI.CancelledError()
           scope = scopeResult
         }
-        targetPath = path.join(
-          scope === "global" ? Global.Path.config : path.join(ctx.worktree, ".kilo"), // kilocode_change
-          "agents",
-        )
+        targetPath = path.join(scope === "global" ? Global.Path.config : path.join(ctx.worktree, ".opencode"), "agents")
       }
 
       // Get description

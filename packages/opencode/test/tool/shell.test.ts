@@ -5,7 +5,7 @@ import type * as Scope from "effect/Scope"
 import os from "os"
 import path from "path"
 import { Config } from "@/config/config"
-import { Shell } from "../../src/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { ShellTool } from "../../src/tool/shell"
 import { Filesystem } from "@/util/filesystem"
 import { provideInstance, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
@@ -70,7 +70,7 @@ const ctx = {
   sessionID: SessionID.make("ses_test"),
   messageID: MessageID.make("msg_test"),
   callID: "",
-  agent: "code", // kilocode_change
+  agent: "build",
   abort: AbortSignal.any([]),
   messages: [],
   metadata: () => Effect.void,
@@ -1028,10 +1028,7 @@ describe("tool.shell permissions", () => {
           yield* run({ command: "ls -la", description: "List" }, capture(requests))
           const bashReq = requests.find((r) => r.permission === "bash")
           expect(bashReq).toBeDefined()
-          // kilocode_change start — arity prefix produces "ls *" with space before wildcard
-          expect(bashReq!.always).toContain("ls *")
-          expect(bashReq!.patterns).toContain("ls -la")
-          // kilocode_change end
+          expect(bashReq!.always[0]).toBe("ls *")
         }),
       )
     }),

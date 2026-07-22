@@ -37,10 +37,8 @@ describe("websearch provider", () => {
     expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: true })).toBe("parallel")
   })
 
-  test("is only enabled for kilo or explicit websearch provider flags", () => {
-    // kilocode_change
-    expect(webSearchEnabled(ProviderV2.ID.kilo, { exa: false, parallel: false })).toBe(true) // kilocode_change
-    expect(webSearchEnabled(ProviderV2.ID.opencode, { exa: false, parallel: false })).toBe(false) // kilocode_change
+  test("is only enabled for opencode or explicit websearch provider flags", () => {
+    expect(webSearchEnabled(ProviderV2.ID.opencode, { exa: false, parallel: false })).toBe(true)
     expect(webSearchEnabled(ProviderV2.ID.openai, { exa: false, parallel: false })).toBe(false)
     expect(webSearchEnabled(ProviderV2.ID.openai, { exa: true, parallel: false })).toBe(true)
     expect(webSearchEnabled(ProviderV2.ID.openai, { exa: false, parallel: true })).toBe(true)

@@ -5,6 +5,7 @@ import { Cause } from "effect"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import { UnauthorizedError } from "@modelcontextprotocol/sdk/client/auth.js"
+import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js"
 import * as prompts from "@clack/prompts"
 import { UI } from "../ui"
 import { MCP } from "../../mcp"
@@ -17,12 +18,10 @@ import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { modify, applyEdits } from "jsonc-parser"
-import { KilocodeMcpConfig } from "@/kilocode/cli/cmd/mcp" // kilocode_change
 import { Filesystem } from "@/util/filesystem"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Effect } from "effect"
-import { Flag } from "@opencode-ai/core/flag/flag" // kilocode_change
 
 function getAuthStatusIcon(status: MCP.AuthStatus): string {
   switch (status) {
@@ -122,7 +121,7 @@ export const McpListCommand = effectCmd({
 
     if (servers.length === 0) {
       prompts.log.warn("No MCP servers configured")
-      prompts.outro("Add servers with: kilo mcp add") // kilocode_change
+      prompts.outro("Add servers with: opencode mcp add")
       return
     }
 
@@ -190,7 +189,7 @@ export const McpAuthCommand = effectCmd({
 
     if (servers.length === 0) {
       prompts.log.warn("No OAuth-capable MCP servers configured")
-      prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in kilo.json:") // kilocode_change
+      prompts.log.info("Remote MCP servers support OAuth by default. Add a remote server in opencode.json:")
       prompts.log.info(`
   "mcp": {
     "my-server": {
@@ -404,26 +403,12 @@ export const McpLogoutCommand = effectCmd({
 })
 
 async function resolveConfigPath(baseDir: string, global = false) {
-  // kilocode_change start - prefer supported Kilo config directories over root files
-  const roots = [
-    path.join(baseDir, "kilo.jsonc"),
-    path.join(baseDir, "kilo.json"),
-    path.join(baseDir, "opencode.jsonc"),
-    path.join(baseDir, "opencode.json"),
-  ]
-  const candidates = global
-    ? roots
-    : [
-        path.join(baseDir, ".kilo", "kilo.jsonc"),
-        path.join(baseDir, ".kilo", "kilo.json"),
-        path.join(baseDir, ".kilo", "opencode.jsonc"),
-        path.join(baseDir, ".kilo", "opencode.json"),
-        path.join(baseDir, ".kilocode", "kilo.jsonc"),
-        path.join(baseDir, ".kilocode", "kilo.json"),
-        path.join(baseDir, ".kilocode", "opencode.jsonc"),
-        path.join(baseDir, ".kilocode", "opencode.json"),
-        ...roots,
-      ]
+  // Check for existing config files (prefer .jsonc over .json, check .opencode/ subdirectory too)
+  const candidates = [path.join(baseDir, "opencode.json"), path.join(baseDir, "opencode.jsonc")]
+
+  if (!global) {
+    candidates.push(path.join(baseDir, ".opencode", "opencode.json"), path.join(baseDir, ".opencode", "opencode.jsonc"))
+  }
 
   for (const candidate of candidates) {
     if (await Filesystem.exists(candidate)) {
@@ -431,9 +416,8 @@ async function resolveConfigPath(baseDir: string, global = false) {
     }
   }
 
-  // Default to kilo.json if none exist
-  return path.join(baseDir, "kilo.json")
-  // kilocode_change end
+  // Default to opencode.json if none exist
+  return candidates[0]
 }
 
 async function addMcpToConfig(name: string, mcpConfig: ConfigMCPV1.Info, configPath: string) {
@@ -446,7 +430,7 @@ async function addMcpToConfig(name: string, mcpConfig: ConfigMCPV1.Info, configP
   const edits = modify(text, ["mcp", name], mcpConfig, {
     formattingOptions: { tabSize: 2, insertSpaces: true },
   })
-  const result = KilocodeMcpConfig.format(configPath, applyEdits(text, edits)) // kilocode_change
+  const result = applyEdits(text, edits)
 
   await Filesystem.write(configPath, result)
 
@@ -480,7 +464,6 @@ export const McpAddCommand = effectCmd({
     const maybeCtx = yield* InstanceRef
     if (!maybeCtx) return yield* Effect.die("InstanceRef not provided")
     const ctx = maybeCtx
-    const global = Flag.KILO_CONFIG_DIR ?? Global.Path.config // kilocode_change - honor the active Kilo config profile
     yield* Effect.promise(async () => {
       const command = args["--"] ?? []
       if (!args.name && (args.url || args.env?.length || args.header?.length || command.length)) {
@@ -522,7 +505,7 @@ export const McpAddCommand = effectCmd({
               ...(Object.keys(environment).length ? { environment } : {}),
             }
 
-        const configPath = await resolveConfigPath(global, true) // kilocode_change
+        const configPath = await resolveConfigPath(Global.Path.config, true)
         await addMcpToConfig(args.name, mcpConfig, configPath)
         prompts.log.success(`MCP server "${args.name}" added to ${configPath}`)
         return
@@ -536,7 +519,7 @@ export const McpAddCommand = effectCmd({
       // Resolve config paths eagerly for hints
       const [projectConfigPath, globalConfigPath] = await Promise.all([
         resolveConfigPath(ctx.worktree),
-        resolveConfigPath(global, true), // kilocode_change
+        resolveConfigPath(Global.Path.config, true),
       ])
 
       // Determine scope
@@ -587,7 +570,7 @@ export const McpAddCommand = effectCmd({
       if (type === "local") {
         const command = await prompts.text({
           message: "Enter command to run",
-          placeholder: "e.g., kilo x @modelcontextprotocol/server-filesystem", // kilocode_change
+          placeholder: "e.g., opencode x @modelcontextprotocol/server-filesystem",
           validate: (x) => (x && x.length > 0 ? undefined : "Required"),
         })
         if (prompts.isCancel(command)) throw new UI.CancelledError()
@@ -770,9 +753,9 @@ export const McpDebugCommand = effectCmd({
             jsonrpc: "2.0",
             method: "initialize",
             params: {
-              protocolVersion: "2024-11-05",
+              protocolVersion: LATEST_PROTOCOL_VERSION,
               capabilities: {},
-              clientInfo: { name: "kilo-debug", version: InstallationVersion }, // kilocode_change
+              clientInfo: { name: "opencode-debug", version: InstallationVersion },
             },
             id: 1,
           }),
@@ -816,7 +799,7 @@ export const McpDebugCommand = effectCmd({
 
           try {
             const client = new Client({
-              name: "kilo-debug", // kilocode_change
+              name: "opencode-debug",
               version: InstallationVersion,
             })
             await client.connect(transport)

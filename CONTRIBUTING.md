@@ -1,192 +1,59 @@
-# Contributing to Kilo CLI
+# Contributing to OpenCode
 
-See [the Documentation for details on contributing](https://kilo.ai/docs/contributing).
+We want to make it easy for you to contribute to OpenCode. Here are the most common type of changes that get merged:
 
-## TL;DR
+- Bug fixes
+- Additional LSPs / Formatters
+- Improvements to LLM performance
+- Support for new providers
+- Fixes for environment-specific quirks
+- Missing standard behavior
+- Documentation improvements
 
-There are lots of ways to contribute to the project:
+However, any UI or core product feature must go through a design review with the core team before implementation.
 
-- **Code Contributions:** Implement new features or fix bugs
-- **Documentation:** Improve existing docs or create new guides
-- **Bug Reports:** Report issues you encounter
-- **Feature Requests:** Suggest new features or improvements
-- **Community Support:** Help other users in the community
+If you are unsure if a PR would be accepted, feel free to ask a maintainer or look for issues with any of the following labels:
 
-The Kilo Community is [on Discord](https://kilo.ai/discord).
+- [`help wanted`](https://github.com/anomalyco/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3Ahelp-wanted)
+- [`good first issue`](https://github.com/anomalyco/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22good%20first%20issue%22)
+- [`bug`](https://github.com/anomalyco/opencode/issues?q=is%3Aissue%20state%3Aopen%20label%3Abug)
+- [`perf`](https://github.com/anomalyco/opencode/issues?q=is%3Aopen%20is%3Aissue%20label%3A%22perf%22)
 
-## Prerequisites
+> [!NOTE]
+> PRs that ignore these guardrails will likely be closed.
 
-- **Bun 1.3.14+** — required for all packages.
-- **Java 21** — required by the JetBrains plugin. The root `bun turbo typecheck` and `bun turbo test:ci` commands include `@kilocode/kilo-jetbrains` and will fail without Java 21.
+Want to take on an issue? Leave a comment and a maintainer may assign it to you unless it is something we are already working on.
 
-  The preferred way to install Java is via [SDKMAN](https://sdkman.io/install):
+## Adding New Providers
 
-  ```bash
-  # Install SDKMAN (if not already installed)
-  curl -s "https://get.sdkman.io" | bash
+New providers shouldn't require many if ANY code changes, but if you want to add support for a new provider first make a PR to:
+https://github.com/anomalyco/models.dev
 
-  # Install and activate Java 21 (Eclipse Temurin)
-  sdk install java 21-tem
-  sdk use java 21-tem
+## Developing OpenCode
 
-  # Verify
-  java -version
-  ```
-
-  If you don't plan to work on the JetBrains plugin, you can still run non-JetBrains checks directly:
-
-  ```bash
-  bun turbo typecheck --filter=!@kilocode/kilo-jetbrains
-  ```
-
-## Developing Kilo CLI
-
-- **Requirements:** Bun 1.3.14+, Java 21 (see [Prerequisites](#prerequisites) above)
-- Install dependencies and start the CLI from the repo root:
+- Requirements: Bun 1.3+
+- Install dependencies and start the dev server from the repo root:
 
   ```bash
   bun install
   bun dev
   ```
 
-  `bun dev` and `bun run dev` both run the local CLI. For the VS Code extension, use `bun run extension`.
-
-## Common Checks
-
-From the repo root:
-
-```bash
-bun install
-bun run lint
-bun run typecheck
-```
-
-`bun run typecheck` wraps `bun turbo typecheck`. Use `bun turbo typecheck --force` if you need to bypass the Turbo cache.
-
-Do **not** run `bun test` from the repo root. The root test script intentionally exits with failure so tests run from the package that owns them.
-
-### CLI checks
-
-From `packages/opencode/`:
-
-```bash
-bun run typecheck
-bun test
-bun test ./path/to/file.test.ts
-```
-
-For backend/API validation, see [`TESTING.md`](./TESTING.md). It covers starting the local backend with `bun dev serve` and making `curl` requests against it. After changing server endpoints in `packages/opencode/src/server/`, run `./script/generate.ts` from the repo root to regenerate `packages/sdk/js/`.
-
-### VS Code extension checks
-
-From `packages/kilo-vscode/`:
-
-```bash
-bun run typecheck
-bun run lint
-bun run test:unit
-bun run test
-bun run compile
-bun run package
-```
-
-### Documentation checks
-
-From the repo root:
-
-```bash
-bun run --filter @kilocode/kilo-docs test
-bun run --filter @kilocode/kilo-docs build
-bun run --filter @kilocode/kilo-docs dev
-```
-
-For manual docs validation, run the docs site locally, preview the affected page, and check changed links and rendered content.
-
-### Guardrails
-
-- User-facing changes usually need a changeset (`bunx changeset add` or a file under `.changeset/`).
-- After changing server endpoints, regenerate the SDK with `./script/generate.ts`.
-- After adding or changing guarded URLs in `packages/kilo-vscode/`, `packages/kilo-vscode/webview-ui/`, or `packages/opencode/src/`, run `bun run script/extract-source-links.ts` from the repo root.
-- When editing shared `packages/opencode/` files, keep Kilo changes small and mark Kilo-only edits with `// kilocode_change` for a single line or `// kilocode_change start` / `// kilocode_change end` for a block. Do not add these markers inside `kilocode`-named paths.
-
-### Developing the VS Code Extension
-
-Build and launch the extension in an isolated VS Code instance:
-
-```bash
-bun run extension        # Build + launch in dev mode
-```
-
-This auto-detects VS Code on macOS, Linux, and Windows. Override with `--app-path PATH` or `VSCODE_EXEC_PATH`. Use `--insiders` to prefer Insiders, `--workspace PATH` to open a specific folder, or `--clean` to reset cached state.
-
-### Developing the JetBrains Plugin
-
-Requires Java 21 (see [Prerequisites](#prerequisites)). From `packages/kilo-jetbrains/`:
-
-```bash
-./gradlew typecheck    # Compile-check all Kotlin sources
-./gradlew test         # Run all tests (backend + frontend)
-./gradlew --no-configuration-cache runIdeSplitMode  # Launch local split-mode sandbox; backend downloads the pinned CLI
-```
-
-Use `./gradlew runIde` only for a monolithic sandbox. JetBrains dev runs do not build or bundle CLI binaries; the backend downloads the pinned release at connect time.
-
-Or via the root turbo filter to run only JetBrains checks from the repo root:
-
-```bash
-bun turbo typecheck --filter=@kilocode/kilo-jetbrains
-bun turbo test:ci --filter=@kilocode/kilo-jetbrains
-```
-
 ### Running against a different directory
 
-By default, `bun dev` runs Kilo CLI in the `packages/opencode` directory. To run it against a different directory or repository:
+By default, `bun dev` runs OpenCode in the `packages/opencode` directory. To run it against a different directory or repository:
 
 ```bash
 bun dev <directory>
 ```
 
-To run Kilo CLI in the root of the repo itself:
+To run OpenCode in the root of the opencode repo itself:
 
 ```bash
 bun dev .
 ```
 
-### Running Kilo CLI from any folder
-
-`bin/kilodev` is a self-locating launcher that runs this checkout from wherever you invoke it. Running it with no arguments launches the TUI pointed at the caller's directory; any arguments are forwarded to the CLI unchanged.
-
-One-shot install (recommended). From the repo root:
-
-```bash
-./bin/kilodev dev-setup
-```
-
-This detects your shell, shows exactly what it will add, asks for confirmation, writes an idempotent block to your rc file, and saves a timestamped backup of the original. Re-running is safe — it only rewrites when the snippet has changed.
-
-Useful flags:
-
-- `--yes` — skip the confirmation prompt (good for CI/containers).
-- `--print` — just print the snippet, don't touch any file (pipe-friendly).
-- `--dry-run` — show what would change without writing.
-- `--shell <zsh|bash|fish|powershell>` — override shell detection.
-- `--rc <path>` — override the rc file.
-
-Manual alternatives (equivalent, no CLI invocation needed):
-
-- Unix: add `alias kilodev='/path/to/kilocode/bin/kilodev'` to `~/.zshrc` / `~/.bashrc`, or `fish_add_path /path/to/kilocode/bin`.
-- Windows: add `C:\path\to\kilocode\bin` to PATH (System Environment Variables), or add `function kilodev { & "C:\path\to\kilocode\bin\kilodev.cmd" @args }` to `$PROFILE`.
-
-Then from anywhere:
-
-```bash
-cd ~/some/project
-kilodev                      # opens TUI with project = ~/some/project
-kilodev dev-setup --print    # prints the alias line (scripting)
-kilodev run --dir "$PWD" "…" # subcommands pass through; use --dir for run/serve
-```
-
-### Building a "local" binary
+### Building a "localcode"
 
 To compile a standalone executable:
 
@@ -197,146 +64,236 @@ To compile a standalone executable:
 Then run it with:
 
 ```bash
-./packages/opencode/dist/@kilocode/cli-<platform>/bin/kilo
+./packages/opencode/dist/opencode-<platform>/bin/opencode
 ```
 
 Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
 
-### Understanding bun dev vs kilo
+- Core pieces:
+  - `packages/opencode`: OpenCode core business logic & server.
+  - `packages/opencode/src/cli/cmd/tui/`: The TUI code, written in SolidJS with [opentui](https://github.com/sst/opentui)
+  - `packages/app`: The shared web UI components, written in SolidJS
+  - `packages/desktop`: The native desktop app, built with Electron (wraps `packages/app`)
+  - `packages/plugin`: Source for `@opencode-ai/plugin`
 
-During development, `bun dev` is the local equivalent of the built `kilo` command. Both run the same CLI interface:
+### Understanding bun dev vs opencode
+
+During development, `bun dev` is the local equivalent of the built `opencode` command. Both run the same CLI interface:
 
 ```bash
 # Development (from project root)
 bun dev --help           # Show all available commands
 bun dev serve            # Start headless API server
+bun dev web              # Start server + open web interface
+bun dev <directory>      # Start TUI in specific directory
 
 # Production
-kilo --help          # Show all available commands
-kilo serve           # Start headless API server
+opencode --help          # Show all available commands
+opencode serve           # Start headless API server
+opencode web             # Start server + open web interface
+opencode <directory>     # Start TUI in specific directory
 ```
 
-### Testing with a local backend
+### Running the API Server
 
-To point the CLI at a local backend (e.g., a locally running Kilo API server on port 3000), set the `KILO_API_URL` environment variable:
+To start the OpenCode headless API server:
 
 ```bash
-KILO_API_URL=http://localhost:3000 bun dev
+bun dev serve
 ```
 
-This redirects all gateway traffic (auth, model listing, provider routing, profile, etc.) to your local server. The default is `https://api.kilo.ai`.
+This starts the headless server on port 4096 by default. You can specify a different port:
 
-There are also optional overrides for other services:
+```bash
+bun dev serve --port 8080
+```
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `KILO_API_URL` | `https://api.kilo.ai` | Kilo API (gateway, auth, models, profile) |
-| `KILO_SESSION_INGEST_URL` | `https://ingest.kilosessions.ai` | Session export / cloud sync |
-| `KILO_MODELS_URL` | `https://models.dev` | Model metadata |
+### Running the Web App
 
-> **VS Code:** The repo includes a "VSCode - Run Extension (Local Backend)" launch config in `.vscode/launch.json` that sets `KILO_API_URL=http://localhost:3000` automatically.
+To test UI changes during development:
 
-## Issue Template Requirements
+1. **First, start the OpenCode server** (see [Running the API Server](#running-the-api-server) section above)
+2. **Then run the web app:**
 
-If you open an issue through the GitHub web UI, GitHub will guide you through the correct template automatically.
+```bash
+bun run --cwd packages/app dev
+```
 
-If you open an issue through `gh issue create`, the API, or another tool that bypasses the web UI, include the equivalent required fields yourself so the issue still matches the template. Issues that skip required fields may be auto-closed by the compliance bot.
+This starts a local dev server at http://localhost:5173 (or similar port shown in output). Most UI changes can be tested here, but the server must be running for full functionality.
 
-Current required fields by issue type:
+### Running the Desktop App
 
-- **Bug report:** include a `Description`. When you can, also add Plugins, Kilo version, Steps to reproduce, Screenshot and/or share link, Operating System, and Terminal so the report matches the full bug template.
-- **Feature request:** use a title prefixed with `[FEATURE]:`, complete the required checkbox confirming you have searched for duplicates, and fill in `Describe the enhancement you want to request`.
-- **Question:** include the `Question` field.
+The desktop app is an Electron application that wraps the web UI.
+
+To run the desktop app in development:
+
+```bash
+bun run --cwd packages/desktop dev
+```
+
+To create a production build and package the app:
+
+```bash
+bun run --cwd packages/desktop build
+bun run --cwd packages/desktop package
+```
+
+> [!NOTE]
+> If you make changes to the API or SDK (e.g. `packages/opencode/src/server/server.ts`), run `./script/generate.ts` to regenerate the SDK and related files.
+
+Please try to follow the [style guide](./AGENTS.md)
+
+### Setting up a Debugger
+
+Bun debugging is currently rough around the edges. We hope this guide helps you get set up and avoid some pain points.
+
+The most reliable way to debug OpenCode is to run it manually in a terminal via `bun run --inspect=<url> dev ...` and attach
+your debugger via that URL. Other methods can result in breakpoints being mapped incorrectly, at least in VSCode (YMMV).
+
+Caveats:
+
+- If you want to run the OpenCode TUI and have breakpoints triggered in the server code, you might need to run `bun dev spawn` instead of
+  the usual `bun dev`. This is because `bun dev` runs the server in a worker thread and breakpoints might not work there.
+- If `spawn` does not work for you, you can debug the server separately:
+  - Debug server: `bun run --inspect=ws://localhost:6499/ --cwd packages/opencode ./src/index.ts serve --port 4096`,
+    then attach TUI with `opencode attach http://localhost:4096`
+  - Debug TUI: `bun run --inspect=ws://localhost:6499/ --cwd packages/opencode --conditions=browser ./src/index.ts`
+
+Other tips and tricks:
+
+- You might want to use `--inspect-wait` or `--inspect-brk` instead of `--inspect`, depending on your workflow
+- Specifying `--inspect=ws://localhost:6499/` on every invocation can be tiresome, you may want to `export BUN_OPTIONS=--inspect=ws://localhost:6499/` instead
+
+#### VSCode Setup
+
+If you use VSCode, you can use our example configurations [.vscode/settings.example.json](.vscode/settings.example.json) and [.vscode/launch.example.json](.vscode/launch.example.json).
+
+Some debug methods that can be problematic:
+
+- Debug configurations with `"request": "launch"` can have breakpoints incorrectly mapped and thus unusable
+- The same problem arises when running OpenCode in the VSCode `JavaScript Debug Terminal`
+
+With that said, you may want to try these methods, as they might work for you.
 
 ## Pull Request Expectations
 
-Contributor guidance exists to protect maintainer review time and keep reviews focused on work that is ready to evaluate.
+### Issue First Policy
 
-- **UI Changes:** Include screenshots or videos (before/after).
-- **Logic Changes:** Explain how you verified it works.
+**All PRs must reference an existing issue.** Before opening a PR, open an issue describing the bug or feature. This helps maintainers triage and prevents duplicate work. PRs without a linked issue may be closed without review.
 
-### Contribution Ownership and AI Assistance
+- Use `Fixes #123` or `Closes #123` in your PR description to link the issue
+- For small fixes, a brief issue is fine - just enough context for maintainers to understand the problem
 
-AI and coding agents are allowed, but contributors own the work they submit. Before requesting review, make sure you personally understand the change, have tested it appropriately, can explain the diff, and understand how it interacts with the affected packages and the rest of the repo.
+### General Requirements
 
-If you use an agent, start it from the repo root so the root `AGENTS.md` is available. When your change touches a package with its own guidance, read and follow that package's `AGENTS.md` or contributor docs too.
+- Keep pull requests small and focused
+- Explain the issue and why your change fixes it
+- Before adding new functionality, ensure it doesn't already exist elsewhere in the codebase
 
-Maintainers may close PRs that appear to be submitted without credible contributor ownership or understanding, including AI-assisted work that the contributor cannot explain or has not meaningfully reviewed.
+### UI Changes
 
-### Tracker Use and Automation
+If your PR includes UI changes, please include screenshots or videos showing the before and after. This helps maintainers review faster and gives you quicker feedback.
 
-Do not submit batches of agent-generated, untested, or weakly reviewed PRs.
+### Logic Changes
 
-Please keep concurrent PRs focused and limited. As a rule, open no more than three PRs at a time, especially if you are a new contributor. Prioritize high-impact or high-priority issues first instead of opening many speculative fixes. If a contributor opens a large batch of low-value or duplicative PRs, maintainers may close the batch and ask the contributor to choose one PR to reopen, focus, and bring up to the documented review bar before submitting more.
+For non-UI changes (bug fixes, new features, refactors), explain **how you verified it works**:
 
-For issues, do not mass-create tickets through automation or agents. Search existing issues first, open issues only when you have enough context for someone to act, and prioritize the most important reports instead of filing every possible finding. Maintainers may close duplicate, low-signal, automated, or weakly reviewed issues without action.
+- What did you test?
+- How can a reviewer reproduce/confirm the fix?
 
-Repeated disregard of this contribution guide, or high-volume automated or agent-generated tracker spam across issues or PRs, may result in maintainers blocking the responsible account.
+### No AI-Generated Walls of Text
 
-### Bug Bounties
+Long, AI-generated PR descriptions and issues are not acceptable and may be ignored. Respect the maintainers' time:
 
-Kilo has bug bounties. To be eligible, make sure your GitHub account is connected in your Kilo account.
+- Write short, focused descriptions
+- Explain what changed and why in your own words
+- If you can't explain it briefly, your PR might be too large
 
-### Testing Evidence
+### PR Titles
 
-Every PR marked ready for review must include testing evidence. A bare `Not tested` or `N/A` answer is not sufficient.
+PR titles should follow conventional commit standards:
 
-Choose checks that match the files touched. Include command results and manual/local verification; for visual CLI or extension changes, include screenshots or videos. Docs-only, config-only, and similar changes still need concrete evidence, such as a relevant command check or preview.
+- `feat:` new feature or functionality
+- `fix:` bug fix
+- `docs:` documentation or README changes
+- `chore:` maintenance tasks, dependency updates, etc.
+- `refactor:` code refactoring without changing behavior
+- `test:` adding or updating tests
 
-If you cannot complete a relevant command, include all of the following in the PR:
+You can optionally include a scope to indicate which package is affected:
 
-- The command you attempted or would normally run
-- The blocker or failure that prevented completion
-- The substitute verification you performed instead
+- `feat(app):` feature in the app package
+- `fix(desktop):` bug fix in the desktop package
+- `chore(opencode):` maintenance in the opencode package
 
-See [Testing Evidence for Pull Requests](packages/kilo-docs/pages/contributing/development-environment.md#testing-evidence-for-pull-requests) for more examples. Agent limitations, local resource constraints, OOM constraints, or an agent prompt that says to skip tests do not waive this requirement. Draft PRs may be incomplete until they are marked ready for review. Maintainers may still defer or close review at their discretion.
+Examples:
 
-Our issue-first policy asks contributors to reference an existing issue when opening a PR. This helps reviewers understand the problem statement, discussion, and intended scope before reviewing the code change.
+- `docs: update contributing guidelines`
+- `fix: resolve crash on startup`
+- `feat: add dark mode support`
+- `feat(app): add dark mode support`
+- `fix(desktop): resolve crash on startup`
+- `chore: bump dependency versions`
 
-A review-ready PR description should explain:
+### Style Preferences
 
-- What problem is being solved
-- Why the change is needed
-- Important implementation choices or tradeoffs reviewers cannot infer from the diff
-- How the change was tested or verified
+These are not strictly enforced, they are just general guidelines:
 
-Keep the description focused on context reviewers cannot infer from the diff. Skip file-by-file summaries, placeholders, and other filler.
+- **Functions:** Keep logic within a single function unless breaking it out adds clear reuse or composition benefits.
+- **Destructuring:** Do not do unnecessary destructuring of variables.
+- **Control flow:** Avoid `else` statements.
+- **Error handling:** Prefer `.catch(...)` instead of `try`/`catch` when possible.
+- **Types:** Reach for precise types and avoid `any`.
+- **Variables:** Stick to immutable patterns and avoid `let`.
+- **Naming:** Choose concise single-word identifiers when they remain descriptive.
+- **Runtime APIs:** Use Bun helpers such as `Bun.file()` when they fit the use case.
 
-For visual UI changes, include screenshots or video showing the relevant before/after or resulting state.
+## Feature Requests
 
-Maintainers may close or decline review of PRs presented as review-ready at their discretion when they lack:
+For net-new functionality, start with a design conversation. Open an issue describing the problem, your proposed approach (optional), and why it belongs in OpenCode. The core team will help decide whether it should move forward; please wait for that approval instead of opening a feature PR directly.
 
-- Linked issue context
-- A clear what/why explanation
-- Credible testing evidence
-- Credible contributor ownership of AI-assisted work
-- Relevant UI proof for visual UI changes
+## Trust & Vouch System
 
-When a PR is close to this bar, addresses important work, or would benefit from further shaping, maintainers may ask for specific fixes instead of closing or declining review. Contributors may reopen or resubmit once the PR meets the documented bar.
+This project uses [vouch](https://github.com/mitchellh/vouch) to manage contributor trust. The vouch list is maintained in [`.github/VOUCHED.td`](.github/VOUCHED.td).
 
-## PR Titles
+### How it works
 
-Use conventional commit style PR titles such as:
+- **Vouched users** are explicitly trusted contributors.
+- **Denounced users** are explicitly blocked. Issues and pull requests from denounced users are automatically closed. If you have been denounced, you can request to be unvouched by reaching out to a maintainer on [Discord](https://opencode.ai/discord)
+- **Everyone else** can participate normally — you don't need to be vouched to open issues or PRs.
 
-- `feat: add MCP settings tab`
-- `fix: correct Windows path handling`
-- `docs: clarify issue template requirements`
-- `chore: bump TypeScript to 5.8`
-- `refactor: extract diff renderer into a hook`
-- `test: cover ServerManager orphan cleanup`
+### For maintainers
 
-## Issue and PR Lifecycle
+Collaborators with write access can manage the vouch list by commenting on any issue:
 
-To keep our backlog manageable, we automatically close inactive issues and PRs after a period of inactivity. This isn't a judgment on quality — older items tend to lose context over time and we'd rather start fresh if they're still relevant. Feel free to reopen or create a new issue/PR if you're still working on something!
+- `vouch` — vouch for the issue author
+- `vouch @username` — vouch for a specific user
+- `denounce` — denounce the issue author
+- `denounce @username` — denounce a specific user
+- `denounce @username <reason>` — denounce with a reason
+- `unvouch` / `unvouch @username` — remove someone from the list
 
-Maintainers may also close issues or PRs that disregard the contribution guide, bypass required context, or lack credible contributor ownership of AI-assisted work.
+Changes are committed automatically to `.github/VOUCHED.td`.
 
-## Style Preferences
+### Denouncement policy
 
-- **Functions:** Keep logic within a single function unless breaking it out adds clear reuse.
-- **Destructuring:** Avoid unnecessary destructuring.
-- **Control flow:** Avoid `else` statements; prefer early returns.
-- **Types:** Avoid `any`.
-- **Variables:** Prefer `const`.
-- **Naming:** Concise single-word identifiers when descriptive.
-- **Runtime APIs:** Use Bun helpers (e.g., `Bun.file()`).
+Denouncement is reserved for users who repeatedly submit low-quality AI-generated contributions, spam, or otherwise act in bad faith. It is not used for disagreements or honest mistakes.
+
+## Issue Requirements
+
+All issues **must** use one of our issue templates:
+
+- **Bug report** — for reporting bugs (requires a description)
+- **Feature request** — for suggesting enhancements (requires verification checkbox and description)
+- **Question** — for asking questions (requires the question)
+
+Blank issues are not allowed. When a new issue is opened, an automated check verifies that it follows a template and meets our contributing guidelines. If an issue doesn't meet the requirements, you'll receive a comment explaining what needs to be fixed and have **2 hours** to edit the issue. After that, it will be automatically closed.
+
+Issues may be flagged for:
+
+- Not using a template
+- Required fields left empty or filled with placeholder text
+- AI-generated walls of text
+- Missing meaningful content
+
+If you believe your issue was incorrectly flagged, let a maintainer know.

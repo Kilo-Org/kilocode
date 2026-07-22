@@ -4,8 +4,6 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Oturum değişiklikleri",
-  "ui.sessionReview.title.git": "Git değişiklikleri",
-  "ui.sessionReview.title.branch": "Dal değişiklikleri",
   "ui.sessionReview.title.lastTurn": "Son tur değişiklikleri",
   "ui.sessionReview.diffStyle.unified": "Birleşik",
   "ui.sessionReview.diffStyle.split": "Bölünmüş",
@@ -45,10 +43,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Adımları gizle",
   "ui.sessionTurn.summary.response": "Yanıt",
   "ui.sessionTurn.diff.showMore": "Daha fazla değişiklik göster ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Değiştirildi",
-  "ui.sessionTurn.diffs.showAll": "Tümünü göster",
-  "ui.sessionTurn.diffs.showLess": "Daha az göster",
-  "ui.sessionTurn.diffs.more": "+{{count}} dosya daha",
 
   "ui.sessionTurn.retry.retrying": "yeniden deneniyor",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}sn içinde",
@@ -68,8 +62,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Ayarları aç",
 
   "ui.sessionTurn.status.delegating": "Görev devrediliyor",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Sonraki adımlar planlanıyor",
   "ui.sessionTurn.status.gatheringContext": "Keşfediliyor",
   "ui.sessionTurn.status.gatheredContext": "Keşfedildi",
@@ -91,8 +83,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Hata",
-  "ui.messagePart.mcp.input": "Giriş",
-  "ui.messagePart.mcp.output": "Çıkış",
   "ui.messagePart.title.edit": "Düzenle",
   "ui.messagePart.title.write": "Yaz",
   "ui.messagePart.option.typeOwnAnswer": "Kendi cevabınızı yazın",
@@ -111,23 +101,10 @@ export const dict = {
   "ui.textField.copied": "Kopyalandı",
 
   "ui.imagePreview.alt": "Görsel önizleme",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Mermaid diyagramı işleniyor...",
-  "ui.mermaid.renderError": "Mermaid işleme başarısız: {{message}}",
-  "ui.mermaid.errorDefault": "Mermaid diyagramı işlenemiyor.",
-  "ui.mermaid.errorEmpty": "Mermaid boş bir diyagram işledi.",
-  "ui.mermaid.download": "İndir",
-  "ui.mermaid.copySource": "Mermaid kaynağını kopyala",
-  "ui.mermaid.copySvg": "SVG kopyala",
-  "ui.mermaid.copyPng": "PNG kopyala",
-  "ui.mermaid.downloadSvg": "SVG indir",
-  "ui.mermaid.downloadPng": "PNG indir",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "kaydırılabilir içerik",
 
   "ui.tool.read": "Oku",
   "ui.tool.loaded": "Yüklendi",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}} satırdan {{kept}} tanesi korundu", // kilocode_change
   "ui.tool.list": "Listele",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -165,7 +142,6 @@ export const dict = {
   "ui.message.copyMessage": "Mesajı kopyala",
   "ui.message.forkMessage": "Yeni oturuma dallandır",
   "ui.message.revertMessage": "Bu noktaya sıfırla",
-  "ui.message.revert": "Revert to here",
   "ui.message.copyResponse": "Yanıtı kopyala",
   "ui.message.copied": "Kopyalandı",
   "ui.message.interrupted": "Kesildi",
@@ -178,9 +154,7 @@ export const dict = {
   "ui.patch.action.patched": "Yamalandı",
 
   "ui.question.subtitle.answered": "{{count}} cevaplandı",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(cevap yok)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(cevaplanmadı)",
   "ui.question.multiHint": "Geçerli tüm cevapları seçin",
   "ui.question.singleHint": "Bir cevap seçin",

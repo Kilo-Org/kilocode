@@ -32,25 +32,6 @@ export const SkillTool = Tool.define(
             metadata: {},
           })
 
-          // kilocode_change start - built-in skills have no filesystem directory
-          if (info.location === Skill.BUILTIN_LOCATION) {
-            return {
-              title: `Loaded skill: ${info.name}`,
-              output: [
-                `<skill_content name="${info.name}">`,
-                `# Skill: ${info.name}`,
-                "",
-                info.content.trim(),
-                "</skill_content>",
-              ].join("\n"),
-              metadata: {
-                name: info.name,
-                dir: Skill.BUILTIN_LOCATION,
-              },
-            }
-          }
-          // kilocode_change end
-
           const dir = path.dirname(info.location)
           const base = pathToFileURL(dir).href
           const files = yield* ripgrep.find({

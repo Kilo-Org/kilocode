@@ -4,8 +4,6 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Promjene sesije",
-  "ui.sessionReview.title.git": "Git promjene",
-  "ui.sessionReview.title.branch": "Promjene grane",
   "ui.sessionReview.title.lastTurn": "Promjene u posljednjem potezu",
   "ui.sessionReview.diffStyle.unified": "Ujedinjeno",
   "ui.sessionReview.diffStyle.split": "Podijeljeno",
@@ -43,10 +41,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Sakrij korake",
   "ui.sessionTurn.summary.response": "Odgovor",
   "ui.sessionTurn.diff.showMore": "Prikaži još izmjena ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Izmijenjeno",
-  "ui.sessionTurn.diffs.showAll": "Prikaži sve",
-  "ui.sessionTurn.diffs.showLess": "Prikaži manje",
-  "ui.sessionTurn.diffs.more": "Još +{{count}} datoteka",
 
   "ui.sessionTurn.retry.retrying": "ponovni pokušaj",
   "ui.sessionTurn.retry.inSeconds": "za {{seconds}}s",
@@ -66,8 +60,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Otvori postavke",
 
   "ui.sessionTurn.status.delegating": "Delegiranje posla",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planiranje sljedećih koraka",
   "ui.sessionTurn.status.gatheringContext": "Istraživanje",
   "ui.sessionTurn.status.gatheredContext": "Istraženo",
@@ -89,8 +81,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} liste",
   "ui.messagePart.diagnostic.error": "Greška",
-  "ui.messagePart.mcp.input": "Ulaz",
-  "ui.messagePart.mcp.output": "Izlaz",
   "ui.messagePart.title.edit": "Uredi",
   "ui.messagePart.title.write": "Napiši",
   "ui.messagePart.option.typeOwnAnswer": "Unesi svoj odgovor",
@@ -109,23 +99,10 @@ export const dict = {
   "ui.textField.copied": "Kopirano",
 
   "ui.imagePreview.alt": "Pregled slike",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Renderovanje Mermaid dijagrama...",
-  "ui.mermaid.renderError": "Renderovanje Mermaid dijagrama nije uspjelo: {{message}}",
-  "ui.mermaid.errorDefault": "Nije moguće renderovati Mermaid dijagram.",
-  "ui.mermaid.errorEmpty": "Mermaid je renderovao prazan dijagram.",
-  "ui.mermaid.download": "Preuzmi",
-  "ui.mermaid.copySource": "Kopiraj Mermaid izvor",
-  "ui.mermaid.copySvg": "Kopiraj SVG",
-  "ui.mermaid.copyPng": "Kopiraj PNG",
-  "ui.mermaid.downloadSvg": "Preuzmi SVG",
-  "ui.mermaid.downloadPng": "Preuzmi PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "sadržaj za pomjeranje",
 
   "ui.tool.read": "Čitanje",
   "ui.tool.loaded": "Učitano",
-  "ui.tool.swePruned": "SWE-Pruner · zadržano {{kept}} od {{total}} redova", // kilocode_change
   "ui.tool.list": "Listanje",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -165,7 +142,6 @@ export const dict = {
   "ui.message.revertMessage": "Resetuj na ovu tačku",
   "ui.message.copyResponse": "Kopiraj odgovor",
   "ui.message.copied": "Kopirano!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Prekinuto",
   "ui.message.queued": "U redu",
   "ui.message.attachment.alt": "prilog",
@@ -176,9 +152,7 @@ export const dict = {
   "ui.patch.action.patched": "Primijenjeno",
 
   "ui.question.subtitle.answered": "{{count}} odgovoreno",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(nema odgovora)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(nije odgovoreno)",
   "ui.question.multiHint": "Odaberi sve što važi",
   "ui.question.singleHint": "Odaberi jedan odgovor",

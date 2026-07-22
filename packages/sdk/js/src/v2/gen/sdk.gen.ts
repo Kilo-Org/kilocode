@@ -3,20 +3,7 @@
 import { client } from "./client.gen.js"
 import { buildClientParams, type Client, type Options as Options2, type TDataShape } from "./client/index.js"
 import type {
-  AgentBuilderPreviewErrors,
-  AgentBuilderPreviewResponses,
-  AgentBuilderSaveErrors,
-  AgentBuilderSaveResponses,
-  AgentManagerFailure,
-  AgentManagerRequestId,
-  AgentManagerResult,
   AgentPartInput,
-  AnacondaDesktopOpenErrors,
-  AnacondaDesktopOpenResponses,
-  AnacondaDesktopStatusErrors,
-  AnacondaDesktopStatusResponses,
-  AnacondaDesktopSyncErrors,
-  AnacondaDesktopSyncResponses,
   AppAgentsErrors,
   AppAgentsResponses,
   AppLogErrors,
@@ -28,56 +15,22 @@ import type {
   AuthRemoveResponses,
   AuthSetErrors,
   AuthSetResponses,
-  BackgroundProcessGetErrors,
-  BackgroundProcessGetResponses,
-  BackgroundProcessListErrors,
-  BackgroundProcessListResponses,
-  BackgroundProcessLogsErrors,
-  BackgroundProcessLogsResponses,
-  BackgroundProcessRestartErrors,
-  BackgroundProcessRestartResponses,
-  BackgroundProcessStopErrors,
-  BackgroundProcessStopResponses,
-  BackgroundProcessStopSessionErrors,
-  BackgroundProcessStopSessionResponses,
-  BranchNameGenerateErrors,
-  BranchNameGenerateResponses,
   CommandListErrors,
   CommandListResponses,
-  CommitMessageGenerateErrors,
-  CommitMessageGenerateResponses,
-  Config as Config4,
-  ConfigEffectiveErrors,
-  ConfigEffectiveResponses,
+  Config as Config3,
   ConfigGetErrors,
   ConfigGetResponses,
-  ConfigModelStateErrors,
-  ConfigModelStateResponses,
-  ConfigModelStateUpdateErrors,
-  ConfigModelStateUpdateResponses,
-  ConfigOverlayErrors,
-  ConfigOverlayResponses,
-  ConfigOverlayUpdateErrors,
-  ConfigOverlayUpdateResponses,
   ConfigProvidersErrors,
   ConfigProvidersResponses,
-  ConfigRulesErrors,
-  ConfigRulesResponses,
-  ConfigRulesUpdateErrors,
-  ConfigRulesUpdateResponses,
-  ConfigSourcesErrors,
-  ConfigSourcesResponses,
   ConfigUpdateErrors,
   ConfigUpdateResponses,
-  ConfigWarningsErrors,
-  ConfigWarningsResponses,
-  EnhancePromptEnhanceErrors,
-  EnhancePromptEnhanceResponses,
   EventSubscribeResponses,
-  EventTuiCommandExecute2,
-  EventTuiPromptAppend2,
-  EventTuiSessionSelect2,
-  EventTuiToastShow2,
+  EventTuiCommandExecute,
+  EventTuiPromptAppend,
+  EventTuiSessionSelect,
+  EventTuiToastShow,
+  ExperimentalCapabilitiesGetErrors,
+  ExperimentalCapabilitiesGetResponses,
   ExperimentalConsoleGetErrors,
   ExperimentalConsoleGetResponses,
   ExperimentalConsoleListOrgsErrors,
@@ -135,86 +88,8 @@ import type {
   GlobalHealthResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
-  IndexingModelsErrors,
-  IndexingModelsResponses,
-  IndexingStatusErrors,
-  IndexingStatusResponses,
-  IndexingWarningsErrors,
-  IndexingWarningsResponses,
   InstanceDisposeErrors,
   InstanceDisposeResponses,
-  InstanceReloadErrors,
-  InstanceReloadResponses,
-  InteractiveTerminalCloseErrors,
-  InteractiveTerminalCloseResponses,
-  InteractiveTerminalGetErrors,
-  InteractiveTerminalGetResponses,
-  InteractiveTerminalListErrors,
-  InteractiveTerminalListResponses,
-  InteractiveTerminalResizeErrors,
-  InteractiveTerminalResizeInput,
-  InteractiveTerminalResizeResponses,
-  InteractiveTerminalWriteErrors,
-  InteractiveTerminalWriteInput,
-  InteractiveTerminalWriteResponses,
-  KiloAudioTranscriptionsErrors,
-  KiloAudioTranscriptionsResponses,
-  KiloAuthStatusErrors,
-  KiloAuthStatusResponses,
-  KiloClawChatCredentialsErrors,
-  KiloClawChatCredentialsResponses,
-  KiloClawStatusErrors,
-  KiloClawStatusResponses,
-  KiloCloudSessionGetErrors,
-  KiloCloudSessionGetResponses,
-  KiloCloudSessionImportErrors,
-  KiloCloudSessionImportResponses,
-  KiloCloudSessionsErrors,
-  KiloCloudSessionsResponses,
-  KilocodeAgentManagerListErrors,
-  KilocodeAgentManagerListResponses,
-  KilocodeAgentManagerRejectErrors,
-  KilocodeAgentManagerRejectResponses,
-  KilocodeAgentManagerReplyErrors,
-  KilocodeAgentManagerReplyResponses,
-  KilocodeAgentRequirementsErrors,
-  KilocodeAgentRequirementsResponses,
-  KilocodeHeapSnapshotErrors,
-  KilocodeHeapSnapshotResponses,
-  KilocodeNotebookListErrors,
-  KilocodeNotebookListResponses,
-  KilocodeNotebookRejectErrors,
-  KilocodeNotebookRejectResponses,
-  KilocodeNotebookReplyErrors,
-  KilocodeNotebookReplyResponses,
-  KilocodeRemoveAgentErrors,
-  KilocodeRemoveAgentResponses,
-  KilocodeRemoveSkillErrors,
-  KilocodeRemoveSkillResponses,
-  KilocodeSessionImportMessageErrors,
-  KilocodeSessionImportMessageResponses,
-  KilocodeSessionImportPartErrors,
-  KilocodeSessionImportPartResponses,
-  KilocodeSessionImportProjectErrors,
-  KilocodeSessionImportProjectResponses,
-  KilocodeSessionImportSessionErrors,
-  KilocodeSessionImportSessionResponses,
-  KilocodeSessionModelUsageErrors,
-  KilocodeSessionModelUsageResponses,
-  KiloEditErrors,
-  KiloEditResponses,
-  KiloFimErrors,
-  KiloFimResponses,
-  KiloModelsImagesErrors,
-  KiloModelsImagesResponses,
-  KiloModesErrors,
-  KiloModesResponses,
-  KiloNotificationsErrors,
-  KiloNotificationsResponses,
-  KiloOrganizationSetErrors,
-  KiloOrganizationSetResponses,
-  KiloProfileErrors,
-  KiloProfileResponses,
   LocationRef,
   LspStatusErrors,
   LspStatusResponses,
@@ -236,36 +111,7 @@ import type {
   McpRemoteConfig,
   McpStatusErrors,
   McpStatusResponses,
-  MemoryConfigureErrors,
-  MemoryConfigureResponses,
-  MemoryCorrectErrors,
-  MemoryCorrectResponses,
-  MemoryDisableErrors,
-  MemoryDisableResponses,
-  MemoryEnableErrors,
-  MemoryEnableResponses,
-  MemoryForgetErrors,
-  MemoryForgetResponses,
-  MemoryPurgeErrors,
-  MemoryPurgeResponses,
-  MemoryRebuildErrors,
-  MemoryRebuildResponses,
-  MemoryRememberErrors,
-  MemoryRememberResponses,
-  MemoryShowErrors,
-  MemoryShowResponses,
-  MemoryStatusErrors,
-  MemoryStatusResponses,
   MoveSessionDestination,
-  NetworkListErrors,
-  NetworkListResponses,
-  NetworkRejectErrors,
-  NetworkRejectResponses,
-  NetworkReplyErrors,
-  NetworkReplyResponses,
-  NotebookFailure,
-  NotebookRequestId,
-  NotebookResult,
   OutputFormat,
   Part as Part2,
   PartDeleteErrors,
@@ -274,8 +120,6 @@ import type {
   PartUpdateResponses,
   PathGetErrors,
   PathGetResponses,
-  PermissionAllowEverythingErrors,
-  PermissionAllowEverythingResponses,
   PermissionListErrors,
   PermissionListResponses,
   PermissionReplyErrors,
@@ -283,8 +127,6 @@ import type {
   PermissionRespondErrors,
   PermissionRespondResponses,
   PermissionRuleset,
-  PermissionSaveAlwaysRulesErrors,
-  PermissionSaveAlwaysRulesResponses,
   PermissionV2Reply,
   ProjectCurrentErrors,
   ProjectCurrentResponses,
@@ -329,18 +171,6 @@ import type {
   QuestionReplyErrors,
   QuestionReplyResponses,
   QuestionV2Reply,
-  RemoteDisableErrors,
-  RemoteDisableResponses,
-  RemoteEnableErrors,
-  RemoteEnableResponses,
-  RemoteStatusErrors,
-  RemoteStatusResponses,
-  SandboxStatusErrors,
-  SandboxStatusResponses,
-  SandboxSupportErrors,
-  SandboxSupportResponses,
-  SandboxToggleErrors,
-  SandboxToggleResponses,
   SessionAbortErrors,
   SessionAbortResponses,
   SessionChildrenErrors,
@@ -389,15 +219,7 @@ import type {
   SessionUnshareResponses,
   SessionUpdateErrors,
   SessionUpdateResponses,
-  SessionViewedErrors,
-  SessionViewedResponses,
   SubtaskPartInput,
-  SuggestionAcceptErrors,
-  SuggestionAcceptResponses,
-  SuggestionDismissErrors,
-  SuggestionDismissResponses,
-  SuggestionListErrors,
-  SuggestionListResponses,
   SyncHistoryListErrors,
   SyncHistoryListResponses,
   SyncReplayErrors,
@@ -406,10 +228,6 @@ import type {
   SyncStartResponses,
   SyncStealErrors,
   SyncStealResponses,
-  TelemetryCaptureErrors,
-  TelemetryCaptureResponses,
-  TelemetrySetEnabledErrors,
-  TelemetrySetEnabledResponses,
   TextPartInput,
   ToolIdsErrors,
   ToolIdsResponses,
@@ -419,18 +237,12 @@ import type {
   TuiAppendPromptResponses,
   TuiClearPromptErrors,
   TuiClearPromptResponses,
-  TuiConfigGetErrors,
-  TuiConfigGetResponses,
-  TuiConfigUpdateErrors,
-  TuiConfigUpdateResponses,
   TuiControlNextErrors,
   TuiControlNextResponses,
   TuiControlResponseErrors,
   TuiControlResponseResponses,
   TuiExecuteCommandErrors,
   TuiExecuteCommandResponses,
-  TuiKeybindListErrors,
-  TuiKeybindListResponses,
   TuiOpenHelpErrors,
   TuiOpenHelpResponses,
   TuiOpenModelsErrors,
@@ -499,6 +311,20 @@ import type {
   V2ProviderGetResponses,
   V2ProviderListErrors,
   V2ProviderListResponses,
+  V2PtyConnectErrors,
+  V2PtyConnectResponses,
+  V2PtyConnectTokenErrors,
+  V2PtyConnectTokenResponses,
+  V2PtyCreateErrors,
+  V2PtyCreateResponses,
+  V2PtyGetErrors,
+  V2PtyGetResponses,
+  V2PtyListErrors,
+  V2PtyListResponses,
+  V2PtyRemoveErrors,
+  V2PtyRemoveResponses,
+  V2PtyUpdateErrors,
+  V2PtyUpdateResponses,
   V2QuestionRequestListErrors,
   V2QuestionRequestListResponses,
   V2ReferenceListErrors,
@@ -544,12 +370,6 @@ import type {
   WorktreeCreateErrors,
   WorktreeCreateInput,
   WorktreeCreateResponses,
-  WorktreeDiffErrors,
-  WorktreeDiffFileErrors,
-  WorktreeDiffFileResponses,
-  WorktreeDiffResponses,
-  WorktreeDiffSummaryErrors,
-  WorktreeDiffSummaryResponses,
   WorktreeListErrors,
   WorktreeListResponses,
   WorktreeRemoveErrors,
@@ -708,7 +528,7 @@ export class App extends HeyApiClient {
   /**
    * List agents
    *
-   * Get a list of all available AI agents in the Kilo system.
+   * Get a list of all available AI agents in the OpenCode system.
    */
   public agents<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -738,7 +558,7 @@ export class App extends HeyApiClient {
   /**
    * List skills
    *
-   * Get a list of all available skills in the Kilo system.
+   * Get a list of all available skills in the OpenCode system.
    */
   public skills<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -805,6 +625,42 @@ export class ControlPlane extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+}
+
+export class Capabilities extends HeyApiClient {
+  /**
+   * Get experimental capabilities
+   *
+   * Get experimental features enabled on the OpenCode server.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<
+      ExperimentalCapabilitiesGetResponses,
+      ExperimentalCapabilitiesGetErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/capabilities",
+      ...options,
+      ...params,
     })
   }
 }
@@ -881,7 +737,7 @@ export class Console extends HeyApiClient {
   /**
    * Switch active Console org
    *
-   * Persist a new active Console account/org selection for the current local Kilo state.
+   * Persist a new active Console account/org selection for the current local OpenCode state.
    */
   public switchOrg<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -922,15 +778,12 @@ export class Session extends HeyApiClient {
   /**
    * List sessions
    *
-   * Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
+   * Get a list of all OpenCode sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
       workspace?: string
-      projectID?: string
-      worktrees?: boolean
-      current?: "true" | "false"
       roots?: boolean | "true" | "false"
       start?: number
       cursor?: number
@@ -947,9 +800,6 @@ export class Session extends HeyApiClient {
           args: [
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
-            { in: "query", key: "projectID" },
-            { in: "query", key: "worktrees" },
-            { in: "query", key: "current" },
             { in: "query", key: "roots" },
             { in: "query", key: "start" },
             { in: "query", key: "cursor" },
@@ -1368,6 +1218,11 @@ export class Experimental extends HeyApiClient {
     return (this._controlPlane ??= new ControlPlane({ client: this.client }))
   }
 
+  private _capabilities?: Capabilities
+  get capabilities(): Capabilities {
+    return (this._capabilities ??= new Capabilities({ client: this.client }))
+  }
+
   private _console?: Console
   get console(): Console {
     return (this._console ??= new Console({ client: this.client }))
@@ -1398,7 +1253,7 @@ export class Config extends HeyApiClient {
   /**
    * Get global configuration
    *
-   * Retrieve the current global Kilo configuration settings and preferences.
+   * Retrieve the current global OpenCode configuration settings and preferences.
    */
   public get<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GlobalConfigGetResponses, GlobalConfigGetErrors, ThrowOnError>({
@@ -1410,11 +1265,11 @@ export class Config extends HeyApiClient {
   /**
    * Update global configuration
    *
-   * Update global Kilo configuration settings and preferences.
+   * Update global OpenCode configuration settings and preferences.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
-      config?: Config4
+      config?: Config3
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1436,7 +1291,7 @@ export class Global extends HeyApiClient {
   /**
    * Get health
    *
-   * Get health information about the Kilo server.
+   * Get health information about the OpenCode server.
    */
   public health<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).get<GlobalHealthResponses, GlobalHealthErrors, ThrowOnError>({
@@ -1448,7 +1303,7 @@ export class Global extends HeyApiClient {
   /**
    * Get global events
    *
-   * Subscribe to global events from the Kilo system using server-sent events.
+   * Subscribe to global events from the OpenCode system using server-sent events.
    */
   public event<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).sse.get<GlobalEventResponses, GlobalEventErrors, ThrowOnError>({
@@ -1460,7 +1315,7 @@ export class Global extends HeyApiClient {
   /**
    * Dispose instance
    *
-   * Clean up and dispose all Kilo instances, releasing all resources.
+   * Clean up and dispose all OpenCode instances, releasing all resources.
    */
   public dispose<ThrowOnError extends boolean = false>(options?: Options<never, ThrowOnError>) {
     return (options?.client ?? this.client).post<GlobalDisposeResponses, GlobalDisposeErrors, ThrowOnError>({
@@ -1470,9 +1325,9 @@ export class Global extends HeyApiClient {
   }
 
   /**
-   * Upgrade kilo
+   * Upgrade opencode
    *
-   * Upgrade kilo to the specified version or latest if not specified.
+   * Upgrade opencode to the specified version or latest if not specified.
    */
   public upgrade<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1535,7 +1390,7 @@ export class Config2 extends HeyApiClient {
   /**
    * Get configuration
    *
-   * Retrieve the current Kilo configuration settings and preferences.
+   * Retrieve the current OpenCode configuration settings and preferences.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -1565,13 +1420,13 @@ export class Config2 extends HeyApiClient {
   /**
    * Update configuration
    *
-   * Update Kilo configuration settings and preferences.
+   * Update OpenCode configuration settings and preferences.
    */
   public update<ThrowOnError extends boolean = false>(
     parameters?: {
       directory?: string
       workspace?: string
-      config?: Config4
+      config?: Config3
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1596,36 +1451,6 @@ export class Config2 extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
-    })
-  }
-
-  /**
-   * Get config warnings
-   *
-   * Get warnings generated during config loading (e.g., invalid JSON, schema errors).
-   */
-  public warnings<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<ConfigWarningsResponses, ConfigWarningsErrors, ThrowOnError>({
-      url: "/config/warnings",
-      ...options,
-      ...params,
     })
   }
 
@@ -1656,290 +1481,6 @@ export class Config2 extends HeyApiClient {
       url: "/config/providers",
       ...options,
       ...params,
-    })
-  }
-
-  /**
-   * Get config overlay
-   *
-   * Resolve global, project, and effective config values with source metadata for inheritance-aware settings UI.
-   */
-  public overlay<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      scope?: "global" | "project"
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "scope" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<ConfigOverlayResponses, ConfigOverlayErrors, ThrowOnError>({
-      url: "/config/overlay",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Patch config overlay
-   *
-   * Apply a minimal global or project config patch, including unset paths for reverting local overrides.
-   */
-  public overlayUpdate<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      scope?: "global" | "project"
-      set?: {
-        [key: string]: unknown
-      }
-      unset?: Array<Array<string>>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "scope" },
-            { in: "body", key: "set" },
-            { in: "body", key: "unset" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).patch<
-      ConfigOverlayUpdateResponses,
-      ConfigOverlayUpdateErrors,
-      ThrowOnError
-    >({
-      url: "/config/overlay",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * List config sources
-   *
-   * List config source metadata in load order without exposing config contents or secrets.
-   */
-  public sources<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<ConfigSourcesResponses, ConfigSourcesErrors, ThrowOnError>({
-      url: "/config/sources",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get effective configuration
-   *
-   * Retrieve effective config for the current instance directory.
-   */
-  public effective<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<ConfigEffectiveResponses, ConfigEffectiveErrors, ThrowOnError>({
-      url: "/config/effective",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get project rules
-   *
-   * List project instruction files used by Kilo and return their current contents.
-   */
-  public rules<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      scope?: "project"
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "scope" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<ConfigRulesResponses, ConfigRulesErrors, ThrowOnError>({
-      url: "/config/rules",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Update project rules
-   *
-   * Create or update the project AGENTS.md rules file.
-   */
-  public rulesUpdate<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      scope?: "project"
-      content?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "scope" },
-            { in: "body", key: "content" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).put<ConfigRulesUpdateResponses, ConfigRulesUpdateErrors, ThrowOnError>({
-      url: "/config/rules",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Get model state
-   *
-   * Retrieve TUI-compatible recent and favorite model selections.
-   */
-  public modelState<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<ConfigModelStateResponses, ConfigModelStateErrors, ThrowOnError>({
-      url: "/config/model-state",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Update model state
-   *
-   * Patch TUI-compatible model selections shared with Kilo Console.
-   */
-  public modelStateUpdate<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      favorite?: Array<{
-        providerID: string
-        modelID: string
-      }>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "favorite" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).patch<
-      ConfigModelStateUpdateResponses,
-      ConfigModelStateUpdateErrors,
-      ThrowOnError
-    >({
-      url: "/config/model-state",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
     })
   }
 }
@@ -2051,7 +1592,7 @@ export class Worktree extends HeyApiClient {
   /**
    * List worktrees
    *
-   * List all git worktrees for the current project and whether Kilo manages them.
+   * List all sandbox worktrees for the current project.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2149,104 +1690,6 @@ export class Worktree extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
-    })
-  }
-
-  /**
-   * Get worktree diff
-   *
-   * Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.
-   */
-  public diff<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      base?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "base" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<WorktreeDiffResponses, WorktreeDiffErrors, ThrowOnError>({
-      url: "/experimental/worktree/diff",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get worktree diff summary
-   *
-   * Get lightweight file diff metadata for a worktree compared to its base branch.
-   */
-  public diffSummary<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      base?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "base" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<WorktreeDiffSummaryResponses, WorktreeDiffSummaryErrors, ThrowOnError>({
-      url: "/experimental/worktree/diff/summary",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get worktree diff detail
-   *
-   * Get full diff contents for one worktree file compared to its base branch.
-   */
-  public diffFile<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      base?: string
-      file: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "base" },
-            { in: "query", key: "file" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<WorktreeDiffFileResponses, WorktreeDiffFileErrors, ThrowOnError>({
-      url: "/experimental/worktree/diff/file",
-      ...options,
-      ...params,
     })
   }
 }
@@ -2455,7 +1898,7 @@ export class Instance extends HeyApiClient {
   /**
    * Dispose instance
    *
-   * Clean up and dispose the current Kilo instance, releasing all resources.
+   * Clean up and dispose the current OpenCode instance, releasing all resources.
    */
   public dispose<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2481,43 +1924,13 @@ export class Instance extends HeyApiClient {
       ...params,
     })
   }
-
-  /**
-   * Reload instance
-   *
-   * Atomically dispose and reboot the current Kilo instance, reloading config, skills, agents, commands, and MCP prompts from disk. Returns 409 if a session is actively running.
-   */
-  public reload<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<InstanceReloadResponses, InstanceReloadErrors, ThrowOnError>({
-      url: "/instance/reload",
-      ...options,
-      ...params,
-    })
-  }
 }
 
 export class Path extends HeyApiClient {
   /**
    * Get paths
    *
-   * Retrieve the current working directory and related path information for the Kilo instance.
+   * Retrieve the current working directory and related path information for the OpenCode instance.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -2719,7 +2132,7 @@ export class Command extends HeyApiClient {
   /**
    * List commands
    *
-   * Get a list of all available commands in the Kilo system.
+   * Get a list of all available commands in the OpenCode system.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3090,7 +2503,7 @@ export class Project extends HeyApiClient {
   /**
    * List all projects
    *
-   * Get a list of projects that have been opened with Kilo.
+   * Get a list of projects that have been opened with OpenCode.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3120,7 +2533,7 @@ export class Project extends HeyApiClient {
   /**
    * Get current project
    *
-   * Retrieve the currently active project that Kilo is working with.
+   * Retrieve the currently active project that OpenCode is working with.
    */
   public current<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3296,7 +2709,7 @@ export class Pty extends HeyApiClient {
   /**
    * List PTY sessions
    *
-   * Get a list of all active pseudo-terminal (PTY) sessions managed by Kilo.
+   * Get a list of all active pseudo-terminal (PTY) sessions managed by OpenCode.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -3445,7 +2858,6 @@ export class Pty extends HeyApiClient {
       directory?: string
       workspace?: string
       title?: string
-      sessionID?: string | null
       size?: {
         rows: number
         cols: number
@@ -3462,7 +2874,6 @@ export class Pty extends HeyApiClient {
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
             { in: "body", key: "title" },
-            { in: "body", key: "sessionID" },
             { in: "body", key: "size" },
           ],
         },
@@ -3725,96 +3136,6 @@ export class Permission extends HeyApiClient {
   }
 
   /**
-   * Save always-allow/deny permission rules
-   *
-   * Save approved/denied always-rules for a pending permission request.
-   */
-  public saveAlwaysRules<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: string
-      directory?: string
-      workspace?: string
-      approvedAlways?: Array<string>
-      deniedAlways?: Array<string>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "approvedAlways" },
-            { in: "body", key: "deniedAlways" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      PermissionSaveAlwaysRulesResponses,
-      PermissionSaveAlwaysRulesErrors,
-      ThrowOnError
-    >({
-      url: "/permission/{requestID}/always-rules",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Allow everything
-   *
-   * Enable or disable allowing all permissions without prompts.
-   */
-  public allowEverything<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      enable?: boolean
-      requestID?: string
-      sessionID?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "enable" },
-            { in: "body", key: "requestID" },
-            { in: "body", key: "sessionID" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      PermissionAllowEverythingResponses,
-      PermissionAllowEverythingErrors,
-      ThrowOnError
-    >({
-      url: "/permission/allow-everything",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
    * Respond to permission
    *
    * Approve or deny a permission request from the AI assistant.
@@ -4023,7 +3344,7 @@ export class Session2 extends HeyApiClient {
   /**
    * List sessions
    *
-   * Get a list of all Kilo sessions, sorted by most recently updated.
+   * Get a list of all OpenCode sessions, sorted by most recently updated.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4065,7 +3386,7 @@ export class Session2 extends HeyApiClient {
   /**
    * Create session
    *
-   * Create a new Kilo session for interacting with AI assistants and managing conversations.
+   * Create a new OpenCode session for interacting with AI assistants and managing conversations.
    */
   public create<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -4083,9 +3404,7 @@ export class Session2 extends HeyApiClient {
         [key: string]: unknown
       }
       permission?: PermissionRuleset
-      platform?: string
       workspaceID?: string
-      sandboxInheritanceToken?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -4102,9 +3421,7 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "model" },
             { in: "body", key: "metadata" },
             { in: "body", key: "permission" },
-            { in: "body", key: "platform" },
             { in: "body", key: "workspaceID" },
-            { in: "body", key: "sandboxInheritanceToken" },
           ],
         },
       ],
@@ -4186,7 +3503,7 @@ export class Session2 extends HeyApiClient {
   /**
    * Get session
    *
-   * Retrieve detailed information about a specific Kilo session.
+   * Retrieve detailed information about a specific OpenCode session.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
@@ -4421,13 +3738,6 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
-      snapshotInitialization?: "wait"
-      editorContext?: {
-        visibleFiles?: Array<string>
-        openTabs?: Array<string>
-        activeFile?: string
-        shell?: string
-      }
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4448,8 +3758,6 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
-            { in: "body", key: "snapshotInitialization" },
-            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4783,13 +4091,6 @@ export class Session2 extends HeyApiClient {
       format?: OutputFormat
       system?: string
       variant?: string
-      snapshotInitialization?: "wait"
-      editorContext?: {
-        visibleFiles?: Array<string>
-        openTabs?: Array<string>
-        activeFile?: string
-        shell?: string
-      }
       parts?: Array<TextPartInput | FilePartInput | AgentPartInput | SubtaskPartInput>
     },
     options?: Options<never, ThrowOnError>,
@@ -4810,8 +4111,6 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "format" },
             { in: "body", key: "system" },
             { in: "body", key: "variant" },
-            { in: "body", key: "snapshotInitialization" },
-            { in: "body", key: "editorContext" },
             { in: "body", key: "parts" },
           ],
         },
@@ -4845,7 +4144,6 @@ export class Session2 extends HeyApiClient {
       arguments?: string
       command?: string
       variant?: string
-      snapshotInitialization?: "wait"
       parts?: Array<{
         id?: string
         type: "file"
@@ -4871,7 +4169,6 @@ export class Session2 extends HeyApiClient {
             { in: "body", key: "arguments" },
             { in: "body", key: "command" },
             { in: "body", key: "variant" },
-            { in: "body", key: "snapshotInitialization" },
             { in: "body", key: "parts" },
           ],
         },
@@ -5007,50 +4304,6 @@ export class Session2 extends HeyApiClient {
       url: "/session/{sessionID}/unrevert",
       ...options,
       ...params,
-    })
-  }
-
-  /**
-   * Set viewed sessions
-   *
-   * Notify the server which sessions the user is currently viewing, or clear all.
-   */
-  public viewed<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      viewer?: {
-        id: string
-        active: boolean
-      }
-      attached?: Array<string>
-      visible?: Array<string>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "viewer" },
-            { in: "body", key: "attached" },
-            { in: "body", key: "visible" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<SessionViewedResponses, SessionViewedErrors, ThrowOnError>({
-      url: "/session/viewed",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
     })
   }
 }
@@ -5371,148 +4624,6 @@ export class Control extends HeyApiClient {
   }
 }
 
-export class Config3 extends HeyApiClient {
-  /**
-   * Get TUI configuration
-   *
-   * Retrieve the effective TUI configuration for the current instance directory.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<TuiConfigGetResponses, TuiConfigGetErrors, ThrowOnError>({
-      url: "/tui/config",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Update TUI configuration
-   *
-   * Patch global or project TUI configuration and return the effective TUI configuration.
-   */
-  public update<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      scope?: "project" | "global"
-      $schema?: string
-      theme?: string
-      keybinds?: {
-        [key: string]: string
-      }
-      plugin?: Array<
-        | string
-        | [
-            string,
-            {
-              [key: string]: unknown
-            },
-          ]
-      >
-      plugin_enabled?: {
-        [key: string]: boolean
-      }
-      title_icon?: "none" | "unicode" | "emojis"
-      scroll_speed?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      scroll_acceleration?: {
-        enabled: boolean
-      }
-      diff_style?: "auto" | "stacked"
-      mouse?: boolean
-      attention?: {
-        enabled?: boolean
-        notifications?: boolean
-        sound?: boolean
-        volume?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "scope" },
-            { in: "body", key: "$schema" },
-            { in: "body", key: "theme" },
-            { in: "body", key: "keybinds" },
-            { in: "body", key: "plugin" },
-            { in: "body", key: "plugin_enabled" },
-            { in: "body", key: "title_icon" },
-            { in: "body", key: "scroll_speed" },
-            { in: "body", key: "scroll_acceleration" },
-            { in: "body", key: "diff_style" },
-            { in: "body", key: "mouse" },
-            { in: "body", key: "attention" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).patch<TuiConfigUpdateResponses, TuiConfigUpdateErrors, ThrowOnError>({
-      url: "/tui/config",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class Keybind extends HeyApiClient {
-  /**
-   * List TUI keybinds
-   *
-   * List valid TUI keybind commands, descriptions, groups, and default bindings from the CLI schema.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<TuiKeybindListResponses, TuiKeybindListErrors, ThrowOnError>({
-      url: "/tui/keybinds",
-      ...options,
-      ...params,
-    })
-  }
-}
-
 export class Tui extends HeyApiClient {
   /**
    * Append TUI prompt
@@ -5820,7 +4931,7 @@ export class Tui extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      body?: EventTuiPromptAppend2 | EventTuiCommandExecute2 | EventTuiToastShow2 | EventTuiSessionSelect2
+      body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5888,3113 +4999,6 @@ export class Tui extends HeyApiClient {
   private _control?: Control
   get control(): Control {
     return (this._control ??= new Control({ client: this.client }))
-  }
-
-  private _config?: Config3
-  get config(): Config3 {
-    return (this._config ??= new Config3({ client: this.client }))
-  }
-
-  private _keybind?: Keybind
-  get keybind(): Keybind {
-    return (this._keybind ??= new Keybind({ client: this.client }))
-  }
-}
-
-export class AgentBuilder extends HeyApiClient {
-  /**
-   * Preview agent markdown
-   *
-   * Validate an agent builder payload and return the canonical agent markdown without writing it.
-   */
-  public preview<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      id?: string
-      scope?: "global" | "project"
-      description?: string
-      mode?: "primary" | "subagent" | "all"
-      model?: string
-      color?: string
-      steps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      tools?: Array<string>
-      permission?: {
-        [key: string]: unknown
-      }
-      prompt?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "scope" },
-            { in: "body", key: "description" },
-            { in: "body", key: "mode" },
-            { in: "body", key: "model" },
-            { in: "body", key: "color" },
-            { in: "body", key: "steps" },
-            { in: "body", key: "tools" },
-            { in: "body", key: "permission" },
-            { in: "body", key: "prompt" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<AgentBuilderPreviewResponses, AgentBuilderPreviewErrors, ThrowOnError>(
-      {
-        url: "/agent-builder/preview",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
-      },
-    )
-  }
-
-  /**
-   * Save agent markdown
-   *
-   * Save an agent builder payload as a canonical agent markdown file.
-   */
-  public save<ThrowOnError extends boolean = false>(
-    parameters: {
-      path_id: string
-      directory?: string
-      workspace?: string
-      body_id?: string
-      scope?: "global" | "project"
-      description?: string
-      mode?: "primary" | "subagent" | "all"
-      model?: string
-      color?: string
-      steps?: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-      tools?: Array<string>
-      permission?: {
-        [key: string]: unknown
-      }
-      prompt?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            {
-              in: "path",
-              key: "path_id",
-              map: "id",
-            },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            {
-              in: "body",
-              key: "body_id",
-              map: "id",
-            },
-            { in: "body", key: "scope" },
-            { in: "body", key: "description" },
-            { in: "body", key: "mode" },
-            { in: "body", key: "model" },
-            { in: "body", key: "color" },
-            { in: "body", key: "steps" },
-            { in: "body", key: "tools" },
-            { in: "body", key: "permission" },
-            { in: "body", key: "prompt" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).put<AgentBuilderSaveResponses, AgentBuilderSaveErrors, ThrowOnError>({
-      url: "/agent-builder/{id}",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class BackgroundProcess extends HeyApiClient {
-  /**
-   * List background processes
-   *
-   * List tracked background processes for the current instance.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      BackgroundProcessListResponses,
-      BackgroundProcessListErrors,
-      ThrowOnError
-    >({
-      url: "/background-process",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get background process
-   *
-   * Get status and retained output for one background process.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      processID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "processID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      BackgroundProcessGetResponses,
-      BackgroundProcessGetErrors,
-      ThrowOnError
-    >({
-      url: "/background-process/{processID}",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get background process logs
-   *
-   * Get the retained output tail for one background process.
-   */
-  public logs<ThrowOnError extends boolean = false>(
-    parameters: {
-      processID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "processID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      BackgroundProcessLogsResponses,
-      BackgroundProcessLogsErrors,
-      ThrowOnError
-    >({
-      url: "/background-process/{processID}/logs",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Stop background process
-   *
-   * Terminate a background process and its child process tree.
-   */
-  public stop<ThrowOnError extends boolean = false>(
-    parameters: {
-      processID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "processID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      BackgroundProcessStopResponses,
-      BackgroundProcessStopErrors,
-      ThrowOnError
-    >({
-      url: "/background-process/{processID}/stop",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Restart background process
-   *
-   * Stop and restart a background process with its original command.
-   */
-  public restart<ThrowOnError extends boolean = false>(
-    parameters: {
-      processID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "processID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      BackgroundProcessRestartResponses,
-      BackgroundProcessRestartErrors,
-      ThrowOnError
-    >({
-      url: "/background-process/{processID}/restart",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Stop session background processes
-   *
-   * Terminate and forget all background processes associated with one session.
-   */
-  public stopSession<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      BackgroundProcessStopSessionResponses,
-      BackgroundProcessStopSessionErrors,
-      ThrowOnError
-    >({
-      url: "/background-process/session/{sessionID}/stop",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class BranchName extends HeyApiClient {
-  /**
-   * Generate branch name
-   *
-   * Generate a task-focused branch name from the current conversation.
-   */
-  public generate<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-      prompt?: string
-      providerID?: string
-      modelID?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "prompt" },
-            { in: "body", key: "providerID" },
-            { in: "body", key: "modelID" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<BranchNameGenerateResponses, BranchNameGenerateErrors, ThrowOnError>({
-      url: "/session/{sessionID}/branch-name",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class CommitMessage extends HeyApiClient {
-  /**
-   * Generate commit message
-   *
-   * Generate a commit message using AI based on the current git diff.
-   */
-  public generate<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      path?: string
-      selectedFiles?: Array<string>
-      previousMessage?: string
-      language?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "path" },
-            { in: "body", key: "selectedFiles" },
-            { in: "body", key: "previousMessage" },
-            { in: "body", key: "language" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      CommitMessageGenerateResponses,
-      CommitMessageGenerateErrors,
-      ThrowOnError
-    >({
-      url: "/commit-message",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class EnhancePrompt extends HeyApiClient {
-  /**
-   * Enhance prompt
-   *
-   * Rewrite a user's draft prompt into a clearer, more specific, and more effective prompt.
-   */
-  public enhance<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      text?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "text" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      EnhancePromptEnhanceResponses,
-      EnhancePromptEnhanceErrors,
-      ThrowOnError
-    >({
-      url: "/enhance-prompt",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class Indexing extends HeyApiClient {
-  /**
-   * Get indexing status
-   *
-   * Retrieve the current code indexing status for the active project.
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<IndexingStatusResponses, IndexingStatusErrors, ThrowOnError>({
-      url: "/indexing/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get indexing warnings
-   *
-   * Retrieve code indexing warnings for the active project.
-   */
-  public warnings<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<IndexingWarningsResponses, IndexingWarningsErrors, ThrowOnError>({
-      url: "/indexing/warnings",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * List Kilo embedding models
-   *
-   * Retrieve the embedding models available through the active Kilo account.
-   */
-  public models<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<IndexingModelsResponses, IndexingModelsErrors, ThrowOnError>({
-      url: "/indexing/models",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class InteractiveTerminal extends HeyApiClient {
-  /**
-   * List interactive terminals
-   *
-   * List active human-driven terminal sessions for the current instance.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      InteractiveTerminalListResponses,
-      InteractiveTerminalListErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get interactive terminal
-   *
-   * Get metadata and retained output for an active interactive terminal.
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      InteractiveTerminalGetResponses,
-      InteractiveTerminalGetErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Write interactive terminal input
-   *
-   * Send raw keyboard input to an active interactive terminal.
-   */
-  public write<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-      interactiveTerminalWriteInput?: InteractiveTerminalWriteInput
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { key: "interactiveTerminalWriteInput", map: "body" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalWriteResponses,
-      InteractiveTerminalWriteErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/input",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Resize interactive terminal
-   *
-   * Resize an active interactive terminal's PTY.
-   */
-  public resize<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-      interactiveTerminalResizeInput?: InteractiveTerminalResizeInput
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { key: "interactiveTerminalResizeInput", map: "body" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalResizeResponses,
-      InteractiveTerminalResizeErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/resize",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Close interactive terminal
-   *
-   * Terminate an active interactive terminal and unblock its tool call.
-   */
-  public close<ThrowOnError extends boolean = false>(
-    parameters: {
-      terminalID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "terminalID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      InteractiveTerminalCloseResponses,
-      InteractiveTerminalCloseErrors,
-      ThrowOnError
-    >({
-      url: "/interactive-terminal/{terminalID}/close",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Audio extends HeyApiClient {
-  /**
-   * Speech to text transcription
-   *
-   * Proxy an audio transcription request to the Kilo Gateway
-   */
-  public transcriptions<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      model?: string
-      input_audio?: {
-        data: string
-        format: string
-      }
-      language?: string
-      prompt?: string
-      temperature?: number
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "model" },
-            { in: "body", key: "input_audio" },
-            { in: "body", key: "language" },
-            { in: "body", key: "prompt" },
-            { in: "body", key: "temperature" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KiloAudioTranscriptionsResponses,
-      KiloAudioTranscriptionsErrors,
-      ThrowOnError
-    >({
-      url: "/kilo/audio/transcriptions",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class Models extends HeyApiClient {
-  /**
-   * Image generation models
-   *
-   * List image-capable models from the Kilo Gateway OpenRouter passthrough
-   */
-  public images<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloModelsImagesResponses, KiloModelsImagesErrors, ThrowOnError>({
-      url: "/kilo/models/images",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Organization extends HeyApiClient {
-  /**
-   * Update Kilo Gateway organization
-   *
-   * Switch to a different Kilo Gateway organization
-   */
-  public set<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      organizationId?: string | null
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "organizationId" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<KiloOrganizationSetResponses, KiloOrganizationSetErrors, ThrowOnError>(
-      {
-        url: "/kilo/organization",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
-      },
-    )
-  }
-}
-
-export class Claw extends HeyApiClient {
-  /**
-   * Get KiloClaw instance status
-   *
-   * Fetch the user's KiloClaw instance status via the KiloClaw worker
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloClawStatusResponses, KiloClawStatusErrors, ThrowOnError>({
-      url: "/kilo/claw/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get KiloClaw chat credentials
-   *
-   * Returns the bearer token and endpoint URLs the client uses to talk to the Kilo Chat worker and the Event Service. The bearer is the user's existing long-lived Kilo JWT — kilo-chat and event-service both verify it directly with NEXTAUTH_SECRET, so no separate token mint is needed.
-   */
-  public chatCredentials<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KiloClawChatCredentialsResponses,
-      KiloClawChatCredentialsErrors,
-      ThrowOnError
-    >({
-      url: "/kilo/claw/chat-credentials",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Session3 extends HeyApiClient {
-  /**
-   * Get cloud session
-   *
-   * Fetch full session data from the Kilo cloud for preview
-   */
-  public get<ThrowOnError extends boolean = false>(
-    parameters: {
-      id: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "id" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloCloudSessionGetResponses, KiloCloudSessionGetErrors, ThrowOnError>({
-      url: "/kilo/cloud/session/{id}",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Import session from cloud
-   *
-   * Download a cloud-synced session and write it to local storage with fresh IDs.
-   */
-  public import<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      sessionId?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "sessionId" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KiloCloudSessionImportResponses,
-      KiloCloudSessionImportErrors,
-      ThrowOnError
-    >({
-      url: "/kilo/cloud/session/import",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class Cloud extends HeyApiClient {
-  private _session?: Session3
-  get session(): Session3 {
-    return (this._session ??= new Session3({ client: this.client }))
-  }
-}
-
-export class Kilo extends HeyApiClient {
-  /**
-   * Get Kilo Gateway profile
-   *
-   * Fetch user profile and organizations from Kilo Gateway
-   */
-  public profile<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloProfileResponses, KiloProfileErrors, ThrowOnError>({
-      url: "/kilo/profile",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get Kilo authentication status
-   *
-   * Check whether a locally stored Kilo credential can authenticate Gateway requests
-   */
-  public authStatus<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloAuthStatusResponses, KiloAuthStatusErrors, ThrowOnError>({
-      url: "/kilo/auth-status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get organization custom modes
-   *
-   * Fetch custom modes defined for the current organization
-   */
-  public modes<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloModesResponses, KiloModesErrors, ThrowOnError>({
-      url: "/kilo/modes",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * FIM completion
-   *
-   * Proxy a Fill-in-the-Middle completion request to the Kilo Gateway
-   */
-  public fim<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      prefix?: string
-      suffix?: string
-      provider?: string
-      model?: string
-      maxTokens?: number
-      temperature?: number
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "prefix" },
-            { in: "body", key: "suffix" },
-            { in: "body", key: "provider" },
-            { in: "body", key: "model" },
-            { in: "body", key: "maxTokens" },
-            { in: "body", key: "temperature" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).sse.post<KiloFimResponses, KiloFimErrors, ThrowOnError>({
-      url: "/kilo/fim",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Next Edit completion
-   *
-   * Proxy a Mercury-style Next Edit request. The client supplies structured editor context; the gateway assembles the sentinel-tagged prompt and forwards to the upstream edit endpoint.
-   */
-  public edit<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      provider?: string
-      model?: string
-      maxTokens?: number
-      currentFilePath?: string
-      currentFileContent?: string
-      cursorLine?: number
-      cursorCharacter?: number
-      editableRegionStartLine?: number
-      editableRegionEndLine?: number
-      recentlyViewedSnippets?: Array<{
-        filepath: string
-        content: string
-      }>
-      editDiffHistory?: Array<string>
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "provider" },
-            { in: "body", key: "model" },
-            { in: "body", key: "maxTokens" },
-            { in: "body", key: "currentFilePath" },
-            { in: "body", key: "currentFileContent" },
-            { in: "body", key: "cursorLine" },
-            { in: "body", key: "cursorCharacter" },
-            { in: "body", key: "editableRegionStartLine" },
-            { in: "body", key: "editableRegionEndLine" },
-            { in: "body", key: "recentlyViewedSnippets" },
-            { in: "body", key: "editDiffHistory" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<KiloEditResponses, KiloEditErrors, ThrowOnError>({
-      url: "/kilo/edit",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Get Kilo notifications
-   *
-   * Fetch notifications from Kilo Gateway for CLI display
-   */
-  public notifications<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloNotificationsResponses, KiloNotificationsErrors, ThrowOnError>({
-      url: "/kilo/notifications",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get cloud sessions
-   *
-   * Fetch cloud CLI sessions from Kilo API
-   */
-  public cloudSessions<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      cursor?: string
-      limit?: number
-      gitUrl?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "cursor" },
-            { in: "query", key: "limit" },
-            { in: "query", key: "gitUrl" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<KiloCloudSessionsResponses, KiloCloudSessionsErrors, ThrowOnError>({
-      url: "/kilo/cloud-sessions",
-      ...options,
-      ...params,
-    })
-  }
-
-  private _audio?: Audio
-  get audio(): Audio {
-    return (this._audio ??= new Audio({ client: this.client }))
-  }
-
-  private _models?: Models
-  get models(): Models {
-    return (this._models ??= new Models({ client: this.client }))
-  }
-
-  private _organization?: Organization
-  get organization(): Organization {
-    return (this._organization ??= new Organization({ client: this.client }))
-  }
-
-  private _claw?: Claw
-  get claw(): Claw {
-    return (this._claw ??= new Claw({ client: this.client }))
-  }
-
-  private _cloud?: Cloud
-  get cloud(): Cloud {
-    return (this._cloud ??= new Cloud({ client: this.client }))
-  }
-}
-
-export class Heap extends HeyApiClient {
-  /**
-   * Write heap snapshot
-   *
-   * Write a heap snapshot for the CLI process to the log directory.
-   */
-  public snapshot<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeHeapSnapshotResponses,
-      KilocodeHeapSnapshotErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/heap/snapshot",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Notebook extends HeyApiClient {
-  /**
-   * List pending notebook requests
-   *
-   * List pending native notebook requests for the routed workspace.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeNotebookListResponses,
-      KilocodeNotebookListErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/notebook",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Reply to a notebook request
-   *
-   * Complete a pending native notebook request with a structured result.
-   */
-  public reply<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: NotebookRequestId
-      directory?: string
-      workspace?: string
-      result?: NotebookResult
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "result" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeNotebookReplyResponses,
-      KilocodeNotebookReplyErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/notebook/{requestID}/reply",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Reject a notebook request
-   *
-   * Complete a pending native notebook request with a structured host error.
-   */
-  public reject<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: NotebookRequestId
-      directory?: string
-      workspace?: string
-      error?: NotebookFailure
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "error" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeNotebookRejectResponses,
-      KilocodeNotebookRejectErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/notebook/{requestID}/reject",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class AgentManager extends HeyApiClient {
-  /**
-   * List pending Agent Manager requests
-   *
-   * List pending native Agent Manager orchestration requests for the routed workspace.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeAgentManagerListResponses,
-      KilocodeAgentManagerListErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent-manager",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Reply to an Agent Manager request
-   *
-   * Complete a pending Agent Manager orchestration request with a structured result.
-   */
-  public reply<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: AgentManagerRequestId
-      directory?: string
-      workspace?: string
-      result?: AgentManagerResult
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "result" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeAgentManagerReplyResponses,
-      KilocodeAgentManagerReplyErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent-manager/{requestID}/reply",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Reject an Agent Manager request
-   *
-   * Complete a pending Agent Manager orchestration request with a structured host error.
-   */
-  public reject<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: AgentManagerRequestId
-      directory?: string
-      workspace?: string
-      error?: AgentManagerFailure
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "error" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeAgentManagerRejectResponses,
-      KilocodeAgentManagerRejectErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent-manager/{requestID}/reject",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class SessionImport extends HeyApiClient {
-  /**
-   * Insert project for session import
-   *
-   * Insert or update a project row used by legacy session import.
-   */
-  public project<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      id?: string
-      worktree?: string
-      vcs?: string
-      name?: string
-      iconUrl?: string
-      iconColor?: string
-      timeCreated?: number
-      timeUpdated?: number
-      timeInitialized?: number
-      sandboxes?: Array<string>
-      commands?: {
-        start?: string
-      }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "worktree" },
-            { in: "body", key: "vcs" },
-            { in: "body", key: "name" },
-            { in: "body", key: "iconUrl" },
-            { in: "body", key: "iconColor" },
-            { in: "body", key: "timeCreated" },
-            { in: "body", key: "timeUpdated" },
-            { in: "body", key: "timeInitialized" },
-            { in: "body", key: "sandboxes" },
-            { in: "body", key: "commands" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeSessionImportProjectResponses,
-      KilocodeSessionImportProjectErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/session-import/project",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Insert session for session import
-   *
-   * Insert or update a session row used by legacy session import.
-   */
-  public session<ThrowOnError extends boolean = false>(
-    parameters?: {
-      query_directory?: string
-      workspace?: string
-      id?: string
-      projectID?: string
-      force?: boolean
-      workspaceID?: string
-      parentID?: string
-      slug?: string
-      body_directory?: string
-      title?: string
-      version?: string
-      shareURL?: string
-      summary?: {
-        additions: number
-        deletions: number
-        files: number
-        diffs?: Array<{
-          [key: string]: unknown
-        }>
-      }
-      revert?: {
-        messageID: string
-        partID?: string
-        snapshot?: string
-        diff?: string
-      }
-      permission?: {
-        [key: string]: unknown
-      }
-      timeCreated?: number
-      timeUpdated?: number
-      timeCompacting?: number
-      timeArchived?: number
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            {
-              in: "query",
-              key: "query_directory",
-              map: "directory",
-            },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "projectID" },
-            { in: "body", key: "force" },
-            { in: "body", key: "workspaceID" },
-            { in: "body", key: "parentID" },
-            { in: "body", key: "slug" },
-            {
-              in: "body",
-              key: "body_directory",
-              map: "directory",
-            },
-            { in: "body", key: "title" },
-            { in: "body", key: "version" },
-            { in: "body", key: "shareURL" },
-            { in: "body", key: "summary" },
-            { in: "body", key: "revert" },
-            { in: "body", key: "permission" },
-            { in: "body", key: "timeCreated" },
-            { in: "body", key: "timeUpdated" },
-            { in: "body", key: "timeCompacting" },
-            { in: "body", key: "timeArchived" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeSessionImportSessionResponses,
-      KilocodeSessionImportSessionErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/session-import/session",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Insert message for session import
-   *
-   * Insert or update a message row used by legacy session import.
-   */
-  public message<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      id?: string
-      sessionID?: string
-      timeCreated?: number
-      data?:
-        | {
-            role: "user"
-            time: {
-              created: number
-            }
-            agent: string
-            model: {
-              providerID: string
-              modelID: string
-            }
-            tools?: {
-              [key: string]: boolean
-            }
-          }
-        | {
-            role: "assistant"
-            time: {
-              created: number
-              completed?: number
-            }
-            parentID: string
-            modelID: string
-            providerID: string
-            mode: string
-            agent: string
-            path: {
-              cwd: string
-              root: string
-            }
-            summary?: boolean
-            cost: number
-            tokens: {
-              total?: number
-              input: number
-              output: number
-              reasoning: number
-              cache: {
-                read: number
-                write: number
-              }
-            }
-            structured?: unknown
-            variant?: string
-            finish?: string
-          }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "sessionID" },
-            { in: "body", key: "timeCreated" },
-            { in: "body", key: "data" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeSessionImportMessageResponses,
-      KilocodeSessionImportMessageErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/session-import/message",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Insert part for session import
-   *
-   * Insert or update a part row used by legacy session import.
-   */
-  public part<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      id?: string
-      messageID?: string
-      sessionID?: string
-      timeCreated?: number
-      data?:
-        | {
-            type: "text"
-            text: string
-            synthetic?: boolean
-            ignored?: boolean
-            time?: {
-              start: number
-              end?: number
-            }
-            metadata?: {
-              [key: string]: unknown
-            }
-          }
-        | {
-            type: "reasoning"
-            text: string
-            metadata?: {
-              [key: string]: unknown
-            }
-            time: {
-              start: number
-              end?: number
-            }
-          }
-        | {
-            type: "tool"
-            callID: string
-            tool: string
-            state:
-              | {
-                  status: "pending"
-                  input: {
-                    [key: string]: unknown
-                  }
-                  raw: string
-                }
-              | {
-                  status: "running"
-                  input: {
-                    [key: string]: unknown
-                  }
-                  title?: string
-                  metadata?: {
-                    [key: string]: unknown
-                  }
-                  time: {
-                    start: number
-                  }
-                }
-              | {
-                  status: "completed"
-                  input: {
-                    [key: string]: unknown
-                  }
-                  output: string
-                  title: string
-                  metadata: {
-                    [key: string]: unknown
-                  }
-                  time: {
-                    start: number
-                    end: number
-                    compacted?: number
-                  }
-                }
-              | {
-                  status: "error"
-                  input: {
-                    [key: string]: unknown
-                  }
-                  error: string
-                  metadata?: {
-                    [key: string]: unknown
-                  }
-                  time: {
-                    start: number
-                    end: number
-                  }
-                }
-            metadata?: {
-              [key: string]: unknown
-            }
-          }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "id" },
-            { in: "body", key: "messageID" },
-            { in: "body", key: "sessionID" },
-            { in: "body", key: "timeCreated" },
-            { in: "body", key: "data" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      KilocodeSessionImportPartResponses,
-      KilocodeSessionImportPartErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/session-import/part",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-}
-
-export class Kilocode extends HeyApiClient {
-  /**
-   * Check agent requirements
-   *
-   * Check whether the selected agent's requirements are available in the request directory.
-   */
-  public agentRequirements<ThrowOnError extends boolean = false>(
-    parameters: {
-      directory?: string
-      workspace?: string
-      agent: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "query", key: "agent" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeAgentRequirementsResponses,
-      KilocodeAgentRequirementsErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/agent/requirements",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Remove a skill
-   *
-   * Remove a skill by deleting its manifest from disk and clearing it from cache.
-   */
-  public removeSkill<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      location?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "location" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<KilocodeRemoveSkillResponses, KilocodeRemoveSkillErrors, ThrowOnError>(
-      {
-        url: "/kilocode/skill/remove",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
-      },
-    )
-  }
-
-  /**
-   * Remove a custom agent
-   *
-   * Remove a custom (non-native) agent by deleting its markdown file from disk and refreshing state.
-   */
-  public removeAgent<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      name?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "name" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<KilocodeRemoveAgentResponses, KilocodeRemoveAgentErrors, ThrowOnError>(
-      {
-        url: "/kilocode/agent/remove",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
-      },
-    )
-  }
-
-  /**
-   * Get session model usage
-   *
-   * Get token usage and direct cost by model for the complete top-level session tree.
-   */
-  public sessionModelUsage<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      KilocodeSessionModelUsageResponses,
-      KilocodeSessionModelUsageErrors,
-      ThrowOnError
-    >({
-      url: "/session/{sessionID}/model-usage",
-      ...options,
-      ...params,
-    })
-  }
-
-  private _heap?: Heap
-  get heap(): Heap {
-    return (this._heap ??= new Heap({ client: this.client }))
-  }
-
-  private _notebook?: Notebook
-  get notebook(): Notebook {
-    return (this._notebook ??= new Notebook({ client: this.client }))
-  }
-
-  private _agentManager?: AgentManager
-  get agentManager(): AgentManager {
-    return (this._agentManager ??= new AgentManager({ client: this.client }))
-  }
-
-  private _sessionImport?: SessionImport
-  get sessionImport(): SessionImport {
-    return (this._sessionImport ??= new SessionImport({ client: this.client }))
-  }
-}
-
-export class AnacondaDesktop extends HeyApiClient {
-  /**
-   * Get Anaconda Desktop setup status
-   *
-   * Discover the locally installed Anaconda Desktop and its active inference server.
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<
-      AnacondaDesktopStatusResponses,
-      AnacondaDesktopStatusErrors,
-      ThrowOnError
-    >({
-      url: "/kilocode/anaconda-desktop/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Open Anaconda Desktop
-   *
-   * Open the locally installed Anaconda Desktop application.
-   */
-  public open<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<AnacondaDesktopOpenResponses, AnacondaDesktopOpenErrors, ThrowOnError>(
-      {
-        url: "/kilocode/anaconda-desktop/open",
-        ...options,
-        ...params,
-      },
-    )
-  }
-
-  /**
-   * Synchronize Anaconda Desktop provider
-   *
-   * Discover the active local inference server and replace Kilo provider authentication metadata.
-   */
-  public sync<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      acknowledgeToolLimitations?: boolean
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "acknowledgeToolLimitations" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<AnacondaDesktopSyncResponses, AnacondaDesktopSyncErrors, ThrowOnError>(
-      {
-        url: "/kilocode/anaconda-desktop/sync",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
-      },
-    )
-  }
-}
-
-export class Network extends HeyApiClient {
-  /**
-   * List pending network waits
-   *
-   * Get all pending network reconnect requests across all sessions.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<NetworkListResponses, NetworkListErrors, ThrowOnError>({
-      url: "/network",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Resume after network wait
-   *
-   * Resume a pending session after reconnecting network-dependent services.
-   */
-  public reply<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<NetworkReplyResponses, NetworkReplyErrors, ThrowOnError>({
-      url: "/network/{requestID}/reply",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Reject network resume request
-   *
-   * Stop a pending session instead of resuming after network reconnect.
-   */
-  public reject<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<NetworkRejectResponses, NetworkRejectErrors, ThrowOnError>({
-      url: "/network/{requestID}/reject",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Remote extends HeyApiClient {
-  /**
-   * Enable remote connection
-   *
-   * Enable WebSocket connection to UserConnectionDO for real-time session relay and commands.
-   */
-  public enable<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<RemoteEnableResponses, RemoteEnableErrors, ThrowOnError>({
-      url: "/remote/enable",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Disable remote connection
-   *
-   * Close the remote WebSocket connection to UserConnectionDO.
-   */
-  public disable<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<RemoteDisableResponses, RemoteDisableErrors, ThrowOnError>({
-      url: "/remote/disable",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get remote connection status
-   *
-   * Get the current state of the remote WebSocket connection.
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<RemoteStatusResponses, RemoteStatusErrors, ThrowOnError>({
-      url: "/remote/status",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Sandbox extends HeyApiClient {
-  /**
-   * Get sandbox backend support
-   *
-   * Get sandbox backend availability without creating a session.
-   */
-  public support<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<SandboxSupportResponses, SandboxSupportErrors, ThrowOnError>({
-      url: "/sandbox/support",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Get session sandbox status
-   *
-   * Get the effective sandbox state for one session.
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<SandboxStatusResponses, SandboxStatusErrors, ThrowOnError>({
-      url: "/session/{sessionID}/sandbox",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Toggle session sandbox
-   *
-   * Toggle and persist the sandbox state for one session.
-   */
-  public toggle<ThrowOnError extends boolean = false>(
-    parameters: {
-      sessionID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "sessionID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<SandboxToggleResponses, SandboxToggleErrors, ThrowOnError>({
-      url: "/session/{sessionID}/sandbox/toggle",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Suggestion extends HeyApiClient {
-  /**
-   * List pending suggestions
-   *
-   * Get all pending suggestion requests across all sessions.
-   */
-  public list<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<SuggestionListResponses, SuggestionListErrors, ThrowOnError>({
-      url: "/suggestion",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Accept suggestion request
-   *
-   * Accept a suggestion request from the AI assistant.
-   */
-  public accept<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: string
-      directory?: string
-      workspace?: string
-      index?: number
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "index" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<SuggestionAcceptResponses, SuggestionAcceptErrors, ThrowOnError>({
-      url: "/suggestion/{requestID}/accept",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Dismiss suggestion request
-   *
-   * Dismiss a suggestion request from the AI assistant.
-   */
-  public dismiss<ThrowOnError extends boolean = false>(
-    parameters: {
-      requestID: string
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "requestID" },
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<SuggestionDismissResponses, SuggestionDismissErrors, ThrowOnError>({
-      url: "/suggestion/{requestID}/dismiss",
-      ...options,
-      ...params,
-    })
-  }
-}
-
-export class Telemetry extends HeyApiClient {
-  /**
-   * Capture telemetry event
-   *
-   * Forward a telemetry event to PostHog via kilo-telemetry.
-   */
-  public capture<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      event?: string
-      properties?: {
-        [key: string]: unknown
-      }
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "event" },
-            { in: "body", key: "properties" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<TelemetryCaptureResponses, TelemetryCaptureErrors, ThrowOnError>({
-      url: "/telemetry/capture",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Set PostHog telemetry enabled state
-   *
-   * Update the PostHog client's opt-in/out state at runtime. The CLI reads KILO_TELEMETRY_LEVEL once at spawn — this route lets clients (e.g. the VS Code extension) propagate runtime telemetry consent changes.
-   */
-  public setEnabled<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      enabled?: boolean
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "enabled" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<TelemetrySetEnabledResponses, TelemetrySetEnabledErrors, ThrowOnError>(
-      {
-        url: "/telemetry/setEnabled",
-        ...options,
-        ...params,
-        headers: {
-          "Content-Type": "application/json",
-          ...options?.headers,
-          ...params.headers,
-        },
-      },
-    )
-  }
-}
-
-export class Memory extends HeyApiClient {
-  /**
-   * Get memory status
-   *
-   * Return memory state, index preview, and token estimate for the active workspace.
-   */
-  public status<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<MemoryStatusResponses, MemoryStatusErrors, ThrowOnError>({
-      url: "/memory/status",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Show memory
-   *
-   * Return source memory files, generated index, recent decision summary, and memory save decisions.
-   */
-  public show<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).get<MemoryShowResponses, MemoryShowErrors, ThrowOnError>({
-      url: "/memory/show",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Enable memory
-   *
-   * Scaffold and enable project memory for the active workspace.
-   */
-  public enable<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryEnableResponses, MemoryEnableErrors, ThrowOnError>({
-      url: "/memory/enable",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Disable memory
-   *
-   * Disable project memory without deleting local memory files.
-   */
-  public disable<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryDisableResponses, MemoryDisableErrors, ThrowOnError>({
-      url: "/memory/disable",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Configure memory
-   *
-   * Update project memory settings such as automatic project fact capture.
-   */
-  public configure<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      autoConsolidate?: boolean
-      verbose?: boolean
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "autoConsolidate" },
-            { in: "body", key: "verbose" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryConfigureResponses, MemoryConfigureErrors, ThrowOnError>({
-      url: "/memory/configure",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Rebuild memory index
-   *
-   * Regenerate index.kmem from source memory files.
-   */
-  public rebuild<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryRebuildResponses, MemoryRebuildErrors, ThrowOnError>({
-      url: "/memory/rebuild",
-      ...options,
-      ...params,
-    })
-  }
-
-  /**
-   * Remember text
-   *
-   * Persist explicit user-provided memory text through the deterministic operation pipeline.
-   */
-  public remember<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      text?: string
-      key?: string
-      file?: "project.md" | "environment.md" | "corrections.md"
-      section?: string
-      sessionID?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "text" },
-            { in: "body", key: "key" },
-            { in: "body", key: "file" },
-            { in: "body", key: "section" },
-            { in: "body", key: "sessionID" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryRememberResponses, MemoryRememberErrors, ThrowOnError>({
-      url: "/memory/remember",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Remember correction
-   *
-   * Persist explicit corrective memory under corrections.md.
-   */
-  public correct<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      text?: string
-      key?: string
-      sessionID?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "text" },
-            { in: "body", key: "key" },
-            { in: "body", key: "sessionID" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryCorrectResponses, MemoryCorrectErrors, ThrowOnError>({
-      url: "/memory/correct",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Forget memory
-   *
-   * Remove memory lines by exact key, id, or normalized key text and rebuild the index.
-   */
-  public forget<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      query?: string
-      sessionID?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "query" },
-            { in: "body", key: "sessionID" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryForgetResponses, MemoryForgetErrors, ThrowOnError>({
-      url: "/memory/forget",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Purge memory
-   *
-   * Delete all project memory files for the active workspace.
-   */
-  public purge<ThrowOnError extends boolean = false>(
-    parameters?: {
-      directory?: string
-      workspace?: string
-      confirm?: true
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "directory" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "confirm" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<MemoryPurgeResponses, MemoryPurgeErrors, ThrowOnError>({
-      url: "/memory/purge",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
   }
 }
 
@@ -9228,7 +5232,7 @@ export class Question2 extends HeyApiClient {
   }
 }
 
-export class Session4 extends HeyApiClient {
+export class Session3 extends HeyApiClient {
   /**
    * List sessions
    *
@@ -9851,10 +5855,24 @@ export class Credential extends HeyApiClient {
   public remove<ThrowOnError extends boolean = false>(
     parameters: {
       credentialID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "credentialID" }] }])
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "credentialID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
     return (options?.client ?? this.client).delete<V2CredentialRemoveResponses, V2CredentialRemoveErrors, ThrowOnError>(
       {
         url: "/api/credential/{credentialID}",
@@ -9872,6 +5890,10 @@ export class Credential extends HeyApiClient {
   public update<ThrowOnError extends boolean = false>(
     parameters: {
       credentialID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
       label?: string
     },
     options?: Options<never, ThrowOnError>,
@@ -9882,6 +5904,7 @@ export class Credential extends HeyApiClient {
         {
           args: [
             { in: "path", key: "credentialID" },
+            { in: "query", key: "location" },
             { in: "body", key: "label" },
           ],
         },
@@ -10000,21 +6023,10 @@ export class Fs extends HeyApiClient {
         directory?: string
         workspace?: string
       }
-      path?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "query", key: "location" },
-            { in: "query", key: "path" },
-          ],
-        },
-      ],
-    )
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
     return (options?.client ?? this.client).get<V2FsReadResponses, V2FsReadErrors, ThrowOnError>({
       url: "/api/fs/read/*",
       ...options,
@@ -10159,6 +6171,258 @@ export class Event2 extends HeyApiClient {
     const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
     return (options?.client ?? this.client).sse.get<V2EventSubscribeResponses, V2EventSubscribeErrors, ThrowOnError>({
       url: "/api/event",
+      ...options,
+      ...params,
+    })
+  }
+}
+
+export class Pty2 extends HeyApiClient {
+  /**
+   * List PTY sessions
+   *
+   * List PTY sessions for a location, including exited sessions retained until removal.
+   */
+  public list<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
+    return (options?.client ?? this.client).get<V2PtyListResponses, V2PtyListErrors, ThrowOnError>({
+      url: "/api/pty",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Create PTY session
+   *
+   * Create a pseudo-terminal session for a location.
+   */
+  public create<ThrowOnError extends boolean = false>(
+    parameters?: {
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      command?: string
+      args?: Array<string>
+      cwd?: string
+      title?: string
+      env?: {
+        [key: string]: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "location" },
+            { in: "body", key: "command" },
+            { in: "body", key: "args" },
+            { in: "body", key: "cwd" },
+            { in: "body", key: "title" },
+            { in: "body", key: "env" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2PtyCreateResponses, V2PtyCreateErrors, ThrowOnError>({
+      url: "/api/pty",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Remove PTY session
+   *
+   * Terminate and remove one PTY session.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<V2PtyRemoveResponses, V2PtyRemoveErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Get PTY session
+   *
+   * Get one PTY session, including its exit code once exited.
+   */
+  public get<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2PtyGetResponses, V2PtyGetErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Update PTY session
+   *
+   * Update the title or viewport size of one PTY session.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      title?: string
+      size?: {
+        rows: number
+        cols: number
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "title" },
+            { in: "body", key: "size" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<V2PtyUpdateResponses, V2PtyUpdateErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
+   * Create PTY WebSocket token
+   *
+   * Create a short-lived single-use ticket for opening a PTY WebSocket connection.
+   */
+  public connectToken<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2PtyConnectTokenResponses, V2PtyConnectTokenErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}/connect-token",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Connect to PTY session
+   *
+   * Establish a WebSocket connection streaming PTY output and accepting terminal input.
+   */
+  public connect<ThrowOnError extends boolean = false>(
+    parameters: {
+      ptyID: string
+      "location[directory]"?: string
+      "location[workspace]"?: string
+      cursor?: string
+      ticket?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "ptyID" },
+            { in: "query", key: "location[directory]" },
+            { in: "query", key: "location[workspace]" },
+            { in: "query", key: "cursor" },
+            { in: "query", key: "ticket" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<V2PtyConnectResponses, V2PtyConnectErrors, ThrowOnError>({
+      url: "/api/pty/{ptyID}/connect",
       ...options,
       ...params,
     })
@@ -10356,9 +6620,9 @@ export class V2 extends HeyApiClient {
     return (this._agent ??= new Agent({ client: this.client }))
   }
 
-  private _session?: Session4
-  get session(): Session4 {
-    return (this._session ??= new Session4({ client: this.client }))
+  private _session?: Session3
+  get session(): Session3 {
+    return (this._session ??= new Session3({ client: this.client }))
   }
 
   private _model?: Model
@@ -10404,6 +6668,11 @@ export class V2 extends HeyApiClient {
   private _event?: Event2
   get event(): Event2 {
     return (this._event ??= new Event2({ client: this.client }))
+  }
+
+  private _pty?: Pty2
+  get pty(): Pty2 {
+    return (this._pty ??= new Pty2({ client: this.client }))
   }
 
   private _question?: Question3
@@ -10558,86 +6827,6 @@ export class KiloClient extends HeyApiClient {
   private _tui?: Tui
   get tui(): Tui {
     return (this._tui ??= new Tui({ client: this.client }))
-  }
-
-  private _agentBuilder?: AgentBuilder
-  get agentBuilder(): AgentBuilder {
-    return (this._agentBuilder ??= new AgentBuilder({ client: this.client }))
-  }
-
-  private _backgroundProcess?: BackgroundProcess
-  get backgroundProcess(): BackgroundProcess {
-    return (this._backgroundProcess ??= new BackgroundProcess({ client: this.client }))
-  }
-
-  private _branchName?: BranchName
-  get branchName(): BranchName {
-    return (this._branchName ??= new BranchName({ client: this.client }))
-  }
-
-  private _commitMessage?: CommitMessage
-  get commitMessage(): CommitMessage {
-    return (this._commitMessage ??= new CommitMessage({ client: this.client }))
-  }
-
-  private _enhancePrompt?: EnhancePrompt
-  get enhancePrompt(): EnhancePrompt {
-    return (this._enhancePrompt ??= new EnhancePrompt({ client: this.client }))
-  }
-
-  private _indexing?: Indexing
-  get indexing(): Indexing {
-    return (this._indexing ??= new Indexing({ client: this.client }))
-  }
-
-  private _interactiveTerminal?: InteractiveTerminal
-  get interactiveTerminal(): InteractiveTerminal {
-    return (this._interactiveTerminal ??= new InteractiveTerminal({ client: this.client }))
-  }
-
-  private _kilo?: Kilo
-  get kilo(): Kilo {
-    return (this._kilo ??= new Kilo({ client: this.client }))
-  }
-
-  private _kilocode?: Kilocode
-  get kilocode(): Kilocode {
-    return (this._kilocode ??= new Kilocode({ client: this.client }))
-  }
-
-  private _anacondaDesktop?: AnacondaDesktop
-  get anacondaDesktop(): AnacondaDesktop {
-    return (this._anacondaDesktop ??= new AnacondaDesktop({ client: this.client }))
-  }
-
-  private _network?: Network
-  get network(): Network {
-    return (this._network ??= new Network({ client: this.client }))
-  }
-
-  private _remote?: Remote
-  get remote(): Remote {
-    return (this._remote ??= new Remote({ client: this.client }))
-  }
-
-  private _sandbox?: Sandbox
-  get sandbox(): Sandbox {
-    return (this._sandbox ??= new Sandbox({ client: this.client }))
-  }
-
-  private _suggestion?: Suggestion
-  get suggestion(): Suggestion {
-    return (this._suggestion ??= new Suggestion({ client: this.client }))
-  }
-
-  private _telemetry?: Telemetry
-  get telemetry(): Telemetry {
-    return (this._telemetry ??= new Telemetry({ client: this.client }))
-  }
-
-  private _memory?: Memory
-  get memory(): Memory {
-    return (this._memory ??= new Memory({ client: this.client }))
   }
 
   private _v2?: V2

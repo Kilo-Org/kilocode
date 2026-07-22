@@ -2,10 +2,8 @@ import { Config } from "@/config/config"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { EventV2 } from "@opencode-ai/core/event"
 import { InstanceDisposed } from "@/server/event"
-import { BusEvent } from "@/bus/bus-event" // kilocode_change - include legacy Kilo events until they migrate to EventV2
 import "@opencode-ai/core/account"
 import "@/server/event"
-import "@/kilocode/indexing-event" // kilocode_change - register indexing.status before HttpApi event schemas
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
 import { described } from "./metadata"
@@ -40,7 +38,12 @@ const GlobalEventSchema = Schema.Struct({
   project: Schema.optional(Schema.String),
   workspace: Schema.optional(Schema.String),
   payload: Schema.Union([
-    ...BusEvent.effectPayloads(), // kilocode_change
+    ...EventV2.registry
+      .values()
+      .map((definition) =>
+        Schema.Struct({ id: EventV2.ID, type: Schema.Literal(definition.type), properties: definition.data }),
+      )
+      .toArray(),
     InstanceDisposed,
     ...SyncEventSchemas,
   ]),
@@ -78,7 +81,7 @@ export const GlobalApi = HttpApi.make("global").add(
         OpenApi.annotations({
           identifier: "global.health",
           summary: "Get health",
-          description: "Get health information about the Kilo server.", // kilocode_change
+          description: "Get health information about the OpenCode server.",
         }),
       ),
       HttpApiEndpoint.get("event", GlobalPaths.event, {
@@ -87,7 +90,7 @@ export const GlobalApi = HttpApi.make("global").add(
         OpenApi.annotations({
           identifier: "global.event",
           summary: "Get global events",
-          description: "Subscribe to global events from the Kilo system using server-sent events.", // kilocode_change
+          description: "Subscribe to global events from the OpenCode system using server-sent events.",
         }),
       ),
       HttpApiEndpoint.get("configGet", GlobalPaths.config, {
@@ -96,7 +99,7 @@ export const GlobalApi = HttpApi.make("global").add(
         OpenApi.annotations({
           identifier: "global.config.get",
           summary: "Get global configuration",
-          description: "Retrieve the current global Kilo configuration settings and preferences.", // kilocode_change
+          description: "Retrieve the current global OpenCode configuration settings and preferences.",
         }),
       ),
       HttpApiEndpoint.patch("configUpdate", GlobalPaths.config, {
@@ -107,7 +110,7 @@ export const GlobalApi = HttpApi.make("global").add(
         OpenApi.annotations({
           identifier: "global.config.update",
           summary: "Update global configuration",
-          description: "Update global Kilo configuration settings and preferences.", // kilocode_change
+          description: "Update global OpenCode configuration settings and preferences.",
         }),
       ),
       HttpApiEndpoint.post("dispose", GlobalPaths.dispose, {
@@ -116,7 +119,7 @@ export const GlobalApi = HttpApi.make("global").add(
         OpenApi.annotations({
           identifier: "global.dispose",
           summary: "Dispose instance",
-          description: "Clean up and dispose all Kilo instances, releasing all resources.", // kilocode_change
+          description: "Clean up and dispose all OpenCode instances, releasing all resources.",
         }),
       ),
       HttpApiEndpoint.post("upgrade", GlobalPaths.upgrade, {
@@ -126,8 +129,8 @@ export const GlobalApi = HttpApi.make("global").add(
       }).annotateMerge(
         OpenApi.annotations({
           identifier: "global.upgrade",
-          summary: "Upgrade kilo", // kilocode_change
-          description: "Upgrade kilo to the specified version or latest if not specified.", // kilocode_change
+          summary: "Upgrade opencode",
+          description: "Upgrade opencode to the specified version or latest if not specified.",
         }),
       ),
     )

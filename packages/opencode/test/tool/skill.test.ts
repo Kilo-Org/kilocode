@@ -9,7 +9,7 @@ import type { Permission } from "../../src/permission"
 import type { Tool } from "@/tool/tool"
 import { SkillTool } from "../../src/tool/skill"
 import { ToolRegistry } from "@/tool/registry"
-import { disposeAllInstances, provideTmpdirInstance, TestInstance } from "../fixture/fixture" // kilocode_change
+import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { testEffect } from "../lib/effect"
 
@@ -31,14 +31,11 @@ const node = CrossSpawnSpawner.defaultLayer
 
 const it = testEffect(Layer.mergeAll(ToolRegistry.defaultLayer, node).pipe(Layer.provide(Ripgrep.defaultLayer)))
 
-// kilocode_change - skip on windows: address windows ci failures #9496
-const unix = process.platform !== "win32" ? it.instance : it.instance.skip
-
 describe("tool.skill", () => {
-  unix("execute returns skill content block with files", () =>
+  it.instance("execute returns skill content block with files", () =>
     Effect.gen(function* () {
       const dir = (yield* TestInstance).directory
-      const skill = path.join(dir, ".kilo", "skill", "tool-skill") // kilocode_change
+      const skill = path.join(dir, ".opencode", "skill", "tool-skill")
       yield* Effect.promise(() =>
         Bun.write(
           path.join(skill, "SKILL.md"),
@@ -72,8 +69,8 @@ Use this skill.
       })).find((tool) => tool.id === SkillTool.id)
       if (!tool) throw new Error("Skill tool not found")
 
-      expect(tool.description).toContain("tool-skill") // kilocode_change - include concise available-skill context
-      expect(tool.description).toContain("Skill for tool tests.") // kilocode_change
+      expect(tool.description).not.toContain("tool-skill")
+      expect(tool.description).not.toContain("Skill for tool tests.")
 
       const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
       const ctx: Tool.Context = {
@@ -136,45 +133,4 @@ Use this skill.
       }
     }),
   )
-
-  // kilocode_change start
-  it.live("built-in kilo-config includes named command lookup guidance", () =>
-    provideTmpdirInstance(
-      (dir) =>
-        Effect.gen(function* () {
-          const home = process.env.KILO_TEST_HOME
-          process.env.KILO_TEST_HOME = dir
-          yield* Effect.addFinalizer(() =>
-            Effect.sync(() => {
-              process.env.KILO_TEST_HOME = home
-            }),
-          )
-
-          const registry = yield* ToolRegistry.Service
-          const agent = { name: "build", mode: "primary" as const, permission: [], options: {} }
-          const tool = (yield* registry.tools({
-            providerID: "opencode" as any,
-            modelID: "gpt-5" as any,
-            agent,
-          })).find((t) => t.id === SkillTool.id)
-          if (!tool) throw new Error("Skill tool not found")
-
-          const ctx: Tool.Context = {
-            ...baseCtx,
-            ask: () => Effect.void,
-          }
-
-          const result = yield* tool.execute({ name: "kilo-config" }, ctx)
-
-          expect(result.metadata.dir).toBe("builtin")
-          expect(result.output).toContain("Finding a named command")
-          expect(result.output).toContain("~/.config/kilo/")
-          expect(result.output).toContain("~/.kilocode/")
-          expect(result.output).toContain("**/command/")
-          expect(result.output).toContain("explicit search")
-        }),
-      { git: true },
-    ),
-  )
-  // kilocode_change end
 })

@@ -1,6 +1,5 @@
 /// <reference path="../env.d.ts" />
-import { tool } from "@kilocode/plugin"
-
+import { tool } from "@opencode-ai/plugin"
 async function githubFetch(endpoint: string, options: RequestInit = {}) {
   const response = await fetch(`https://api.github.com${endpoint}`, {
     ...options,

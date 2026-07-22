@@ -17,7 +17,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { eq } from "drizzle-orm"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { resetDatabase } from "../fixture/db"
-import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { pollWithTimeout, testEffect } from "../lib/effect"
 
 const env = LayerNode.buildLayer(CrossSpawnSpawner.node)
 const it = testEffect(env)
@@ -140,10 +140,10 @@ describe("ShareNext", () => {
   it.live("create posts share, persists it, and returns the result", () =>
     provideTmpdirInstance(
       () => {
-        const seen: HttpClientRequest.HttpClientRequest[] = []
+        const createRequests: HttpClientRequest.HttpClientRequest[] = []
         const client = HttpClient.make((req) => {
-          seen.push(req)
           if (req.url.endsWith("/api/share")) {
+            createRequests.push(req)
             return Effect.succeed(
               json(req, {
                 id: "shr_abc",
@@ -168,9 +168,9 @@ describe("ShareNext", () => {
           expect(row?.url).toBe("https://legacy-share.example.com/share/abc")
           expect(row?.secret).toBe("sec_123")
 
-          expect(seen).toHaveLength(1)
-          expect(seen[0].method).toBe("POST")
-          expect(seen[0].url).toBe("https://legacy-share.example.com/api/share")
+          expect(createRequests).toHaveLength(1)
+          expect(createRequests[0].method).toBe("POST")
+          expect(createRequests[0].url).toBe("https://legacy-share.example.com/api/share")
         }).pipe(Effect.provide(integrationLayer(client)))
       },
       { config: { enterprise: { url: "https://legacy-share.example.com" } } },
@@ -244,6 +244,7 @@ describe("ShareNext", () => {
 
           const info = yield* session.create({ title: "first" })
           yield* share.init()
+          yield* Effect.sleep(50)
           const { db } = yield* Database.Service
           yield* db
             .insert(SessionShareTable)
@@ -255,30 +256,6 @@ describe("ShareNext", () => {
             })
             .run()
             .pipe(Effect.orDie)
-          // kilocode_change start
-          yield* pollWithTimeout(
-            Effect.gen(function* () {
-              if (seen.length > 0) return true as const
-              yield* events.publish(Session.Event.Diff, {
-                sessionID: info.id,
-                diff: [
-                  {
-                    file: "warmup.ts",
-                    patch: "",
-                    additions: 0,
-                    deletions: 0,
-                    status: "modified",
-                  },
-                ],
-              })
-              return undefined
-            }),
-            "share diff subscriber did not flush warmup sync",
-          )
-          yield* Effect.sync(() => {
-            seen.length = 0
-          })
-          // kilocode_change end
 
           yield* events.publish(Session.Event.Diff, {
             sessionID: info.id,
@@ -304,19 +281,18 @@ describe("ShareNext", () => {
                 deletions: 0,
                 status: "modified",
               },
-            ], // kilocode_change
+            ],
           })
-          const sync = yield* pollWithTimeout(
-            Effect.sync(() => seen[0]),
-            "share sync was not sent",
-            "3 seconds",
-          ) // kilocode_change
+          yield* pollWithTimeout(
+            Effect.sync(() => (seen.length === 1 ? true : undefined)),
+            "timed out waiting for share sync",
+            "5 seconds",
+          )
 
           expect(seen).toHaveLength(1)
-          expect(sync.url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync") // kilocode_change
+          expect(seen[0].url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync")
 
-          const body = JSON.parse(sync.body) as {
-            // kilocode_change
+          const body = JSON.parse(seen[0].body) as {
             secret: string
             data: Array<{
               type: string

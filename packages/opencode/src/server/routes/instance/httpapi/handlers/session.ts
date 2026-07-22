@@ -1,8 +1,4 @@
-import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
-import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
-import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
-import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -38,7 +34,6 @@ import {
   ShellPayload,
   SummarizePayload,
   UpdatePayload,
-  ViewedPayload, // kilocode_change
 } from "../groups/session"
 import { PermissionNotFoundError } from "../errors"
 import * as SessionError from "./session-errors"
@@ -63,7 +58,6 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const todoSvc = yield* Todo.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
-    const viewers = yield* KiloViewers.Service // kilocode_change
     const scope = yield* Scope.Scope
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {
@@ -219,7 +213,19 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       )
     })
 
-    const forkRaw = KiloSessionHttpApi.forkRaw(fork) // kilocode_change - carry upstream bodyless full-session fork support
+    const forkRaw = Effect.fn("SessionHttpApi.forkRaw")(function* (ctx: {
+      params: { sessionID: SessionID }
+      request: HttpServerRequest.HttpServerRequest
+    }) {
+      const body = yield* Effect.orDie(ctx.request.text)
+      if (body.trim().length === 0) return yield* fork({ params: ctx.params })
+
+      const json = yield* tryParseJson(body)
+      const payload = yield* Schema.decodeUnknownEffect(ForkPayload)(json).pipe(
+        Effect.mapError(() => new HttpApiError.BadRequest({})),
+      )
+      return yield* fork({ params: ctx.params, payload })
+    })
 
     const abort = Effect.fn("SessionHttpApi.abort")(function* (ctx: { params: { sessionID: SessionID } }) {
       yield* promptSvc.cancel(ctx.params.sessionID)
@@ -290,21 +296,11 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     }) {
       yield* requireSession(ctx.params.sessionID)
       const message = yield* promptSvc
-        .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput) // kilocode_change
-        .pipe(
-          // kilocode_change start - reject only typed user image validation defects as request errors
-          Effect.catchCause((cause) => {
-            const error = Cause.squash(cause)
-            if (
-              error instanceof Image.InvalidDataUrlError ||
-              error instanceof Image.DecodeError ||
-              error instanceof Image.SizeError
-            )
-              return Effect.fail(new HttpApiError.BadRequest({}))
-            return Effect.die(error)
-          }),
-          // kilocode_change end
-        )
+        .prompt({
+          ...ctx.payload,
+          sessionID: ctx.params.sessionID,
+        })
+        .pipe(Effect.mapError(() => new HttpApiError.BadRequest({})))
       return HttpServerResponse.stream(Stream.make(JSON.stringify(message)).pipe(Stream.encodeText), {
         contentType: "application/json",
       })
@@ -315,24 +311,18 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       payload: typeof PromptPayload.Type
     }) {
       yield* requireSession(ctx.params.sessionID)
-      yield* promptSvc
-        .prompt({ ...ctx.payload, sessionID: ctx.params.sessionID } as unknown as SessionPrompt.PromptInput)
-        .pipe(
-          Effect.catchCause((cause) => {
-            if (Cause.hasInterruptsOnly(cause)) return Effect.void // kilocode_change - Stop is not an error
-            return Effect.gen(function* () {
-              yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
-              const error = Cause.squash(cause)
-              yield* events.publish(Session.Event.Error, {
-                sessionID: ctx.params.sessionID,
-                error: AgentRequirementError.isInstance(error)
-                  ? error.toObject()
-                  : new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
-              })
+      yield* promptSvc.prompt({ ...ctx.payload, sessionID: ctx.params.sessionID }).pipe(
+        Effect.catchCause((cause) =>
+          Effect.gen(function* () {
+            yield* Effect.logError("prompt_async failed", { sessionID: ctx.params.sessionID, cause })
+            yield* events.publish(Session.Event.Error, {
+              sessionID: ctx.params.sessionID,
+              error: new NamedError.Unknown({ message: Cause.pretty(cause) }).toObject(),
             })
           }),
-          Effect.forkIn(scope, { startImmediately: true }),
-        )
+        ),
+        Effect.forkIn(scope, { startImmediately: true }),
+      )
       return HttpApiSchema.NoContent.make()
     })
 
@@ -418,13 +408,6 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       return yield* session.updatePart(payload)
     })
 
-    // kilocode_change start
-    const viewed = Effect.fn("SessionHttpApi.viewed")(function* (ctx: { payload: typeof ViewedPayload.Type }) {
-      yield* viewers.update(ctx.payload)
-      return true
-    })
-    // kilocode_change end
-
     return handlers
       .handle("list", list)
       .handle("status", status)
@@ -437,7 +420,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handleRaw("create", createRaw)
       .handle("remove", remove)
       .handle("update", update)
-      .handleRaw("fork", forkRaw) // kilocode_change - carry upstream bodyless full-session fork support
+      .handleRaw("fork", forkRaw)
       .handle("abort", abort)
       .handle("init", init)
       .handle("share", share)
@@ -453,6 +436,5 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handle("deleteMessage", deleteMessage)
       .handle("deletePart", deletePart)
       .handle("updatePart", updatePart)
-      .handle("viewed", viewed) // kilocode_change
   }),
 )

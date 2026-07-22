@@ -1,6 +1,4 @@
-# kilocode_change start
-ARG REGISTRY=ghcr.io/kilo-org
-# kilocode_change end
+ARG REGISTRY=ghcr.io/anomalyco
 FROM ${REGISTRY}/build/bun-node:24.04
 
 ARG RUST_TOOLCHAIN=stable

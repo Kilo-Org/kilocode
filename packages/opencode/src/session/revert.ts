@@ -69,25 +69,12 @@ export const layer = Layer.effect(
 
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
       if (session.revert?.snapshot) yield* snap.restore(session.revert.snapshot)
-
-      // kilocode_change start - compute diffs BEFORE reverting files so the diff
-      // reflects changes being undone (files on disk still have AI modifications)
-      const range = all.filter((msg) => msg.info.id >= rev.messageID)
-      const diffs = yield* summary.computeDiff({ messages: range })
-      // kilocode_change end
-
       yield* snap.revert(patches)
       if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot)
+      const range = all.filter((msg) => msg.info.id >= rev.messageID)
+      const diffs = yield* summary.computeDiff({ messages: range })
       yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
       yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
-      // kilocode_change start
-      const summaryDiffs: Snapshot.SummaryFileDiff[] = diffs.map((d) => ({
-        file: d.file,
-        additions: d.additions,
-        deletions: d.deletions,
-        status: d.status,
-      }))
-      // kilocode_change end
       yield* sessions.setRevert({
         sessionID: input.sessionID,
         revert: rev,
@@ -95,7 +82,6 @@ export const layer = Layer.effect(
           additions: diffs.reduce((sum, x) => sum + x.additions, 0),
           deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
           files: diffs.length,
-          diffs: summaryDiffs, // kilocode_change
         },
       })
       return yield* sessions.get(input.sessionID).pipe(Effect.orDie)
@@ -142,12 +128,6 @@ export const layer = Layer.effect(
           for (const part of removeParts) {
             yield* sessions.removePart({ sessionID, messageID: target.info.id, partID: part.id })
           }
-          // kilocode_change start - clear a reverted provider error from the retained assistant message
-          if (target.info.role === "assistant" && target.info.error) {
-            delete target.info.error
-            yield* sessions.updateMessage(target.info)
-          }
-          // kilocode_change end
         }
       }
       yield* sessions.clearRevert(sessionID)

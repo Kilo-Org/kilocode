@@ -54,20 +54,11 @@ export function createFetch(override?: FetchHandler) {
       ].includes(url.pathname)
     )
       return json([])
-    if (
-      ["/config", "/global/config", "/experimental/resource", "/mcp", "/provider/auth", "/session/status"].includes(
-        url.pathname,
-      )
-    )
+    if (["/config", "/experimental/resource", "/mcp", "/provider/auth", "/session/status"].includes(url.pathname))
       return json({})
-    // kilocode_change start - Kilo bootstrap endpoints
-    if (["/network", "/background-process", "/interactive-terminal", "/config/warnings"].includes(url.pathname))
-      return json([])
-    if (url.pathname === "/indexing/status")
-      return json({ state: "Disabled", message: "Indexing disabled.", processedFiles: 0, totalFiles: 0, percent: 0 })
-    // kilocode_change end
     if (url.pathname === "/config/providers") return json({ providers: {}, default: {} })
     if (url.pathname === "/experimental/console") return json({ consoleManagedProviders: [], switchableOrgCount: 0 })
+    if (url.pathname === "/experimental/capabilities") return json({ backgroundSubagents: false })
     if (url.pathname === "/path") return json({ home: "", state: "", config: "", worktree, directory })
     if (url.pathname === "/api/location") return json({ directory, project: { id: "proj_test", directory: worktree } })
     if (

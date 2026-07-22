@@ -40,7 +40,7 @@ const FilesCommand = effectCmd({
         limit: args.limit ?? 10_000,
       })
       .pipe(Effect.orDie)
-    process.stdout.write(files.items.map((file) => file.path).join(EOL) + EOL) // kilocode_change
+    process.stdout.write(files.map((file) => file.path).join(EOL) + EOL)
   }),
 })
 
@@ -74,6 +74,6 @@ const SearchCommand = effectCmd({
         limit: args.limit ?? 10_000,
       })
       .pipe(Effect.orDie)
-    process.stdout.write(JSON.stringify(results.items, null, 2) + EOL) // kilocode_change - preserve debug output shape
+    process.stdout.write(JSON.stringify(results, null, 2) + EOL)
   }),
 })

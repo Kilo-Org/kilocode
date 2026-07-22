@@ -58,34 +58,33 @@ function run(msg: Msg) {
   })
 }
 
-// kilocode_change start - make worker finalization await the process close event without a Windows race
-const closed = new WeakMap<ReturnType<typeof spawn>, Promise<void>>()
-
 function spawnWorker(msg: Msg) {
-  const proc = spawn(process.execPath, [worker, JSON.stringify(msg)], {
+  return spawn(process.execPath, [worker, JSON.stringify(msg)], {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
   })
-  closed.set(proc, new Promise((resolve) => proc.once("close", () => resolve())))
-  return proc
 }
 
 async function stopWorker(proc: ReturnType<typeof spawnWorker>) {
-  const close = closed.get(proc) ?? Promise.resolve()
-  if (proc.exitCode !== null || proc.signalCode !== null) return close
+  if (proc.exitCode !== null || proc.signalCode !== null) return
+
+  const closed = new Promise<void>((resolve) => proc.once("close", () => resolve()))
+
   if (process.platform !== "win32" || !proc.pid) {
     proc.kill()
-    return close
+    await closed
+    return
   }
+
   await new Promise<void>((resolve) => {
-    const kill = spawn("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { windowsHide: true })
-    kill.once("error", () => resolve())
-    kill.once("close", () => resolve())
+    const killProc = spawn("taskkill", ["/pid", String(proc.pid), "/T", "/F"])
+    killProc.on("close", () => {
+      proc.kill()
+      resolve()
+    })
   })
-  proc.kill()
-  return close
+  await closed
 }
-// kilocode_change end
 
 async function waitForFile(file: string, timeout = 3_000) {
   const stop = Date.now() + timeout
@@ -368,8 +367,8 @@ describe("util.effect-flock", () => {
         const proc = spawnWorker({ key: "eflock:crash", dir, ready, holdMs: 120_000 })
 
         try {
-          await waitForFile(ready, 20_000) // kilocode_change - hosted macOS can start this worker slowly after stress tests
-          await stopWorker(proc) // kilocode_change - stopWorker now awaits close before returning
+          await waitForFile(ready, 5_000)
+          await stopWorker(proc)
 
           // Backdate lock files so they're past STALE_MS (60s)
           const lockDir = lock(dir, "eflock:crash")
@@ -387,6 +386,6 @@ describe("util.effect-flock", () => {
           await fs.rm(tmp, { recursive: true, force: true })
         }
       }),
-    60_000, // kilocode_change - match the wider worker readiness window
+    30_000,
   )
 })

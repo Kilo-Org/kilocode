@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "세션 변경 사항",
-  "ui.sessionReview.title.git": "Git 변경 사항",
-  "ui.sessionReview.title.branch": "브랜치 변경 사항",
   "ui.sessionReview.title.lastTurn": "마지막 턴 변경 사항",
   "ui.sessionReview.diffStyle.unified": "통합 보기",
   "ui.sessionReview.diffStyle.split": "분할 보기",
@@ -39,10 +37,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "단계 숨기기",
   "ui.sessionTurn.summary.response": "응답",
   "ui.sessionTurn.diff.showMore": "변경 사항 더 보기 ({{count}})",
-  "ui.sessionTurn.diffs.changed": "변경됨",
-  "ui.sessionTurn.diffs.showAll": "모두 보기",
-  "ui.sessionTurn.diffs.showLess": "간략히 보기",
-  "ui.sessionTurn.diffs.more": "+{{count}}개 파일 더 보기",
 
   "ui.sessionTurn.retry.retrying": "재시도 중",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}초 후",
@@ -62,8 +56,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "설정 열기",
 
   "ui.sessionTurn.status.delegating": "작업 위임 중",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "다음 단계 계획 중",
   "ui.sessionTurn.status.gatheringContext": "탐색 중",
   "ui.sessionTurn.status.gatheredContext": "탐색됨",
@@ -85,8 +77,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}}개 목록",
   "ui.messagePart.context.list.other": "{{count}}개 목록",
   "ui.messagePart.diagnostic.error": "오류",
-  "ui.messagePart.mcp.input": "입력",
-  "ui.messagePart.mcp.output": "출력",
   "ui.messagePart.title.edit": "편집",
   "ui.messagePart.title.write": "작성",
   "ui.messagePart.option.typeOwnAnswer": "직접 답변 입력",
@@ -105,23 +95,10 @@ export const dict = {
   "ui.textField.copied": "복사됨",
 
   "ui.imagePreview.alt": "이미지 미리보기",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Mermaid 다이어그램 렌더링 중...",
-  "ui.mermaid.renderError": "Mermaid 렌더링 실패: {{message}}",
-  "ui.mermaid.errorDefault": "Mermaid 다이어그램을 렌더링할 수 없습니다.",
-  "ui.mermaid.errorEmpty": "Mermaid가 빈 다이어그램을 렌더링했습니다.",
-  "ui.mermaid.download": "다운로드",
-  "ui.mermaid.copySource": "Mermaid 소스 복사",
-  "ui.mermaid.copySvg": "SVG 복사",
-  "ui.mermaid.copyPng": "PNG 복사",
-  "ui.mermaid.downloadSvg": "SVG 다운로드",
-  "ui.mermaid.downloadPng": "PNG 다운로드",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "스크롤 가능한 콘텐츠",
 
   "ui.tool.read": "읽기",
   "ui.tool.loaded": "로드됨",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}}줄 중 {{kept}}줄 유지", // kilocode_change
   "ui.tool.list": "목록",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -161,7 +138,6 @@ export const dict = {
   "ui.message.revertMessage": "이 시점으로 초기화",
   "ui.message.copyResponse": "응답 복사",
   "ui.message.copied": "복사됨!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "중단됨",
   "ui.message.queued": "대기 중",
   "ui.message.attachment.alt": "첨부 파일",
@@ -172,9 +148,7 @@ export const dict = {
   "ui.patch.action.patched": "패치됨",
 
   "ui.question.subtitle.answered": "{{count}}개 답변됨",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(답변 없음)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(답변되지 않음)",
   "ui.question.multiHint": "해당하는 항목 모두 선택",
   "ui.question.singleHint": "하나의 답변을 선택",

@@ -8,6 +8,7 @@ import {
   HttpClientResponse,
   HttpRouter,
   HttpServer,
+  HttpServerRequest,
   HttpServerResponse,
 } from "effect/unstable/http"
 import { FSUtil } from "@opencode-ai/core/fs-util"
@@ -64,14 +65,13 @@ function app(input?: { password?: string; username?: string }) {
   ).handler
   return {
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise(
-        (): Promise<Response> =>
-          Promise.resolve(
-            handler(
-              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-              HttpApiApp.context,
-            ),
+      return Effect.promise(() =>
+        Promise.resolve(
+          handler(
+            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+            HttpApiApp.context,
           ),
+        ),
       )
     },
   }
@@ -112,14 +112,13 @@ function uiApp(input?: {
   ).handler
   return {
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise(
-        (): Promise<Response> =>
-          Promise.resolve(
-            handler(
-              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-              HttpApiApp.context,
-            ),
+      return Effect.promise(() =>
+        Promise.resolve(
+          handler(
+            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+            HttpApiApp.context,
           ),
+        ),
       )
     },
   }
@@ -155,14 +154,13 @@ function routeOrderingApp() {
   return {
     proxiedUrl: () => proxiedUrl,
     request(input: string | URL | Request, init?: RequestInit) {
-      return Effect.promise(
-        (): Promise<Response> =>
-          Promise.resolve(
-            handler(
-              input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
-              HttpApiApp.context,
-            ),
+      return Effect.promise(() =>
+        Promise.resolve(
+          handler(
+            input instanceof Request ? input : new Request(new URL(input, "http://localhost"), init),
+            HttpApiApp.context,
           ),
+        ),
       )
     },
   }
@@ -183,23 +181,120 @@ function responseText(response: Response) {
 }
 
 describe("HttpApi UI fallback", () => {
-  // kilocode_change start - embedded UI is the only supported fallback; never proxy to app.opencode.ai
-  it.live("returns not found without proxying when embedded UI is disabled", () =>
+  it.live("serves the web UI through the HTTP API app", () =>
     Effect.gen(function* () {
-      let proxied = false
+      let proxiedUrl: string | undefined
+
       const response = yield* uiApp({
         disableEmbeddedWebUi: true,
-        client: httpClient(new Response("ui"), () => {
-          proxied = true
-        }),
+        client: httpClient(
+          new Response("<html>opencode</html>", { headers: { "content-type": "text/html" } }),
+          (request) => {
+            proxiedUrl = request.url
+          },
+        ),
       }).request("/")
 
-      expect(response.status).toBe(404)
-      expect(yield* Effect.promise(() => response.json())).toEqual({ error: "Not Found" })
-      expect(proxied).toBe(false)
+      expect(response.status).toBe(200)
+      expect(response.headers.get("content-type")).toContain("text/html")
+      expect(yield* responseText(response)).toBe("<html>opencode</html>")
+      expect(proxiedUrl).toBe("https://app.opencode.ai/")
     }),
   )
-  // kilocode_change end
+
+  it.live("strips upstream transfer encoding headers from proxied assets", () =>
+    Effect.gen(function* () {
+      let proxiedUrl: string | undefined
+
+      const response = yield* Effect.gen(function* () {
+        const fs = yield* FSUtil.Service
+        const client = yield* HttpClient.HttpClient
+        const flags = yield* RuntimeFlags.Service
+        return yield* serveUIEffect(HttpServerRequest.fromWeb(new Request("http://localhost/assets/app.js")), {
+          fs,
+          client,
+          disableEmbeddedWebUi: flags.disableEmbeddedWebUi,
+        })
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            RuntimeFlags.layer({ disableEmbeddedWebUi: true }),
+            Layer.succeed(
+              HttpClient.HttpClient,
+              HttpClient.make((request) => {
+                proxiedUrl = request.url
+                return Effect.succeed(
+                  HttpClientResponse.fromWeb(
+                    request,
+                    new Response("console.log('ok')", {
+                      headers: {
+                        "content-encoding": "br",
+                        "content-length": "999",
+                        "content-type": "text/javascript",
+                      },
+                    }),
+                  ),
+                )
+              }),
+            ),
+          ),
+        ),
+        Effect.map(HttpServerResponse.toWeb),
+      )
+
+      expect(response.status).toBe(200)
+      expect(proxiedUrl).toBe("https://app.opencode.ai/assets/app.js")
+      expect(response.headers.get("content-encoding")).toBeNull()
+      expect(response.headers.get("content-length")).not.toBe("999")
+      expect(response.headers.get("content-type")).toContain("text/javascript")
+      expect(yield* responseText(response)).toBe("console.log('ok')")
+    }),
+  )
+
+  // Regression for #25698 (Ope): upstream `transfer-encoding: chunked` was
+  // forwarded through the proxy while the proxy itself re-frames the body,
+  // causing browsers to fail with `ERR_INVALID_CHUNKED_ENCODING`.
+  it.live("strips upstream transfer-encoding header from proxied assets", () =>
+    Effect.gen(function* () {
+      const response = yield* Effect.gen(function* () {
+        const fs = yield* FSUtil.Service
+        const client = yield* HttpClient.HttpClient
+        const flags = yield* RuntimeFlags.Service
+        return yield* serveUIEffect(HttpServerRequest.fromWeb(new Request("http://localhost/")), {
+          fs,
+          client,
+          disableEmbeddedWebUi: flags.disableEmbeddedWebUi,
+        })
+      }).pipe(
+        Effect.provide(
+          Layer.mergeAll(
+            RuntimeFlags.layer({ disableEmbeddedWebUi: true }),
+            Layer.succeed(
+              HttpClient.HttpClient,
+              HttpClient.make((request) =>
+                Effect.succeed(
+                  HttpClientResponse.fromWeb(
+                    request,
+                    new Response("<html>opencode</html>", {
+                      headers: {
+                        "transfer-encoding": "chunked",
+                        "content-type": "text/html",
+                      },
+                    }),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Effect.map(HttpServerResponse.toWeb),
+      )
+
+      expect(response.status).toBe(200)
+      expect(response.headers.get("transfer-encoding")).toBeNull()
+      expect(yield* responseText(response)).toBe("<html>opencode</html>")
+    }),
+  )
 
   it.live("serves embedded UI assets when Bun can read them but access reports missing", () =>
     Effect.gen(function* () {
@@ -271,7 +366,7 @@ describe("HttpApi UI fallback", () => {
     Effect.gen(function* () {
       const response = yield* uiApp({
         password: "secret",
-        username: "kilo", // kilocode_change
+        username: "opencode",
         disableEmbeddedWebUi: true,
       }).request("/")
 
@@ -282,47 +377,29 @@ describe("HttpApi UI fallback", () => {
 
   it.live("accepts auth token for the web UI", () =>
     Effect.gen(function* () {
-      let proxied = false // kilocode_change
       const response = yield* uiApp({
         password: "secret",
-        username: "kilo", // kilocode_change
+        username: "opencode",
         disableEmbeddedWebUi: true,
-        // kilocode_change start - authenticated requests still must not proxy when embedded UI is disabled
-        client: httpClient(new Response("<html>kilo</html>", { headers: { "content-type": "text/html" } }), () => {
-          proxied = true
-        }),
-        // kilocode_change end
-      }).request(`/?auth_token=${btoa("kilo:secret")}`)
+        client: httpClient(new Response("<html>opencode</html>", { headers: { "content-type": "text/html" } })),
+      }).request(`/?auth_token=${btoa("opencode:secret")}`)
 
-      // kilocode_change start
-      expect(response.status).toBe(404)
-      expect(yield* Effect.promise(() => response.json())).toEqual({ error: "Not Found" })
-      expect(proxied).toBe(false)
-      // kilocode_change end
+      expect(response.status).toBe(200)
+      expect(yield* responseText(response)).toBe("<html>opencode</html>")
     }),
   )
 
   it.live("accepts basic auth for the web UI", () =>
     Effect.gen(function* () {
-      let proxied = false // kilocode_change
       const response = yield* uiApp({
         password: "secret",
-        username: "kilo", // kilocode_change
+        username: "opencode",
         disableEmbeddedWebUi: true,
-        // kilocode_change start
-        client: httpClient(new Response("ui"), () => {
-          proxied = true
-        }),
-        // kilocode_change end
       }).request("/", {
-        headers: { authorization: `Basic ${btoa("kilo:secret")}` },
+        headers: { authorization: `Basic ${btoa("opencode:secret")}` },
       })
 
-      // kilocode_change start
-      expect(response.status).toBe(404)
-      expect(yield* Effect.promise(() => response.json())).toEqual({ error: "Not Found" })
-      expect(proxied).toBe(false)
-      // kilocode_change end
+      expect(response.status).toBe(200)
     }),
   )
 
@@ -336,7 +413,7 @@ describe("HttpApi UI fallback", () => {
         headers: { authorization: `Basic ${btoa("opencode:sec:ret")}` },
       })
 
-      expect(response.status).toBe(404) // kilocode_change - auth succeeds, but Kilo does not proxy a fallback UI
+      expect(response.status).toBe(200)
     }),
   )
 
@@ -350,7 +427,7 @@ describe("HttpApi UI fallback", () => {
       for (const path of ["/site.webmanifest", "/web-app-manifest-192x192.png", "/web-app-manifest-512x512.png"]) {
         const response = yield* uiApp({
           password: "secret",
-          username: "kilo", // kilocode_change
+          username: "opencode",
           disableEmbeddedWebUi: true,
           client: httpClient(new Response("ok")),
         }).request(path)
@@ -361,8 +438,7 @@ describe("HttpApi UI fallback", () => {
 
   it.live("allows web UI preflight without auth", () =>
     Effect.gen(function* () {
-      const response = yield* app({ password: "secret", username: "kilo" }).request("/", {
-        // kilocode_change
+      const response = yield* app({ password: "secret", username: "opencode" }).request("/", {
         method: "OPTIONS",
         headers: {
           origin: "http://localhost:3000",

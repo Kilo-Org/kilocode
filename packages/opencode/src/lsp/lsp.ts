@@ -12,7 +12,6 @@ import { spawn as lspspawn } from "./launch"
 import { Effect, Layer, Context, Schema } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { containsPath } from "@/project/instance-context"
-import { TsClient } from "../kilocode/ts-client" // kilocode_change
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 
@@ -260,21 +259,6 @@ export const layer = Layer.effect(
           const root = await server.root(file, ctx)
           if (!root) continue
           if (s.broken.has(root + server.id)) continue
-
-          // kilocode_change start - use lightweight tsgo-based client when persistent LSP is not enabled
-          if (server.id === "typescript" && !flags.experimentalLspTool) {
-            const existing = s.clients.find((x) => x.root === root && x.serverID === server.id)
-            if (existing) {
-              result.push(existing)
-              continue
-            }
-            const client = TsClient.create({ root })
-            s.clients.push(client)
-            result.push(client)
-            updated++
-            continue
-          }
-          // kilocode_change end
 
           const match = s.clients.find((x) => x.root === root && x.serverID === server.id)
           if (match) {

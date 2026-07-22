@@ -21,7 +21,7 @@
   align-self: stretch;
   width: 100%;
   max-width: 100%;
-  gap: 8px; /* kilocode_change */
+  gap: 0;
 
   [data-slot="user-message-attachments"] {
     display: flex;
@@ -43,7 +43,7 @@
     overflow: hidden;
     background: var(--surface-weak);
     border: 1px solid var(--border-weak-base);
-    cursor: pointer; /* kilocode_change */
+    cursor: default;
     transition:
       border-color 0.15s ease,
       opacity 0.3s ease;
@@ -182,7 +182,7 @@
     align-items: center;
     justify-content: flex-end;
     overflow: hidden;
-    gap: 6px; /* kilocode_change */
+    gap: 0;
   }
 
   [data-slot="user-message-meta-tail"] {
@@ -245,12 +245,6 @@
 
   &:hover [data-slot="text-part-copy-wrapper"],
   &:focus-within [data-slot="text-part-copy-wrapper"] {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* kilocode_change: always show copy button for the final turn response */
-  [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
     opacity: 1;
     pointer-events: auto;
   }
@@ -365,7 +359,7 @@
   width: 100%;
   border: 1px solid var(--border-weak-base);
   border-radius: 6px;
-  background: var(--background-stronger);
+  background: transparent;
   position: relative;
   overflow: hidden;
 
@@ -417,7 +411,6 @@
     line-height: var(--line-height-large);
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    background: transparent;
   }
 }
 
@@ -481,18 +474,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-weight: var(--font-weight-regular);
-
-    /* kilocode_change start */
-    &.clickable {
-      cursor: pointer;
-      transition: color 0.15s ease;
-
-      &:hover {
-        text-decoration: underline;
-        color: var(--text-base);
-      }
-    }
-    /* kilocode_change end */
   }
 
   [data-slot="message-part-path"] {
@@ -509,30 +490,6 @@
     white-space: nowrap;
     direction: rtl;
     text-align: left;
-
-    /* kilocode_change start */
-    &.clickable {
-      cursor: pointer;
-      transition: color 0.15s ease;
-
-      &:hover {
-        text-decoration: underline;
-        color: var(--text-base);
-      }
-    }
-    /* kilocode_change end */
-  }
-
-  [data-slot="message-part-filename"] {
-    color: var(--text-strong);
-    flex-shrink: 0;
-  }
-
-  [data-slot="message-part-actions"] {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: flex-end;
   }
 
   [data-slot="message-part-filename"] {
@@ -646,15 +603,7 @@
   padding: 10px 0 24px 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-
-  [data-component="checkbox"] {
-    gap: 8px;
-
-    [data-slot="checkbox-checkbox-content"] {
-      display: contents;
-    }
-  }
+  gap: 8px;
 
   [data-component="checkbox"] {
     --checkbox-align: flex-start;
@@ -1278,30 +1227,12 @@
     font-weight: var(--font-weight-medium);
   }
 
-  [data-slot="apply-patch-file-path"] {
-    font-family: var(--font-family-mono);
-    font-size: var(--font-size-small);
-    color: var(--text-weak);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex-grow: 1;
-
-    /* kilocode_change start */
-    &.clickable {
-      cursor: pointer;
-      transition: color 0.15s ease;
-
-      &:hover {
-        text-decoration: underline;
-        color: var(--text-base);
-      }
-    }
-    /* kilocode_change end */
-  }
-
   [data-slot="apply-patch-change"][data-type="added"] {
     color: var(--icon-diff-add-base);
+  }
+
+  [data-slot="apply-patch-change"][data-type="removed"] {
+    color: var(--icon-diff-delete-base);
   }
 
   [data-slot="apply-patch-change"][data-type="modified"] {
@@ -1341,15 +1272,4 @@
     flex-shrink: 0;
     color: var(--icon-weak);
   }
-
-  /* kilocode_change start */
-  &.clickable {
-    cursor: pointer;
-    transition: color 0.15s ease;
-
-    &:hover {
-      color: var(--text-base);
-    }
-  }
-  /* kilocode_change end */
 }

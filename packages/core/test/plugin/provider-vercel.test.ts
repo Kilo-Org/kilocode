@@ -25,8 +25,8 @@ describe("VercelPlugin", () => {
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("vercel"))).request.headers).toEqual({
         Existing: "1",
-        "http-referer": "https://kilo.ai/",
-        "x-title": "Kilo Code",
+        "http-referer": "https://opencode.ai/",
+        "x-title": "opencode",
       })
     }),
   )

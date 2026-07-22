@@ -1,6 +1,6 @@
 import { NodeFileSystem } from "@effect/platform-node"
 import { describe, expect, test } from "bun:test"
-import { Cause, Deferred, Effect, Exit, Fiber, Layer, Scope, Stream } from "effect"
+import { Cause, Deferred, Effect, Exit, Layer, Scope, Stream } from "effect"
 import { Headers, HttpBody, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { Socket } from "effect/unstable/socket"
 import * as fs from "node:fs"
@@ -309,102 +309,6 @@ describe("http-recorder", () => {
     expect(received).toEqual(['{"type":"session.created"}', '{"type":"response.completed"}'])
   })
 
-  // kilocode_change - regression coverage for internal replay ordering and auto recording
-  test("internal WebSocket replay preserves causal frame ordering", async () => {
-    const received: string[] = []
-    await runRecorder(
-      Effect.gen(function* () {
-        const cassette = yield* HttpRecorderInternal.Cassette.Service
-        const first = yield* Deferred.make<void>()
-        const second = yield* Deferred.make<void>()
-        yield* cassette.append("websocket/internal-replay", {
-          transport: "websocket",
-          open: { url: "wss://example.test/realtime", headers: {} },
-          events: [
-            { direction: "server", kind: "text", body: '{"type":"session.created"}' },
-            { direction: "client", kind: "text", body: '{"type":"response.create","prompt":"hello"}' },
-            { direction: "server", kind: "text", body: '{"type":"response.completed"}' },
-          ],
-        })
-        const executor = yield* HttpRecorderInternal.makeWebSocketExecutor({
-          name: "websocket/internal-replay",
-          mode: "replay",
-          cassette,
-          compareClientMessagesAsJson: true,
-          live: { open: () => Effect.die(new Error("unexpected live WebSocket open")) },
-        })
-        const connection = yield* executor.open({
-          url: "wss://example.test/realtime",
-          headers: Headers.fromInput({}),
-        })
-        const stream = yield* connection.messages.pipe(
-          Stream.runForEach((message) =>
-            Effect.gen(function* () {
-              if (typeof message !== "string") return yield* Effect.die(new Error("unexpected binary frame"))
-              received.push(message)
-              yield* Deferred.succeed(JSON.parse(message).type === "session.created" ? first : second, undefined)
-            }),
-          ),
-          Effect.forkScoped,
-        )
-        yield* Deferred.await(first)
-        yield* Effect.yieldNow
-        expect(yield* Deferred.isDone(second)).toBe(false)
-        yield* connection.sendText('{"prompt":"hello","type":"response.create"}')
-        yield* Deferred.await(second)
-        yield* Fiber.join(stream)
-        yield* connection.close
-      }),
-    )
-
-    expect(received).toEqual(['{"type":"session.created"}', '{"type":"response.completed"}'])
-  })
-
-  test("internal WebSocket auto mode records when the cassette is missing", async () => {
-    const previous = process.env.CI
-    delete process.env.CI
-    try {
-      const interactions = await runRecorder(
-        Effect.gen(function* () {
-          const cassette = yield* HttpRecorderInternal.Cassette.Service
-          const executor = yield* HttpRecorderInternal.makeWebSocketExecutor({
-            name: "websocket/internal-auto",
-            mode: "auto",
-            cassette,
-            live: {
-              open: () =>
-                Effect.succeed({
-                  sendText: () => Effect.void,
-                  messages: Stream.make("reply"),
-                  close: Effect.void,
-                }),
-            },
-          })
-          const connection = yield* executor.open({
-            url: "wss://example.test/realtime",
-            headers: Headers.fromInput({}),
-          })
-          yield* connection.sendText("hello")
-          yield* Stream.runDrain(connection.messages)
-          yield* connection.close
-          return yield* cassette.read("websocket/internal-auto")
-        }),
-      )
-
-      expect(interactions).toMatchObject([
-        {
-          transport: "websocket",
-          events: [
-            { direction: "client", kind: "text", body: "hello" },
-            { direction: "server", kind: "text", body: "reply" },
-          ],
-        },
-      ])
-    } finally {
-      if (previous !== undefined) process.env.CI = previous
-    }
-  })
-
   test("the public socket decorator replays a provided Effect socket", async () => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "http-recorder-websocket-"))
     await seedCassetteDirectory(directory, "websocket/public-layer", [
@@ -434,7 +338,7 @@ describe("http-recorder", () => {
       }).pipe(
         Effect.scoped,
         Effect.provide(
-          HttpRecorder.socket("websocket/public-layer", { directory, mode: "auto" }).pipe(
+          HttpRecorder.socket("websocket/public-layer", { directory }).pipe(
             Layer.provide(
               Layer.succeed(
                 Socket.Socket,

@@ -136,14 +136,14 @@ describe("ProjectV2.resolve", () => {
         Effect.promise(() => tmpdir()),
         (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
       )
-      yield* Effect.promise(() => initRepo(ssh.path, { commit: true, remote: "git@example.com:owner/repo.git" }))
-      yield* Effect.promise(() => initRepo(https.path, { commit: true, remote: "https://example.com/owner/repo.git" }))
+      yield* Effect.promise(() => initRepo(ssh.path, { commit: true, remote: "git@github.com:owner/repo.git" }))
+      yield* Effect.promise(() => initRepo(https.path, { commit: true, remote: "https://github.com/owner/repo.git" }))
       const project = yield* ProjectV2.Service
 
       const a = yield* project.resolve(abs(ssh.path))
       const b = yield* project.resolve(abs(https.path))
 
-      expect(a.id).toBe(remoteID("example.com/owner/repo"))
+      expect(a.id).toBe(remoteID("github.com/owner/repo"))
       expect(b.id).toBe(a.id)
     }),
   )
@@ -170,7 +170,7 @@ describe("ProjectV2.resolve", () => {
         (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
       )
       yield* Effect.promise(() => initRepo(tmp.path, { commit: true, remote: "git@github.com:owner/repo.git" }))
-      yield* Effect.promise(() => Bun.write(path.join(tmp.path, ".git", "kilo"), "old-id")) // kilocode_change
+      yield* Effect.promise(() => Bun.write(path.join(tmp.path, ".git", "opencode"), "old-id"))
       const project = yield* ProjectV2.Service
 
       const result = yield* project.resolve(abs(tmp.path))
@@ -191,7 +191,7 @@ describe("ProjectV2.resolve", () => {
 
       yield* project.resolve(abs(tmp.path))
 
-      expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, ".git", "kilo")).exists())).toBe(false) // kilocode_change
+      expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, ".git", "opencode")).exists())).toBe(false)
     }),
   )
 
@@ -222,7 +222,7 @@ describe("ProjectV2.resolve", () => {
         Effect.promise(() => $`rm -rf ${worktree}`.quiet().nothrow()).pipe(Effect.ignore),
       )
       yield* Effect.promise(() => initRepo(tmp.path, { commit: true, remote: "git@github.com:owner/repo.git" }))
-      yield* Effect.promise(() => Bun.write(path.join(tmp.path, ".git", "kilo"), "old-id")) // kilocode_change
+      yield* Effect.promise(() => Bun.write(path.join(tmp.path, ".git", "opencode"), "old-id"))
       yield* Effect.promise(() => $`git worktree add ${worktree} -b test-${Date.now()}`.cwd(tmp.path).quiet())
       const project = yield* ProjectV2.Service
 

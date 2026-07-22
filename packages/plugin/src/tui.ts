@@ -13,7 +13,6 @@ import type {
   QuestionRequest,
   Session,
   SessionStatus,
-  BackgroundProcessInfo,
   TextPart,
   Config as SdkConfig,
 } from "@kilocode/sdk/v2"
@@ -389,7 +388,6 @@ export type TuiState = {
     get: (sessionID: string) => Session | undefined
     diff: (sessionID: string) => ReadonlyArray<TuiSidebarFileItem>
     todo: (sessionID: string) => ReadonlyArray<TuiSidebarTodoItem>
-    processes: (sessionID: string) => ReadonlyArray<TuiSidebarBackgroundProcessItem>
     messages: (sessionID: string) => ReadonlyArray<Message>
     status: (sessionID: string) => SessionStatus | undefined
     permission: (sessionID: string) => ReadonlyArray<PermissionRequest>
@@ -447,11 +445,6 @@ export type TuiSidebarMcpItem = {
 export type TuiSidebarLspItem = Pick<LspStatus, "id" | "root" | "status">
 
 export type TuiSidebarTodoItem = Pick<Todo, "content" | "status">
-
-export type TuiSidebarBackgroundProcessItem = Pick<
-  BackgroundProcessInfo,
-  "id" | "pid" | "command" | "cwd" | "description" | "ports" | "status" | "output"
->
 
 export type TuiSidebarFileItem = {
   file: string

@@ -19,7 +19,6 @@ import {
   type ToolPart,
 } from "@opencode-ai/core/v1/session"
 
-export { EditorContext } from "@opencode-ai/core/v1/session" // kilocode_change
 import { NamedError } from "@opencode-ai/core/util/error"
 import { APICallError, convertToModelMessages, LoadAPIKeyError, type ModelMessage, type UIMessage } from "ai"
 import { Database } from "@opencode-ai/core/database/database"
@@ -37,11 +36,6 @@ import { errorMessage } from "@/util/error"
 import { isMedia } from "@/util/media"
 import type { SystemError } from "bun"
 import type { Provider } from "@/provider/provider"
-import { Snapshot } from "@/snapshot" // kilocode_change
-import { SessionNetwork } from "./network" // kilocode_change
-import { CodexAuthExpiredError } from "@/kilocode/provider/codex-refresh" // kilocode_change
-import { KiloSessionMessageOrder } from "@/kilocode/session/message-order" // kilocode_change
-import * as TextStream from "@/kilocode/text-stream" // kilocode_change
 import { Effect, Schema } from "effect"
 
 /** Error shape thrown by Bun's fetch() when gzip/br decompression fails mid-stream */
@@ -54,38 +48,10 @@ interface FetchDecompressionError extends Error {
 export const SYNTHETIC_ATTACHMENT_PROMPT = "Attached media from tool result:"
 export { isMedia }
 
-// kilocode_change - upstream moved these message/part types to SessionV1; re-export them so the
-// existing MessageV2.<Type> call sites keep resolving.
-export {
-  APIError,
-  AbortedError,
-  AgentPartInput,
-  Assistant,
-  CompactionPart,
-  ContextOverflowError,
-  FilePart,
-  FilePartInput,
-  Info,
-  Part,
-  StepFinishPart,
-  StepStartPart,
-  StructuredOutputError,
-  SubtaskPart,
-  SubtaskPartInput,
-  TextPart,
-  TextPartInput,
-  ToolPart,
-  User,
-  WithParts,
-} from "@opencode-ai/core/v1/session"
-
 function truncateToolOutput(text: string, maxChars?: number) {
   if (!maxChars || text.length <= maxChars) return text
-  // kilocode_change start - avoid persisting malformed Unicode in compacted tool output
-  const sliced = TextStream.safeSlice(text, maxChars)
-  const omitted = text.length - sliced.length
-  return `${sliced}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
-  // kilocode_change end
+  const omitted = text.length - maxChars
+  return `${text.slice(0, maxChars)}\n[Tool output truncated for compaction: omitted ${omitted} chars]`
 }
 
 export const Event = {
@@ -122,109 +88,20 @@ export const cursor = {
   },
 }
 
-// kilocode_change start - strip bloated metadata fields from stored parts to prevent multi-MB payloads
-// This handles both legacy data that was stored with full file contents and keeps the API response lean.
-function stripPatch(value: unknown) {
-  if (typeof value !== "string") return undefined
-  if (Buffer.byteLength(value) > Snapshot.MAX_DIFF_SIZE) return undefined
-  return value
-}
-
-function withPatch(value: unknown) {
-  const kept = stripPatch(value)
-  return kept ? { patch: kept } : {}
-}
-
-export function stripPartMetadata(part: Part): Part {
-  // kilocode_change - exported for testing
-  if (part.type !== "tool") return part
-  const { state } = part
-  if (state.status !== "completed" && state.status !== "running") return part
-  const meta = state.metadata
-  if (!meta) return part
-
-  let changed = false
-  let next = meta
-
-  if (meta.diff !== undefined) {
-    const { diff, ...rest } = next
-    next = rest
-    changed = true
-  }
-
-  // Strip edit/write tool filediff.before/after (full file contents) and cap patches.
-  if (meta.filediff) {
-    const { before, after, patch, ...rest } = meta.filediff
-    next = { ...next, filediff: { ...rest, ...withPatch(patch) } }
-    changed = true
-  }
-
-  // Strip apply_patch tool's files[].before/after (full file contents per file) and cap per-file patches.
-  if (Array.isArray(meta.files) && meta.files.length > 0) {
-    next = {
-      ...next,
-      files: meta.files.map((f: Record<string, unknown>) => {
-        const { before, after, patch, diff, ...rest } = f
-        const kept = stripPatch(patch) ?? stripPatch(diff)
-        return { ...rest, ...(kept ? { patch: kept } : {}) }
-      }),
-    }
-    changed = true
-  }
-
-  if (Array.isArray(meta.results) && meta.results.length > 0) {
-    next = {
-      ...next,
-      results: meta.results.map((r: Record<string, unknown>) => {
-        const { diff, ...rest } = r
-        if (!r.filediff || typeof r.filediff !== "object") return rest
-        const fd = r.filediff as Record<string, unknown>
-        const { before, after, patch, ...file } = fd
-        return { ...rest, filediff: { ...file, ...withPatch(patch) } }
-      }),
-    }
-    changed = true
-  }
-
-  if (!changed) return part
-  return { ...part, state: { ...state, metadata: next } } as Part
-}
-
-export function stripMessageMetadata(info: Info): Info {
-  // kilocode_change - exported for testing
-  // Strip oversized summary.diffs patches from user messages to limit SSE payload.
-  // Small patches are preserved so the UI can render inline diffs.
-  if (info.role !== "user") return info
-  const user = info as User
-  if (!user.summary?.diffs?.length) return info
-  const oversized = (d: Snapshot.FileDiff) => d.patch && Buffer.byteLength(d.patch) > Snapshot.MAX_DIFF_SIZE
-  if (!user.summary.diffs.some(oversized)) return info
-  return {
-    ...user,
-    summary: {
-      ...user.summary,
-      diffs: user.summary.diffs.map((d: Snapshot.FileDiff) => (oversized(d) ? { ...d, patch: "" } : d)),
-    },
-  } as Info
-}
-// kilocode_change end
-
-// kilocode_change - apply stripping inside helpers so all read paths are covered
 const info = (row: typeof MessageTable.$inferSelect) =>
-  stripMessageMetadata({
+  ({
     ...row.data,
     id: row.id,
     sessionID: row.session_id,
-  } as Info)
+  }) as Info
 
 const part = (row: typeof PartTable.$inferSelect) =>
-  stripPartMetadata({
+  ({
     ...row.data,
     id: row.id,
     sessionID: row.session_id,
     messageID: row.message_id,
-  } as Part)
-// kilocode_change end
+  }) as Part
 
 const older = (row: Cursor) =>
   or(lt(MessageTable.time_created, row.time), and(eq(MessageTable.time_created, row.time), lt(MessageTable.id, row.id)))
@@ -409,8 +286,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
         return part.metadata?.anthropic?.signature != null
       })
       for (const part of msg.parts) {
-        // kilocode_change - !part.ignored keeps local UI warnings out of future prompts
-        if (part.type === "text" && !part.ignored) {
+        if (part.type === "text") {
           const text = part.text === "" && hasSignedReasoning ? " " : part.text
           assistantMessage.parts.push({
             type: "text",
@@ -634,7 +510,7 @@ export function parts(messageID: MessageID) {
       .orderBy(PartTable.id)
       .all()
       .pipe(Effect.orDie)
-    return rows.map(part) // kilocode_change - part() applies stripPartMetadata to cover all read paths
+    return rows.map(part)
   })
 }
 
@@ -677,7 +553,6 @@ export function filterCompacted(msgs: Iterable<WithParts>) {
       completed.add(msg.info.parentID)
   }
   result.reverse()
-  KiloSessionMessageOrder.annotate(result) // kilocode_change - preserve chronology before retained-tail projection
   const compactionIndex = result.findLastIndex(
     (msg) =>
       msg.info.role === "user" &&
@@ -758,18 +633,10 @@ export function fromError(
         },
         { cause: e },
       ).toObject()
-    case e instanceof CodexAuthExpiredError: // kilocode_change start
-      return new AuthError(
-        {
-          providerID: "openai",
-          message: e.message,
-        },
-        { cause: e },
-      ).toObject() // kilocode_change end
-    case SessionNetwork.disconnected(e): // kilocode_change start
+    case (e as SystemError)?.code === "ECONNRESET":
       return new APIError(
         {
-          message: SessionNetwork.message(e), // kilocode_change end
+          message: "Connection reset by server",
           isRetryable: true,
           metadata: {
             code: (e as SystemError).code ?? "",

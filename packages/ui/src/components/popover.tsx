@@ -1,14 +1,5 @@
 import { Popover as Kobalte } from "@kobalte/core/popover"
-import {
-  ComponentProps,
-  JSXElement,
-  ParentProps,
-  Show,
-  createEffect,
-  onCleanup,
-  splitProps,
-  ValidComponent,
-} from "solid-js"
+import { ComponentProps, JSXElement, ParentProps, Show, createEffect, splitProps, ValidComponent } from "solid-js"
 import { createStore } from "solid-js/store"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { useI18n } from "../context/i18n"
@@ -52,21 +43,12 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     triggerRef: undefined as HTMLElement | undefined,
     dismiss: null as "escape" | "outside" | null,
     uncontrolledOpen: local.defaultOpen ?? false,
-    ready: true, // kilocode_change
   })
 
   const controlled = () => local.open !== undefined
   const opened = () => {
     if (controlled()) return local.open ?? false
     return state.uncontrolledOpen
-  }
-
-  const focus = (node?: ParentNode | null) => {
-    const root = node ?? state.contentRef
-    if (!root) return
-    const target = root.querySelector<HTMLElement>("[data-autofocus]")
-    if (!target) return
-    target.focus()
   }
 
   const onOpenChange = (next: boolean) => {
@@ -78,7 +60,6 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
 
   createEffect(() => {
     if (!opened()) return
-    setState("ready", false)
 
     const inside = (node: Node | null | undefined) => {
       if (!node) return false
@@ -105,8 +86,6 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       const target = event.target
       if (!(target instanceof Node)) return
       if (inside(target)) return
-      // Node was detached by a reactive update — treat as inside
-      if (!target.isConnected) return
       close("outside")
     }
 
@@ -114,22 +93,12 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
       const target = event.target
       if (!(target instanceof Node)) return
       if (inside(target)) return
-      // Node was detached by a reactive update — treat as inside
-      if (!target.isConnected) return
       close("outside")
     }
 
     makeEventListener(window, "keydown", onKeyDown, { capture: true })
     makeEventListener(window, "pointerdown", onPointerDown, { capture: true })
     makeEventListener(window, "focusin", onFocusIn, { capture: true })
-  })
-
-  createEffect(() => {
-    if (!opened()) return
-    const node = state.contentRef
-    if (!node) return
-    const id = requestAnimationFrame(() => focus(node))
-    onCleanup(() => cancelAnimationFrame(id))
   })
 
   const content = () => (
@@ -141,21 +110,6 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
         [local.class ?? ""]: !!local.class,
       }}
       style={local.style}
-      onInteractOutside={(event: Event) => {
-        // Custom window-level handlers manage outside dismissal;
-        // always prevent Kobalte's built-in interact-outside close
-        // to avoid double-firing and stale-node false positives.
-        event.preventDefault()
-      }}
-      onFocusOutside={(event: Event) => {
-        event.preventDefault()
-      }}
-      onOpenAutoFocus={(event: Event) => {
-        const node = event.currentTarget as ParentNode | null
-        if (!node) return
-        event.preventDefault()
-        focus(node)
-      }}
       onCloseAutoFocus={(event: Event) => {
         if (state.dismiss === "outside") event.preventDefault()
         setState("dismiss", null)

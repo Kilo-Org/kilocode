@@ -62,8 +62,7 @@ describe("instance HttpApi", () => {
 
       expect(response.status).toBe(200)
       expect(response.headers["content-type"]).toContain("application/json")
-      const spec = yield* response.json
-      expect(spec).toMatchObject({
+      expect(yield* response.json).toMatchObject({
         openapi: expect.any(String),
         info: expect.any(Object),
         paths: expect.objectContaining({
@@ -71,7 +70,6 @@ describe("instance HttpApi", () => {
           "/session": expect.any(Object),
         }),
       })
-      expect(JSON.stringify(spec)).not.toContain("OpenCode")
     }),
   )
 

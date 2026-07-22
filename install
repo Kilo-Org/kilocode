@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-APP=kilo # kilocode_change
+APP=opencode
 
 MUTED='\033[0;2m'
 RED='\033[0;31m'
 ORANGE='\033[38;5;214m'
 NC='\033[0m' # No Color
 
-# kilocode_change start - usage text
 usage() {
     cat <<EOF
-Kilo Code Installer
+OpenCode Installer
 
-Usage: install [options]
+Usage: install.sh [options]
 
 Options:
     -h, --help              Display this help message
@@ -21,12 +20,11 @@ Options:
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
 Examples:
-    curl -fsSL https://kilo.ai/cli/install | bash
-    curl -fsSL https://kilo.ai/cli/install | bash -s -- --version 1.0.180
-    ./install --binary /path/to/kilo
+    curl -fsSL https://opencode.ai/install | bash
+    curl -fsSL https://opencode.ai/install | bash -s -- --version 1.0.180
+    ./install --binary /path/to/opencode
 EOF
 }
-# kilocode_change end
 
 requested_version=${VERSION:-}
 no_modify_path=false
@@ -67,7 +65,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-INSTALL_DIR=$HOME/.kilo/bin # kilocode_change
+INSTALL_DIR=$HOME/.opencode/bin
 mkdir -p "$INSTALL_DIR"
 
 # If --binary is provided, skip all download/detection logic
@@ -183,28 +181,24 @@ else
     fi
 
     if [ -z "$requested_version" ]; then
-        # The npm latest tag tracks stable CLI releases independently of other GitHub release types.
-        if ! specific_version=$(curl -fsSL "https://registry.npmjs.org/-/package/%40kilocode%2Fcli/dist-tags" |
-            sed -n 's/.*"latest"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'); then
+        url="https://github.com/anomalyco/opencode/releases/latest/download/$filename"
+        specific_version=$(curl -s https://api.github.com/repos/anomalyco/opencode/releases/latest | sed -n 's/.*"tag_name": *"v\([^"]*\)".*/\1/p')
+
+        if [[ $? -ne 0 || -z "$specific_version" ]]; then
             echo -e "${RED}Failed to fetch version information${NC}"
             exit 1
         fi
-        if [[ ! "$specific_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo -e "${RED}Failed to fetch version information${NC}"
-            exit 1
-        fi
-        url="https://github.com/Kilo-Org/kilocode/releases/download/v${specific_version}/$filename"
     else
         # Strip leading 'v' if present
         requested_version="${requested_version#v}"
-        url="https://github.com/Kilo-Org/kilocode/releases/download/v${requested_version}/$filename"
+        url="https://github.com/anomalyco/opencode/releases/download/v${requested_version}/$filename"
         specific_version=$requested_version
 
         # Verify the release exists before downloading
-        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/Kilo-Org/kilocode/releases/tag/v${requested_version}")
+        http_status=$(curl -sI -o /dev/null -w "%{http_code}" "https://github.com/anomalyco/opencode/releases/tag/v${requested_version}")
         if [ "$http_status" = "404" ]; then
             echo -e "${RED}Error: Release v${requested_version} not found${NC}"
-            echo -e "${MUTED}Available releases: https://github.com/Kilo-Org/kilocode/releases${NC}"
+            echo -e "${MUTED}Available releases: https://github.com/anomalyco/opencode/releases${NC}"
             exit 1
         fi
     fi
@@ -224,13 +218,12 @@ print_message() {
     echo -e "${color}${message}${NC}"
 }
 
-# kilocode_change start
 check_version() {
-    if command -v kilo >/dev/null 2>&1; then
-        kilo_path=$(which kilo)
+    if command -v opencode >/dev/null 2>&1; then
+        opencode_path=$(which opencode)
 
         ## Check the installed version
-        installed_version=$(kilo --version 2>/dev/null || echo "")
+        installed_version=$(opencode --version 2>/dev/null || echo "")
 
         if [[ "$installed_version" != "$specific_version" ]]; then
             print_message info "${MUTED}Installed version: ${NC}$installed_version."
@@ -240,7 +233,6 @@ check_version() {
         fi
     fi
 }
-# kilocode_change end
 
 unbuffered_sed() {
     if echo | sed -u -e "" >/dev/null 2>&1; then
@@ -283,7 +275,7 @@ download_with_progress() {
     fi
 
     local tmp_dir=${TMPDIR:-/tmp}
-    local basename="${tmp_dir}/kilo_install_$$" # kilocode_change
+    local basename="${tmp_dir}/opencode_install_$$"
     local tracefile="${basename}.trace"
 
     rm -f "$tracefile"
@@ -295,7 +287,7 @@ download_with_progress() {
     trap "trap - RETURN; rm -f \"$tracefile\"; printf '\033[?25h' >&4; exec 4>&-" RETURN
 
     (
-        curl --trace-ascii "$tracefile" -fsL -o "$output" "$url" # kilocode_change
+        curl --trace-ascii "$tracefile" -s -L -o "$output" "$url"
     ) &
     local curl_pid=$!
 
@@ -333,15 +325,13 @@ download_with_progress() {
 }
 
 download_and_install() {
-    # kilocode_change start
-    print_message info "\n${MUTED}Installing ${NC}Kilo Code ${MUTED}version: ${NC}$specific_version"
-    local tmp_dir="${TMPDIR:-/tmp}/kilo_install_$$"
-    # kilocode_change end
+    print_message info "\n${MUTED}Installing ${NC}opencode ${MUTED}version: ${NC}$specific_version"
+    local tmp_dir="${TMPDIR:-/tmp}/opencode_install_$$"
     mkdir -p "$tmp_dir"
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
         # Fallback to standard curl on Windows, non-TTY environments, or if custom progress fails
-        curl -f# -L -o "$tmp_dir/$filename" "$url" # kilocode_change
+        curl -# -L -o "$tmp_dir/$filename" "$url"
     fi
 
     if [ "$os" = "linux" ]; then
@@ -350,23 +340,15 @@ download_and_install() {
         unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
     fi
 
-    # kilocode_change start
-    mv "$tmp_dir/kilo" "$INSTALL_DIR"
-    rm -rf "${INSTALL_DIR}/tree-sitter"
-    if [ -d "$tmp_dir/tree-sitter" ]; then
-        mv "$tmp_dir/tree-sitter" "$INSTALL_DIR"
-    fi
-    chmod 755 "${INSTALL_DIR}/kilo"
-    # kilocode_change end
+    mv "$tmp_dir/opencode" "$INSTALL_DIR"
+    chmod 755 "${INSTALL_DIR}/opencode"
     rm -rf "$tmp_dir"
 }
 
 install_from_binary() {
-    # kilocode_change start
-    print_message info "\n${MUTED}Installing ${NC}Kilo Code ${MUTED}from: ${NC}$binary_path"
-    cp "$binary_path" "${INSTALL_DIR}/kilo"
-    chmod 755 "${INSTALL_DIR}/kilo"
-    # kilocode_change end
+    print_message info "\n${MUTED}Installing ${NC}opencode ${MUTED}from: ${NC}$binary_path"
+    cp "$binary_path" "${INSTALL_DIR}/opencode"
+    chmod 755 "${INSTALL_DIR}/opencode"
 }
 
 if [ -n "$binary_path" ]; then
@@ -384,64 +366,13 @@ add_to_path() {
     if grep -Fxq "$command" "$config_file"; then
         print_message info "Command already exists in $config_file, skipping write."
     elif [[ -w $config_file ]]; then
-        echo -e "\n# kilo" >> "$config_file" # kilocode_change
+        echo -e "\n# opencode" >> "$config_file"
         echo "$command" >> "$config_file"
-        print_message info "${MUTED}Successfully added ${NC}kilo ${MUTED}to \$PATH in ${NC}$config_file" # kilocode_change
+        print_message info "${MUTED}Successfully added ${NC}opencode ${MUTED}to \$PATH in ${NC}$config_file"
     else
         print_message warning "Manually add the directory to $config_file (or similar):"
         print_message info "  $command"
     fi
-}
-
-# Persistently add $INSTALL_DIR to the Windows user PATH via the registry.
-# Works from Git Bash (MINGW64), MSYS2, and Cygwin.
-# Converts the MSYS/Cygwin path to native Windows form so that cmd and
-# PowerShell also see the entry.
-add_to_windows_path() {
-    local win_install_dir
-    if command -v cygpath >/dev/null 2>&1; then
-        win_install_dir=$(cygpath -w "$INSTALL_DIR")
-    else
-        # Fallback: naive conversion  /c/Users/... -> C:\Users\...
-        win_install_dir=$(echo "$INSTALL_DIR" | sed -e 's|^/\([a-zA-Z]\)/|\1:\\|' -e 's|/|\\|g')
-    fi
-
-    # Escape single-quotes for PowerShell single-quoted strings ('' is the escape sequence)
-    local win_install_dir_ps="${win_install_dir//\'/\'\'}"
-
-    local ps_cmd
-    ps_cmd=$(cat <<EOFPS
-\$kiloPath = '$win_install_dir_ps'
-\$currentPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-\$pathParts = if ([string]::IsNullOrEmpty(\$currentPath)) { @() } else { \$currentPath -split ';' }
-if (\$pathParts -notcontains \$kiloPath) {
-    \$newPath = if ([string]::IsNullOrEmpty(\$currentPath)) { \$kiloPath } else { "\$currentPath;\$kiloPath" }
-    [Environment]::SetEnvironmentVariable('Path', \$newPath, 'User')
-    Write-Output 'added'
-}
-EOFPS
-)
-
-    local ps_output
-    if command -v powershell.exe >/dev/null 2>&1; then
-        ps_output=$(powershell.exe -NoProfile -NonInteractive -Command "$ps_cmd" 2>/dev/null) || return 1
-    elif command -v pwsh >/dev/null 2>&1; then
-        ps_output=$(pwsh -NoProfile -NonInteractive -Command "$ps_cmd" 2>/dev/null) || return 1
-    else
-        return 1
-    fi
-
-    if [[ "$ps_output" == *"added"* ]]; then
-        print_message info "${MUTED}Successfully added ${NC}kilo ${MUTED}to Windows user PATH${NC}"
-    fi
-
-    # Also add to the current bash session so `kilo` works immediately
-    # without the user needing to open a new terminal.
-    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
-        export PATH="$INSTALL_DIR:$PATH"
-    fi
-
-    return 0
 }
 
 XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
@@ -470,13 +401,6 @@ case $current_shell in
 esac
 
 if [[ "$no_modify_path" != "true" ]]; then
-    # Detect if we are running on Windows (MINGW, MSYS, Cygwin) regardless
-    # of whether the binary was installed from download or --binary.
-    _running_on_windows=false
-    case "$(uname -s)" in
-        MINGW*|MSYS*|CYGWIN*) _running_on_windows=true ;;
-    esac
-
     config_file=""
     for file in $config_files; do
         if [[ -f $file ]]; then
@@ -485,12 +409,7 @@ if [[ "$no_modify_path" != "true" ]]; then
         fi
     done
 
-    if [[ "$_running_on_windows" == "true" ]] && add_to_windows_path; then
-        # Handled via the Windows user-level PATH in the registry.
-        # The change is visible in new cmd / PowerShell / Git Bash sessions.
-        # We also exported it into the current session above.
-        :
-    elif [[ -z $config_file ]]; then
+    if [[ -z $config_file ]]; then
         print_message warning "No config file found for $current_shell. You may need to manually add to PATH:"
         print_message info "  export PATH=$INSTALL_DIR:\$PATH"
     elif [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
@@ -524,55 +443,18 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
     print_message info "Added $INSTALL_DIR to \$GITHUB_PATH"
 fi
 
-# kilocode_change start
-logo_supports() {
-    case "${KILO_UNICODE_LOGO:-}" in
-        1|true|TRUE|yes|YES|on|ON)
-            return 0
-        ;;
-        0|false|FALSE|no|NO|off|OFF)
-            return 1
-        ;;
-    esac
-
-    if [ "${TERM:-}" = "dumb" ]; then
-        return 1
-    fi
-
-    if [ -n "${SSH_TTY:-}" ] || [ -n "${SSH_CLIENT:-}" ] || [ -n "${SSH_CONNECTION:-}" ]; then
-        return 1
-    fi
-
-    if [ -n "${ConEmuPID:-}" ] || [ -n "${ANSICON:-}" ]; then
-        return 1
-    fi
-
-    return 0
-}
-
-print_logo() {
-    if logo_supports; then
-        echo -e "██  ██ ██🬺🬏   ██  ██   ██🬺🬏     ████ ██     ██🬺🬏   "
-        echo -e "████🬺🬏   ██   ██     ██  ██   ██     ██       ██   "
-        echo -e "██  ██ ██████ 🬁🬬████ 🬁🬬██     🬁🬬████ 🬁🬬████ ██████ "
-        return
-    fi
-
-    echo -e "██  ██ ████   ██  ██   ███      ████ ██     ████   "
-    echo -e "████     ██   ██     ██  ██   ██     ██       ██   "
-    echo -e "██  ██ ██████ ██████   ██       ████ ██████ ██████ "
-}
-
 echo -e ""
-print_logo
+echo -e "${MUTED}                    ${NC}             ▄     "
+echo -e "${MUTED}█▀▀█ █▀▀█ █▀▀█ █▀▀▄ ${NC}█▀▀▀ █▀▀█ █▀▀█ █▀▀█"
+echo -e "${MUTED}█░░█ █░░█ █▀▀▀ █░░█ ${NC}█░░░ █░░█ █░░█ █▀▀▀"
+echo -e "${MUTED}▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ${NC}▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"
 echo -e ""
 echo -e ""
-echo -e "${MUTED}Kilo includes free models so you can start immediately:${NC}"
+echo -e "${MUTED}OpenCode includes free models, to start:${NC}"
 echo -e ""
 echo -e "cd <project>  ${MUTED}# Open directory${NC}"
-echo -e "kilo          ${MUTED}# Run Kilo${NC}"
+echo -e "opencode      ${MUTED}# Run command${NC}"
 echo -e ""
-echo -e "${MUTED}For more information visit ${NC}https://kilo.ai/docs"
+echo -e "${MUTED}For more information visit ${NC}https://opencode.ai/docs"
 echo -e ""
 echo -e ""
-# kilocode_change end

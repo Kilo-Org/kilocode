@@ -7,7 +7,6 @@ import { Flock } from "./util/flock"
 import { Hash } from "./util/hash"
 import { FSUtil } from "./fs-util"
 import { InstallationChannel, InstallationVersion } from "./installation/version"
-import * as ModelsRefresh from "./kilocode/models-refresh" // kilocode_change
 import { EventV2 } from "./event"
 import { LayerNode } from "./effect/layer-node"
 import { httpClient } from "./effect/layer-node-platform"
@@ -73,13 +72,6 @@ export const Model = Schema.Struct({
       output: Schema.Array(Schema.Literals(["text", "audio", "image", "video", "pdf"])),
     }),
   ),
-  // kilocode_change start - preserve Kilo catalog metadata
-  recommendedIndex: Schema.optional(Schema.Finite),
-  prompt: Schema.optional(Schema.String),
-  isFree: Schema.optional(Schema.Boolean),
-  mayTrainOnYourPrompts: Schema.optional(Schema.Boolean),
-  ai_sdk_provider: Schema.optional(Schema.String),
-  // kilocode_change end
   experimental: Schema.optional(
     Schema.Struct({
       modes: Schema.optional(
@@ -108,7 +100,6 @@ export type Model = Schema.Schema.Type<typeof Model>
 export const Provider = Schema.Struct({
   api: Schema.optional(Schema.String),
   name: Schema.String,
-  description: Schema.optional(Schema.String), // kilocode_change
   env: Schema.Array(Schema.String),
   id: Schema.String,
   npm: Schema.optional(Schema.String),
@@ -186,7 +177,9 @@ export const layer = Layer.effect(
       Effect.map((v) => v as Record<string, Provider> | undefined),
     )
 
-    const loadSnapshot = Effect.sync(() => (typeof KILO_MODELS_DEV === "undefined" ? undefined : KILO_MODELS_DEV))
+    const loadSnapshot = Effect.sync(() =>
+      typeof KILO_MODELS_DEV === "undefined" ? undefined : KILO_MODELS_DEV,
+    )
 
     const fetchAndWrite = Effect.fn("ModelsDev.fetchAndWrite")(function* () {
       const text = yield* fetchApi()
@@ -233,7 +226,6 @@ export const layer = Layer.effect(
           if (!force && (yield* fresh())) return
           yield* fetchAndWrite()
           yield* invalidate
-          yield* ModelsRefresh.notify() // kilocode_change
           yield* events.publish(Event.Refreshed, {})
         }),
       ).pipe(

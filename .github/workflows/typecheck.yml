@@ -2,101 +2,20 @@ name: typecheck
 
 on:
   push:
-    branches:
-      - main
+    branches: [dev]
   pull_request:
+    branches: [dev]
   workflow_dispatch:
 
 jobs:
-  typecheck-js:
-    name: typecheck-js
-    runs-on: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
+  typecheck:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      # kilocode_change start
-      - name: Run TypeScript typecheck
-        run: bun turbo typecheck --filter='!@kilocode/kilo-jetbrains'
-
-      - name: Build Kilo Console
-        run: bun turbo build --filter=@kilocode/kilo-console
-      # kilocode_change end
-
-  # kilocode_change start
-  jetbrains-changes:
-    name: detect JetBrains changes
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    outputs:
-      jetbrains: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.jetbrains }}
-    steps:
-      - name: Checkout repository
-        if: github.event_name != 'workflow_dispatch'
-        uses: actions/checkout@v6
-
-      - name: Detect JetBrains changes
-        if: github.event_name != 'workflow_dispatch'
-        id: filter
-        uses: Kilo-Org/paths-filter@668c092af3649c4b664c54e4b704aa46782f6f7c # v3
-        with:
-          predicate-quantifier: every
-          filters: |
-            jetbrains:
-              - '**'
-              - '!.changeset/**'
-              - '!packages/kilo-vscode/**'
-              - '!packages/kilo-docs/**'
-
-  typecheck-jetbrains:
-    name: typecheck-jetbrains
-    needs: jetbrains-changes
-    if: github.event_name == 'workflow_dispatch' || needs.jetbrains-changes.outputs.jetbrains == 'true'
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Setup Bun
-        uses: ./.github/actions/setup-bun
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
-
-      - name: Run JetBrains typecheck
-        run: ./gradlew typecheck
-        working-directory: packages/kilo-jetbrains
-
-  required:
-    name: typecheck
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs:
-      - typecheck-js
-      - jetbrains-changes
-      - typecheck-jetbrains
-    if: always()
-    steps:
-      - name: Verify typecheck jobs passed
-        run: |
-          echo "typecheck-js=${{ needs.typecheck-js.result }}"
-          echo "jetbrains-changes=${{ needs.jetbrains-changes.result }}"
-          echo "typecheck-jetbrains=${{ needs.typecheck-jetbrains.result }}"
-          test "${{ needs.typecheck-js.result }}" = "success"
-          test "${{ needs.jetbrains-changes.result }}" = "success"
-          if [ "${{ needs.jetbrains-changes.outputs.jetbrains }}" = "true" ]; then
-            test "${{ needs.typecheck-jetbrains.result }}" = "success"
-          else
-            test "${{ needs.jetbrains-changes.outputs.jetbrains }}" = "false"
-            test "${{ needs.typecheck-jetbrains.result }}" = "skipped"
-          fi
-  # kilocode_change end
+      - name: Run typecheck
+        run: bun typecheck

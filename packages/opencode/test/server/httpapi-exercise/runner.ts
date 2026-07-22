@@ -207,12 +207,11 @@ function trace(options: Options, scenario: ActiveScenario, phase: string) {
 function projectOptions(
   project: ProjectOptions,
   llmUrl: string | undefined,
-): { git?: boolean; config?: Partial<ConfigV1.Info>; init?: (directory: string) => Promise<void> } {
-  if (!project.llm || !llmUrl) return { git: project.git, config: project.config, init: project.init }
+): { git?: boolean; config?: Partial<ConfigV1.Info> } {
+  if (!project.llm || !llmUrl) return { git: project.git, config: project.config }
   const fake = fakeLlmConfig(llmUrl)
   return {
     git: project.git,
-    init: project.init,
     config: {
       ...fake,
       ...project.config,
@@ -263,6 +262,6 @@ const resetState = Effect.promise(async () => {
   Flag.KILO_SERVER_USERNAME = original.KILO_SERVER_USERNAME
   await disposeApps()
   await modules.disposeAllInstances()
-  // kilocode_change - each exerciser process already owns an isolated DB; unlinking it between scenarios races async Kilo callbacks
+  await modules.resetDatabase()
   await Bun.sleep(25)
 })

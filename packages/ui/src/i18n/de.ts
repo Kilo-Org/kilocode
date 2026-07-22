@@ -4,8 +4,6 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "Sitzungsänderungen",
-  "ui.sessionReview.title.git": "Git-Änderungen",
-  "ui.sessionReview.title.branch": "Branch-Änderungen",
   "ui.sessionReview.title.lastTurn": "Änderungen der letzten Runde",
   "ui.sessionReview.diffStyle.unified": "Vereinheitlicht",
   "ui.sessionReview.diffStyle.split": "Geteilt",
@@ -44,10 +42,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Schritte ausblenden",
   "ui.sessionTurn.summary.response": "Antwort",
   "ui.sessionTurn.diff.showMore": "Weitere Änderungen anzeigen ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Geändert",
-  "ui.sessionTurn.diffs.showAll": "Alle anzeigen",
-  "ui.sessionTurn.diffs.showLess": "Weniger anzeigen",
-  "ui.sessionTurn.diffs.more": "+{{count}} weitere Dateien",
 
   "ui.sessionTurn.retry.retrying": "erneuter Versuch",
   "ui.sessionTurn.retry.inSeconds": "in {{seconds}}s",
@@ -67,8 +61,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Einstellungen öffnen",
 
   "ui.sessionTurn.status.delegating": "Arbeit delegieren",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Nächste Schritte planen",
   "ui.sessionTurn.status.gatheringContext": "Erkunden",
   "ui.sessionTurn.status.gatheredContext": "Erkundet",
@@ -90,8 +82,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} Liste",
   "ui.messagePart.context.list.other": "{{count}} Listen",
   "ui.messagePart.diagnostic.error": "Fehler",
-  "ui.messagePart.mcp.input": "Eingabe",
-  "ui.messagePart.mcp.output": "Ausgabe",
   "ui.messagePart.title.edit": "Bearbeiten",
   "ui.messagePart.title.write": "Schreiben",
   "ui.messagePart.option.typeOwnAnswer": "Eigene Antwort eingeben",
@@ -110,23 +100,10 @@ export const dict = {
   "ui.textField.copied": "Kopiert",
 
   "ui.imagePreview.alt": "Bildvorschau",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Mermaid-Diagramm wird gerendert...",
-  "ui.mermaid.renderError": "Mermaid-Rendering fehlgeschlagen: {{message}}",
-  "ui.mermaid.errorDefault": "Mermaid-Diagramm kann nicht gerendert werden.",
-  "ui.mermaid.errorEmpty": "Mermaid hat ein leeres Diagramm gerendert.",
-  "ui.mermaid.download": "Herunterladen",
-  "ui.mermaid.copySource": "Mermaid-Quelltext kopieren",
-  "ui.mermaid.copySvg": "SVG kopieren",
-  "ui.mermaid.copyPng": "PNG kopieren",
-  "ui.mermaid.downloadSvg": "SVG herunterladen",
-  "ui.mermaid.downloadPng": "PNG herunterladen",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollbarer Inhalt",
 
   "ui.tool.read": "Lesen",
   "ui.tool.loaded": "Geladen",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} von {{total}} Zeilen behalten", // kilocode_change
   "ui.tool.list": "Auflisten",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -166,7 +143,6 @@ export const dict = {
   "ui.message.revertMessage": "Auf diesen Punkt zurücksetzen",
   "ui.message.copyResponse": "Antwort kopieren",
   "ui.message.copied": "Kopiert!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Unterbrochen",
   "ui.message.queued": "In Warteschlange",
   "ui.message.attachment.alt": "Anhang",
@@ -177,9 +153,7 @@ export const dict = {
   "ui.patch.action.patched": "Gepatched",
 
   "ui.question.subtitle.answered": "{{count}} beantwortet",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(keine Antwort)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(nicht beantwortet)",
   "ui.question.multiHint": "Alle zutreffenden auswählen",
   "ui.question.singleHint": "Eine Antwort auswählen",

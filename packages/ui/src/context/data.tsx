@@ -41,25 +41,6 @@ export type NavigateToSessionFn = (sessionID: string) => void
 
 export type SessionHrefFn = (sessionID: string) => string
 
-// kilocode_change start
-export type OpenFileFn = (filePath: string, line?: number, column?: number) => void
-
-export type OpenDiffFn = (diff: {
-  file: string
-  before?: string // kilocode_change - optional, kilo uses `patch`
-  after?: string // kilocode_change - optional, kilo uses `patch`
-  patch?: string // kilocode_change
-  additions: number
-  deletions: number
-}) => void
-
-export type OpenUrlFn = (url: string) => void
-
-export type OpenContentFn = (content: string, language?: string) => void // kilocode_change
-
-export type ValidateFilesFn = (paths: string[]) => Promise<string[]> // kilocode_change
-// kilocode_change end
-
 export const { use: useData, provider: DataProvider } = createSimpleContext({
   name: "Data",
   init: (props: {
@@ -67,11 +48,6 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     directory: string
     onNavigateToSession?: NavigateToSessionFn
     onSessionHref?: SessionHrefFn
-    onOpenFile?: OpenFileFn // kilocode_change
-    onOpenDiff?: OpenDiffFn // kilocode_change
-    onOpenUrl?: OpenUrlFn // kilocode_change
-    onOpenContent?: OpenContentFn // kilocode_change
-    onValidateFiles?: ValidateFilesFn // kilocode_change
   }) => {
     return {
       get store() {
@@ -82,11 +58,6 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
       },
       navigateToSession: props.onNavigateToSession,
       sessionHref: props.onSessionHref,
-      openFile: props.onOpenFile, // kilocode_change
-      openDiff: props.onOpenDiff, // kilocode_change
-      openUrl: props.onOpenUrl, // kilocode_change
-      openContent: props.onOpenContent, // kilocode_change
-      validateFiles: props.onValidateFiles, // kilocode_change
     }
   },
 })

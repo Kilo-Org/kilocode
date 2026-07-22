@@ -85,9 +85,7 @@ const getAllSessions = Effect.fnUntraced(function* () {
   return (yield* db.select().from(SessionTable).all().pipe(Effect.orDie)).map((row) => Session.fromRow(row))
 })
 
-// kilocode_change start - expose Effect stats aggregation for Kilo regression coverage
-export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* (
-  // kilocode_change end
+const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* (
   days?: number,
   projectFilter?: string,
   currentProject?: Project.Info,
@@ -170,9 +168,8 @@ export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* 
           .messages({ sessionID: session.id })
           .pipe(Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed([])))
 
-        let legacyCost = 0
-        const legacyTokens = { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
-        const sessionTokens = session.tokens ?? legacyTokens
+        const sessionCost = session.cost ?? 0
+        const sessionTokens = session.tokens ?? { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } }
         let sessionToolUsage: Record<string, number> = {}
         let sessionModelUsage: Record<
           string,
@@ -185,12 +182,6 @@ export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* 
 
         for (const message of messages) {
           if (message.info.role === "assistant") {
-            // kilocode_change start - count propagated subagent cost once but keep child model stats (#6321)
-            const parts = message.parts.filter((part) => part.type === "step-finish")
-            const cost = parts.length ? parts.reduce((sum, part) => sum + part.cost, 0) : message.info.cost || 0
-            if (!session.parentID) legacyCost += message.info.cost || 0
-            // kilocode_change end
-
             const modelKey = `${message.info.providerID}/${message.info.modelID}`
             if (!sessionModelUsage[modelKey]) {
               sessionModelUsage[modelKey] = {
@@ -200,17 +191,9 @@ export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* 
               }
             }
             sessionModelUsage[modelKey].messages++
-            sessionModelUsage[modelKey].cost += cost // kilocode_change
+            sessionModelUsage[modelKey].cost += message.info.cost || 0
 
             if (message.info.tokens) {
-              if (!session.tokens) {
-                legacyTokens.input += message.info.tokens.input || 0
-                legacyTokens.output += message.info.tokens.output || 0
-                legacyTokens.reasoning += message.info.tokens.reasoning || 0
-                legacyTokens.cache.read += message.info.tokens.cache?.read || 0
-                legacyTokens.cache.write += message.info.tokens.cache?.write || 0
-              }
-
               sessionModelUsage[modelKey].tokens.input += message.info.tokens.input || 0
               sessionModelUsage[modelKey].tokens.output +=
                 (message.info.tokens.output || 0) + (message.info.tokens.reasoning || 0)
@@ -228,9 +211,7 @@ export const aggregateSessionStats = Effect.fn("Cli.stats.aggregate")(function* 
 
         return {
           messageCount: messages.length,
-          // Persisted totals may reflect step costs while parent assistant
-          // messages include propagated subagent cost. Keep the larger total.
-          sessionCost: session.parentID ? 0 : Math.max(session.cost ?? 0, legacyCost),
+          sessionCost,
           sessionTokens,
           sessionTotalTokens:
             sessionTokens.input +

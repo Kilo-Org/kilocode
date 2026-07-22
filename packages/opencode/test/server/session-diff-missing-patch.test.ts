@@ -4,11 +4,11 @@
  * the response was Schema-encoded against `Snapshot.FileDiff` with
  * `patch: Schema.String` (required), so any session whose stored
  * `summary_diffs` had a row without `patch` returned HTTP 400 and the
- * session never loaded. // kilocode_change
- * Kilo still surfaces cumulative session diffs to its TUI and VS Code clients. // kilocode_change
+ * session never loaded. Legacy session-level diffs are no longer surfaced,
+ * but the endpoint remains compatible and must still return successfully.
  *
  * This test inserts a session row with a missing-patch diff entry and
- * asserts that GET /session/<id>/diff returns 200 with the row intact. // kilocode_change
+ * asserts that GET /session/<id>/diff returns 200 with empty data.
  */
 import { afterEach, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
@@ -40,7 +40,7 @@ const withSession = (input?: Parameters<Session.Interface["create"]>[0]) =>
 
 describe("session diff with missing patch (#26574)", () => {
   it.instance(
-    "GET /session/<id>/diff returns cumulative session diffs", // kilocode_change
+    "GET /session/<id>/diff ignores legacy session-level diff storage",
     () =>
       Effect.gen(function* () {
         const test = yield* TestInstance
@@ -59,7 +59,7 @@ describe("session diff with missing patch (#26574)", () => {
         )
 
         expect(response.status).toBe(200)
-        expect(yield* response.json).toEqual([{ file: "legacy.txt", additions: 1, deletions: 0 }]) // kilocode_change
+        expect(yield* response.json).toEqual([])
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )

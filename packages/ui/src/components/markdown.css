@@ -15,6 +15,12 @@
   > *:last-child {
     margin-bottom: 0;
   }
+  > [data-markdown-block]:first-child > *:first-child {
+    margin-top: 0;
+  }
+  > [data-markdown-block]:last-child > *:last-child {
+    margin-bottom: 0;
+  }
 
   /* Headings: Same size, distinguished by color and spacing */
   h1,
@@ -60,8 +66,8 @@
   ol {
     margin-top: 8px;
     margin-bottom: 12px;
-    margin-inline-start: 0; /* kilocode_change */
-    padding-inline-start: 32px; /* kilocode_change */
+    margin-left: 0;
+    padding-left: 32px;
     list-style-position: outside;
   }
 
@@ -71,7 +77,7 @@
 
   ol {
     list-style-type: decimal;
-    padding-inline-start: 2.25rem; /* kilocode_change */
+    padding-left: 2.25rem;
   }
 
   li {
@@ -97,18 +103,18 @@
   li > ol {
     margin-top: 0.25rem;
     margin-bottom: 0.25rem;
-    padding-inline-start: 1rem; /* Minimal indent for nesting only */  /* kilocode_change */
+    padding-left: 1rem; /* Minimal indent for nesting only */
   }
 
   li > ol {
-    padding-inline-start: 1.75rem; /* kilocode_change */
+    padding-left: 1.75rem;
   }
 
   /* Blockquotes */
   blockquote {
-    border-inline-start: 2px solid var(--border-weak-base); /* kilocode_change */
+    border-left: 2px solid var(--border-weak-base);
     margin: 1.5rem 0;
-    padding-inline-start: 0.5rem; /* kilocode_change */
+    padding-left: 0.5rem;
     color: var(--text-weak);
     font-style: normal;
   }
@@ -121,6 +127,8 @@
   }
 
   .shiki {
+    background: var(--color-background-stronger);
+    color: var(--text-base);
     font-size: 13px;
     padding: 12px;
     border-radius: 6px;
@@ -223,21 +231,6 @@
     /* border-radius: 2px; */
     /* background: var(--surface-base); */
     /* box-shadow: 0 0 0 0.5px var(--border-weak-base); */
-
-    /* kilocode_change start */
-    &.file-link {
-      cursor: pointer;
-      text-decoration-line: underline;
-      text-decoration-style: dotted;
-      text-underline-offset: 2px;
-      transition: color 0.15s ease;
-
-      &:hover {
-        color: var(--text-interactive-base);
-        text-decoration-style: solid;
-      }
-    }
-    /* kilocode_change end */
   }
 
   /* Tables */
@@ -255,7 +248,7 @@
     /* Minimal borders for structure, matching TUI "lines" roughly but keeping it web-clean */
     border-bottom: 1px solid var(--border-weaker-base);
     padding: 12px;
-    text-align: start; /* kilocode_change */
+    text-align: left;
     vertical-align: top;
   }
 

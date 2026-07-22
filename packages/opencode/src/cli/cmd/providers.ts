@@ -17,7 +17,6 @@ import { Process } from "@/util/process"
 import { errorMessage } from "@/util/error"
 import { text } from "node:stream/consumers"
 import { Effect, Option } from "effect"
-import { remove as removeAuth } from "@/kilocode/auth/remove" // kilocode_change
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -238,10 +237,8 @@ export function resolvePluginProviders(input: {
 }
 
 export const ProvidersCommand = cmd({
-  // kilocode_change start - keep "auth" as primary command name
-  command: "auth",
-  aliases: ["providers"],
-  // kilocode_change end
+  command: "providers",
+  aliases: ["auth"],
   describe: "manage AI providers and credentials",
   builder: (yargs) =>
     yargs.command(ProvidersListCommand).command(ProvidersLoginCommand).command(ProvidersLogoutCommand).demandCommand(),
@@ -307,7 +304,7 @@ export const ProvidersLoginCommand = effectCmd({
   builder: (yargs: Argv) =>
     yargs
       .positional("url", {
-        describe: "kilo auth provider",
+        describe: "opencode auth provider",
         type: "string",
       })
       .option("provider", {
@@ -371,27 +368,21 @@ export const ProvidersLoginCommand = effectCmd({
     }
     const hooks = yield* pluginSvc.list()
 
-    // kilocode_change start
     const priority: Record<string, number> = {
-      kilo: 0,
-      anthropic: 2,
-      "github-copilot": 3,
-      openai: 4,
-      google: 5,
-      openrouter: 6,
-      vercel: 7,
+      opencode: 0,
+      openai: 1,
+      "github-copilot": 2,
+      google: 3,
+      anthropic: 4,
+      openrouter: 5,
+      vercel: 6,
     }
-    // kilocode_change end
     const pluginProviders = resolvePluginProviders({
       hooks,
       existingProviders: providers,
       disabled,
       enabled,
-      // kilocode_change start
-      providerNames: Object.fromEntries(
-        Object.entries(config.provider ?? {}).flatMap(([id, p]) => (p ? [[id, p.name]] : [])),
-      ),
-      // kilocode_change end
+      providerNames: Object.fromEntries(Object.entries(config.provider ?? {}).map(([id, p]) => [id, p.name])),
     })
     const options = [
       ...pipe(
@@ -405,10 +396,8 @@ export const ProvidersLoginCommand = effectCmd({
           label: x.name,
           value: x.id,
           hint: {
-            // kilocode_change start
-            kilo: "recommended",
-            openai: "ChatGPT login or API key",
-            // kilocode_change end
+            opencode: "recommended",
+            openai: "ChatGPT Plus/Pro or API key",
           }[x.id],
         })),
       ),
@@ -424,10 +413,7 @@ export const ProvidersLoginCommand = effectCmd({
       const input = args.provider
       const byID = options.find((x) => x.value === input)
       const byName = options.find((x) => x.label.toLowerCase() === input.toLowerCase())
-      // kilocode_change start - accept codex as an alias for OpenAI ChatGPT auth
-      const alias = input.toLowerCase() === "codex" ? options.find((x) => x.value === "openai") : undefined
-      const match = byID ?? byName ?? alias
-      // kilocode_change end
+      const match = byID ?? byName
       if (!match) {
         return yield* fail(`Unknown provider "${input}"`)
       }
@@ -463,7 +449,7 @@ export const ProvidersLoginCommand = effectCmd({
       }
 
       yield* Prompt.log.warn(
-        `This only stores a credential for ${provider} - you will need configure it in kilo.json, check the docs for examples.`, // kilocode_change
+        `This only stores a credential for ${provider} - you will need configure it in opencode.json, check the docs for examples.`,
       )
     }
 
@@ -472,9 +458,13 @@ export const ProvidersLoginCommand = effectCmd({
         "Amazon Bedrock authentication priority:\n" +
           "  1. Bearer token (AWS_BEARER_TOKEN_BEDROCK or /connect)\n" +
           "  2. AWS credential chain (profile, access keys, IAM roles, EKS IRSA)\n\n" +
-          "Configure via kilo.json options (profile, region, endpoint) or\n" + // kilocode_change
+          "Configure via opencode.json options (profile, region, endpoint) or\n" +
           "AWS environment variables (AWS_PROFILE, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_WEB_IDENTITY_TOKEN_FILE).",
       )
+    }
+
+    if (provider === "opencode") {
+      yield* Prompt.log.info("Create an api key at https://opencode.ai/auth")
     }
 
     if (provider === "vercel") {
@@ -483,7 +473,7 @@ export const ProvidersLoginCommand = effectCmd({
 
     if (["cloudflare", "cloudflare-ai-gateway"].includes(provider)) {
       yield* Prompt.log.info(
-        "Cloudflare AI Gateway can be configured with CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_API_TOKEN environment variables. Read more: https://kilo.ai/docs/ai-providers/cloudflare", // kilocode_change
+        "Cloudflare AI Gateway can be configured with CLOUDFLARE_GATEWAY_ID, CLOUDFLARE_ACCOUNT_ID, and CLOUDFLARE_API_TOKEN environment variables. Read more: https://opencode.ai/docs/providers/#cloudflare-ai-gateway",
       )
     }
 
@@ -538,7 +528,7 @@ export const ProvidersLogoutCommand = effectCmd({
           }),
         )
     if (!provider) return yield* fail(`Unknown configured provider "${args.provider}"`)
-    yield* removeAuth(provider) // kilocode_change
+    yield* Effect.orDie(authSvc.remove(provider))
     yield* Prompt.outro("Logout successful")
   }),
 })

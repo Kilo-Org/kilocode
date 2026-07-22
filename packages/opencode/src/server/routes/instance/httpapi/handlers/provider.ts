@@ -3,15 +3,7 @@ import { Config } from "@/config/config"
 import { ModelsDev } from "@opencode-ai/core/models-dev"
 import { Provider } from "@/provider/provider"
 
-import { mapValues, pickBy } from "remeda" // kilocode_change
-import { ModelCache } from "@/provider/model-cache" // kilocode_change
-import {
-  disposeAllInstancesAfterProviderAuthCallback,
-  invalidatePresence,
-} from "@/kilocode/server/provider-auth-lifecycle" // kilocode_change
-import { providerMetadata } from "@/kilocode/provider/metadata" // kilocode_change
-import { filterPromptTrainingModels } from "@/kilocode/provider/model-filter" // kilocode_change
-import { overlay as overlayAnacondaDesktop } from "@/kilocode/anaconda-desktop/provider" // kilocode_change
+import { mapValues } from "remeda"
 import { Effect, Schema } from "effect"
 import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
@@ -34,7 +26,7 @@ function mapProviderAuthError<A, R>(self: Effect.Effect<A, ProviderAuth.Error, R
       if (error instanceof ProviderAuth.ValidationFailed) {
         return new ProviderAuthApiError({ name: error._tag, data: { field: error.field, message: error.message } })
       }
-      return new ProviderAuthApiError({ name: "BadRequest", data: { message: error.message } }) // kilocode_change
+      return new ProviderAuthApiError({ name: "BadRequest", data: {} })
     }),
   )
 }
@@ -44,11 +36,10 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     const cfg = yield* Config.Service
     const provider = yield* Provider.Service
     const svc = yield* ProviderAuth.Service
-    const cache = yield* ModelCache.Service // kilocode_change
 
     const list = Effect.fn("ProviderHttpApi.list")(function* () {
       const config = yield* cfg.get()
-      const all = overlayAnacondaDesktop(yield* ModelsDev.Service.use((s) => s.get())) // kilocode_change
+      const all = yield* ModelsDev.Service.use((s) => s.get())
       const disabled = new Set(config.disabled_providers ?? [])
       const enabled = config.enabled_providers ? new Set(config.enabled_providers) : undefined
       const filtered: Record<string, (typeof all)[string]> = {}
@@ -56,34 +47,15 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         if ((enabled ? enabled.has(key) : true) && !disabled.has(key)) filtered[key] = value
       }
       const connected = yield* provider.list()
-      // kilocode_change start
-      const providers = filterPromptTrainingModels(
-        Object.assign(
-          mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
-          connected,
-        ),
-        config.hide_prompt_training_models === true,
-      )
-      // kilocode_change end
-      // kilocode_change start
-      const failed = yield* cache.failedProviders()
-      // Note: connected only contains providers with non-empty models after Provider.Service.list(),
-      // so failed must be checked explicitly for providers whose fetch returned an error.
-      const failedSet = new Set(failed)
-      const validProviders = pickBy(
-        providers,
-        (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
+      const providers = Object.assign(
+        mapValues(filtered, (item) => Provider.fromModelsDevProvider(item)),
+        connected,
       )
       return {
-        all: Object.values(validProviders).map((item) => ({
-          ...Provider.toPublicInfo(item),
-          metadata: providerMetadata(item.id),
-        })), // kilocode_change
-        default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
+        all: Object.values(providers).map(Provider.toPublicInfo),
+        default: Provider.defaultModelIDs(providers),
         connected: Object.keys(connected),
-        failed,
       }
-      // kilocode_change end
     })
 
     const auth = Effect.fn("ProviderHttpApi.auth")(function* () {
@@ -129,10 +101,6 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
           code: ctx.payload.code,
         }),
       )
-      // kilocode_change start - drop old-user presence before instance disposal on Kilo OAuth callback
-      if (ctx.params.providerID === "kilo") yield* invalidatePresence()
-      // kilocode_change end
-      yield* disposeAllInstancesAfterProviderAuthCallback() // kilocode_change
       return true
     })
 

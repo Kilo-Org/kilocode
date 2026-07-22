@@ -11,6 +11,7 @@ import { SkillGroup } from "./groups/skill"
 import { EventGroup } from "./groups/event"
 import { AgentGroup } from "./groups/agent"
 import { HealthGroup } from "./groups/health"
+import { PtyGroup } from "./groups/pty"
 import { QuestionGroup } from "./groups/question"
 import { ReferenceGroup } from "./groups/reference"
 import { Authorization } from "./middleware/authorization"
@@ -34,12 +35,13 @@ export const Api = HttpApi.make("server")
   .add(CommandGroup)
   .add(SkillGroup)
   .add(EventGroup)
+  .add(PtyGroup)
   .add(QuestionGroup)
   .add(ReferenceGroup)
   .add(ProjectCopyGroup)
   .annotateMerge(
     OpenApi.annotations({
-      title: "Kilo HttpApi", // kilocode_change
+      title: "opencode HttpApi",
       version: "0.0.1",
       description: "Experimental HttpApi surface for selected instance routes.",
     }),

@@ -3,7 +3,6 @@ import { Deferred, Effect, Layer, Schema, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID, MessageID } from "@/session/schema"
 import { QuestionID } from "./schema"
-import { KiloQuestion } from "@/kilocode/question" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 
@@ -19,21 +18,6 @@ export const Option = Schema.Struct({
   description: Schema.String.annotate({
     description: "Explanation of choice",
   }),
-  // kilocode_change start - optional i18n keys so clients can translate while still
-  // replying with the canonical English label (backend matches on `label`).
-  labelKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the label; clients translate and still reply with `label`",
-  }),
-  descriptionKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the description",
-  }),
-  // kilocode_change end
-  // kilocode_change start - hint to UI clients to switch the active agent/mode picker
-  // when this option is selected (before the reply is confirmed by the server).
-  mode: Schema.optional(Schema.String).annotate({
-    description: "Optional agent/mode name to pre-select in the UI when this option is picked",
-  }),
-  // kilocode_change end
 }).annotate({ identifier: "QuestionOption" })
 export type Option = Schema.Schema.Type<typeof Option>
 
@@ -50,14 +34,6 @@ const base = {
   multiple: Schema.optional(Schema.Boolean).annotate({
     description: "Allow selecting multiple choices",
   }),
-  // kilocode_change start - optional i18n keys for question text and header
-  questionKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the question text; clients fall back to `question` when missing",
-  }),
-  headerKey: Schema.optional(Schema.String).annotate({
-    description: "Optional i18n key for the header; clients fall back to `header` when missing",
-  }),
-  // kilocode_change end
 }
 
 export const Info = Schema.Struct({
@@ -82,10 +58,6 @@ export const Request = Schema.Struct({
   sessionID: SessionID,
   questions: Schema.Array(Info).annotate({
     description: "Questions to ask",
-  }),
-  blocking: Schema.optional(Schema.Boolean).annotate({
-    // kilocode_change
-    description: "Whether this question blocks prompt input (default: true)",
   }),
   tool: Schema.optional(Tool),
 }).annotate({ identifier: "QuestionRequest" })
@@ -143,7 +115,6 @@ export interface Interface {
   readonly ask: (input: {
     sessionID: SessionID
     questions: ReadonlyArray<Info>
-    blocking?: boolean // kilocode_change
     tool?: Tool
   }) => Effect.Effect<ReadonlyArray<Answer>, RejectedError>
   readonly reply: (input: {
@@ -152,7 +123,6 @@ export interface Interface {
   }) => Effect.Effect<void, NotFoundError>
   readonly reject: (requestID: QuestionID) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
-  readonly dismissAll: (sessionID: SessionID) => Effect.Effect<void> // kilocode_change
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/Question") {}
@@ -183,7 +153,6 @@ export const layer = Layer.effect(
     const ask = Effect.fn("Question.ask")(function* (input: {
       sessionID: SessionID
       questions: ReadonlyArray<Info>
-      blocking?: boolean // kilocode_change
       tool?: Tool
     }) {
       const pending = (yield* InstanceState.get(state)).pending
@@ -195,26 +164,16 @@ export const layer = Layer.effect(
         id,
         sessionID: input.sessionID,
         questions: input.questions,
-        blocking: input.blocking, // kilocode_change
         tool: input.tool,
       }
-
-      // kilocode_change start
-      yield* KiloQuestion.guardFollowup(input.sessionID, () => new RejectedError())
-      // kilocode_change end
-
       pending.set(id, { info, deferred })
       yield* events.publish(Event.Asked, info)
 
       return yield* Effect.ensuring(
         Deferred.await(deferred),
-        // kilocode_change start - every asked question gets a terminal event when its waiter is interrupted
-        KiloQuestion.finalize({
-          pending,
-          id,
-          publishRejected: () => events.publish(Event.Rejected, { sessionID: info.sessionID, requestID: info.id }),
+        Effect.sync(() => {
+          pending.delete(id)
         }),
-        // kilocode_change end
       )
     })
 
@@ -259,16 +218,7 @@ export const layer = Layer.effect(
       return Array.from(pending.values(), (x) => x.info)
     })
 
-    // kilocode_change start - body lives in @/kilocode/question/KiloQuestion.makeDismissAll
-    const dismissAll = KiloQuestion.makeDismissAll({
-      state,
-      publishRejected: (entry) =>
-        events.publish(Event.Rejected, { sessionID: entry.info.sessionID, requestID: entry.info.id }),
-      makeError: () => new RejectedError(),
-    })
-    // kilocode_change end
-
-    return Service.of({ ask, reply, reject, list, dismissAll }) // kilocode_change
+    return Service.of({ ask, reply, reject, list })
   }),
 )
 

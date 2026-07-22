@@ -1,6 +1,5 @@
 name: Bug report
-description: Report an issue that should be fixed
-labels: ["bug"]
+description: Report an issue that should be fixed (avoid pasting giant AI generated summaries or your issue may be closed/ignored)
 body:
   - type: textarea
     id: description
@@ -20,10 +19,10 @@ body:
       required: false
 
   - type: input
-    id: kilo-version
+    id: opencode-version
     attributes:
-      label: Kilo version
-      description: What version of Kilo are you using?
+      label: OpenCode version
+      description: What version of OpenCode are you using?
     validations:
       required: false
 

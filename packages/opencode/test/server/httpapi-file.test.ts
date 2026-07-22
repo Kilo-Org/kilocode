@@ -51,10 +51,7 @@ describe("file HttpApi", () => {
     expect(await status.json()).toEqual([])
   })
 
-  // kilocode_change - skip on Windows: Kilo file search returns [] for hello.txt.
-  // Tracked in Kilo-Org/kilocode#9831.
-  const searchTest = process.platform === "win32" ? test.skip : test
-  searchTest("serves search endpoints", async () => {
+  test("serves search endpoints", async () => {
     await using tmp = await tmpdir({ git: true })
     await Bun.write(path.join(tmp.path, "hello.txt"), "needle")
 

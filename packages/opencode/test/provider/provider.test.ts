@@ -71,7 +71,7 @@ const list = Provider.use.list()
 
 const paid = (providers: Record<string, { models: Record<string, { cost: { input: number } }> }>) => {
   const item = providers[ProviderV2.ID.make("opencode")]
-  if (!item) return 0 // kilocode_change - Kilo drops opencode provider without apiKey/auth
+  expect(item).toBeDefined()
   return Object.values(item.models).filter((model) => model.cost.input > 0).length
 }
 
@@ -1121,9 +1121,9 @@ it.instance(
   Effect.gen(function* () {
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("nvidia")].options.headers).toEqual({
-      "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-      "X-Title": "Kilo Code", // kilocode_change
-      "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
+      "HTTP-Referer": "https://opencode.ai/",
+      "X-Title": "opencode",
+      "X-BILLING-INVOKE-ORIGIN": "OpenCode",
     })
   }),
   { config: { provider: { nvidia: { options: { apiKey: "test-api-key" } } } } },
@@ -1134,9 +1134,9 @@ it.instance(
   Effect.gen(function* () {
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("nvidia")].options.headers).toEqual({
-      "HTTP-Referer": "https://kilo.ai/", // kilocode_change
-      "X-Title": "Kilo Code", // kilocode_change
-      "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
+      "HTTP-Referer": "https://opencode.ai/",
+      "X-Title": "opencode",
+      "X-BILLING-INVOKE-ORIGIN": "OpenCode",
     })
   }),
   { config: { provider: { nvidia: { options: { apiKey: "test-api-key", baseURL: "http://localhost:8000/v1" } } } } },
@@ -1652,7 +1652,7 @@ const provideMultiInstance = <A, E, R>(eff: Effect.Effect<A, E, R>) =>
 it.effect("plugin config providers persist after instance dispose", () =>
   Effect.gen(function* () {
     const dir = yield* tmpdirScoped()
-    const configDir = path.join(dir, ".kilo") // kilocode_change
+    const configDir = path.join(dir, ".opencode")
     const root = path.join(configDir, "plugin")
     yield* Effect.promise(() => mkdir(root, { recursive: true }))
     yield* Effect.promise(() => markPluginDependenciesReady(configDir))
@@ -1709,11 +1709,10 @@ it.instance(
   "plugin config enabled and disabled providers are honored",
   Effect.gen(function* () {
     const instance = yield* TestInstance
-    const configDir = path.join(instance.directory, ".kilo") // kilocode_change
+    const configDir = path.join(instance.directory, ".opencode")
     const root = path.join(configDir, "plugin")
     yield* Effect.promise(() => mkdir(root, { recursive: true }))
     yield* Effect.promise(() => markPluginDependenciesReady(configDir))
-    yield* Effect.promise(() => markPluginDependenciesReady(Global.Path.config)) // kilocode_change
     yield* Effect.promise(() =>
       Bun.write(
         path.join(root, "provider-filter.ts"),

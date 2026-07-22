@@ -6,37 +6,19 @@ import { useClipboard } from "../context/clipboard"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { useExit } from "../context/exit"
 
-// kilocode_change start — guard against missing renderer context in ErrorBoundary fallback
-function tryUseTerminalDimensions() {
-  try {
-    return useTerminalDimensions()
-  } catch (err) {
-    process.stderr.write(`error boundary terminal unavailable: ${String(err)}\n`)
-    return undefined
-  }
-}
-// kilocode_change end
-
 export function ErrorComponent(props: { error: Error; reset: () => void; mode?: "dark" | "light" }) {
-  // kilocode_change start — guard against missing renderer context in ErrorBoundary fallback
-  const term = tryUseTerminalDimensions()
-  const height = () => term?.().height ?? process.stdout.rows ?? 24
+  const term = useTerminalDimensions()
   const exit = useExit()
   const clipboard = useClipboard()
 
-  try {
-    useKeyboard((evt) => {
-      if (evt.ctrl && evt.name === "c") {
-        void exit()
-      }
-    })
-  } catch (err) {
-    process.stderr.write(`error boundary keyboard unavailable: ${String(err)}\n`)
-  }
-  // kilocode_change end
+  useKeyboard((evt) => {
+    if (evt.ctrl && evt.name === "c") {
+      void exit()
+    }
+  })
   const [copied, setCopied] = createSignal(false)
 
-  const issueURL = new URL("https://github.com/Kilo-Org/kilocode/issues/new?template=bug-report.yml") // kilocode_change
+  const issueURL = new URL("https://github.com/anomalyco/opencode/issues/new?template=bug-report.yml")
 
   // Choose safe fallback colors per mode since theme context may not be available
   const isLight = props.mode === "light"
@@ -58,7 +40,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
     )
   }
 
-  issueURL.searchParams.set("kilo-version", InstallationVersion) // kilocode_change
+  issueURL.searchParams.set("opencode-version", InstallationVersion)
 
   const copyIssueURL = () => {
     void clipboard.write?.(issueURL.toString()).then(() => {
@@ -88,10 +70,7 @@ export function ErrorComponent(props: { error: Error; reset: () => void; mode?: 
           <text fg={colors.bg}>Exit</text>
         </box>
       </box>
-      <scrollbox
-        height={Math.floor(height() * 0.7)} // kilocode_change — use safe terminal height fallback
-        scrollAcceleration={getScrollAcceleration()}
-      >
+      <scrollbox height={Math.floor(term().height * 0.7)} scrollAcceleration={getScrollAcceleration()}>
         <text fg={colors.muted}>{props.error.stack}</text>
       </scrollbox>
       <text fg={colors.text}>{props.error.message}</text>

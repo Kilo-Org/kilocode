@@ -234,8 +234,7 @@ describe("ModelsDev Service", () => {
       const final = yield* Ref.get(state)
       expect(final.calls.length).toBe(1)
       expect(final.calls[0].url).toContain("/api.json")
-      expect(final.calls[0].userAgent).toStartWith("opencode/")
-      expect(final.calls[0].userAgent).toEndWith(`/${Flag.KILO_CLIENT}`)
+      expect(final.calls[0].userAgent).toContain("/cli")
     }),
   )
 

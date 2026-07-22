@@ -22,7 +22,7 @@ import { TestLLMServer } from "../lib/llm-server"
 import path from "path"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance, tmpdirScoped } from "../fixture/fixture"
-import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { awaitWithTimeout, testEffect } from "../lib/effect"
 import { testProviderConfig } from "../lib/test-provider"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -180,15 +180,6 @@ function firstPartText(value: unknown) {
   return record(array(record(value).parts)[0]).text
 }
 
-// kilocode_change start
-function texts(value: unknown) {
-  return array(value)
-    .flatMap((item) => array(record(item).parts))
-    .map((part) => record(part).text)
-    .filter((text): text is string => typeof text === "string")
-}
-// kilocode_change end
-
 function sessionTitles(value: unknown) {
   return array(value)
     .map((item) => record(item).title)
@@ -295,7 +286,7 @@ function writeStandardFiles(dir: string) {
 function writeProjectSkill(dir: string) {
   return FSUtil.Service.use((fs) =>
     fs.writeWithDirs(
-      path.join(dir, ".kilo", "skills", "project-rest-skill", "SKILL.md"), // kilocode_change
+      path.join(dir, ".opencode", "skills", "project-rest-skill", "SKILL.md"),
       `---
 name: project-rest-skill
 description: A project skill visible to REST API prompts.
@@ -366,28 +357,16 @@ describe("HttpApi SDK", () => {
   httpapiInstance(
     "uses the generated SDK for safe instance routes",
     { serverPath: "raw", git: false, setup: writeStandardFiles },
-    ({ sdk, directory }) =>
+    ({ sdk }) =>
       Effect.gen(function* () {
         const file = yield* call(() => sdk.file.read({ path: "hello.txt" }))
-        const raw = yield* call(() => sdk.v2.fs.read({ path: "hello.txt" })) // kilocode_change
         const session = yield* call(() => sdk.session.create({ title: "sdk" }))
-        const v2session = yield* call(() => sdk.v2.session.create({ agent: "build" })) // kilocode_change
         const listed = yield* call(() => sdk.session.list({ roots: true, limit: 10 }))
 
         expect(file.response.status).toBe(200)
         expect(file.data).toMatchObject({ content: "hello" })
-        // kilocode_change start
-        expect(raw.response.status).toBe(200)
-        const body = raw.data
-        if (!body) throw new Error("missing V2 file body")
-        const content =
-          body instanceof Blob ? yield* Effect.promise(() => body.text()) : Buffer.from(body as unknown as Uint8Array).toString()
-        expect(content).toBe("hello")
-        // kilocode_change end
         expect(session.response.status).toBe(200)
         expect(session.data).toMatchObject({ title: "sdk" })
-        expect({ status: v2session.response.status, error: v2session.error }).toEqual({ status: 200, error: undefined }) // kilocode_change
-        expect(v2session.data).toMatchObject({ data: { location: { directory } } }) // kilocode_change
         expect(listed.response.status).toBe(200)
         expect(listed.data?.map((item) => item.id)).toContain(session.data?.id)
 
@@ -421,15 +400,6 @@ describe("HttpApi SDK", () => {
         expect(url.searchParams.get("location[workspace]")).toBe(workspaceID)
         expect(request!.headers.has("x-kilo-directory")).toBe(false)
         expect(request!.headers.has("x-kilo-workspace")).toBe(false)
-
-        // kilocode_change start - encoded legacy directory headers still route on payload requests
-        const legacy = yield* client("raw", undefined, {
-          headers: { "x-kilo-directory": encodeURIComponent(directory) },
-        })
-        const legacySession = yield* call(() => legacy.v2.session.create({ agent: "build" }))
-        expect(legacySession.response.status).toBe(200)
-        expect(legacySession.data).toMatchObject({ data: { location: { directory } } })
-        // kilocode_change end
       }),
     ),
   )
@@ -521,18 +491,16 @@ describe("HttpApi SDK", () => {
       Effect.gen(function* () {
         const missingSdk = yield* client("raw", directory, { password: "secret" })
         const missing = yield* capture(() => missingSdk.file.read({ path: "hello.txt" }))
-        // kilocode_change start - match Hono AuthMiddleware username default ("kilo")
         const badSdk = yield* client("raw", directory, {
           password: "secret",
-          headers: { authorization: authorization("kilo", "wrong") },
+          headers: { authorization: authorization("opencode", "wrong") },
         })
         const bad = yield* capture(() => badSdk.file.read({ path: "hello.txt" }))
         const goodSdk = yield* client("raw", directory, {
           password: "secret",
-          headers: { authorization: authorization("kilo", "secret") },
+          headers: { authorization: authorization("opencode", "secret") },
         })
         const good = yield* capture(() => goodSdk.file.read({ path: "hello.txt" }))
-        // kilocode_change end
 
         return {
           statuses: statuses({ missing, bad, good }),
@@ -775,7 +743,6 @@ describe("HttpApi SDK", () => {
             parts: [{ type: "text", text: "hello" }],
           }),
         )
-        // kilocode_change start
         const asyncPrompt = yield* capture(() =>
           sdk.session.promptAsync({
             sessionID,
@@ -784,89 +751,21 @@ describe("HttpApi SDK", () => {
             parts: [{ type: "text", text: "async hello" }],
           }),
         )
-        const messages = yield* pollWithTimeout(
-          capture(() => sdk.session.messages({ sessionID })).pipe(
-            Effect.map((messages) => (texts(messages.data).includes("async hello") ? messages : undefined)),
-          ),
-          "async no-reply prompt message was not persisted",
-        )
+        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
 
         return {
           statuses: statuses({ session, prompt, asyncPrompt, messages }),
           promptRole: record(record(prompt.data).info).role,
           messageCount: array(messages.data).length,
-          messageTexts: texts(messages.data).sort(),
-        }
-        // kilocode_change end
-      }),
-    ),
-  )
-
-  // kilocode_change start - verify invalid user images fail at the real SDK boundary
-  serverPathParity("rejects malformed user image data before persistence", (serverPath) =>
-    withStandardProject(serverPath, ({ sdk }) =>
-      Effect.gen(function* () {
-        const session = yield* capture(() => sdk.session.create({ title: "invalid image" }))
-        const sessionID = String(record(session.data).id)
-        const prompt = yield* capture(() =>
-          sdk.session.prompt({
-            sessionID,
-            agent: "build",
-            noReply: true,
-            parts: [
-              {
-                type: "file",
-                mime: "image/png",
-                filename: "not-an-image.png",
-                url: "data:image/png;base64,bm90LWltYWdl",
-              },
-            ],
-          }),
-        )
-        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
-
-        expect(prompt.status).toBe(400)
-        expect(JSON.stringify(messages.data)).not.toContain("not-an-image.png")
-
-        return {
-          promptStatus: prompt.status,
-          persisted: JSON.stringify(messages.data).includes("not-an-image.png"),
+          messageTexts: array(messages.data)
+            .flatMap((item) => array(record(item).parts))
+            .map((part) => record(part).text)
+            .filter((text): text is string => typeof text === "string")
+            .sort(),
         }
       }),
     ),
   )
-  serverPathParity("rejects oversized user image files before persistence", (serverPath) =>
-    withProject(serverPath, { config: { attachment: { image: { max_base64_bytes: 4 } } } }, ({ sdk, directory }) =>
-      Effect.gen(function* () {
-        const filepath = path.join(directory, "oversized.png")
-        yield* call(() => Bun.write(filepath, Buffer.alloc(1024, 1)))
-        const session = yield* capture(() => sdk.session.create({ title: "oversized image" }))
-        const sessionID = String(record(session.data).id)
-        const prompt = yield* capture(() =>
-          sdk.session.prompt({
-            sessionID,
-            agent: "build",
-            noReply: true,
-            parts: [
-              {
-                type: "file",
-                mime: "image/png",
-                filename: "oversized.png",
-                url: `file://${filepath}`,
-              },
-            ],
-          }),
-        )
-        const messages = yield* capture(() => sdk.session.messages({ sessionID }))
-
-        expect(prompt.status).toBe(400)
-        expect(JSON.stringify(messages.data)).not.toContain("oversized.png")
-
-        return { promptStatus: prompt.status, persisted: JSON.stringify(messages.data).includes("oversized.png") }
-      }),
-    ),
-  )
-  // kilocode_change end
 
   serverPathParity("matches generated SDK prompt streaming through fake LLM", (serverPath) =>
     withFakeLlm(serverPath, ({ sdk, llm }) =>
@@ -901,62 +800,6 @@ describe("HttpApi SDK", () => {
       }),
     ),
   )
-
-  // kilocode_change start - verify provider errors remain in successful assistant messages
-  serverPathParity("preserves provider errors through the generated SDK", (serverPath) =>
-    withFakeLlm(serverPath, ({ sdk, llm }) =>
-      Effect.gen(function* () {
-        const gateway = { error: { code: "PAID_MODEL_AUTH_REQUIRED", message: "Authentication required" } }
-        const create = () =>
-          capture(() =>
-            sdk.session.create({
-              title: "provider error",
-              permission: [{ permission: "*", pattern: "*", action: "allow" }],
-            }),
-          )
-        const prompt = (sessionID: string) => ({
-          sessionID,
-          agent: "build",
-          model: { providerID: "test", modelID: "test-model" },
-          parts: [{ type: "text" as const, text: "trigger provider error" }],
-        })
-
-        yield* llm.error(401, gateway)
-        const tupleSession = yield* create()
-        const tuple = yield* capture(() => sdk.session.prompt(prompt(String(record(tupleSession.data).id))))
-
-        yield* llm.error(401, gateway)
-        const strictSession = yield* create()
-        const strict = yield* call(() =>
-          sdk.session.prompt(prompt(String(record(strictSession.data).id)), { throwOnError: true }),
-        )
-
-        const tupleError = record(record(tuple.data).info).error
-        const tupleData = record(record(tupleError).data)
-        const strictError = record(record(record(strict).data).info).error
-        const strictData = record(record(strictError).data)
-
-        expect(tuple.status).toBe(200)
-        expect(record(tupleError).name).toBe("APIError")
-        expect(tupleData.statusCode).toBe(401)
-        expect(JSON.parse(String(tupleData.responseBody))).toEqual(gateway)
-        expect(record(strictError).name).toBe("APIError")
-        expect(strictData.statusCode).toBe(401)
-        expect(JSON.parse(String(strictData.responseBody))).toEqual(gateway)
-
-        return {
-          tupleStatus: tuple.status,
-          tupleName: record(tupleError).name,
-          providerStatus: tupleData.statusCode,
-          providerBody: tupleData.responseBody,
-          strictName: record(strictError).name,
-          strictStatus: strictData.statusCode,
-          strictBody: strictData.responseBody,
-        }
-      }),
-    ),
-  )
-  // kilocode_change end
 
   httpapi(
     "includes project skills in REST API prompt context",

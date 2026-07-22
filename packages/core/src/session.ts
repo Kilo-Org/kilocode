@@ -2,7 +2,7 @@ export * as SessionV2 from "./session"
 export * from "./session/schema"
 
 import { Cause, DateTime, Effect, Layer, Schema, Context, Stream } from "effect"
-import { and, asc, desc, eq, gt, isNotNull, like, lt, or, type SQL } from "drizzle-orm" // kilocode_change
+import { and, asc, desc, eq, gt, like, lt, or, type SQL } from "drizzle-orm"
 import { ProjectV2 } from "./project"
 import { WorkspaceV2 } from "./workspace"
 import { ModelV2 } from "./model"
@@ -29,7 +29,6 @@ import { logFailure } from "./session/logging"
 import { MessageDecodeError } from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
-import { normalize } from "./kilocode/session-message" // kilocode_change
 
 // get project -> project.locations
 //
@@ -187,8 +186,7 @@ export const layer = Layer.effect(
       )
 
     const decode = (row: typeof SessionMessageTable.$inferSelect) =>
-      decodeMessage(normalize({ ...row.data, id: row.id, type: row.type })).pipe(
-        // kilocode_change - normalize released tool content on paginated reads
+      decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(
         Effect.mapError(
           () =>
             new MessageDecodeError({
@@ -305,25 +303,20 @@ export const layer = Layer.effect(
               .select({ seq: SessionMessageTable.seq })
               .from(SessionMessageTable)
               .where(
-                and(
-                  eq(SessionMessageTable.session_id, input.sessionID),
-                  eq(SessionMessageTable.id, input.cursor.id),
-                  isNotNull(SessionMessageTable.seq), // kilocode_change
-                ),
+                and(eq(SessionMessageTable.session_id, input.sessionID), eq(SessionMessageTable.id, input.cursor.id)),
               )
               .get()
               .pipe(Effect.orDie)
           : undefined
-        const seq = anchor?.seq
-        if (input.cursor && seq == null) return []
-        const boundary = seq != null
+        if (input.cursor && !anchor) return []
+        const boundary = anchor
           ? order === "asc"
-            ? gt(SessionMessageTable.seq, seq)
-            : lt(SessionMessageTable.seq, seq)
+            ? gt(SessionMessageTable.seq, anchor.seq)
+            : lt(SessionMessageTable.seq, anchor.seq)
           : undefined
         const where = boundary
-          ? and(eq(SessionMessageTable.session_id, input.sessionID), isNotNull(SessionMessageTable.seq), boundary)
-          : and(eq(SessionMessageTable.session_id, input.sessionID), isNotNull(SessionMessageTable.seq)) // kilocode_change
+          ? and(eq(SessionMessageTable.session_id, input.sessionID), boundary)
+          : eq(SessionMessageTable.session_id, input.sessionID)
         const query = db
           .select()
           .from(SessionMessageTable)
@@ -416,14 +409,13 @@ export const layer = Layer.effect(
           Effect.gen(function* () {
             const session = yield* store.get(sessionID)
             if (!session) return yield* execution.interrupt(sessionID)
-            // kilocode_change start - keep interrupt operational while preserving released durable event compatibility.
-            const seq = yield* SessionInput.latestSeq(db, sessionID)
-            yield* events.publish(SessionEvent.InterruptRequested, {
+            const event = yield* events.publish(SessionEvent.InterruptRequested, {
               sessionID,
               timestamp: yield* DateTime.now,
             })
-            yield* execution.interrupt(sessionID, seq)
-            // kilocode_change end
+            if (event.seq === undefined)
+              return yield* Effect.die("Interrupt request event is missing aggregate sequence")
+            yield* execution.interrupt(sessionID, event.seq)
           }),
         ),
       ),

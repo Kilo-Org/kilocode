@@ -6,7 +6,6 @@ import { Context, Effect, Layer } from "effect"
 import { Global } from "../global"
 import { Flag } from "../flag/flag"
 import { isAbsolute, join } from "path"
-import { existsSync } from "fs" // kilocode_change
 import { DatabaseMigration } from "./migration"
 import { InstallationChannel } from "../installation/version"
 import { LayerNode } from "../effect/layer-node"
@@ -52,13 +51,7 @@ export function path() {
     process.env.KILO_DISABLE_CHANNEL_DB === "true"
   )
     return join(Global.Path.data, "kilo.db")
-  // kilocode_change start - kilo-branded dev-channel db name, falling back to a pre-existing opencode-named db
-  const safe = InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")
-  const next = join(Global.Path.data, `kilo-${safe}.db`)
-  const prev = join(Global.Path.data, `opencode-${safe}.db`)
-  if (!existsSync(next) && existsSync(prev)) return prev
-  return next
-  // kilocode_change end
+  return join(Global.Path.data, `opencode-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`)
 }
 
 export const defaultLayer = Layer.unwrap(

@@ -29,37 +29,21 @@ export function DialogSessionList() {
   const toast = useToast()
   const [toDelete, setToDelete] = createSignal<string>()
   const [search, setSearch] = createDebouncedSignal("", 150)
-  const [global, setGlobal] = createSignal(false) // kilocode_change - show current worktree by default
   const deleteHint = useCommandShortcut("session.delete")
   const quickSwitch1 = useCommandShortcut("session.quick_switch.1")
   const quickSwitch9 = useCommandShortcut("session.quick_switch.9")
 
-  // kilocode_change start - always fetch from experimental endpoint (returns GlobalSession with worktree info)
-  // TODO: extend /experimental/session to accept `scope`/`path` so this dialog can respect the
-  // upstream `session_directory_filter_enabled` KV toggle (via sync.session.query()) while
-  // keeping worktree grouping.
-  const [searchResults, searchActions] = createResource(
-    () => ({ query: search(), global: global(), directory: project.instance.directory() }), // kilocode_change
+  const [searchResults, { refetch }] = createResource(
+    () => ({ query: search(), filter: sync.session.query() }),
     async (input) => {
-      const result = await sdk.client.experimental.session.list(
-        {
-          search: input.query || undefined,
-          roots: true,
-          worktrees: true,
-          current: input.global ? undefined : "true",
-          directory: input.global ? undefined : input.directory || undefined,
-          limit: 30,
-        },
-        { throwOnError: true },
-      )
+      if (!input.query) return undefined
+      const result = await sdk.client.session.list({ search: input.query, limit: 30, ...input.filter })
       return result.data ?? []
     },
   )
-  // kilocode_change end
 
   const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
-
-  const sessions = createMemo(() => searchResults() ?? []) // kilocode_change - endpoint applies worktree scope
+  const sessions = createMemo(() => searchResults() ?? sync.data.session)
 
   function recover(session: NonNullable<ReturnType<typeof sessions>[number]>) {
     const workspace = project.workspace.get(session.workspaceID!)
@@ -124,7 +108,7 @@ export function DialogSessionList() {
           }
           await project.workspace.sync()
           await sync.session.refresh()
-          if (search()) await searchActions.refetch() // kilocode_change - use createResource actions
+          if (search()) await refetch()
           if (info?.workspaceID === session.workspaceID) {
             route.navigate({ type: "home" })
           }
@@ -147,13 +131,14 @@ export function DialogSessionList() {
     ))
   }
 
-  // kilocode_change - support local and global sessions
-  function orderByRecency(sessionsList: { id: string; parentID?: string; time: { updated: number } }[]) {
+  function orderByRecency(sessionsList: NonNullable<ReturnType<typeof sessions>>) {
     return sessionsList
       .filter((x) => x.parentID === undefined)
       .toSorted((a, b) => b.time.updated - a.time.updated)
       .map((x) => x.id)
   }
+
+  const [browseOrder] = createSignal<string[]>(orderByRecency(sync.data.session))
 
   const quickSwitchHint = createMemo(() => {
     const first = quickSwitch1()
@@ -168,14 +153,14 @@ export function DialogSessionList() {
 
   const options = createMemo(() => {
     const today = new Date().toDateString()
-    const all = global() // kilocode_change
     const sessionMap = new Map(
       sessions()
         .filter((x) => x.parentID === undefined)
         .map((x) => [x.id, x]),
     )
 
-    const displayOrder = orderByRecency(sessions()) // kilocode_change - respect current scope
+    const searchResult = searchResults()
+    const displayOrder = searchResult ? orderByRecency(searchResult) : browseOrder()
 
     const pinned = local.session.pinned().filter((id) => sessionMap.has(id))
     const pinnedSet = new Set(pinned)
@@ -203,7 +188,6 @@ export function DialogSessionList() {
           : undefined
       return {
         title: isDeleting ? `Press ${deleteHint()} again to confirm` : x.title,
-        description: all && x.worktreeName ? `(${x.worktreeName})` : undefined, // kilocode_change - worktree label
         bg: isDeleting ? theme.error : undefined,
         value: x.id,
         category,
@@ -231,7 +215,7 @@ export function DialogSessionList() {
 
   return (
     <DialogSelect
-      title={global() ? "Sessions (all worktrees)" : "Sessions (current worktree)"} // kilocode_change
+      title="Sessions"
       options={options()}
       skipFilter={true}
       current={currentSessionID()}
@@ -295,7 +279,7 @@ export function DialogSessionList() {
               if (status && status !== "connected") {
                 await sync.session.refresh()
               }
-              void searchActions.refetch() // kilocode_change
+              if (search()) await refetch()
               setToDelete(undefined)
               return
             }
@@ -305,34 +289,11 @@ export function DialogSessionList() {
         {
           command: "session.rename",
           title: "rename",
-          // kilocode_change start
           onTrigger: async (option) => {
-            const item = sessions().find((x) => x.id === option.value)
-            dialog.replace(() => (
-              <DialogSessionRename
-                session={option.value}
-                title={item?.title}
-                onConfirm={() => {
-                  void searchActions.refetch()
-                }}
-              />
-            ))
+            dialog.replace(() => <DialogSessionRename session={option.value} />)
           },
         },
-        {
-          command: "session.scope.toggle",
-          title: global() ? "current" : "all",
-          requiresSelection: false,
-          onTrigger: async () => {
-            setToDelete(undefined)
-            setGlobal((v) => !v)
-          },
-        },
-        // kilocode_change end
       ]}
-      // kilocode_change start - preserve Ctrl+A worktree scope toggle with the upstream keymap engine
-      bindings={[{ key: "ctrl+a", cmd: "session.scope.toggle" }]}
-      // kilocode_change end
       footerHints={quickSwitchFooterHints()}
     />
   )

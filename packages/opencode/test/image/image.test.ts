@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test"
+import { describe, expect } from "bun:test"
 import { Cause, Effect, Exit, Layer } from "effect"
 import { Image } from "@/image/image"
 import { MessageID, PartID, SessionID } from "@/session/schema"
+import path from "node:path"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
 
@@ -57,45 +58,45 @@ describe("Image", () => {
     }),
   )
 
-  // kilocode_change start - cover Kilo's Photon-unavailable fallback
-  test("preserves a valid in-limit image without Photon", () => {
-    const data = "UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA"
-    const input = part("image/webp", data)
+  it.effect("resizes images that fit the byte limit but exceed dimension limits", () =>
+    Effect.gen(function* () {
+      const photon = yield* Effect.promise(() => import("@silvia-odwyer/photon-node"))
+      const source = new photon.PhotonImage(new Uint8Array(Array.from({ length: 9_000 * 4 }, () => 255)), 9_000, 1)
+      const image = yield* Image.Service
+      const result = yield* image.normalize(part("image/png", Buffer.from(source.get_bytes()).toString("base64")))
+      const resized = photon.PhotonImage.new_from_byteslice(
+        Buffer.from(result.url.slice(result.url.indexOf(";base64,") + ";base64,".length), "base64"),
+      )
 
-    expect(Image.fallback(input, data, { bytes: 1024, width: 2000, height: 2000 })).toEqual(input)
-  })
+      source.free()
+      expect(resized.get_width()).toBeLessThanOrEqual(2_000)
+      expect(resized.get_height()).toBeLessThanOrEqual(2_000)
+      resized.free()
+    }),
+  )
 
-  test("rejects non-image bytes without Photon", () => {
-    const data = Buffer.from("not an image").toString("base64")
-    const result = Image.fallback(part("image/png", data), data, { bytes: 1024, width: 2000, height: 2000 })
+  it.effect("resizes the 5MB base64 picture fixture", () =>
+    Effect.gen(function* () {
+      const photon = yield* Effect.promise(() => import("@silvia-odwyer/photon-node"))
+      const data = Buffer.from(
+        yield* Effect.promise(() =>
+          Bun.file(path.join(import.meta.dir, "fixtures", "picture-5mb-base64.png")).arrayBuffer(),
+        ),
+      )
+      const input = part("image/png", data.toString("base64"))
+      const image = yield* Image.Service
+      const result = yield* image.normalize(input)
+      const base64 = result.url.slice(result.url.indexOf(";base64,") + ";base64,".length)
+      const resized = photon.PhotonImage.new_from_byteslice(Buffer.from(base64, "base64"))
 
-    expect(result).toBeInstanceOf(Image.DecodeError)
-  })
-
-  test("rejects oversized encoded input before decoding without Photon", () => {
-    const data = "A".repeat(8 * 1024 * 1024)
-    const result = Image.fallback(part("image/png", data), data, { bytes: 1024, width: 2000, height: 2000 })
-
-    expect(result).toBeInstanceOf(Image.SizeError)
-    if (result instanceof Image.SizeError) expect(result.bytes).toBe(data.length)
-  })
-
-  test("rejects an image with oversized header dimensions without Photon", () => {
-    const png = Buffer.alloc(24)
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(png)
-    png.write("IHDR", 12, "ascii")
-    png.writeUInt32BE(10_000, 16)
-    png.writeUInt32BE(1, 20)
-    const data = png.toString("base64")
-    const result = Image.fallback(part("image/png", data), data, { bytes: 1024, width: 2000, height: 2000 })
-
-    expect(result).toBeInstanceOf(Image.SizeError)
-    if (result instanceof Image.SizeError) {
-      expect(result.width).toBe(10_000)
-      expect(result.height).toBe(1)
-    }
-  })
-  // kilocode_change end
+      expect(input.url.slice(input.url.indexOf(";base64,") + ";base64,".length).length).toBe(5 * 1024 * 1024)
+      expect(result.url).not.toBe(input.url)
+      expect(base64.length).toBeLessThan(5 * 1024 * 1024)
+      expect(resized.get_width()).toBeLessThanOrEqual(2_000)
+      expect(resized.get_height()).toBeLessThanOrEqual(2_000)
+      resized.free()
+    }),
+  )
 
   tiny.effect("fails with a typed size error when no resized candidate fits", () =>
     Effect.gen(function* () {

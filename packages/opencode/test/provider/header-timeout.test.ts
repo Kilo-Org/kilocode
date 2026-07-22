@@ -24,7 +24,7 @@ const it = testEffect(
 it.live("headerTimeout does not abort delayed SSE body after headers arrive", () =>
   Effect.gen(function* () {
     const server = yield* Effect.acquireRelease(
-      Effect.promise(() => delayedBodyServer(1000, ":\n\n")), // kilocode_change
+      Effect.promise(() => delayedBodyServer(1_000)),
       (server) => Effect.sync(() => server.server.close()),
     )
 
@@ -40,7 +40,7 @@ it.live("headerTimeout does not abort delayed SSE body after headers arrive", ()
 
           expect(yield* Effect.promise(() => result.text)).toBe("late")
         }),
-      { config: providerConfig(server.url, { headerTimeout: 500 }) }, // kilocode_change
+      { config: providerConfig(server.url, { headerTimeout: 500 }) },
     )
   }),
 )
@@ -196,12 +196,10 @@ async function delayedHeaderServer(delay: number): Promise<{ server: Server; url
   return { server, url: `http://127.0.0.1:${address.port}` }
 }
 
-// kilocode_change start
-async function delayedBodyServer(delay: number, prelude = ""): Promise<{ server: Server; url: string }> {
+async function delayedBodyServer(delay: number): Promise<{ server: Server; url: string }> {
   const server = createServer((_, res) => {
     res.writeHead(200, { "content-type": "text/event-stream" })
     res.flushHeaders()
-    if (prelude) res.write(prelude)
     setTimeout(() => {
       res.end('data: {"choices":[{"delta":{"content":"late"}}]}\n\ndata: [DONE]\n\n')
     }, delay)
@@ -211,7 +209,6 @@ async function delayedBodyServer(delay: number, prelude = ""): Promise<{ server:
   if (!address || typeof address === "string") throw new Error("server did not bind to a TCP port")
   return { server, url: `http://127.0.0.1:${address.port}` }
 }
-// kilocode_change end
 
 function withAuthContent<A, E, R>(self: Effect.Effect<A, E, R>, value: Record<string, unknown> = defaultAuthContent()) {
   return Effect.acquireUseRelease(

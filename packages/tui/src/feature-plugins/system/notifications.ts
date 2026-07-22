@@ -56,30 +56,32 @@ const tui: TuiPlugin = async (api) => {
     permissions.delete(event.properties.requestID)
   })
 
-  // kilocode_change start - only completed turns need completion attention
   api.event.on("session.status", (event) => {
     const sessionID = event.properties.sessionID
-    if (event.properties.status.type !== "busy" && event.properties.status.type !== "retry") return
-    active.add(sessionID)
-    errored.delete(sessionID)
-  })
+    if (event.properties.status.type === "busy" || event.properties.status.type === "retry") {
+      active.add(sessionID)
+      errored.delete(sessionID)
+      return
+    }
 
-  api.event.on("session.turn.close", (event) => {
-    const sessionID = event.properties.sessionID
-    if (!active.delete(sessionID)) return
-    if (errored.delete(sessionID)) return
-    if (event.properties.reason !== "completed") return
-    if (event.properties.parentID !== undefined) return
-    notify(api, sessionID, "Session done", "done")
+    if (event.properties.status.type !== "idle") return
+    if (!active.has(sessionID)) return
+    active.delete(sessionID)
+
+    if (errored.has(sessionID)) {
+      errored.delete(sessionID)
+      return
+    }
+
+    const session = api.state.session.get(sessionID)
+    notify(api, sessionID, "Session done", session?.parentID ? "subagent_done" : "done")
   })
-  // kilocode_change end
 
   api.event.on("session.error", (event) => {
     const sessionID = event.properties.sessionID
     if (!sessionID) return
     if (!active.has(sessionID)) return
     errored.add(sessionID)
-    if (event.properties.error?.name === "MessageAbortedError") return // kilocode_change - manual stops do not need attention
     notify(api, sessionID, sessionErrorMessage(event.properties.error), "error")
   })
 }

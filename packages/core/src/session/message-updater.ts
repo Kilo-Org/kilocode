@@ -370,7 +370,6 @@ export function update(adapter: Adapter, event: SessionEvent.Event) {
       "session.next.compaction.started": () => Effect.void,
       "session.next.compaction.delta": () => Effect.void,
       "session.next.compaction.ended": (event) => {
-        if (event.data.messageID === undefined || event.data.reason === undefined) return Effect.void // kilocode_change
         return adapter.appendMessage(
           new SessionMessage.Compaction({
             id: event.data.messageID,
@@ -378,7 +377,7 @@ export function update(adapter: Adapter, event: SessionEvent.Event) {
             metadata: event.metadata,
             reason: event.data.reason,
             summary: event.data.text,
-            recent: event.data.recent ?? "", // kilocode_change - current v1 writes include recent; released rows omit it
+            recent: event.data.recent,
             time: { created: event.data.timestamp },
           }),
         )

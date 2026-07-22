@@ -2,9 +2,6 @@ import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION_WRITE from "./todowrite.txt"
 import { Todo } from "../session/todo"
-// kilocode_change start
-import { TodoView } from "../kilocode/todo-view"
-// kilocode_change end
 
 // Todo.Info is still a zod schema (session/todo.ts). Inline the field shape
 // here rather than referencing its `.shape` — the LLM-visible JSON Schema is
@@ -23,9 +20,6 @@ export const Parameters = Schema.Struct({
 
 type Metadata = {
   todos: Todo.Info[]
-  // kilocode_change start
-  view?: TodoView.Info
-  // kilocode_change end
 }
 
 export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Service>(
@@ -45,11 +39,6 @@ export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Servi
             metadata: {},
           })
 
-          // kilocode_change start
-          const before = yield* todo.get(ctx.sessionID)
-          const view = TodoView.calculate(before, params.todos)
-          // kilocode_change end
-
           yield* todo.update({
             sessionID: ctx.sessionID,
             todos: params.todos,
@@ -60,9 +49,6 @@ export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Servi
             output: JSON.stringify(params.todos, null, 2),
             metadata: {
               todos: params.todos,
-              // kilocode_change start
-              view,
-              // kilocode_change end
             },
           }
         }),

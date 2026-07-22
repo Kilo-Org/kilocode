@@ -1,8 +1,9 @@
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
 import { createMemo, For, type Accessor } from "solid-js"
 import { DEFAULT_THEMES, useTheme } from "../../context/theme"
-import { KILO_TIPS } from "@/kilocode/cli/cmd/tui/feature-plugins/home/tips" // kilocode_change
 import { useCommandShortcut } from "../../keymap"
+
+const themeCount = Object.keys(DEFAULT_THEMES).length
 
 type TipPart = { text: string; highlight: boolean }
 type TipShortcut = Accessor<string>
@@ -133,14 +134,10 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
   }
   const tip = createMemo(() => {
     if (props.connected === false) return NO_MODELS_TIP
-    // kilocode_change start
-    const tips = [...KILO_TIPS, ...TIPS, process.platform !== "win32" ? TERMINAL_SUSPEND_TIP : INPUT_UNDO_TIP].flatMap(
-      (item) => {
+    const tips = [...TIPS, process.platform !== "win32" ? TERMINAL_SUSPEND_TIP : INPUT_UNDO_TIP].flatMap((item) => {
       const value = typeof item === "string" ? item : item(shortcuts)
       return value ? [value] : []
-      },
-    )
-    // kilocode_change end
+    })
     return tips[Math.floor(tipOffset * tips.length)] ?? NO_MODELS_TIP
   }, NO_MODELS_TIP)
   // Solid can expose a memo's initial value while a pure computation is pending.
@@ -165,7 +162,6 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
 }
 
 const TIPS: Tip[] = [
-  /* kilocode_change hide the entire list for if it is accidentally used
   "Type {highlight}@{/highlight} followed by a filename to fuzzy search and attach files",
   "Start a message with {highlight}!{/highlight} to run shell commands directly (e.g., {highlight}!ls -la{/highlight})",
   (shortcuts) => press(shortcuts.agentCycle(), "to cycle between Build and Plan agents"),
@@ -221,10 +217,10 @@ const TIPS: Tip[] = [
   "Override any keybind in {highlight}tui.json{/highlight} via the {highlight}keybinds{/highlight} section",
   "Set any keybind to {highlight}none{/highlight} to disable it completely",
   "Configure local or remote MCP servers in the {highlight}mcp{/highlight} config section",
-  "Add {highlight}.md{/highlight} files to {highlight}.kilo/commands/{/highlight} to define reusable custom prompts", // kilocode_change
+  "Add {highlight}.md{/highlight} files to {highlight}.opencode/commands/{/highlight} to define reusable custom prompts",
   "Use {highlight}$ARGUMENTS{/highlight}, {highlight}$1{/highlight}, {highlight}$2{/highlight} in custom commands for dynamic input",
   "Use backticks in commands to inject shell output (e.g., {highlight}`git status`{/highlight})",
-  "Add {highlight}.md{/highlight} files to {highlight}.kilo/agents/{/highlight} for specialized AI personas", // kilocode_change
+  "Add {highlight}.md{/highlight} files to {highlight}.opencode/agents/{/highlight} for specialized AI personas",
   "Configure per-agent permissions for {highlight}edit{/highlight}, {highlight}bash{/highlight}, and {highlight}webfetch{/highlight} tools",
   'Use patterns like {highlight}"git *": "allow"{/highlight} for granular bash permissions',
   'Set {highlight}"rm -rf *": "deny"{/highlight} to block destructive commands',
@@ -233,9 +229,9 @@ const TIPS: Tip[] = [
   'Set {highlight}"formatter": false{/highlight} in config to disable formatters enabled by another config layer',
   "Define custom formatter commands with file extensions in config",
   'Set {highlight}"lsp": true{/highlight} in config to enable built-in LSP servers for code analysis',
-  "Create {highlight}.ts{/highlight} files in {highlight}.kilo/tools/{/highlight} to define new LLM tools", // kilocode_change
+  "Create {highlight}.ts{/highlight} files in {highlight}.opencode/tools/{/highlight} to define new LLM tools",
   "Tool definitions can invoke scripts written in Python, Go, etc",
-  "Add {highlight}.ts{/highlight} files to {highlight}.kilo/plugins/{/highlight} for event hooks", // kilocode_change
+  "Add {highlight}.ts{/highlight} files to {highlight}.opencode/plugins/{/highlight} for event hooks",
   "Use plugins to send OS notifications when sessions complete",
   "Create a plugin to prevent OpenCode from reading sensitive files",
   "Use {highlight}opencode run{/highlight} for non-interactive scripting",
@@ -252,7 +248,7 @@ const TIPS: Tip[] = [
   "Comment {highlight}/opencode fix this{/highlight} on issues to auto-create PRs",
   "Comment {highlight}/oc{/highlight} on PR code lines for targeted code reviews",
   'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',
-  "Create JSON theme files in {highlight}.kilo/themes/{/highlight} directory", // kilocode_change
+  "Create JSON theme files in {highlight}.opencode/themes/{/highlight} directory",
   "Themes support dark/light variants for both modes",
   "Use numeric xterm color codes 0-255 in custom theme JSON",
   "Use {highlight}{env:VAR_NAME}{/highlight} syntax to reference environment variables in config",
@@ -284,12 +280,6 @@ const TIPS: Tip[] = [
   "Use {highlight}/review{/highlight} to review uncommitted changes, branches, or PRs",
   (shortcuts) => `Use ${commandText("/help", shortcuts.helpShow())} to show the help dialog`,
   "Use {highlight}/rename{/highlight} to rename the current session",
-  ...(process.platform === "win32"
-    ? ([(shortcuts) => press(shortcuts.inputUndo(), "to undo changes in your prompt")] satisfies Tip[])
-    : ([
-        (shortcuts) => press(shortcuts.terminalSuspend(), "to suspend the terminal and return to your shell"),
-      ] satisfies Tip[])),
-  */
 ]
 
 const INPUT_UNDO_TIP: Tip = (shortcuts) => press(shortcuts.inputUndo(), "to undo changes in your prompt")

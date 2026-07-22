@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test"
 import {
   accessTokenIsExpiring,
   buildAuthorizeUrl,
-  escapeHtml,
   pollDeviceCodeToken,
   requestDeviceCode,
   XaiAuthPlugin,
@@ -94,25 +93,12 @@ describe("plugin.xai", () => {
       expect(params.get("state")).toBe("state-abc")
       expect(params.get("nonce")).toBe("nonce-xyz")
       expect(params.get("plan")).toBe("generic")
-      expect(params.get("referrer")).toBe("kilocode") // kilocode_change
+      expect(params.get("referrer")).toBe("opencode")
     })
 
     test("supports endpoint override for local integration tests", () => {
       const url = new URL(buildAuthorizeUrl(pkce, "s", "n", { authorizeUrl: "http://127.0.0.1/oauth2/authorize" }))
       expect(url.origin + url.pathname).toBe("http://127.0.0.1/oauth2/authorize")
-    })
-  })
-
-  describe("escapeHtml", () => {
-    test("escapes HTML metacharacters", () => {
-      expect(escapeHtml(`</div><script>alert(1)</script><div class="x">`)).toBe(
-        "&lt;/div&gt;&lt;script&gt;alert(1)&lt;/script&gt;&lt;div class=&quot;x&quot;&gt;",
-      )
-      expect(escapeHtml("a & b")).toBe("a &amp; b")
-      expect(escapeHtml("it's fine")).toBe("it&#39;s fine")
-      expect(escapeHtml("invalid_grant")).toBe("invalid_grant")
-      expect(escapeHtml("")).toBe("")
-      expect(escapeHtml("&<")).toBe("&amp;&lt;")
     })
   })
 
@@ -151,7 +137,7 @@ describe("plugin.xai", () => {
 
       expect(captured[0].get("authorization")).toBe("Bearer live-token")
       expect(captured[0].get("x-keep")).toBe("yes")
-      expect(captured[0].get("user-agent")).toMatch(/^kilocode\//) // kilocode_change
+      expect(captured[0].get("user-agent")).toMatch(/^opencode\//)
     })
 
     test("does not mutate caller headers and supports HeadersInit shapes", async () => {
@@ -191,7 +177,7 @@ describe("plugin.xai", () => {
       ])
       for (const headers of captured) {
         expect(headers.get("authorization")).toBe("Bearer tok")
-        expect(headers.get("user-agent")).toMatch(/^kilocode\//) // kilocode_change
+        expect(headers.get("user-agent")).toMatch(/^opencode\//)
       }
     })
 
@@ -477,7 +463,7 @@ describe("plugin.xai", () => {
         expect(request.method).toBe("POST")
         expect(request.headers.get("content-type")).toBe("application/x-www-form-urlencoded")
         expect(request.headers.get("accept")).toBe("application/json")
-        expect(request.headers.get("user-agent")).toMatch(/^kilocode\//) // kilocode_change
+        expect(request.headers.get("user-agent")).toMatch(/^opencode\//)
         capturedBody = await request.text()
         return Response.json({ device_code: "DC", user_code: "UC", verification_uri: "https://x.ai/device" })
       })

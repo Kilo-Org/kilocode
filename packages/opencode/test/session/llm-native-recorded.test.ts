@@ -28,9 +28,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
 const FIXTURES_DIR = path.join(import.meta.dir, "../fixtures/recordings")
-const KILO_FIXTURES_DIR = path.join(FIXTURES_DIR, "kilocode") // kilocode_change
 
-const zenURL = (connection: string) => `https://console.opencode.ai/proxy/connections/${connection}/v1` // kilocode_change
+const zenURL = (connection: string) => `https://console.opencode.ai/proxy/connections/${connection}/v1`
 
 const replayOpenAIOAuth = {
   type: "oauth",
@@ -61,10 +60,10 @@ const cloneModel = (model: ModelsDev.Provider["models"][string]) => {
   // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- The config schema accepts the same model shape except object-valued experimental metadata.
   if (typeof experimental === "boolean") {
     // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- The fixture model already matches config input when experimental is boolean.
-    return cloned as NonNullable<NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]>["models"]>[string] // kilocode_change
+    return cloned as NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]["models"]>[string]
   }
   // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion -- Dropping non-boolean experimental metadata makes the fixture model match config input.
-  return rest as NonNullable<NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]>["models"]>[string] // kilocode_change
+  return rest as NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]["models"]>[string]
 }
 
 const envValue = (...names: string[]) => names.map((name) => process.env[name]).find(Boolean)
@@ -162,7 +161,7 @@ const RECORDED_SCENARIOS = [
   },
   {
     id: "opencode-proxy",
-    name: "OpenCode proxy", // kilocode_change
+    name: "OpenCode proxy",
     providerID: ProviderV2.ID.opencode,
     modelID: "gpt-5.2-codex",
     cassette: "session/native-zen-tool-loop",
@@ -224,11 +223,9 @@ function isSelected(scenario: RecordedScenario) {
 }
 
 const canRun = (scenario: RecordedScenario) =>
-  // kilocode_change start
   shouldRecord
     ? scenario.canRecord()
-    : HttpRecorderInternal.hasCassetteSync(scenario.cassette, { directory: KILO_FIXTURES_DIR })
-  // kilocode_change end
+    : HttpRecorderInternal.hasCassetteSync(scenario.cassette, { directory: FIXTURES_DIR })
 
 const recordError = (scenario: RecordedScenario) =>
   scenario.id === "openai-oauth"
@@ -287,12 +284,12 @@ function recordedNativeLLMLayer(scenario: RecordedScenario) {
   }
   const recordedHttp = shouldRecord
     ? HttpRecorderInternal.cassetteLayer(scenario.cassette, {
-        directory: KILO_FIXTURES_DIR, // kilocode_change
+        directory: FIXTURES_DIR,
         mode: "record",
         metadata,
         redactor: HttpRecorderInternal.Redactor.make(redact),
       })
-    : HttpRecorder.http(scenario.cassette, { directory: KILO_FIXTURES_DIR, metadata, redact }) // kilocode_change
+    : HttpRecorder.http(scenario.cassette, { directory: FIXTURES_DIR, metadata, redact })
   const recordedClient = LLMClient.layer.pipe(
     Layer.provide(Layer.mergeAll(RequestExecutor.layer.pipe(Layer.provide(recordedHttp)), WebSocketExecutor.layer)),
   )
@@ -314,7 +311,7 @@ const writeConfig = (directory: string, scenario: RecordedScenario, model: Model
   Effect.promise(() =>
     Bun.write(
       path.join(directory, "opencode.json"),
-      JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...scenario.config(model) }), // kilocode_change
+      JSON.stringify({ $schema: "https://opencode.ai/config.json", ...scenario.config(model) }),
     ),
   )
 

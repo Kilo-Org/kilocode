@@ -58,7 +58,7 @@ export const PtyApi = HttpApi.make("pty")
           OpenApi.annotations({
             identifier: "pty.list",
             summary: "List PTY sessions",
-            description: "Get a list of all active pseudo-terminal (PTY) sessions managed by Kilo.",
+            description: "Get a list of all active pseudo-terminal (PTY) sessions managed by OpenCode.",
           }),
         ),
         HttpApiEndpoint.post("create", PtyPaths.create, {

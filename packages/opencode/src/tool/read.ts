@@ -1,35 +1,24 @@
-import { Effect, Schema, Scope } from "effect" // kilocode_change - stable object reads do not use Option
+import { Effect, Option, Schema, Scope, Stream } from "effect"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import * as path from "path"
-import { Readable } from "stream" // kilocode_change
-import { createInterface } from "readline"
 import * as Tool from "./tool"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
 import { InstanceState } from "@/effect/instance-state"
-import { Config } from "@/config/config" // kilocode_change - optional configured reference authorization
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
 import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
-// kilocode_change start
-import * as Encoding from "../kilocode/encoding"
-import { KiloReference } from "@/kilocode/reference/contains"
-import * as KiloConfiguredReference from "@/kilocode/reference"
-import { KiloReadObject } from "@/kilocode/tool/read-object"
-import * as Extract from "../kilocode/tool/read-extract"
-import * as TextStream from "../kilocode/text-stream"
-// kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
 const MAX_LINE_LENGTH = 2000
-// kilocode_change start - report the safe Unicode slice length
-const suffix = (length: number) => `... (line truncated to ${length} chars)`
-// kilocode_change end
+const MAX_LINE_SUFFIX = `... (line truncated to ${MAX_LINE_LENGTH} chars)`
 const MAX_BYTES = 50 * 1024
 const MAX_BYTES_LABEL = `${MAX_BYTES / 1024} KB`
 const SAMPLE_BYTES = 4096
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
+
+class ReadStop extends Schema.TaggedErrorClass<ReadStop>()("ReadStop", {}) {}
 
 // `offset` and `limit` were originally `z.coerce.number()` — the runtime
 // coercion was useful when the tool was called from a shell but serves no
@@ -84,25 +73,29 @@ export const ReadTool = Tool.define<
     const lsp = yield* LSP.Service
     const scope = yield* Scope.Scope
 
-    // kilocode_change start - authorize missing paths without enumerating sibling names
-    const miss = Effect.fn("ReadTool.miss")(function* (filepath: string, worktree: string, ctx: Tool.Context) {
+    const miss = Effect.fn("ReadTool.miss")(function* (filepath: string) {
       const dir = path.dirname(filepath)
-      const parent = yield* fs.realPath(dir).pipe(Effect.option)
-      if (parent._tag === "None") return yield* Effect.fail(new Error(`File not found: ${filepath}`))
-      yield* assertExternalDirectoryEffect(ctx, parent.value, { bypass: false, kind: "directory" })
-      yield* ctx.ask({
-        permission: "read",
-        patterns: [...new Set([filepath, parent.value].map((item) => path.relative(worktree, item)))],
-        always: ["*"],
-        metadata: {},
-      })
-      return yield* Effect.fail(new Error(`File not found: ${filepath}`))
-    })
-    // kilocode_change end
+      const base = path.basename(filepath)
+      const items = yield* fs.readDirectory(dir).pipe(
+        Effect.map((items) =>
+          items
+            .filter(
+              (item) =>
+                item.toLowerCase().includes(base.toLowerCase()) || base.toLowerCase().includes(item.toLowerCase()),
+            )
+            .map((item) => path.join(dir, item))
+            .slice(0, 3),
+        ),
+        Effect.catch(() => Effect.succeed([] as string[])),
+      )
 
-    const warm = Effect.fn("ReadTool.warm")(function* (filepath: string) {
-      // LSP warm-up is optional; do not let a background defect fail an otherwise successful read.
-      yield* lsp.touchFile(filepath).pipe(Effect.ignoreCause, Effect.forkIn(scope))
+      if (items.length > 0) {
+        return yield* Effect.fail(
+          new Error(`File not found: ${filepath}\n\nDid you mean one of these?\n${items.join("\n")}`),
+        )
+      }
+
+      return yield* Effect.fail(new Error(`File not found: ${filepath}`))
     })
 
     const list = Effect.fn("ReadTool.list")(function* (filepath: string) {
@@ -121,27 +114,70 @@ export const ReadTool = Tool.define<
       ).pipe(Effect.map((items: string[]) => items.sort((a, b) => a.localeCompare(b))))
     })
 
-    // kilocode_change start - extracted formats and text consume the authorized open object
-    const lines = Effect.fn("ReadTool.lines")(
-      (file: KiloReadObject.File, opts: { limit: number; offset: number }, abort: AbortSignal) =>
-        Effect.tryPromise({
-          try: async (signal) => {
-            const combined = AbortSignal.any([abort, signal])
-            const extracted = Extract.accepts(file.requested)
-              ? await Extract.open(file.requested, await file.read(Extract.limit(file.requested), combined))
-              : undefined
-            if (extracted) return collect(TextStream.abortable(extracted, combined), opts)
-            return TextStream.withFallback(
-              () => file.stream(combined),
-              (next) => file.read(undefined, next),
-              (stream) => collect(stream, opts),
-              combined,
-            )
-          },
-          catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+    const warm = Effect.fn("ReadTool.warm")(function* (filepath: string) {
+      // LSP warm-up is optional; do not let a background defect fail an otherwise successful read.
+      yield* lsp.touchFile(filepath).pipe(Effect.ignoreCause, Effect.forkIn(scope))
+    })
+
+    const readSample = Effect.fn("ReadTool.readSample")(function* (
+      filepath: string,
+      fileSize: number,
+      sampleSize: number,
+    ) {
+      if (fileSize === 0) return new Uint8Array()
+
+      return yield* Effect.scoped(
+        Effect.gen(function* () {
+          const file = yield* fs.open(filepath, { flag: "r" })
+          return Option.getOrElse(yield* file.readAlloc(Math.min(sampleSize, fileSize)), () => new Uint8Array())
         }),
-    )
-    // kilocode_change end
+      )
+    })
+
+    const lines = Effect.fn("ReadTool.lines")(function* (filepath: string, opts: { limit: number; offset: number }) {
+      const start = opts.offset - 1
+      const raw: string[] = []
+      const flags = { bytes: 0, count: 0, cut: false, more: false, done: false }
+
+      // Note: prefer manual TextDecoder over Stream.decodeText — when the source stream
+      // ends without flushing, decodeText drops the final unterminated line. We also
+      // avoid Stream.runForEachWhile (it currently swallows the final unterminated
+      // line of the upstream splitLines pipeline) and use a tagged error to stop the
+      // upstream file stream as soon as the byte cap is reached.
+      const decoder = new TextDecoder("utf-8")
+      yield* fs.stream(filepath).pipe(
+        Stream.map((bytes) => decoder.decode(bytes, { stream: true })),
+        Stream.splitLines,
+        Stream.runForEach((text) =>
+          Effect.gen(function* () {
+            if (flags.done) return yield* new ReadStop()
+            flags.count += 1
+            if (flags.count <= start) return
+
+            if (raw.length >= opts.limit) {
+              flags.more = true
+              return
+            }
+
+            const line = text.length > MAX_LINE_LENGTH ? text.substring(0, MAX_LINE_LENGTH) + MAX_LINE_SUFFIX : text
+            const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
+            if (flags.bytes + size <= MAX_BYTES) {
+              raw.push(line)
+              flags.bytes += size
+              return
+            }
+
+            flags.cut = true
+            flags.more = true
+            flags.done = true
+            return yield* new ReadStop()
+          }),
+        ),
+        Effect.catchTag("ReadStop", () => Effect.void),
+      )
+
+      return { raw, count: flags.count, cut: flags.cut, more: flags.more, offset: opts.offset }
+    })
 
     const isBinaryFile = (filepath: string, bytes: Uint8Array) => {
       const ext = path.extname(filepath).toLowerCase()
@@ -179,11 +215,6 @@ export const ReadTool = Tool.define<
 
       if (bytes.length === 0) return false
 
-      // kilocode_change start - UTF-16/32 BOM: NUL bytes are legitimate, skip the NUL/control-char heuristic
-      const buf = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-      if (Encoding.hasUtf16Bom(buf, bytes.length) || Encoding.hasUtf32Bom(buf, bytes.length)) return false
-      // kilocode_change end
-
       let nonPrintableCount = 0
       for (let i = 0; i < bytes.length; i++) {
         if (bytes[i] === 0) return true
@@ -207,62 +238,32 @@ export const ReadTool = Tool.define<
       if (process.platform === "win32") {
         filepath = FSUtil.normalizePath(filepath)
       }
-      const requested = filepath
-      const title = path.relative(instance.worktree, requested)
-      // kilocode_change start - resolve V1 configured references without introducing a Core location-layer dependency
-      const config = yield* Effect.serviceOption(Config.Service)
-      const references =
-        config._tag === "Some"
-          ? KiloConfiguredReference.resolveAll({
-              references: (yield* config.value.get()).reference ?? {},
-              directory: instance.directory,
-              worktree: instance.worktree,
-            })
-          : []
-      // kilocode_change end
-      // kilocode_change start - fail before read authorization when the target is missing
-      const info = yield* fs.stat(requested).pipe(
+      const title = path.relative(instance.worktree, filepath)
+
+      const stat = yield* fs.stat(filepath).pipe(
         Effect.catchIf(
           (err) => "reason" in err && err.reason._tag === "NotFound",
           () => Effect.succeed(undefined),
         ),
       )
-      if (!info) {
-        return yield* miss(requested, instance.worktree, ctx)
-      }
-      // kilocode_change end
 
-      // kilocode_change start - directory mentions expose only a bound listing, never child file bodies
-      if (info.type === "Directory") {
-        const resolved = yield* fs.realPath(requested)
-        const target = process.platform === "win32" ? FSUtil.normalizePath(resolved) : resolved
-        const explicit =
-          typeof ctx.extra?.["referenceRoot"] === "string" &&
-          (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], target))
-        const referenced =
-          explicit ||
-          (yield* KiloReference.contains({ fs, references, target }))
-        yield* assertExternalDirectoryEffect(ctx, target, { bypass: referenced, kind: "directory" })
-        yield* ctx.ask({
-          permission: "read",
-          patterns: [...new Set([requested, target].map((item) => path.relative(instance.worktree, item)))],
-          always: ["*"],
-          metadata: {},
-        })
-        // kilocode_change start - reject any canonical path change after permission approval
-        if (ctx.extra?.["denyDirectory"] === true) {
-          // Re-resolve after permission approval to detect TOCTOU symlink swaps.
-          // If the canonical target changed, the approved permission no longer
-          // applies to the resolved path, so deny before listing.
-          const resolved2 = yield* fs.realPath(requested)
-          const target2 = process.platform === "win32" ? FSUtil.normalizePath(resolved2) : resolved2
-          if (target2 !== target) {
-            return yield* Effect.fail(new Error(`Directory attachments cannot be expanded: ${requested}`))
-          }
-        }
-        // kilocode_change end
-        const items = yield* list(target)
-        const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT) // kilocode_change - prevent zero-limit loops
+      yield* assertExternalDirectoryEffect(ctx, filepath, {
+        bypass: Boolean(ctx.extra?.["bypassCwdCheck"]),
+        kind: stat?.type === "Directory" ? "directory" : "file",
+      })
+
+      yield* ctx.ask({
+        permission: "read",
+        patterns: [path.relative(instance.worktree, filepath)],
+        always: ["*"],
+        metadata: {},
+      })
+
+      if (!stat) return yield* miss(filepath)
+
+      if (stat.type === "Directory") {
+        const items = yield* list(filepath)
+        const limit = params.limit ?? DEFAULT_READ_LIMIT
         const offset = params.offset || 1
         const start = offset - 1
         const sliced = items.slice(start, start + limit)
@@ -271,7 +272,7 @@ export const ReadTool = Tool.define<
         return {
           title,
           output: [
-            `<path>${target}</path>`,
+            `<path>${filepath}</path>`,
             `<type>directory</type>`,
             `<entries>`,
             sliced.join("\n"),
@@ -283,10 +284,10 @@ export const ReadTool = Tool.define<
           metadata: {
             preview: sliced.slice(0, 20).join("\n"),
             truncated,
-            loaded: [],
+            loaded: [] as string[],
             display: {
               type: "directory" as const,
-              path: target,
+              path: filepath,
               entries: sliced,
               offset,
               totalEntries: items.length,
@@ -295,100 +296,84 @@ export const ReadTool = Tool.define<
           },
         }
       }
-      // kilocode_change start - authorize metadata, then bind every content read to the same reopened object
-      const file = yield* KiloReadObject.file(requested)
-      const explicit =
-        typeof ctx.extra?.["referenceRoot"] === "string" &&
-        (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target))
-      const referenced =
-        explicit ||
-        (yield* KiloReference.contains({ fs, references, target: file.target }))
-      yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: referenced, kind: "file" })
-      yield* ctx.ask({
-        permission: "read",
-        patterns: [...new Set([requested, file.target].map((item) => path.relative(instance.worktree, item)))],
-        always: ["*"],
-        metadata: {},
-      })
-      return yield* KiloReadObject.use(file, (bound) =>
-        Effect.gen(function* () {
-          const loaded =
-            ctx.extra?.["includeInstructions"] === false
-              ? []
-              : yield* instruction.resolve(ctx.messages, bound.target, ctx.messageID)
-          const sample = yield* Effect.tryPromise({
-            try: (signal) => bound.sample(SAMPLE_BYTES, AbortSignal.any([ctx.abort, signal])),
-            catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-          })
-          const mime = sniffAttachmentMime(sample, FSUtil.mimeType(requested))
-          const isImage = SUPPORTED_IMAGE_MIMES.has(mime)
 
-          if (isImage || isPdfAttachment(mime)) {
-            const bytes = yield* Effect.tryPromise({
-              try: (signal) => bound.read(undefined, AbortSignal.any([ctx.abort, signal])),
-              catch: (err) => (err instanceof Error ? err : new Error(String(err))),
-            })
-            const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
-            return {
-              title,
-              output: msg,
-              metadata: { preview: msg, truncated: false, loaded: loaded.map((item) => item.filepath) },
-              attachments: [{ type: "file" as const, mime, url: `data:${mime};base64,${bytes.toString("base64")}` }],
-            }
-          }
+      const loaded = yield* instruction.resolve(ctx.messages, filepath, ctx.messageID)
+      const sample = yield* readSample(filepath, Number(stat.size), SAMPLE_BYTES)
 
-          if (!Extract.binary(requested) && isBinaryFile(requested, sample)) {
-            return yield* Effect.fail(new Error(`Cannot read binary file: ${requested}`))
-          }
-          const file = yield* lines(
-            bound,
-            { limit: Math.max(1, params.limit ?? DEFAULT_READ_LIMIT), offset: params.offset || 1 },
-            ctx.abort,
-          )
-          if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
-            return yield* Effect.fail(
-              new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
-            )
-          }
+      const mime = sniffAttachmentMime(sample, FSUtil.mimeType(filepath))
+      const isImage = SUPPORTED_IMAGE_MIMES.has(mime)
 
-          let output = [`<path>${bound.target}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
-          output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
-          const last = file.offset + file.raw.length - 1
-          const next = last + 1
-          const truncated = file.more || file.cut
-          if (file.cut) {
-            output += `\n\n(Output capped at ${MAX_BYTES_LABEL}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)`
-          } else if (file.more) {
-            output += `\n\n(Showing lines ${file.offset}-${last} of ${file.count}. Use offset=${next} to continue.)`
-          } else {
-            output += `\n\n(End of file - total ${file.count} lines)`
-          }
-          output += "\n</content>"
-          yield* warm(bound.target)
-          if (loaded.length > 0) {
-            output += `\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
-          }
-          return {
-            title,
-            output,
-            metadata: {
-              preview: file.raw.slice(0, 20).join("\n"),
-              truncated,
-              loaded: loaded.map((item) => item.filepath),
-              display: {
-                type: "file" as const,
-                path: bound.target,
-                text: file.raw.join("\n"),
-                lineStart: file.offset,
-                lineEnd: last,
-                totalLines: file.count,
-                truncated,
-              },
+      if (isImage || isPdfAttachment(mime)) {
+        const bytes = yield* fs.readFile(filepath)
+        const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
+        return {
+          title,
+          output: msg,
+          metadata: {
+            preview: msg,
+            truncated: false,
+            loaded: loaded.map((item) => item.filepath),
+          },
+          attachments: [
+            {
+              type: "file" as const,
+              mime,
+              url: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`,
             },
-          }
-        }),
-      )
-      // kilocode_change end
+          ],
+        }
+      }
+
+      if (isBinaryFile(filepath, sample)) {
+        return yield* Effect.fail(new Error(`Cannot read binary file: ${filepath}`))
+      }
+
+      const file = yield* lines(filepath, { limit: params.limit ?? DEFAULT_READ_LIMIT, offset: params.offset || 1 })
+      if (file.count < file.offset && !(file.count === 0 && file.offset === 1)) {
+        return yield* Effect.fail(
+          new Error(`Offset ${file.offset} is out of range for this file (${file.count} lines)`),
+        )
+      }
+
+      let output = [`<path>${filepath}</path>`, `<type>file</type>`, "<content>\n"].join("\n")
+      output += file.raw.map((line, i) => `${i + file.offset}: ${line}`).join("\n")
+
+      const last = file.offset + file.raw.length - 1
+      const next = last + 1
+      const truncated = file.more || file.cut
+      if (file.cut) {
+        output += `\n\n(Output capped at ${MAX_BYTES_LABEL}. Showing lines ${file.offset}-${last}. Use offset=${next} to continue.)`
+      } else if (file.more) {
+        output += `\n\n(Showing lines ${file.offset}-${last} of ${file.count}. Use offset=${next} to continue.)`
+      } else {
+        output += `\n\n(End of file - total ${file.count} lines)`
+      }
+      output += "\n</content>"
+
+      yield* warm(filepath)
+
+      if (loaded.length > 0) {
+        output += `\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
+      }
+
+      return {
+        title,
+        output,
+        metadata: {
+          preview: file.raw.slice(0, 20).join("\n"),
+          truncated,
+          loaded: loaded.map((item) => item.filepath),
+          display: {
+            type: "file" as const,
+            path: filepath,
+            text: file.raw.join("\n"),
+            lineStart: file.offset,
+            lineEnd: last,
+            totalLines: file.count,
+            truncated,
+          },
+        },
+      }
     })
 
     return {
@@ -399,41 +384,3 @@ export const ReadTool = Tool.define<
     }
   }),
 )
-
-// kilocode_change start - extracted formats use native readers; ordinary text is supplied by FSUtil above
-async function collect(stream: Readable, opts: { limit: number; offset: number }) {
-  // kilocode_change end
-  const rl = createInterface({ input: stream, crlfDelay: Infinity })
-  const start = opts.offset - 1
-  const raw: string[] = []
-  let bytes = 0
-  let count = 0
-  let cut = false
-  let more = false
-  try {
-    for await (const text of rl) {
-      count += 1
-      if (count <= start) continue
-      if (raw.length >= opts.limit) {
-        more = true
-        continue
-      }
-      // kilocode_change start - keep truncated output valid Unicode
-      const sliced = TextStream.safeSlice(text, MAX_LINE_LENGTH)
-      const line = text.length > MAX_LINE_LENGTH ? sliced + suffix(sliced.length) : text
-      // kilocode_change end
-      const size = Buffer.byteLength(line, "utf-8") + (raw.length > 0 ? 1 : 0)
-      if (bytes + size > MAX_BYTES) {
-        cut = true
-        more = true
-        break
-      }
-      raw.push(line)
-      bytes += size
-    }
-  } finally {
-    rl.close()
-    stream.destroy()
-  }
-  return { raw, count, cut, more, offset: opts.offset }
-}

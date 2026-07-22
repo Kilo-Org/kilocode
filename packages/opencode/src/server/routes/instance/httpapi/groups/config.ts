@@ -1,7 +1,6 @@
 import { Config } from "@/config/config"
 import { ConfigV1 } from "@opencode-ai/core/v1/config/config"
 import { Provider } from "@/provider/provider"
-import { Schema } from "effect" // kilocode_change
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
@@ -9,14 +8,6 @@ import { WorkspaceRoutingMiddleware, WorkspaceRoutingQuery } from "../middleware
 import { described } from "./metadata"
 
 const root = "/config"
-
-// kilocode_change start
-const Warning = Schema.Struct({
-  path: Schema.String,
-  message: Schema.String,
-  detail: Schema.optional(Schema.String),
-})
-// kilocode_change end
 
 export const ConfigApi = HttpApi.make("config")
   .add(
@@ -29,7 +20,7 @@ export const ConfigApi = HttpApi.make("config")
           OpenApi.annotations({
             identifier: "config.get",
             summary: "Get configuration",
-            description: "Retrieve the current Kilo configuration settings and preferences.", // kilocode_change
+            description: "Retrieve the current OpenCode configuration settings and preferences.",
           }),
         ),
         HttpApiEndpoint.patch("update", root, {
@@ -41,21 +32,9 @@ export const ConfigApi = HttpApi.make("config")
           OpenApi.annotations({
             identifier: "config.update",
             summary: "Update configuration",
-            description: "Update Kilo configuration settings and preferences.", // kilocode_change
+            description: "Update OpenCode configuration settings and preferences.",
           }),
         ),
-        // kilocode_change start
-        HttpApiEndpoint.get("warnings", `${root}/warnings`, {
-          query: WorkspaceRoutingQuery,
-          success: described(Schema.Array(Warning), "Config warnings"),
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "config.warnings",
-            summary: "Get config warnings",
-            description: "Get warnings generated during config loading (e.g., invalid JSON, schema errors).",
-          }),
-        ),
-        // kilocode_change end
         HttpApiEndpoint.get("providers", `${root}/providers`, {
           query: WorkspaceRoutingQuery,
           success: described(Provider.ConfigProvidersResult, "List of providers"),

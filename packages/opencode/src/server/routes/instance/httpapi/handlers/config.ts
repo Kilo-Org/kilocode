@@ -1,15 +1,8 @@
 import { Config } from "@/config/config"
-// kilocode_change start - preserve Kilo API default model overlay
-import { fetchDefaultModel } from "@kilocode/kilo-gateway"
-import { Auth } from "@/auth"
-import { ProviderV2 } from "@opencode-ai/core/provider"
-import { ModelV2 } from "@opencode-ai/core/model"
-import { filterPromptTrainingModels, nonEmptyProviders } from "@/kilocode/provider/model-filter"
-// kilocode_change end
 import { Provider } from "@/provider/provider"
 import * as InstanceState from "@/effect/instance-state"
 import { Effect } from "effect"
-import { HttpApiBuilder, HttpApiError } from "effect/unstable/httpapi" // kilocode_change
+import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { markInstanceForDisposal } from "../lifecycle"
 
@@ -28,43 +21,14 @@ export const configHandlers = HttpApiBuilder.group(InstanceHttpApi, "config", (h
       return ctx.payload
     })
 
-    // kilocode_change start
-    const warnings = Effect.fn("ConfigHttpApi.warnings")(function* () {
-      return yield* configSvc.warnings()
-    })
-    // kilocode_change end
-
     const providers = Effect.fn("ConfigHttpApi.providers")(function* () {
-      // kilocode_change start
-      const config = yield* configSvc.get()
-      const providers = filterPromptTrainingModels(
-        yield* providerSvc.list(),
-        config.hide_prompt_training_models === true,
-      )
-      const defaults = Provider.defaultModelIDs(nonEmptyProviders(providers))
-      // kilocode_change end
-
-      // kilocode_change start - Fetch default model from Kilo API when the kilo provider is available.
-      if (providers[ProviderV2.ID.kilo]) {
-        const auth = yield* Auth.Service
-        const info = yield* auth.get("kilo").pipe(Effect.mapError(() => new HttpApiError.Unauthorized({}))) // kilocode_change
-        const token = info?.type === "oauth" ? info.access : info?.key
-        const organizationId = info?.type === "oauth" ? info.accountId : undefined
-        const model = yield* Effect.promise(() => fetchDefaultModel(token, organizationId))
-        if (model && providers[ProviderV2.ID.kilo]?.models[model]) defaults[ProviderV2.ID.kilo] = ModelV2.ID.make(model)
-      }
-      // kilocode_change end
-
+      const providers = yield* providerSvc.list()
       return {
         providers: Object.values(providers).map(Provider.toPublicInfo),
-        default: defaults,
+        default: Provider.defaultModelIDs(providers),
       }
     })
 
-    return handlers
-      .handle("get", get)
-      .handle("update", update)
-      .handle("warnings", warnings)
-      .handle("providers", providers) // kilocode_change
+    return handlers.handle("get", get).handle("update", update).handle("providers", providers)
   }),
 )

@@ -1,14 +1,12 @@
 name: "Setup Git Committer"
 description: "Create app token and configure git user"
 inputs:
-  # kilocode_change start
-  kilo-maintainer-app-id:
-    description: "Kilo Maintainer GitHub App ID"
+  opencode-app-id:
+    description: "OpenCode GitHub App ID"
     required: true
-  kilo-maintainer-app-secret:
-    description: "Kilo Maintainer GitHub App private key"
+  opencode-app-secret:
+    description: "OpenCode GitHub App private key"
     required: true
-  # kilocode_change end
 outputs:
   token:
     description: "GitHub App token"
@@ -23,10 +21,8 @@ runs:
       id: apptoken
       uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
       with:
-        # kilocode_change start
-        app-id: ${{ inputs['kilo-maintainer-app-id'] }}
-        private-key: ${{ inputs['kilo-maintainer-app-secret'] }}
-        # kilocode_change end
+        app-id: ${{ inputs.opencode-app-id }}
+        private-key: ${{ inputs.opencode-app-secret }}
         owner: ${{ github.repository_owner }}
 
     - name: Configure git user
@@ -39,15 +35,6 @@ runs:
     - name: Clear checkout auth
       run: |
         git config --local --unset-all http.https://github.com/.extraheader || true
-        # kilocode_change start
-        keys="$(git config --local --name-only --get-regexp '^includeIf\.gitdir:' || true)"
-        for key in $keys; do
-          path="$(git config --local --get "$key" || true)"
-          case "$path" in
-            *git-credentials-*.config) git config --local --unset-all "$key" || true ;;
-          esac
-        done
-        # kilocode_change end
       shell: bash
 
     - name: Configure git remote

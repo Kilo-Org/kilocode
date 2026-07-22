@@ -17,31 +17,31 @@ Use one v2 config schema for now. Some fields, such as `autoupdate`, are intende
 
 Small fields describing the config file itself rather than application behavior.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `$schema` | JSON schema reference for editor validation and completion | keep | Keep as read-only metadata; loading config must not insert it or create files for it. |
+| Field     | Current Purpose                                            | Status | Notes                                                                                 |
+| --------- | ---------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------- |
+| `$schema` | JSON schema reference for editor validation and completion | keep   | Keep as read-only metadata; loading config must not insert it or create files for it. |
 
 ## Group 2: Process And Server Settings
 
 Settings that affect process startup, shell execution, or network serving. Review global-only versus location-specific scope carefully.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `shell` | Default shell for terminal and shell tool execution | keep | Port as effective config; shared shell choice is used throughout opencode. |
-| `logLevel` | Intended logging level configuration | remove | Do not port: no config consumer exists and logging initializes from CLI input. |
-| `server` | Hostname, port, mDNS, and CORS settings | remove | Do not port: location config is loaded after the server is already running. |
-| `autoupdate` | Automatic update or notification behavior | keep | Global-only user preference; keep `true`, `false`, and `"notify"`. |
+| Field        | Current Purpose                                     | Status | Notes                                                                          |
+| ------------ | --------------------------------------------------- | ------ | ------------------------------------------------------------------------------ |
+| `shell`      | Default shell for terminal and shell tool execution | keep   | Port as effective config; shared shell choice is used throughout opencode.     |
+| `logLevel`   | Intended logging level configuration                | remove | Do not port: no config consumer exists and logging initializes from CLI input. |
+| `server`     | Hostname, port, mDNS, and CORS settings             | remove | Do not port: location config is loaded after the server is already running.    |
+| `autoupdate` | Automatic update or notification behavior           | keep   | Global-only user preference; keep `true`, `false`, and `"notify"`.             |
 
 ## Group 3: Commands And Project Resources
 
 Configuration that introduces location-scoped project resources or discoverable content.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `command` | User-defined commands | remove | Do not port as v2 config; named reusable user workflows belong to skills. |
-| `skills` | Additional skill locations | redesign | Replace `{ paths?, urls? }` with a single array of local path or remote URL discovery sources. |
-| `reference` | Named git or local directory references | redesign | Rename to plural `references`; retain named local path and Git repository external-context entries. |
-| `instructions` | Additional ambient instruction sources | keep | Keep as one array of local paths, glob patterns, or remote URLs supplying automatically included context. |
+| Field          | Current Purpose                         | Status   | Notes                                                                                                     |
+| -------------- | --------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `command`      | User-defined commands                   | remove   | Do not port as v2 config; named reusable user workflows belong to skills.                                 |
+| `skills`       | Additional skill locations              | redesign | Replace `{ paths?, urls? }` with a single array of local path or remote URL discovery sources.            |
+| `reference`    | Named git or local directory references | redesign | Rename to plural `references`; retain named local path and Git repository external-context entries.       |
+| `instructions` | Additional ambient instruction sources  | keep     | Keep as one array of local paths, glob patterns, or remote URLs supplying automatically included context. |
 
 V2 does not expose separate user-authored command configuration. Skills should cover named reusable prompt workflows, whether invoked directly by the user or loaded by an agent. Internal command routing and built-in commands may remain runtime concerns without creating a `command` or `commands` config field.
 
@@ -85,8 +85,8 @@ Retain the compact string entry form as well: values starting with `.`, `/`, or 
 
 Plugin loading has source-path and scope-sensitive behavior, so it should be reviewed separately from other project resources.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
+| Field    | Current Purpose               | Status   | Notes                                                                                                       |
+| -------- | ----------------------------- | -------- | ----------------------------------------------------------------------------------------------------------- |
 | `plugin` | User-specified plugin modules | redesign | Rename to plural `plugins`; retain ordered loading with package strings or `{ package, options? }` entries. |
 
 Plugin order remains part of the v2 configuration contract because hook registration and execution can depend on load order. Replace legacy option tuples with readable object entries:
@@ -111,14 +111,14 @@ The configured `plugins` list represents package-loaded plugins only. Local plug
 
 Settings controlling local file observation, snapshots, language tooling, and tool output behavior.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `watcher` | Ignore patterns for filesystem watching | keep | Keep `{ ignore?: string[] }`; this configures the filesystem watcher subsystem. |
-| `snapshot` | Enable filesystem snapshot tracking | redesign | Rename to plural `snapshots`; controls creation of snapshots used for undo and revert behavior. |
-| `formatter` | Configure formatters | keep | Keep singular `boolean \| Record<string, entry>` shape; it configures built-in enablement and named formatter overrides. |
-| `lsp` | Configure language servers | keep | Keep singular `boolean \| Record<string, entry>` shape; custom servers need commands and file extensions. |
-| `attachment` | Configure attachment/image processing | redesign | Rename to plural `attachments`; retain `{ image?: { auto_resize?, max_width?, max_height?, max_base64_bytes? } }` for input normalization limits. |
-| `tool_output` | Configure tool output truncation limits | keep | Keep `{ max_lines?, max_bytes? }`; both positive thresholds apply to saved-preview truncation behavior. |
+| Field         | Current Purpose                         | Status   | Notes                                                                                                                                             |
+| ------------- | --------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `watcher`     | Ignore patterns for filesystem watching | keep     | Keep `{ ignore?: string[] }`; this configures the filesystem watcher subsystem.                                                                   |
+| `snapshot`    | Enable filesystem snapshot tracking     | redesign | Rename to plural `snapshots`; controls creation of snapshots used for undo and revert behavior.                                                   |
+| `formatter`   | Configure formatters                    | keep     | Keep singular `boolean \| Record<string, entry>` shape; it configures built-in enablement and named formatter overrides.                          |
+| `lsp`         | Configure language servers              | keep     | Keep singular `boolean \| Record<string, entry>` shape; custom servers need commands and file extensions.                                         |
+| `attachment`  | Configure attachment/image processing   | redesign | Rename to plural `attachments`; retain `{ image?: { auto_resize?, max_width?, max_height?, max_base64_bytes? } }` for input normalization limits. |
+| `tool_output` | Configure tool output truncation limits | keep     | Keep `{ max_lines?, max_bytes? }`; both positive thresholds apply to saved-preview truncation behavior.                                           |
 
 `formatter` and `lsp` configure one project tooling subsystem each, so their singular names remain appropriate. `true` enables the built-in registrations, `false` disables them, and a keyed object enables built-ins while applying named overrides or custom registrations. Custom language servers must declare `extensions` so runtime file attachment is deterministic; validation of known built-in server IDs belongs with the eventual v2 LSP integration rather than the aggregate core config schema.
 
@@ -145,12 +145,12 @@ Rename legacy `attachment` to `attachments` in v2. This setting controls process
 
 Settings affecting sharing behavior or user/account identity rather than model execution.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `share` | Session sharing behavior | keep | Keep `"manual" \| "auto" \| "disabled"`; it controls manual sharing permission and automatic sharing of new sessions. |
-| `autoshare` | Legacy automatic sharing flag | remove | Do not port deprecated alias; use `share: "auto"`. |
-| `enterprise` | Enterprise URL configuration | keep | Keep `{ url?: string }`; currently selects the legacy sharing service endpoint when no organization account is active. |
-| `username` | Display username in conversations and telemetry | keep | Keep string identity override; runtime may otherwise resolve an operating-system username. |
+| Field        | Current Purpose                                 | Status | Notes                                                                                                                  |
+| ------------ | ----------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `share`      | Session sharing behavior                        | keep   | Keep `"manual" \| "auto" \| "disabled"`; it controls manual sharing permission and automatic sharing of new sessions.  |
+| `autoshare`  | Legacy automatic sharing flag                   | remove | Do not port deprecated alias; use `share: "auto"`.                                                                     |
+| `enterprise` | Enterprise URL configuration                    | keep   | Keep `{ url?: string }`; currently selects the legacy sharing service endpoint when no organization account is active. |
+| `username`   | Display username in conversations and telemetry | keep   | Keep string identity override; runtime may otherwise resolve an operating-system username.                             |
 
 Retain `share` as the single session-sharing setting. `"manual"` permits explicit sharing, `"auto"` shares newly created top-level sessions, and `"disabled"` prevents sharing. Legacy `autoshare: true` is only an alias for `share: "auto"`, so v2 does not expose it.
 
@@ -168,13 +168,13 @@ Retain `enterprise.url` for legacy enterprise share hosting selection and `usern
 
 Provider catalog customization and model-choice configuration. The new core work has started here.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `provider` | Custom provider configuration and model overrides | redesign | Rename to plural `providers` in v2; do not preserve the legacy singular key. Review nested provider/model fields separately. |
-| `disabled_providers` | Disable automatically loaded providers | redesign | Replace with `experimental.policies: [{ effect: "deny", action: "provider.use", resource: "..." }]`. |
-| `enabled_providers` | Restrict enabled providers to an allowlist | redesign | Replace with ordered `provider.use` allow/deny statements and wildcard resources. |
-| `model` | Default model selection | keep | Keep as the fallback model when an active session or agent does not specify a model. |
-| `small_model` | Small/utility model selection | remove | Do not port; its only runtime consumer is title generation, which can use an explicit `title` agent model override. |
+| Field                | Current Purpose                                   | Status   | Notes                                                                                                                        |
+| -------------------- | ------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `provider`           | Custom provider configuration and model overrides | redesign | Rename to plural `providers` in v2; do not preserve the legacy singular key. Review nested provider/model fields separately. |
+| `disabled_providers` | Disable automatically loaded providers            | redesign | Replace with `experimental.policies: [{ effect: "deny", action: "provider.use", resource: "..." }]`.                         |
+| `enabled_providers`  | Restrict enabled providers to an allowlist        | redesign | Replace with ordered `provider.use` allow/deny statements and wildcard resources.                                            |
+| `model`              | Default model selection                           | keep     | Keep as the fallback model when an active session or agent does not specify a model.                                         |
+| `small_model`        | Small/utility model selection                     | remove   | Do not port; its only runtime consumer is title generation, which can use an explicit `title` agent model override.          |
 
 Provider selection rules belong in `experimental.policies` rather than provider entries or repeated top-level provider fields. Initial proposed shape:
 
@@ -238,13 +238,13 @@ Do not port legacy provider model `reasoning`, `temperature`, or `interleaved` f
 
 Agent behavior and tool-access policy. Review together because agent configuration can contain permissions and model choices.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `default_agent` | Choose default primary agent | remove | Do not retain a separate top-level selector; default choice should be designed with the v2 agent configuration model. |
-| `mode` | Legacy agent configuration alias | remove | Do not port deprecated alias; configure agents through the v2 agent surface only. |
-| `agent` | Configure primary, subagent, and specialized agents | redesign | Rename to plural `agents`; retain a named map of built-in overrides and custom agent definitions. |
-| `permission` | Tool permission rules | redesign | Rename to plural `permissions`; replace legacy map shorthand with an ordered array of `{ permission, pattern, action }` rules. |
-| `tools` | Legacy tool enable/disable map | remove | Do not port boolean enable/disable alias; express tool access through permissions. |
+| Field           | Current Purpose                                     | Status   | Notes                                                                                                                       |
+| --------------- | --------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `default_agent` | Choose default primary agent                        | remove   | Do not retain a separate top-level selector; default choice should be designed with the v2 agent configuration model.       |
+| `mode`          | Legacy agent configuration alias                    | remove   | Do not port deprecated alias; configure agents through the v2 agent surface only.                                           |
+| `agent`         | Configure primary, subagent, and specialized agents | redesign | Rename to plural `agents`; retain a named map of built-in overrides and custom agent definitions.                           |
+| `permission`    | Tool permission rules                               | redesign | Rename to plural `permissions`; replace legacy map shorthand with an ordered array of `{ action, resource, effect }` rules. |
+| `tools`         | Legacy tool enable/disable map                      | remove   | Do not port boolean enable/disable alias; express tool access through permissions.                                          |
 
 Do not port `default_agent` ahead of the v2 agent design. The legacy runtime uses it to choose a visible, non-subagent fallback instead of `build`, but exposing that selection as an isolated top-level field would pre-commit v2 to the legacy agent model before agents and their policy surface are defined together.
 
@@ -281,7 +281,7 @@ Retain `description`, `hidden`, and `steps`; they define an agent's discoverabil
       "color": "warning",
       "steps": 12,
       "disabled": false,
-      "permissions": [{ "permission": "edit", "pattern": "*", "action": "deny" }],
+      "permissions": [{ "action": "edit", "resource": "*", "effect": "deny" }],
     },
   },
 }
@@ -289,13 +289,13 @@ Retain `description`, `hidden`, and `steps`; they define an agent's discoverabil
 
 Do not port `tools`, either as a top-level setting or as an agent-entry alias. The legacy loader already converts tool booleans into permission rules, including collapsing write-adjacent tool names into `edit`; v2 should avoid carrying that lossy compatibility input forward.
 
-Rename legacy `permission` to `permissions` and expose the normalized ordered ruleset already modeled by `PermissionV2.Ruleset`. Rules retain the interactive `"ask"` action in addition to `"allow"` and `"deny"`; this is distinct from `experimental.policies`, whose provider enforcement currently needs only allow/deny decisions. The same `permissions` ruleset shape should be used inside future `agents` entries.
+Rename legacy `permission` to `permissions` and expose the normalized ordered ruleset already modeled by `PermissionV2.Ruleset`. Rules retain the interactive `"ask"` effect in addition to `"allow"` and `"deny"`; this is distinct from `experimental.policies`, whose provider enforcement currently needs only allow/deny decisions. The same `permissions` ruleset shape should be used inside future `agents` entries.
 
 ```jsonc
 {
   "permissions": [
-    { "permission": "bash", "pattern": "*", "action": "ask" },
-    { "permission": "bash", "pattern": "git status", "action": "allow" },
+    { "action": "bash", "resource": "*", "effect": "ask" },
+    { "action": "bash", "resource": "git status", "effect": "allow" },
   ],
 }
 ```
@@ -304,8 +304,8 @@ Rename legacy `permission` to `permissions` and expose the normalized ordered ru
 
 External protocol and server integration configuration.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
+| Field | Current Purpose                       | Status   | Notes                                                                                                                                             |
+| ----- | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `mcp` | MCP server definitions and enablement | redesign | Keep opencode's explicit local/remote server entry format, nested under `mcp.servers`; use `disabled` for inactive entries and move timeout here. |
 
 Keep the opencode MCP server entry format instead of adopting the common `mcpServers` copy/paste shape. Local servers remain explicit `type: "local"` entries with command arrays and `environment`; remote servers remain explicit `type: "remote"` entries with `url`, `headers`, and optional `oauth`. Nest the server map under `mcp.servers` so protocol-wide settings such as default timeout can live under the same subsystem.
@@ -344,11 +344,11 @@ Keep the opencode MCP server entry format instead of adopting the common `mcpSer
 
 Behavior affecting long-running conversations and context management.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
+| Field        | Current Purpose                                             | Status   | Notes                                                                                 |
+| ------------ | ----------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------- |
 | `compaction` | Automatic compaction, pruning, and context reserve settings | redesign | Group retained verbatim history under `keep` and rename context headroom to `buffer`. |
 
-Retain the compaction capability but redesign the less clear limits. `keep.turns` is the maximum number of recent user turns to preserve verbatim after compaction, and `keep.tokens` is the token budget for those retained turns. `buffer` is the token headroom reserved so automatic compaction triggers before the input window is exhausted.
+Retain the compaction capability but redesign the less clear limits. `keep.tokens` is the token budget for recent history serialized into the textual compaction checkpoint. `buffer` is the token headroom reserved so automatic compaction triggers before the input window is exhausted.
 
 ```jsonc
 {
@@ -356,7 +356,6 @@ Retain the compaction capability but redesign the less clear limits. `keep.turns
     "auto": true,
     "prune": true,
     "keep": {
-      "turns": 2,
       "tokens": 2000,
     },
     "buffer": 10000,
@@ -368,15 +367,15 @@ Retain the compaction capability but redesign the less clear limits. `keep.turns
 
 Fields that should not be ported by inertia; each needs an explicit justification.
 
-| Field | Current Purpose | Status | Notes |
-|---|---|---|---|
-| `layout` | Legacy layout selection | remove | Do not port deprecated option; stretch layout is always used. |
-| `experimental.disable_paste_summary` | Disable pasted-content summary behavior | remove | Do not port; pasted-input presentation behavior belongs to the client/UI surface. |
-| `experimental.batch_tool` | Enable batch tool | remove | Do not port; batch tool is no longer a supported feature. |
-| `experimental.openTelemetry` | Enable AI SDK telemetry spans | remove | Do not port; observability is process-level and should use standard OpenTelemetry environment or declarative configuration. |
-| `experimental.primary_tools` | Restrict tools to primary agents | remove | Do not port obsolete gating; agent tool access is configured through permissions. |
-| `experimental.continue_loop_on_deny` | Continue loop after denied tool call | remove | Do not port legacy denied-tool loop behavior. |
-| `experimental.mcp_timeout` | MCP request timeout | redesign | Move to `mcp.timeout` for the default and `mcp.servers.<name>.timeout` for per-server overrides. |
+| Field                                | Current Purpose                         | Status   | Notes                                                                                                                       |
+| ------------------------------------ | --------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `layout`                             | Legacy layout selection                 | remove   | Do not port deprecated option; stretch layout is always used.                                                               |
+| `experimental.disable_paste_summary` | Disable pasted-content summary behavior | remove   | Do not port; pasted-input presentation behavior belongs to the client/UI surface.                                           |
+| `experimental.batch_tool`            | Enable batch tool                       | remove   | Do not port; batch tool is no longer a supported feature.                                                                   |
+| `experimental.openTelemetry`         | Enable AI SDK telemetry spans           | remove   | Do not port; observability is process-level and should use standard OpenTelemetry environment or declarative configuration. |
+| `experimental.primary_tools`         | Restrict tools to primary agents        | remove   | Do not port obsolete gating; agent tool access is configured through permissions.                                           |
+| `experimental.continue_loop_on_deny` | Continue loop after denied tool call    | remove   | Do not port legacy denied-tool loop behavior.                                                                               |
+| `experimental.mcp_timeout`           | MCP request timeout                     | redesign | Move to `mcp.timeout` for the default and `mcp.servers.<name>.timeout` for per-server overrides.                            |
 
 ## Review Order
 

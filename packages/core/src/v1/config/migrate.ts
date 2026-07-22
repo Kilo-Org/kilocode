@@ -37,8 +37,8 @@ export function migrate(info: typeof ConfigV1.Info.Type) {
   return {
     $schema: info.$schema,
     shell: info.shell,
-    model: info.model ?? undefined, // kilocode_change - v1 null delete sentinel is not valid in v2
-    default_agent: info.default_agent ?? undefined, // kilocode_change
+    model: info.model,
+    default_agent: info.default_agent,
     autoupdate: info.autoupdate,
     share: info.share ?? (info.autoshare ? "auto" : undefined),
     enterprise: info.enterprise,
@@ -73,7 +73,7 @@ export function migrate(info: typeof ConfigV1.Info.Type) {
 }
 
 function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<string, boolean>>) {
-  const rules: Array<{ action: string; resource: string; effect: "allow" | "ask" | "deny" }> = Object.entries(
+  const rules: Array<{ action: string; resource: string; effect: ConfigPermissionV1.Action }> = Object.entries(
     tools ?? {},
   ).map(([action, enabled]) => ({
     action: normalizeAction(action),
@@ -86,12 +86,7 @@ function permissions(info?: ConfigPermissionV1.Info, tools?: Readonly<Record<str
       rules.push({ action, resource: "*", effect: rule })
       continue
     }
-    // kilocode_change - per-resource effect may also be null (delete sentinel); skip those entries
-    rules.push(
-      ...Object.entries(rule)
-        .filter((entry): entry is [string, "allow" | "ask" | "deny"] => entry[1] !== null)
-        .map(([resource, effect]) => ({ action, resource, effect })),
-    )
+    rules.push(...Object.entries(rule).map(([resource, effect]) => ({ action, resource, effect })))
   }
   return rules.length ? rules : undefined
 }
@@ -109,23 +104,22 @@ function agents(info: typeof ConfigV1.Info.Type) {
   return Object.fromEntries(entries.flatMap(([name, agent]) => (agent ? [[name, migrateAgent(agent)]] : [])))
 }
 
-// kilocode_change - v1 fields are nullable (delete sentinel); the v2 format has no such concept, so null collapses to undefined
 export function migrateAgent(info: ConfigAgentV1.Info) {
   const body = {
     ...info.options,
-    ...(info.temperature === undefined || info.temperature === null ? {} : { temperature: info.temperature }),
-    ...(info.top_p === undefined || info.top_p === null ? {} : { top_p: info.top_p }),
+    ...(info.temperature === undefined ? {} : { temperature: info.temperature }),
+    ...(info.top_p === undefined ? {} : { top_p: info.top_p }),
   }
   return {
-    model: info.model ?? undefined,
-    variant: info.variant ?? undefined,
+    model: info.model,
+    variant: info.variant,
     request: Object.keys(body).length ? { body } : undefined,
-    system: info.prompt ?? undefined,
-    description: info.description ?? undefined,
+    system: info.prompt,
+    description: info.description,
     mode: info.mode,
     hidden: info.hidden,
     color: info.color,
-    steps: info.steps ?? undefined,
+    steps: info.steps,
     disabled: info.disable,
     permissions: permissions(info.permission),
   }
@@ -169,14 +163,9 @@ function migrateMcp(info: ConfigMCPV1.Info) {
   }
 }
 
-function providers(info?: Readonly<Record<string, ConfigProviderV1.Info | null>>) {
+function providers(info?: Readonly<Record<string, ConfigProviderV1.Info>>) {
   if (!info) return undefined
-  // kilocode_change - provider entries may be null (delete sentinel); migration has nothing to convert for those
-  return Object.fromEntries(
-    Object.entries(info)
-      .filter((entry): entry is [string, ConfigProviderV1.Info] => entry[1] !== null)
-      .map(([name, provider]) => [name, migrateProvider(provider)]),
-  )
+  return Object.fromEntries(Object.entries(info).map(([name, provider]) => [name, migrateProvider(provider)]))
 }
 
 function migrateProvider(info: ConfigProviderV1.Info) {
@@ -194,14 +183,9 @@ function migrateProvider(info: ConfigProviderV1.Info) {
         }
       : undefined,
     request: info.options && { headers: options.headers, body: options.body },
-    // kilocode_change - model entries may be null (delete sentinel); migration has nothing to convert for those
     models:
       info.models &&
-      Object.fromEntries(
-        Object.entries(info.models)
-          .filter((entry): entry is [string, typeof ConfigProviderV1.Model.Type] => entry[1] !== null)
-          .map(([name, model]) => [name, migrateModel(model, info.npm)]),
-      ),
+      Object.fromEntries(Object.entries(info.models).map(([name, model]) => [name, migrateModel(model, info.npm)])),
   }
 }
 
@@ -253,12 +237,9 @@ function migrateModel(info: typeof ConfigProviderV1.Model.Type, packageName?: st
       headers: info.headers,
       body: request,
     },
-    // kilocode_change - variant entries may be null (delete sentinel); migration has nothing to convert for those
     variants:
       info.variants &&
-      Object.entries(info.variants)
-        .filter((entry): entry is [string, NonNullable<(typeof info.variants)[string]>] => entry[1] !== null)
-        .map(([id, options]) => ({
+      Object.entries(info.variants).map(([id, options]) => ({
         id,
         body: ingest(options),
       })),

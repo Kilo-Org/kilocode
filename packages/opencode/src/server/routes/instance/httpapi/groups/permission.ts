@@ -14,19 +14,6 @@ const ReplyPayload = Schema.Struct({
   message: Schema.optional(Schema.String),
 })
 
-// kilocode_change start
-export const SaveAlwaysRulesBody = Schema.Struct({
-  approvedAlways: Schema.Array(Schema.String).pipe(Schema.optional),
-  deniedAlways: Schema.Array(Schema.String).pipe(Schema.optional),
-})
-
-export const AllowEverythingBody = Schema.Struct({
-  enable: Schema.Boolean,
-  requestID: Schema.optional(Schema.String),
-  sessionID: Schema.optional(Schema.String),
-})
-// kilocode_change end
-
 export const PermissionApi = HttpApi.make("permission")
   .add(
     HttpApiGroup.make("permission")
@@ -54,33 +41,6 @@ export const PermissionApi = HttpApi.make("permission")
             description: "Approve or deny a permission request from the AI assistant.",
           }),
         ),
-        // kilocode_change start
-        HttpApiEndpoint.post("saveAlwaysRules", `${root}/:requestID/always-rules`, {
-          params: { requestID: PermissionV1.ID },
-          query: WorkspaceRoutingQuery,
-          payload: SaveAlwaysRulesBody,
-          success: described(Schema.Boolean, "Always-rules saved"),
-          error: [PermissionNotFoundError],
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "permission.saveAlwaysRules",
-            summary: "Save always-allow/deny permission rules",
-            description: "Save approved/denied always-rules for a pending permission request.",
-          }),
-        ),
-        HttpApiEndpoint.post("allowEverything", `${root}/allow-everything`, {
-          query: WorkspaceRoutingQuery,
-          payload: AllowEverythingBody,
-          success: described(Schema.Boolean, "Success"),
-          error: [HttpApiError.BadRequest, PermissionNotFoundError],
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "permission.allowEverything",
-            summary: "Allow everything",
-            description: "Enable or disable allowing all permissions without prompts.",
-          }),
-        ),
-        // kilocode_change end
       )
       .annotateMerge(
         OpenApi.annotations({

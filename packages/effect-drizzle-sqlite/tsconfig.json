@@ -3,7 +3,6 @@
   "extends": "@tsconfig/bun/tsconfig.json",
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["bun"],
     "noUncheckedIndexedAccess": false,
     "plugins": [
       {

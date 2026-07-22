@@ -1,7 +1,9 @@
 // @ts-nocheck
-import { createMemo, onCleanup } from "solid-js" // kilocode_change
+import { createEffect, createMemo, onCleanup } from "solid-js"
 import { createStore } from "solid-js/store"
 import type { Todo } from "@kilocode/sdk/v2"
+import { useServerSync } from "@/context/global-sync"
+import { SessionComposerRegion, createSessionComposerState } from "@/pages/session/composer"
 
 export default {
   title: "UI/Todo Panel Motion",
@@ -10,10 +12,17 @@ export default {
   parameters: {
     docs: {
       description: {
-        // kilocode_change start
         component: `### Overview
-This playground isolates the todo dock motion controls without depending on the removed app package.`,
-        // kilocode_change end
+This playground renders the real session composer region from app code.
+
+### Source path
+- \`packages/app/src/pages/session/composer/session-composer-region.tsx\`
+
+### Includes
+- \`SessionTodoDock\` (real)
+- \`PromptInput\` (real)
+
+No visual reimplementation layer is used for the dock/input stack.`,
       },
     },
   },
@@ -120,6 +129,7 @@ const css = `
 
 export const Playground = {
   render: () => {
+    const global = useServerSync()
     const [cfg, setCfg] = createStore({
       open: true,
       step: 1,
@@ -139,7 +149,6 @@ export const Playground = {
       countMask: 18,
       countMaskHeight: 0,
       countWidthDuration: 560,
-      collapsed: false, // kilocode_change
     })
     const open = () => cfg.open
     const step = () => cfg.step
@@ -159,7 +168,9 @@ export const Playground = {
     const countMask = () => cfg.countMask
     const countMaskHeight = () => cfg.countMaskHeight
     const countWidthDuration = () => cfg.countWidthDuration
+    const state = createSessionComposerState({ closeMs: () => Math.round(dockCloseDuration() * 1000) })
     let frame
+    let composerRef
     let scrollRef
 
     const todos = createMemo<Todo[]>(() => {
@@ -169,6 +180,10 @@ export const Playground = {
         content,
         status: i < done ? "completed" : i === done && done < 3 ? "in_progress" : "pending",
       }))
+    })
+
+    createEffect(() => {
+      global.todo.set("story-session", todos())
     })
 
     const clear = () => {
@@ -181,14 +196,15 @@ export const Playground = {
       scrollRef.scrollTop = scrollRef.scrollHeight
     }
 
-    // kilocode_change start
-    const collapsed = () => !open() || cfg.collapsed
+    const collapsed = () =>
+      !!composerRef?.querySelector('[data-action="session-todo-toggle-button"][data-collapsed="true"]')
 
     const setCollapsed = (value: boolean) => {
+      const button = composerRef?.querySelector('[data-action="session-todo-toggle-button"]')
+      if (!(button instanceof HTMLButtonElement)) return
       if (collapsed() === value) return
-      setCfg("collapsed", value)
+      button.click()
     }
-    // kilocode_change end
 
     const openDock = () => {
       clear()
@@ -251,33 +267,33 @@ export const Playground = {
                   </div>
                 </div>
 
-                {/* kilocode_change start */}
-                <div data-component="todo-motion-dock" data-open={dockOpen()} data-collapsed={collapsed()}>
-                  <button
-                    type="button"
-                    data-action="session-todo-toggle-button"
-                    data-collapsed={collapsed() ? "true" : undefined}
-                    onClick={toggleDrawer}
-                  >
-                    {collapsed() ? "Show todos" : "Hide todos"}
-                  </button>
-                  <div data-slot="todo-motion-panel">
-                    <div data-slot="todo-motion-header">
-                      <span>Todos</span>
-                      <span>{todos().filter((todo) => todo.status === "completed").length}/3 done</span>
-                    </div>
-                    <div data-slot="todo-motion-list">
-                      {todos().map((todo) => (
-                        <div data-slot="todo-motion-item" data-status={todo.status}>
-                          <span data-slot="todo-motion-check">{todo.status === "completed" ? "✓" : ""}</span>
-                          <span>{todo.content}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <textarea placeholder="Ask Kilo to keep working..." />
+                <div ref={composerRef}>
+                  <SessionComposerRegion
+                    state={state}
+                    centered={false}
+                    inputRef={() => {}}
+                    newSessionWorktree=""
+                    onNewSessionWorktreeReset={() => {}}
+                    onSubmit={() => {}}
+                    onResponseSubmit={pin}
+                    setPromptDockRef={() => {}}
+                    dockOpenVisualDuration={dockOpenDuration()}
+                    dockOpenBounce={dockOpenBounce()}
+                    dockCloseVisualDuration={dockCloseDuration()}
+                    dockCloseBounce={dockCloseBounce()}
+                    drawerExpandVisualDuration={drawerExpandDuration()}
+                    drawerExpandBounce={drawerExpandBounce()}
+                    drawerCollapseVisualDuration={drawerCollapseDuration()}
+                    drawerCollapseBounce={drawerCollapseBounce()}
+                    subtitleDuration={subtitleDuration()}
+                    subtitleTravel={subtitleAuto() ? undefined : subtitleTravel()}
+                    subtitleEdge={subtitleAuto() ? undefined : subtitleEdge()}
+                    countDuration={countDuration()}
+                    countMask={countMask()}
+                    countMaskHeight={countMaskHeight()}
+                    countWidthDuration={countWidthDuration()}
+                  />
                 </div>
-                {/* kilocode_change end */}
               </div>
             </div>
           </div>

@@ -21,7 +21,6 @@
   font: inherit;
   letter-spacing: inherit;
   line-height: inherit;
-  white-space: pre; /* kilocode_change - preserve inactive fallback whitespace */
 }
 
 [data-component="text-shimmer"] [data-slot="text-shimmer-char"] {
@@ -56,9 +55,7 @@
   opacity: 1;
 }
 
-/* kilocode_change — gate animation on data-active directly (was data-run
-   set by a JS timer-driven effect). No JS timer needed. */
-[data-component="text-shimmer"][data-active="true"] [data-slot="text-shimmer-char-shimmer"] {
+[data-component="text-shimmer"] [data-slot="text-shimmer-char-shimmer"][data-run="true"] {
   animation-name: text-shimmer-sweep;
   animation-duration: var(--text-shimmer-duration);
   animation-iteration-count: infinite;

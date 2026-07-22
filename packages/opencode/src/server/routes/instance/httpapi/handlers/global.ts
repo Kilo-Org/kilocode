@@ -3,7 +3,6 @@ import { GlobalBus, type GlobalEvent as GlobalBusEvent } from "@/bus/global"
 import { EffectBridge } from "@/effect/bridge"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Installation } from "@/installation"
-import { disconnect } from "@/kilocode/server/sse" // kilocode_change
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { Effect, Queue, Schema } from "effect"
@@ -31,10 +30,8 @@ function parseBody(body: string) {
   }
 }
 
-// kilocode_change start
-function eventResponse(request: HttpServerRequest.HttpServerRequest) {
+function eventResponse() {
   return Effect.gen(function* () {
-    // kilocode_change end
     yield* Effect.logInfo("global event connected")
     const events = Stream.callback<GlobalBusEvent>((queue) => {
       const handler = (event: GlobalBusEvent) => Queue.offerUnsafe(queue, event)
@@ -54,11 +51,6 @@ function eventResponse(request: HttpServerRequest.HttpServerRequest) {
         Stream.map(eventData),
         Stream.pipeThroughChannel(Sse.encode()),
         Stream.encodeText,
-        // kilocode_change start - prevent disconnected SSE clients from retaining full diff payloads
-        // Explicit interruption closes the stream scope, unregisters its GlobalBus listener, and
-        // releases the unbounded callback queue even when transport cancellation is not propagated.
-        Stream.interruptWhen(disconnect(request)),
-        // kilocode_change end
         Stream.ensuring(Effect.logInfo("global event disconnected")),
       ),
       {
@@ -84,8 +76,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     })
 
     const event = Effect.fn("GlobalHttpApi.event")(function* () {
-      const request = yield* HttpServerRequest.HttpServerRequest // kilocode_change
-      return yield* eventResponse(request) // kilocode_change
+      return yield* eventResponse()
     })
 
     const configGet = Effect.fn("GlobalHttpApi.configGet")(function* () {
@@ -94,13 +85,7 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
 
     const configUpdate = Effect.fn("GlobalHttpApi.configUpdate")(function* (ctx) {
       const result = yield* config.updateGlobal(ctx.payload)
-      // kilocode_change start
-      if (result.changed) {
-        yield* bridge.run(
-          disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(Effect.catchCause(() => Effect.void)),
-        )
-      }
-      // kilocode_change end
+      if (result.changed) bridge.fork(disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }))
       return result.info
     })
 

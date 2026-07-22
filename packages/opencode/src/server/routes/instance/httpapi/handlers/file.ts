@@ -25,10 +25,9 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
     })
 
     const findText = Effect.fn("FileHttpApi.findText")(function* (ctx: { query: { pattern: string } }) {
-      // kilocode_change start - preserve the released HTTP response shape while Core retains search metadata.
       return (yield* ripgrep
         .grep({ cwd: (yield* InstanceState.context).directory, pattern: ctx.query.pattern, limit: 10 })
-        .pipe(Effect.orDie)).items.map((match) => ({
+        .pipe(Effect.orDie)).map((match) => ({
         path: { text: match.entry.path },
         lines: { text: match.text },
         line_number: match.line,
@@ -39,7 +38,6 @@ export const fileHandlers = HttpApiBuilder.group(InstanceHttpApi, "file", (handl
           end: submatch.end,
         })),
       }))
-      // kilocode_change end
     })
 
     const findFile = Effect.fn("FileHttpApi.findFile")(function* (ctx: {

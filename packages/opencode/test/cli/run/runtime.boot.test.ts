@@ -166,7 +166,6 @@ describe("run runtime boot", () => {
       all: Provider[]
       default: Record<string, string>
       connected: string[]
-      failed: string[]
     } = {
       all: [
         {
@@ -195,7 +194,6 @@ describe("run runtime boot", () => {
       ],
       default: {},
       connected: [],
-      failed: [],
     }
     const configured = {
       providers: [data.all[0]!],
@@ -234,7 +232,6 @@ describe("run runtime boot", () => {
       all: Provider[]
       default: Record<string, string>
       connected: string[]
-      failed: string[]
     } = {
       all: [
         {
@@ -263,7 +260,6 @@ describe("run runtime boot", () => {
       ],
       default: {},
       connected: [],
-      failed: [],
     }
     spyOn(sdk.config, "providers").mockRejectedValue(new Error("boom"))
     spyOn(sdk.provider, "list").mockImplementation(() =>

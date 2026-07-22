@@ -12,7 +12,6 @@ import { normalizePromptContent } from "@opencode-ai/tui/editor"
 import fuzzysort from "fuzzysort"
 import path from "path"
 import { createEffect, createMemo, createResource, createSignal, onCleanup, onMount, type Accessor } from "solid-js"
-import { slashDisplay, slashMatches } from "@/kilocode/cli/cmd/command-display" // kilocode_change
 import * as Locale from "@/util/locale"
 import {
   createPromptHistory,
@@ -176,8 +175,7 @@ function parseSlashCommand(text: string, commands: RunCommand[] | undefined) {
     return { type: "pending" as const }
   }
 
-  if (!commands.some((item) => slashMatches(item, head.name))) {
-    // kilocode_change
+  if (!commands.some((item) => item.name === head.name)) {
     return { type: "none" as const }
   }
 
@@ -419,7 +417,7 @@ export function createPromptState(input: PromptInput): PromptState {
         description: "compose in your external editor",
       } satisfies SlashOption,
       { kind: "slash", name: "new", display: "/new", description: "start a new session" } satisfies SlashOption,
-      { kind: "slash", name: "exit", display: "/exit", description: "close direct mode" } satisfies SlashOption, // kilocode_change
+      { kind: "slash", name: "exit", display: "/exit", description: "close OpenCode" } satisfies SlashOption,
     ]
     const hidden = new Set(builtins.map((item) => item.name))
     const showSkillMenu = !shell() && skillCommands().length > 0 && !hasSkillsCommand()
@@ -440,13 +438,13 @@ export function createPromptState(input: PromptInput): PromptState {
           ]
         : []),
       ...(input.commands() ?? [])
-        .filter((item) => !hidden.has(item.name)) // kilocode_change - suggest skills as slash commands
+        .filter((item) => item.source !== "skill" && !hidden.has(item.name))
         .map(
           (item) =>
             ({
               kind: "slash",
               name: item.name,
-              display: slashDisplay(item), // kilocode_change
+              display: `/${item.name}${item.source === "mcp" ? ":mcp" : ""}`,
               description: item.description,
             }) satisfies SlashOption,
         ),
@@ -865,7 +863,7 @@ export function createPromptState(input: PromptInput): PromptState {
       const head = slashHead(area.plainText)
       const local = !shell() && (next.name === "new" || next.name === "exit")
       const separator = !shell() && !local && head && /\s/.test(area.plainText[head.end] ?? "") ? "" : " "
-      const text = `${next.display}${separator}` // kilocode_change
+      const text = `/${next.name}${separator}`
 
       area.cursorOffset = 0
       const start = area.logicalCursor

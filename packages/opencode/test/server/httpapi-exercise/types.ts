@@ -16,12 +16,7 @@ export type Mode = "effect" | "coverage" | "auth"
 export type Comparison = "none" | "status" | "json"
 export type CaptureMode = "full" | "stream"
 export type AuthPolicy = "protected" | "public" | "public-bypass" | "ticket-bypass"
-export type ProjectOptions = {
-  git?: boolean
-  config?: Partial<ConfigV1.Info>
-  llm?: boolean
-  init?: (directory: string) => Promise<void>
-}
+export type ProjectOptions = { git?: boolean; config?: Partial<ConfigV1.Info>; llm?: boolean }
 export type OpenApiSpec = { paths?: Record<string, Partial<Record<OpenApiMethod, unknown>>> }
 export type JsonObject = Record<string, unknown>
 

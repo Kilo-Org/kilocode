@@ -14,12 +14,6 @@ import { Locale } from "../../util/locale"
 import { webSearchProviderLabel } from "../../util/tool-display"
 import { getScrollAcceleration } from "../../util/scroll"
 import { useTuiConfig } from "../../config"
-// kilocode_change start
-import { ConfigProtection } from "@/kilocode/permission/config-paths"
-import { splitDiffHunks } from "@/kilocode/tui/diff"
-import { normalizeUrls } from "@/kilocode/util/url"
-import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
-// kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
 
@@ -49,7 +43,6 @@ function EditBody(props: { request: PermissionRequest }) {
 
   const ft = createMemo(() => filetype(filepath()))
   const scrollAcceleration = createMemo(() => getScrollAcceleration(config))
-  const hunks = createMemo(() => splitDiffHunks(diff())) // kilocode_change
 
   return (
     <box flexDirection="column" gap={1}>
@@ -64,38 +57,25 @@ function EditBody(props: { request: PermissionRequest }) {
             },
           }}
         >
-          {/* kilocode_change start */}
-          <box flexDirection="column">
-            <For each={hunks()}>
-              {(hunk, i) => (
-                <>
-                  <Show when={i() > 0}>
-                    <text fg={theme.textMuted}>...</text>
-                  </Show>
-                  <diff
-                    diff={hunk}
-                    view={view()}
-                    filetype={ft()}
-                    syntaxStyle={syntax()}
-                    showLineNumbers={true}
-                    width="100%"
-                    wrapMode="word"
-                    fg={theme.text}
-                    addedBg={theme.diffAddedBg}
-                    removedBg={theme.diffRemovedBg}
-                    contextBg={theme.diffContextBg}
-                    addedSignColor={theme.diffHighlightAdded}
-                    removedSignColor={theme.diffHighlightRemoved}
-                    lineNumberFg={theme.diffLineNumber}
-                    lineNumberBg={theme.diffContextBg}
-                    addedLineNumberBg={theme.diffAddedLineNumberBg}
-                    removedLineNumberBg={theme.diffRemovedLineNumberBg}
-                  />
-                </>
-              )}
-            </For>
-          </box>
-          {/* kilocode_change end */}
+          <diff
+            diff={diff()}
+            view={view()}
+            filetype={ft()}
+            syntaxStyle={syntax()}
+            showLineNumbers={true}
+            width="100%"
+            wrapMode="word"
+            fg={theme.text}
+            addedBg={theme.diffAddedBg}
+            removedBg={theme.diffRemovedBg}
+            contextBg={theme.diffContextBg}
+            addedSignColor={theme.diffHighlightAdded}
+            removedSignColor={theme.diffHighlightRemoved}
+            lineNumberFg={theme.diffLineNumber}
+            lineNumberBg={theme.diffContextBg}
+            addedLineNumberBg={theme.diffAddedLineNumberBg}
+            removedLineNumberBg={theme.diffRemovedLineNumberBg}
+          />
         </scrollbox>
       </Show>
       <Show when={!diff()}>
@@ -161,13 +141,11 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
           body={
             <Switch>
               <Match when={props.request.always.length === 1 && props.request.always[0] === "*"}>
-                {/* kilocode_change */}
-                <TextBody title={"This will allow " + props.request.permission + " permanently."} />
+                <TextBody title={"This will allow " + props.request.permission + " until OpenCode is restarted."} />
               </Match>
               <Match when={true}>
                 <box paddingLeft={1} gap={1}>
-                  {/* kilocode_change */}
-                  <text fg={theme.textMuted}>This will allow the following patterns permanently</text>
+                  <text fg={theme.textMuted}>This will allow the following patterns until OpenCode is restarted</text>
                   <box>
                     <For each={props.request.always}>
                       {(pattern) => (
@@ -291,20 +269,9 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
-              // kilocode_change start
-              const meta = props.request.metadata ?? {}
-              const desc =
-                typeof data.description === "string" && data.description
-                  ? data.description
-                  : typeof meta.description === "string" && meta.description
-                    ? meta.description
-                    : undefined
-              const bg = meta.backgroundProcess === true
-              const title = bg ? `Start background process${desc ? `: ${desc}` : ""}` : (desc ?? "Shell command")
-              const command = normalizeUrls(
-                typeof data.command === "string" ? data.command : typeof meta.command === "string" ? meta.command : "",
-              )
-              // kilocode_change end
+              const title =
+                typeof data.description === "string" && data.description ? data.description : "Shell command"
+              const command = typeof data.command === "string" ? data.command : ""
               return {
                 icon: "#",
                 title,
@@ -335,7 +302,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "webfetch") {
-              const url = normalizeUrls(typeof data.url === "string" ? data.url : "") // kilocode_change
+              const url = typeof data.url === "string" ? data.url : ""
               return {
                 icon: "%",
                 title: `WebFetch ${url}`,
@@ -404,9 +371,6 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               }
             }
 
-            const custom = MemoryPermissionRegistry.render(permission, props.request) // kilocode_change
-            if (custom) return custom // kilocode_change
-
             return {
               icon: "⚙",
               title: `Call tool ${permission}`,
@@ -432,32 +396,15 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                 </text>
                 <text fg={theme.text}>{current.title}</text>
               </box>
-              {/* kilocode_change start - explain protected Kilo configuration access */}
-              <Show when={props.request.metadata?.[ConfigProtection.CONFIG_PROTECTED_KEY]}>
-                <box paddingLeft={4} flexShrink={0}>
-                  <text fg={theme.textMuted}>
-                    {props.request.permission === "edit"
-                      ? "Config file edits always require approval"
-                      : "Kilo configuration access always requires approval"}
-                  </text>
-                </box>
-              </Show>
-              {/* kilocode_change end */}
             </box>
           )
-
-          // kilocode_change start - hide "Always allow" for protected Kilo configuration access
-          const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-            ? { once: "Allow once", reject: "Reject" }
-            : { once: "Allow once", always: "Allow always", reject: "Reject" }
-          // kilocode_change end
 
           const body = (
             <Prompt
               title="Permission required"
               header={header()}
               body={current.body}
-              /* kilocode_change */ options={options}
+              options={{ once: "Allow once", always: "Allow always", reject: "Reject" }}
               escapeKey="reject"
               fullscreen
               onSelect={(option) => {
@@ -538,7 +485,7 @@ function RejectPrompt(props: { onConfirm: (message: string) => void; onCancel: (
           <text fg={theme.text}>Reject permission</text>
         </box>
         <box paddingLeft={1}>
-          <text fg={theme.textMuted}>Tell Kilo what to do differently</text>
+          <text fg={theme.textMuted}>Tell OpenCode what to do differently</text>
         </box>
       </box>
       <box

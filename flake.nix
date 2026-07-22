@@ -1,5 +1,5 @@
 {
-  description = "Kilo development flake";
+  description = "OpenCode development flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -19,245 +19,15 @@
     in
     {
       devShells = forEachSystem (pkgs: {
-        default =
-          let
-            # Pin bun to the version declared in package.json (packageManager: "bun@1.3.14").
-            # The locked nixpkgs revision ships 1.3.11, so we fetch the official release directly.
-            bun =
-              let
-                sources = {
-                  "aarch64-linux" = {
-                    name = "bun-linux-aarch64";
-                    hash = "sha256-on/7Y6gxA3WDbg1vZorhf6jY0YuIw3yCHGUzGXOhmjs=";
-                  };
-                  "x86_64-linux" = {
-                    name = "bun-linux-x64";
-                    hash = "sha256-lR7iruhV8IWVruxiJSJqKY0/6oOj3NZGXAnLzN9+hI8=";
-                  };
-                  "aarch64-darwin" = {
-                    name = "bun-darwin-aarch64";
-                    hash = "sha256-2LliIYKK1vl6x6wKt+lYcjQa92MAHogD6CZ2UsJlJiA=";
-                  };
-                  "x86_64-darwin" = {
-                    name = "bun-darwin-x64";
-                    hash = "sha256-QYPfM3RiPlurMVxUfPoJdFM81FfYa3O2OfeoeXTNZjM=";
-                  };
-                };
-                source =
-                  sources.${pkgs.stdenv.hostPlatform.system}
-                    or (throw "Unsupported system for bun: ${pkgs.stdenv.hostPlatform.system}");
-              in
-              pkgs.stdenv.mkDerivation rec {
-                pname = "bun";
-                version = "1.3.14";
-                src = pkgs.fetchurl {
-                  url = "https://github.com/oven-sh/bun/releases/download/bun-v${version}/${source.name}.zip";
-                  inherit (source) hash;
-                };
-                nativeBuildInputs = [
-                  pkgs.unzip
-                ] ++ pkgs.lib.optional pkgs.stdenv.isLinux pkgs.autoPatchelfHook;
-                buildInputs = pkgs.lib.optionals pkgs.stdenv.isLinux [ pkgs.stdenv.cc.cc.lib ];
-                dontConfigure = true;
-                dontBuild = true;
-                installPhase = ''
-                  runHook preInstall
-                  install -Dm755 bun $out/bin/bun
-                  ln -s $out/bin/bun $out/bin/bunx
-                  runHook postInstall
-                '';
-                meta = {
-                  description = "Fast all-in-one JavaScript runtime";
-                  homepage = "https://bun.sh";
-                  license = pkgs.lib.licenses.mit;
-                  mainProgram = "bun";
-                  platforms = builtins.attrNames sources;
-                };
-              };
-
-            kilo-dev = pkgs.writeShellScriptBin "kilo-dev" ''
-              set -euo pipefail
-
-              : "''${KILO_ROOT:?KILO_ROOT is not set. Enter the flake dev shell from the repo root.}"
-              export KILO_DEV_CWD="$PWD"
-              exec ${bun}/bin/bun --cwd "$KILO_ROOT/packages/opencode" --conditions=browser ./src/index.ts "$@"
-            '';
-
-            kilo-install-bin = pkgs.writeShellScriptBin "kilo-install" ''
-              set -euo pipefail
-
-              CACHE_DIR="$HOME/.cache/kilo-nix"
-              VERSION="''${1:-latest}"
-
-              # Platform detection
-              os=$(uname -s | tr '[:upper:]' '[:lower:]')
-              case "$os" in
-                darwin) os="darwin" ;;
-                linux) os="linux" ;;
-                *) echo "Unsupported OS: $os" >&2; exit 1 ;;
-              esac
-
-              arch=$(uname -m)
-              case "$arch" in
-                aarch64) arch="arm64" ;;
-                x86_64) arch="x64" ;;
-                *) echo "Unsupported architecture: $arch" >&2; exit 1 ;;
-              esac
-
-              # Rosetta 2 detection on macOS
-              if [ "$os" = "darwin" ] && [ "$arch" = "x64" ]; then
-                rosetta_flag=$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)
-                if [ "$rosetta_flag" = "1" ]; then
-                  arch="arm64"
-                fi
-              fi
-
-              # Musl detection on Linux
-              is_musl=""
-              if [ "$os" = "linux" ]; then
-                if [ -f /etc/alpine-release ] || (command -v ldd >/dev/null 2>&1 && ldd --version 2>&1 | grep -qi musl); then
-                  is_musl="-musl"
-                fi
-              fi
-
-              # AVX2 detection for baseline builds
-              needs_baseline=""
-              if [ "$arch" = "x64" ]; then
-                if [ "$os" = "linux" ] && ! grep -qi avx2 /proc/cpuinfo 2>/dev/null; then
-                  needs_baseline="-baseline"
-                elif [ "$os" = "darwin" ]; then
-                  avx2=$(sysctl -n hw.optional.avx2_0 2>/dev/null || echo 0)
-                  if [ "$avx2" != "1" ]; then
-                    needs_baseline="-baseline"
-                  fi
-                fi
-              fi
-
-              # Determine archive extension
-              if [ "$os" = "linux" ]; then
-                ext=".tar.gz"
-              else
-                ext=".zip"
-              fi
-
-              # Build filename and URL
-              target="$os-$arch$needs_baseline$is_musl"
-              filename="kilo-$target$ext"
-
-              if [ "$VERSION" = "latest" ]; then
-                url="https://github.com/Kilo-Org/kilocode/releases/latest/download/$filename"
-                echo "Installing latest version of kilo..." >&2
-              else
-                # Strip leading 'v' if present
-                VERSION="''${VERSION#v}"
-                url="https://github.com/Kilo-Org/kilocode/releases/download/v''${VERSION}/$filename"
-                echo "Installing kilo version $VERSION..." >&2
-              fi
-
-              # Create cache directory
-              mkdir -p "$CACHE_DIR"
-
-              # Download to temporary directory
-              tmp_dir=$(mktemp -d)
-              trap "rm -rf $tmp_dir" EXIT
-
-              echo "Downloading from $url..." >&2
-              if ! ${pkgs.curl}/bin/curl -fsSL -o "$tmp_dir/$filename" "$url"; then
-                echo "Error: Failed to download kilo from $url" >&2
-                echo "Please check your internet connection or visit https://github.com/Kilo-Org/kilocode/releases" >&2
-                exit 1
-              fi
-
-              # Extract the archive
-              echo "Extracting..." >&2
-              if [ "$os" = "linux" ]; then
-                ${pkgs.gnutar}/bin/tar -xzf "$tmp_dir/$filename" -C "$tmp_dir"
-              else
-                ${pkgs.unzip}/bin/unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
-              fi
-
-              # Install the binary
-              KILO_BIN="$CACHE_DIR/kilo"
-              mv "$tmp_dir/kilo" "$KILO_BIN"
-              chmod +x "$KILO_BIN"
-
-              # Get the installed version
-              installed_version=$("$KILO_BIN" --version 2>/dev/null || echo "unknown")
-              echo "Successfully installed kilo $installed_version to $KILO_BIN" >&2
-            '';
-
-            kilo-bin = pkgs.writeShellScriptBin "kilo" ''
-              set -euo pipefail
-
-              CACHE_DIR="$HOME/.cache/kilo-nix"
-              KILO_BIN="$CACHE_DIR/kilo"
-
-              if [ ! -f "$KILO_BIN" ]; then
-                echo "Error: kilo is not installed in the cache." >&2
-                echo "Please run 'kilo-install' first to download and install kilo." >&2
-                echo "" >&2
-                echo "Examples:" >&2
-                echo "  kilo-install          # Install latest version" >&2
-                echo "  kilo-install 1.0.180  # Install specific version" >&2
-                exit 1
-              fi
-
-              # Execute the cached binary with all arguments
-              exec "$KILO_BIN" "$@"
-            '';
-          in
-          pkgs.mkShell {
-            packages =
-              with pkgs;
-              [
-                bun
-                nodejs_20
-                python3
-                pkg-config
-                openssl
-                git
-                gh
-                playwright-driver.browsers
-                vsce
-                unzip
-                gnutar
-                gzip
-                patchelf
-                ripgrep
-                jetbrains.jdk
-                jdk21
-                kilo-dev
-                kilo-install-bin
-                kilo-bin
-              ]
-              ++ lib.optionals stdenv.isLinux [
-                libX11
-                libXext
-                libXrender
-                libXtst
-                libXi
-                fontconfig
-                freetype
-              ];
-            shellHook = ''
-              export KILO_ROOT="$PWD"
-              export PLAYWRIGHT_BROWSERS_PATH="${pkgs.playwright-driver.browsers}"
-              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
-            ''
-            + pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-              export LD_LIBRARY_PATH="${
-                pkgs.lib.makeLibraryPath [
-                  pkgs.libX11
-                  pkgs.libXext
-                  pkgs.libXrender
-                  pkgs.libXtst
-                  pkgs.libXi
-                  pkgs.fontconfig
-                  pkgs.freetype
-                ]
-              }:$LD_LIBRARY_PATH"
-            '';
-          };
+        default = pkgs.mkShell {
+          packages = with pkgs; [
+            bun
+            nodejs_20
+            pkg-config
+            openssl
+            git
+          ];
+        };
       });
 
       overlays = {
@@ -267,12 +37,14 @@
             node_modules = final.callPackage ./nix/node_modules.nix {
               inherit rev;
             };
+          in
+          rec {
             opencode = final.callPackage ./nix/opencode.nix {
               inherit node_modules;
             };
-          in
-          {
-            inherit opencode;
+            opencode-desktop = final.callPackage ./nix/desktop.nix {
+              inherit opencode;
+            };
           };
       };
 
@@ -282,13 +54,15 @@
           node_modules = pkgs.callPackage ./nix/node_modules.nix {
             inherit rev;
           };
-          kilo = pkgs.callPackage ./nix/kilo.nix {
+        in
+        rec {
+          default = opencode;
+          opencode = pkgs.callPackage ./nix/opencode.nix {
             inherit node_modules;
           };
-        in
-        {
-          default = kilo;
-          inherit kilo;
+          opencode-desktop = pkgs.callPackage ./nix/desktop.nix {
+            inherit opencode;
+          };
           # Updater derivation with fakeHash - build fails and reveals correct hash
           node_modules_updater = node_modules.override {
             hash = pkgs.lib.fakeHash;

@@ -11,10 +11,8 @@ process.env.XDG_CONFIG_HOME = path.join(exerciseGlobalRoot, "config")
 process.env.XDG_STATE_HOME = path.join(exerciseGlobalRoot, "state")
 process.env.XDG_CACHE_HOME = path.join(exerciseGlobalRoot, "cache")
 process.env.KILO_DISABLE_SHARE = "true"
-process.env.KILO_DISABLE_SESSION_INGEST = "true" // kilocode_change - isolate the exerciser from async Kilo session sync
-process.env.KILO_DISABLE_PRESENCE = "1" // kilocode_change - presence now has a default Event Service URL; never open real sockets from the exerciser
 export const exerciseConfigDirectory = path.join(exerciseGlobalRoot, "config", "opencode")
-export const exerciseDataDirectory = path.join(exerciseGlobalRoot, "data", "kilo") // kilocode_change
+export const exerciseDataDirectory = path.join(exerciseGlobalRoot, "data", "opencode")
 
 const preserveExerciseDatabase = !!process.env.KILO_HTTPAPI_EXERCISE_DB
 export const exerciseDatabasePath =

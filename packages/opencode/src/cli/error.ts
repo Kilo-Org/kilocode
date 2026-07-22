@@ -47,7 +47,7 @@ export function FormatError(input: unknown): string | undefined {
   // MCPFailed: { name: string }
   if (NamedError.hasName(input, "MCPFailed")) {
     const data = isRecord(input) && isRecord(input.data) ? stringField(input.data, "name") : undefined
-    return `MCP server "${data}" failed.` // kilocode_change
+    return `MCP server "${data}" failed. Note, opencode does not support MCP authentication yet.`
   }
 
   // AccountServiceError, AccountTransportError: TaggedErrorClass
@@ -55,7 +55,7 @@ export function FormatError(input: unknown): string | undefined {
     return stringField(input, "message") ?? ""
   }
 
-  // ProviderModelNotFoundError: { providerID: string, modelID: string, suggestions?: string[], modelsEmpty?: boolean } // kilocode_change
+  // ProviderModelNotFoundError: { providerID: string, modelID: string, suggestions?: string[] }
   const providerModelNotFound = configData(input, "ProviderModelNotFoundError")
   if (providerModelNotFound) {
     const suggestions = Array.isArray(providerModelNotFound.suggestions)
@@ -64,9 +64,8 @@ export function FormatError(input: unknown): string | undefined {
     return [
       `Model not found: ${stringField(providerModelNotFound, "providerID")}/${stringField(providerModelNotFound, "modelID")}`,
       ...(suggestions.length ? ["Did you mean: " + suggestions.join(", ")] : []),
-      ...(providerModelNotFound.modelsEmpty === true ? ["No models are currently available."] : []), // kilocode_change
-      `Try: \`kilo models\` to list available models`, // kilocode_change
-      `Or check your kilo.json provider/model names`, // kilocode_change
+      `Try: \`opencode models\` to list available models`,
+      `Or check your config (opencode.json) provider/model names`,
     ].join("\n")
   }
 
@@ -103,7 +102,7 @@ export function FormatError(input: unknown): string | undefined {
     return [
       `Failed to load remote config${remote ? ` from ${remote}` : ""}: the server returned a login page instead of JSON.`,
       `Authentication is missing or has expired (the endpoint is likely behind an SSO or identity-aware proxy).`,
-      ...(url ? [`Run \`kilo auth login ${url}\` to re-authenticate.`] : []), // kilocode_change
+      ...(url ? [`Run \`opencode auth login ${url}\` to re-authenticate.`] : []),
     ].join("\n")
   }
 

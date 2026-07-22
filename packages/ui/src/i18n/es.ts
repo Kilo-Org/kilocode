@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "Cambios de la sesión",
-  "ui.sessionReview.title.git": "Cambios de Git",
-  "ui.sessionReview.title.branch": "Cambios de rama",
   "ui.sessionReview.title.lastTurn": "Cambios del último turno",
   "ui.sessionReview.diffStyle.unified": "Unificado",
   "ui.sessionReview.diffStyle.split": "Dividido",
@@ -39,10 +37,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Ocultar pasos",
   "ui.sessionTurn.summary.response": "Respuesta",
   "ui.sessionTurn.diff.showMore": "Mostrar más cambios ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Modificado",
-  "ui.sessionTurn.diffs.showAll": "Mostrar todo",
-  "ui.sessionTurn.diffs.showLess": "Mostrar menos",
-  "ui.sessionTurn.diffs.more": "+{{count}} archivos más",
 
   "ui.sessionTurn.retry.retrying": "reintentando",
   "ui.sessionTurn.retry.inSeconds": "en {{seconds}}s",
@@ -62,8 +56,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Abrir configuración",
 
   "ui.sessionTurn.status.delegating": "Delegando trabajo",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planificando siguientes pasos",
   "ui.sessionTurn.status.gatheringContext": "Explorando",
   "ui.sessionTurn.status.gatheredContext": "Explorado",
@@ -85,8 +77,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} lista",
   "ui.messagePart.context.list.other": "{{count}} listas",
   "ui.messagePart.diagnostic.error": "Error",
-  "ui.messagePart.mcp.input": "Entrada",
-  "ui.messagePart.mcp.output": "Salida",
   "ui.messagePart.title.edit": "Editar",
   "ui.messagePart.title.write": "Escribir",
   "ui.messagePart.option.typeOwnAnswer": "Escribe tu propia respuesta",
@@ -105,23 +95,10 @@ export const dict = {
   "ui.textField.copied": "Copiado",
 
   "ui.imagePreview.alt": "Vista previa de imagen",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Renderizando diagrama Mermaid...",
-  "ui.mermaid.renderError": "Error al renderizar Mermaid: {{message}}",
-  "ui.mermaid.errorDefault": "No se puede renderizar el diagrama Mermaid.",
-  "ui.mermaid.errorEmpty": "Mermaid renderizó un diagrama vacío.",
-  "ui.mermaid.download": "Descargar",
-  "ui.mermaid.copySource": "Copiar código fuente Mermaid",
-  "ui.mermaid.copySvg": "Copiar SVG",
-  "ui.mermaid.copyPng": "Copiar PNG",
-  "ui.mermaid.downloadSvg": "Descargar SVG",
-  "ui.mermaid.downloadPng": "Descargar PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "contenido desplazable",
 
   "ui.tool.read": "Leer",
   "ui.tool.loaded": "Cargado",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} de {{total}} líneas conservadas", // kilocode_change
   "ui.tool.list": "Listar",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -161,7 +138,6 @@ export const dict = {
   "ui.message.revertMessage": "Restablecer a este punto",
   "ui.message.copyResponse": "Copiar respuesta",
   "ui.message.copied": "¡Copiado!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Interrumpido",
   "ui.message.queued": "En cola",
   "ui.message.attachment.alt": "adjunto",
@@ -172,9 +148,7 @@ export const dict = {
   "ui.patch.action.patched": "Parcheado",
 
   "ui.question.subtitle.answered": "{{count}} respondidas",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(sin respuesta)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(no respondida)",
   "ui.question.multiHint": "Selecciona todas las que correspondan",
   "ui.question.singleHint": "Selecciona una respuesta",

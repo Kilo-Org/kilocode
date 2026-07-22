@@ -1,11 +1,10 @@
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import { expect, mock, beforeEach } from "bun:test"
-import { ToolListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
+import { ListRootsRequestSchema, ToolListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js"
 import { Cause, Effect, Exit } from "effect"
 import type { MCP as MCPNS } from "../../src/mcp/index"
 import { testEffect } from "../lib/effect"
-import * as SandboxNetwork from "../../src/kilocode/sandbox/network" // kilocode_change
-import { run as runSandbox, type Profile } from "@kilocode/sandbox" // kilocode_change
 import { TestInstance } from "../fixture/fixture"
 
 // --- Mock infrastructure ---
@@ -40,6 +39,8 @@ interface MockClientState {
     { resources: Array<{ name: string; uri: string; description?: string }>; nextCursor?: string }
   >
   closed: boolean
+  clientOptions?: { capabilities?: { roots?: { listChanged?: boolean } } }
+  requestHandlers: Map<unknown, (...args: any[]) => Promise<any>>
   notificationHandlers: Map<unknown, (...args: any[]) => any>
 }
 
@@ -77,6 +78,7 @@ function getOrCreateClientState(name?: string): MockClientState {
       promptPages: {},
       resourcePages: {},
       closed: false,
+      requestHandlers: new Map(),
       notificationHandlers: new Map(),
     }
     clientStates.set(key, state)
@@ -151,8 +153,10 @@ void mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
     _state!: MockClientState
     transport: any
 
-    constructor(_opts: any) {
+    constructor(_info: any, options?: MockClientState["clientOptions"]) {
       clientCreateCount++
+      this._state = getOrCreateClientState(lastCreatedClientName)
+      this._state.clientOptions = options
     }
 
     async connect(transport: { start: () => Promise<void> }) {
@@ -160,6 +164,10 @@ void mock.module("@modelcontextprotocol/sdk/client/index.js", () => ({
       await transport.start()
       // After successful connect, bind to the last-created client name
       this._state = getOrCreateClientState(lastCreatedClientName)
+    }
+
+    setRequestHandler(schema: unknown, handler: (...args: any[]) => Promise<any>) {
+      this._state.requestHandlers.set(schema, handler)
     }
 
     setNotificationHandler(schema: unknown, handler: (...args: any[]) => any) {
@@ -248,76 +256,32 @@ const { McpOAuthCallback } = await import("../../src/mcp/oauth-callback")
 
 const it = testEffect(MCP.defaultLayer)
 
-// kilocode_change start
-function sandboxProfile(): Profile {
-  return {
-    filesystem: { allowWrite: [], denyWrite: [], denyNames: [] },
-    network: { mode: "deny", allowedHosts: [] },
-    environment: { deny: [], set: {} },
-  }
-}
-// kilocode_change end
-
 function statusName(status: Record<string, MCPNS.Status> | MCPNS.Status, server: string) {
   if ("status" in status) return status.status
   return status[server]?.status
 }
 
-// kilocode_change start
 it.instance(
-  "denies local and remote MCP tools while network sandboxing is active",
+  "advertises and lists the instance directory as its root",
   () =>
     MCP.Service.use((mcp: MCPNS.Interface) =>
       Effect.gen(function* () {
-        lastCreatedClientName = "local-server"
-        getOrCreateClientState("local-server")
-        yield* mcp.add("local-server", { type: "local", command: ["node", "fake.js"] })
+        const { directory } = yield* TestInstance
+        lastCreatedClientName = "roots"
+        yield* mcp.add("roots", { type: "local", command: ["echo", "test"] })
 
-        lastCreatedClientName = "remote-server"
-        getOrCreateClientState("remote-server")
-        yield* mcp.add("remote-server", {
-          type: "remote",
-          url: "http://localhost:9999/mcp",
-          oauth: false,
-        })
+        const state = getOrCreateClientState("roots")
+        expect(state.clientOptions?.capabilities?.roots).toEqual({})
+        expect(state.clientOptions?.capabilities?.roots?.listChanged).toBeUndefined()
 
-        const tools = yield* mcp.tools()
-        const local = Object.entries(tools).find(([key]) => key.startsWith("local") && key.endsWith("_test_tool"))?.[1]
-        const remote = Object.entries(tools).find(
-          ([key]) => key.startsWith("remote") && key.endsWith("_test_tool"),
-        )?.[1]
-        if (!local || !remote) return yield* Effect.die(new Error("expected MCP tools are missing"))
-
-        let localCalled = false
-        let remoteCalled = false
-        const localExit = yield* runSandbox(
-          sandboxProfile(),
-          SandboxNetwork.mcp(
-            local,
-            Effect.sync(() => {
-              localCalled = true
-            }),
-          ),
-        ).pipe(Effect.exit)
-        const remoteExit = yield* runSandbox(
-          sandboxProfile(),
-          SandboxNetwork.mcp(
-            remote,
-            Effect.sync(() => {
-              remoteCalled = true
-            }),
-          ),
-        ).pipe(Effect.exit)
-
-        expect(Exit.isFailure(localExit)).toBe(true)
-        expect(localCalled).toBe(false)
-        expect(Exit.isFailure(remoteExit)).toBe(true)
-        expect(remoteCalled).toBe(false)
+        const handler = state.requestHandlers.get(ListRootsRequestSchema)
+        expect(handler).toBeDefined()
+        const result = yield* Effect.promise(() => handler?.() ?? Promise.reject(new Error("roots handler missing")))
+        expect(result).toEqual({ roots: [{ uri: pathToFileURL(directory).href }] })
       }),
     ),
   { config: { mcp: {} } },
 )
-// kilocode_change end
 
 it.instance(
   "local mcp cwd resolves relative paths against instance directory",
@@ -332,7 +296,6 @@ it.instance(
     ),
   { config: { mcp: {} } },
 )
-
 
 // ========================================================================
 // Test: tools() are cached after connect

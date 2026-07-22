@@ -7,7 +7,6 @@
     "declaration": true,
     "moduleResolution": "nodenext",
     "lib": ["es2022", "dom", "dom.iterable"],
-    "types": ["node"],
     "composite": true,
     "rootDir": "src"
   },

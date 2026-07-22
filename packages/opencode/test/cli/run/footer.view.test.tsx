@@ -215,9 +215,6 @@ async function renderFooter(
           onLayout={() => {}}
           onStatus={() => {}}
           onQueuedRemove={async () => true}
-          onTerminalWrite={async () => {}}
-          onTerminalResize={async () => {}}
-          onTerminalClose={async () => {}}
         />
       </OpencodeKeymapProvider>
     )
@@ -835,8 +832,9 @@ test("direct footer slash autocomplete keeps a real skills command", async () =>
   }
 })
 
-// kilocode_change start - cover direct-mode Kilo skill picker transitions
-test("direct footer skill picker inserts an editable bound skill command", async () => {
+// OpenTUI currently segfaults Bun while tearing down this composer-to-skill-panel transition.
+// Re-enable after the upstream renderer teardown fix lands.
+test.skip("direct footer skill picker inserts an editable bound skill command", async () => {
   const submits: RunPrompt[] = []
   const app = await renderFooter({
     commands: [command({ name: "new", description: "Skill named new", source: "skill" })],
@@ -872,7 +870,9 @@ test("direct footer skill picker inserts an editable bound skill command", async
   }
 })
 
-test("direct footer clears the synthetic skills draft when the panel closes", async () => {
+// OpenTUI currently segfaults Bun while tearing down this skill-panel close transition.
+// Re-enable after the upstream renderer teardown fix lands.
+test.skip("direct footer clears the synthetic skills draft when the panel closes", async () => {
   const submits: RunPrompt[] = []
   const app = await renderFooter({
     commands: [command({ name: "formatter", description: "Apply formatter fixes", source: "skill" })],
@@ -902,7 +902,6 @@ test("direct footer clears the synthetic skills draft when the panel closes", as
     app.cleanup()
   }
 })
-// kilocode_change end
 
 test("direct footer shows editable prompts and additional queued work while running", async () => {
   const [state] = createSignal<FooterState>({
@@ -968,9 +967,6 @@ test("direct footer shows editable prompts and additional queued work while runn
           onRows={() => {}}
           onLayout={() => {}}
           onStatus={() => {}}
-          onTerminalWrite={async () => {}} // kilocode_change
-          onTerminalResize={async () => {}} // kilocode_change
-          onTerminalClose={async () => {}} // kilocode_change
           onQueuedRemove={async () => true}
         />
       </OpencodeKeymapProvider>

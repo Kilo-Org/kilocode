@@ -12,9 +12,6 @@ import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import DESCRIPTION from "./apply_patch.txt"
 import { FileSystem } from "@opencode-ai/core/filesystem"
-import { filterDiagnostics } from "./diagnostics" // kilocode_change
-import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import { Format } from "../format"
 import * as Bom from "@/util/bom"
 
@@ -68,7 +65,6 @@ export const ApplyPatchTool = Tool.define(
         additions: number
         deletions: number
         bom: boolean
-        encoding: string // kilocode_change - preserved per-file encoding
       }> = []
 
       let totalDiff = ""
@@ -101,7 +97,6 @@ export const ApplyPatchTool = Tool.define(
               additions,
               deletions,
               bom: next.bom,
-              encoding: "utf-8", // kilocode_change - new files default to utf-8
             })
 
             totalDiff += diff + "\n"
@@ -117,24 +112,10 @@ export const ApplyPatchTool = Tool.define(
               )
             }
 
-            // kilocode_change start - encoding-aware read so non-UTF-8 files decode without
-            // mojibake; the resulting diff, additions/deletions counts, and permission-prompt
-            // metadata shown to the user must reflect the real file contents.
-            const read = yield* EncodedIO.read(afs, filePath).pipe(
-              Effect.catch((error) =>
-                Effect.fail(
-                  new Error(
-                    `apply_patch verification failed: ${error instanceof Error ? error.message : String(error)}`,
-                  ),
-                ),
-              ),
-            )
-            const source = Bom.split(read.text)
-            // kilocode_change end
+            const source = yield* Bom.readFile(afs, filePath)
             const oldContent = source.text
             let newContent = oldContent
             let bom = source.bom
-            let encoding = read.encoding // kilocode_change - overwritten by deriveNewContentsFromChunks below
 
             // Apply the update chunks to get new content
             try {
@@ -171,7 +152,6 @@ export const ApplyPatchTool = Tool.define(
               additions,
               deletions,
               bom,
-              encoding, // kilocode_change
             })
 
             totalDiff += diff + "\n"
@@ -179,8 +159,7 @@ export const ApplyPatchTool = Tool.define(
           }
 
           case "delete": {
-            // kilocode_change start - encoding-aware read so non-UTF-8 files decode without corruption
-            const deleteRead = yield* EncodedIO.read(afs, filePath).pipe(
+            const source = yield* Bom.readFile(afs, filePath).pipe(
               Effect.catch((error) =>
                 Effect.fail(
                   new Error(
@@ -189,9 +168,7 @@ export const ApplyPatchTool = Tool.define(
                 ),
               ),
             )
-            const contentToDelete = deleteRead.text
-            const source = Bom.split(contentToDelete)
-            // kilocode_change end
+            const contentToDelete = source.text
             const deleteDiff = trimDiff(createTwoFilesPatch(filePath, filePath, contentToDelete, ""))
 
             const deletions = contentToDelete.split("\n").length
@@ -205,7 +182,6 @@ export const ApplyPatchTool = Tool.define(
               additions: 0,
               deletions,
               bom: source.bom,
-              encoding: deleteRead.encoding, // kilocode_change
             })
 
             totalDiff += deleteDiff + "\n"
@@ -246,19 +222,21 @@ export const ApplyPatchTool = Tool.define(
         switch (change.type) {
           case "add":
             // Create parent directories (recursive: true is safe on existing/root dirs)
-            yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+
+            yield* afs.writeWithDirs(change.filePath, Bom.join(change.newContent, change.bom))
             updates.push({ file: change.filePath, event: "add" })
             break
 
           case "update":
-            yield* EncodedIO.write(afs, change.filePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write replaces afs.writeWithDirs
+            yield* afs.writeWithDirs(change.filePath, Bom.join(change.newContent, change.bom))
             updates.push({ file: change.filePath, event: "change" })
             break
 
           case "move":
             if (change.movePath) {
               // Create parent directories (recursive: true is safe on existing/root dirs)
-              yield* EncodedIO.write(afs, change.movePath, Bom.join(change.newContent, change.bom), change.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces afs.writeWithDirs
+
+              yield* afs.writeWithDirs(change.movePath!, Bom.join(change.newContent, change.bom))
               yield* afs.remove(change.filePath)
               updates.push({ file: change.filePath, event: "unlink" })
               updates.push({ file: change.movePath, event: "add" })
@@ -273,7 +251,7 @@ export const ApplyPatchTool = Tool.define(
 
         if (edited) {
           if (yield* format.file(edited)) {
-            yield* EncodedIO.sync(afs, edited, change.bom, change.encoding)
+            yield* Bom.syncFile(afs, edited, change.bom)
           }
           yield* events.publish(FileSystem.Event.Edited, { file: edited })
         }
@@ -305,12 +283,6 @@ export const ApplyPatchTool = Tool.define(
       })
       let output = `Success. Updated the following files:\n${summaryLines.join("\n")}`
 
-      // kilocode_change start
-      const changedPaths = fileChanges
-        .filter((c) => c.type !== "delete")
-        .map((c) => FSUtil.normalizePath(c.movePath ?? c.filePath))
-      // kilocode_change end
-
       for (const change of fileChanges) {
         if (change.type === "delete") continue
         const target = change.movePath ?? change.filePath
@@ -320,19 +292,12 @@ export const ApplyPatchTool = Tool.define(
         output += `\n\nLSP errors detected in ${rel}, please fix:\n${block}`
       }
 
-      // kilocode_change start - append Kilo config validation warnings
-      for (const changed of fileChanges) {
-        if (changed.type === "delete") continue
-        output += yield* Effect.promise(() => ConfigValidation.check(changed.movePath ?? changed.filePath))
-      }
-      // kilocode_change end
-
       return {
         title: output,
         metadata: {
           diff: totalDiff,
           files,
-          diagnostics: filterDiagnostics(diagnostics, changedPaths), // kilocode_change
+          diagnostics,
         },
         output,
       }

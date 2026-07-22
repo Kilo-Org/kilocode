@@ -1,10 +1,7 @@
 import { createConnection } from "net"
 import { createServer } from "http"
-import * as Log from "@opencode-ai/core/util/log" // kilocode_change
+import { escapeHtml } from "@/util/html"
 import { OAUTH_CALLBACK_PORT, OAUTH_CALLBACK_PATH, parseRedirectUri } from "./oauth-provider"
-import * as KiloOAuthCallback from "../kilocode/mcp-oauth-callback" // kilocode_change
-
-const log = Log.create({ service: "mcp.oauth-callback" }) // kilocode_change
 
 // Current callback server configuration (may differ from defaults if custom redirectUri is used)
 let currentPort = OAUTH_CALLBACK_PORT
@@ -13,9 +10,7 @@ let currentPath = OAUTH_CALLBACK_PATH
 const HTML_SUCCESS = `<!DOCTYPE html>
 <html>
 <head>
-  <!-- kilocode_change start -->
-  <title>Kilo - Authorization Successful</title>
-  <!-- kilocode_change end -->
+  <title>OpenCode - Authorization Successful</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
@@ -26,9 +21,7 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 <body>
   <div class="container">
     <h1>Authorization Successful</h1>
-    <!-- kilocode_change start -->
-    <p>You can close this window and return to Kilo.</p>
-    <!-- kilocode_change end -->
+    <p>You can close this window and return to OpenCode.</p>
   </div>
   <script>setTimeout(() => window.close(), 2000);</script>
 </body>
@@ -37,9 +30,7 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 const HTML_ERROR = (error: string) => `<!DOCTYPE html>
 <html>
 <head>
-  <!-- kilocode_change start -->
-  <title>Kilo - Authorization Failed</title>
-  <!-- kilocode_change end -->
+  <title>OpenCode - Authorization Failed</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
@@ -52,7 +43,7 @@ const HTML_ERROR = (error: string) => `<!DOCTYPE html>
   <div class="container">
     <h1>Authorization Failed</h1>
     <p>An error occurred during authorization.</p>
-    <div class="error">${error}</div>
+    <div class="error">${escapeHtml(error)}</div>
   </div>
 </body>
 </html>`
@@ -80,6 +71,13 @@ function cleanupStateIndex(oauthState: string) {
   }
 }
 
+function stopIfIdle() {
+  if (pendingAuths.size > 0 || !server) return
+
+  server.close()
+  server = undefined
+}
+
 function handleRequest(req: import("http").IncomingMessage, res: import("http").ServerResponse) {
   const url = new URL(req.url || "/", `http://localhost:${currentPort}`)
 
@@ -97,7 +95,7 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
   // Enforce state parameter presence
   if (!state) {
     const errorMsg = "Missing required state parameter - potential CSRF attack"
-    res.writeHead(400, { "Content-Type": "text/html" })
+    res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
     res.end(HTML_ERROR(errorMsg))
     return
   }
@@ -111,13 +109,14 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
       cleanupStateIndex(state)
       pending.reject(new Error(errorMsg))
     }
-    res.writeHead(200, { "Content-Type": "text/html" })
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
     res.end(HTML_ERROR(errorMsg))
+    stopIfIdle()
     return
   }
 
   if (!code) {
-    res.writeHead(400, { "Content-Type": "text/html" })
+    res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
     res.end(HTML_ERROR("No authorization code provided"))
     return
   }
@@ -125,7 +124,7 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
   // Validate state parameter
   if (!pendingAuths.has(state)) {
     const errorMsg = "Invalid or expired state parameter - potential CSRF attack"
-    res.writeHead(400, { "Content-Type": "text/html" })
+    res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
     res.end(HTML_ERROR(errorMsg))
     return
   }
@@ -137,29 +136,12 @@ function handleRequest(req: import("http").IncomingMessage, res: import("http").
   cleanupStateIndex(state)
   pending.resolve(code)
 
-  res.writeHead(200, { "Content-Type": "text/html" })
+  res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
   res.end(HTML_SUCCESS)
+  stopIfIdle()
 }
 
 export async function ensureRunning(redirectUri?: string): Promise<void> {
-  // kilocode_change start - delegate Kilo-specific callback binding from here because OAuth state lives in this module
-  await KiloOAuthCallback.ensureRunning({
-    redirectUri,
-    parse: parseRedirectUri,
-    state: () => ({ server, port: currentPort, path: currentPath }),
-    set: (next) => {
-      server = next.server
-      currentPort = next.port
-      currentPath = next.path
-    },
-    create: () => createServer(handleRequest),
-    stop,
-    info: (msg, data) => log.info(msg, data),
-    error: (msg, data) => log.error(msg, data),
-  })
-  return
-  // kilocode_change end
-
   // Parse the redirect URI to get port and path (uses defaults if not provided)
   const { port, path } = parseRedirectUri(redirectUri)
 
@@ -180,27 +162,10 @@ export async function ensureRunning(redirectUri?: string): Promise<void> {
 
   server = createServer(handleRequest)
   await new Promise<void>((resolve, reject) => {
-    // kilocode_change start - EADDRINUSE can still fire when another process
-    // races us between isPortInUse() and listen() (notably across parallel
-    // bun test subprocesses). Treat it as "another instance owns the port",
-    // matching the isPortInUse() branch above instead of crashing.
-    const onError = (err: Error & { code?: string }) => {
-      if (err.code === "EADDRINUSE") {
-        log.info("oauth callback port bound by another instance", { port: currentPort })
-        server?.close()
-        server = undefined
-        resolve()
-        return
-      }
-      reject(err)
-    }
-    server!.on("error", onError)
-    // kilocode_change end
     server!.listen(currentPort, () => {
-      server!.off("error", onError) // kilocode_change
-      log.info("oauth callback server started", { port: currentPort, path: currentPath })
       resolve()
     })
+    server!.on("error", reject)
   })
 }
 
@@ -212,6 +177,7 @@ export function waitForCallback(oauthState: string, mcpName?: string): Promise<s
         pendingAuths.delete(oauthState)
         if (mcpName) mcpNameToState.delete(mcpName)
         reject(new Error("OAuth callback timeout - authorization took too long"))
+        stopIfIdle()
       }
     }, CALLBACK_TIMEOUT_MS)
 
@@ -229,6 +195,7 @@ export function cancelPending(mcpName: string): void {
     pendingAuths.delete(key)
     mcpNameToState.delete(mcpName)
     pending.reject(new Error("Authorization cancelled"))
+    stopIfIdle()
   }
 }
 

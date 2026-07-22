@@ -1,7 +1,0 @@
-Generate a new image from a text prompt or edit an existing image using AI models through the Kilo Gateway or OpenRouter.
-
-Usage notes:
-  - Provide a `prompt` describing what to generate or how to edit
-  - Provide a `path` (relative to the workspace) where the resulting image should be saved — the extension is auto-appended (.png/.jpg) if missing
-  - Optionally provide an `image` path to an existing image to edit or transform (supports PNG, JPG, JPEG, GIF, WEBP)
-  - The tool writes the image to disk and returns it inline in the chat

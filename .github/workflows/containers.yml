@@ -3,7 +3,7 @@ name: containers
 on:
   push:
     branches:
-      - main # kilocode_change
+      - dev
     paths:
       - packages/containers/**
       - .github/workflows/containers.yml
@@ -16,18 +16,12 @@ permissions:
 
 jobs:
   build:
-    if: github.event_name == 'workflow_dispatch' || github.repository == 'Kilo-Org/kilocode' # kilocode_change
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    env:
+      REGISTRY: ghcr.io/${{ github.repository_owner }}
+      TAG: "24.04"
     steps:
-      # kilocode_change start
-      - name: Set lowercase repository owner
-        id: repo
-        run: echo "owner_lc=${OWNER,,}" >> $GITHUB_OUTPUT
-        env:
-          OWNER: ${{ github.repository_owner }}
-      # kilocode_change end
-
-      - uses: actions/checkout@v6 # kilocode_change
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: ./.github/actions/setup-bun
 
@@ -47,7 +41,5 @@ jobs:
       - name: Build and push containers
         run: bun ./packages/containers/script/build.ts --push
         env:
-          # kilocode_change start
-          REGISTRY: ghcr.io/${{ steps.repo.outputs.owner_lc }}
-          TAG: "24.04"
-          # kilocode_change end
+          REGISTRY: ${{ env.REGISTRY }}
+          TAG: ${{ env.TAG }}

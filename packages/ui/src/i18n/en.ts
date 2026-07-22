@@ -63,8 +63,6 @@ export const dict: Record<string, string> = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Open settings",
 
   "ui.sessionTurn.status.delegating": "Delegating work",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planning next steps",
   "ui.sessionTurn.status.gatheringContext": "Exploring",
   "ui.sessionTurn.status.gatheredContext": "Explored",
@@ -78,8 +76,6 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Considering next steps",
 
   "ui.messagePart.diagnostic.error": "Error",
-  "ui.messagePart.mcp.input": "Input",
-  "ui.messagePart.mcp.output": "Output",
   "ui.messagePart.title.edit": "Edit",
   "ui.messagePart.title.write": "Write",
   "ui.messagePart.option.typeOwnAnswer": "Type your own answer",
@@ -111,23 +107,10 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Copied",
 
   "ui.imagePreview.alt": "Image preview",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Rendering Mermaid diagram...",
-  "ui.mermaid.renderError": "Mermaid render failed: {{message}}",
-  "ui.mermaid.errorDefault": "Unable to render Mermaid diagram.",
-  "ui.mermaid.errorEmpty": "Mermaid rendered an empty diagram.",
-  "ui.mermaid.download": "Download",
-  "ui.mermaid.copySource": "Copy Mermaid source",
-  "ui.mermaid.copySvg": "Copy SVG",
-  "ui.mermaid.copyPng": "Copy PNG",
-  "ui.mermaid.downloadSvg": "Download SVG",
-  "ui.mermaid.downloadPng": "Download PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "scrollable content",
 
   "ui.tool.read": "Read",
   "ui.tool.loaded": "Loaded",
-  "ui.tool.swePruned": "SWE-Pruner · kept {{kept}} of {{total}} lines", // kilocode_change
   "ui.tool.list": "List",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -170,7 +153,7 @@ export const dict: Record<string, string> = {
   "ui.message.copy": "Copy",
   "ui.message.copyMessage": "Copy message",
   "ui.message.forkMessage": "Fork to new session",
-  "ui.message.revertMessage": "Revert to here",
+  "ui.message.revertMessage": "Revert message",
   "ui.message.copyResponse": "Copy response",
   "ui.message.copied": "Copied",
   "ui.message.duration.seconds": "{{count}}s",
@@ -185,9 +168,7 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Patched",
 
   "ui.question.subtitle.answered": "{{count}} answered",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(no answer)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(not answered)",
   "ui.question.multiHint": "Select all answers that apply",
   "ui.question.singleHint": "Select one answer",

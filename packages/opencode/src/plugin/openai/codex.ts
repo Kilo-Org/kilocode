@@ -1,35 +1,18 @@
 import type { Hooks, PluginInput } from "@kilocode/plugin"
-import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { OAUTH_DUMMY_KEY } from "../../auth"
 import os from "os"
 import { setTimeout as sleep } from "node:timers/promises"
 import { createServer } from "http"
-import { refreshCodexAuth } from "@/kilocode/provider/codex-refresh" // kilocode_change
 import { OpenAIWebSocketPool } from "./ws-pool"
-
-const log = Log.create({ service: "plugin.codex" }) // kilocode_change
+import { escapeHtml } from "@/util/html"
 
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 const ISSUER = "https://auth.openai.com"
 const CODEX_API_ENDPOINT = "https://chatgpt.com/backend-api/codex/responses"
 const OAUTH_PORT = 1455
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000
-const ALLOWED_MODELS = new Set([
-  "gpt-5.5",
-  "gpt-5.3-codex-spark",
-  "gpt-5.4",
-  "gpt-5.4-mini",
-  // kilocode_change start - additional codex models supported by Kilo
-  "gpt-5.1-codex",
-  "gpt-5.1-codex-max",
-  "gpt-5.1-codex-mini",
-  "gpt-5.2-codex",
-  // kilocode_change end
-])
-// kilocode_change start
-const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
-// kilocode_change end
+const ALLOWED_MODELS = new Set(["gpt-5.5", "gpt-5.3-codex-spark", "gpt-5.4", "gpt-5.4-mini"])
 
 interface PkceCodes {
   verifier: string
@@ -102,7 +85,7 @@ function buildAuthorizeUrl(redirectUri: string, pkce: PkceCodes, state: string):
     id_token_add_organizations: "true",
     codex_cli_simplified_flow: "true",
     state,
-    originator: "kilo", // kilocode_change
+    originator: "opencode",
   })
   return `${ISSUER}/oauth/authorize?${params.toString()}`
 }
@@ -138,13 +121,10 @@ async function exchangeCodeForTokens(code: string, redirectUri: string, pkce: Pk
   return response.json()
 }
 
-// kilocode_change start
-async function refreshAccessToken(refreshToken: string, issuer = ISSUER, signal?: AbortSignal): Promise<TokenResponse> {
+async function refreshAccessToken(refreshToken: string, issuer = ISSUER): Promise<TokenResponse> {
   const response = await fetch(`${issuer}/oauth/token`, {
     method: "POST",
-    signal,
-    headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": `kilo/${InstallationVersion}` },
-    // kilocode_change end
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: refreshToken,
@@ -160,9 +140,7 @@ async function refreshAccessToken(refreshToken: string, issuer = ISSUER, signal?
 const HTML_SUCCESS = `<!doctype html>
 <html>
   <head>
-    <!-- kilocode_change start -->
-    <title>Kilo - Codex Authorization Successful</title>
-    <!-- kilocode_change end -->
+    <title>OpenCode - Codex Authorization Successful</title>
     <style>
       body {
         font-family:
@@ -193,9 +171,7 @@ const HTML_SUCCESS = `<!doctype html>
   <body>
     <div class="container">
       <h1>Authorization Successful</h1>
-      <!-- kilocode_change start -->
-      <p>You can close this window and return to Kilo.</p>
-      <!-- kilocode_change end -->
+      <p>You can close this window and return to OpenCode.</p>
     </div>
     <script>
       setTimeout(() => window.close(), 2000)
@@ -203,12 +179,10 @@ const HTML_SUCCESS = `<!doctype html>
   </body>
 </html>`
 
-const HTML_ERROR = (error: string) => `<!doctype html>
+export const renderOAuthError = (error: string) => `<!doctype html>
 <html>
   <head>
-    <!-- kilocode_change start -->
-    <title>Kilo - Codex Authorization Failed</title>
-    <!-- kilocode_change end -->
+    <title>OpenCode - Codex Authorization Failed</title>
     <style>
       body {
         font-family:
@@ -248,7 +222,7 @@ const HTML_ERROR = (error: string) => `<!doctype html>
     <div class="container">
       <h1>Authorization Failed</h1>
       <p>An error occurred during authorization.</p>
-      <div class="error">${error}</div>
+      <div class="error">${escapeHtml(error)}</div>
     </div>
   </body>
 </html>`
@@ -281,8 +255,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         const errorMsg = errorDescription || error
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
-        res.writeHead(200, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(renderOAuthError(errorMsg))
         return
       }
 
@@ -290,8 +264,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         const errorMsg = "Missing authorization code"
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
-        res.writeHead(400, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(renderOAuthError(errorMsg))
         return
       }
 
@@ -299,8 +273,8 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         const errorMsg = "Invalid state - potential CSRF attack"
         pendingOAuth?.reject(new Error(errorMsg))
         pendingOAuth = undefined
-        res.writeHead(400, { "Content-Type": "text/html" })
-        res.end(HTML_ERROR(errorMsg))
+        res.writeHead(400, { "Content-Type": "text/html; charset=utf-8" })
+        res.end(renderOAuthError(errorMsg))
         return
       }
 
@@ -311,7 +285,7 @@ async function startOAuthServer(): Promise<{ port: number; redirectUri: string }
         .then((tokens) => current.resolve(tokens))
         .catch((err) => current.reject(err))
 
-      res.writeHead(200, { "Content-Type": "text/html" })
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" })
       res.end(HTML_SUCCESS)
       return
     }
@@ -396,7 +370,6 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
           Object.entries(provider.models)
             .filter(([, model]) => {
               if (ALLOWED_MODELS.has(model.api.id)) return true
-              if (DISALLOWED_MODELS.has(model.api.id)) return false // kilocode_change
               const match = model.api.id.match(/^gpt-(\d+\.\d+)/)
               return match ? parseFloat(match[1]) > 5.4 : false
             })
@@ -464,23 +437,27 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
 
             if (!currentAuth.access || currentAuth.expires < Date.now()) {
               if (!refreshPromise) {
-                log.info("refreshing codex access token")
-                // kilocode_change start
-                refreshPromise = refreshCodexAuth({
-                  input,
-                  getAuth,
-                  auth: currentAuth,
-                  refresh: (token, signal) => refreshAccessToken(token, issuer, signal),
-                  account: extractAccountId,
-                })
-                  .then((auth) => ({
-                    access: auth.access,
-                    accountId: auth.accountId,
-                  }))
+                refreshPromise = refreshAccessToken(currentAuth.refresh, issuer)
+                  .then(async (tokens) => {
+                    const accountId = extractAccountId(tokens) || authWithAccount.accountId
+                    await input.client.auth.set({
+                      path: { id: "openai" },
+                      body: {
+                        type: "oauth",
+                        refresh: tokens.refresh_token,
+                        access: tokens.access_token,
+                        expires: Date.now() + (tokens.expires_in ?? 3600) * 1000,
+                        ...(accountId && { accountId }),
+                      },
+                    })
+                    return {
+                      access: tokens.access_token,
+                      accountId,
+                    }
+                  })
                   .finally(() => {
                     refreshPromise = undefined
                   })
-                // kilocode_change end
               }
 
               const refreshed = await refreshPromise

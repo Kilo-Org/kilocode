@@ -1,5 +1,4 @@
 import { afterEach, describe, expect } from "bun:test"
-import { realpath } from "node:fs/promises" // kilocode_change
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { eq } from "drizzle-orm"
@@ -276,8 +275,7 @@ describe("experimental HttpApi", () => {
           Effect.gen(function* () {
             const listed = yield* request(ExperimentalPaths.worktree, tmp.directory)
             expect(listed.status).toBe(200)
-            const directory = yield* Effect.promise(() => realpath(info.directory)) // kilocode_change
-            expect(yield* json(listed)).toContainEqual({ directory, managed: true }) // kilocode_change
+            expect(yield* json(listed)).toContain(info.directory)
 
             const reset = yield* request(ExperimentalPaths.worktreeReset, tmp.directory, {
               method: "POST",

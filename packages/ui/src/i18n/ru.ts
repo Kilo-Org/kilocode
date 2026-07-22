@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "Изменения сессии",
-  "ui.sessionReview.title.git": "Изменения Git",
-  "ui.sessionReview.title.branch": "Изменения ветки",
   "ui.sessionReview.title.lastTurn": "Изменения последнего хода",
   "ui.sessionReview.diffStyle.unified": "Объединённый",
   "ui.sessionReview.diffStyle.split": "Разделённый",
@@ -38,10 +36,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Скрыть шаги",
   "ui.sessionTurn.summary.response": "Ответ",
   "ui.sessionTurn.diff.showMore": "Показать ещё изменений ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Изменено",
-  "ui.sessionTurn.diffs.showAll": "Показать все",
-  "ui.sessionTurn.diffs.showLess": "Показать меньше",
-  "ui.sessionTurn.diffs.more": "Еще +{{count}} файлов",
 
   "ui.sessionTurn.retry.retrying": "повтор",
   "ui.sessionTurn.retry.inSeconds": "через {{seconds}}с",
@@ -61,8 +55,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Открыть настройки",
 
   "ui.sessionTurn.status.delegating": "Делегирование работы",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Планирование следующих шагов",
   "ui.sessionTurn.status.gatheringContext": "Исследование",
   "ui.sessionTurn.status.gatheredContext": "Исследовано",
@@ -84,8 +76,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} список",
   "ui.messagePart.context.list.other": "{{count}} списков",
   "ui.messagePart.diagnostic.error": "Ошибка",
-  "ui.messagePart.mcp.input": "Ввод",
-  "ui.messagePart.mcp.output": "Вывод",
   "ui.messagePart.title.edit": "Редактировать",
   "ui.messagePart.title.write": "Написать",
   "ui.messagePart.option.typeOwnAnswer": "Введите свой ответ",
@@ -104,23 +94,10 @@ export const dict = {
   "ui.textField.copied": "Скопировано",
 
   "ui.imagePreview.alt": "Предпросмотр изображения",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Отрисовка диаграммы Mermaid...",
-  "ui.mermaid.renderError": "Не удалось отрисовать Mermaid: {{message}}",
-  "ui.mermaid.errorDefault": "Не удалось отрисовать диаграмму Mermaid.",
-  "ui.mermaid.errorEmpty": "Mermaid отрисовал пустую диаграмму.",
-  "ui.mermaid.download": "Скачать",
-  "ui.mermaid.copySource": "Копировать исходный код Mermaid",
-  "ui.mermaid.copySvg": "Копировать SVG",
-  "ui.mermaid.copyPng": "Копировать PNG",
-  "ui.mermaid.downloadSvg": "Скачать SVG",
-  "ui.mermaid.downloadPng": "Скачать PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "прокручиваемый контент",
 
   "ui.tool.read": "Чтение",
   "ui.tool.loaded": "Загружено",
-  "ui.tool.swePruned": "SWE-Pruner · сохранено {{kept}} из {{total}} строк", // kilocode_change
   "ui.tool.list": "Список",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -160,7 +137,6 @@ export const dict = {
   "ui.message.revertMessage": "Сбросить до этого момента",
   "ui.message.copyResponse": "Копировать ответ",
   "ui.message.copied": "Скопировано!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Прервано",
   "ui.message.queued": "В очереди",
   "ui.message.attachment.alt": "вложение",
@@ -171,9 +147,7 @@ export const dict = {
   "ui.patch.action.patched": "Изменено",
 
   "ui.question.subtitle.answered": "{{count}} отвечено",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(нет ответа)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(не отвечено)",
   "ui.question.multiHint": "Выберите все подходящие",
   "ui.question.singleHint": "Выберите один ответ",

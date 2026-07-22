@@ -11,7 +11,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8"))
 
-// kilocode_change start - variant detection matching bin/kilo logic
 const platformMap = {
   darwin: "darwin",
   linux: "linux",
@@ -25,9 +24,9 @@ const archMap = {
 
 const platform = platformMap[os.platform()] ?? os.platform()
 const arch = archMap[os.arch()] ?? os.arch()
-const base = `@kilocode/cli-${platform}-${arch}`
-const sourceBinary = platform === "windows" ? "kilo.exe" : "kilo"
-const targetBinary = path.join(__dirname, "bin", ".kilo")
+const base = `opencode-${platform}-${arch}`
+const sourceBinary = platform === "windows" ? "opencode.exe" : "opencode"
+const targetBinary = path.join(__dirname, "bin", "opencode.exe")
 
 function supportsAvx2() {
   if (arch !== "x64") return false
@@ -123,55 +122,42 @@ function resolveBinary(name) {
   if (!fs.existsSync(binaryPath)) throw new Error(`Binary not found at ${binaryPath}`)
   return binaryPath
 }
-// kilocode_change end
 
-// kilocode_change start - copy runtime resources next to cached binary
-function copyResources(source) {
-  for (const [name, entry] of [
-    ["tree-sitter", "tree-sitter.wasm"],
-    ["console", "index.html"],
-  ]) {
-    const dir = path.join(path.dirname(source), name)
-    if (!fs.existsSync(path.join(dir, entry))) continue
-    const target = path.join(__dirname, "bin", name)
-    fs.rmSync(target, { recursive: true, force: true })
-    fs.cpSync(dir, target, { recursive: true })
-  }
+function installPackage(name) {
+  const version = packageJson.optionalDependencies?.[name]
+  if (!version) return
 
-  const bwrap = path.join(path.dirname(source), "bwrap")
-  if (fs.existsSync(bwrap)) {
-    const target = path.join(__dirname, "bin", "bwrap")
-    fs.copyFileSync(bwrap, target)
-    fs.chmodSync(target, 0o755)
-  }
-
-  const licenses = path.join(path.dirname(source), "licenses")
-  if (fs.existsSync(licenses)) {
-    const target = path.join(__dirname, "bin", "licenses")
-    fs.rmSync(target, { recursive: true, force: true })
-    fs.cpSync(licenses, target, { recursive: true })
-  }
-
-  const worker = path.join(path.dirname(source), "kilo-sandbox-mutation-worker.js")
-  if (fs.existsSync(worker)) fs.copyFileSync(worker, path.join(__dirname, "bin", "kilo-sandbox-mutation-worker.js"))
-}
-
-function copyBinary(source) {
-  if (!fs.existsSync(source)) throw new Error(`Binary not found at ${source}`)
-  fs.mkdirSync(path.dirname(targetBinary), { recursive: true })
-  if (fs.existsSync(targetBinary)) fs.unlinkSync(targetBinary)
+  const temp = fs.mkdtempSync(path.join(os.tmpdir(), "opencode-install-"))
   try {
-    fs.linkSync(source, targetBinary)
-  } catch {
-    fs.copyFileSync(source, targetBinary)
+    const result = childProcess.spawnSync(
+      "npm",
+      ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
+      { stdio: "inherit", windowsHide: true },
+    )
+    if (result.status !== 0) return
+    const packageDir = path.join(temp, "node_modules", name)
+    copyBinary(path.join(packageDir, "bin", sourceBinary), targetBinary)
+    return true
+  } finally {
+    fs.rmSync(temp, { recursive: true, force: true })
   }
-  copyResources(source)
-  fs.chmodSync(targetBinary, 0o755)
 }
-// kilocode_change end
+
+function copyBinary(source, target) {
+  if (!fs.existsSync(source)) throw new Error(`Binary not found at ${source}`)
+  fs.mkdirSync(path.dirname(target), { recursive: true })
+  if (fs.existsSync(target)) fs.unlinkSync(target)
+  try {
+    fs.linkSync(source, target)
+  } catch {
+    fs.copyFileSync(source, target)
+  }
+  fs.chmodSync(target, 0o755)
+}
 
 function verifyBinary() {
   const result = childProcess.spawnSync(targetBinary, ["--version"], {
+    encoding: "utf8",
     stdio: "ignore",
     windowsHide: true,
   })
@@ -179,36 +165,17 @@ function verifyBinary() {
 }
 
 function main() {
-  if (platform === "windows") {
-    console.log("Windows detected: binary setup not needed (using packaged wrapper)")
-    return
-  }
-
   for (const name of packageNames()) {
     try {
-      copyBinary(resolveBinary(name))
+      copyBinary(resolveBinary(name), targetBinary)
       if (verifyBinary()) return
     } catch {
-      const temp = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-install-"))
-      try {
-        const version = packageJson.optionalDependencies?.[name]
-        if (!version) continue
-        const result = childProcess.spawnSync(
-          "npm",
-          ["install", "--ignore-scripts", "--no-save", "--loglevel=error", "--prefix", temp, `${name}@${version}`],
-          { stdio: "inherit", windowsHide: true },
-        )
-        if (result.status !== 0) continue
-        copyBinary(path.join(temp, "node_modules", name, "bin", sourceBinary))
-        if (verifyBinary()) return
-      } finally {
-        fs.rmSync(temp, { recursive: true, force: true })
-      }
+      if (installPackage(name) && verifyBinary()) return
     }
   }
 
   throw new Error(
-    `It seems your package manager failed to install the right Kilo CLI package. Try manually installing ${packageNames()
+    `It seems your package manager failed to install the right opencode CLI package. Try manually installing ${packageNames()
       .map((name) => JSON.stringify(name))
       .join(" or ")}.`,
   )
@@ -217,6 +184,6 @@ function main() {
 try {
   main()
 } catch (error) {
-  console.error("Failed to setup kilo binary:", error.message)
+  console.error(error.message)
   process.exit(1)
 }

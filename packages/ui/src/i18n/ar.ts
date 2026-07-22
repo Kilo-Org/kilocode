@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "تغييرات الجلسة",
-  "ui.sessionReview.title.git": "تغييرات Git",
-  "ui.sessionReview.title.branch": "تغييرات الفرع",
   "ui.sessionReview.title.lastTurn": "تغييرات آخر دور",
   "ui.sessionReview.diffStyle.unified": "موحد",
   "ui.sessionReview.diffStyle.split": "منقسم",
@@ -39,10 +37,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "إخفاء الخطوات",
   "ui.sessionTurn.summary.response": "استجابة",
   "ui.sessionTurn.diff.showMore": "إظهار المزيد من التغييرات ({{count}})",
-  "ui.sessionTurn.diffs.changed": "تم التغيير",
-  "ui.sessionTurn.diffs.showAll": "إظهار الكل",
-  "ui.sessionTurn.diffs.showLess": "إظهار أقل",
-  "ui.sessionTurn.diffs.more": "+{{count}} ملفات أخرى",
 
   "ui.sessionTurn.retry.retrying": "إعادة المحاولة",
   "ui.sessionTurn.retry.inSeconds": "خلال {{seconds}} ثواني",
@@ -62,8 +56,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "فتح الإعدادات",
 
   "ui.sessionTurn.status.delegating": "تفويض العمل",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "تخطيط الخطوات التالية",
   "ui.sessionTurn.status.gatheringContext": "استكشاف",
   "ui.sessionTurn.status.gatheredContext": "تم الاستكشاف",
@@ -85,8 +77,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} قائمة",
   "ui.messagePart.context.list.other": "{{count}} قوائم",
   "ui.messagePart.diagnostic.error": "خطأ",
-  "ui.messagePart.mcp.input": "الإدخال",
-  "ui.messagePart.mcp.output": "الإخراج",
   "ui.messagePart.title.edit": "تحرير",
   "ui.messagePart.title.write": "كتابة",
   "ui.messagePart.option.typeOwnAnswer": "اكتب إجابتك الخاصة",
@@ -105,23 +95,10 @@ export const dict = {
   "ui.textField.copied": "تم النسخ",
 
   "ui.imagePreview.alt": "معاينة الصورة",
-  // kilocode_change start
-  "ui.mermaid.rendering": "جارٍ عرض مخطط Mermaid...",
-  "ui.mermaid.renderError": "فشل عرض Mermaid: {{message}}",
-  "ui.mermaid.errorDefault": "تعذر عرض مخطط Mermaid.",
-  "ui.mermaid.errorEmpty": "عرض Mermaid مخططًا فارغًا.",
-  "ui.mermaid.download": "تنزيل",
-  "ui.mermaid.copySource": "نسخ مصدر Mermaid",
-  "ui.mermaid.copySvg": "نسخ SVG",
-  "ui.mermaid.copyPng": "نسخ PNG",
-  "ui.mermaid.downloadSvg": "تنزيل SVG",
-  "ui.mermaid.downloadPng": "تنزيل PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "محتوى قابل للتمرير",
 
   "ui.tool.read": "قراءة",
   "ui.tool.loaded": "تم التحميل",
-  "ui.tool.swePruned": "SWE-Pruner · تم الاحتفاظ بـ {{kept}} من {{total}} سطرًا", // kilocode_change
   "ui.tool.list": "قائمة",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -161,7 +138,6 @@ export const dict = {
   "ui.message.revertMessage": "إعادة التعيين إلى هذه النقطة",
   "ui.message.copyResponse": "نسخ الرد",
   "ui.message.copied": "تم النسخ!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "تمت المقاطعة",
   "ui.message.queued": "في الانتظار",
   "ui.message.attachment.alt": "مرفق",
@@ -172,9 +148,7 @@ export const dict = {
   "ui.patch.action.patched": "مصحح",
 
   "ui.question.subtitle.answered": "{{count}} أجيب",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(لا توجد إجابة)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(لم يتم الرد)",
   "ui.question.multiHint": "حدد كل ما ينطبق",
   "ui.question.singleHint": "حدد إجابة واحدة",

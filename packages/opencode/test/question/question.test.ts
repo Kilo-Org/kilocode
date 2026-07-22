@@ -24,7 +24,6 @@ const lifecycle = testEffect(
 const askEffect = Effect.fn("QuestionTest.ask")(function* (input: {
   sessionID: SessionID
   questions: ReadonlyArray<Question.Info>
-  blocking?: boolean // kilocode_change
   tool?: Question.Tool
 }) {
   const question = yield* Question.Service
@@ -126,35 +125,6 @@ it.instance(
   { git: true },
 )
 
-// kilocode_change start - review follow-up uses non-blocking question prompts
-it.instance(
-  "ask - preserves blocking flag",
-  () =>
-    Effect.gen(function* () {
-      const fiber = yield* askEffect({
-        sessionID: SessionID.make("ses_test"),
-        blocking: false,
-        questions: [
-          {
-            question: "Proceed with review suggestion?",
-            header: "Code review",
-            options: [{ label: "Start", description: "Run review" }],
-          },
-        ],
-      }).pipe(Effect.forkScoped)
-
-      const pending = yield* waitForPending(1)
-      expect(pending[0]?.blocking).toBe(false)
-
-      yield* rejectEffect(pending[0].id)
-      const exit = yield* Fiber.await(fiber)
-      expect(Exit.isFailure(exit)).toBe(true)
-      if (Exit.isFailure(exit)) expect(Cause.squash(exit.cause)).toBeInstanceOf(Question.RejectedError)
-    }),
-  { git: true },
-)
-// kilocode_change end
-
 // reply tests
 
 it.instance(
@@ -234,11 +204,6 @@ it.instance(
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         expect(Cause.squash(exit.cause)).toMatchObject({ _tag: "Question.NotFoundError", requestID: "que_unknown" })
-        // kilocode_change start - preserve upstream unknown-request failure behavior during facade migration
-        const err = Cause.squash(exit.cause)
-        expect(err).toBeInstanceOf(Question.NotFoundError)
-        if (err instanceof Question.NotFoundError) expect(err.requestID).toBe(QuestionID.make("que_unknown"))
-        // kilocode_change end
       }
     }),
   { git: true },
@@ -312,11 +277,6 @@ it.instance(
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) {
         expect(Cause.squash(exit.cause)).toMatchObject({ _tag: "Question.NotFoundError", requestID: "que_unknown" })
-        // kilocode_change start - preserve upstream unknown-request failure behavior during facade migration
-        const err = Cause.squash(exit.cause)
-        expect(err).toBeInstanceOf(Question.NotFoundError)
-        if (err instanceof Question.NotFoundError) expect(err.requestID).toBe(QuestionID.make("que_unknown"))
-        // kilocode_change end
       }
     }),
   { git: true },

@@ -7,7 +7,6 @@ import { Permission } from "../../src/permission"
 import { SystemPrompt } from "../../src/session/system"
 import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 import { testEffect } from "../lib/effect"
-import { Config } from "../../src/config/config" // kilocode_change
 
 const skills: Skill.Info[] = [
   {
@@ -45,7 +44,6 @@ const build: Agent.Info = {
 const it = testEffect(
   SystemPrompt.layer.pipe(
     Layer.provide(LocationServiceMap.layer),
-    Layer.provide(Config.defaultLayer), // kilocode_change
     Layer.provide(
       Layer.succeed(
         Skill.Service,

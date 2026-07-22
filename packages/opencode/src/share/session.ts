@@ -4,7 +4,7 @@ import { SessionID } from "@/session/schema"
 import { Effect, Layer, Scope, Context } from "effect"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { KiloSession } from "@/kilocode/session" // kilocode_change
+import { ShareNext } from "./share-next"
 
 export interface Interface {
   readonly create: (input?: Session.CreateInput) => Effect.Effect<Session.Info>
@@ -19,19 +19,20 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const cfg = yield* Config.Service
     const session = yield* Session.Service
+    const shareNext = yield* ShareNext.Service
     const scope = yield* Scope.Scope
     const flags = yield* RuntimeFlags.Service
 
     const share = Effect.fn("SessionShare.share")(function* (sessionID: SessionID) {
       const conf = yield* cfg.get()
       if (conf.share === "disabled") throw new Error("Sharing is disabled in configuration")
-      const result = yield* KiloSession.shareSession(sessionID) // kilocode_change - use Kilo public share URLs
+      const result = yield* shareNext.create(sessionID)
       yield* session.setShare({ sessionID, share: { url: result.url } })
       return result
     })
 
     const unshare = Effect.fn("SessionShare.unshare")(function* (sessionID: SessionID) {
-      yield* KiloSession.unshareSession(sessionID) // kilocode_change - use Kilo public share URLs
+      yield* shareNext.remove(sessionID)
       yield* session.setShare({ sessionID, share: undefined })
     })
 
@@ -49,11 +50,12 @@ export const layer = Layer.effect(
 )
 
 export const defaultLayer = layer.pipe(
+  Layer.provide(ShareNext.defaultLayer),
   Layer.provide(Session.defaultLayer),
   Layer.provide(Config.defaultLayer),
   Layer.provide(RuntimeFlags.defaultLayer),
 )
 
-export const node = LayerNode.make(layer, [Config.node, Session.node, RuntimeFlags.node]) // kilocode_change
+export const node = LayerNode.make(layer, [Config.node, Session.node, ShareNext.node, RuntimeFlags.node])
 
 export * as SessionShare from "./session"

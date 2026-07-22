@@ -12,6 +12,7 @@ export type Runtime = {
   Tui: typeof import("../../../src/server/shared/tui-control")
   disposeAllInstances: (typeof import("../../fixture/fixture"))["disposeAllInstances"]
   tmpdir: (typeof import("../../fixture/fixture"))["tmpdir"]
+  resetDatabase: (typeof import("../../fixture/db"))["resetDatabase"]
 }
 
 let runtimePromise: Promise<Runtime> | undefined
@@ -30,6 +31,7 @@ export function runtime() {
     const project = await import("../../../src/project/project")
     const tui = await import("../../../src/server/shared/tui-control")
     const fixture = await import("../../fixture/fixture")
+    const db = await import("../../fixture/db")
     return {
       PublicApi: publicApi.PublicApi,
       HttpApiApp: httpApiServer.HttpApiApp,
@@ -44,6 +46,7 @@ export function runtime() {
       Tui: tui,
       disposeAllInstances: fixture.disposeAllInstances,
       tmpdir: fixture.tmpdir,
+      resetDatabase: db.resetDatabase,
     }
   })())
 }

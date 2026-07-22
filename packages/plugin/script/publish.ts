@@ -31,7 +31,7 @@ if (await published(pkg.name, pkg.version)) {
   await Bun.write("package.json", JSON.stringify(pkg, null, 2))
   try {
     await $`bun pm pack`
-    await $`npm publish *.tgz --tag ${Script.channel} --access public --provenance` // kilocode_change
+    await $`npm publish *.tgz --tag ${Script.channel} --access public`
   } finally {
     await Bun.write("package.json", originalText)
   }

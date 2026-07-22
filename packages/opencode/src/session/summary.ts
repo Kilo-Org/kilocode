@@ -5,8 +5,6 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { Snapshot } from "@/snapshot"
 import { Session } from "./session"
 import { SessionID, MessageID } from "./schema"
-import { appendSessionDiffs, readSessionDiffBase } from "@/kilocode/session-portability/cumulative-diff" // kilocode_change
-import { Storage } from "@/storage/storage" // kilocode_change
 import { Config } from "@/config/config"
 
 function unquoteGitPath(input: string) {
@@ -80,7 +78,6 @@ export const layer = Layer.effect(
     const snapshot = yield* Snapshot.Service
     const events = yield* EventV2Bridge.Service
     const config = yield* Config.Service
-    const storage = yield* Storage.Service // kilocode_change
 
     const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: SessionV1.WithParts[] }) {
       let from: string | undefined
@@ -106,62 +103,31 @@ export const layer = Layer.effect(
       sessionID: SessionID
       messageID: MessageID
     }) {
+      yield* sessions.setSummary({
+        sessionID: input.sessionID,
+        summary: {
+          additions: 0,
+          deletions: 0,
+          files: 0,
+        },
+      })
+      yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: [] })
+      if ((yield* config.get()).snapshot === false) return
       const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
       if (!all.length) return
-      if ((yield* config.get()).snapshot === false) return // kilocode_change - respect snapshot config toggle
 
-      // kilocode_change start - preserve imported cumulative diffs when summarizing cloud-forked sessions
-      const base = yield* readSessionDiffBase(storage, input.sessionID)
       const messages = all.filter(
         (m) => m.info.id === input.messageID || (m.info.role === "assistant" && m.info.parentID === input.messageID),
       )
       const target = messages.find((m) => m.info.id === input.messageID)
-      const local = base.length > 0 && target?.info.role === "user" ? yield* computeDiff({ messages }) : []
-      const diffs =
-        base.length > 0
-          ? yield* storage.read<Snapshot.FileDiff[]>(["session_diff", input.sessionID]).pipe(
-              Effect.orElseSucceed((): Snapshot.FileDiff[] => base),
-              Effect.map((existing) =>
-                appendSessionDiffs({ existing: existing.length > 0 ? existing : base, next: local }),
-              ),
-            )
-          : yield* computeDiff({ messages: all })
-      // kilocode_change end
-      yield* sessions.setSummary({
-        sessionID: input.sessionID,
-        summary: {
-          additions: diffs.reduce((sum, x) => sum + x.additions, 0),
-          deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
-          files: diffs.length,
-        },
-      })
-      yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore) // kilocode_change
-      yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
-
       if (!target || target.info.role !== "user") return
-      const msgDiffs = base.length > 0 ? local : yield* computeDiff({ messages }) // kilocode_change
+      const msgDiffs = yield* computeDiff({ messages })
       target.info.summary = { ...target.info.summary, diffs: msgDiffs }
       yield* sessions.updateMessage(target.info)
     })
 
     const diff = Effect.fn("SessionSummary.diff")(function* (input: { sessionID: SessionID; messageID?: MessageID }) {
-      // kilocode_change start - retain cumulative diffs for legacy TUI and VS Code consumers
-      if (!input.messageID) {
-        const diffs = yield* storage
-          .read<Snapshot.FileDiff[]>(["session_diff", input.sessionID])
-          .pipe(Effect.catch(() => Effect.succeed([] as Snapshot.FileDiff[])))
-        const next = diffs.map((item) => {
-          const file = item.file === undefined ? undefined : unquoteGitPath(item.file)
-          const oversized = item.patch !== undefined && Buffer.byteLength(item.patch) > Snapshot.MAX_DIFF_SIZE
-          if (file === item.file && !oversized) return item
-          return { ...item, ...(file === undefined ? {} : { file }), ...(oversized ? { patch: "" } : {}) }
-        })
-        if (next.some((item, index) => item !== diffs[index])) {
-          yield* storage.write(["session_diff", input.sessionID], next).pipe(Effect.ignore)
-        }
-        return next
-      }
-      // kilocode_change end
+      if (!input.messageID) return []
       const message = (yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)).find(
         (item) => item.info.id === input.messageID,
       )
@@ -185,7 +151,6 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Snapshot.defaultLayer),
     Layer.provide(EventV2Bridge.defaultLayer),
     Layer.provide(Config.defaultLayer),
-    Layer.provide(Storage.defaultLayer), // kilocode_change
   ),
 )
 
@@ -195,12 +160,6 @@ export const DiffInput = Schema.Struct({
 })
 export type DiffInput = Schema.Schema.Type<typeof DiffInput>
 
-export const node = LayerNode.make(layer, [
-  Session.node,
-  Snapshot.node,
-  EventV2Bridge.node,
-  Config.node,
-  Storage.node, // kilocode_change
-])
+export const node = LayerNode.make(layer, [Session.node, Snapshot.node, EventV2Bridge.node, Config.node])
 
 export * as SessionSummary from "./summary"

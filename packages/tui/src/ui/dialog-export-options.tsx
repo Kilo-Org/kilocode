@@ -124,13 +124,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "thinking" ? theme.backgroundElement : undefined}
-          onMouseUp={
-            () => {
-              // kilocode_change start
-              setStore("active", "thinking")
-              setStore("thinking", !store.thinking)
-            } /* kilocode_change end */
-          }
+          onMouseUp={() => setStore("active", "thinking")}
         >
           <text fg={store.active === "thinking" ? theme.primary : theme.textMuted}>
             {store.thinking ? "[x]" : "[ ]"}
@@ -142,13 +136,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "toolDetails" ? theme.backgroundElement : undefined}
-          onMouseUp={
-            () => {
-              // kilocode_change start
-              setStore("active", "toolDetails")
-              setStore("toolDetails", !store.toolDetails)
-            } /* kilocode_change end */
-          }
+          onMouseUp={() => setStore("active", "toolDetails")}
         >
           <text fg={store.active === "toolDetails" ? theme.primary : theme.textMuted}>
             {store.toolDetails ? "[x]" : "[ ]"}
@@ -160,13 +148,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "assistantMetadata" ? theme.backgroundElement : undefined}
-          onMouseUp={
-            () => {
-              // kilocode_change start
-              setStore("active", "assistantMetadata")
-              setStore("assistantMetadata", !store.assistantMetadata)
-            } /* kilocode_change end */
-          }
+          onMouseUp={() => setStore("active", "assistantMetadata")}
         >
           <text fg={store.active === "assistantMetadata" ? theme.primary : theme.textMuted}>
             {store.assistantMetadata ? "[x]" : "[ ]"}
@@ -178,13 +160,7 @@ export function DialogExportOptions(props: DialogExportOptionsProps) {
           gap={2}
           paddingLeft={1}
           backgroundColor={store.active === "openWithoutSaving" ? theme.backgroundElement : undefined}
-          onMouseUp={
-            () => {
-              // kilocode_change start
-              setStore("active", "openWithoutSaving")
-              setStore("openWithoutSaving", !store.openWithoutSaving)
-            } /* kilocode_change end */
-          }
+          onMouseUp={() => setStore("active", "openWithoutSaving")}
         >
           <text fg={store.active === "openWithoutSaving" ? theme.primary : theme.textMuted}>
             {store.openWithoutSaving ? "[x]" : "[ ]"}

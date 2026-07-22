@@ -162,45 +162,6 @@ describe("Config", () => {
     ),
   )
 
-  // kilocode_change start
-  it.live("skips project configuration when project discovery is disabled", () =>
-    Effect.acquireRelease(
-      Effect.promise(() => tmpdir()),
-      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
-    ).pipe(
-      Effect.flatMap((tmp) =>
-        Effect.gen(function* () {
-          const project = path.join(tmp.path, "project")
-          const global = path.join(tmp.path, "global")
-          yield* Effect.promise(async () => {
-            await Promise.all([fs.mkdir(project, { recursive: true }), fs.mkdir(global, { recursive: true })])
-            await Promise.all([
-              fs.writeFile(path.join(project, "kilo.json"), JSON.stringify({ model: "project/model" })),
-              fs.writeFile(path.join(global, "kilo.json"), JSON.stringify({ model: "global/model" })),
-            ])
-          })
-
-          const prior = process.env.KILO_DISABLE_PROJECT_CONFIG
-          process.env.KILO_DISABLE_PROJECT_CONFIG = "1"
-          yield* Effect.addFinalizer(() =>
-            Effect.sync(() => {
-              if (prior === undefined) delete process.env.KILO_DISABLE_PROJECT_CONFIG
-              else process.env.KILO_DISABLE_PROJECT_CONFIG = prior
-            }),
-          )
-
-          return yield* Effect.gen(function* () {
-            const config = yield* Config.Service
-            const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
-
-            expect(documents.map((document) => document.info.model)).toEqual(["global/model"])
-          }).pipe(Effect.provide(testLayer(project, global, project)))
-        }),
-      ),
-    ),
-  )
-            // kilocode_change end
-
   it.live("loads JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -738,8 +699,7 @@ describe("Config", () => {
     ),
   )
 
-  // kilocode_change start - V2 config discovery follows Kilo roots and precedence
-  it.live("loads Kilo configuration roots up to the project boundary", () =>
+  it.live("loads global, ancestor, and .opencode configuration up to the project boundary", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -753,25 +713,19 @@ describe("Config", () => {
           yield* Effect.promise(async () => {
             await fs.mkdir(global, { recursive: true })
             await fs.mkdir(directory, { recursive: true })
-            await Promise.all(
-              [root, directory].flatMap((dir) =>
-                [".kilocode", ".kilo", ".opencode"].map((name) => fs.mkdir(path.join(dir, name), { recursive: true })),
-              ),
-            )
+            await fs.mkdir(path.join(root, ".opencode"), { recursive: true })
+            await fs.mkdir(path.join(directory, ".opencode"), { recursive: true })
             await Promise.all([
               fs.writeFile(path.join(tmp.path, "opencode.json"), JSON.stringify({ $schema: "outside" })),
-              fs.writeFile(path.join(global, "kilo.json"), JSON.stringify({ $schema: "global" })),
-              fs.writeFile(path.join(root, "kilo.json"), JSON.stringify({ $schema: "root" })),
+              fs.writeFile(path.join(global, "opencode.json"), JSON.stringify({ $schema: "global" })),
+              fs.writeFile(path.join(root, "opencode.json"), JSON.stringify({ $schema: "root" })),
               fs.writeFile(path.join(parent, "opencode.jsonc"), JSON.stringify({ $schema: "parent" })),
               fs.writeFile(path.join(directory, "config.json"), JSON.stringify({ $schema: "directory" })),
-              fs.writeFile(path.join(root, ".kilocode", "opencode.json"), JSON.stringify({ $schema: "root-kilocode" })),
-              fs.writeFile(path.join(root, ".kilo", "kilo.json"), JSON.stringify({ $schema: "root-kilo" })),
+              fs.writeFile(path.join(root, ".opencode", "opencode.json"), JSON.stringify({ $schema: "root-dot" })),
               fs.writeFile(
-                path.join(directory, ".kilocode", "opencode.jsonc"),
-                JSON.stringify({ $schema: "directory-kilocode" }),
+                path.join(directory, ".opencode", "opencode.jsonc"),
+                JSON.stringify({ $schema: "directory-dot" }),
               ),
-              fs.writeFile(path.join(directory, ".kilo", "kilo.jsonc"), JSON.stringify({ $schema: "directory-kilo" })),
-              fs.writeFile(path.join(root, ".opencode", "opencode.json"), JSON.stringify({ $schema: "ignored" })),
             ])
           })
 
@@ -782,36 +736,27 @@ describe("Config", () => {
 
             expect(entries.filter((entry) => entry.type === "directory").map((entry) => entry.path)).toEqual([
               AbsolutePath.make(global),
-              AbsolutePath.make(path.join(root, ".kilocode")),
-              AbsolutePath.make(path.join(root, ".kilo")),
-              AbsolutePath.make(path.join(directory, ".kilocode")),
-              AbsolutePath.make(path.join(directory, ".kilo")),
+              AbsolutePath.make(path.join(root, ".opencode")),
+              AbsolutePath.make(path.join(directory, ".opencode")),
             ])
             expect(documents.map((document) => document.info.$schema)).toEqual([
               "global",
               "root",
               "parent",
               "directory",
-              "root-kilocode",
-              "root-kilo",
-              "directory-kilocode",
-              "directory-kilo",
+              "root-dot",
+              "directory-dot",
             ])
-            expect(Config.latest(entries, "$schema")).toBe("directory-kilo")
             expect(entries.map((entry) => (entry.type === "document" ? entry.info.$schema : entry.path))).toEqual([
               "global",
               AbsolutePath.make(global),
               "root",
               "parent",
               "directory",
-              "root-kilocode",
-              AbsolutePath.make(path.join(root, ".kilocode")),
-              "root-kilo",
-              AbsolutePath.make(path.join(root, ".kilo")),
-              "directory-kilocode",
-              AbsolutePath.make(path.join(directory, ".kilocode")),
-              "directory-kilo",
-              AbsolutePath.make(path.join(directory, ".kilo")),
+              "root-dot",
+              AbsolutePath.make(path.join(root, ".opencode")),
+              "directory-dot",
+              AbsolutePath.make(path.join(directory, ".opencode")),
             ])
           }).pipe(
             Effect.provide(
@@ -825,5 +770,4 @@ describe("Config", () => {
       }),
     ),
   )
-  // kilocode_change end
 })

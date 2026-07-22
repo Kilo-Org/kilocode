@@ -2,13 +2,11 @@ export * as ProviderV2 from "./provider"
 
 import { withStatics } from "./schema"
 import { Schema } from "effect"
-import { Credential } from "./credential"
 
 export const ID = Schema.String.pipe(
   Schema.brand("ProviderV2.ID"),
   withStatics((schema) => ({
     // Well-known providers
-    kilo: schema.make("kilo"), // kilocode_change - Kilo well-known provider id
     opencode: schema.make("opencode"),
     anthropic: schema.make("anthropic"),
     openai: schema.make("openai"),
@@ -49,22 +47,7 @@ export type Request = typeof Request.Type
 export class Info extends Schema.Class<Info>("ProviderV2.Info")({
   id: ID,
   name: Schema.String,
-  enabled: Schema.Union([
-    Schema.Literal(false),
-    Schema.Struct({
-      via: Schema.Literal("env"),
-      name: Schema.String,
-    }),
-    Schema.Struct({
-      via: Schema.Literal("credential"),
-      credentialID: Credential.ID,
-    }),
-    Schema.Struct({
-      via: Schema.Literal("custom"),
-      data: Schema.Record(Schema.String, Schema.Any),
-    }),
-  ]),
-  env: Schema.String.pipe(Schema.Array),
+  disabled: Schema.Boolean.pipe(Schema.optional),
   api: Api,
   request: Request,
 }) {
@@ -72,8 +55,6 @@ export class Info extends Schema.Class<Info>("ProviderV2.Info")({
     return new Info({
       id: providerID,
       name: providerID,
-      enabled: false,
-      env: [],
       api: {
         type: "native",
         settings: {},

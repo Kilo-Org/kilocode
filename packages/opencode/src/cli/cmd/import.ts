@@ -1,18 +1,17 @@
 import type { Session as SDKSession, Message, Part } from "@kilocode/sdk/v2"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Session } from "@/session/session"
+import { MessageV2 } from "../../session/message-v2"
 import { CliError, effectCmd } from "../effect-cmd"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionTable, MessageTable, PartTable } from "@opencode-ai/core/session/sql"
 import { InstanceRef } from "@/effect/instance-ref"
+import { ShareNext } from "@/share/share-next"
 import { EOL } from "os"
 import path from "path"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect, Schema } from "effect"
-import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import type { InstanceContext } from "@/project/instance-context"
-
-const log = Log.create({ service: "import" }) // kilocode_change
 
 const decodeMessageInfo = Schema.decodeUnknownSync(SessionV1.Info)
 const decodePart = Schema.decodeUnknownSync(SessionV1.Part)
@@ -25,13 +24,11 @@ export type ShareData =
   | { type: "session_diff"; data: unknown }
   | { type: "model"; data: unknown }
 
-// kilocode_change start
-/** Extract share ID from a Kilo share URL like https://app.kilo.ai/s/abc123 */
+/** Extract share ID from a share URL like https://opncd.ai/share/abc123 */
 export function parseShareUrl(url: string): string | null {
-  const match = url.match(/^https?:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)$/)
+  const match = url.match(/^https?:\/\/[^/]+\/share\/([a-zA-Z0-9_-]+)$/)
   return match ? match[1] : null
 }
-// kilocode_change end
 
 export function shouldAttachShareAuthHeaders(shareUrl: string, accountBaseUrl: string): boolean {
   try {
@@ -81,44 +78,6 @@ export function transformShareData(shareData: ShareData[]): {
   }
 }
 
-// kilocode_change start
-export function ingestBootstrapWarning(sessionId: string, error: unknown) {
-  const details = error instanceof Error ? error.message : String(error)
-  return `Warning: imported session ${sessionId} locally, but ingest bootstrap failed: ${details}`
-}
-
-async function ingestBootstrap(sessionId: string) {
-  const { KiloSessions } = await import("../../kilo-sessions/kilo-sessions")
-  return KiloSessions.bootstrap(sessionId)
-}
-
-export async function bootstrapImportedSessionIngest(
-  sessionId: string,
-  input?: {
-    bootstrap?: (sessionId: string) => Promise<unknown>
-    warn?: (message: string) => void
-  },
-) {
-  const run = input?.bootstrap ?? ingestBootstrap
-  const warn =
-    input?.warn ??
-    ((message: string) => {
-      process.stderr.write(message)
-      process.stderr.write(EOL)
-    })
-
-  log.info("ingest bootstrap started", { sessionId })
-  await run(sessionId)
-    .then(() => {
-      log.info("ingest bootstrap completed", { sessionId })
-    })
-    .catch((error) => {
-      log.error("ingest bootstrap failed", { sessionId, error })
-      warn(ingestBootstrapWarning(sessionId, error))
-    })
-}
-// kilocode_change end
-
 type ExportData = { info: SDKSession; messages: Array<{ info: Message; parts: Part[] }> }
 
 export const ImportCommand = effectCmd({
@@ -138,6 +97,7 @@ export const ImportCommand = effectCmd({
 })
 
 const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: InstanceContext) {
+  const share = yield* ShareNext.Service
   const fs = yield* FSUtil.Service
   const { db } = yield* Database.Service
 
@@ -146,22 +106,33 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
   const isUrl = file.startsWith("http://") || file.startsWith("https://")
 
   if (isUrl) {
-    // kilocode_change start - Migrate to upstream ShareNext architecture #10281
     const slug = parseShareUrl(file)
     if (!slug) {
-      process.stdout.write(`Invalid URL format. Expected: https://app.kilo.ai/s/<id>`)
+      const baseUrl = yield* Effect.orDie(share.url())
+      process.stdout.write(`Invalid URL format. Expected: ${baseUrl}/share/<slug>`)
       process.stdout.write(EOL)
       return
     }
 
-    const base = process.env["KILO_SESSION_INGEST_URL"] ?? "https://ingest.kilosessions.ai"
-    const response = yield* Effect.tryPromise({
-      try: () => fetch(`${base}/session/${encodeURIComponent(slug)}`),
-      catch: (e) =>
-        new CliError({
-          message: `Failed to fetch share data: ${e instanceof Error ? e.message : String(e)}`,
-        }),
-    })
+    const baseUrl = new URL(file).origin
+    const req = yield* Effect.orDie(share.request())
+    const headers = shouldAttachShareAuthHeaders(file, req.baseUrl) ? req.headers : {}
+
+    const tryFetch = (url: string) =>
+      Effect.tryPromise({
+        try: () => fetch(url, { headers }),
+        catch: (e) =>
+          new CliError({
+            message: `Failed to fetch share data: ${e instanceof Error ? e.message : String(e)}`,
+          }),
+      })
+
+    const dataPath = req.api.data(slug)
+    let response = yield* tryFetch(`${baseUrl}${dataPath}`)
+
+    if (!response.ok && dataPath !== `/api/share/${slug}/data`) {
+      response = yield* tryFetch(`${baseUrl}/api/share/${slug}/data`)
+    }
 
     if (!response.ok) {
       process.stdout.write(`Failed to fetch share data: ${response.statusText}`)
@@ -169,19 +140,19 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
       return
     }
 
-    const data = yield* Effect.tryPromise({
-      try: () => response.json() as Promise<ExportData>,
+    const shareData = yield* Effect.tryPromise({
+      try: () => response.json() as Promise<ShareData[]>,
       catch: () => new CliError({ message: "Share data was not valid JSON" }),
     })
+    const transformed = transformShareData(shareData)
 
-    if (!data || typeof data !== "object" || !data.info || !data.messages || !Array.isArray(data.messages)) {
+    if (!transformed) {
       process.stdout.write(`Share not found or empty: ${slug}`)
       process.stdout.write(EOL)
       return
     }
 
-    exportData = data
-    // kilocode_change end
+    exportData = transformed
   } else {
     exportData = (yield* fs.readJson(file).pipe(Effect.orElseSucceed(() => undefined))) as
       | NonNullable<typeof exportData>
@@ -247,10 +218,6 @@ const runImport = Effect.fn("Cli.import.body")(function* (file: string, ctx: Ins
         .pipe(Effect.orDie)
     }
   }
-
-  // kilocode_change start
-  yield* Effect.promise(() => bootstrapImportedSessionIngest(exportData!.info.id))
-  // kilocode_change end
 
   process.stdout.write(`Imported session: ${exportData.info.id}`)
   process.stdout.write(EOL)

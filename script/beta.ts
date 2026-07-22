@@ -230,11 +230,11 @@ async function main() {
     return
   }
 
-  console.log("Fetching latest main branch...")
-  await $`git fetch origin main`
+  console.log("Fetching latest dev branch...")
+  await $`git fetch origin dev`
 
-  console.log("Checking out main branch...")
-  await $`git checkout -B beta origin/main`
+  console.log("Checking out beta branch...")
+  await $`git checkout -B beta origin/dev`
 
   const applied: number[] = []
   const failed: FailedPR[] = []
@@ -318,7 +318,7 @@ async function main() {
   await $`git fetch origin beta`
 
   const localTree = (await $`git rev-parse beta^{tree}`.text()).trim()
-  const remoteTrees = (await $`git log origin/main..origin/beta --format=%T`.text()).split("\n")
+  const remoteTrees = (await $`git log origin/dev..origin/beta --format=%T`.text()).split("\n")
 
   const matchIdx = remoteTrees.indexOf(localTree)
   if (matchIdx !== -1) {

@@ -159,7 +159,6 @@ export function SessionTurn(
     shellToolDefaultOpen?: boolean
     editToolDefaultOpen?: boolean
     active?: boolean
-    queued?: boolean // kilocode_change
     status?: SessionStatus
     onUserInteracted?: () => void
     classes?: {
@@ -206,7 +205,7 @@ export function SessionTurn(
   })
 
   const pending = createMemo(() => {
-    if (typeof props.active === "boolean" && typeof props.queued === "boolean") return // kilocode_change
+    if (typeof props.active === "boolean") return
     const messages = allMessages() ?? emptyMessages
     return messages.findLast(
       (item): item is AssistantMessage => item.role === "assistant" && typeof item.time.completed !== "number",
@@ -230,18 +229,6 @@ export function SessionTurn(
     if (!msg || !parent) return false
     return parent.id === msg.id
   })
-
-  // kilocode_change start — restore queued feature
-  const queued = createMemo(() => {
-    if (typeof props.queued === "boolean") return props.queued
-    const id = message()?.id
-    if (!id) return false
-    if (!pendingUser()) return false
-    const item = pending()
-    if (!item) return false
-    return id > item.id
-  })
-  // kilocode_change end
 
   const parts = createMemo(() => {
     const msg = message()
@@ -383,7 +370,6 @@ export function SessionTurn(
   const reasoningHeading = createMemo(() => assistantDerived().reason)
   const showThinking = createMemo(() => {
     if (!working() || !!error()) return false
-    if (queued()) return false // kilocode_change
     if (status().type === "retry") return false
     if (showReasoningSummaries()) return assistantVisible() === 0
     return true
@@ -412,9 +398,7 @@ export function SessionTurn(
               class={props.classes?.container}
             >
               <div data-slot="session-turn-message-content" aria-live="off">
-                {/* kilocode_change start */}
-                <Message message={message()!} parts={parts()} actions={props.actions} queued={queued()} />
-                {/* kilocode_change end */}
+                <Message message={message()!} parts={parts()} actions={props.actions} />
               </div>
               <Show when={divider()}>
                 <div data-slot="session-turn-compaction">
@@ -505,7 +489,7 @@ export function SessionTurn(
                                     <span data-slot="session-turn-diff-path">
                                       <Show when={diff.file.includes("/")}>
                                         <span data-slot="session-turn-diff-directory">
-                                          {`\u2066${getDirectory(diff.file)}\u2069`}
+                                          {`\u202A${getDirectory(diff.file)}\u202C`}
                                         </span>
                                       </Show>
                                       <span data-slot="session-turn-diff-filename">{getFilename(diff.file)}</span>

@@ -1,12 +1,11 @@
-// kilocode_change - new file
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { KiloClient, type GlobalEvent } from "@kilocode/sdk/v2"
 import { createSessionTransport } from "@/cli/cmd/run/stream.transport"
 import type { FooterApi, FooterEvent, LocalReplayRow, RunFilePart, StreamCommit } from "@/cli/cmd/run/types"
 
-type SdkEvent = GlobalEvent["payload"]
-type EventStream = AsyncGenerator<SdkEvent, void, unknown>
+type EventStream = Awaited<ReturnType<KiloClient["event"]["subscribe"]>>["stream"]
 type GlobalEventStream = Awaited<ReturnType<KiloClient["global"]["event"]>>["stream"]
+type SdkEvent = EventStream extends AsyncGenerator<infer T, unknown, unknown> ? T : never
 type SessionMessage = NonNullable<Awaited<ReturnType<KiloClient["session"]["messages"]>>["data"]>[number]
 type SessionChild = NonNullable<Awaited<ReturnType<KiloClient["session"]["children"]>>["data"]>[number]
 type SessionToolPart = Extract<SessionMessage["parts"][number], { type: "tool" }>
@@ -85,25 +84,19 @@ function retry(sessionID: string, attempt: number, message: string) {
   } satisfies SdkEvent
 }
 
-function assistant(id: string, sessionID = "session-1"): SdkEvent {
+function assistant(id: string) {
   return {
     id: `evt-${id}`,
-    type: "sync",
-    syncEvent: {
-      type: "message.updated.1",
-      id: `evt-${id}`,
-      seq: 1,
-      aggregateID: sessionID,
-      data: {
-        sessionID,
-        info: assistantMessage({
-          sessionID,
-          id,
-          parts: [],
-        }).info,
-      },
+    type: "message.updated",
+    properties: {
+      sessionID: "session-1",
+      info: assistantMessage({
+        sessionID: "session-1",
+        id,
+        parts: [],
+      }).info,
     },
-  }
+  } satisfies SdkEvent
 }
 
 const StreamClosed = undefined as never
@@ -297,17 +290,11 @@ function textPart(id: string, messageID: string, text: string, sessionID = "sess
 function textUpdated(part: TextPart): SdkEvent {
   return {
     id: `evt-${part.id}-updated`,
-    type: "sync",
-    syncEvent: {
-      type: "message.part.updated.1",
-      id: `evt-${part.id}-updated`,
-      seq: 1,
-      aggregateID: part.sessionID,
-      data: {
-        sessionID: part.sessionID,
-        part,
-        time: 1,
-      },
+    type: "message.part.updated",
+    properties: {
+      sessionID: part.sessionID,
+      part,
+      time: 1,
     },
   }
 }
@@ -338,17 +325,11 @@ function reasoningUpdated(part: ReasoningPart): SdkEvent {
 function toolUpdated(part: SessionToolPart): SdkEvent {
   return {
     id: `evt-${part.id}-updated`,
-    type: "sync",
-    syncEvent: {
-      type: "message.part.updated.1",
-      id: `evt-${part.id}-updated`,
-      seq: 1,
-      aggregateID: part.sessionID,
-      data: {
-        sessionID: part.sessionID,
-        part,
-        time: 1,
-      },
+    type: "message.part.updated",
+    properties: {
+      sessionID: part.sessionID,
+      part,
+      time: 1,
     },
   }
 }
@@ -436,6 +417,7 @@ function sdk(
   input: {
     stream?: EventStream
     globalStream?: GlobalEventStream
+    subscribe?: KiloClient["event"]["subscribe"]
     globalEvent?: KiloClient["global"]["event"]
     promptAsync?: KiloClient["session"]["promptAsync"]
     status?: KiloClient["session"]["status"]
@@ -447,6 +429,7 @@ function sdk(
 ) {
   const client = new KiloClient()
 
+  const subscribe: KiloClient["event"]["subscribe"] = input.subscribe ?? (() => sse(input.stream ?? emptyStream()))
   const globalEvent: KiloClient["global"]["event"] =
     input.globalEvent ?? (() => globalSse(input.globalStream ?? wrapGlobalStream(input.stream ?? emptyStream())))
   const promptAsync: KiloClient["session"]["promptAsync"] = input.promptAsync ?? (() => ok(undefined))
@@ -456,6 +439,7 @@ function sdk(
   const permissions: KiloClient["permission"]["list"] = input.permissions ?? (() => ok([]))
   const questions: KiloClient["question"]["list"] = input.questions ?? (() => ok([]))
 
+  spyOn(client.event, "subscribe").mockImplementation(subscribe)
   spyOn(client.global, "event").mockImplementation(globalEvent)
   spyOn(client.session, "promptAsync").mockImplementation(promptAsync)
   spyOn(client.session, "status").mockImplementation(status)
@@ -1716,7 +1700,20 @@ describe("run stream transport", () => {
 
       transport.selectSubagent("child-1")
 
-      global.push(globalEvent(assistant("msg-child-1", "child-1")))
+      global.push(
+        globalEvent({
+          id: "evt-child-message",
+          type: "message.updated",
+          properties: {
+            sessionID: "child-1",
+            info: assistantMessage({
+              sessionID: "child-1",
+              id: "msg-child-1",
+              parts: [],
+            }).info,
+          },
+        }),
+      )
       global.push(globalEvent(textUpdated(textPart("txt-child-1", "msg-child-1", "hello", "child-1"))))
 
       expect(

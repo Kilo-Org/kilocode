@@ -36,9 +36,9 @@ describe("NvidiaPlugin", () => {
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia"))).request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://kilo.ai/",
-        "X-Title": "Kilo Code",
-        "X-BILLING-INVOKE-ORIGIN": "KiloCode",
+        "HTTP-Referer": "https://opencode.ai/",
+        "X-Title": "opencode",
+        "X-BILLING-INVOKE-ORIGIN": "OpenCode",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.openrouter)).request.headers).toEqual({})
     }),
@@ -62,9 +62,9 @@ describe("NvidiaPlugin", () => {
       })
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia"))).request.headers).toEqual({
-        "HTTP-Referer": "https://kilo.ai/",
-        "X-Title": "Kilo Code",
-        "X-BILLING-INVOKE-ORIGIN": "KiloCode",
+        "HTTP-Referer": "https://opencode.ai/",
+        "X-Title": "opencode",
+        "X-BILLING-INVOKE-ORIGIN": "OpenCode",
       })
     }),
   )
@@ -90,8 +90,8 @@ describe("NvidiaPlugin", () => {
       })
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("nvidia"))).request.headers).toEqual({
-        "HTTP-Referer": "https://kilo.ai/",
-        "X-Title": "Kilo Code",
+        "HTTP-Referer": "https://opencode.ai/",
+        "X-Title": "opencode",
         "X-BILLING-INVOKE-ORIGIN": "CustomOrigin",
       })
     }),

@@ -1,7 +1,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
-import { QuestionID } from "@/question/schema" // kilocode_change
 import { NonNegativeInt } from "@opencode-ai/core/schema"
 import { Effect, Layer, Context, Schema } from "effect"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -30,13 +29,6 @@ export const Info = Schema.Union([
   Schema.Struct({
     type: Schema.Literal("busy"),
   }),
-  // kilocode_change start
-  Schema.Struct({
-    type: Schema.Literal("offline"),
-    requestID: QuestionID,
-    message: Schema.String,
-  }),
-  // kilocode_change end
 ]).annotate({ identifier: "SessionStatus" })
 export type Info = Schema.Schema.Type<typeof Info>
 

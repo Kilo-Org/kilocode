@@ -58,39 +58,8 @@ if (sseTypesPatched === sseTypesSource) {
 }
 await Bun.write(sseTypesPath, sseTypesPatched)
 
-// The legacy SDK generator is retired, but this public Config type remains exported.
-// Keep Kilo's released sandbox settings aligned with the current generated client.
-const legacyTypesPath = "./src/gen/types.gen.ts"
-const legacyTypesFile = Bun.file(legacyTypesPath)
-const legacySource = await legacyTypesFile.text()
-const sandbox = `  /**
-   * Sandbox configuration for agent tools
-   */
-  sandbox?: {
-    /**
-     * Enable sandbox confinement for new sessions (default: false)
-     */
-    enabled?: boolean
-    /**
-     * Control outbound network access from sandboxed tools (default: deny)
-     */
-    network?: "allow" | "deny"
-    /**
-     * Additional filesystem paths that sandboxed tools may write to
-     */
-    writable_paths?: Array<string>
-  }
-`
-const legacyPatched = legacySource.includes(sandbox)
-  ? legacySource
-  : legacySource.replace("  experimental?: {\n", sandbox + "  experimental?: {\n")
-if (!legacyPatched.includes(sandbox)) {
-  throw new Error(`Legacy Config sandbox patch did not apply (${legacyTypesPath})`)
-}
-await Bun.write(legacyTypesPath, legacyPatched)
-
 await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`
-await $`rm -rf dist tsconfig.tsbuildinfo`
+await $`rm -rf dist`
 await $`bun tsc`
 await $`rm openapi.json`

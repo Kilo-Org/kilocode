@@ -1,6 +1,7 @@
 import { EventV2 } from "@opencode-ai/core/event"
 import { Schema } from "effect"
 import { NamedError } from "@opencode-ai/core/util/error"
+import { Process } from "@/util/process"
 
 const SUPPORTED_IDES = [
   { name: "Windsurf" as const, cmd: "windsurf" },
@@ -39,10 +40,22 @@ export function alreadyInstalled() {
   return process.env["KILO_CALLER"] === "vscode" || process.env["KILO_CALLER"] === "vscode-insiders"
 }
 
-// kilocode_change start - Kilo's VS Code extension bundles the CLI; auto-install from CLI is not applicable
-export async function install(_ide: (typeof SUPPORTED_IDES)[number]["name"]) {
-  throw new AlreadyInstalledError({})
+export async function install(ide: (typeof SUPPORTED_IDES)[number]["name"]) {
+  const cmd = SUPPORTED_IDES.find((i) => i.name === ide)?.cmd
+  if (!cmd) throw new Error(`Unknown IDE: ${ide}`)
+
+  const p = await Process.run([cmd, "--install-extension", "sst-dev.opencode"], {
+    nothrow: true,
+  })
+  const stdout = p.stdout.toString()
+  const stderr = p.stderr.toString()
+
+  if (p.code !== 0) {
+    throw new InstallFailedError({ stderr })
+  }
+  if (stdout.includes("already installed")) {
+    throw new AlreadyInstalledError({})
+  }
 }
-// kilocode_change end
 
 export * as Ide from "."

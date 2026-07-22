@@ -1,33 +1,24 @@
-import { and, asc, desc, eq, gt, gte, isNotNull, ne, or } from "drizzle-orm" // kilocode_change
+import { and, asc, desc, eq, gt, gte, ne, or } from "drizzle-orm"
 import { Effect, Schema } from "effect"
 import { Database } from "../database/database"
 import { MessageDecodeError } from "./error"
 import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
 import { SessionContextEpochTable, SessionMessageTable } from "./sql"
-import { normalize } from "../kilocode/session-message" // kilocode_change
 
 type DatabaseService = Database.Interface["db"]
 
 const decode = Schema.decodeUnknownEffect(SessionMessage.Message)
 
 const latestCompaction = Effect.fnUntraced(function* (db: DatabaseService, sessionID: SessionSchema.ID) {
-  const row = yield* db
-    .select({ seq: SessionMessageTable.seq })
+  return yield* db
+    .select()
     .from(SessionMessageTable)
-    .where(
-      and(
-        eq(SessionMessageTable.session_id, sessionID),
-        eq(SessionMessageTable.type, "compaction"),
-        isNotNull(SessionMessageTable.seq), // kilocode_change
-      ),
-    )
+    .where(and(eq(SessionMessageTable.session_id, sessionID), eq(SessionMessageTable.type, "compaction")))
     .orderBy(desc(SessionMessageTable.seq))
     .limit(1)
     .get()
     .pipe(Effect.orDie)
-  if (!row || row.seq === null) return
-  return { seq: row.seq }
 })
 
 const messageRows = Effect.fnUntraced(function* (
@@ -42,7 +33,6 @@ const messageRows = Effect.fnUntraced(function* (
     .where(
       and(
         eq(SessionMessageTable.session_id, sessionID),
-        isNotNull(SessionMessageTable.seq), // kilocode_change
         compaction
           ? or(
               gte(SessionMessageTable.seq, compaction.seq),
@@ -62,9 +52,8 @@ const messageRows = Effect.fnUntraced(function* (
   return rows
 })
 
-// kilocode_change - normalize released storage shapes only at the assistant tool-state boundary
 const decodeMessageRow = (row: typeof SessionMessageTable.$inferSelect) =>
-  decode(normalize({ ...row.data, id: row.id, type: row.type })).pipe(
+  decode({ ...row.data, id: row.id, type: row.type }).pipe(
     Effect.mapError(
       () =>
         new MessageDecodeError({
@@ -104,11 +93,9 @@ export const entriesForRunner = Effect.fn("SessionHistory.entriesForRunner")(fun
   baselineSeq: number,
 ) {
   const rows = yield* messageRows(db, sessionID, yield* latestCompaction(db, sessionID), baselineSeq)
-  return yield* Effect.forEach(rows, (row) => {
-    const seq = row.seq
-    if (seq === null) return Effect.die("Sequenced session history returned a legacy row") // kilocode_change
-    return decodeMessageRow(row).pipe(Effect.map((message) => ({ seq, message })))
-  })
+  return yield* Effect.forEach(rows, (row) =>
+    decodeMessageRow(row).pipe(Effect.map((message) => ({ seq: row.seq, message }))),
+  )
 })
 
 export * as SessionHistory from "./history"

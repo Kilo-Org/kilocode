@@ -7,12 +7,6 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Plugin } from "../plugin"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Array as Arr, Effect, Layer, Record, Result, Context, Schema } from "effect"
-import { errorMessage } from "@/util/error" // kilocode_change
-
-// kilocode_change start
-import { Telemetry } from "@kilocode/kilo-telemetry"
-import { ModelCache } from "./model-cache"
-// kilocode_change end
 
 const When = Schema.Struct({
   key: Schema.String,
@@ -112,14 +106,11 @@ export class Service extends Context.Service<Service, Interface>()("@opencode/Pr
 
 export const use = serviceUse(Service)
 
-// kilocode_change start
-export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | ModelCache.Service> = Layer.effect(
+export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const auth = yield* Auth.Service
     const plugin = yield* Plugin.Service
-    const cache = yield* ModelCache.Service
-    // kilocode_change end
     const state = yield* InstanceState.make<State>(
       Effect.fn("ProviderAuth.state")(function* () {
         const plugins = yield* plugin.list()
@@ -185,12 +176,7 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
         }
       }
 
-      // kilocode_change start
-      const result = yield* Effect.tryPromise({
-        try: () => method.authorize(input.inputs),
-        catch: (err) => new Auth.AuthError({ message: errorMessage(err), cause: err }),
-      })
-      // kilocode_change end
+      const result = yield* Effect.promise(() => method.authorize(input.inputs))
       pending.set(input.providerID, result)
       return {
         url: result.url,
@@ -232,35 +218,16 @@ export const layer: Layer.Layer<Service, never, Auth.Service | Plugin.Service | 
           ...extra,
         })
       }
-
-      // kilocode_change start - Update telemetry identity on Kilo auth
-      if (input.providerID === "kilo") {
-        const info = yield* auth.get(input.providerID)
-        if (info) {
-          const token = info.type === "oauth" ? info.access : info.type === "api" ? info.key : null
-          const accountId = info.type === "oauth" ? info.accountId : undefined
-          yield* Effect.promise(() => Telemetry.updateIdentity(token, accountId))
-        }
-      }
-      Telemetry.trackAuthSuccess(input.providerID)
-      yield* cache.clear(input.providerID)
-      // kilocode_change end
     })
 
     return Service.of({ methods, authorize, callback })
   }),
 )
 
-// kilocode_change start
 export const defaultLayer = Layer.suspend(() =>
-  layer.pipe(
-    Layer.provide(Auth.defaultLayer),
-    Layer.provide(Plugin.defaultLayer),
-    Layer.provide(ModelCache.defaultLayer),
-  ),
+  layer.pipe(Layer.provide(Auth.defaultLayer), Layer.provide(Plugin.defaultLayer)),
 )
-// kilocode_change end
 
-export const node = LayerNode.make(layer, [Auth.node, Plugin.node, ModelCache.node]) // kilocode_change
+export const node = LayerNode.make(layer, [Auth.node, Plugin.node])
 
 export * as ProviderAuth from "./auth"

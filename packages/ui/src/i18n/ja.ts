@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "セッションの変更",
-  "ui.sessionReview.title.git": "Git の変更",
-  "ui.sessionReview.title.branch": "ブランチの変更",
   "ui.sessionReview.title.lastTurn": "前回ターンの変更",
   "ui.sessionReview.diffStyle.unified": "Unified",
   "ui.sessionReview.diffStyle.split": "Split",
@@ -38,10 +36,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "ステップを隠す",
   "ui.sessionTurn.summary.response": "応答",
   "ui.sessionTurn.diff.showMore": "さらに変更を表示 ({{count}})",
-  "ui.sessionTurn.diffs.changed": "変更あり",
-  "ui.sessionTurn.diffs.showAll": "すべて表示",
-  "ui.sessionTurn.diffs.showLess": "表示を減らす",
-  "ui.sessionTurn.diffs.more": "ほか +{{count}} 件のファイル",
 
   "ui.sessionTurn.retry.retrying": "再試行中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}}秒後",
@@ -61,8 +55,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "設定を開く",
 
   "ui.sessionTurn.status.delegating": "作業を委任中",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "次のステップを計画中",
   "ui.sessionTurn.status.gatheringContext": "探索中",
   "ui.sessionTurn.status.gatheredContext": "探索済み",
@@ -84,8 +76,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 件のリスト",
   "ui.messagePart.context.list.other": "{{count}} 件のリスト",
   "ui.messagePart.diagnostic.error": "エラー",
-  "ui.messagePart.mcp.input": "入力",
-  "ui.messagePart.mcp.output": "出力",
   "ui.messagePart.title.edit": "編集",
   "ui.messagePart.title.write": "作成",
   "ui.messagePart.option.typeOwnAnswer": "自分の回答を入力",
@@ -104,23 +94,10 @@ export const dict = {
   "ui.textField.copied": "コピーしました",
 
   "ui.imagePreview.alt": "画像プレビュー",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Mermaid 図をレンダリング中...",
-  "ui.mermaid.renderError": "Mermaid のレンダリングに失敗しました: {{message}}",
-  "ui.mermaid.errorDefault": "Mermaid 図をレンダリングできません。",
-  "ui.mermaid.errorEmpty": "Mermaid が空の図をレンダリングしました。",
-  "ui.mermaid.download": "ダウンロード",
-  "ui.mermaid.copySource": "Mermaid ソースをコピー",
-  "ui.mermaid.copySvg": "SVG をコピー",
-  "ui.mermaid.copyPng": "PNG をコピー",
-  "ui.mermaid.downloadSvg": "SVG をダウンロード",
-  "ui.mermaid.downloadPng": "PNG をダウンロード",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "スクロール可能なコンテンツ",
 
   "ui.tool.read": "読み込み",
   "ui.tool.loaded": "読み込み済み",
-  "ui.tool.swePruned": "SWE-Pruner · {{total}} 行中 {{kept}} 行を保持", // kilocode_change
   "ui.tool.list": "リスト",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -160,7 +137,6 @@ export const dict = {
   "ui.message.revertMessage": "この時点までリセット",
   "ui.message.copyResponse": "応答をコピー",
   "ui.message.copied": "コピーしました！",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "中断",
   "ui.message.queued": "待機中",
   "ui.message.attachment.alt": "添付ファイル",
@@ -171,9 +147,7 @@ export const dict = {
   "ui.patch.action.patched": "パッチ適用済み",
 
   "ui.question.subtitle.answered": "{{count}}件回答済み",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(回答なし)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "該当するものをすべて選択",
   "ui.question.singleHint": "1 つ選択",

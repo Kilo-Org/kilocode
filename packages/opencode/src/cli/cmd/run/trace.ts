@@ -1,7 +1,7 @@
 // Dev-only JSONL event trace for direct interactive mode.
 //
 // Enable with KILO_DIRECT_TRACE=1. Writes one JSON line per event to
-// ~/.local/share/kilo/log/direct/<timestamp>-<pid>.jsonl. Also writes // kilocode_change
+// ~/.local/share/opencode/log/direct/<timestamp>-<pid>.jsonl. Also writes
 // a latest.json pointer so you can quickly find the most recent trace.
 //
 // The trace captures the full closed loop: outbound prompts, inbound SDK

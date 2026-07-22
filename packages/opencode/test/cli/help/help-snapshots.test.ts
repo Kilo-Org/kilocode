@@ -8,10 +8,8 @@
 // diff tells you exactly which command(s) changed.
 //
 // Snapshots are taken at COLUMNS=120 so wrapping is stable across
-// kilocode_change start - describe Kilo's branded CLI
-// terminal sizes. The default kilo TUI command is excluded —
-// `kilo --help` includes an ASCII banner that pulls in the install
-// kilocode_change end
+// terminal sizes. The default opencode tui command is excluded —
+// `opencode --help` includes an ASCII banner that pulls in the install
 // version (changes per release), so we'd snapshot a moving target.
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
@@ -30,16 +28,7 @@ import { normalizeForSnapshot, PATH_SEP } from "../../lib/snapshot"
 //      path widths produce different leading-whitespace counts (or even
 //      line-wraps onto a fresh line on Windows). `\s+` matches both forms.
 function normalize(text: string): string {
-  // kilocode_change start - snapshot Kilo help independently of lifecycle logs
-  const help = text.slice(text.indexOf("kilo "))
-  const output = help
-    .replace(/(?=INFO  \d{4}-\d{2}-\d{2}).*$/s, "")
-    .replace(/ {4}(?=\[aliases: ls\])/g, "")
-    .replace(/ {4}(?=\[string\] \[default: "kilo\.local"\])/g, "")
-  // kilocode_change end
-  // kilocode_change start - normalize the branded help output
-  return normalizeForSnapshot(output, {
-    // kilocode_change end
+  return normalizeForSnapshot(text, {
     pathReplacements: [
       // Mixed-case [A-Za-z0-9] because node's mkdtemp suffix is mixed-case
       // (the harness now uses FileSystem.makeTempDirectoryScoped under the
@@ -50,12 +39,10 @@ function normalize(text: string): string {
   })
 }
 
-// kilocode_change start - describe Kilo's command list
-// Top-level commands. Order matches what `kilo --help` prints today;
+// Top-level commands. Order matches what `opencode --help` prints today;
 // keep it in that order so the snapshot file reads as a table of contents.
 // `completion` is intentionally excluded — it's a yargs built-in that emits
-// top-level help on `--help` and exits 1; not a real kilo command.
-// kilocode_change end
+// top-level help on `--help` and exits 1; not a real opencode command.
 const TOP_LEVEL = [
   "acp",
   "mcp",
@@ -104,9 +91,7 @@ const SUBCOMMANDS = [
 // different wraps from a 200-col local terminal.
 const SNAPSHOT_ENV = { COLUMNS: "120" }
 
-// kilocode_change start - name snapshots after the shipped CLI
-describe("Kilo CLI help-text snapshots", () => {
-  // kilocode_change end
+describe("opencode CLI help-text snapshots", () => {
   // Single test, parallel spawns. Each command's help fires under
   // `concurrency: 8` — wall-clock stays under ~10s even for ~35 commands,
   // versus ~1 minute if we serialized.
@@ -121,8 +106,8 @@ describe("Kilo CLI help-text snapshots", () => {
         const argvs: Array<readonly string[]> = [...TOP_LEVEL.map((c) => [c] as const), ...SUBCOMMANDS]
 
         // Spawn in parallel, then assert in argv order so snapshot output is
-        // deterministic and per-command failures don't abort the rest of the
-        // sweep. `Effect.partition` is the canonical "run all, separate
+        // deterministic and per-command failures don't abort the rest of
+        // the sweep. `Effect.partition` is the canonical "run all, separate
         // failures from successes" primitive — no mutable accumulator needed.
         const [failures, results] = yield* Effect.partition(
           argvs,
@@ -130,7 +115,7 @@ describe("Kilo CLI help-text snapshots", () => {
             Effect.gen(function* () {
               const result = yield* opencode.spawn([...argv, "--help"], { env: SNAPSHOT_ENV })
               if (result.exitCode !== 0) {
-                return yield* Effect.fail(`kilo ${argv.join(" ")}: exit ${result.exitCode}`) // kilocode_change
+                return yield* Effect.fail(`opencode ${argv.join(" ")}: exit ${result.exitCode}`)
               }
               return { argv, result }
             }),
@@ -141,7 +126,7 @@ describe("Kilo CLI help-text snapshots", () => {
           // yargs writes --help to stderr, not stdout. Snapshotting stderr
           // means our test catches the help body; stdout for these commands
           // is expected to be empty.
-          expect(normalize(result.stderr)).toMatchSnapshot(`kilo ${argv.join(" ")} --help`) // kilocode_change
+          expect(normalize(result.stderr)).toMatchSnapshot(`opencode ${argv.join(" ")} --help`)
         }
         if (failures.length > 0) {
           throw new Error(`Help text failed for:\n  ${failures.join("\n  ")}`)

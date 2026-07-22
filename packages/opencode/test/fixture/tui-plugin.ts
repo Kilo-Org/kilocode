@@ -197,7 +197,7 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
       soundboard: {
         registerPack: (pack) => opts.attention?.soundboard?.registerPack?.(pack) ?? (() => {}),
         activate: (id, options) => opts.attention?.soundboard?.activate?.(id, options) ?? false,
-        current: () => opts.attention?.soundboard?.current?.() ?? "kilo.default", // kilocode_change
+        current: () => opts.attention?.soundboard?.current?.() ?? "opencode.default",
         list: () => opts.attention?.soundboard?.list?.() ?? [],
       },
     },
@@ -317,7 +317,6 @@ export function createTuiPluginApi(opts: Opts = {}): HostPluginApi {
         get: opts.state?.session?.get ?? (() => undefined),
         diff: opts.state?.session?.diff ?? (() => []),
         todo: opts.state?.session?.todo ?? (() => []),
-        processes: opts.state?.session?.processes ?? (() => []), // kilocode_change
         messages: opts.state?.session?.messages ?? (() => []),
         status: opts.state?.session?.status ?? (() => undefined),
         permission: opts.state?.session?.permission ?? (() => []),

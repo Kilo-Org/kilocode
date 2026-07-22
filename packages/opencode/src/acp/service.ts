@@ -45,7 +45,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { Provider } from "@/provider/provider"
 import type { Command } from "@/command"
 
-export const AuthMethodID = "kilo-login" // kilocode_change
+export const AuthMethodID = "opencode-login"
 
 export type Error = ACPError.Error
 type ServiceConnection = Pick<AgentSideConnection, "sessionUpdate"> &
@@ -90,20 +90,18 @@ export function make(input: {
 
   const initialize = Effect.fn("ACP.initialize")(function* (params: InitializeRequest) {
     const started = performance.now()
-    // kilocode_change start
     const authMethod: AuthMethod = {
-      description: "Run `kilo auth login` in the terminal",
-      name: "Login with Kilo",
+      description: "Run `opencode auth login` in the terminal",
+      name: "Login with opencode",
       id: AuthMethodID,
     }
-    // kilocode_change end
 
     if (params.clientCapabilities?._meta?.["terminal-auth"] === true) {
       authMethod._meta = {
         "terminal-auth": {
           command: "opencode",
           args: ["auth", "login"],
-          label: "Kilo Login",
+          label: "OpenCode Login",
         },
       }
     }
@@ -129,7 +127,7 @@ export function make(input: {
       },
       authMethods: [authMethod],
       agentInfo: {
-        name: "Kilo",
+        name: "OpenCode",
         version: InstallationVersion,
       },
     }
@@ -784,9 +782,9 @@ function defaultModelFromConfig(
   // First-session ACP startup must not scan historical sessions just to infer
   // a default. Configured model, opencode provider, then sorted best model keep
   // the protocol response deterministic without extra session/message reads.
-  const kiloProvider = providers[ProviderV2.ID.make("kilo")] // kilocode_change
-  const kiloModel = kiloProvider ? Provider.sort(Object.values(kiloProvider.models))[0] : undefined // kilocode_change
-  if (kiloProvider && kiloModel) return { providerID: kiloProvider.id, modelID: kiloModel.id } // kilocode_change
+  const opencodeProvider = providers[ProviderV2.ID.make("opencode")]
+  const opencodeModel = opencodeProvider ? Provider.sort(Object.values(opencodeProvider.models))[0] : undefined
+  if (opencodeProvider && opencodeModel) return { providerID: opencodeProvider.id, modelID: opencodeModel.id }
 
   const best = Provider.sort(Object.values(providers).flatMap((provider) => Object.values(provider.models)))[0]
   if (best) return { providerID: best.providerID, modelID: best.id }

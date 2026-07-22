@@ -204,7 +204,6 @@ function fake(
       return msg
     },
     updateToolCall: Effect.fn("TestSessionProcessor.updateToolCall")(() => Effect.succeed(undefined)),
-    metadata: Effect.fn("TestSessionProcessor.metadata")(() => Effect.void), // kilocode_change
     completeToolCall: Effect.fn("TestSessionProcessor.completeToolCall")(() => Effect.void),
     process: Effect.fn("TestSessionProcessor.process")(() => Effect.succeed(result)),
   } satisfies SessionProcessorModule.SessionProcessor.Handle
@@ -262,8 +261,6 @@ type CompactionProcessOptions = {
   plugin?: Layer.Layer<Plugin.Service>
   provider?: ReturnType<typeof ProviderTest.fake>
   config?: Layer.Layer<Config.Service>
-  flags?: Partial<RuntimeFlags.Info> // kilocode_change
-  snapshot?: Layer.Layer<Snapshot.Service> // kilocode_change
 }
 
 function withCompaction(options?: CompactionProcessOptions) {
@@ -284,7 +281,7 @@ function compactionProcessLayer(options?: CompactionProcessOptions) {
   return Layer.mergeAll(SessionCompaction.layer.pipe(Layer.provide(processor)), processor, events, status).pipe(
     Layer.provide(SessionNs.defaultLayer),
     Layer.provide((options?.provider ?? wide()).layer),
-    Layer.provide(options?.snapshot ?? Snapshot.defaultLayer), // kilocode_change
+    Layer.provide(Snapshot.defaultLayer),
     Layer.provide(options?.llm ?? LLM.defaultLayer),
     Layer.provide(Permission.defaultLayer),
     Layer.provide(Agent.defaultLayer),
@@ -292,26 +289,10 @@ function compactionProcessLayer(options?: CompactionProcessOptions) {
     Layer.provide(status),
     Layer.provide(events),
     Layer.provide(options?.config ?? Config.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, ...options?.flags })), // kilocode_change
+    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
     Layer.provide(EventV2Bridge.defaultLayer),
   )
 }
-
-// kilocode_change start - keep retry-backoff cancellation tests independent of git snapshot cleanup latency
-const snap = Layer.succeed(
-  Snapshot.Service,
-  Snapshot.Service.of({
-    init: () => Effect.void,
-    cleanup: () => Effect.void,
-    track: () => Effect.succeed(undefined),
-    patch: (hash) => Effect.succeed({ hash, files: [] }),
-    restore: () => Effect.void,
-    revert: () => Effect.void,
-    diff: () => Effect.succeed(""),
-    diffFull: () => Effect.succeed([]),
-  }),
-)
-// kilocode_change end
 
 function createSummaryCompaction(sessionID: SessionID) {
   return SessionCompaction.use.create({ sessionID, agent: "build", model: ref, auto: false })
@@ -982,40 +963,6 @@ describe("session.compaction.process", () => {
     }).pipe(withCompaction({ config: cfg({ tail_turns: 2, preserve_recent_tokens: 10_000 }) })),
   )
 
-  // kilocode_change start - configured output ceiling controls automatic tail budgeting
-  itCompaction.instance(
-    "uses the configured output token ceiling for retained tail budgeting",
-    Effect.gen(function* () {
-      const ssn = yield* SessionNs.Service
-      const session = yield* ssn.create({})
-      yield* createUserMessage(session.id, "first")
-      const keep = yield* createUserMessage(session.id, "x".repeat(12_000))
-      yield* createUserMessage(session.id, "third")
-      yield* createSummaryCompaction(session.id)
-
-      const msgs = yield* ssn.messages({ sessionID: session.id })
-      const parent = msgs.at(-1)?.info.id
-      expect(parent).toBeTruthy()
-      if (!parent) return yield* Effect.die(new Error("compaction parent not found"))
-      yield* SessionCompaction.use.process({
-        parentID: parent,
-        messages: msgs,
-        sessionID: session.id,
-        auto: false,
-      })
-
-      const part = yield* readCompactionPart(session.id)
-      expect(part?.tail_start_id).toBe(keep.id)
-    }).pipe(
-      withCompaction({
-        config: cfg({ tail_turns: 2 }),
-        provider: ProviderTest.fake({ model: createModel({ context: 20_000, output: 10_000 }) }),
-        flags: { outputTokenMax: 2_000 },
-      }),
-    ),
-  )
-  // kilocode_change end
-
   itCompaction.instance(
     "shrinks retained tail to fit preserve token budget",
     Effect.gen(function* () {
@@ -1303,25 +1250,19 @@ describe("session.compaction.process", () => {
           })
           .pipe(Effect.forkChild)
 
-        // kilocode_change start - Effect 4.x timeout throws TimeoutError on the error
-        // channel; on loaded Windows CI runners the fiber may not reach the retry state
-        // within 1 second. Swallow the TimeoutError so the test proceeds to interrupt the
-        // fiber regardless — the assertions verify the interrupt exit either way.
-        yield* Deferred.await(ready).pipe(
-          Effect.timeout("1 second"),
-          Effect.catchTag("TimeoutError", () => Effect.void),
-        )
+        yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
+        const start = Date.now()
         yield* Fiber.interrupt(fiber)
-        const exit = yield* Fiber.await(fiber)
-        // kilocode_change end
+        const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
 
         expect(Exit.isFailure(exit)).toBe(true)
         if (Exit.isFailure(exit)) {
           expect(Cause.hasInterrupts(exit.cause)).toBe(true)
+          expect(Date.now() - start).toBeLessThan(250)
         }
-      }).pipe(withCompaction({ llm: stub.layer, snapshot: snap })) // kilocode_change
+      }).pipe(withCompaction({ llm: stub.layer }))
     },
-    {}, // kilocode_change - isolate cancellation from git setup
+    { git: true },
   )
 
   itCompaction.instance(
@@ -1343,25 +1284,17 @@ describe("session.compaction.process", () => {
             })
             .pipe(Effect.forkChild)
 
-          // kilocode_change start - Effect 4.x timeout throws TimeoutError on the error
-          // channel; on loaded Windows CI runners the fiber may not reach the trigger or
-          // terminate within the inner deadlines. Swallow the ready timeout and remove the
-          // Fiber.await timeout since Fiber.interrupt already waits for termination.
-          yield* Deferred.await(ready).pipe(
-            Effect.timeout("1 second"),
-            Effect.catchTag("TimeoutError", () => Effect.void),
-          )
+          yield* Deferred.await(ready).pipe(Effect.timeout("1 second"))
           yield* Fiber.interrupt(fiber)
-          const exit = yield* Fiber.await(fiber)
-          // kilocode_change end
+          const exit = yield* Fiber.await(fiber).pipe(Effect.timeout("250 millis"))
           const all = yield* ssn.messages({ sessionID: session.id })
 
           expect(Exit.isFailure(exit)).toBe(true)
           if (Exit.isFailure(exit)) expect(Cause.hasInterrupts(exit.cause)).toBe(true)
           expect(all.some((msg) => msg.info.role === "assistant" && msg.info.summary)).toBe(false)
-        }).pipe(withCompaction({ plugin: plugin(ready), snapshot: snap })) // kilocode_change - avoid git snapshot startup
+        }).pipe(withCompaction({ plugin: plugin(ready) }))
       }),
-    {}, // kilocode_change - isolate cancellation from git setup
+    { git: true },
   )
 
   itCompaction.instance(
@@ -1829,205 +1762,6 @@ describe("SessionNs.getUsage", () => {
 
     expect(result.cost).toBe(0.9 + 0.4)
   })
-
-  // kilocode_change start - Test for OpenRouter provider cost
-  test("uses openrouter provider cost when available", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const result = SessionNs.getUsage({
-      model,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.42, // Provider-reported cost should be used instead of calculated
-          },
-        },
-      },
-    })
-
-    // Should use the provider cost (0.42) instead of calculated cost (4.5)
-    expect(result.cost).toBe(0.42)
-  })
-
-  test("falls back to calculated cost when openrouter cost is not available", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const result = SessionNs.getUsage({
-      model,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            // cost is undefined
-          },
-        },
-      },
-    })
-
-    // Should fall back to calculated cost
-    expect(result.cost).toBe(3 + 1.5)
-  })
-
-  test("falls back to calculated cost when openrouter metadata is empty", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const result = SessionNs.getUsage({
-      model,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {},
-      },
-    })
-
-    // Should fall back to calculated cost
-    expect(result.cost).toBe(3 + 1.5)
-  })
-
-  test("uses upstreamInferenceCost for Kilo provider", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const provider = { id: "kilo" } as Provider.Info
-    const result = SessionNs.getUsage({
-      model,
-      provider,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.01, // OpenRouter 5% fee
-            costDetails: {
-              upstreamInferenceCost: 0.2, // Actual inference cost
-            },
-          },
-        },
-      },
-    })
-
-    // Should use upstreamInferenceCost for Kilo provider (BYOK)
-    expect(result.cost).toBe(0.2)
-  })
-
-  test("uses regular cost for OpenRouter provider", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const provider = { id: "openrouter" } as Provider.Info
-    const result = SessionNs.getUsage({
-      model,
-      provider,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.5, // Regular OpenRouter cost
-            costDetails: {
-              upstreamInferenceCost: 0.45,
-            },
-          },
-        },
-      },
-    })
-
-    // Should use regular cost for OpenRouter provider
-    expect(result.cost).toBe(0.5)
-  })
-
-  test("falls back to regular cost when provider is not specified", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const result = SessionNs.getUsage({
-      model,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.3,
-            costDetails: {
-              upstreamInferenceCost: 0.25,
-            },
-          },
-        },
-      },
-    })
-
-    // Should use regular cost when provider is not specified
-    expect(result.cost).toBe(0.3)
-  })
-
-  test("uses regular cost when upstreamInferenceCost is missing for Kilo", () => {
-    const model = createModel({
-      context: 100_000,
-      output: 32_000,
-      cost: {
-        input: 3,
-        output: 15,
-        cache: { read: 0.3, write: 3.75 },
-      },
-    })
-    const provider = { id: "kilo" } as Provider.Info
-    const result = SessionNs.getUsage({
-      model,
-      provider,
-      usage: usage({ inputTokens: 1_000_000, outputTokens: 100_000, totalTokens: 1_100_000 }),
-      metadata: {
-        openrouter: {
-          usage: {
-            cost: 0.01,
-            // costDetails is missing
-          },
-        },
-      },
-    })
-
-    // When upstream cost is missing for Kilo, fall back to regular cost field
-    expect(result.cost).toBe(0.01)
-  })
-
-  // Tests for Anthropic Messages / OpenAI Responses / Vercel AI Gateway cost extraction
-  // live in test/kilocode/provider-cost.test.ts (kilocode_change).
-  // kilocode_change end
 
   test.each(["@ai-sdk/anthropic", "@ai-sdk/amazon-bedrock", "@ai-sdk/google-vertex/anthropic"])(
     "computes total from components for %s models",

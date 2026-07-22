@@ -1,9 +1,7 @@
 import { AccountID, OrgID } from "@/account/schema"
-import { Snapshot } from "@/snapshot" // kilocode_change
 import { MCP } from "@/mcp"
 
 import { Session } from "@/session/session"
-import { WorktreeDiff } from "@/kilocode/review/worktree-diff" // kilocode_change
 import { SessionID } from "@/session/schema"
 import { Worktree } from "@/worktree"
 import { NonNegativeInt } from "@opencode-ai/core/schema"
@@ -26,6 +24,10 @@ const ConsoleStateResponse = Schema.Struct({
   activeOrgName: Schema.optionalKey(Schema.String),
   switchableOrgCount: NonNegativeInt,
 }).annotate({ identifier: "ConsoleState" })
+
+const CapabilitiesResponse = Schema.Struct({
+  backgroundSubagents: Schema.Boolean,
+}).annotate({ identifier: "ExperimentalCapabilities" })
 
 const ConsoleOrgOption = Schema.Struct({
   accountID: Schema.String,
@@ -58,11 +60,7 @@ export const ToolListQuery = Schema.Struct({
   model: ModelV2.ID,
 })
 
-// kilocode_change start
-const WorktreeList = Schema.Array(
-  Schema.Struct({ directory: Schema.String, managed: Schema.Boolean }).annotate({ identifier: "WorktreeListItem" }),
-)
-// kilocode_change end
+const WorktreeList = Schema.Array(Schema.String)
 const WorktreeErrorName = Schema.Union([
   Schema.Literal("WorktreeNotGitError"),
   Schema.Literal("WorktreeNameGenerationFailedError"),
@@ -81,11 +79,6 @@ export class WorktreeApiError extends Schema.ErrorClass<WorktreeApiError>("Workt
 ) {}
 export const SessionListQuery = Schema.Struct({
   ...WorkspaceRoutingQueryFields,
-  // kilocode_change start
-  projectID: Schema.optional(Schema.String),
-  worktrees: Schema.optional(QueryBoolean),
-  current: Schema.optional(QueryBoolean),
-  // kilocode_change end
   roots: Schema.optional(QueryBoolean),
   start: Schema.optional(Schema.NumberFromString),
   cursor: Schema.optional(Schema.NumberFromString),
@@ -93,28 +86,15 @@ export const SessionListQuery = Schema.Struct({
   limit: Schema.optional(Schema.NumberFromString),
   archived: Schema.optional(QueryBoolean),
 })
-// kilocode_change start
-export const WorktreeDiffQuery = Schema.Struct({
-  ...WorkspaceRoutingQueryFields,
-  base: Schema.optional(Schema.String),
-})
-export const WorktreeDiffFileQuery = Schema.Struct({
-  ...WorkspaceRoutingQueryFields,
-  base: Schema.optional(Schema.String),
-  file: Schema.String,
-})
-// kilocode_change end
 
 export const ExperimentalPaths = {
+  capabilities: "/experimental/capabilities",
   console: "/experimental/console",
   consoleOrgs: "/experimental/console/orgs",
   consoleSwitch: "/experimental/console/switch",
   tool: "/experimental/tool",
   toolIDs: "/experimental/tool/ids",
   worktree: "/experimental/worktree",
-  worktreeDiff: "/experimental/worktree/diff", // kilocode_change
-  worktreeDiffFile: "/experimental/worktree/diff/file", // kilocode_change
-  worktreeDiffSummary: "/experimental/worktree/diff/summary", // kilocode_change
   worktreeReset: "/experimental/worktree/reset",
   session: "/experimental/session",
   sessionBackground: "/experimental/session/:sessionID/background",
@@ -125,6 +105,16 @@ export const ExperimentalApi = HttpApi.make("experimental")
   .add(
     HttpApiGroup.make("experimental")
       .add(
+        HttpApiEndpoint.get("capabilities", ExperimentalPaths.capabilities, {
+          query: WorkspaceRoutingQuery,
+          success: described(CapabilitiesResponse, "Experimental capabilities"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "experimental.capabilities.get",
+            summary: "Get experimental capabilities",
+            description: "Get experimental features enabled on the OpenCode server.",
+          }),
+        ),
         HttpApiEndpoint.get("console", ExperimentalPaths.console, {
           query: WorkspaceRoutingQuery,
           success: described(ConsoleStateResponse, "Active Console provider metadata"),
@@ -156,7 +146,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
           OpenApi.annotations({
             identifier: "experimental.console.switchOrg",
             summary: "Switch active Console org",
-            description: "Persist a new active Console account/org selection for the current local Kilo state.", // kilocode_change
+            description: "Persist a new active Console account/org selection for the current local OpenCode state.",
           }),
         ),
         HttpApiEndpoint.get("tool", ExperimentalPaths.tool, {
@@ -185,13 +175,13 @@ export const ExperimentalApi = HttpApi.make("experimental")
         ),
         HttpApiEndpoint.get("worktree", ExperimentalPaths.worktree, {
           query: WorkspaceRoutingQuery,
-          success: described(WorktreeList, "List of worktrees"), // kilocode_change
+          success: described(WorktreeList, "List of worktree directories"),
           error: WorktreeApiError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "worktree.list",
             summary: "List worktrees",
-            description: "List all git worktrees for the current project and whether Kilo manages them.", // kilocode_change
+            description: "List all sandbox worktrees for the current project.",
           }),
         ),
         HttpApiEndpoint.post("worktreeCreate", ExperimentalPaths.worktree, {
@@ -231,41 +221,6 @@ export const ExperimentalApi = HttpApi.make("experimental")
             description: "Reset a worktree branch to the primary default branch.",
           }),
         ),
-        // kilocode_change start - worktree diff endpoints for agent manager
-        HttpApiEndpoint.get("worktreeDiff", ExperimentalPaths.worktreeDiff, {
-          query: WorktreeDiffQuery,
-          success: described(Schema.Array(Snapshot.FileDiff), "File diffs"),
-          error: HttpApiError.BadRequest,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "worktree.diff",
-            summary: "Get worktree diff",
-            description: "Get file diffs for a worktree compared to its base branch. Includes uncommitted changes.",
-          }),
-        ),
-        HttpApiEndpoint.get("worktreeDiffSummary", ExperimentalPaths.worktreeDiffSummary, {
-          query: WorktreeDiffQuery,
-          success: described(Schema.Array(WorktreeDiff.Item), "Diff summary items"),
-          error: HttpApiError.BadRequest,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "worktree.diffSummary",
-            summary: "Get worktree diff summary",
-            description: "Get lightweight file diff metadata for a worktree compared to its base branch.",
-          }),
-        ),
-        HttpApiEndpoint.get("worktreeDiffFile", ExperimentalPaths.worktreeDiffFile, {
-          query: WorktreeDiffFileQuery,
-          success: described(Schema.NullOr(WorktreeDiff.Item), "Diff detail item"),
-          error: HttpApiError.BadRequest,
-        }).annotateMerge(
-          OpenApi.annotations({
-            identifier: "worktree.diffFile",
-            summary: "Get worktree diff detail",
-            description: "Get full diff contents for one worktree file compared to its base branch.",
-          }),
-        ),
-        // kilocode_change end
         HttpApiEndpoint.get("session", ExperimentalPaths.session, {
           query: SessionListQuery,
           success: described(Schema.Array(Session.GlobalInfo), "List of sessions"),
@@ -274,7 +229,7 @@ export const ExperimentalApi = HttpApi.make("experimental")
             identifier: "experimental.session.list",
             summary: "List sessions",
             description:
-              "Get a list of all Kilo sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.", // kilocode_change
+              "Get a list of all OpenCode sessions across projects, sorted by most recently updated. Archived sessions are excluded by default.",
           }),
         ),
         HttpApiEndpoint.post("sessionBackground", ExperimentalPaths.sessionBackground, {

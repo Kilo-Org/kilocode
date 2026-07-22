@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "การเปลี่ยนแปลงเซสชัน",
-  "ui.sessionReview.title.git": "การเปลี่ยนแปลง Git",
-  "ui.sessionReview.title.branch": "การเปลี่ยนแปลงสาขา",
   "ui.sessionReview.title.lastTurn": "การเปลี่ยนแปลงของเทิร์นล่าสุด",
   "ui.sessionReview.diffStyle.unified": "แบบรวม",
   "ui.sessionReview.diffStyle.split": "แบบแยก",
@@ -40,10 +38,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "ซ่อนขั้นตอน",
   "ui.sessionTurn.summary.response": "การตอบสนอง",
   "ui.sessionTurn.diff.showMore": "แสดงการเปลี่ยนแปลงเพิ่มเติม ({{count}})",
-  "ui.sessionTurn.diffs.changed": "เปลี่ยนแปลงแล้ว",
-  "ui.sessionTurn.diffs.showAll": "แสดงทั้งหมด",
-  "ui.sessionTurn.diffs.showLess": "แสดงน้อยลง",
-  "ui.sessionTurn.diffs.more": "อีก +{{count}} ไฟล์",
 
   "ui.sessionTurn.retry.retrying": "กำลังลองใหม่",
   "ui.sessionTurn.retry.inSeconds": "ใน {{seconds}}วิ",
@@ -63,8 +57,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "เปิดการตั้งค่า",
 
   "ui.sessionTurn.status.delegating": "มอบหมายงาน",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "วางแผนขั้นตอนถัดไป",
   "ui.sessionTurn.status.gatheringContext": "กำลังสำรวจ",
   "ui.sessionTurn.status.gatheredContext": "สำรวจแล้ว",
@@ -86,8 +78,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "รายการ {{count}} รายการ",
   "ui.messagePart.context.list.other": "รายการ {{count}} รายการ",
   "ui.messagePart.diagnostic.error": "ข้อผิดพลาด",
-  "ui.messagePart.mcp.input": "อินพุต",
-  "ui.messagePart.mcp.output": "เอาต์พุต",
   "ui.messagePart.title.edit": "แก้ไข",
   "ui.messagePart.title.write": "เขียน",
   "ui.messagePart.option.typeOwnAnswer": "พิมพ์คำตอบของคุณเอง",
@@ -106,23 +96,10 @@ export const dict = {
   "ui.textField.copied": "คัดลอกแล้ว",
 
   "ui.imagePreview.alt": "ตัวอย่างรูปภาพ",
-  // kilocode_change start
-  "ui.mermaid.rendering": "กำลังเรนเดอร์ไดอะแกรม Mermaid...",
-  "ui.mermaid.renderError": "เรนเดอร์ Mermaid ไม่สำเร็จ: {{message}}",
-  "ui.mermaid.errorDefault": "ไม่สามารถเรนเดอร์ไดอะแกรม Mermaid ได้",
-  "ui.mermaid.errorEmpty": "Mermaid เรนเดอร์ไดอะแกรมว่าง",
-  "ui.mermaid.download": "ดาวน์โหลด",
-  "ui.mermaid.copySource": "คัดลอกซอร์ส Mermaid",
-  "ui.mermaid.copySvg": "คัดลอก SVG",
-  "ui.mermaid.copyPng": "คัดลอก PNG",
-  "ui.mermaid.downloadSvg": "ดาวน์โหลด SVG",
-  "ui.mermaid.downloadPng": "ดาวน์โหลด PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "เนื้อหาที่เลื่อนได้",
 
   "ui.tool.read": "อ่าน",
   "ui.tool.loaded": "โหลดแล้ว",
-  "ui.tool.swePruned": "SWE-Pruner · เก็บไว้ {{kept}} จาก {{total}} บรรทัด", // kilocode_change
   "ui.tool.list": "รายการ",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -162,7 +139,6 @@ export const dict = {
   "ui.message.revertMessage": "รีเซ็ตไปยังจุดนี้",
   "ui.message.copyResponse": "คัดลอกคำตอบ",
   "ui.message.copied": "คัดลอกแล้ว!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "ถูกขัดจังหวะ",
   "ui.message.queued": "อยู่ในคิว",
   "ui.message.attachment.alt": "ไฟล์แนบ",
@@ -173,9 +149,7 @@ export const dict = {
   "ui.patch.action.patched": "แพตช์",
 
   "ui.question.subtitle.answered": "{{count}} ตอบแล้ว",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(ไม่มีคำตอบ)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ไม่ได้ตอบ)",
   "ui.question.multiHint": "เลือกทั้งหมดที่ใช้",
   "ui.question.singleHint": "เลือกหนึ่งคำตอบ",

@@ -11,8 +11,6 @@ import { InstanceStore } from "../../src/project/instance-store"
 import { TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { MessageID, SessionID } from "../../src/session/schema"
-import { RuntimeFlags } from "../../src/effect/runtime-flags"
-import { Config } from "../../src/config/config"
 
 const events = EventV2Bridge.defaultLayer
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
@@ -21,8 +19,8 @@ const env = Layer.mergeAll(
   events,
   CrossSpawnSpawner.defaultLayer,
   InstanceStore.defaultLayer.pipe(Layer.provide(noopBootstrap)),
-).pipe(Layer.provide(RuntimeFlags.layer()), Layer.provide(Config.defaultLayer))
-const it = testEffect(Layer.mergeAll(env, RuntimeFlags.layer()))
+)
+const it = testEffect(env)
 
 const rejectAll = (message?: string) =>
   Effect.gen(function* () {
@@ -879,7 +877,7 @@ it.instance(
 )
 
 it.instance(
-  "reply - always resolves matching pending requests from other sessions",
+  "reply - always keeps other session pending",
   () =>
     Effect.gen(function* () {
       const a = yield* ask({
@@ -906,8 +904,10 @@ it.instance(
       yield* reply({ requestID: PermissionV1.ID.make("per_test6a"), reply: "always" })
 
       yield* Fiber.join(a)
-      yield* Fiber.join(b)
-      expect(yield* list()).toHaveLength(0)
+      expect((yield* list()).map((item) => item.id)).toEqual([PermissionV1.ID.make("per_test6b")])
+
+      yield* rejectAll()
+      yield* Fiber.await(b)
     }),
   { git: true },
 )

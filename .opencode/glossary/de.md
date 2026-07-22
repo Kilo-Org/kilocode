@@ -6,8 +6,8 @@
 
 ## Do Not Translate (Locale Additions)
 
-- `Kilo` (preserve casing in prose; keep `kilo` only in commands, package names, paths, or code)
-- `Kilo CLI`
+- `OpenCode` (preserve casing in prose; keep `opencode` only in commands, package names, paths, or code)
+- `OpenCode CLI`
 - `CLI`, `TUI`, `MCP`, `OAuth`
 - Commands, flags, file paths, and code literals (keep exactly as written)
 

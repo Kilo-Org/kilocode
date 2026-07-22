@@ -3,65 +3,23 @@
   "globalEnv": ["CI", "KILO_DISABLE_SHARE"],
   "globalPassThroughEnv": ["CI", "KILO_DISABLE_SHARE"],
   "tasks": {
-    "typecheck": {
-      "dependsOn": ["^typecheck"]
-    },
+    "typecheck": {},
     "build": {
       "dependsOn": [],
       "outputs": ["dist/**"]
     },
-    "@kilocode/cli#build": {
-      "dependsOn": ["@kilocode/sdk#build"],
-      "outputs": ["dist/**"]
-    },
-    "@kilocode/cli#test": {
+    "opencode#test": {
       "dependsOn": ["^build"],
       "outputs": [],
       "passThroughEnv": ["*"]
     },
-    "test:ci": {
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
-    },
-    "@kilocode/cli#test:ci": {
+    "@opencode-ai/app#test": {
       "dependsOn": ["^build"],
-      "env": ["KILO_TEST_PROFILE", "KILO_TEST_SHARD"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/.github/workflows/test.yml"],
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
-    },
-    "@kilocode/cli#test:httpapi": {
-      "dependsOn": ["^build"],
-      "cache": false,
-      "outputs": [],
-      "passThroughEnv": ["*"]
-    },
-    "@kilocode/kilo-gateway#test:ci": {
-      "outputs": [".artifacts/unit/junit.xml"]
-    },
-    "@kilocode/kilo-docs#build": {
-      "dependsOn": ["^build"],
-      "outputs": [".next/**"],
-      "env": ["POSTHOG_API_KEY", "FREE_TIER_AMOUNT", "NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"]
-    },
-    "@kilocode/kilo-jetbrains#build": {
-      "dependsOn": ["@kilocode/cli#build"],
-      "outputs": ["build/distributions/**"]
-    },
-    "@kilocode/kilo-jetbrains#typecheck": {
       "outputs": []
-    },
-    "@kilocode/kilo-jetbrains#test:ci": {
-      "outputs": [".artifacts/unit/junit.xml"]
     },
     "@opencode-ai/ui#test": {
       "dependsOn": ["^build"],
       "outputs": []
-    },
-    "@opencode-ai/ui#test:ci": {
-      "dependsOn": ["^build"],
-      "outputs": [".artifacts/unit/junit.xml"],
-      "passThroughEnv": ["*"]
     }
   }
 }

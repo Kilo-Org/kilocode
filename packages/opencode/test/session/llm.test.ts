@@ -25,11 +25,10 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Permission } from "@/permission"
 import { LLMAISDK } from "@/session/llm/ai-sdk"
 import { Session as SessionNs } from "@/session/session"
-import { USER_AGENT } from "../../src/installation" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
-type ConfigModel = NonNullable<NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]>["models"]>[string] // kilocode_change
+type ConfigModel = NonNullable<NonNullable<ConfigV1.Info["provider"]>[string]["models"]>[string]
 
 const openAIConfig = (model: ModelsDev.Provider["models"][string], baseURL: string): Partial<ConfigV1.Info> => {
   const { experimental: _experimental, ...configModel } = model
@@ -450,35 +449,6 @@ describe("session.llm.ai-sdk adapter", () => {
     ])
   })
 
-  // kilocode_change start - preserve AI SDK raw usage for Kilo provider billing
-  test("preserves raw usage in native usage provider metadata", async () => {
-    const events = await adapt([
-      uncheckedAdapterEvent({
-        type: "finish-step",
-        finishReason: "stop",
-        usage: {
-          inputTokens: 10,
-          outputTokens: 5,
-          totalTokens: 15,
-          raw: {
-            cost: 0.01,
-            cost_details: { upstream_inference_cost: 0.02 },
-          },
-        },
-      }),
-    ])
-
-    const step = events[0]
-    if (step.type !== "step-finish") throw new Error("expected step-finish")
-    expect(step.usage?.providerMetadata).toEqual({
-      aiSdk: {
-        cost: 0.01,
-        cost_details: { upstream_inference_cost: 0.02 },
-      },
-    })
-  })
-  // kilocode_change end
-
   // Anthropic emits cache write counts in providerMetadata.anthropic.cacheCreationInputTokens
   // rather than usage.inputTokenDetails.cacheWriteTokens. Session.getUsage falls back to the
   // metadata path — but only if the adapter preserves providerMetadata on step-finish.
@@ -504,12 +474,7 @@ describe("session.llm.ai-sdk adapter", () => {
     expect(events).toHaveLength(1)
     const stepFinish = events[0]
     if (stepFinish.type !== "step-finish") throw new Error("expected step-finish")
-    // kilocode_change start
-    expect(stepFinish.providerMetadata).toEqual({
-      anthropic: { cacheCreationInputTokens: 300 },
-      kilocode: { routedModelID: "claude-3-5-sonnet" },
-    })
-    // kilocode_change end
+    expect(stepFinish.providerMetadata).toEqual({ anthropic: { cacheCreationInputTokens: 300 } })
     expect(stepFinish.usage?.cacheWriteInputTokens).toBeUndefined()
     expect(stepFinish.usage?.cacheReadInputTokens).toBe(200)
 
@@ -843,7 +808,6 @@ describe("session.llm.stream", () => {
         expect(url.pathname.startsWith("/v1/")).toBe(true)
         expect(url.pathname.endsWith("/chat/completions")).toBe(true)
         expect(headers.get("Authorization")).toBe("Bearer test-key")
-        expect(headers.get("User-Agent") ?? "").toMatch(/^Kilo-Code\//) // kilocode_change
 
         expect(body.model).toBe(resolved.api.id)
         expect(body.temperature).toBe(0.4)
@@ -1836,10 +1800,8 @@ describe("session.llm.stream", () => {
 
         const capture = yield* Effect.promise(() => request)
         const body = capture.body
-        const headers = capture.headers // kilocode_change
 
         expect(capture.url.pathname.endsWith("/messages")).toBe(true)
-        expect(headers.get("User-Agent")?.split(" ")[0]).toBe(USER_AGENT) // kilocode_change
         const messages = body.messages as Array<{ role: string; content: Array<Record<string, unknown>> }>
         expect(messages[0]?.role).toBe("user")
         expect(messages[0]?.content[0]).toMatchObject({
@@ -1952,11 +1914,6 @@ describe("session.llm.stream", () => {
 
         expect(capture.url.pathname).toBe(pathSuffix)
         expect(body.contents).toEqual([{ role: "user", parts: [{ text: "Hello" }] }])
-        // kilocode_change start - auth keys use the same Google API key header as Standard keys
-        expect(capture.headers.get("x-goog-api-key")).toBe("test-google-key")
-        expect(capture.headers.get("authorization")).toBeNull()
-        expect(capture.url.searchParams.get("key")).toBeNull()
-        // kilocode_change end
         expect(config?.temperature).toBe(0.3)
         expect(config?.topP).toBe(0.8)
         expect(config?.maxOutputTokens).toBe(ProviderTransform.maxOutputTokens(resolved))
@@ -1972,100 +1929,4 @@ describe("session.llm.stream", () => {
       }),
     },
   )
-
-  // kilocode_change start
-  it.instance(
-    "repairs whitespace-padded tool names and executes the correct tool",
-    () =>
-      Effect.gen(function* () {
-        const fixture = loadFixture(alibabaQwenFixture.providerID, alibabaQwenFixture.modelID)
-        let toolExecuted = false
-
-        waitRequest(
-          "/chat/completions",
-          createEventResponse(
-            [
-              {
-                id: "chatcmpl-1",
-                object: "chat.completion.chunk",
-                choices: [
-                  {
-                    index: 0,
-                    delta: {
-                      role: "assistant",
-                      content: null,
-                      tool_calls: [{ index: 0, id: "call-1", type: "function", function: { name: " bash", arguments: "" } }],
-                    },
-                  },
-                ],
-              },
-              {
-                id: "chatcmpl-1",
-                object: "chat.completion.chunk",
-                choices: [{ index: 0, delta: { tool_calls: [{ index: 0, function: { arguments: "{}" } }] } }],
-              },
-              {
-                id: "chatcmpl-1",
-                object: "chat.completion.chunk",
-                choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
-              },
-            ],
-            true,
-          ),
-        )
-
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(alibabaQwenFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
-        )
-        const sessionID = SessionID.make("session-test-repair")
-        const agent = {
-          name: "test",
-          mode: "primary",
-          options: {},
-          permission: [{ permission: "*", pattern: "*", action: "allow" }],
-        } satisfies Agent.Info
-
-        const user = {
-          id: MessageID.make("msg_user-repair"),
-          sessionID,
-          role: "user",
-          time: { created: Date.now() },
-          agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
-        } satisfies MessageV2.User
-
-        yield* drain({
-          user,
-          sessionID,
-          model: resolved,
-          agent,
-          system: ["You are a helpful assistant."],
-          messages: [{ role: "user", content: "Run bash" }],
-          tools: {
-            bash: tool({
-              description: "Run bash",
-              inputSchema: z.object({}),
-              execute: async () => {
-                toolExecuted = true
-                return { output: "" }
-              },
-            }),
-          },
-        })
-
-        expect(toolExecuted).toBe(true)
-      }),
-    {
-      config: () => ({
-        enabled_providers: [alibabaQwenFixture.providerID],
-        provider: {
-          [alibabaQwenFixture.providerID]: {
-            options: { apiKey: "test-key", baseURL: `${state.server!.url.origin}/v1` },
-          },
-        },
-      }),
-    },
-  )
-  // kilocode_change end
 })

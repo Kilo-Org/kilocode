@@ -222,7 +222,7 @@ const lowerUserMessage = Effect.fn("OpenAIChat.lowerUserMessage")(function* (mes
     return yield* ProviderShared.unsupportedContent("OpenAI Chat", "user", ["text", "media"])
   }
   if (content.every((part) => part.type === "text"))
-    return { role: "user" as const, content: content.map((part) => part.text).join("\n") } // kilocode_change
+    return { role: "user" as const, content: content.map((part) => part.text).join("") }
   return { role: "user" as const, content }
 })
 

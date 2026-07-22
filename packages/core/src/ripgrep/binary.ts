@@ -91,8 +91,7 @@ export namespace RipgrepBinary {
       return Service.of({
         filepath: yield* Effect.cached(
           Effect.gen(function* () {
-            // kilocode_change - Git for Windows may expose an incompatible MSYS rg.exe
-            const system = yield* Effect.sync(() => (process.platform === "win32" ? undefined : which("rg")))
+            const system = yield* Effect.sync(() => which(process.platform === "win32" ? "rg.exe" : "rg"))
             if (system && (yield* fs.isFile(system).pipe(Effect.orDie))) return system
 
             const target = path.join(Global.Path.bin, `rg${process.platform === "win32" ? ".exe" : ""}`)

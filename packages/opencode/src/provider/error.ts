@@ -1,7 +1,6 @@
 import { APICallError } from "ai"
 import { STATUS_CODES } from "http"
 import { iife } from "@/util/iife"
-import * as KiloError from "@/kilocode/provider/error" // kilocode_change
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { isContextOverflow } from "@opencode-ai/llm"
 
@@ -32,13 +31,6 @@ function isOpenAiErrorRetryable(e: APICallError) {
 // - z.ai: can accept overflow silently (needs token-count/context-window checks)
 function message(providerID: ProviderV2.ID, e: APICallError) {
   return iife(() => {
-    const hint = KiloError.hint(providerID, e) // kilocode_change
-    if (hint) return hint // kilocode_change
-    // kilocode_change start - surface a branded reauth hint for expired Copilot tokens
-    if (providerID.includes("github-copilot") && e.statusCode === 403) {
-      return "Please reauthenticate with the copilot provider to ensure your credentials work properly with Kilo."
-    }
-    // kilocode_change end
     const msg = e.message
     if (msg === "") {
       if (e.responseBody) return e.responseBody
@@ -66,7 +58,7 @@ function message(providerID: ProviderV2.ID, e: APICallError) {
     // provide a human-readable message instead of dumping raw markup
     if (/^\s*<!doctype|^\s*<html/i.test(e.responseBody)) {
       if (e.statusCode === 401) {
-        return "Unauthorized: request was blocked by a gateway or proxy. Your authentication token may be missing or expired — try running `kilo auth login <your provider URL>` to re-authenticate." // kilocode_change
+        return "Unauthorized: request was blocked by a gateway or proxy. Your authentication token may be missing or expired — try running `opencode auth login <your provider URL>` to re-authenticate."
       }
       if (e.statusCode === 403) {
         return "Forbidden: request was blocked by a gateway or proxy. You may not have permission to access this resource — check your account and provider settings."
@@ -122,18 +114,6 @@ export function parseStreamError(input: unknown): ParsedStreamError | undefined 
         message: "Input exceeds context window of this model",
         responseBody,
       }
-    // kilocode_change start - normalize empty provider rate-limit stream errors
-    case "rate_limit_exceeded":
-      return {
-        type: "api_error",
-        message:
-          typeof body?.error?.message === "string" && body.error.message.trim()
-            ? body.error.message
-            : "Provider rate limit exceeded. Please try again shortly.",
-        isRetryable: true,
-        responseBody,
-      }
-    // kilocode_change end
     case "insufficient_quota":
       return {
         type: "api_error",

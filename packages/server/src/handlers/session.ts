@@ -10,7 +10,7 @@ import {
   SessionNotFoundError,
   UnknownError,
 } from "../errors"
-import { Location } from "@opencode-ai/core/location" // kilocode_change
+import { AbsolutePath } from "@opencode-ai/core/schema"
 
 const DefaultSessionsLimit = 50
 
@@ -65,17 +65,12 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.create",
         Effect.fn(function* (ctx) {
-          const location = yield* Location.Service // kilocode_change
           return {
             data: yield* session.create({
               id: ctx.payload.id,
               agent: ctx.payload.agent,
               model: ctx.payload.model,
-              // kilocode_change start - honor createKiloClient's configured Location
-              location:
-                ctx.payload.location ??
-                Location.Ref.make({ directory: location.directory, workspaceID: location.workspaceID }),
-              // kilocode_change end
+              location: ctx.payload.location ?? { directory: AbsolutePath.make(process.cwd()) },
             }),
           }
         }),

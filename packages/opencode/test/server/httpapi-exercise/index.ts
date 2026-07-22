@@ -36,7 +36,6 @@ import { runScenario } from "./runner"
 import { disposeApps } from "./backend"
 import { runtime } from "./runtime"
 import { type Scenario } from "./types"
-import { kiloScenarios } from "../../kilocode/server/httpapi-exercise-scenarios" // kilocode_change
 
 function cursor(input: Record<string, unknown>) {
   return Buffer.from(JSON.stringify(input)).toString("base64url")
@@ -298,50 +297,6 @@ const scenarios: Scenario[] = [
     }))
     .json(404, object, "status"),
   http.protected.get("/question", "question.list").json(200, array),
-  // kilocode_change start
-  http.protected.get("/kilocode/notebook", "kilocode.notebook.list").json(200, array),
-  http.protected
-    .post("/kilocode/notebook/{requestID}/reply", "kilocode.notebook.reply")
-    .at((ctx) => ({
-      path: route("/kilocode/notebook/{requestID}/reply", { requestID: "nbr_httpapi_reply" }),
-      headers: ctx.headers(),
-      body: {
-        result: {
-          operation: "read",
-          path: "notebook.ipynb",
-          requestPath: "notebook.ipynb",
-          revision: "content:1",
-          cells: [],
-        },
-      },
-    }))
-    .json(404, object, "status"),
-  http.protected
-    .post("/kilocode/notebook/{requestID}/reject", "kilocode.notebook.reject")
-    .at((ctx) => ({
-      path: route("/kilocode/notebook/{requestID}/reject", { requestID: "nbr_httpapi_reject" }),
-      headers: ctx.headers(),
-      body: { error: { code: "not_found", message: "Notebook not found" } },
-    }))
-    .json(404, object, "status"),
-  http.protected.get("/kilocode/agent-manager", "kilocode.agentManager.list").json(200, array),
-  http.protected
-    .post("/kilocode/agent-manager/{requestID}/reply", "kilocode.agentManager.reply")
-    .at((ctx) => ({
-      path: route("/kilocode/agent-manager/{requestID}/reply", { requestID: "amr_httpapi_reply" }),
-      headers: ctx.headers(),
-      body: { result: { operation: "overview", overview: { sections: [], ungrouped: [] } } },
-    }))
-    .json(404, object, "status"),
-  http.protected
-    .post("/kilocode/agent-manager/{requestID}/reject", "kilocode.agentManager.reject")
-    .at((ctx) => ({
-      path: route("/kilocode/agent-manager/{requestID}/reject", { requestID: "amr_httpapi_reject" }),
-      headers: ctx.headers(),
-      body: { error: { code: "unknown_session", message: "Managed session not found" } },
-    }))
-    .json(404, object, "status"),
-  // kilocode_change end
   http.protected
     .post("/question/{requestID}/reply", "question.reply.invalid")
     .at((ctx) => ({
@@ -623,6 +578,10 @@ const scenarios: Scenario[] = [
     .get("/experimental/session", "experimental.session.list")
     .at((ctx) => ({ path: "/experimental/session?roots=false&archived=false", headers: ctx.headers() }))
     .json(200, array),
+  http.protected.get("/experimental/capabilities", "experimental.capabilities.get").json(200, (body) => {
+    check(typeof body === "object" && body !== null, "capabilities should be an object")
+    check("backgroundSubagents" in body, "capabilities should report background subagents")
+  }),
   http.protected
     .post("/experimental/session/{sessionID}/background", "experimental.session.background")
     .mutating()
@@ -802,6 +761,44 @@ const scenarios: Scenario[] = [
     .seeded((ctx) => ctx.file("hello.txt", "hello\n"))
     .at((ctx) => ({ path: "/api/fs/find?query=hello&type=file", headers: ctx.headers() }))
     .json(200, locationData(array)),
+  http.protected.get("/api/pty", "v2.pty.list").json(200, locationData(array)),
+  http.protected
+    .post("/api/pty", "v2.pty.create")
+    .mutating()
+    .at((ctx) => ({ path: "/api/pty", headers: ctx.headers(), body: controlledPtyInput("HTTP API V2 PTY") }))
+    .json(200, locationData(object)),
+  http.protected
+    .get("/api/pty/{ptyID}", "v2.pty.get")
+    .at((ctx) => ({ path: route("/api/pty/{ptyID}", { ptyID: "pty_httpapi_missing" }), headers: ctx.headers() }))
+    .json(404, object, "status"),
+  http.protected
+    .put("/api/pty/{ptyID}", "v2.pty.update")
+    .mutating()
+    .at((ctx) => ({
+      path: route("/api/pty/{ptyID}", { ptyID: "pty_httpapi_missing" }),
+      headers: ctx.headers(),
+      body: { title: "missing" },
+    }))
+    .json(404, object, "status"),
+  http.protected
+    .delete("/api/pty/{ptyID}", "v2.pty.remove")
+    .mutating()
+    .at((ctx) => ({ path: route("/api/pty/{ptyID}", { ptyID: "pty_httpapi_missing" }), headers: ctx.headers() }))
+    .json(404, object, "status"),
+  http.protected
+    .post("/api/pty/{ptyID}/connect-token", "v2.pty.connectToken")
+    .at((ctx) => ({
+      path: route("/api/pty/{ptyID}/connect-token", { ptyID: "pty_httpapi_missing" }),
+      headers: { ...ctx.headers(), "x-kilo-ticket": "1" },
+    }))
+    .json(404, object, "status"),
+  http.protected
+    .get("/api/pty/{ptyID}/connect", "v2.pty.connect")
+    .at((ctx) => ({
+      path: route("/api/pty/{ptyID}/connect", { ptyID: "pty_httpapi_missing" }),
+      headers: ctx.headers(),
+    }))
+    .status(404, undefined, "none"),
   http.protected.get("/api/reference", "v2.reference.list").json(200, object),
   http.protected
     .get("/api/provider/{providerID}", "v2.provider.get")
@@ -1546,13 +1543,27 @@ const scenarios: Scenario[] = [
     .mutating()
     .seeded((ctx) => ctx.session({ title: "Share session" }))
     .at((ctx) => ({ path: route("/session/{sessionID}/share", { sessionID: ctx.state.id }), headers: ctx.headers() }))
-    .status(500, undefined, "status"), // kilocode_change
+    .json(
+      200,
+      (body, ctx) => {
+        object(body)
+        check(body.id === ctx.state.id, "share should return the session")
+      },
+      "status",
+    ),
   http.protected
     .delete("/session/{sessionID}/share", "session.unshare")
     .mutating()
     .seeded((ctx) => ctx.session({ title: "Unshare session" }))
     .at((ctx) => ({ path: route("/session/{sessionID}/share", { sessionID: ctx.state.id }), headers: ctx.headers() }))
-    .status(500, undefined, "status"), // kilocode_change
+    .json(
+      200,
+      (body, ctx) => {
+        object(body)
+        check(body.id === ctx.state.id, "unshare should return the session")
+      },
+      "status",
+    ),
   http.protected
     .post("/tui/append-prompt", "tui.appendPrompt")
     .at((ctx) => ({ path: "/tui/append-prompt", headers: ctx.headers(), body: { text: "hello" } }))
@@ -1616,7 +1627,6 @@ const scenarios: Scenario[] = [
     .probe({ path: "/global/upgrade", body: { target: 1 } })
     .at(() => ({ path: "/global/upgrade", body: { target: 1 } }))
     .status(400),
-  ...kiloScenarios, // kilocode_change
 ]
 
 const llmScenarios = new Set([

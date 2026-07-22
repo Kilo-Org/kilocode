@@ -58,23 +58,16 @@ function testLayer(
 
 describe("installation", () => {
   describe("latest", () => {
-    // kilocode_change start - curl/unknown fallback now resolves from the public npm
-    // registry instead of GitHub /releases/latest (which is polluted by JetBrains releases)
-    const curlCalls: string[] = []
-    testEffect(
-      testLayer((request) => {
-        curlCalls.push(request.url)
-        return jsonResponse({ version: "1.2.3" })
-      }),
-    ).effect("reads release version from GitHub releases", () =>
-      Effect.gen(function* () {
-        const result = yield* Installation.use.latest("unknown")
-        expect(result).toBe("1.2.3")
-        expect(curlCalls).toContain("https://registry.npmjs.org/@kilocode%2fcli/local")
-      }),
+    testEffect(testLayer(() => jsonResponse({ tag_name: "v1.2.3" }))).effect(
+      "reads release version from GitHub releases",
+      () =>
+        Effect.gen(function* () {
+          const result = yield* Installation.use.latest("unknown")
+          expect(result).toBe("1.2.3")
+        }),
     )
 
-    testEffect(testLayer(() => jsonResponse({ version: "4.0.0-beta.1" }))).effect(
+    testEffect(testLayer(() => jsonResponse({ tag_name: "v4.0.0-beta.1" }))).effect(
       "strips v prefix from GitHub release tag",
       () =>
         Effect.gen(function* () {
@@ -82,7 +75,6 @@ describe("installation", () => {
           expect(result).toBe("4.0.0-beta.1")
         }),
     )
-    // kilocode_change end
 
     const npmCalls: string[] = []
     testEffect(
@@ -94,7 +86,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("npm")
         expect(result).toBe("1.5.0")
-        expect(npmCalls).toContain(`https://registry.npmjs.org/@kilocode%2fcli/${InstallationChannel}`) // kilocode_change
+        expect(npmCalls).toContain(`https://registry.npmjs.org/opencode-ai/${InstallationChannel}`)
       }),
     )
 
@@ -108,7 +100,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("bun")
         expect(result).toBe("1.6.0")
-        expect(bunCalls).toContain(`https://registry.npmjs.org/@kilocode%2fcli/${InstallationChannel}`) // kilocode_change
+        expect(bunCalls).toContain(`https://registry.npmjs.org/opencode-ai/${InstallationChannel}`)
       }),
     )
 
@@ -122,7 +114,7 @@ describe("installation", () => {
       Effect.gen(function* () {
         const result = yield* Installation.use.latest("pnpm")
         expect(result).toBe("1.7.0")
-        expect(pnpmCalls).toContain(`https://registry.npmjs.org/@kilocode%2fcli/${InstallationChannel}`) // kilocode_change
+        expect(pnpmCalls).toContain(`https://registry.npmjs.org/opencode-ai/${InstallationChannel}`)
       }),
     )
 
@@ -147,8 +139,8 @@ describe("installation", () => {
         () => jsonResponse({ versions: { stable: "2.0.0" } }),
         (cmd, args) => {
           // getBrewFormula: return core formula (no tap)
-          if (cmd === "brew" && args.includes("--formula") && args.includes("Kilo-Org/tap/kilo")) return "" // kilocode_change
-          if (cmd === "brew" && args.includes("--formula") && args.includes("kilo")) return "kilo" // kilocode_change
+          if (cmd === "brew" && args.includes("--formula") && args.includes("anomalyco/tap/opencode")) return ""
+          if (cmd === "brew" && args.includes("--formula") && args.includes("opencode")) return "opencode"
           return ""
         },
       ),
@@ -166,7 +158,7 @@ describe("installation", () => {
       testLayer(
         () => jsonResponse({}), // HTTP not used for tap formula
         (cmd, args) => {
-          if (cmd === "brew" && args.includes("Kilo-Org/tap/kilo") && args.includes("--formula")) return "kilo" // kilocode_change
+          if (cmd === "brew" && args.includes("anomalyco/tap/opencode") && args.includes("--formula")) return "opencode"
           if (cmd === "brew" && args.includes("--json=v2")) return brewInfoJson
           return ""
         },

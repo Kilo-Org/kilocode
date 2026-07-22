@@ -17,8 +17,6 @@ import { SessionProcessor } from "../../src/session/processor"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
-import { SessionNetwork } from "../../src/session/network" // kilocode_change
-import { Bus } from "../../src/bus" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -185,19 +183,6 @@ const replacements = [
 const env = LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMServer.layer, [])]), { replacements })
 
 const it = testEffect(env)
-// kilocode_change start - exercise non-default output token ceilings in the processor
-const capped = testEffect(
-  LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMServer.layer, [])]), {
-    replacements: [
-      LayerNode.replace(SessionSummary.node, summary),
-      LayerNode.replace(
-        RuntimeFlags.node,
-        RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 }),
-      ),
-    ],
-  }),
-)
-// kilocode_change end
 
 const providerErrorLLM = Layer.succeed(
   LLM.Service,
@@ -435,48 +420,6 @@ it.live("session.processor effect tests stop after token overflow requests compa
   ),
 )
 
-// kilocode_change start - configured output ceiling must reach finish-step overflow accounting
-capped.live("session.processor respects the configured output token ceiling", () =>
-  provideTmpdirServer(
-    ({ dir, llm }) =>
-      Effect.gen(function* () {
-        const { processors, session, provider } = yield* boot()
-        yield* llm.text("within capacity", { usage: { input: 91_000, output: 0 } })
-
-        const chat = yield* session.create({})
-        const parent = yield* user(chat.id, "stay within the configured capacity")
-        const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
-        const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
-        const handle = yield* processors.create({
-          assistantMessage: msg,
-          sessionID: chat.id,
-          model: mdl,
-        })
-
-        const value = yield* handle.process({
-          user: {
-            id: parent.id,
-            sessionID: chat.id,
-            role: "user",
-            time: parent.time,
-            agent: parent.agent,
-            model: { providerID: ref.providerID, modelID: ref.modelID },
-          } satisfies MessageV2.User,
-          sessionID: chat.id,
-          model: mdl,
-          agent: agent(),
-          system: [],
-          messages: [{ role: "user", content: "stay within the configured capacity" }],
-          tools: {},
-        })
-
-        expect(value).toBe("continue")
-      }),
-    { git: true, config: (url) => providerCfg(url) },
-  ),
-)
-// kilocode_change end
-
 it.live("session.processor effect tests capture reasoning from http mock", () =>
   provideTmpdirServer(
     ({ dir, llm }) =>
@@ -531,11 +474,6 @@ it.live("session.processor effect tests reset reasoning state across retries", (
     ({ dir, llm }) =>
       Effect.gen(function* () {
         const { processors, session, provider } = yield* boot()
-        // kilocode_change start — auto-reply to network reconnection prompts triggered by reset()
-        const offAsk = Bus.subscribe(SessionNetwork.Event.Asked, (event) => {
-          void SessionNetwork.reply({ requestID: event.properties.id })
-        })
-        // kilocode_change end
 
         yield* llm.push(reply().reason("one").reset(), reply().reason("two").stop())
 
@@ -573,7 +511,6 @@ it.live("session.processor effect tests reset reasoning state across retries", (
         expect(yield* llm.calls).toBe(2)
         expect(reasoning.some((part) => part.text === "two")).toBe(true)
         expect(reasoning.some((part) => part.text === "onetwo")).toBe(false)
-        offAsk() // kilocode_change — cleanup subscriber
       }),
     { config: (url) => providerCfg(url) },
   ),

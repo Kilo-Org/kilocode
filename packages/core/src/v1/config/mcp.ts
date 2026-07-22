@@ -1,12 +1,9 @@
 export * as ConfigMCPV1 from "./mcp"
 
-import { Schema, SchemaGetter } from "effect" // kilocode_change
-import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
+import { Schema } from "effect"
 import { PositiveInt } from "../../schema"
-import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
 
-const LocalCanonical = Schema.Struct({
-  // kilocode_change
+export const Local = Schema.Struct({
   type: Schema.Literal("local").annotate({ description: "Type of MCP server connection" }),
   command: Schema.mutable(Schema.Array(Schema.String)).annotate({
     description: "Command and arguments to run the MCP server",
@@ -23,41 +20,8 @@ const LocalCanonical = Schema.Struct({
   timeout: Schema.optional(PositiveInt).annotate({
     description: "Timeout in ms for MCP server requests. Defaults to 5000 (5 seconds) if not specified.",
   }),
-})
-
-// kilocode_change start - accept `env` as an alias for `environment`
-// The input schema admits either key and the transform normalises to the
-// canonical `environment` field before validation downstream.
-const LocalInput = Schema.Struct({
-  type: Schema.Literal("local"),
-  command: Schema.mutable(Schema.Array(Schema.String)),
-  environment: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-  env: Schema.optional(Schema.Record(Schema.String, Schema.String)),
-  enabled: Schema.optional(Schema.Boolean),
-  timeout: Schema.optional(PositiveInt),
-})
-
-const normalizeLocal = (input: Schema.Schema.Type<typeof LocalInput>): Schema.Schema.Type<typeof LocalCanonical> => {
-  const env = input.environment ?? input.env
-  return {
-    type: input.type,
-    command: input.command,
-    ...(env === undefined ? {} : { environment: env }),
-    ...("enabled" in input ? { enabled: input.enabled } : {}),
-    ...("timeout" in input ? { timeout: input.timeout } : {}),
-  }
-}
-
-export const Local = LocalInput.pipe(
-  Schema.decodeTo(LocalCanonical, {
-    decode: SchemaGetter.transform(normalizeLocal),
-    encode: SchemaGetter.passthrough({ strict: false }),
-  }),
-)
-  .annotate({ identifier: "McpLocalConfig" })
-  .pipe(withStatics((s) => ({ zod: zod(s) })))
+}).annotate({ identifier: "McpLocalConfig" })
 export type Local = Schema.Schema.Type<typeof Local>
-// kilocode_change end
 
 export const OAuth = Schema.Struct({
   clientId: Schema.optional(Schema.String).annotate({

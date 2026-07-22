@@ -5,7 +5,6 @@ import { Discovery } from "../../src/skill/discovery"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Config } from "../../src/config/config"
-import { Git } from "../../src/git" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
@@ -16,20 +15,35 @@ import fs from "fs/promises"
 
 const node = CrossSpawnSpawner.defaultLayer
 
-const skills = (disableExternalSkills: boolean, disableClaudeCodeSkills: boolean) =>
-  Skill.layer.pipe(
-    Layer.provide(Git.defaultLayer), // kilocode_change
-    Layer.provide(Discovery.defaultLayer),
-    Layer.provide(Config.defaultLayer),
-    Layer.provide(EventV2Bridge.defaultLayer),
-    Layer.provide(FSUtil.defaultLayer),
-    Layer.provide(Global.layer),
-    Layer.provide(RuntimeFlags.layer({ disableExternalSkills, disableClaudeCodeSkills })),
-  )
-
-const it = testEffect(Layer.mergeAll(skills(false, false), node, testInstanceStoreLayer))
-const itWithoutExternalSkills = testEffect(Layer.mergeAll(skills(true, false), node, testInstanceStoreLayer))
-const itWithoutClaudeCodeSkills = testEffect(Layer.mergeAll(skills(false, true), node, testInstanceStoreLayer)) // kilocode_change
+const it = testEffect(Layer.mergeAll(Skill.defaultLayer, node, testInstanceStoreLayer))
+const itWithoutClaudeCodeSkills = testEffect(
+  Layer.mergeAll(
+    Skill.layer.pipe(
+      Layer.provide(Discovery.defaultLayer),
+      Layer.provide(Config.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(FSUtil.defaultLayer),
+      Layer.provide(Global.layer),
+      Layer.provide(RuntimeFlags.layer({ disableClaudeCodeSkills: true })),
+    ),
+    node,
+    testInstanceStoreLayer,
+  ),
+)
+const itWithoutExternalSkills = testEffect(
+  Layer.mergeAll(
+    Skill.layer.pipe(
+      Layer.provide(Discovery.defaultLayer),
+      Layer.provide(Config.defaultLayer),
+      Layer.provide(EventV2Bridge.defaultLayer),
+      Layer.provide(FSUtil.defaultLayer),
+      Layer.provide(Global.layer),
+      Layer.provide(RuntimeFlags.layer({ disableExternalSkills: true })),
+    ),
+    node,
+    testInstanceStoreLayer,
+  ),
+)
 
 async function createGlobalSkill(homeDir: string) {
   const skillDir = path.join(homeDir, ".claude", "skills", "global-test-skill")
@@ -62,19 +76,14 @@ const withHome = <A, E, R>(home: string, self: Effect.Effect<A, E, R>) =>
       }),
   )
 
-const discovered = <T extends { location: string }>(list: readonly T[]) =>
-  list.filter((skill) => ![Skill.BUILTIN_LOCATION, "<built-in>"].includes(skill.location)) // kilocode_change
-
 describe("skill", () => {
-  // kilocode_change start
-  it.live("discovers skills from .kilo/skill/ directory", () =>
-    // kilocode_change end
+  it.live("discovers skills from .opencode/skill/ directory", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             Bun.write(
-              path.join(dir, ".kilo", "skill", "test-skill", "SKILL.md"),
+              path.join(dir, ".opencode", "skill", "test-skill", "SKILL.md"),
               `---
 name: test-skill
 description: A test skill for verification.
@@ -88,7 +97,7 @@ Instructions here.
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.length).toBe(1)
           const item = list.find((x) => x.name === "test-skill")
           expect(item).toBeDefined()
@@ -107,7 +116,7 @@ Instructions here.
           Effect.gen(function* () {
             yield* Effect.promise(() =>
               Bun.write(
-                path.join(dir, ".kilo", "skill", "dir-skill", "SKILL.md"), // kilocode_change: .kilo is primary
+                path.join(dir, ".opencode", "skill", "dir-skill", "SKILL.md"),
                 `---
 name: dir-skill
 description: Skill for dirs test.
@@ -120,7 +129,7 @@ description: Skill for dirs test.
 
             const skill = yield* Skill.Service
             const dirs = yield* skill.dirs()
-            expect(dirs).toContain(path.join(dir, ".kilo", "skill", "dir-skill")) // kilocode_change: .kilo is primary
+            expect(dirs).toContain(path.join(dir, ".opencode", "skill", "dir-skill"))
             expect(dirs.length).toBe(1)
           }),
         ),
@@ -128,16 +137,14 @@ description: Skill for dirs test.
     ),
   )
 
-  // kilocode_change start
-  it.live("discovers multiple skills from .kilo/skill/ directory", () =>
-    // kilocode_change end
+  it.live("discovers multiple skills from .opencode/skill/ directory", () =>
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             Promise.all([
               Bun.write(
-                path.join(dir, ".kilo", "skill", "skill-one", "SKILL.md"),
+                path.join(dir, ".opencode", "skill", "skill-one", "SKILL.md"),
                 `---
 name: skill-one
 description: First test skill.
@@ -147,7 +154,7 @@ description: First test skill.
 `,
               ),
               Bun.write(
-                path.join(dir, ".kilo", "skill", "skill-two", "SKILL.md"),
+                path.join(dir, ".opencode", "skill", "skill-two", "SKILL.md"),
                 `---
 name: skill-two
 description: Second test skill.
@@ -160,7 +167,7 @@ description: Second test skill.
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.length).toBe(2)
           expect(list.find((x) => x.name === "skill-one")).toBeDefined()
           expect(list.find((x) => x.name === "skill-two")).toBeDefined()
@@ -175,7 +182,7 @@ description: Second test skill.
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             Bun.write(
-              path.join(dir, ".kilo", "skill", "no-frontmatter", "SKILL.md"), // kilocode_change: .kilo is primary
+              path.join(dir, ".opencode", "skill", "no-frontmatter", "SKILL.md"),
               `# No Frontmatter
 
 Just some content without YAML frontmatter.
@@ -184,7 +191,7 @@ Just some content without YAML frontmatter.
           )
 
           const skill = yield* Skill.Service
-          expect(discovered(yield* skill.all())).toEqual([]) // kilocode_change
+          expect((yield* skill.all()).filter((s) => s.location !== "<built-in>")).toEqual([])
         }),
       { git: true },
     ),
@@ -194,12 +201,10 @@ Just some content without YAML frontmatter.
     provideTmpdirInstance(
       (dir) =>
         Effect.gen(function* () {
-          // kilocode_change start - load .kilo skills without falling back to .opencode
           yield* Effect.promise(() =>
-            Promise.all([
-              Bun.write(
-                path.join(dir, ".kilo", "skill", "manual-skill", "SKILL.md"),
-                `---
+            Bun.write(
+              path.join(dir, ".opencode", "skill", "manual-skill", "SKILL.md"),
+              `---
 name: manual-skill
 ---
 
@@ -207,21 +212,11 @@ name: manual-skill
 
 Instructions here.
 `,
-              ),
-              Bun.write(
-                path.join(dir, ".opencode", "skill", "ignored-skill", "SKILL.md"),
-                `---
-name: ignored-skill
-description: This skill must not load.
----
-`,
-              ),
-            ]),
+            ),
           )
-          // kilocode_change end
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.length).toBe(1)
           const item = list.find((x) => x.name === "manual-skill")
           expect(item).toBeDefined()
@@ -251,7 +246,7 @@ description: A skill in the .claude/skills directory.
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.length).toBe(1)
           const item = list.find((x) => x.name === "claude-skill")
           expect(item).toBeDefined()
@@ -274,7 +269,7 @@ description: A skill in the .claude/skills directory.
           yield* Effect.promise(() => createGlobalSkill(tmp.path))
           yield* Effect.gen(function* () {
             const skill = yield* Skill.Service
-            const list = discovered(yield* skill.all()) // kilocode_change
+            const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
             expect(list.length).toBe(1)
             expect(list[0].name).toBe("global-test-skill")
             expect(list[0].description).toBe("A global skill from ~/.claude/skills for testing.")
@@ -290,7 +285,7 @@ description: A skill in the .claude/skills directory.
       () =>
         Effect.gen(function* () {
           const skill = yield* Skill.Service
-          expect(discovered(yield* skill.all())).toEqual([]) // kilocode_change
+          expect((yield* skill.all()).filter((s) => s.location !== "<built-in>")).toEqual([])
         }),
       { git: true },
     ),
@@ -345,7 +340,7 @@ description: A skill in the .agents/skills directory.
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.length).toBe(1)
           const item = list.find((x) => x.name === "agent-skill")
           expect(item).toBeDefined()
@@ -384,7 +379,7 @@ This skill is loaded from the global home directory.
 
           yield* Effect.gen(function* () {
             const skill = yield* Skill.Service
-            const list = discovered(yield* skill.all()) // kilocode_change
+            const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
             expect(list.length).toBe(1)
             expect(list[0].name).toBe("global-agent-skill")
             expect(list[0].description).toBe("A global skill from ~/.agents/skills for testing.")
@@ -425,7 +420,7 @@ description: A skill in the .agents/skills directory.
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.length).toBe(2)
           expect(list.find((x) => x.name === "claude-skill")).toBeDefined()
           expect(list.find((x) => x.name === "agent-skill")).toBeDefined()
@@ -464,7 +459,7 @@ description: A skill in the .agents/skills directory.
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.map((s) => s.name)).toEqual(["agent-skill"])
         }),
       { git: true },
@@ -497,23 +492,21 @@ description: A skill in the .agents/skills directory.
 # Agent Skill
 `,
               ),
-              // kilocode_change start
               Bun.write(
-                path.join(dir, ".kilo", "skill", "opencode-skill", "SKILL.md"),
+                path.join(dir, ".opencode", "skill", "opencode-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .kilo/skill directory.
+description: A skill in the .opencode/skill directory.
 ---
 
 # OpenCode Skill
 `,
               ),
-              // kilocode_change end
             ]),
           )
 
           const skill = yield* Skill.Service
-          const list = discovered(yield* skill.all()) // kilocode_change
+          const list = (yield* skill.all()).filter((s) => s.location !== "<built-in>")
           expect(list.map((s) => s.name)).toEqual(["opencode-skill"])
         }),
       { git: true },
@@ -546,28 +539,26 @@ description: A skill in the .agents/skills directory.
 # Agent Skill
 `,
               ),
-              // kilocode_change start
               Bun.write(
-                path.join(dir, ".kilo", "skill", "agent-skill", "SKILL.md"),
+                path.join(dir, ".opencode", "skill", "agent-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .kilo/skill directory.
+description: A skill in the .opencode/skill directory.
 ---
 
 # OpenCode Skill
 `,
               ),
               Bun.write(
-                path.join(dir, ".kilo", "skills", "agent-skill", "SKILL.md"),
+                path.join(dir, ".opencode", "skills", "agent-skill", "SKILL.md"),
                 `---
 name: opencode-skill
-description: A skill in the .kilo/skills directory.
+description: A skill in the .opencode/skills directory.
 ---
 
 # OpenCode Skill
 `,
               ),
-              // kilocode_change end
             ]),
           )
 

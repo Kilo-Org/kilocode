@@ -22,10 +22,7 @@ export const Plugin = {
     for (const doc of (yield* config.entries()).filter(
       (entry): entry is Config.Document => entry.type === "document",
     )) {
-      // kilocode_change start
-      const root = path.parse(location.project.directory).root
-      const directory = location.project.directory === root ? location.directory : location.project.directory
-      // kilocode_change end
+      const directory = doc.path ? path.dirname(doc.path) : location.directory
       for (const [name, entry] of Object.entries(doc.info.references ?? {})) {
         if (!validAlias(name)) continue
         entries.set(

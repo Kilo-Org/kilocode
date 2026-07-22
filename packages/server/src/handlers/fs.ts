@@ -13,8 +13,7 @@ export const FileSystemHandler = HttpApiBuilder.group(Api, "server.fs", (handler
         Effect.gen(function* () {
           const file = yield* (yield* FileSystem.Service).read({
             path: RelativePath.make(
-              // kilocode_change - generated clients use the typed query; retain raw wildcard compatibility
-              ctx.query.path ?? decodeURIComponent(new URL(ctx.request.url, "http://localhost").pathname.slice(13)),
+              decodeURIComponent(new URL(ctx.request.url, "http://localhost").pathname.slice(13)),
             ),
           })
           return HttpServerResponse.uint8Array(file.content, { contentType: file.mime })

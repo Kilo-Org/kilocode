@@ -59,7 +59,7 @@ describe("HttpApi Server.listen mDNS", () => {
       const published = events.filter((e) => e.kind === "publish")
       expect(published.length).toBe(1)
       expect(published[0]!.port).toBe(listener.port)
-      expect(published[0]!.name).toBe(`kilo-${listener.port}`) // kilocode_change
+      expect(published[0]!.name).toBe(`opencode-${listener.port}`)
     } finally {
       await withTimeout(listener.stop(true), 10_000, "timed out stopping mdns listener")
     }

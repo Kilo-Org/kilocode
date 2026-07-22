@@ -7,30 +7,23 @@ on:
 
 jobs:
   generate:
-    if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: write
       pull-requests: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
-        # kilocode_change start
-        with:
-          persist-credentials: false
-        # kilocode_change end
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Setup Bun
         uses: ./.github/actions/setup-bun
 
-      - name: Setup Git Committer
+      - name: Setup git committer
         id: committer
         uses: ./.github/actions/setup-git-committer
         with:
-          # kilocode_change start
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # kilocode_change end
+          opencode-app-id: ${{ vars.OPENCODE_APP_ID }}
+          opencode-app-secret: ${{ secrets.OPENCODE_APP_SECRET }}
 
       - name: Generate
         run: ./script/generate.ts

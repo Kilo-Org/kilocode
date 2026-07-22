@@ -1,19 +1,31 @@
-/* kilocode_change start — restore main's card visual style (border + background) while keeping upstream layout selectors */
 [data-component="card"] {
+  --card-pad-y: 10px;
+  --card-pad-r: 12px;
+  --card-pad-l: 10px;
+
   width: 100%;
   display: flex;
   flex-direction: column;
-  background-color: var(--surface-inset-base);
-  border: 1px solid var(--border-weaker-base);
-  transition: background-color 0.15s ease;
+  position: relative;
+  background: transparent;
+  border: none;
   border-radius: var(--radius-md);
-  padding: 6px 12px;
-  overflow: clip;
+  padding: var(--card-pad-y) var(--card-pad-r) var(--card-pad-y) var(--card-pad-l);
 
-  /* upstream layout variables (used by card.tsx data-slot system) */
+  /* text-14-regular */
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-base);
+  font-style: normal;
+  font-weight: var(--font-weight-regular);
+  line-height: var(--line-height-large);
+  letter-spacing: var(--letter-spacing-normal);
+  color: var(--text-strong);
+
   --card-gap: 8px;
   --card-icon: 16px;
   --card-indent: 0px;
+  --card-line-pad: 8px;
+
   --card-accent: var(--icon-active);
 
   &:has([data-slot="card-title"]) {
@@ -22,6 +34,17 @@
 
   &:has([data-slot="card-title-icon"]) {
     --card-indent: calc(var(--card-icon) + var(--card-gap));
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: var(--card-line-pad);
+    bottom: var(--card-line-pad);
+    width: 2px;
+    border-radius: 2px;
+    background-color: var(--card-accent);
   }
 
   :where([data-card="title"], [data-slot="card-title"]) {
@@ -68,38 +91,4 @@
   :where([data-card="actions"], [data-slot="card-actions"]) {
     padding-left: var(--card-indent);
   }
-
-  &[data-variant="error"] {
-    background-color: var(--surface-critical-weak);
-    border: 1px solid var(--border-critical-base);
-    color: rgba(218, 51, 25, 0.6);
-
-    /* text-12-regular */
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-small);
-    font-style: normal;
-    font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-large);
-    letter-spacing: var(--letter-spacing-normal);
-
-    &[data-component="icon"] {
-      color: var(--icon-critical-active);
-    }
-  }
-
-  &[data-variant="warning"] {
-    background-color: rgba(245, 158, 11, 0.1);
-    border: 1px solid rgba(245, 158, 11, 0.45);
-    color: color-mix(in oklab, var(--text-warning, #d97706) 85%, var(--text-base, #ccc));
-    padding: 12px 14px;
-
-    /* text-12-regular */
-    font-family: var(--font-family-sans);
-    font-size: var(--font-size-small);
-    font-style: normal;
-    font-weight: var(--font-weight-regular);
-    line-height: var(--line-height-large);
-    letter-spacing: var(--letter-spacing-normal);
-  }
 }
-/* kilocode_change end */

@@ -26,7 +26,7 @@ exports[`tool parameters JSON Schema (wire shape) bash 1`] = `
     },
     "description": {
       "description": 
-"Recommended: a clear, concise description of what this command does in 5-10 words. Examples:
+"Clear, concise description of what this command does in 5-10 words. Examples:
 Input: ls
 Output: Lists files in current directory
 
@@ -55,6 +55,7 @@ Output: Creates directory 'foo'"
   },
   "required": [
     "command",
+    "description",
   ],
   "type": "object",
 }
@@ -206,12 +207,7 @@ exports[`tool parameters JSON Schema (wire shape) lsp 1`] = `
 exports[`tool parameters JSON Schema (wire shape) plan 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "properties": {
-    "path": {
-      "description": "Optional workspace-local path to the finalized plan file. Pass this when you saved the plan somewhere other than the provided plan file path.",
-      "type": "string",
-    },
-  },
+  "properties": {},
   "type": "object",
 }
 `;
@@ -228,10 +224,6 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
             "description": "Very short label (max 30 chars)",
             "type": "string",
           },
-          "headerKey": {
-            "description": "Optional i18n key for the header; clients fall back to \`header\` when missing",
-            "type": "string",
-          },
           "multiple": {
             "description": "Allow selecting multiple choices",
             "type": "boolean",
@@ -244,20 +236,8 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
                   "description": "Explanation of choice",
                   "type": "string",
                 },
-                "descriptionKey": {
-                  "description": "Optional i18n key for the description",
-                  "type": "string",
-                },
                 "label": {
                   "description": "Display text (1-5 words, concise)",
-                  "type": "string",
-                },
-                "labelKey": {
-                  "description": "Optional i18n key for the label; clients translate and still reply with \`label\`",
-                  "type": "string",
-                },
-                "mode": {
-                  "description": "Optional agent/mode name to pre-select in the UI when this option is picked",
                   "type": "string",
                 },
               },
@@ -271,10 +251,6 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
           },
           "question": {
             "description": "Complete question",
-            "type": "string",
-          },
-          "questionKey": {
-            "description": "Optional i18n key for the question text; clients fall back to \`question\` when missing",
             "type": "string",
           },
         },

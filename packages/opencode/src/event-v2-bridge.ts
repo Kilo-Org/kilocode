@@ -3,7 +3,6 @@
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
 import { GlobalBus } from "@/bus/global"
-import * as EventWire from "@/kilocode/event-wire" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import { Location } from "@opencode-ai/core/location"
 import { Project } from "@opencode-ai/core/project"
@@ -40,22 +39,18 @@ export const layer = Layer.effect(
       Effect.gen(function* () {
         const ctx = yield* InstanceRef
         const workspaceID = (yield* WorkspaceRef) ?? event.location?.workspaceID
-        // kilocode_change start - legacy bus and SSE consumers require the schema's encoded representation
-        const definition = EventV2.registry.get(event.type)
-        const data = definition ? EventWire.encode(definition.data, event.data) : event.data
-        // kilocode_change end
         GlobalBus.emit("event", {
-          directory: event.location?.directory ?? ctx?.directory ?? "global", // kilocode_change - instance-less events are tagged "global" on the wire
+          directory: event.location?.directory ?? ctx?.directory,
           project: ctx?.project.id,
           workspace: workspaceID,
-          payload: { id: event.id, type: event.type, properties: data }, // kilocode_change - encoded
+          payload: { id: event.id, type: event.type, properties: event.data },
         })
-        const sync = definition?.sync
+        const sync = EventV2.registry.get(event.type)?.sync
         if (sync === undefined || event.seq === undefined || event.version === undefined) return
         const aggregateID = (event.data as Record<string, unknown>)[sync.aggregate]
         if (typeof aggregateID !== "string") return
         GlobalBus.emit("event", {
-          directory: event.location?.directory ?? ctx?.directory ?? "global", // kilocode_change - instance-less events are tagged "global" on the wire
+          directory: event.location?.directory ?? ctx?.directory,
           project: ctx?.project.id,
           workspace: workspaceID,
           payload: {
@@ -65,7 +60,7 @@ export const layer = Layer.effect(
               type: EventV2.versionedType(event.type, event.version),
               seq: event.seq,
               aggregateID,
-              data, // kilocode_change - encoded
+              data: event.data,
             },
           },
         })

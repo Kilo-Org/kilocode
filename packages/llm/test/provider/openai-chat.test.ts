@@ -17,12 +17,7 @@ const encodeJson = Schema.encodeSync(TargetJson)
 const decodeJson = Schema.decodeUnknownSync(TargetJson)
 
 const model = OpenAIChat.route
-  .with({
-    endpoint: {
-      baseURL: "https://api.openai.test/v1/",
-    },
-    auth: Auth.bearer("test"),
-  })
+  .with({ endpoint: { baseURL: "https://api.openai.test/v1/" }, auth: Auth.bearer("test") })
   .model({ id: "gpt-4o-mini" })
 
 const request = LLM.request({
@@ -53,15 +48,6 @@ describe("OpenAI Chat route", () => {
         max_tokens: 20,
         temperature: 0,
       })
-    }),
-  )
-
-  it.effect("separates adjacent user text parts with newlines", () =>
-    Effect.gen(function* () {
-      const prepared = yield* LLMClient.prepare<OpenAIChat.OpenAIChatBody>(
-        LLM.request({ model, messages: [Message.user(["first", "second"].map((text) => ({ type: "text", text })))] }),
-      )
-      expect(prepared.body.messages).toEqual([{ role: "user", content: "first\nsecond" }])
     }),
   )
 

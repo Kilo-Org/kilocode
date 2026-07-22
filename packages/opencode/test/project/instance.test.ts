@@ -5,7 +5,6 @@ import { InstanceRef } from "../../src/effect/instance-ref"
 import { registerDisposer } from "../../src/effect/instance-registry"
 import { InstanceBootstrap } from "../../src/project/bootstrap-service"
 import { InstanceStore } from "../../src/project/instance-store"
-import { capture } from "../../src/kilocode/instance" // kilocode_change
 import { tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
@@ -45,11 +44,6 @@ describe("InstanceStore", () => {
 
       expect(ctx.directory).toBe(dir)
       expect(ctx.worktree).toBe(dir)
-
-      // kilocode_change start - capture prefers legacy ALS, then falls back to the Effect fiber reference
-      const fallback = yield* Effect.sync(capture).pipe(Effect.provideService(InstanceRef, ctx))
-      expect({ ambient: capture(), fallback }).toEqual({ ambient: undefined, fallback: ctx })
-      // kilocode_change end
     }),
   )
 
@@ -67,7 +61,6 @@ describe("InstanceStore", () => {
       yield* store.load({ directory: dir })
 
       expect(initializedDirectory).toBe(dir)
-      expect(capture()).toBeUndefined() // kilocode_change - bootstrap legacy ALS does not leak into the caller
     }),
   )
 
@@ -170,26 +163,6 @@ describe("InstanceStore", () => {
     }),
   )
 
-  // kilocode_change start - reload disposers retain legacy instance context
-  it.live("runs reload disposers under the previous instance context", () =>
-    Effect.gen(function* () {
-      const dir = yield* tmpdirScoped({ git: true })
-      const store = yield* InstanceStore.Service
-      const first = yield* store.load({ directory: dir })
-      let captured: ReturnType<typeof capture>
-      yield* registerDisposerScoped(async (directory) => {
-        if (directory !== dir) return
-        await Promise.resolve()
-        captured = capture()
-      })
-
-      yield* store.reload({ directory: dir })
-
-      expect(captured).toBe(first)
-    }),
-  )
-  // kilocode_change end
-
   it.live("stale dispose does not delete an in-flight reload", () =>
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
@@ -267,24 +240,6 @@ describe("InstanceStore", () => {
       yield* store.load({ directory: dir2 })
       yield* store.disposeAll()
       expect(disposed).toEqual([dir1, dir2])
-    }),
-  )
-
-  // kilocode_change - InstanceStore.boot provides InstanceRef to bootstrap.run so
-  // KilocodeBootstrap (and anything it forkDetaches, e.g. KiloIndexing.init) can read
-  // the current directory. This regression test pins the Kilo contract.
-  it.live("provides InstanceRef during bootstrap for Kilo bootstrap compatibility", () =>
-    Effect.gen(function* () {
-      const dir = yield* tmpdirScoped({ git: true })
-      const store = yield* InstanceStore.Service
-      let directoryDuringBootstrap: string | undefined
-
-      bootstrapRun = Effect.gen(function* () {
-        directoryDuringBootstrap = (yield* InstanceRef)?.directory
-      })
-      yield* store.load({ directory: dir })
-
-      expect(directoryDuringBootstrap).toBe(dir)
     }),
   )
 })

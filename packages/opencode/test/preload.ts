@@ -5,7 +5,6 @@ import path from "path"
 import fs from "fs/promises"
 import { setTimeout as sleep } from "node:timers/promises"
 import { afterAll } from "bun:test"
-import { remove as cleanup } from "./kilocode/cleanup" // kilocode_change
 
 // Set XDG env vars FIRST, before any src/ imports
 const dir = path.join(os.tmpdir(), "opencode-test-data-" + process.pid)
@@ -30,7 +29,6 @@ afterAll(async () => {
   // Windows can keep SQLite WAL handles alive until GC finalizers run, so we
   // force GC and retry teardown to avoid flaky EBUSY in test cleanup.
   await rm(30)
-  await cleanup(dir) // kilocode_change
 })
 
 process.env["XDG_DATA_HOME"] = path.join(dir, "share")
@@ -52,9 +50,9 @@ const testManagedConfigDir = path.join(dir, "managed")
 process.env["KILO_TEST_MANAGED_CONFIG_DIR"] = testManagedConfigDir
 
 // Write the cache version file to prevent global/index.ts from clearing the cache
-const cacheDir = path.join(dir, "cache", "kilo")
+const cacheDir = path.join(dir, "cache", "opencode")
 await fs.mkdir(cacheDir, { recursive: true })
-await fs.writeFile(path.join(cacheDir, "version"), "21")
+await fs.writeFile(path.join(cacheDir, "version"), "14")
 
 // Clear provider and server auth env vars to ensure clean test state
 delete process.env["ANTHROPIC_API_KEY"]
@@ -90,8 +88,5 @@ process.env["KILO_DB"] = ":memory:"
 
 // Now safe to import from src/
 const { initProjectors } = await import("../src/server/projectors")
-// kilocode_change: bind the package memory effect layer to opencode for tests (paths/instance/log/events)
-const { installMemoryRuntime } = await import("../src/kilocode/memory/runtime") // kilocode_change
 
 initProjectors()
-installMemoryRuntime() // kilocode_change

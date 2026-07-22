@@ -4,8 +4,6 @@ type Keys = keyof typeof en
 
 export const dict = {
   "ui.sessionReview.title": "工作階段變更",
-  "ui.sessionReview.title.git": "Git 變更",
-  "ui.sessionReview.title.branch": "分支變更",
   "ui.sessionReview.title.lastTurn": "上一輪變更",
   "ui.sessionReview.diffStyle.unified": "整合",
   "ui.sessionReview.diffStyle.split": "拆分",
@@ -43,10 +41,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "隱藏步驟",
   "ui.sessionTurn.summary.response": "回覆",
   "ui.sessionTurn.diff.showMore": "顯示更多變更 ({{count}})",
-  "ui.sessionTurn.diffs.changed": "已變更",
-  "ui.sessionTurn.diffs.showAll": "顯示全部",
-  "ui.sessionTurn.diffs.showLess": "顯示更少",
-  "ui.sessionTurn.diffs.more": "還有 +{{count}} 個檔案",
 
   "ui.sessionTurn.retry.retrying": "重試中",
   "ui.sessionTurn.retry.inSeconds": "{{seconds}} 秒後",
@@ -65,8 +59,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "開啟設定",
 
   "ui.sessionTurn.status.delegating": "正在委派工作",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "正在規劃下一步",
   "ui.sessionTurn.status.gatheringContext": "正在探索",
   "ui.sessionTurn.status.gatheredContext": "已探索",
@@ -88,8 +80,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} 個清單",
   "ui.messagePart.context.list.other": "{{count}} 個清單",
   "ui.messagePart.diagnostic.error": "錯誤",
-  "ui.messagePart.mcp.input": "輸入",
-  "ui.messagePart.mcp.output": "輸出",
   "ui.messagePart.title.edit": "編輯",
   "ui.messagePart.title.write": "寫入",
   "ui.messagePart.option.typeOwnAnswer": "輸入自己的答案",
@@ -108,23 +98,10 @@ export const dict = {
   "ui.textField.copied": "已複製",
 
   "ui.imagePreview.alt": "圖片預覽",
-  // kilocode_change start
-  "ui.mermaid.rendering": "正在渲染 Mermaid 圖表...",
-  "ui.mermaid.renderError": "Mermaid 渲染失敗：{{message}}",
-  "ui.mermaid.errorDefault": "無法渲染 Mermaid 圖表。",
-  "ui.mermaid.errorEmpty": "Mermaid 渲染了一個空圖表。",
-  "ui.mermaid.download": "下載",
-  "ui.mermaid.copySource": "複製 Mermaid 原始碼",
-  "ui.mermaid.copySvg": "複製 SVG",
-  "ui.mermaid.copyPng": "複製 PNG",
-  "ui.mermaid.downloadSvg": "下載 SVG",
-  "ui.mermaid.downloadPng": "下載 PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "可捲動內容",
 
   "ui.tool.read": "讀取",
   "ui.tool.loaded": "已載入",
-  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行", // kilocode_change
   "ui.tool.list": "清單",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -164,7 +141,6 @@ export const dict = {
   "ui.message.revertMessage": "重設至此點",
   "ui.message.copyResponse": "複製回覆",
   "ui.message.copied": "已複製！",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "已中斷",
   "ui.message.queued": "排隊中",
   "ui.message.attachment.alt": "附件",
@@ -175,9 +151,7 @@ export const dict = {
   "ui.patch.action.patched": "已套用修補",
 
   "ui.question.subtitle.answered": "{{count}} 已回答",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(無答案)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "可多選",
   "ui.question.singleHint": "選擇一個答案",

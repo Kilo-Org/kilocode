@@ -67,7 +67,7 @@ describe("project.initGit endpoint", () => {
       })
       // Reload behavior: bus emits exactly one server.instance.disposed for the directory.
       expect(disposedEvents(events.seen, tmp.directory)).toBe(1)
-      expect(yield* fs.exists(path.join(tmp.directory, ".git", "kilo"))).toBe(false) // kilocode_change
+      expect(yield* fs.exists(path.join(tmp.directory, ".git", "opencode"))).toBe(false)
 
       const current = yield* request(tmp.directory, "/project/current")
       expect(current.status).toBe(200)

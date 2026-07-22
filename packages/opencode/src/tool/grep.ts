@@ -59,34 +59,28 @@ export const GrepTool = Tool.define(
 
           const search = FSUtil.resolve(requested)
           const info = yield* fs.stat(search).pipe(Effect.catch(() => Effect.succeed(undefined)))
-          if (!info || (info.type !== "File" && info.type !== "Directory")) return empty // kilocode_change
           const cwd = info?.type === "Directory" ? search : path.dirname(search)
           const result = yield* ripgrep.grep({
             cwd,
-            file: info?.type === "File" ? path.basename(search) : undefined, // kilocode_change - constrain exact-file searches
             pattern: params.pattern,
             include: params.include,
             limit: 100,
-            signal: ctx.abort, // kilocode_change - stop ripgrep when the tool call is cancelled
           })
-          // kilocode_change start
-          const matches = result.items
-          if (matches.length === 0) return empty
-          // kilocode_change end
+          if (result.length === 0) return empty
 
-          const rows = matches.map((item) => ({ // kilocode_change
+          const rows = result.map((item) => ({
             path: path.resolve(cwd, item.entry.path),
             line: item.line,
             text: item.text,
           }))
 
           const limit = 100
-          const truncated = result.truncated // kilocode_change
+          const truncated = rows.length === limit
           const final = rows
           if (final.length === 0) return empty
 
           const total = rows.length
-          const hasMore = truncated // kilocode_change
+          const hasMore = truncated || result.length === limit
           const output = [`Found ${total} matches${hasMore ? " (more matches available)" : ""}`]
 
           let current = ""
@@ -103,7 +97,6 @@ export const GrepTool = Tool.define(
             output.push("")
             output.push("(Results truncated. Consider using a more specific path or pattern.)")
           }
-          if (result.partial) output.push("", "(Some paths were inaccessible.)") // kilocode_change
 
           return {
             title: params.pattern,

@@ -236,14 +236,6 @@ export const StepFinishPart = Schema.Struct({
   type: Schema.Literal("step-finish"),
   reason: Schema.String,
   snapshot: Schema.optional(Schema.String),
-  // kilocode_change start
-  model: Schema.optional(
-    Schema.Struct({
-      providerID: ProviderV2.ID,
-      modelID: ModelV2.ID,
-    }),
-  ),
-  // kilocode_change end
   cost: Schema.Finite,
   tokens: Schema.Struct({
     total: Schema.optional(Schema.Finite),
@@ -339,16 +331,6 @@ const FileDiff = Schema.Struct({
   status: Schema.optional(Schema.Literals(["added", "deleted", "modified"])),
 }).annotate({ identifier: "SnapshotFileDiff" })
 
-// kilocode_change start
-export const EditorContext = Schema.Struct({
-  visibleFiles: Schema.optional(Schema.Array(Schema.String)),
-  openTabs: Schema.optional(Schema.Array(Schema.String)),
-  activeFile: Schema.optional(Schema.String),
-  shell: Schema.optional(Schema.String),
-})
-export type EditorContext = Types.DeepMutable<Schema.Schema.Type<typeof EditorContext>>
-// kilocode_change end
-
 export const User = Schema.Struct({
   ...messageBase,
   role: Schema.Literal("user"),
@@ -371,9 +353,6 @@ export const User = Schema.Struct({
   }),
   system: Schema.optional(Schema.String),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
-  // kilocode_change start
-  editorContext: Schema.optional(EditorContext),
-  // kilocode_change end
 }).annotate({ identifier: "UserMessage" })
 export type User = Types.DeepMutable<Schema.Schema.Type<typeof User>>
 

@@ -1,4 +1,4 @@
-import { Schema, SchemaGetter } from "effect" // kilocode_change
+import { Schema } from "effect"
 import { JsonSchema, MessageRole, ProviderMetadata } from "./ids"
 import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions } from "./options"
 import { isRecord } from "../utils/record"
@@ -57,84 +57,40 @@ export type ToolFileContent = typeof ToolFileContent.Type
 export const ToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
 export type ToolContent = Schema.Schema.Type<typeof ToolContent>
 
-// kilocode_change start - decode persisted V2 tool file shapes and legacy media results
-const LegacyToolFileContent = Schema.Struct({
-  type: Schema.Literal("file"),
-  source: Schema.Union([
-    Schema.Struct({ type: Schema.Literal("data"), data: Schema.String }),
-    Schema.Struct({ type: Schema.Literal("url"), url: Schema.String }),
-    Schema.Struct({ type: Schema.Literal("file"), uri: Schema.String }),
-  ]).pipe(Schema.toTaggedUnion("type")),
-  mime: Schema.String,
-  name: Schema.optional(Schema.String),
-})
-const LegacyToolMediaContent = Schema.Struct({
-  type: Schema.Literal("media"),
-  mediaType: Schema.String,
-  data: Schema.String,
-  filename: Schema.optional(Schema.String),
-})
-const ToolContentInput = Schema.Union([ToolContent, LegacyToolFileContent, LegacyToolMediaContent])
-
-const stored = (item: ToolContent): typeof ToolContentInput.Type => {
-  if (item.type === "text") return item
-  const data = /^data:[^;,]+;base64,(.*)$/s.exec(item.uri)?.[1]
-  const source = data
-    ? ({ type: "data", data } as const)
-    : URL.canParse(item.uri) && ["http:", "https:"].includes(new URL(item.uri).protocol)
-      ? ({ type: "url", url: item.uri } as const)
-      : ({ type: "file", uri: item.uri } as const)
-  return { type: "file", source, mime: item.mime, name: item.name }
-}
-
-export const StoredToolContent = ToolContentInput.pipe(
-  Schema.decodeTo(ToolContent, {
-    decode: SchemaGetter.transform((item) => {
-      if (item.type === "text" || (item.type === "file" && "uri" in item)) return item
-      if (item.type === "media") {
-        return {
-          type: "file" as const,
-          uri: item.data.startsWith("data:") ? item.data : `data:${item.mediaType};base64,${item.data}`,
-          mime: item.mediaType,
-          name: item.filename,
-        }
-      }
-      const uri =
-        item.source.type === "data"
-          ? `data:${item.mime};base64,${item.source.data}`
-          : item.source.type === "url"
-            ? item.source.url
-            : item.source.uri
-      return { type: "file" as const, uri, mime: item.mime, name: item.name }
-    }),
-    encode: SchemaGetter.transform(stored),
-  }),
-)
-
-const toolResultValueSchema = Schema.Union([
-  Schema.Struct({ type: Schema.Literal("json"), value: Schema.Unknown }),
-  Schema.Struct({ type: Schema.Literal("text"), value: Schema.Unknown }),
-  Schema.Struct({ type: Schema.Literal("error"), value: Schema.Unknown }),
-  Schema.Struct({ type: Schema.Literal("content"), value: Schema.Array(ToolContent) }),
-]).annotate({ identifier: "LLM.ToolResult" })
-export type ToolResultValue = Schema.Schema.Type<typeof toolResultValueSchema>
-// kilocode_change end
-
 const isToolResultValue = (value: unknown): value is ToolResultValue =>
   isRecord(value) &&
   (value.type === "text" || value.type === "json" || value.type === "error" || value.type === "content") &&
   "value" in value
 
-// kilocode_change start
-export const ToolResultValue = Object.assign(toolResultValueSchema, {
-  is: isToolResultValue,
-  make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue => {
-    if (isToolResultValue(value)) return value
-    if (type === "content") return { type, value: Array.isArray(value) ? value : [] }
-    return { type, value }
-// kilocode_change end
+export const ToolResultValue = Object.assign(
+  Schema.Union([
+    Schema.Struct({
+      type: Schema.Literal("json"),
+      value: Schema.Unknown,
+    }),
+    Schema.Struct({
+      type: Schema.Literal("text"),
+      value: Schema.Unknown,
+    }),
+    Schema.Struct({
+      type: Schema.Literal("error"),
+      value: Schema.Unknown,
+    }),
+    Schema.Struct({
+      type: Schema.Literal("content"),
+      value: Schema.Array(ToolContent),
+    }),
+  ]).annotate({ identifier: "LLM.ToolResult" }),
+  {
+    is: isToolResultValue,
+    make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue => {
+      if (isToolResultValue(value)) return value
+      if (type === "content") return { type, value: Array.isArray(value) ? value : [] }
+      return { type, value }
+    },
   },
-}) // kilocode_change
+)
+export type ToolResultValue = Schema.Schema.Type<typeof ToolResultValue>
 
 export interface ToolOutput {
   readonly structured: unknown

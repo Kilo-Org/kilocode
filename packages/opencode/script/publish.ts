@@ -3,7 +3,6 @@ import { $ } from "bun"
 import pkg from "../package.json"
 import { Script } from "@opencode-ai/script"
 import { fileURLToPath } from "url"
-import { NpmPublish } from "./kilocode/npm-publish" // kilocode_change
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
@@ -21,20 +20,11 @@ async function publish(dir: string, name: string, version: string) {
     return
   }
   await $`bun pm pack`.cwd(dir)
-  // kilocode_change start
-  await NpmPublish.retry({
-    name,
-    version,
-    run: () => $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir),
-    exists: () => published(name, version),
-  })
-  // kilocode_change end
+  await $`npm publish *.tgz --access public --tag ${Script.channel}`.cwd(dir)
 }
 
 const binaries: Record<string, string> = {}
-// kilocode_change start
-for (const filepath of new Bun.Glob("*/*/package.json").scanSync({ cwd: "./dist" })) {
-  // kilocode_change end
+for (const filepath of new Bun.Glob("*/package.json").scanSync({ cwd: "./dist" })) {
   const pkg = await Bun.file(`./dist/${filepath}`).json()
   binaries[pkg.name] = pkg.version
 }
@@ -42,37 +32,40 @@ console.log("binaries", binaries)
 const version = Object.values(binaries)[0]
 
 await $`mkdir -p ./dist/${pkg.name}`
-await $`cp -r ./bin ./dist/${pkg.name}/bin`
+await $`mkdir -p ./dist/${pkg.name}/bin`
 await $`cp ./script/postinstall.mjs ./dist/${pkg.name}/postinstall.mjs`
 await Bun.file(`./dist/${pkg.name}/LICENSE`).write(await Bun.file("../../LICENSE").text())
-await Bun.file(`./dist/${pkg.name}/README.md`).write(await Bun.file("./README.md").text()) // kilocode_change
+await Bun.file(`./dist/${pkg.name}/bin/${pkg.name}.exe`).write(
+  [
+    `echo "Error: ${pkg.name}-ai's postinstall script was not run." >&2`,
+    'echo "" >&2',
+    'echo "This occurs when using --ignore-scripts during installation, or when using a" >&2',
+    'echo "package manager like pnpm that does not run postinstall scripts by default." >&2',
+    'echo "" >&2',
+    'echo "To fix this, run the postinstall script manually:" >&2',
+    `echo "  cd node_modules/${pkg.name}-ai && node postinstall.mjs" >&2`,
+    'echo "" >&2',
+    `echo "Or reinstall ${pkg.name}-ai without the --ignore-scripts flag." >&2`,
+    "exit 1",
+    "",
+  ].join("\n"),
+)
 
 await Bun.file(`./dist/${pkg.name}/package.json`).write(
   JSON.stringify(
     {
-      name: pkg.name, // kilocode_change
+      name: pkg.name + "-ai",
       bin: {
-        // kilocode_change start
-        kilo: `./bin/kilo`,
-        kilocode: `./bin/kilo`,
-        // kilocode_change end
+        [pkg.name]: `./bin/${pkg.name}.exe`,
       },
       scripts: {
         postinstall: "node ./postinstall.mjs",
       },
       version: version,
       license: pkg.license,
-      keywords: pkg.keywords, // kilocode_change
-      private: pkg.private, // kilocode_change
       os: ["darwin", "linux", "win32"],
       cpu: ["arm64", "x64"],
       optionalDependencies: binaries,
-      // kilocode_change start
-      repository: {
-        type: "git",
-        url: "https://github.com/Kilo-Org/kilocode",
-      },
-      // kilocode_change end
     },
     null,
     2,
@@ -83,9 +76,9 @@ const tasks = Object.entries(binaries).map(async ([name]) => {
   await publish(`./dist/${name}`, name, binaries[name])
 })
 await Promise.all(tasks)
-await publish(`./dist/${pkg.name}`, pkg.name, version) // kilocode_change
+await publish(`./dist/${pkg.name}`, `${pkg.name}-ai`, version)
 
-const image = "ghcr.io/kilo-org/kilocode" // kilocode_change
+const image = "ghcr.io/Kilo-Org/kilocode"
 const platforms = "linux/amd64,linux/arm64"
 const tags = [`${image}:${version}`, `${image}:${Script.channel}`]
 const tagFlags = tags.flatMap((t) => ["-t", t])
@@ -103,9 +96,10 @@ if (!Script.preview) {
 
   // arch
   const binaryPkgbuild = [
-    "# Maintainer: kilo", // kilocode_change
+    "# Maintainer: dax",
+    "# Maintainer: adam",
     "",
-    "pkgname='kilo-bin'",
+    "pkgname='opencode-bin'",
     `pkgver=${pkgver}`,
     `_subver=${_subver}`,
     "options=('!debug' '!strip')",
@@ -113,9 +107,9 @@ if (!Script.preview) {
     "pkgdesc='The AI coding agent built for the terminal.'",
     "url='https://github.com/Kilo-Org/kilocode'",
     "arch=('aarch64' 'x86_64')",
-    "license=('MIT' 'LGPL-2.0-or-later')", // kilocode_change
-    "provides=('kilo')",
-    "conflicts=('kilo')",
+    "license=('MIT')",
+    "provides=('opencode')",
+    "conflicts=('opencode')",
     "depends=('ripgrep')",
     "",
     `source_aarch64=("\${pkgname}_\${pkgver}_aarch64.tar.gz::https://github.com/Kilo-Org/kilocode/releases/download/v\${pkgver}\${_subver}/kilo-linux-arm64.tar.gz")`,
@@ -125,19 +119,12 @@ if (!Script.preview) {
     `sha256sums_x86_64=('${x64Sha}')`,
     "",
     "package() {",
-    '  install -Dm755 ./kilo "${pkgdir}/usr/lib/kilo/kilo"', // kilocode_change
-    '  install -Dm755 ./bwrap "${pkgdir}/usr/lib/kilo/bwrap"', // kilocode_change
-    '  install -Dm644 ./kilo-sandbox-mutation-worker.js "${pkgdir}/usr/lib/kilo/kilo-sandbox-mutation-worker.js"', // kilocode_change
-    '  install -dm755 "${pkgdir}/usr/bin" "${pkgdir}/usr/lib/kilo/tree-sitter" "${pkgdir}/usr/share/licenses/kilo"', // kilocode_change
-    '  cp -r ./tree-sitter/. "${pkgdir}/usr/lib/kilo/tree-sitter/"', // kilocode_change
-    '  cp -r ./licenses/. "${pkgdir}/usr/share/licenses/kilo/"', // kilocode_change
-    "  printf '%s\\n' '#!/bin/sh' 'export KILO_TREE_SITTER_WASM_DIR=/usr/lib/kilo/tree-sitter' 'exec /usr/lib/kilo/kilo \"$@\"' > \"${pkgdir}/usr/bin/kilo\"", // kilocode_change
-    '  chmod 755 "${pkgdir}/usr/bin/kilo"', // kilocode_change
+    '  install -Dm755 ./opencode "${pkgdir}/usr/bin/opencode"',
     "}",
     "",
   ].join("\n")
 
-  for (const [pkg, pkgbuild] of [["kilo-bin", binaryPkgbuild]]) {
+  for (const [pkg, pkgbuild] of [["opencode-bin", binaryPkgbuild]]) {
     for (let i = 0; i < 30; i++) {
       try {
         await $`rm -rf ./dist/aur-${pkg}`
@@ -162,9 +149,9 @@ if (!Script.preview) {
     "# frozen_string_literal: true",
     "",
     "# This file was generated by GoReleaser. DO NOT EDIT.",
-    "class Kilo < Formula", // kilocode_change
+    "class Opencode < Formula",
     `  desc "The AI coding agent built for the terminal."`,
-    `  homepage "https://kilo.ai"`, // kilocode_change
+    `  homepage "https://github.com/Kilo-Org/kilocode"`,
     `  version "${Script.version.split("-")[0]}"`,
     "",
     `  depends_on "ripgrep"`,
@@ -175,8 +162,7 @@ if (!Script.preview) {
     `      sha256 "${macX64Sha}"`,
     "",
     "      def install",
-    '        libexec.install "kilo", "kilo-sandbox-mutation-worker.js", "tree-sitter"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
+    '        bin.install "opencode"',
     "      end",
     "    end",
     "    if Hardware::CPU.arm?",
@@ -184,8 +170,7 @@ if (!Script.preview) {
     `      sha256 "${macArm64Sha}"`,
     "",
     "      def install",
-    '        libexec.install "kilo", "kilo-sandbox-mutation-worker.js", "tree-sitter"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
+    '        bin.install "opencode"',
     "      end",
     "    end",
     "  end",
@@ -195,16 +180,14 @@ if (!Script.preview) {
     `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-linux-x64.tar.gz"`,
     `      sha256 "${x64Sha}"`,
     "      def install",
-    '        libexec.install "kilo", "bwrap", "kilo-sandbox-mutation-worker.js", "tree-sitter", "licenses"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
+    '        bin.install "opencode"',
     "      end",
     "    end",
     "    if Hardware::CPU.arm? and Hardware::CPU.is_64_bit?",
     `      url "https://github.com/Kilo-Org/kilocode/releases/download/v${Script.version}/kilo-linux-arm64.tar.gz"`,
     `      sha256 "${arm64Sha}"`,
     "      def install",
-    '        libexec.install "kilo", "bwrap", "kilo-sandbox-mutation-worker.js", "tree-sitter", "licenses"', // kilocode_change
-    '        (bin/"kilo").write_env_script libexec/"kilo", KILO_TREE_SITTER_WASM_DIR: libexec/"tree-sitter"', // kilocode_change
+    '        bin.install "opencode"',
     "      end",
     "    end",
     "  end",
@@ -218,11 +201,11 @@ if (!Script.preview) {
     console.error("GITHUB_TOKEN is required to update homebrew tap")
     process.exit(1)
   }
-  const tap = `https://x-access-token:${token}@github.com/Kilo-Org/homebrew-tap.git` // kilocode_change
+  const tap = `https://x-access-token:${token}@github.com/anomalyco/homebrew-tap.git`
   await $`rm -rf ./dist/homebrew-tap`
   await $`git clone ${tap} ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/kilo.rb").write(homebrewFormula) // kilocode_change
-  await $`cd ./dist/homebrew-tap && git add kilo.rb` // kilocode_change
+  await Bun.file("./dist/homebrew-tap/opencode.rb").write(homebrewFormula)
+  await $`cd ./dist/homebrew-tap && git add opencode.rb`
   if ((await $`cd ./dist/homebrew-tap && git diff --cached --quiet`.nothrow()).exitCode !== 0) {
     await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
     await $`cd ./dist/homebrew-tap && git push`

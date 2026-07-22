@@ -136,8 +136,7 @@ describe("internal notifications TUI plugin", () => {
     ])
   })
 
-  // kilocode_change start
-  test("notifies only when an active turn closes as completed", async () => {
+  test("notifies when an active session becomes idle and suppresses no-op idle", async () => {
     const harness = await setup()
 
     harness.emit({
@@ -154,11 +153,6 @@ describe("internal notifications TUI plugin", () => {
       id: "event-3",
       type: "session.status",
       properties: { sessionID: "session", status: { type: "idle" } },
-    })
-    harness.emit({
-      id: "event-4",
-      type: "session.turn.close",
-      properties: { sessionID: "session", reason: "completed" },
     })
 
     expect(harness.notifications).toEqual([
@@ -171,29 +165,7 @@ describe("internal notifications TUI plugin", () => {
     ])
   })
 
-  test("stays silent when an active turn closes as interrupted after becoming idle", async () => {
-    const harness = await setup()
-
-    harness.emit({
-      id: "event-1",
-      type: "session.status",
-      properties: { sessionID: "session", status: { type: "busy" } },
-    })
-    harness.emit({
-      id: "event-2",
-      type: "session.status",
-      properties: { sessionID: "session", status: { type: "idle" } },
-    })
-    harness.emit({
-      id: "event-3",
-      type: "session.turn.close",
-      properties: { sessionID: "session", reason: "interrupted" },
-    })
-
-    expect(harness.notifications).toEqual([])
-  })
-
-  test("keeps subagent request notifications but suppresses completion attention", async () => {
+  test("uses sound-only notifications and subagent_done sound for subagent sessions", async () => {
     const harness = await setup()
 
     harness.emit({ id: "event-1", type: "question.asked", properties: question("question-1", "subagent") })
@@ -207,11 +179,6 @@ describe("internal notifications TUI plugin", () => {
       type: "session.status",
       properties: { sessionID: "subagent", status: { type: "idle" } },
     })
-    harness.emit({
-      id: "event-4",
-      type: "session.turn.close",
-      properties: { sessionID: "subagent", parentID: "session", reason: "completed" },
-    })
 
     expect(harness.notifications).toEqual([
       {
@@ -219,6 +186,12 @@ describe("internal notifications TUI plugin", () => {
         message: "Question needs input",
         notification: false,
         sound: { name: "question", when: "always" },
+      },
+      {
+        title: "Subagent session",
+        message: "Session done",
+        notification: false,
+        sound: { name: "subagent_done", when: "always" },
       },
     ])
   })
@@ -252,7 +225,7 @@ describe("internal notifications TUI plugin", () => {
     ])
   })
 
-  test("stays silent for manual aborts and identifies model response timeouts", async () => {
+  test("special-cases aborts and model response timeouts", async () => {
     const harness = await setup()
 
     harness.emit({
@@ -268,25 +241,21 @@ describe("internal notifications TUI plugin", () => {
     harness.emit({
       id: "event-3",
       type: "session.status",
-      properties: { sessionID: "abort", status: { type: "idle" } },
-    })
-    harness.emit({
-      id: "event-4",
-      type: "session.turn.close",
-      properties: { sessionID: "abort", reason: "interrupted" },
-    })
-    harness.emit({
-      id: "event-5",
-      type: "session.status",
       properties: { sessionID: "timeout", status: { type: "busy" } },
     })
     harness.emit({
-      id: "event-6",
+      id: "event-4",
       type: "session.error",
       properties: { sessionID: "timeout", error: { name: "UnknownError", data: { message: "SSE read timed out" } } },
     })
 
     expect(harness.notifications).toEqual([
+      {
+        title: "Abort session",
+        message: "Session aborted",
+        notification: { when: "blurred" },
+        sound: { name: "error", when: "always" },
+      },
       {
         title: "Timeout session",
         message: "Model stopped responding",
@@ -295,5 +264,4 @@ describe("internal notifications TUI plugin", () => {
       },
     ])
   })
-  // kilocode_change end
 })

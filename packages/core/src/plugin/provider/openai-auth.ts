@@ -32,11 +32,11 @@ const headlessMethodID = Integration.MethodID.make("chatgpt-headless")
 
 export const browser = {
   integrationID: Integration.ID.make("openai"),
-  method: new Integration.OAuthMethod({
+  method: {
     id: browserMethodID,
     type: "oauth",
     label: "ChatGPT Pro/Plus (browser)",
-  }),
+  },
   authorize: () =>
     Effect.gen(function* () {
       const pkce = yield* Effect.promise(generatePKCE)
@@ -49,12 +49,6 @@ export const browser = {
           response.writeHead(404).end("Not found")
           return
         }
-        // kilocode_change start - unrelated localhost requests must not terminate the active OAuth attempt
-        if (url.searchParams.get("state") !== state) {
-          response.writeHead(400, { "Content-Type": "text/html" }).end(errorPage("Invalid OAuth state"))
-          return
-        }
-        // kilocode_change end
         const error = url.searchParams.get("error_description") ?? url.searchParams.get("error")
         const value = url.searchParams.get("code")
         if (error) {
@@ -62,8 +56,8 @@ export const browser = {
           response.writeHead(400, { "Content-Type": "text/html" }).end(errorPage(error))
           return
         }
-        if (!value) {
-          const message = "Missing authorization code"
+        if (!value || url.searchParams.get("state") !== state) {
+          const message = value ? "Invalid OAuth state" : "Missing authorization code"
           Effect.runFork(Deferred.fail(code, new Error(message)))
           response.writeHead(400, { "Content-Type": "text/html" }).end(errorPage(message))
           return
@@ -95,11 +89,11 @@ export const browser = {
 
 export const headless = {
   integrationID: Integration.ID.make("openai"),
-  method: new Integration.OAuthMethod({
+  method: {
     id: headlessMethodID,
     type: "oauth",
     label: "ChatGPT Pro/Plus (headless)",
-  }),
+  },
   authorize: () =>
     Effect.gen(function* () {
       const device = yield* request<{ device_auth_id: string; user_code: string; interval: string }>(
@@ -152,7 +146,7 @@ export const headless = {
 } satisfies Integration.OAuthImplementation
 
 function headers(contentType: string) {
-  return { "Content-Type": contentType, "User-Agent": `kilo/${InstallationVersion}` } // kilocode_change
+  return { "Content-Type": contentType, "User-Agent": `opencode/${InstallationVersion}` }
 }
 
 function exchange(code: string, redirect: string, pkce: Pkce) {
@@ -234,7 +228,7 @@ function authorizeURL(redirect: string, pkce: Pkce, state: string) {
     id_token_add_organizations: "true",
     codex_cli_simplified_flow: "true",
     state,
-    originator: "kilo", // kilocode_change
+    originator: "opencode",
   })}`
 }
 
@@ -258,6 +252,6 @@ function claim(token: string) {
 }
 
 const successPage =
-  "<!doctype html><title>Kilo</title><h1>Authorization successful</h1><p>You can close this window.</p>" // kilocode_change
+  "<!doctype html><title>OpenCode</title><h1>Authorization successful</h1><p>You can close this window.</p>"
 const errorPage = (message: string) =>
-  `<!doctype html><title>Kilo</title><h1>Authorization failed</h1><p>${message.replace(/[&<>"']/g, "")}</p>` // kilocode_change
+  `<!doctype html><title>OpenCode</title><h1>Authorization failed</h1><p>${message.replace(/[&<>"']/g, "")}</p>`

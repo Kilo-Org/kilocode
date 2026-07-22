@@ -12,10 +12,8 @@ export const dict: Record<string, string> = {
   "ui.sessionReview.change.modified": "Змінено",
   "ui.sessionReview.image.loading": "Завантаження...",
   "ui.sessionReview.image.placeholder": "Зображення",
-  // kilocode_change start
-  "ui.sessionReview.largeDiff.title": "Різниця занадто велика для відображення",
-  "ui.sessionReview.largeDiff.meta": "Ліміт: {{limit}} змінених рядків. Поточне: {{current}} змінених рядків.",
-  // kilocode_change end
+  "ui.sessionReview.largeDiff.title": "Завеликий diff для відображення",
+  "ui.sessionReview.largeDiff.meta": "Ліміт: {{limit}} змінених рядків. Поточно: {{current}} змінених рядків.",
   "ui.sessionReview.largeDiff.renderAnyway": "Все одно відобразити",
   "ui.sessionReview.openFile": "Відкрити файл",
   "ui.sessionReview.selection.line": "рядок {{line}}",
@@ -26,12 +24,10 @@ export const dict: Record<string, string> = {
   "ui.fileMedia.state.removed": "{{kind}} видалено",
   "ui.fileMedia.state.loading": "Завантаження {{kind}}...",
   "ui.fileMedia.state.error": "Не вдалося завантажити {{kind}}",
-  "ui.fileMedia.state.unavailable": "Попередній перегляд {{kind}} недоступний.", // kilocode_change
+  "ui.fileMedia.state.unavailable": "{{kind}} недоступне",
   "ui.fileMedia.binary.title": "Бінарний файл",
-  // kilocode_change start
-  "ui.fileMedia.binary.description.path": "{{path}} є бінарним файлом.",
-  "ui.fileMedia.binary.description.default": "Бінарний вміст",
-  // kilocode_change end
+  "ui.fileMedia.binary.description.path": "Неможливо відобразити {{path}}, оскільки це бінарний файл.",
+  "ui.fileMedia.binary.description.default": "Неможливо відобразити цей файл, оскільки він бінарний.",
 
   "ui.lineComment.label.prefix": "Коментар до ",
   "ui.lineComment.label.suffix": "",
@@ -49,30 +45,15 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.diffs.showLess": "Показати менше",
   "ui.sessionTurn.diffs.more": "+{{count}} інших файлів",
 
-  "ui.sessionTurn.retry.retrying": "повтор спроби", // kilocode_change
-  "ui.sessionTurn.retry.inSeconds": "через {{seconds}}с", // kilocode_change
+  "ui.sessionTurn.retry.retrying": "повтор",
+  "ui.sessionTurn.retry.inSeconds": "за {{seconds}}с",
   "ui.sessionTurn.retry.attempt": "спроба №{{attempt}}",
   "ui.sessionTurn.retry.attemptLine": "{{line}} — спроба №{{attempt}}",
-  "ui.sessionTurn.retry.geminiHot": "Gemini зараз перевантажений", // kilocode_change
+  "ui.sessionTurn.retry.geminiHot": "gemini зараз перевантажений",
   "ui.sessionTurn.error.freeUsageExceeded": "Перевищено ліміт безкоштовного використання",
   "ui.sessionTurn.error.addCredits": "Додати кредити",
 
-  // kilocode_change start - complete upstream usage-exceeded translations
-  "dialog.usageExceeded.freeTier.title": "Досягнуто безкоштовного ліміту",
-  "dialog.usageExceeded.freeTier.description":
-    "Підпишіться на Kilo Go, щоб отримати надійний доступ до найкращих моделей із відкритим кодом, від $5 на місяць.",
-  "dialog.usageExceeded.freeTier.actionLabel": "Підписатися",
-  "dialog.usageExceeded.accountRateLimit.title": "Досягнуто ліміту Go",
-  "dialog.usageExceeded.accountRateLimit.description":
-    "Досягнуто ліміту використання. Щоб продовжити користуватися цією моделлю зараз, увімкніть використання доступного балансу",
-  "dialog.usageExceeded.accountRateLimit.actionLabel": "Відкрити налаштування",
-  // kilocode_change end
-
   "ui.sessionTurn.status.delegating": "Делегування роботи",
-  // kilocode_change start
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
-  // kilocode_change end
   "ui.sessionTurn.status.planning": "Планування наступних кроків",
   "ui.sessionTurn.status.gatheringContext": "Дослідження",
   "ui.sessionTurn.status.gatheredContext": "Досліджено",
@@ -86,20 +67,14 @@ export const dict: Record<string, string> = {
   "ui.sessionTurn.status.consideringNextSteps": "Розгляд наступних кроків",
 
   "ui.messagePart.diagnostic.error": "Помилка",
-  // kilocode_change start
-  "ui.messagePart.mcp.input": "Вхід",
-  "ui.messagePart.mcp.output": "Вихід",
-  // kilocode_change end
   "ui.messagePart.title.edit": "Редагувати",
-  "ui.messagePart.title.write": "Записати", // kilocode_change
+  "ui.messagePart.title.write": "Написати",
   "ui.messagePart.option.typeOwnAnswer": "Введіть власну відповідь",
-  "ui.messagePart.review.title": "Перегляньте свої відповіді", // kilocode_change
+  "ui.messagePart.review.title": "Перевірте свої відповіді",
   "ui.messagePart.questions.dismissed": "Питання відхилено",
   "ui.messagePart.compaction": "Сесію стиснуто",
-  // kilocode_change start
-  "ui.messagePart.context.read.one": "{{count}} прочитання",
-  "ui.messagePart.context.read.other": "{{count}} прочитань",
-  // kilocode_change end
+  "ui.messagePart.context.read.one": "{{count}} читання",
+  "ui.messagePart.context.read.other": "{{count}} читань",
   "ui.messagePart.context.search.one": "{{count}} пошук",
   "ui.messagePart.context.search.other": "{{count}} пошуків",
   "ui.messagePart.context.list.one": "{{count}} список",
@@ -123,30 +98,16 @@ export const dict: Record<string, string> = {
   "ui.textField.copied": "Скопійовано",
 
   "ui.imagePreview.alt": "Попередній перегляд зображення",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Відтворення діаграми Mermaid...",
-  "ui.mermaid.renderError": "Не вдалося відтворити Mermaid: {{message}}",
-  "ui.mermaid.errorDefault": "Не вдалося відтворити діаграму Mermaid.",
-  "ui.mermaid.errorEmpty": "Mermaid відтворив порожню діаграму.",
-  "ui.mermaid.download": "Завантажити",
-  "ui.mermaid.copySource": "Копіювати вихідний код Mermaid",
-  "ui.mermaid.copySvg": "Копіювати SVG",
-  "ui.mermaid.copyPng": "Копіювати PNG",
-  "ui.mermaid.downloadSvg": "Завантажити SVG",
-  "ui.mermaid.downloadPng": "Завантажити PNG",
-  // kilocode_change end
-  "ui.scrollView.ariaLabel": "вміст з прокруткою", // kilocode_change
+  "ui.scrollView.ariaLabel": "контент для прокручування",
 
   "ui.tool.read": "Читання",
   "ui.tool.loaded": "Завантажено",
-  "ui.tool.swePruned": "SWE-Pruner · збережено {{kept}} з {{total}} рядків", // kilocode_change
   "ui.tool.list": "Список",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
   "ui.tool.task": "Завдання",
-  "ui.tool.webfetch": "Веб-запит", // kilocode_change
+  "ui.tool.webfetch": "Веб-отримання",
   "ui.tool.websearch": "Веб-пошук",
-  "ui.tool.codesearch": "Пошук коду", // kilocode_change
   "ui.tool.shell": "Оболонка",
   "ui.tool.patch": "Патч",
   "ui.tool.todos": "Завдання",
@@ -195,12 +156,10 @@ export const dict: Record<string, string> = {
   "ui.patch.action.deleted": "Видалено",
   "ui.patch.action.created": "Створено",
   "ui.patch.action.moved": "Переміщено",
-  "ui.patch.action.patched": "Застосовано патч", // kilocode_change
+  "ui.patch.action.patched": "Пропатчено",
 
   "ui.question.subtitle.answered": "{{count}} відповідей",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(немає відповіді)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(не відповіли)",
   "ui.question.multiHint": "Виберіть усі відповідні варіанти",
   "ui.question.singleHint": "Виберіть одну відповідь",

@@ -4,6 +4,7 @@ import {
   parseJwtClaims,
   extractAccountIdFromClaims,
   extractAccountId,
+  renderOAuthError,
   type IdTokenClaims,
 } from "../../src/plugin/openai/codex"
 
@@ -14,6 +15,14 @@ function createTestJwt(payload: object): string {
 }
 
 describe("plugin.codex", () => {
+  test("escapes provider errors in callback HTML", () => {
+    const error = `</div><script>alert("xss" & 'more')</script>`
+    const html = renderOAuthError(error)
+
+    expect(html).toContain("&lt;/div&gt;&lt;script&gt;alert(&quot;xss&quot; &amp; &#39;more&#39;)&lt;/script&gt;")
+    expect(html).not.toContain(error)
+  })
+
   describe("parseJwtClaims", () => {
     test("parses valid JWT with claims", () => {
       const payload = { email: "test@example.com", chatgpt_account_id: "acc-123" }
@@ -121,68 +130,6 @@ describe("plugin.codex", () => {
       ).toBe("acc-123")
     })
   })
-
-  // kilocode_change start
-  describe("models filter", () => {
-    test("filters out disallowed models for oauth users", async () => {
-      const hooks = await CodexAuthPlugin({} as never)
-      const provider = await hooks.provider!.models!({
-        id: "openai",
-        baseURL: "",
-        apiKey: "",
-        models: {
-          "gpt-5.5-pro": {
-            id: "gpt-5.5-pro",
-            api: { id: "gpt-5.5-pro" },
-          } as never,
-          "gpt-5.5": {
-            id: "gpt-5.5",
-            api: { id: "gpt-5.5" },
-          } as never,
-          "gpt-5.4-mini": {
-            id: "gpt-5.4-mini",
-            api: { id: "gpt-5.4-mini" },
-          } as never,
-          "gpt-5.1-codex": {
-            id: "gpt-5.1-codex",
-            api: { id: "gpt-5.1-codex" },
-          } as never,
-          "other-model": {
-            id: "other-model",
-            api: { id: "other-model" },
-          } as never,
-        },
-      } as never, { auth: { type: "oauth" } } as never)
-      expect(provider).not.toHaveProperty(["gpt-5.5-pro"])
-      expect(provider).toHaveProperty(["gpt-5.5"])
-      expect(provider).toHaveProperty(["gpt-5.4-mini"])
-      expect(provider).toHaveProperty(["gpt-5.1-codex"])
-      expect(provider).not.toHaveProperty(["other-model"])
-    })
-
-    test("passes through all models when not using oauth", async () => {
-      const hooks = await CodexAuthPlugin({} as never)
-      const models = {
-        "gpt-5.5-pro": {
-          id: "gpt-5.5-pro",
-          api: { id: "gpt-5.5-pro" },
-        } as never,
-        "other-model": {
-          id: "other-model",
-          api: { id: "other-model" },
-        } as never,
-      }
-      const provider = await hooks.provider!.models!({
-        id: "openai",
-        baseURL: "",
-        apiKey: "",
-        models,
-      } as never, { auth: { type: "api", key: "sk-test" } } as never)
-      expect(provider).toHaveProperty(["gpt-5.5-pro"])
-      expect(provider).toHaveProperty(["other-model"])
-    })
-  })
-  // kilocode_change end
 
   test("installs websocket transport only when experimental websockets are enabled", async () => {
     const disabled = await CodexAuthPlugin({} as never)

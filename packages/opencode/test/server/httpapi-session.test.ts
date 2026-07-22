@@ -164,45 +164,6 @@ const insertLegacyAssistantMessage = (sessionID: SessionIDType, seq = 1, time = 
     return message
   })
 
-// kilocode_change start - released V2 clients persisted media-shaped tool content
-const insertLegacyToolMessage = (sessionID: SessionIDType) =>
-  Effect.gen(function* () {
-    const id = SessionMessage.ID.create()
-    const { db } = yield* Database.Service
-    yield* db
-      .insert(SessionMessageTable)
-      .values({
-        id,
-        session_id: sessionID,
-        type: "assistant",
-        seq: 1,
-        time_created: 1,
-        data: {
-          agent: "build",
-          model: { id: "model", providerID: "provider" },
-          content: [
-            {
-              type: "tool",
-              id: "tool",
-              name: "read",
-              state: {
-                status: "completed",
-                input: {},
-                content: [{ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" }],
-                structured: {},
-              },
-              time: { created: 1, completed: 1 },
-            },
-          ],
-          time: { created: 1, completed: 1 },
-        } as NonNullable<(typeof SessionMessageTable.$inferInsert)["data"]>,
-      })
-      .run()
-      .pipe(Effect.orDie)
-    return id
-  })
-// kilocode_change end
-
 const insertCorruptV2Message = (sessionID: SessionIDType, time = 1) =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
@@ -568,36 +529,6 @@ describe("session HttpApi", () => {
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
-
-  // kilocode_change start - protect mixed-version session database compatibility
-  it.instance(
-    "normalizes released tool content on paginated v2 message reads",
-    () =>
-      Effect.gen(function* () {
-        const test = yield* TestInstance
-        const session = yield* createSession({ title: "legacy tool content" })
-        const id = yield* insertLegacyToolMessage(session.id)
-        const response = yield* request(`/api/session/${session.id}/message`, {
-          headers: { "x-kilo-directory": test.directory },
-        })
-        expect(response.status).toBe(200)
-        const body = yield* json<{ data: SessionMessage.Message[] }>(response)
-        expect(body.data).toEqual([
-          expect.objectContaining({
-            id,
-            content: [
-              expect.objectContaining({
-                state: expect.objectContaining({
-                  content: [{ type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png", name: "image.png" }],
-                }),
-              }),
-            ],
-          }),
-        ])
-      }),
-    { git: true, config: { formatter: false, lsp: false } },
-  )
-  // kilocode_change end
 
   it.instance(
     "returns v2 public not found errors for missing sessions",

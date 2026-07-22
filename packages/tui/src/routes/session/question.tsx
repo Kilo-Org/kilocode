@@ -11,10 +11,7 @@ import { useBindings, useOpencodeModeStack } from "../../keymap"
 
 const QUESTION_MODE = "question"
 
-// kilocode_change start
-export function QuestionPrompt(props: {
-  request: QuestionRequest; nonBlocking?: boolean; inputFocused?: () => boolean; directory?: string }) {
-  // kilocode_change end
+export function QuestionPrompt(props: { request: QuestionRequest; directory?: string }) {
   const sdk = useSDK()
   const { theme } = useTheme()
   const renderer = useRenderer()
@@ -216,9 +213,7 @@ export function QuestionPrompt(props: {
 
     return {
       mode: QUESTION_MODE,
-      // kilocode_change start - avoid intrusive key capture for non-blocking review questions
-      enabled: !store.editing && !(props.nonBlocking && props.inputFocused?.()),
-      // kilocode_change end
+      enabled: !store.editing,
       commands: [
         {
           name: "app.exit",

@@ -161,14 +161,7 @@ function build(key: string, remote: SelectableItem, url: string, prev?: Model): 
         variants[effort] = {
           thinking: {
             type: "adaptive",
-            // kilocode_change start - treat opus-4.8, fable, and sonnet-5 like opus-4.7
-            ...(model.api.id.includes("opus-4.7") ||
-            model.api.id.includes("opus-4.8") ||
-            model.api.id.includes("fable") ||
-            model.api.id.includes("sonnet-5")
-              ? { display: "summarized" }
-              : {}),
-            // kilocode_change end
+            ...(model.api.id.includes("opus-4.7") ? { display: "summarized" } : {}),
           },
           effort,
         }

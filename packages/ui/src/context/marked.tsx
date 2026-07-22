@@ -1,40 +1,383 @@
 import { marked } from "marked"
-// kilocode_change: marked-shiki highlighted code blocks synchronously during
-// parse, freezing the main thread on session switches with many code blocks
-// (issue #6221 / PR #7102). We render plain <pre><code data-lang="..."> here
-// and hand off to deferredHighlight() in markdown.tsx for progressive Shiki.
-// This import was re-added by an upstream merge; removing it restores the
-// two-pass rendering design.
+import markedKatex from "marked-katex-extension"
+import markedShiki from "marked-shiki"
 import katex from "katex"
-// kilocode_change start: import types for double-dollar math extension
-import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
-// kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
-import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
-import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_change
+import { getSharedHighlighter, registerCustomTheme, ThemeRegistrationResolved } from "@pierre/diffs"
 
-// kilocode_change start: the "Kilo" diff/highlight theme registration moved to
-// ../pierre/kilo-diff-theme so the diff worker pool can register it without
-// importing this module's katex/marked dependencies. This call keeps the markdown
-// highlighter (getSharedHighlighter, below) working. Upstream keeps an inline
-// registerCustomTheme("OpenCode", …) block here — do not restore it on merges;
-// route registration through ensureKiloDiffTheme() instead.
-ensureKiloDiffTheme()
-// kilocode_change end
+export const OpenCodeTheme = {
+  name: "Kilo",
+  bg: "var(--color-background-stronger)",
+  fg: "var(--text-base)",
+  colors: {
+    "editor.background": "var(--color-background-stronger)",
+    "editor.foreground": "var(--text-base)",
+    "gitDecoration.addedResourceForeground": "var(--syntax-diff-add)",
+    "gitDecoration.deletedResourceForeground": "var(--syntax-diff-delete)",
+    "gitDecoration.modifiedResourceForeground": "var(--syntax-diff-unknown)",
+    // "gitDecoration.conflictingResourceForeground": "#ffca00",
+    // "gitDecoration.modifiedResourceForeground": "#1a76d4",
+    // "gitDecoration.untrackedResourceForeground": "#00cab1",
+    // "gitDecoration.ignoredResourceForeground": "#84848A",
+    // "terminal.titleForeground": "#adadb1",
+    // "terminal.titleInactiveForeground": "#84848A",
+    // "terminal.background": "#141415",
+    // "terminal.foreground": "#adadb1",
+    // "terminal.ansiBlack": "#141415",
+    // "terminal.ansiRed": "#ff2e3f",
+    // "terminal.ansiGreen": "#0dbe4e",
+    // "terminal.ansiYellow": "#ffca00",
+    // "terminal.ansiBlue": "#008cff",
+    // "terminal.ansiMagenta": "#c635e4",
+    // "terminal.ansiCyan": "#08c0ef",
+    // "terminal.ansiWhite": "#c6c6c8",
+    // "terminal.ansiBrightBlack": "#141415",
+    // "terminal.ansiBrightRed": "#ff2e3f",
+    // "terminal.ansiBrightGreen": "#0dbe4e",
+    // "terminal.ansiBrightYellow": "#ffca00",
+    // "terminal.ansiBrightBlue": "#008cff",
+    // "terminal.ansiBrightMagenta": "#c635e4",
+    // "terminal.ansiBrightCyan": "#08c0ef",
+    // "terminal.ansiBrightWhite": "#c6c6c8",
+  },
+  tokenColors: [
+    {
+      scope: ["comment", "punctuation.definition.comment", "string.comment"],
+      settings: {
+        foreground: "var(--syntax-comment)",
+      },
+    },
+    {
+      scope: ["entity.other.attribute-name"],
+      settings: {
+        foreground: "var(--syntax-property)", // maybe attribute
+      },
+    },
+    {
+      scope: ["constant", "entity.name.constant", "variable.other.constant", "variable.language", "entity"],
+      settings: {
+        foreground: "var(--syntax-constant)",
+      },
+    },
+    {
+      scope: ["entity.name", "meta.export.default", "meta.definition.variable"],
+      settings: {
+        foreground: "var(--syntax-type)",
+      },
+    },
+    {
+      scope: ["meta.object.member"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: [
+        "variable.parameter.function",
+        "meta.jsx.children",
+        "meta.block",
+        "meta.tag.attributes",
+        "entity.name.constant",
+        "meta.embedded.expression",
+        "meta.template.expression",
+        "string.other.begin.yaml",
+        "string.other.end.yaml",
+      ],
+      settings: {
+        foreground: "var(--syntax-punctuation)",
+      },
+    },
+    {
+      scope: ["entity.name.function", "support.type.primitive"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: ["support.class.component"],
+      settings: {
+        foreground: "var(--syntax-type)",
+      },
+    },
+    {
+      scope: "keyword",
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: [
+        "keyword.operator",
+        "storage.type.function.arrow",
+        "punctuation.separator.key-value.css",
+        "entity.name.tag.yaml",
+        "punctuation.separator.key-value.mapping.yaml",
+      ],
+      settings: {
+        foreground: "var(--syntax-operator)",
+      },
+    },
+    {
+      scope: ["storage", "storage.type"],
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: ["storage.modifier.package", "storage.modifier.import", "storage.type.java"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: [
+        "string",
+        "punctuation.definition.string",
+        "string punctuation.section.embedded source",
+        "entity.name.tag",
+      ],
+      settings: {
+        foreground: "var(--syntax-string)",
+      },
+    },
+    {
+      scope: "support",
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: ["support.type.object.module", "variable.other.object", "support.type.property-name.css"],
+      settings: {
+        foreground: "var(--syntax-object)",
+      },
+    },
+    {
+      scope: "meta.property-name",
+      settings: {
+        foreground: "var(--syntax-property)",
+      },
+    },
+    {
+      scope: "variable",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "variable.other",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: [
+        "invalid.broken",
+        "invalid.illegal",
+        "invalid.unimplemented",
+        "invalid.deprecated",
+        "message.error",
+        "markup.deleted",
+        "meta.diff.header.from-file",
+        "punctuation.definition.deleted",
+        "brackethighlighter.unmatched",
+        "token.error-token",
+      ],
+      settings: {
+        foreground: "var(--syntax-critical)",
+      },
+    },
+    {
+      scope: "carriage-return",
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: "string source",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "string variable",
+      settings: {
+        foreground: "var(--syntax-constant)",
+      },
+    },
+    {
+      scope: [
+        "source.regexp",
+        "string.regexp",
+        "string.regexp.character-class",
+        "string.regexp constant.character.escape",
+        "string.regexp source.ruby.embedded",
+        "string.regexp string.regexp.arbitrary-repitition",
+        "string.regexp constant.character.escape",
+      ],
+      settings: {
+        foreground: "var(--syntax-regexp)",
+      },
+    },
+    {
+      scope: "support.constant",
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: "support.variable",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "meta.module-reference",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "punctuation.definition.list.begin.markdown",
+      settings: {
+        foreground: "var(--syntax-punctuation)",
+      },
+    },
+    {
+      scope: ["markup.heading", "markup.heading entity.name"],
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "markup.quote",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "markup.italic",
+      settings: {
+        fontStyle: "italic",
+        // foreground: "",
+      },
+    },
+    {
+      scope: "markup.bold",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--text-strong)",
+      },
+    },
+    {
+      scope: [
+        "markup.raw",
+        "markup.inserted",
+        "meta.diff.header.to-file",
+        "punctuation.definition.inserted",
+        "markup.changed",
+        "punctuation.definition.changed",
+        "markup.ignored",
+        "markup.untracked",
+      ],
+      settings: {
+        foreground: "var(--text-base)",
+      },
+    },
+    {
+      scope: "meta.diff.range",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.diff.header",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.separator",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.output",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.export.default",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: [
+        "brackethighlighter.tag",
+        "brackethighlighter.curly",
+        "brackethighlighter.round",
+        "brackethighlighter.square",
+        "brackethighlighter.angle",
+        "brackethighlighter.quote",
+      ],
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: ["constant.other.reference.link", "string.other.link"],
+      settings: {
+        fontStyle: "underline",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "token.info-token",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "token.warn-token",
+      settings: {
+        foreground: "var(--syntax-warning)",
+      },
+    },
+    {
+      scope: "token.debug-token",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+  ],
+  semanticTokenColors: {
+    comment: "var(--syntax-comment)",
+    string: "var(--syntax-string)",
+    number: "var(--syntax-constant)",
+    regexp: "var(--syntax-regexp)",
+    keyword: "var(--syntax-keyword)",
+    variable: "var(--syntax-variable)",
+    parameter: "var(--syntax-variable)",
+    property: "var(--syntax-property)",
+    function: "var(--syntax-primitive)",
+    method: "var(--syntax-primitive)",
+    type: "var(--syntax-type)",
+    class: "var(--syntax-type)",
+    namespace: "var(--syntax-type)",
+    enumMember: "var(--syntax-primitive)",
+    "variable.constant": "var(--syntax-constant)",
+    "variable.defaultLibrary": "var(--syntax-unknown)",
+  },
+} as unknown as ThemeRegistrationResolved
 
-// kilocode_change start: double-dollar-only math rules for marked.
-const BLOCK = /^\$\$\n((?:\\[^]|[^\\])+?)\n\$\$(?:\n|$)/
-const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
-// kilocode_change end
-
-// kilocode_change start: isolate KaTeX from the markdown root dir=auto.
-function renderKatex(text: string, options: katex.KatexOptions): string {
-  const html = katex.renderToString(text, options)
-  return `<span dir="auto">${html}</span>`
-}
-// kilocode_change end
+registerCustomTheme("Kilo", () => Promise.resolve(OpenCodeTheme))
 
 function renderMathInText(text: string): string {
   let result = text
@@ -43,20 +386,27 @@ function renderMathInText(text: string): string {
   const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
   result = result.replace(displayMathRegex, (_, math) => {
     try {
-      // kilocode_change start
-      return renderKatex(math, {
+      return katex.renderToString(math, {
         displayMode: true,
         throwOnError: false,
       })
-      // kilocode_change end
     } catch {
       return `$$${math}$$`
     }
   })
 
-  // kilocode_change: removed single-dollar inline math ($...$) rendering.
-  // Single $ is far more common as a currency symbol in agent responses
-  // (e.g. $93K, $307K) than as a LaTeX delimiter. Only $$...$$ is supported.
+  // Inline math: $...$
+  const inlineMathRegex = /(?<!\$)\$(?!\$)((?:[^$\\]|\\.)+?)\$(?!\$)/g
+  result = result.replace(inlineMathRegex, (_, math) => {
+    try {
+      return katex.renderToString(math, {
+        displayMode: false,
+        throwOnError: false,
+      })
+    } catch {
+      return `$${math}$`
+    }
+  })
 
   return result
 }
@@ -76,8 +426,6 @@ function renderMathExpressions(html: string): string {
     .join("")
 }
 
-// Used only by the native parser path (props.nativeParser) — not the JS parser.
-// The JS parser uses deferredHighlight() instead for non-blocking rendering.
 async function highlightCodeBlocks(html: string): Promise<string> {
   const codeBlockRegex = /<pre><code(?:\s+class="language-([^"]*)")?>([\s\S]*?)<\/code><\/pre>/g
   const matches = [...html.matchAll(codeBlockRegex)]
@@ -120,280 +468,55 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
 
-// kilocode_change: parseFilePath imported from ../file-path
-
-// kilocode_change start: highlight cache for deferred highlighting
-
-/** FNV-1a hash — lightweight alternative to storing full source code in DOM attributes. */
-export function fnv1a(s: string): string {
-  let h = 0x811c9dc5
-  for (let i = 0; i < s.length; i++) {
-    h ^= s.charCodeAt(i)
-    h = Math.imul(h, 0x01000193)
-  }
-  return (h >>> 0).toString(36)
-}
-
-const cache = new Map<string, string>()
-const CACHE_LIMIT = 500
-
-// Normalize common language aliases before sanitizing, so e.g. "c++" → "cpp"
-// rather than stripping to "c" (which would highlight as the wrong language).
-const LANG_ALIASES: Record<string, string> = {
-  "c++": "cpp",
-  "c#": "csharp",
-  "f#": "fsharp",
-  "objective-c++": "objective-cpp",
-}
-
-function touchHighlightCache(key: string, value: string) {
-  cache.delete(key)
-  cache.set(key, value)
-  if (cache.size <= CACHE_LIMIT) return
-  const first = cache.keys().next().value
-  if (!first) return
-  cache.delete(first)
-}
-
-function replaceWithHighlighted(block: Element, html: string, sourceHash: string) {
-  const pre = block.parentElement
-  if (!pre || !pre.isConnected) return
-  const temp = document.createElement("div")
-  temp.innerHTML = html
-  const highlighted = temp.firstElementChild
-  if (!highlighted) return
-  const dir = pre.getAttribute("dir") // kilocode_change
-  if (dir) highlighted.setAttribute("dir", dir) // kilocode_change
-  // Store a hash of the source code so the morphdom guard in Markdown can detect
-  // mid-stream content changes without keeping the full source in the DOM.
-  highlighted.setAttribute("data-source-hash", sourceHash)
-  // Preserve any wrapper structure (e.g., markdown-code wrapper with copy button)
-  const wrapper = pre.parentElement
-  if (wrapper?.getAttribute("data-component") === "markdown-code") {
-    wrapper.replaceChild(highlighted, pre)
-    return
-  }
-  pre.replaceWith(highlighted)
-}
-
-/**
- * Progressively highlight unhighlighted <pre><code> blocks inside a container.
- * Each block is highlighted via setTimeout(0) to yield back to the main thread
- * between blocks, keeping the UI responsive.
- *
- * Blocks marked with data-highlighted are skipped (already processed).
- * After highlighting, blocks are marked to survive morphdom re-runs during streaming.
- *
- * Returns a callback to re-run setupCodeCopy after highlighting completes,
- * since highlight replaces DOM nodes that may have copy button wrappers.
- */
-export async function deferredHighlight(
-  container: HTMLElement,
-  onComplete?: () => void,
-  signal?: { aborted: boolean },
-): Promise<void> {
-  const blocks = Array.from(
-    container.querySelectorAll('pre > code[data-lang]:not([data-highlighted]):not([data-lang="mermaid"])'),
-  )
-  if (blocks.length === 0) {
-    onComplete?.()
-    return
-  }
-
-  const highlighter = await getSharedHighlighter({ themes: ["Kilo"], langs: [] })
-
-  for (const block of blocks) {
-    // Short-circuit if the container is unmounted or the caller cancelled this run
-    // (e.g., a newer streaming token triggered a fresh deferredHighlight call).
-    if (!container.isConnected || signal?.aborted) break
-
-    const lang = block.getAttribute("data-lang") || "text"
-    const code = block.textContent ?? ""
-    if (!code) continue
-
-    const cacheKey = `${lang}\0${code}`
-    const codeHash = fnv1a(code)
-    const cached = cache.get(cacheKey)
-    if (cached) {
-      touchHighlightCache(cacheKey, cached) // refresh LRU position on hit
-      replaceWithHighlighted(block, cached, codeHash)
-      continue
-    }
-
-    await new Promise<void>((resolve) => {
-      setTimeout(() => {
-        // Re-check inside the timer callback — signal may have been aborted while
-        // this task was queued in the event loop waiting to run.
-        if (!block.isConnected || signal?.aborted) {
-          resolve()
-          return
-        }
-        try {
-          const language = lang in bundledLanguages ? lang : "text"
-          const highlight = () => {
-            // Re-check after async loadLanguage — block may have been replaced
-            // or signal aborted while the language bundle was being fetched.
-            if (!block.isConnected || signal?.aborted) {
-              resolve()
-              return
-            }
-            const html = highlighter.codeToHtml(code, { lang: language, theme: "Kilo", tabindex: false })
-            touchHighlightCache(cacheKey, html)
-            // Note: data-highlighted is NOT set on `block` here because
-            // replaceWithHighlighted replaces the parent <pre> entirely — the
-            // original <code> element leaves the DOM immediately after this call.
-            // The new highlighted <pre class="shiki"> from Shiki has no
-            // code[data-lang] child, so the querySelectorAll selector won't
-            // pick it up on subsequent deferredHighlight passes.
-            replaceWithHighlighted(block, html, codeHash)
-            resolve()
-          }
-          if (!highlighter.getLoadedLanguages().includes(language)) {
-            highlighter
-              .loadLanguage(language as BundledLanguage)
-              .then(highlight)
-              .catch((err) => {
-                console.warn("Failed to load language for highlighting", language, err)
-                resolve()
-              })
-            return
-          }
-          highlight()
-        } catch (err) {
-          console.warn("Deferred highlight failed", lang, err)
-          resolve()
-        }
-      }, 0)
-    })
-  }
-
-  // Only fire onComplete if the container is still mounted and the run wasn't
-  // cancelled — avoids calling setupCodeCopy on a disconnected DOM tree.
-  if (container.isConnected && !signal?.aborted) {
-    onComplete?.()
-  }
-}
-// kilocode_change end
-
-// kilocode_change start: expose the parser setup for Kilo markdown tests.
-export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser }) => {
-  // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
-  // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
-  // Code blocks render as plain <pre><code data-lang="..."> immediately.
-  // The Markdown component calls deferredHighlight() after DOM paint.
-  const parser = marked.use(
-    {
-      renderer: {
-        link({ href, title, text }) {
-          const titleAttr = title ? ` title="${title}"` : ""
-          return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
-        },
-        // kilocode_change start
-        codespan({ text }) {
-          const file = parseFilePath(text)
-          const escaped = text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;")
-          if (file) {
-            const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
-            const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-            return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
-          }
-          return `<code dir="auto">${escaped}</code>`
-        },
-        code({ text, lang }) {
-          const escaped = text
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;")
-          // Normalize aliases (e.g. "c++" → "cpp") before stripping special
-          // chars, so "c++" doesn't become "c" (wrong language highlight).
-          const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
-          const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
-          const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
-          const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
-          return `<pre dir="auto"><code${attr}>${escaped}</code></pre>`
-        },
-        // kilocode_change end
-      },
-    },
-    // kilocode_change start: enable only double-dollar math.
-    // Single $ is far more common as a currency symbol in agent responses
-    // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
-    // marked-katex-extension inline tokenizer because Marked falls through
-    // to later tokenizers when an override returns undefined.
-    {
-      extensions: [
-        {
-          name: "doubleKatexBlock",
-          level: "block" as const,
-          tokenizer(src) {
-            const match = src.match(BLOCK)
-            const text = match?.[1]
-            if (!match || !text) return undefined
-            return {
-              type: "doubleKatexBlock",
-              raw: match[0],
-              text: text.trim(),
-            }
-          },
-          renderer(token) {
-            return `${renderKatex(token.text, { displayMode: true, throwOnError: false })}\n`
-          },
-        } satisfies TokenizerAndRendererExtension,
-        {
-          name: "doubleKatexInline",
-          level: "inline" as const,
-          start(src) {
-            const index = src.indexOf("$$")
-            if (index === -1) return undefined
-            return index
-          },
-          tokenizer(src) {
-            const match = src.match(INLINE)
-            const text = match?.[1]
-            if (!match || !text) return undefined
-            return {
-              type: "doubleKatexInline",
-              raw: match[0],
-              text: text.trim(),
-            }
-          },
-          renderer(token) {
-            return renderKatex(token.text, { displayMode: true, throwOnError: false })
-          },
-        } satisfies TokenizerAndRendererExtension,
-      ],
-    } satisfies MarkedExtension,
-    // kilocode_change end
-    // kilocode_change: markedShiki removed — the custom `code` renderer
-    // above returns plain <pre><code data-lang="..."> and markdown.tsx
-    // calls deferredHighlight() after paint. Running Shiki inside parse
-    // blocks the main thread on session switches (issue #6221).
-  )
-  // kilocode_change end
-
-  if (props.nativeParser) {
-    const nativeParser = props.nativeParser
-    return {
-      async parse(markdown: string): Promise<string> {
-        const html = await nativeParser(markdown)
-        const withMath = renderMathExpressions(html)
-        return highlightCodeBlocks(withMath)
-      },
-    }
-  }
-
-  return parser
-}
-
 export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
   name: "Marked",
-  init: createMarkedParser,
+  init: (props: { nativeParser?: NativeMarkdownParser }) => {
+    const jsParser = marked.use(
+      {
+        renderer: {
+          link({ href, title, text }) {
+            const titleAttr = title ? ` title="${title}"` : ""
+            return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          },
+        },
+      },
+      markedKatex({
+        throwOnError: false,
+        nonStandard: true,
+      }),
+      markedShiki({
+        async highlight(code, lang) {
+          const highlighter = await getSharedHighlighter({
+            themes: ["Kilo"],
+            langs: [],
+            preferredHighlighter: "shiki-wasm",
+          })
+          if (!(lang in bundledLanguages)) {
+            lang = "text"
+          }
+          if (!highlighter.getLoadedLanguages().includes(lang)) {
+            await highlighter.loadLanguage(lang as BundledLanguage)
+          }
+          return highlighter.codeToHtml(code, {
+            lang: lang || "text",
+            theme: "Kilo",
+            tabindex: false,
+          })
+        },
+      }),
+    )
+
+    if (props.nativeParser) {
+      const nativeParser = props.nativeParser
+      return {
+        async parse(markdown: string): Promise<string> {
+          const html = await nativeParser(markdown)
+          const withMath = renderMathExpressions(html)
+          return highlightCodeBlocks(withMath)
+        },
+      }
+    }
+
+    return jsParser
+  },
 })
-// kilocode_change end

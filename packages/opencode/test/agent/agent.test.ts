@@ -14,7 +14,6 @@ import { Plugin } from "../../src/plugin"
 import { Provider } from "../../src/provider/provider"
 import { Skill } from "../../src/skill"
 import { Truncate } from "../../src/tool/truncate"
-import { MCP } from "../../src/mcp" // kilocode_change
 import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 
 const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
@@ -24,13 +23,11 @@ const agentLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     Layer.provide(Auth.defaultLayer),
     Layer.provide(Config.defaultLayer),
     Layer.provide(Skill.defaultLayer),
-    Layer.provide(Layer.mock(MCP.Service)({})), // kilocode_change
-    Layer.provide(LocationServiceMap.layer), // kilocode_change
+    Layer.provide(LocationServiceMap.layer),
     Layer.provide(RuntimeFlags.layer(flags)),
   )
 
 const it = testEffect(agentLayer())
-const scout = testEffect(agentLayer({ experimentalScout: true })) // kilocode_change
 
 // Helper to evaluate permission for a tool with wildcard pattern
 function evalPerm(agent: Agent.Info | undefined, permission: string): PermissionV1.Action | undefined {
@@ -56,11 +53,10 @@ it.instance("returns default native agents when no config", () =>
   Effect.gen(function* () {
     const agents = yield* load((svc) => svc.list())
     const names = agents.map((a) => a.name)
-    expect(names).toContain("code")
+    expect(names).toContain("build")
     expect(names).toContain("plan")
     expect(names).toContain("general")
     expect(names).toContain("explore")
-    expect(names).not.toContain("scout") // kilocode_change
     expect(names).toContain("compaction")
     expect(names).toContain("title")
     expect(names).toContain("summary")
@@ -74,10 +70,7 @@ it.instance("build agent has correct default properties", () =>
     expect(build?.mode).toBe("primary")
     expect(build?.native).toBe(true)
     expect(evalPerm(build, "edit")).toBe("allow")
-    expect(evalPerm(build, "bash")).toBe("ask")
-    expect(evalPerm(build, "repo_clone")).toBe("deny")
-    expect(evalPerm(build, "repo_overview")).toBe("deny")
-    expect(evalPerm(build, "interactive_terminal")).toBe("allow") // kilocode_change
+    expect(evalPerm(build, "bash")).toBe("allow")
   }),
 )
 
@@ -87,7 +80,6 @@ it.instance("plan agent denies edits except .opencode/plans/*", () =>
     expect(plan).toBeDefined()
     // Wildcard is denied
     expect(evalPerm(plan, "edit")).toBe("deny")
-    expect(evalPerm(plan, "interactive_terminal")).toBe("deny") // kilocode_change
     // But specific path is allowed
     expect(Permission.evaluate("edit", ".opencode/plans/foo.md", plan!.permission).action).toBe("allow")
   }),
@@ -130,7 +122,6 @@ it.instance("explore agent denies edit and write", () =>
     expect(evalPerm(explore, "edit")).toBe("deny")
     expect(evalPerm(explore, "write")).toBe("deny")
     expect(evalPerm(explore, "todowrite")).toBe("deny")
-    expect(evalPerm(explore, "interactive_terminal")).toBe("deny") // kilocode_change
   }),
 )
 
@@ -146,39 +137,19 @@ it.instance("explore agent asks for external directories and allows whitelisted 
   }),
 )
 
-// kilocode_change start - Scout is opt-in and owns repository research permissions
-scout.instance("scout agent allows repo cloning and repo cache reads", () =>
-  Effect.gen(function* () {
-    const agent = yield* load((svc) => svc.get("scout"))
-    expect(agent).toBeDefined()
-    expect(agent?.mode).toBe("subagent")
-    expect(evalPerm(agent, "repo_clone")).toBe("allow")
-    expect(evalPerm(agent, "repo_overview")).toBe("allow")
-    expect(evalPerm(agent, "edit")).toBe("deny")
-    expect(
-      Permission.evaluate(
-        "external_directory",
-        path.join(Global.Path.repos, "github.com", "owner", "repo", "README.md"),
-        agent!.permission,
-      ).action,
-    ).toBe("allow")
-  }),
-)
-
-scout.instance(
-  "references config creates scout-backed subagents",
+it.instance(
+  "reference config does not create subagents",
   () =>
     Effect.gen(function* () {
       const agents = yield* load((svc) => svc.list())
       const names = agents.map((agent) => agent.name)
-      expect(names).toContain("effect")
-      expect(names).toContain("effectFull")
-      expect(names).toContain("localdocs")
-      expect(names).toContain("localdocsFull")
+      expect(names).not.toContain("effect")
+      expect(names).not.toContain("effectFull")
+      expect(names).not.toContain("localdocs")
+      expect(names).not.toContain("localdocsFull")
     }),
   {
     config: {
-      // kilocode_change - Scout-backed Kilo agents use the supported references config
       references: {
         effect: "github.com/effect/effect-smol",
         effectFull: {
@@ -193,7 +164,6 @@ scout.instance(
     },
   },
 )
-// kilocode_change end
 
 it.instance("general agent denies todo tools", () =>
   Effect.gen(function* () {
@@ -633,7 +603,7 @@ it.instance(
   () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
-      const skillDir = path.join(test.directory, ".kilo", "skill", "perm-skill") // kilocode_change
+      const skillDir = path.join(test.directory, ".opencode", "skill", "perm-skill")
       yield* Effect.promise(() =>
         Bun.write(
           path.join(skillDir, "SKILL.md"),
@@ -647,11 +617,11 @@ description: Permission skill.
         ),
       )
 
-      const home = process.env.OPENCODE_TEST_HOME
-      process.env.OPENCODE_TEST_HOME = test.directory
+      const home = process.env.KILO_TEST_HOME
+      process.env.KILO_TEST_HOME = test.directory
       yield* Effect.addFinalizer(() =>
         Effect.sync(() => {
-          process.env.OPENCODE_TEST_HOME = home
+          process.env.KILO_TEST_HOME = home
         }),
       )
 
@@ -681,17 +651,17 @@ it.instance(
   },
 )
 
-it.instance("defaultAgent returns code when no default_agent config", () =>
+it.instance("defaultAgent returns build when no default_agent config", () =>
   Effect.gen(function* () {
     const agent = yield* load((svc) => svc.defaultAgent())
-    expect(agent).toBe("code")
+    expect(agent).toBe("build")
   }),
 )
 
-it.instance("defaultInfo returns resolved code agent when no default_agent config", () =>
+it.instance("defaultInfo returns resolved build agent when no default_agent config", () =>
   Effect.gen(function* () {
     const agent = yield* load((svc) => svc.defaultInfo())
-    expect(agent.name).toBe("code")
+    expect(agent.name).toBe("build")
     expect(agent.mode).toBe("primary")
   }),
 )
@@ -782,11 +752,8 @@ it.instance(
   {
     config: {
       agent: {
-        code: { disable: true },
+        build: { disable: true },
         plan: { disable: true },
-        debug: { disable: true },
-        orchestrator: { disable: true },
-        ask: { disable: true },
       },
     },
   },

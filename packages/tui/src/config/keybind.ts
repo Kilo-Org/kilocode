@@ -143,10 +143,6 @@ export const Definitions = {
   messages_copy: keybind("<leader>y", "Copy message"),
   messages_undo: keybind("<leader>u", "Undo message"),
   messages_redo: keybind("<leader>r", "Redo message"),
-  // kilocode_change start - message feedback
-  messages_feedback_up: keybind("<leader>=", "Rate last assistant message helpful"),
-  messages_feedback_down: keybind("<leader>-", "Rate last assistant message not helpful"),
-  // kilocode_change end
   messages_toggle_conceal: keybind("<leader>h", "Toggle code block concealment in messages"),
   tool_details: keybind("none", "Toggle tool details visibility"),
   display_thinking: keybind("none", "Toggle thinking blocks visibility"),
@@ -218,14 +214,12 @@ export const Definitions = {
   "prompt.autocomplete.select": keybind("return", "Select autocomplete item"),
   "prompt.autocomplete.complete": keybind("tab", "Complete autocomplete item"),
   "permission.prompt.fullscreen": keybind("ctrl+f", "Toggle permission prompt fullscreen"),
-  "prompt.vim.toggle": keybind("none", "Toggle vim modal editing in the prompt input"), // kilocode_change
   "plugins.toggle": keybind("space", "Toggle plugin"),
   "dialog.plugins.install": keybind("shift+i", "Install plugin from plugin dialog"),
 
   terminal_suspend: keybind("ctrl+z", "Suspend terminal"),
   terminal_title_toggle: keybind("none", "Toggle terminal title"),
   tips_toggle: keybind("<leader>h", "Toggle tips on home screen"),
-  news_toggle: keybind("none", "Toggle news on home screen"), // kilocode_change
   plugin_manager: keybind("none", "Open plugin manager dialog"),
   plugin_install: keybind("none", "Install plugin"),
 
@@ -351,10 +345,6 @@ export const CommandMap = {
   messages_copy: "messages.copy",
   messages_undo: "session.undo",
   messages_redo: "session.redo",
-  // kilocode_change start - message feedback
-  messages_feedback_up: "messages.feedback.up",
-  messages_feedback_down: "messages.feedback.down",
-  // kilocode_change end
   messages_toggle_conceal: "session.toggle.conceal",
   tool_details: "session.toggle.actions",
   display_thinking: "session.toggle.thinking",
@@ -408,7 +398,6 @@ export const CommandMap = {
   terminal_suspend: "terminal.suspend",
   terminal_title_toggle: "terminal.title.toggle",
   tips_toggle: "tips.toggle",
-  news_toggle: "news.toggle", // kilocode_change
   plugin_manager: "plugins.list",
   plugin_install: "plugins.install",
   which_key_toggle: "which-key.toggle",

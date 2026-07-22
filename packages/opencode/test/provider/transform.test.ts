@@ -1130,53 +1130,6 @@ describe("ProviderTransform.schema - gemini non-object properties removal", () =
     expect(result.properties.data.required).toEqual(["name"])
   })
 
-  // kilocode_change start
-  test("removes required from object array items with no properties", () => {
-    const schema = {
-      type: "object",
-      properties: {
-        issue_fields: {
-          type: "array",
-          items: {
-            type: "object",
-            required: ["type"],
-          },
-        },
-      },
-    } as any
-
-    const result = ProviderTransform.schema(geminiModel, schema) as any
-
-    expect(result.properties.issue_fields.items.type).toBe("object")
-    expect(result.properties.issue_fields.items.required).toBeUndefined()
-  })
-
-  test("sanitizes gemini schemas routed through the Kilo Gateway", () => {
-    const gatewayGeminiModel = {
-      providerID: "kilocode",
-      api: {
-        id: "google/gemini-2.5-pro",
-      },
-    } as any
-    const schema = {
-      type: "object",
-      properties: {
-        issue_fields: {
-          type: "array",
-          items: {
-            type: "object",
-            required: ["type"],
-          },
-        },
-      },
-    } as any
-
-    const result = ProviderTransform.schema(gatewayGeminiModel, schema) as any
-
-    expect(result.properties.issue_fields.items.required).toBeUndefined()
-  })
-  // kilocode_change end
-
   test("does not affect non-gemini providers", () => {
     const openaiModel = {
       providerID: "openai",
@@ -1198,6 +1151,207 @@ describe("ProviderTransform.schema - gemini non-object properties removal", () =
     const result = ProviderTransform.schema(openaiModel, schema) as any
 
     expect(result.properties.data.properties).toBeDefined()
+  })
+})
+
+describe("ProviderTransform.schema - openai supported schema subset", () => {
+  const openaiModel = {
+    providerID: "openai",
+    api: {
+      id: "gpt-4.1",
+      npm: "@ai-sdk/openai",
+    },
+  } as any
+
+  test("removes unsupported JSON Schema keywords recursively", () => {
+    const result = ProviderTransform.schema(openaiModel, {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      title: "Search",
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query",
+          format: "uri",
+          pattern: "^https://",
+          minLength: 1,
+          maxLength: 100,
+          default: "https://example.com",
+        },
+        count: {
+          type: "integer",
+          minimum: 1,
+          maximum: 10,
+          multipleOf: 1,
+        },
+        createdAt: {
+          format: "date-time",
+        },
+        mode: {
+          const: "fast",
+        },
+        tags: {
+          type: "array",
+          minItems: 1,
+          maxItems: 3,
+          uniqueItems: true,
+        },
+        tuple: {
+          type: "array",
+          items: [
+            { type: "number", minimum: 0 },
+            { type: "string", pattern: "^ok$" },
+          ],
+        },
+        metadata: {
+          type: "object",
+          patternProperties: {
+            "^x-": { type: "string" },
+          },
+          additionalProperties: {
+            type: "string",
+            pattern: "^safe$",
+          },
+        },
+      },
+      patternProperties: {
+        "^extra": { type: "string" },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    } as any) as any
+
+    expect(result).toEqual({
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query",
+        },
+        count: {
+          type: "integer",
+        },
+        createdAt: {
+          type: "string",
+        },
+        mode: {
+          enum: ["fast"],
+          type: "string",
+        },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+        },
+        tuple: {
+          type: "array",
+          items: [{ type: "number" }, { type: "string" }],
+        },
+        metadata: {
+          type: "object",
+          properties: {},
+          additionalProperties: {
+            type: "string",
+          },
+        },
+      },
+      required: ["query"],
+      additionalProperties: false,
+    })
+  })
+
+  test("keeps local references and sanitizes definitions", () => {
+    const result = ProviderTransform.schema(openaiModel, {
+      type: "object",
+      properties: {
+        value: {
+          $ref: "#/$defs/Value",
+          description: "Referenced value",
+          examples: ["ignored"],
+        },
+      },
+      $defs: {
+        Value: {
+          type: "string",
+          pattern: "^value$",
+          description: "Definition description",
+        },
+        Unused: {
+          type: "number",
+          minimum: 0,
+        },
+      },
+    } as any) as any
+
+    expect(result.properties.value).toEqual({
+      $ref: "#/$defs/Value",
+      description: "Referenced value",
+    })
+    expect(result.$defs).toEqual({
+      Value: {
+        type: "string",
+        description: "Definition description",
+      },
+      Unused: {
+        type: "number",
+      },
+    })
+  })
+
+  test("does not sanitize non-openai providers", () => {
+    const result = ProviderTransform.schema(
+      {
+        providerID: "anthropic",
+        api: {
+          id: "claude-sonnet-4",
+          npm: "@ai-sdk/anthropic",
+        },
+      } as any,
+      {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            pattern: "^https://",
+          },
+        },
+      } as any,
+    ) as any
+
+    expect(result.properties.query.pattern).toBe("^https://")
+  })
+
+  test.each([
+    ["opencode", "@ai-sdk/openai"],
+    ["custom-openai-compatible", "@ai-sdk/openai"],
+    ["azure", "@ai-sdk/azure"],
+  ])("sanitizes %s models using %s", (providerID, npm) => {
+    expect(
+      ProviderTransform.schema(
+        {
+          providerID,
+          api: {
+            id: "custom-model",
+            npm,
+          },
+        } as any,
+        {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              pattern: "^https://",
+            },
+          },
+        } as any,
+      ),
+    ).toEqual({
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+        },
+      },
+    })
   })
 })
 
@@ -2680,74 +2834,19 @@ describe("ProviderTransform.variants", () => {
     expect(result).toEqual({})
   })
 
-  test("minimax m3 using anthropic returns thinking toggles", () => {
+  test("minimax returns empty object", () => {
     const model = createMockModel({
-      id: "minimax/minimax-m3",
+      id: "minimax/minimax-model",
       providerID: "minimax",
       api: {
-        id: "MiniMax-M3",
-        url: "https://api.minimax.com/anthropic/v1",
-        npm: "@ai-sdk/anthropic",
-      },
-    })
-    const result = ProviderTransform.variants(model)
-    expect(result).toEqual({
-      none: { thinking: { type: "disabled" } },
-      thinking: { thinking: { type: "adaptive" } },
-    })
-  })
-
-  test("minimax m3 using openai-compatible returns thinking toggles", () => {
-    const model = createMockModel({
-      id: "minimax/minimax-m3",
-      providerID: "minimax",
-      api: {
-        id: "minimax-m3",
-        url: "https://api.minimax.com/v1",
+        id: "minimax-model",
+        url: "https://api.minimax.com",
         npm: "@ai-sdk/openai-compatible",
       },
     })
-    expect(ProviderTransform.variants(model)).toEqual({
-      none: { thinking: { type: "disabled" } },
-      thinking: { thinking: { type: "adaptive" } },
-    })
-  })
-
-  // kilocode_change start: minimax
-  test("minimax m2.7 direct anthropic provider returns instant/thinking toggle", () => {
-    const model = createMockModel({
-      id: "minimax/MiniMax-M2.7",
-      providerID: "minimax",
-      api: {
-        id: "MiniMax-M2.7",
-        url: "https://api.minimax.io/anthropic/v1",
-        npm: "@ai-sdk/anthropic",
-      },
-    })
     const result = ProviderTransform.variants(model)
-    expect(result).toEqual({
-      instant: { thinking: { type: "disabled" } },
-      thinking: { thinking: { type: "adaptive" } },
-    })
+    expect(result).toEqual({})
   })
-
-  test("minimax via kilo gateway returns instant/thinking toggle", () => {
-    const model = createMockModel({
-      id: "kilo/minimax/minimax-m3",
-      providerID: "kilo",
-      api: {
-        id: "minimax/minimax-m3",
-        url: "https://gateway.kilo.ai",
-        npm: "@kilocode/kilo-gateway",
-      },
-    })
-    const result = ProviderTransform.variants(model)
-    expect(result).toEqual({
-      instant: { reasoning: { enabled: false } },
-      thinking: { reasoning: { enabled: true } },
-    })
-  })
-  // kilocode_change end
 
   test("minimax m3 using anthropic returns thinking toggles", () => {
     const model = createMockModel({
@@ -2793,8 +2892,7 @@ describe("ProviderTransform.variants", () => {
       },
     })
     const result = ProviderTransform.variants(model)
-    expect(Object.keys(result)).toEqual(["low", "medium", "high"])
-    expect(result.low).toEqual({ reasoningEffort: "low" })
+    expect(result).toEqual({})
   })
 
   test("glm-5.2 returns native effort variants for openai-compatible providers", () => {
@@ -3030,24 +3128,6 @@ describe("ProviderTransform.variants", () => {
       expect(Object.keys(result)).toEqual(["low", "medium", "high"])
     })
 
-    // kilocode_change start
-    test("mercury-2 returns OPENAI_EFFORTS with reasoning", () => {
-      const model = createMockModel({
-        id: "openrouter/inception/mercury-2",
-        providerID: "openrouter",
-        api: {
-          id: "inception/mercury-2",
-          url: "https://openrouter.ai",
-          npm: "@openrouter/ai-sdk-provider",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-      expect(result.low).toEqual({ reasoning: { effort: "low" } })
-      expect(result.high).toEqual({ reasoning: { effort: "high" } })
-    })
-    // kilocode_change end
-
     test("grok-4 returns empty object", () => {
       const model = createMockModel({
         id: "openrouter/grok-4",
@@ -3078,139 +3158,6 @@ describe("ProviderTransform.variants", () => {
       expect(result.high).toEqual({ reasoning: { effort: "high" } })
     })
   })
-
-  // kilocode_change start
-  describe("@kilocode/kilo-gateway", () => {
-    test("claude models return empty variants (reasoning disabled)", () => {
-      const model = createMockModel({
-        id: "kilo/anthropic/claude-sonnet-4",
-        providerID: "kilo",
-        capabilities: { reasoning: false },
-        api: {
-          id: "anthropic/claude-sonnet-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual([])
-    })
-
-    test("anthropic models in api.id return empty variants (reasoning disabled)", () => {
-      const model = createMockModel({
-        id: "kilo/anthropic/claude-opus-4",
-        providerID: "kilo",
-        capabilities: { reasoning: false },
-        api: {
-          id: "anthropic/claude-opus-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual([])
-    })
-
-    test("gpt models return OPENAI_EFFORTS with reasoning", () => {
-      const model = createMockModel({
-        id: "kilo/openai/gpt-5",
-        providerID: "kilo",
-        api: {
-          id: "openai/gpt-5",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-      expect(result.low).toEqual({ reasoning: { effort: "low" } })
-    })
-
-    test("gemini-3 models return OPENAI_EFFORTS with reasoning and encrypted content", () => {
-      const model = createMockModel({
-        id: "kilo/google/gemini-3-pro",
-        providerID: "kilo",
-        api: {
-          id: "google/gemini-3-pro",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-    })
-
-    test("non-qualifying models return empty object", () => {
-      const model = createMockModel({
-        id: "kilo/meta/llama-4",
-        providerID: "kilo",
-        api: {
-          id: "meta/llama-4",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(result).toEqual({})
-    })
-
-    test("grok-3-mini returns low and high with reasoning", () => {
-      const model = createMockModel({
-        id: "kilo/x-ai/grok-3-mini",
-        providerID: "kilo",
-        api: {
-          id: "x-ai/grok-3-mini",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["low", "high"])
-      expect(result.low).toEqual({ reasoning: { effort: "low" } })
-      expect(result.high).toEqual({ reasoning: { effort: "high" } })
-    })
-
-    test("codex models return OPENAI_EFFORTS with object-based reasoning format", () => {
-      const model = createMockModel({
-        id: "kilo/openai/gpt-5.2-codex",
-        providerID: "kilo",
-        api: {
-          id: "openai/gpt-5.2-codex",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "minimal", "low", "medium", "high", "xhigh"])
-      expect(result.low).toEqual({ reasoning: { effort: "low" } })
-      expect(result.high).toEqual({ reasoning: { effort: "high" } })
-      expect(result.xhigh).toEqual({ reasoning: { effort: "xhigh" } })
-    })
-
-    // kilocode_change start
-    test("mercury-2 uses server-provided variants from kilo gateway", () => {
-      const serverVariants = {
-        low: { reasoningEffort: "low" },
-        medium: { reasoningEffort: "medium" },
-        high: { reasoningEffort: "high" },
-      }
-      const model = createMockModel({
-        id: "kilo/inception/mercury-2",
-        providerID: "kilo",
-        api: {
-          id: "inception/mercury-2",
-          url: "https://gateway.kilo.ai",
-          npm: "@kilocode/kilo-gateway",
-        },
-        variants: serverVariants,
-      })
-      const result = ProviderTransform.variants(model)
-      expect(result).toEqual(serverVariants)
-      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
-    })
-    // kilocode_change end
-  })
-  // kilocode_change end
 
   describe("@ai-sdk/gateway", () => {
     test("anthropic sonnet 4.6 models return adaptive thinking options", () => {
@@ -3550,30 +3497,6 @@ describe("ProviderTransform.variants", () => {
     })
   })
 
-  // kilocode_change start
-  describe("@ai-sdk/azure", () => {
-    test("gpt-5.4 includes xhigh", () => {
-      const model = createMockModel({
-        id: "gpt-5.4",
-        release_date: "2026-03-05",
-        providerID: "azure",
-        api: {
-          id: "gpt-5.4",
-          url: "https://resource.openai.azure.com/openai",
-          npm: "@ai-sdk/azure",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high", "xhigh"])
-      expect(result.xhigh).toEqual({
-        reasoningEffort: "xhigh",
-        reasoningSummary: "auto",
-        include: ["reasoning.encrypted_content"],
-      })
-    })
-  })
-  // kilocode_change end
-
   describe("@ai-sdk/cerebras", () => {
     test("returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
       const model = createMockModel({
@@ -3640,25 +3563,6 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoningEffort: "low" })
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
-
-    // kilocode_change start
-    test("grok-4.5 uses standard reasoning efforts", () => {
-      const model = createMockModel({
-        id: "xai/grok-4.5",
-        providerID: "xai",
-        api: {
-          id: "grok-4.5",
-          url: "https://api.x.ai",
-          npm: "@ai-sdk/xai",
-        },
-      })
-
-      const result = ProviderTransform.variants(model)
-
-      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
-      expect(result.medium).toEqual({ reasoningEffort: "medium" })
-    })
-    // kilocode_change end
   })
 
   describe("@ai-sdk/deepinfra", () => {
@@ -3695,23 +3599,6 @@ describe("ProviderTransform.variants", () => {
       expect(result.low).toEqual({ reasoningEffort: "low" })
       expect(result.high).toEqual({ reasoningEffort: "high" })
     })
-    // kilocode_change start
-    test("mercury-2 returns WIDELY_SUPPORTED_EFFORTS with reasoningEffort", () => {
-      const model = createMockModel({
-        id: "inception/mercury-2",
-        providerID: "inception",
-        api: {
-          id: "mercury-2",
-          url: "https://api.inceptionlabs.ai",
-          npm: "@ai-sdk/openai-compatible",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["low", "medium", "high"])
-      expect(result.low).toEqual({ reasoningEffort: "low" })
-      expect(result.high).toEqual({ reasoningEffort: "high" })
-    })
-    // kilocode_change end
 
     test("north-mini-code-1-0 returns only none and high", () => {
       const model = createMockModel({
@@ -3780,8 +3667,6 @@ describe("ProviderTransform.variants", () => {
     })
 
     for (const testCase of [
-      { id: "o3-deep-research", efforts: ["medium"] }, // kilocode_change - preserve helper exclusions on Azure
-      { id: "gpt-5-pro", efforts: ["high"] }, // kilocode_change - preserve helper exclusions on Azure
       { id: "gpt-5-1", efforts: ["none", "low", "medium", "high"] },
       { id: "gpt-5-4", efforts: ["none", "low", "medium", "high", "xhigh"] },
       { id: "gpt-5.4", efforts: ["none", "low", "medium", "high", "xhigh"] },
@@ -4415,92 +4300,6 @@ describe("ProviderTransform.variants", () => {
     }
   })
 
-  // kilocode_change start
-  describe("ProviderTransform.smallOptions", () => {
-    describe("@kilocode/kilo-gateway", () => {
-      test("claude models use their default reasoning effort", () => {
-        const model = createMockModel({
-          id: "kilo/anthropic/claude-sonnet-4",
-          providerID: "kilo",
-          api: {
-            id: "anthropic/claude-sonnet-4",
-            url: "https://gateway.kilo.ai",
-            npm: "@kilocode/kilo-gateway",
-          },
-        })
-        const result = ProviderTransform.smallOptions(model)
-        expect(result).toEqual({ reasoning: { enabled: true } })
-      })
-
-      test("non-claude models use their default reasoning effort", () => {
-        const model = createMockModel({
-          id: "kilo/openai/gpt-4",
-          providerID: "kilo",
-          api: {
-            id: "openai/gpt-4",
-            url: "https://gateway.kilo.ai",
-            npm: "@kilocode/kilo-gateway",
-          },
-        })
-        const result = ProviderTransform.smallOptions(model)
-        expect(result).toEqual({ reasoning: { enabled: true } })
-      })
-
-      test("google models use their default reasoning effort", () => {
-        const model = createMockModel({
-          id: "kilo/google/gemini-2.0-flash",
-          providerID: "kilo",
-          api: {
-            id: "google/gemini-2.0-flash",
-            url: "https://gateway.kilo.ai",
-            npm: "@kilocode/kilo-gateway",
-          },
-        })
-        const result = ProviderTransform.smallOptions(model)
-        expect(result).toEqual({ reasoning: { enabled: true } })
-      })
-    })
-  })
-
-  describe("@ai-sdk/groq", () => {
-    test("returns none and WIDELY_SUPPORTED_EFFORTS with thinkingLevel", () => {
-      const model = createMockModel({
-        id: "groq/llama-4",
-        providerID: "groq",
-        api: {
-          id: "llama-4-sc",
-          url: "https://api.groq.com",
-          npm: "@ai-sdk/groq",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(Object.keys(result)).toEqual(["none", "low", "medium", "high"])
-      expect(result.none).toEqual({
-        reasoningEffort: "none",
-      })
-      expect(result.low).toEqual({
-        reasoningEffort: "low",
-      })
-    })
-  })
-
-  describe("@ai-sdk/perplexity", () => {
-    test("returns empty object", () => {
-      const model = createMockModel({
-        id: "perplexity/sonar-plus",
-        providerID: "perplexity",
-        api: {
-          id: "sonar-plus",
-          url: "https://api.perplexity.ai",
-          npm: "@ai-sdk/perplexity",
-        },
-      })
-      const result = ProviderTransform.variants(model)
-      expect(result).toEqual({})
-    })
-  })
-  // kilocode_change end
-
   describe("ai-gateway-provider (cloudflare-ai-gateway)", () => {
     const cfModel = (apiId: string, releaseDate = "2024-01-01") =>
       createMockModel({
@@ -4703,92 +4502,3 @@ describe("ProviderTransform.providerOptions - ai-gateway-provider", () => {
     expect(result).toEqual({ openaiCompatible: { reasoningEffort: "high" } })
   })
 })
-
-// kilocode_change start - tests for reasoningSummary guard
-describe("ProviderTransform.options - OpenAI Responses API params guard", () => {
-  const sessionID = "test-session"
-
-  const gpt5Model = (npm: string, providerID: string, apiId = "gpt-5.4"): any => ({
-    id: `${providerID}/${apiId}`,
-    providerID,
-    api: { id: apiId, npm, url: "" },
-    name: apiId,
-    capabilities: {
-      temperature: true,
-      reasoning: true,
-      attachment: true,
-      toolcall: true,
-      input: { text: true, audio: false, image: false, video: false, pdf: false },
-      output: { text: true, audio: false, image: false, video: false, pdf: false },
-      interleaved: false,
-    },
-    cost: { input: 0, output: 0 },
-    limit: { context: 200000, output: 32000 },
-    options: {},
-    headers: {},
-  })
-
-  test("includes reasoningSummary and textVerbosity for @ai-sdk/openai", () => {
-    const result = ProviderTransform.options({
-      model: gpt5Model("@ai-sdk/openai", "openai"),
-      sessionID,
-    })
-    expect(result.reasoningSummary).toBe("auto")
-    expect(result.reasoningEffort).toBe("medium")
-    expect(result.textVerbosity).toBe("low")
-  })
-
-  test("includes reasoningSummary for @ai-sdk/azure", () => {
-    const result = ProviderTransform.options({
-      model: gpt5Model("@ai-sdk/azure", "azure"),
-      sessionID,
-    })
-    expect(result.reasoningSummary).toBe("auto")
-  })
-
-  test("excludes reasoningSummary and textVerbosity for @ai-sdk/openai-compatible", () => {
-    const result = ProviderTransform.options({
-      model: gpt5Model("@ai-sdk/openai-compatible", "my-proxy"),
-      sessionID,
-    })
-    expect(result.reasoningSummary).toBeUndefined()
-    expect(result.textVerbosity).toBeUndefined()
-    expect(result.reasoningEffort).toBe("medium")
-  })
-
-  test("excludes reasoningSummary for unknown SDK packages", () => {
-    const result = ProviderTransform.options({
-      model: gpt5Model("@ai-sdk/xai", "xai"),
-      sessionID,
-    })
-    expect(result.reasoningSummary).toBeUndefined()
-    expect(result.reasoningEffort).toBe("medium")
-  })
-
-  test("includes reasoningSummary for @openrouter/ai-sdk-provider", () => {
-    const result = ProviderTransform.options({
-      model: gpt5Model("@openrouter/ai-sdk-provider", "openrouter"),
-      sessionID,
-    })
-    expect(result.reasoningSummary).toBe("auto")
-  })
-
-  test("includes reasoningSummary for @kilocode/kilo-gateway", () => {
-    const result = ProviderTransform.options({
-      model: gpt5Model("@kilocode/kilo-gateway", "kilo"),
-      sessionID,
-    })
-    expect(result.reasoningSummary).toBe("auto")
-  })
-
-  test("reasoningEffort remains universal across all providers", () => {
-    for (const npm of ["@ai-sdk/openai-compatible", "@ai-sdk/xai", "@ai-sdk/deepinfra"]) {
-      const result = ProviderTransform.options({
-        model: gpt5Model(npm, "test"),
-        sessionID,
-      })
-      expect(result.reasoningEffort).toBe("medium")
-    }
-  })
-})
-// kilocode_change end

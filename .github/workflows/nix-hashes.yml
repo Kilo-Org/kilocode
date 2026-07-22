@@ -6,7 +6,7 @@ permissions:
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [dev, beta]
     paths:
       - "bun.lock"
       - "package.json"
@@ -25,7 +25,6 @@ jobs:
   # Native runners required: bun install cross-compilation flags (--os/--cpu)
   # do not produce byte-identical node_modules as native installs.
   compute-hash:
-    if: github.repository == 'Kilo-Org/kilocode'
     strategy:
       fail-fast: false
       matrix:
@@ -83,7 +82,7 @@ jobs:
           echo "Computed hash for ${SYSTEM}: $HASH"
 
       - name: Upload hash
-        uses: actions/upload-artifact@v7 # kilocode_change
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: hash-${{ matrix.system }}
           path: hash.txt
@@ -91,32 +90,29 @@ jobs:
 
   update-hashes:
     needs: compute-hash
-    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6 # kilocode_change
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
           fetch-depth: 0
           ref: ${{ github.ref_name }}
 
-      - name: Setup Git Committer
-        id: committer
+      - name: Setup git committer
         uses: ./.github/actions/setup-git-committer
         with:
-          # kilocode_change start
-          kilo-maintainer-app-id: ${{ secrets.KILO_MAINTAINER_APP_ID }}
-          kilo-maintainer-app-secret: ${{ secrets.KILO_MAINTAINER_APP_SECRET }}
-          # kilocode_change end
+          opencode-app-id: ${{ vars.OPENCODE_APP_ID }}
+          opencode-app-secret: ${{ secrets.OPENCODE_APP_SECRET }}
 
       - name: Pull latest changes
         run: |
           git pull --rebase --autostash origin "$GITHUB_REF_NAME"
 
       - name: Download hash artifacts
-        uses: actions/download-artifact@v8 # kilocode_change
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: hashes
           pattern: hash-*

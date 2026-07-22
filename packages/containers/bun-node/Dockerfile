@@ -1,6 +1,4 @@
-# kilocode_change start
-ARG REGISTRY=ghcr.io/kilo-org
-# kilocode_change end
+ARG REGISTRY=ghcr.io/anomalyco
 FROM ${REGISTRY}/build/base:24.04
 
 SHELL ["/bin/bash", "-lc"]

@@ -2,22 +2,18 @@ import type { ChildProcessWithoutNullStreams } from "child_process"
 import path from "path"
 import os from "os"
 import { Global } from "@opencode-ai/core/global"
-import * as Log from "@opencode-ai/core/util/log" // kilocode_change
 import { text } from "node:stream/consumers"
 import fs from "fs/promises"
 import { Filesystem } from "@/util/filesystem"
 import type { InstanceContext } from "../project/instance-context"
-import { Flag } from "@opencode-ai/core/flag/flag"
 import { Archive } from "@/util/archive"
 import { Process } from "@/util/process"
 import { which } from "@opencode-ai/core/util/which"
 import { Module } from "@opencode-ai/core/util/module"
 import { spawn } from "./launch"
 import { Npm } from "@opencode-ai/core/npm"
-import { TsCheck } from "../kilocode/ts-check" // kilocode_change
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 
-const log = Log.create({ service: "lsp.server" }) // kilocode_change
 const pathExists = async (p: string) =>
   fs
     .stat(p)
@@ -116,11 +112,6 @@ export const Deno: Info = {
   },
 }
 
-// kilocode_change start - tsgo native LSP or lightweight diagnostic client
-// When KILO_EXPERIMENTAL_LSP_TOOL is enabled, spawn tsgo --lsp --stdio as a
-// persistent LSP server (full diagnostics, hover, go-to-definition, etc.).
-// Otherwise spawn() returns undefined and getClients() in index.ts falls
-// through to the lightweight TsClient that shells out to tsgo --noEmit on demand.
 export const Typescript: Info = {
   id: "typescript",
   root: NearestRoot(
@@ -128,20 +119,27 @@ export const Typescript: Info = {
     ["deno.json", "deno.jsonc"],
   ),
   extensions: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"],
-  async spawn(root) {
-    if (!Flag.KILO_EXPERIMENTAL_LSP_TOOL) return undefined
-    const bin = await TsCheck.native_tsgo(root)
-    if (!bin) {
-      log.info("tsgo native binary not found, falling back to lightweight client")
-      return undefined
-    }
-    log.info("spawning tsgo --lsp", { bin, root })
+  async spawn(root, ctx) {
+    const tsserver = Module.resolve("typescript/lib/tsserver.js", ctx.directory)
+    if (!tsserver) return
+    const bin = await Npm.which("typescript-language-server")
+    if (!bin) return
+    const proc = spawn(bin, ["--stdio"], {
+      cwd: root,
+      env: {
+        ...process.env,
+      },
+    })
     return {
-      process: spawn(bin, ["--lsp", "--stdio"], { cwd: root }),
+      process: proc,
+      initialization: {
+        tsserver: {
+          path: tsserver,
+        },
+      },
     }
   },
 }
-// kilocode_change end
 
 export const Vue: Info = {
   id: "vue",
@@ -986,11 +984,9 @@ export const Clangd: Info = {
     } = await releaseResponse.json()
 
     const tag = release.tag_name
-    // kilocode_change start - reject release metadata before it becomes an executable path
-    if (!tag || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(tag)) {
+    if (!tag) {
       return
     }
-    // kilocode_change end
     const platform = process.platform
     const tokens: Record<string, string> = {
       darwin: "mac",
@@ -1024,9 +1020,7 @@ export const Clangd: Info = {
       return
     }
 
-    // kilocode_change start - do not use remote metadata as a local path
-    const archive = path.join(Global.Path.bin, name.endsWith(".zip") ? "clangd.zip" : "clangd.tar.xz")
-    // kilocode_change end
+    const archive = path.join(Global.Path.bin, name)
     const buf = await downloadResponse.arrayBuffer()
     if (buf.byteLength === 0) {
       return
@@ -1254,7 +1248,6 @@ export const JDTLS: Info = {
       process: spawn(
         java,
         [
-          "-Djava.import.generatesMetadataFilesAtProjectRoot=false", // kilocode_change
           "-jar",
           launcherJar,
           "-configuration",
@@ -1459,9 +1452,7 @@ export const LuaLS: Info = {
         return
       }
 
-      // kilocode_change start - use a fixed local archive name
-      const tempPath = path.join(Global.Path.bin, `lua-language-server.${ext}`)
-      // kilocode_change end
+      const tempPath = path.join(Global.Path.bin, assetName)
       if (downloadResponse.body) await Filesystem.writeStream(tempPath, downloadResponse.body)
 
       // Unlike zls which is a single self-contained binary,

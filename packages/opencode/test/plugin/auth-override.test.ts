@@ -9,7 +9,6 @@ import { ProviderAuth } from "@/provider/auth"
 import { Plugin } from "@/plugin"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Auth } from "@/auth"
-import { ModelCache } from "@/provider/model-cache" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { TestConfig } from "../fixture/config"
 import { testEffect } from "../lib/effect"
@@ -21,7 +20,6 @@ const it = testEffect(Layer.mergeAll(CrossSpawnSpawner.defaultLayer, FSUtil.defa
 function layer(directory: string, plugins: string[]) {
   return ProviderAuth.layer.pipe(
     Layer.provide(Auth.defaultLayer),
-    Layer.provide(ModelCache.defaultLayer), // kilocode_change
     Layer.provide(
       Plugin.layer.pipe(
         Layer.provide(EventV2Bridge.defaultLayer),
@@ -52,7 +50,7 @@ describe("plugin.auth-override", () => {
       Effect.gen(function* () {
         const tmp = yield* TestInstance
         const fs = yield* FSUtil.Service
-        const pluginDir = path.join(tmp.directory, ".kilo", "plugin") // kilocode_change
+        const pluginDir = path.join(tmp.directory, ".opencode", "plugin")
 
         yield* fs.writeWithDirs(
           path.join(pluginDir, "custom-copilot-auth.ts"),

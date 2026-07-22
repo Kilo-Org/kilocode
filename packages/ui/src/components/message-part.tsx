@@ -160,7 +160,6 @@ export interface MessageProps {
   parts: PartType[]
   actions?: UserActions
   showAssistantCopyPartID?: string | null
-  queued?: boolean // kilocode_change
   showReasoningSummaries?: boolean
 }
 
@@ -180,6 +179,7 @@ export interface MessagePartProps {
   onToolOpenChange?: (open: boolean) => void
   deferToolContent?: boolean
   virtualizeDiff?: boolean
+  onContentRendered?: () => void
   showAssistantCopyPartID?: string | null
   turnDurationMs?: number
 }
@@ -189,13 +189,14 @@ export type PartComponent = Component<MessagePartProps>
 export const PART_MAPPING: Record<string, PartComponent | undefined> = {}
 
 const TEXT_RENDER_PACE_MS = 24
+const TEXT_RENDER_IMMEDIATE = 512
 const TEXT_RENDER_SNAP = /[\s.,!?;:)\]]/
 
 function step(size: number) {
   if (size <= 12) return 2
   if (size <= 48) return 4
   if (size <= 96) return 8
-  return Math.min(24, Math.ceil(size / 8))
+  return Math.min(256, Math.ceil(size / 4))
 }
 
 function next(text: string, start: number) {
@@ -234,6 +235,10 @@ function createPacedValue(getValue: () => string, live?: () => boolean) {
       sync(text)
       return
     }
+    if (text.length - shown.length <= TEXT_RENDER_IMMEDIATE) {
+      sync(text)
+      return
+    }
     const end = next(text, shown.length)
     sync(text.slice(0, end))
     if (end < text.length) timeout = setTimeout(run, TEXT_RENDER_PACE_MS)
@@ -247,6 +252,11 @@ function createPacedValue(getValue: () => string, live?: () => boolean) {
       return
     }
     if (!text.startsWith(shown) || text.length < shown.length) {
+      clear()
+      sync(text)
+      return
+    }
+    if (text.length - shown.length <= TEXT_RENDER_IMMEDIATE) {
       clear()
       sync(text)
       return
@@ -841,12 +851,7 @@ export function Message(props: MessageProps) {
     <Switch>
       <Match when={props.message.role === "user" && props.message}>
         {(userMessage) => (
-          <UserMessageDisplay
-            message={userMessage() as UserMessage}
-            parts={props.parts}
-            actions={props.actions}
-            queued={props.queued} // kilocode_change
-          />
+          <UserMessageDisplay message={userMessage() as UserMessage} parts={props.parts} actions={props.actions} />
         )}
       </Match>
       <Match when={props.message.role === "assistant" && props.message}>
@@ -1047,12 +1052,7 @@ export function ContextToolGroup(props: { parts: ToolPart[]; busy?: boolean; onS
   )
 }
 
-export function UserMessageDisplay(props: {
-  message: UserMessage
-  parts: PartType[]
-  actions?: UserActions
-  queued?: boolean // kilocode_change
-}) {
+export function UserMessageDisplay(props: { message: UserMessage; parts: PartType[]; actions?: UserActions }) {
   const data = useData()
   const dialog = useDialog()
   const i18n = useI18n()
@@ -1141,7 +1141,6 @@ export function UserMessageDisplay(props: {
                   data-slot="user-message-attachment"
                   data-type={type}
                   data-clickable={type === "image" ? "true" : undefined}
-                  data-queued={props.queued ? "" : undefined} // kilocode_change
                   title={type === "file" ? name : undefined}
                   onClick={() => {
                     if (type === "image") openImagePreview(file.url, name)
@@ -1167,16 +1166,9 @@ export function UserMessageDisplay(props: {
       <Show when={text()}>
         <>
           <div data-slot="user-message-body">
-            <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>{/* kilocode_change */}
+            <div data-slot="user-message-text">
               <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
             </div>
-            {/* kilocode_change start */}
-            <Show when={props.queued}>
-              <div data-slot="user-message-queued-indicator">
-                <TextShimmer text={i18n.t("ui.message.queued")} />
-              </div>
-            </Show>
-            {/* kilocode_change end */}
           </div>
           <div data-slot="user-message-copy-wrapper">
             <Show when={metaHead() || metaTail()}>
@@ -1291,6 +1283,7 @@ export function Part(props: MessagePartProps) {
         onToolOpenChange={props.onToolOpenChange}
         deferToolContent={props.deferToolContent}
         virtualizeDiff={props.virtualizeDiff}
+        onContentRendered={props.onContentRendered}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         turnDurationMs={props.turnDurationMs}
       />
@@ -1311,6 +1304,7 @@ export interface ToolProps {
   onOpenChange?: (open: boolean) => void
   deferContent?: boolean
   virtualizeDiff?: boolean
+  onContentRendered?: () => void
   forceOpen?: boolean
   locked?: boolean
 }
@@ -1357,7 +1351,7 @@ function ToolFileAccordion(props: { path: string; actions?: JSX.Element; childre
                 <FileIcon node={{ path: props.path, type: "file" }} />
                 <div data-slot="apply-patch-file-name-container">
                   <Show when={props.path.includes("/")}>
-                    <span data-slot="apply-patch-directory">{`\u2066${getDirectory(props.path)}\u2069`}</span>
+                    <span data-slot="apply-patch-directory">{`\u202A${getDirectory(props.path)}\u202C`}</span>
                   </Show>
                   <span data-slot="apply-patch-filename">{getFilename(props.path)}</span>
                 </div>
@@ -1457,6 +1451,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               onOpenChange={props.onToolOpenChange ? handleToolOpenChange : undefined}
               deferContent={props.deferToolContent}
               virtualizeDiff={props.virtualizeDiff}
+              onContentRendered={props.onContentRendered}
             />
           </Match>
         </Switch>
@@ -1538,27 +1533,13 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
     () => props.message.role === "assistant" && typeof (props.message as AssistantMessage).time.completed !== "number",
   )
   const text = () => readPartText(data.store.part_text_accum_delta, part())
-  // kilocode_change start
-  // Synthetic text parts (e.g. "Initializing snapshot…" from the slow-repo guard)
-  // are transient status indicators, not assistant output — they must never
-  // carry the copy button, and they must not "steal" last-part status from
-  // the actual assistant response that precedes them.
-  //
-  // On a clean turn the backend removes the part via `removePart` once the
-  // snapshot finishes, so it never reaches this branch. But if the host
-  // process is hard-killed mid-snapshot the part stays in storage and
-  // re-appears on session reload; hiding it when the owning message is no
-  // longer streaming keeps the scrollback clean in that edge case.
-  const showSyntheticPart = createMemo(() => !part().synthetic || streaming())
-  // kilocode_change end
   const isLastTextPart = createMemo(() => {
     const last = (data.store.part?.[props.message.id] ?? [])
-      .filter((item): item is TextPart => item?.type === "text" && !!item.text?.trim() && !item.synthetic) // kilocode_change
+      .filter((item): item is TextPart => item?.type === "text" && !!item.text?.trim())
       .at(-1)
     return last?.id === part().id
   })
   const showCopy = createMemo(() => {
-    if (part().synthetic) return false // kilocode_change
     if (props.message.role !== "assistant") return isLastTextPart()
     if (props.showAssistantCopyPartID === null) return false
     if (typeof props.showAssistantCopyPartID === "string") return props.showAssistantCopyPartID === part().id
@@ -1576,7 +1557,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   }
 
   return (
-    <Show when={text() && showSyntheticPart() /* kilocode_change */}>
+    <Show when={text()}>
       <div data-component="text-part" data-timeline-part-id={part().id}>
         <div data-slot="text-part-body">
           <Show when={streaming()} fallback={<Markdown text={text()} cacheKey={part().id} streaming={false} />}>
@@ -1678,7 +1659,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="bullet-list"
-        defer
         trigger={{ title: i18n.t("ui.tool.list"), subtitle: getDirectory(props.input.path || "/") }}
       >
         <Show when={props.output}>
@@ -1699,7 +1679,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
-        defer
         trigger={{
           title: i18n.t("ui.tool.glob"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1727,7 +1706,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="magnifying-glass-menu"
-        defer
         trigger={{
           title: i18n.t("ui.tool.grep"),
           subtitle: getDirectory(props.input.path || "/"),
@@ -1927,7 +1905,6 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         icon="console"
-        defer
         trigger={
           <div data-slot="basic-tool-tool-info-structured">
             <div data-slot="basic-tool-tool-info-main">
@@ -2058,7 +2035,13 @@ ToolRegistry.register({
               }
             >
               <div data-component="edit-content">
-                <Dynamic component={fileComponent} mode="diff" virtualize={props.virtualizeDiff} {...fileCompProps()} />
+                <Dynamic
+                  component={fileComponent}
+                  mode="diff"
+                  virtualize={props.virtualizeDiff}
+                  onRendered={props.onContentRendered}
+                  {...fileCompProps()}
+                />
               </div>
             </ToolFileAccordion>
           </Show>
@@ -2117,6 +2100,7 @@ ToolRegistry.register({
                     cacheKey: checksum(props.input.content),
                   }}
                   overflow="scroll"
+                  onRendered={props.onContentRendered}
                 />
               </div>
             </ToolFileAccordion>
@@ -2205,7 +2189,7 @@ ToolRegistry.register({
                                   <FileIcon node={{ path: file.relativePath, type: "file" }} />
                                   <div data-slot="apply-patch-file-name-container">
                                     <Show when={file.relativePath.includes("/")}>
-                                      <span data-slot="apply-patch-directory">{`\u2066${getDirectory(file.relativePath)}\u2069`}</span>
+                                      <span data-slot="apply-patch-directory">{`\u202A${getDirectory(file.relativePath)}\u202C`}</span>
                                     </Show>
                                     <span data-slot="apply-patch-filename">{getFilename(file.relativePath)}</span>
                                   </div>
@@ -2245,6 +2229,7 @@ ToolRegistry.register({
                                   virtualize={props.virtualizeDiff}
                                   fileDiff={file.view.fileDiff}
                                   hunkSeparators={file.view.fileDiff.isPartial ? "simple" : "line-info-basic"}
+                                  onRendered={props.onContentRendered}
                                 />
                               </div>
                             </Show>
@@ -2320,6 +2305,7 @@ ToolRegistry.register({
                   mode="diff"
                   virtualize={props.virtualizeDiff}
                   fileDiff={single()!.view.fileDiff}
+                  onRendered={props.onContentRendered}
                 />
               </div>
             </ToolFileAccordion>

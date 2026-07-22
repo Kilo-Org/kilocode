@@ -1,5 +1,5 @@
 import { Schema } from "effect"
-import { ProviderMetadata, StoredToolContent, ToolContent } from "@opencode-ai/llm" // kilocode_change - durable events decode legacy content
+import { ProviderMetadata, ToolContent } from "@opencode-ai/llm"
 import { EventV2 } from "../event"
 import { ModelV2 } from "../model"
 import { NonNegativeInt } from "../schema"
@@ -120,8 +120,9 @@ export namespace PromptLifecycle {
 
 export const InterruptRequested = EventV2.define({
   type: "session.next.interrupt.requested",
+  ...options,
   schema: Base,
-}) // kilocode_change - operational notification; released readers cannot decode a durable event with this type
+})
 export type InterruptRequested = typeof InterruptRequested.Type
 
 export const ContextUpdated = EventV2.define({
@@ -353,43 +354,33 @@ export namespace Tool {
    * Replayable bounded running-tool state. Tools should checkpoint semantic
    * transitions or at a bounded cadence, not persist every stdout/stderr chunk.
    */
-  // kilocode_change start - keep legacy persistence decoding out of public event schemas
-  const ProgressFields = {
-    ...ToolBase,
-    structured: Schema.Record(Schema.String, Schema.Any),
-    content: Schema.Array(ToolContent),
-  }
   export const Progress = EventV2.define({
     type: "session.next.tool.progress",
-    sync: {
-      ...options.sync,
-      codec: Schema.Struct({ ...ProgressFields, content: Schema.Array(StoredToolContent) }), // kilocode_change
+    ...options,
+    schema: {
+      ...ToolBase,
+      structured: Schema.Record(Schema.String, Schema.Any),
+      content: Schema.Array(ToolContent),
     },
-    schema: ProgressFields,
   })
   export type Progress = typeof Progress.Type
 
-  const SuccessFields = {
-    ...ToolBase,
-    structured: Schema.Record(Schema.String, Schema.Any),
-    content: Schema.Array(ToolContent),
-    outputPaths: Schema.Array(Schema.String).pipe(Schema.optional),
-    result: Schema.Unknown.pipe(Schema.optional),
-    provider: Schema.Struct({
-      executed: Schema.Boolean,
-      metadata: ProviderMetadata.pipe(Schema.optional),
-    }),
-  }
   export const Success = EventV2.define({
     type: "session.next.tool.success",
-    sync: {
-      ...options.sync,
-      codec: Schema.Struct({ ...SuccessFields, content: Schema.Array(StoredToolContent) }), // kilocode_change
+    ...options,
+    schema: {
+      ...ToolBase,
+      structured: Schema.Record(Schema.String, Schema.Any),
+      content: Schema.Array(ToolContent),
+      outputPaths: Schema.Array(Schema.String).pipe(Schema.optional),
+      result: Schema.Unknown.pipe(Schema.optional),
+      provider: Schema.Struct({
+        executed: Schema.Boolean,
+        metadata: ProviderMetadata.pipe(Schema.optional),
+      }),
     },
-    schema: SuccessFields,
   })
   export type Success = typeof Success.Type
-  // kilocode_change end
 
   export const Failed = EventV2.define({
     type: "session.next.tool.failed",
@@ -452,21 +443,28 @@ export namespace Compaction {
   })
   export type Delta = typeof Delta.Type
 
-  // kilocode_change start - keep the released v1 event key while storing enough data for both reader generations.
-  const EndedFields = {
-    ...Base,
-    messageID: SessionMessageID.ID.pipe(Schema.optional),
-    reason: Started.data.fields.reason.pipe(Schema.optional),
-    text: Schema.String,
-    recent: Schema.String.pipe(Schema.optional),
-    include: Schema.String.pipe(Schema.optional),
-  }
+  // Retain the unpublished v1 decoder so stored beta events remain replayable.
+  export const EndedV1 = EventV2.define({
+    type: "session.next.compaction.ended",
+    ...options,
+    schema: {
+      ...Base,
+      text: Schema.String,
+      include: Schema.String.pipe(Schema.optional),
+    },
+  })
+
   export const Ended = EventV2.define({
     type: "session.next.compaction.ended",
-    sync: { aggregate: "sessionID", version: 1 },
-    schema: EndedFields,
+    sync: { aggregate: "sessionID", version: 2 },
+    schema: {
+      ...Base,
+      messageID: SessionMessageID.ID,
+      reason: Started.data.fields.reason,
+      text: Schema.String,
+      recent: Schema.String,
+    },
   })
-  // kilocode_change end
   export type Ended = typeof Ended.Type
 }
 
@@ -477,6 +475,7 @@ const DurableDefinitions = [
   Prompted,
   PromptLifecycle.Admitted,
   PromptLifecycle.Promoted,
+  InterruptRequested,
   ContextUpdated,
   Synthetic,
   Shell.Started,
@@ -498,13 +497,7 @@ const DurableDefinitions = [
   Compaction.Started,
   Compaction.Ended,
 ] as const
-const EphemeralDefinitions = [
-  InterruptRequested, // kilocode_change - preserve downgrade-readable durable streams
-  Text.Delta,
-  Tool.Input.Delta,
-  Reasoning.Delta,
-  Compaction.Delta,
-] as const
+const EphemeralDefinitions = [Text.Delta, Tool.Input.Delta, Reasoning.Delta, Compaction.Delta] as const
 
 export const Durable = Schema.Union(DurableDefinitions, { mode: "oneOf" }).pipe(Schema.toTaggedUnion("type"))
 export type DurableEvent = typeof Durable.Type

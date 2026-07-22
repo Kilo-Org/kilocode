@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { cliErrorMessage, errorData, errorFormat, errorMessage } from "../../src/util/error"
+import { errorData, errorFormat, errorMessage } from "../../src/util/error"
 
 describe("util.error", () => {
   test("formats native Error instances", () => {
@@ -46,20 +46,4 @@ describe("util.error", () => {
     expect(data.message).toBe("ResolveMessage: Cannot resolve module")
     expect(String(data.formatted)).toContain("ResolveMessage")
   })
-
-  // kilocode_change start - preserve Kilo-branded CLI guidance
-  test("uses Kilo commands and capability messaging", () => {
-    const model = cliErrorMessage({
-      _tag: "ProviderModelNotFoundError",
-      providerID: "anthropic",
-      modelID: "claude-sonnet-4",
-    })
-    expect(model).toContain("kilo models")
-    expect(model).toContain("kilo.json")
-    expect(model).not.toContain("opencode")
-
-    const mcp = cliErrorMessage({ name: "MCPFailed", data: { name: "example" } })
-    expect(mcp).toBe('MCP server "example" failed.')
-  })
-  // kilocode_change end
 })

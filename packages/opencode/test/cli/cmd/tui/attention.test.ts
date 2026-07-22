@@ -89,7 +89,7 @@ function config(attention: Partial<AttentionConfig["attention"]> = {}): Attentio
       notifications: true,
       sound: true,
       volume: 0.4,
-      sound_pack: "kilo.default", // kilocode_change
+      sound_pack: "opencode.default",
       sounds: {},
       ...attention,
     },
@@ -161,7 +161,7 @@ describe("createTuiAttention", () => {
       notification: true,
       sound: false,
     })
-    expect(renderer.notifications).toEqual([{ title: "Kilo", message: "focused" }]) // kilocode_change
+    expect(renderer.notifications).toEqual([{ title: "opencode", message: "focused" }])
   })
 
   test("notification can deliver while focused when requested", async () => {
@@ -176,7 +176,7 @@ describe("createTuiAttention", () => {
       sound: true,
     })
     expect(audio.playCalls).toBe(1)
-    expect(renderer.notifications).toEqual([{ title: "Kilo", message: "hello" }]) // kilocode_change
+    expect(renderer.notifications).toEqual([{ title: "opencode", message: "hello" }])
   })
 
   test("notifies while blurred", async () => {
@@ -184,13 +184,12 @@ describe("createTuiAttention", () => {
     const attention = createTuiAttention({ renderer, config: config(), audio: new FakeAudioEngine() })
     renderer.emit("blur")
 
-    expect(await attention.notify({ title: "Kilo", message: "hello", sound: false })).toEqual({
-      // kilocode_change
+    expect(await attention.notify({ title: "opencode", message: "hello", sound: false })).toEqual({
       ok: true,
       notification: true,
       sound: false,
     })
-    expect(renderer.notifications).toEqual([{ title: "Kilo", message: "hello" }]) // kilocode_change
+    expect(renderer.notifications).toEqual([{ title: "opencode", message: "hello" }])
   })
 
   test("when requested, blurred-only calls do not notify or play sound while focused", async () => {
@@ -239,7 +238,7 @@ describe("createTuiAttention", () => {
       notification: true,
       sound: true,
     })
-    expect(renderer.notifications).toEqual([{ title: "Kilo", message: "hello again" }]) // kilocode_change
+    expect(renderer.notifications).toEqual([{ title: "opencode", message: "hello again" }])
   })
 
   test("can disable notification per call while still playing sound", async () => {
@@ -384,7 +383,7 @@ describe("createTuiAttention", () => {
     expect(audio.loadPaths).toEqual(["/tmp/question.mp3"])
 
     dispose()
-    expect(attention.soundboard.current()).toBe("kilo.default") // kilocode_change
+    expect(attention.soundboard.current()).toBe("opencode.default")
   })
 
   test("uses config sound overrides before active pack sounds and falls back on load failure", async () => {

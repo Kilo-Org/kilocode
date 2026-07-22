@@ -82,39 +82,13 @@ export const SessionListCommand = effectCmd({
         type: "string",
         choices: ["table", "json"],
         default: "table",
-      })
-      // kilocode_change start
-      .option("all", {
-        alias: "a",
-        describe: "list sessions from all projects",
-        type: "boolean",
-        default: false,
-      })
-      .option("search", {
-        alias: "s",
-        describe: "filter sessions by title",
-        type: "string",
       }),
-  // kilocode_change end
   handler: Effect.fn("Cli.session.list")(function* (args) {
-    // kilocode_change start
-    const sessions = args.all
-      ? [...Session.listGlobal({ roots: true, limit: args.maxCount, search: args.search })]
-      : yield* Session.Service.use((svc) => svc.list({ roots: true, limit: args.maxCount, search: args.search }))
-    // kilocode_change end
+    const sessions = yield* Session.Service.use((svc) => svc.list({ roots: true, limit: args.maxCount }))
 
     if (sessions.length === 0) return
 
-    // kilocode_change start
-    const output =
-      args.format === "json"
-        ? args.all
-          ? formatGlobalSessionJSON(sessions as Session.GlobalInfo[])
-          : formatSessionJSON(sessions as Session.Info[])
-        : args.all
-          ? formatGlobalSessionTable(sessions as Session.GlobalInfo[])
-          : formatSessionTable(sessions as Session.Info[])
-    // kilocode_change end
+    const output = args.format === "json" ? formatSessionJSON(sessions) : formatSessionTable(sessions)
 
     const shouldPaginate = process.stdout.isTTY && !args.maxCount && args.format === "table"
 
@@ -160,7 +134,6 @@ function formatSessionTable(sessions: Session.Info[]): string {
   return lines.join(EOL)
 }
 
-// kilocode_change start
 function formatSessionJSON(sessions: Session.Info[]): string {
   const jsonData = sessions.map((session) => ({
     id: session.id,
@@ -172,45 +145,3 @@ function formatSessionJSON(sessions: Session.Info[]): string {
   }))
   return JSON.stringify(jsonData, null, 2)
 }
-// kilocode_change end
-
-// kilocode_change start
-function formatGlobalSessionTable(sessions: Session.GlobalInfo[]): string {
-  const lines: string[] = []
-
-  const maxIdWidth = Math.max(20, ...sessions.map((s) => s.id.length))
-  const maxTitleWidth = Math.max(25, ...sessions.map((s) => s.title.length))
-  const maxProjectWidth = Math.max(
-    10,
-    ...sessions.map((s) => (s.project?.name ?? s.project?.worktree ?? "unknown").length),
-  )
-
-  const header = `Session ID${" ".repeat(maxIdWidth - 10)}  Title${" ".repeat(maxTitleWidth - 5)}  Project${" ".repeat(maxProjectWidth - 7)}  Updated`
-  lines.push(header)
-  lines.push("─".repeat(header.length))
-  for (const session of sessions) {
-    const truncatedTitle = Locale.truncate(session.title, maxTitleWidth)
-    const project = Locale.truncate(session.project?.name ?? session.project?.worktree ?? "unknown", maxProjectWidth)
-    const timeStr = Locale.todayTimeOrDateTime(session.time.updated)
-    const line = `${session.id.padEnd(maxIdWidth)}  ${truncatedTitle.padEnd(maxTitleWidth)}  ${project.padEnd(maxProjectWidth)}  ${timeStr}`
-    lines.push(line)
-  }
-
-  return lines.join(EOL)
-}
-
-function formatGlobalSessionJSON(sessions: Session.GlobalInfo[]): string {
-  const jsonData = sessions.map((session) => ({
-    id: session.id,
-    title: session.title,
-    updated: session.time.updated,
-    created: session.time.created,
-    projectId: session.projectID,
-    directory: session.directory,
-    project: session.project
-      ? { id: session.project.id, name: session.project.name, worktree: session.project.worktree }
-      : null,
-  }))
-  return JSON.stringify(jsonData, null, 2)
-}
-// kilocode_change end

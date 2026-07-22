@@ -1,14 +1,13 @@
 export * as FileSystem from "./filesystem"
 
 import path from "path"
-import { Context, Effect, Layer, Option, Schema } from "effect" // kilocode_change
+import { Context, Effect, Layer, Schema } from "effect"
 import { EventV2 } from "./event"
 import { FSUtil } from "./fs-util"
 import { Location } from "./location"
 import { PositiveInt, RelativePath } from "./schema"
 import { FileSystemSearch } from "./filesystem/search"
 import { Entry, Match } from "./filesystem/schema"
-import * as SearchTarget from "./kilocode/search-target" // kilocode_change
 export { Entry, Match, Submatch } from "./filesystem/schema"
 
 export const ReadInput = Schema.Struct({
@@ -35,10 +34,6 @@ export class FindInput extends Schema.Class<FindInput>("FileSystem.FindInput")({
   type: Schema.Literals(["file", "directory"]).pipe(Schema.optional),
   limit: PositiveInt.pipe(Schema.optional),
 }) {}
-
-export const DEFAULT_SEARCH_LIMIT = 100 // kilocode_change - preserve bounded Kilo tool searches
-export const MAX_SEARCH_LIMIT = 100 // kilocode_change
-export const SearchLimit = PositiveInt.check(Schema.isLessThanOrEqualTo(MAX_SEARCH_LIMIT)) // kilocode_change
 
 export class GlobInput extends Schema.Class<GlobInput>("FileSystem.GlobInput")({
   pattern: Schema.String,
@@ -85,8 +80,7 @@ const baseLayer = Layer.effect(
         return yield* Effect.die(new Error("Path escapes the location"))
       const real = yield* fs.realPath(absolute).pipe(Effect.orDie)
       if (!FSUtil.contains(root, real)) return yield* Effect.die(new Error("Path escapes the location"))
-      const target = yield* SearchTarget.inspect(fs, real).pipe(Effect.orDie) // kilocode_change
-      return { absolute, real, directory: location.directory, root, target } // kilocode_change
+      return { absolute, real, directory: location.directory, root }
     })
     return Service.of({
       find: search.find,
@@ -94,38 +88,18 @@ const baseLayer = Layer.effect(
       grep: search.grep,
       read: Effect.fn("FileSystem.read")(function* (input) {
         const target = yield* resolve(input.path)
-        if (target.target.type !== "file") return yield* Effect.die(new Error("Path is not a file")) // kilocode_change
-        // kilocode_change start - read from the validated descriptor, not a second pathname lookup.
-        return yield* Effect.scoped(
-          Effect.gen(function* () {
-            const file = yield* fs.open(target.real, { flag: "r" }).pipe(Effect.orDie)
-            const info = yield* file.stat.pipe(Effect.orDie)
-            if (
-              info.type !== "File" ||
-              info.dev !== target.target.dev ||
-              Option.getOrUndefined(info.ino) !== target.target.ino
-            )
-              return yield* Effect.die(new Error("Path changed during read"))
-            const chunks: Uint8Array[] = []
-            while (true) {
-              const chunk = yield* file.readAlloc(64 * 1024).pipe(Effect.orDie)
-              if (Option.isNone(chunk)) break
-              chunks.push(chunk.value)
-            }
-            return {
-              content: new Uint8Array(Buffer.concat(chunks.map((chunk) => Buffer.from(chunk)))),
-              mime: FSUtil.mimeType(target.real),
-            }
-          }),
-        )
-        // kilocode_change end
+        const info = yield* fs.stat(target.real).pipe(Effect.orDie)
+        if (info.type !== "File") return yield* Effect.die(new Error("Path is not a file"))
+        return {
+          content: yield* fs.readFile(target.real).pipe(Effect.orDie),
+          mime: FSUtil.mimeType(target.real),
+        }
       }),
       list: Effect.fn("FileSystem.list")(function* (input = {}) {
         const target = yield* resolve(input.path)
-        if (target.target.type !== "directory") return yield* Effect.die(new Error("Path is not a directory")) // kilocode_change
-        // kilocode_change start - reject directory replacement during enumeration
-        yield* SearchTarget.validate(fs, target.target).pipe(Effect.orDie)
-        const entries = yield* fs.readDirectoryEntries(target.real).pipe(
+        const info = yield* fs.stat(target.real).pipe(Effect.orDie)
+        if (info.type !== "Directory") return yield* Effect.die(new Error("Path is not a directory"))
+        return yield* fs.readDirectoryEntries(target.real).pipe(
           Effect.orDie,
           Effect.map((items) =>
             items
@@ -144,9 +118,6 @@ const baseLayer = Layer.effect(
               .sort((a, b) => (a.type === b.type ? a.path.localeCompare(b.path) : a.type === "directory" ? -1 : 1)),
           ),
         )
-        yield* SearchTarget.validate(fs, target.target).pipe(Effect.orDie)
-        return entries
-        // kilocode_change end
       }),
     })
   }),

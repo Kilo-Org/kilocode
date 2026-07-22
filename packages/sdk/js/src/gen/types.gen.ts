@@ -1343,23 +1343,6 @@ export type Config = {
      */
     url?: string
   }
-  /**
-   * Sandbox configuration for agent tools
-   */
-  sandbox?: {
-    /**
-     * Enable sandbox confinement for new sessions (default: false)
-     */
-    enabled?: boolean
-    /**
-     * Control outbound network access from sandboxed tools (default: deny)
-     */
-    network?: "allow" | "deny"
-    /**
-     * Additional filesystem paths that sandboxed tools may write to
-     */
-    writable_paths?: Array<string>
-  }
   experimental?: {
     hook?: {
       file_edited?: {
@@ -3049,7 +3032,6 @@ export type ProviderListResponses = {
       [key: string]: string
     }
     connected: Array<string>
-    failed: Array<string>
   }
 }
 

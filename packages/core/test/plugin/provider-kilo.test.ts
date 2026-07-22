@@ -1,12 +1,11 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
-import { Credential } from "@opencode-ai/core/credential"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { ProviderPlugins } from "@opencode-ai/core/plugin/provider"
 import { KiloPlugin } from "@opencode-ai/core/plugin/provider/kilo"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { expectPluginRegistered, it, model, provider, withEnv } from "./provider-helper" // kilocode_change
+import { expectPluginRegistered, it, provider } from "./provider-helper"
 
 describe("KiloPlugin", () => {
   it.effect("is registered so legacy referer headers can be applied", () =>
@@ -37,8 +36,8 @@ describe("KiloPlugin", () => {
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo"))).request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://kilo.ai/",
-        "X-Title": "Kilo Code", // kilocode_change
+        "HTTP-Referer": "https://opencode.ai/",
+        "X-Title": "opencode",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.openrouter)).request.headers).toEqual({})
     }),
@@ -61,8 +60,8 @@ describe("KiloPlugin", () => {
 
       const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
       expect(result.request.headers).toEqual({
-        "HTTP-Referer": "https://kilo.ai/",
-        "X-Title": "Kilo Code", // kilocode_change
+        "HTTP-Referer": "https://opencode.ai/",
+        "X-Title": "opencode",
       })
       expect(result.request.headers).not.toHaveProperty("http-referer")
       expect(result.request.headers).not.toHaveProperty("x-title")
@@ -92,99 +91,10 @@ describe("KiloPlugin", () => {
       })
 
       expect((yield* catalog.provider.get(ProviderV2.ID.make("kilo"))).request.headers).toEqual({
-        "HTTP-Referer": "https://kilo.ai/",
-        "X-Title": "Kilo Code", // kilocode_change
+        "HTTP-Referer": "https://opencode.ai/",
+        "X-Title": "opencode",
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("custom-kilo"))).request.headers).toEqual({})
     }),
   )
-
-  // kilocode_change start
-  it.effect("routes the Kilo catalog through the Kilo Gateway SDK", () =>
-    withEnv({ KILO_API_KEY: undefined, KILO_ORG_ID: undefined }, () =>
-      Effect.gen(function* () {
-        const plugin = yield* PluginV2.Service
-        const catalog = yield* Catalog.Service
-        yield* plugin.add(KiloPlugin)
-        const transform = yield* catalog.transform()
-        yield* transform((catalog) => {
-          const item = provider("kilo", {
-            api: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://api.kilo.ai/api/gateway" },
-            request: { headers: {}, body: { apiKey: "stored-token" } },
-          })
-          catalog.provider.update(item.id, (draft) => {
-            draft.api = item.api
-            draft.request = item.request
-          })
-        })
-        const updated = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
-
-        expect(updated.api).toEqual({
-          type: "aisdk",
-          package: "@kilocode/kilo-gateway",
-          url: "https://api.kilo.ai/api/openrouter",
-        })
-        expect(updated.request.body.kilocodeToken).toBe("stored-token")
-
-        const result = yield* plugin.trigger(
-          "aisdk.sdk",
-          {
-            model: model("kilo", "kilo-auto/free"),
-            package: "@kilocode/kilo-gateway",
-            options: updated.request.body,
-          },
-          {},
-        )
-        expect(result.sdk).toBeDefined()
-        expect(typeof result.sdk.languageModel).toBe("function")
-        expect(typeof result.sdk.anthropic).toBe("function")
-      }),
-    ),
-  )
-
-  it.effect("keeps authenticated credentials ahead of inherited environment keys", () =>
-    withEnv({ KILO_API_KEY: "environment-token", KILO_ORG_ID: "environment-org" }, () =>
-      Effect.gen(function* () {
-        const plugin = yield* PluginV2.Service
-        const catalog = yield* Catalog.Service
-        yield* plugin.add(KiloPlugin)
-        const transform = yield* catalog.transform()
-        yield* transform((catalog) => {
-          const item = provider("kilo", {
-            enabled: { via: "credential", credentialID: Credential.ID.make("cred_kilo") },
-            request: {
-              headers: {},
-              body: { apiKey: "authenticated-token", kilocodeOrganizationId: "authenticated-org" },
-            },
-          })
-          catalog.provider.update(item.id, (draft) => {
-            draft.enabled = item.enabled
-            draft.request = item.request
-          })
-        })
-        const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
-
-        expect(result.enabled).toEqual({ via: "credential", credentialID: Credential.ID.make("cred_kilo") })
-        expect(result.request.body.kilocodeToken).toBe("authenticated-token")
-        expect(result.request.body.kilocodeOrganizationId).toBe("environment-org")
-      }),
-    ),
-  )
-
-  it.effect("keeps anonymous Kilo models available without credentials", () =>
-    withEnv({ KILO_API_KEY: undefined, KILO_ORG_ID: undefined }, () =>
-      Effect.gen(function* () {
-        const plugin = yield* PluginV2.Service
-        const catalog = yield* Catalog.Service
-        yield* plugin.add(KiloPlugin)
-        const transform = yield* catalog.transform()
-        yield* transform((catalog) => catalog.provider.update(ProviderV2.ID.make("kilo"), () => {}))
-        const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
-
-        expect(result.enabled).toEqual({ via: "custom", data: { anonymous: true } })
-        expect(result.request.body.kilocodeToken).toBe("anonymous")
-      }),
-    ),
-  )
-  // kilocode_change end
 })

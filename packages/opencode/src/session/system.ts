@@ -8,9 +8,7 @@ import PROMPT_DEFAULT from "./prompt/default.txt"
 import PROMPT_BEAST from "./prompt/beast.txt"
 import PROMPT_GEMINI from "./prompt/gemini.txt"
 import PROMPT_GPT from "./prompt/gpt.txt"
-import PROMPT_GPT55 from "./prompt/kilocode-gpt-5.5.txt" // kilocode_change
 import PROMPT_KIMI from "./prompt/kimi.txt"
-import PROMPT_LING from "./prompt/ling.txt" // kilocode_change
 
 import PROMPT_CODEX from "./prompt/codex.txt"
 import PROMPT_TRINITY from "./prompt/trinity.txt"
@@ -24,53 +22,7 @@ import { LocationServiceMap } from "@opencode-ai/core/location-layer"
 import { PluginBoot } from "@opencode-ai/core/plugin/boot"
 import { Reference } from "@opencode-ai/core/reference"
 
-// kilocode_change start
-import SOUL from "../kilocode/soul.txt"
-import type { EditorContext } from "../kilocode/editor-context"
-import { KilocodeSystemPrompt } from "../kilocode/system-prompt"
-import { isLing } from "../kilocode/model-match"
-import { Config } from "@/config/config"
-import * as KiloReference from "@/kilocode/reference"
-// kilocode_change end
-
-// kilocode_change start
-export function instructions() {
-  return PROMPT_CODEX.trim()
-}
-
-export function soul() {
-  return SOUL.trim()
-}
-// kilocode_change end
-
 export function provider(model: Provider.Model) {
-  // kilocode_change start
-  function prompt() {
-    switch (model.prompt) {
-      case "anthropic":
-        return [PROMPT_ANTHROPIC]
-      case "anthropic_without_todo":
-        return [PROMPT_DEFAULT]
-      case "beast":
-        return [PROMPT_BEAST]
-      case "codex":
-        return [PROMPT_CODEX]
-      case "gemini":
-        return [PROMPT_GEMINI]
-      case "gpt55":
-        return [PROMPT_GPT55]
-      case "ling":
-        return [PROMPT_LING]
-      case "trinity":
-        return [PROMPT_TRINITY]
-    }
-    return undefined
-  }
-
-  const kilo = prompt()
-  if (kilo) return kilo
-  // kilocode_change end
-
   if (model.api.id.includes("gpt-4") || model.api.id.includes("o1") || model.api.id.includes("o3"))
     return [PROMPT_BEAST]
   if (model.api.id.includes("gpt")) {
@@ -83,12 +35,11 @@ export function provider(model: Provider.Model) {
   if (model.api.id.includes("claude")) return [PROMPT_ANTHROPIC]
   if (model.api.id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
   if (model.api.id.toLowerCase().includes("kimi")) return [PROMPT_KIMI]
-  if (isLing(model.api.id)) return [PROMPT_LING] // kilocode_change
   return [PROMPT_DEFAULT]
 }
 
 export interface Interface {
-  readonly environment: (model: Provider.Model, editorContext?: EditorContext) => Effect.Effect<string[]> // kilocode_change
+  readonly environment: (model: Provider.Model) => Effect.Effect<string[]>
   readonly skills: (agent: Agent.Info) => Effect.Effect<string | undefined>
 }
 
@@ -99,27 +50,26 @@ export const layer = Layer.effect(
   Effect.gen(function* () {
     const skill = yield* Skill.Service
     const locations = yield* LocationServiceMap
-    const config = yield* Config.Service // kilocode_change
 
     return Service.of({
-      // kilocode_change start
-      environment: Effect.fn("SystemPrompt.environment")(function* (
-        model: Provider.Model,
-        editorContext?: EditorContext,
-      ) {
+      environment: Effect.fn("SystemPrompt.environment")(function* (model: Provider.Model) {
         const ctx = yield* InstanceState.context
-        const cfg = yield* config.get()
         const references = yield* Effect.gen(function* () {
           yield* (yield* PluginBoot.Service).wait()
-          yield* KiloReference.sync({
-            references: cfg.references ?? cfg.reference ?? {},
-            directory: ctx.directory,
-            worktree: ctx.worktree,
-          })
           return (yield* (yield* Reference.Service).list()).filter((reference) => reference.description !== undefined)
         }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
         return [
-          ...KilocodeSystemPrompt.environment({ ctx, model, editor: editorContext }),
+          [
+            `You are powered by the model named ${model.api.id}. The exact model ID is ${model.providerID}/${model.api.id}`,
+            `Here is some useful information about the environment you are running in:`,
+            `<env>`,
+            `  Working directory: ${ctx.directory}`,
+            `  Workspace root folder: ${ctx.worktree}`,
+            `  Is directory a git repo: ${ctx.project.vcs === "git" ? "yes" : "no"}`,
+            `  Platform: ${process.platform}`,
+            `  Today's date: ${new Date().toDateString()}`,
+            `</env>`,
+          ].join("\n"),
           references.length === 0
             ? undefined
             : [
@@ -140,7 +90,6 @@ export const layer = Layer.effect(
               ].join("\n"),
         ].filter((part): part is string => part !== undefined)
       }),
-      // kilocode_change end
 
       skills: Effect.fn("SystemPrompt.skills")(function* (agent: Agent.Info) {
         if (Permission.disabled(["skill"], agent.permission).has("skill")) return
@@ -159,14 +108,10 @@ export const layer = Layer.effect(
   }),
 )
 
-export const defaultLayer = layer.pipe(
-  Layer.provide(Skill.defaultLayer),
-  Layer.provide(LocationServiceMap.layer),
-  Layer.provide(Config.defaultLayer), // kilocode_change
-)
+export const defaultLayer = layer.pipe(Layer.provide(Skill.defaultLayer), Layer.provide(LocationServiceMap.layer))
 
 const locationServiceMapNode = LayerNode.make(LocationServiceMap.layer, [])
 
-export const node = LayerNode.make(layer, [Skill.node, locationServiceMapNode, Config.node]) // kilocode_change
+export const node = LayerNode.make(layer, [Skill.node, locationServiceMapNode])
 
 export * as SystemPrompt from "./system"

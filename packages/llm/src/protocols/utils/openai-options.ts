@@ -7,11 +7,6 @@ export const OpenAIReasoningEfforts = ReasoningEfforts.filter(
 )
 export type OpenAIReasoningEffort = (typeof OpenAIReasoningEfforts)[number]
 
-// kilocode_change start - support every reasoning summary mode in the OpenAI Responses API
-export const OpenAIReasoningSummaries = ["auto", "concise", "detailed"] as const
-export type OpenAIReasoningSummary = (typeof OpenAIReasoningSummaries)[number]
-// kilocode_change end
-
 // Mirrors OpenAI's `ResponseIncludable` union from the official SDK. Keep this
 // in lockstep with `openai-node/src/resources/responses/responses.ts`.
 export const OpenAIResponseIncludables = [
@@ -30,13 +25,11 @@ export type OpenAIServiceTier = (typeof OpenAIServiceTiers)[number]
 
 const REASONING_EFFORTS = new Set<string>(ReasoningEfforts)
 const OPENAI_REASONING_EFFORTS = new Set<string>(OpenAIReasoningEfforts)
-const REASONING_SUMMARIES = new Set<string>(OpenAIReasoningSummaries) // kilocode_change
 const TEXT_VERBOSITY = new Set<string>(["low", "medium", "high"])
 const INCLUDABLES = new Set<string>(OpenAIResponseIncludables)
 const SERVICE_TIERS = new Set<string>(OpenAIServiceTiers)
 
 export const OpenAIReasoningEffort = Schema.Literals(OpenAIReasoningEfforts)
-export const OpenAIReasoningSummary = Schema.Literals(OpenAIReasoningSummaries) // kilocode_change
 export const OpenAITextVerbosity = TextVerbosity
 export const OpenAIResponseIncludable = Schema.Literals(OpenAIResponseIncludables)
 export const OpenAIServiceTier = Schema.Literals(OpenAIServiceTiers)
@@ -62,12 +55,8 @@ export const reasoningEffort = (request: LLMRequest): ReasoningEffort | undefine
   return isAnyReasoningEffort(value) ? value : undefined
 }
 
-// kilocode_change start - preserve every reasoning summary mode supported by OpenAI Responses
-export const reasoningSummary = (request: LLMRequest): OpenAIReasoningSummary | undefined => {
-  const value = options(request)?.reasoningSummary
-  return typeof value === "string" && REASONING_SUMMARIES.has(value) ? (value as OpenAIReasoningSummary) : undefined
-}
-// kilocode_change end
+export const reasoningSummary = (request: LLMRequest): "auto" | undefined =>
+  options(request)?.reasoningSummary === "auto" ? "auto" : undefined
 
 // Resolve the OpenAI Responses `include` field. Filters out unknown
 // includable values defensively so a typo in upstream config drops the

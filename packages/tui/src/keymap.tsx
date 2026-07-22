@@ -105,7 +105,7 @@ export function useOpencodeModeStack() {
 
 export function getOpencodeModeStack(keymap: OpenTuiKeymap) {
   const value = modeStacks.get(keymap)
-  if (!value) throw new Error("Kilo mode stack is not registered for this keymap") // kilocode_change
+  if (!value) throw new Error("Opencode mode stack is not registered for this keymap")
   return value
 }
 

@@ -1,15 +1,4 @@
-// kilocode_change start
-type Platform = {
-  platform: "web"
-  openLink(url: string): void
-  restart(): Promise<void>
-  back(): void
-  forward(): void
-  notify(message: string): Promise<void>
-  fetch: typeof fetch
-  parseMarkdown(markdown: string): Promise<string>
-}
-// kilocode_change end
+import type { Platform } from "../../../../../app/src/context/platform"
 
 const value: Platform = {
   platform: "web",

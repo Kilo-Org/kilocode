@@ -1,6 +1,6 @@
 export * as SessionStore from "./store"
 
-import { and, eq, isNotNull } from "drizzle-orm" // kilocode_change
+import { eq } from "drizzle-orm"
 import { Context, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
 import { SessionHistory } from "./history"
@@ -9,7 +9,6 @@ import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
 import { SessionMessageTable, SessionTable } from "./sql"
 import { fromRow } from "./info"
-import { normalize } from "../kilocode/session-message" // kilocode_change
 
 export interface Interface {
   readonly get: (sessionID: SessionSchema.ID) => Effect.Effect<SessionSchema.Info | undefined>
@@ -46,13 +45,13 @@ export const layer = Layer.effect(
         const row = yield* db
           .select()
           .from(SessionMessageTable)
-          .where(and(eq(SessionMessageTable.id, messageID), isNotNull(SessionMessageTable.seq))) // kilocode_change
+          .where(eq(SessionMessageTable.id, messageID))
           .get()
           .pipe(Effect.orDie)
         return row
           ? {
               sessionID: SessionSchema.ID.make(row.session_id),
-              message: yield* decodeMessage(normalize({ ...row.data, id: row.id, type: row.type })).pipe(Effect.orDie), // kilocode_change - normalize legacy tool content at the database boundary
+              message: yield* decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(Effect.orDie),
             }
           : undefined
       }),

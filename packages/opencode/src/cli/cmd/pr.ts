@@ -4,31 +4,10 @@ import { effectCmd, fail } from "../effect-cmd"
 import { Git } from "@/git"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Process } from "@/util/process"
-import { existsSync } from "node:fs" // kilocode_change
-
-const subcommand = "pr" // kilocode_change
-
-// kilocode_change start - resolve the currently running CLI instead of hardcoding opencode
-export function cliCommand(
-  input = {
-    execPath: process.execPath,
-    argv: process.argv,
-    exists: existsSync,
-  },
-) {
-  const script = input.argv[1]
-  if (!script) return [input.execPath]
-  if (script === subcommand) return [input.execPath] // kilocode_change
-  if (script.startsWith("/$bunfs/root/")) return [input.execPath]
-  if (script.startsWith("B:/~BUN/root/")) return [input.execPath]
-  if (input.exists(script)) return [input.execPath, script]
-  return [input.execPath]
-}
-// kilocode_change end
 
 export const PrCommand = effectCmd({
-  command: `${subcommand} <number>`, // kilocode_change
-  describe: "fetch and checkout a GitHub PR branch, then run kilo", // kilocode_change
+  command: "pr <number>",
+  describe: "fetch and checkout a GitHub PR branch, then run opencode",
   builder: (yargs) =>
     yargs.positional("number", {
       type: "number",
@@ -47,7 +26,6 @@ export const PrCommand = effectCmd({
 
     const prNumber = args.number
     const localBranchName = `pr/${prNumber}`
-    const cli = cliCommand() // kilocode_change
     UI.println(`Fetching and checking out PR #${prNumber}...`)
 
     const checkout = yield* Effect.promise(() =>
@@ -95,17 +73,15 @@ export const PrCommand = effectCmd({
       }
 
       if (prInfo?.body) {
-        const sessionMatch = prInfo.body.match(/https:\/\/app\.kilo\.ai\/s\/([a-zA-Z0-9_-]+)/) // kilocode_change
+        const sessionMatch = prInfo.body.match(/https:\/\/opncd\.ai\/s\/([a-zA-Z0-9_-]+)/)
         if (sessionMatch) {
           const sessionUrl = sessionMatch[0]
-          // kilocode_change start
-          UI.println(`Found session: ${sessionUrl}`)
+          UI.println(`Found opencode session: ${sessionUrl}`)
           UI.println(`Importing session...`)
 
           const importResult = yield* Effect.promise(() =>
-            Process.text([...cli, "import", sessionUrl], { nothrow: true }),
+            Process.text(["opencode", "import", sessionUrl], { nothrow: true }),
           )
-          // kilocode_change end
           if (importResult.code === 0) {
             const sessionIdMatch = importResult.text.trim().match(/Imported session: ([a-zA-Z0-9_-]+)/)
             if (sessionIdMatch) {
@@ -119,13 +95,13 @@ export const PrCommand = effectCmd({
 
     UI.println(`Successfully checked out PR #${prNumber} as branch '${localBranchName}'`)
     UI.println()
-    UI.println("Starting kilo...") // kilocode_change
+    UI.println("Starting opencode...")
     UI.println()
 
-    const run = sessionId ? [...cli, "-s", sessionId] : cli // kilocode_change
+    const opencodeArgs = sessionId ? ["-s", sessionId] : []
     const code = yield* Effect.promise(
       () =>
-        Process.spawn(run, {
+        Process.spawn(["opencode", ...opencodeArgs], {
           stdin: "inherit",
           stdout: "inherit",
           stderr: "inherit",
@@ -134,6 +110,6 @@ export const PrCommand = effectCmd({
     )
     // Match legacy throw semantics — propagate as a defect so the top-level
     // index.ts catch handles it identically (exit 1, "Unexpected error" banner).
-    if (code !== 0) return yield* Effect.die(new Error(`kilo exited with code ${code}`)) // kilocode_change
+    if (code !== 0) return yield* Effect.die(new Error(`opencode exited with code ${code}`))
   }),
 })

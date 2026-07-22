@@ -2,14 +2,14 @@ import type { NamedError } from "@opencode-ai/core/util/error"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Cause, Clock, Duration, Effect, Schedule } from "effect"
 import { MessageV2 } from "./message-v2"
-import { isKiloError } from "@/kilocode/kilo-errors" // kilocode_change
-import { SessionNetwork } from "./network" // kilocode_change
 import { iife } from "@/util/iife"
 import { isRecord } from "@/util/record"
 
 export type Err = ReturnType<NamedError["toObject"]>
 
-export type RetryReason = string & {} // kilocode_change - Kilo does not support OpenCode Go upsell reasons
+export const GO_UPSELL_MESSAGE = "Free usage exceeded, subscribe to Go"
+export const GO_UPSELL_URL = "https://opencode.ai/go"
+export type RetryReason = "free_tier_limit" | "account_rate_limit" | (string & {})
 
 export type Retryable = {
   message: string
@@ -65,25 +65,60 @@ export function delay(attempt: number, error?: SessionV1.APIError) {
   return cap(Math.min(RETRY_INITIAL_DELAY * Math.pow(RETRY_BACKOFF_FACTOR, attempt - 1), RETRY_MAX_DELAY_NO_HEADERS))
 }
 
-// kilocode_change - Kilo does not emit OpenCode Go actions
-export function retryable(error: Err, _provider?: string): Retryable | undefined {
+export function retryable(error: Err, provider: string) {
   // context overflow errors should not be retried
   if (SessionV1.ContextOverflowError.isInstance(error)) return undefined
   if (SessionV1.APIError.isInstance(error)) {
     const status = error.data.statusCode
-    // kilocode_change start - Current Kilo errors require user action (login/signup), don't retry
-    if (isKiloError(error)) return undefined
-    // kilocode_change end
-
     // 5xx errors are transient server failures and should always be retried,
     // even when the provider SDK doesn't explicitly mark them as retryable.
     if (!error.data.isRetryable && !(status !== undefined && status >= 500)) return undefined
+    if (error.data.responseBody?.includes("FreeUsageLimitError")) {
+      return {
+        message: GO_UPSELL_MESSAGE,
+        action: {
+          reason: "free_tier_limit",
+          provider,
+          title: "Free limit reached",
+          message: "Subscribe to OpenCode Go for reliable access to the best open-source models, starting at $5/month.",
+          label: "subscribe",
+          link: GO_UPSELL_URL,
+        },
+      }
+    }
+    if (error.data.responseBody?.includes("GoUsageLimitError")) {
+      const body = parseJSON(error.data.responseBody)
+      const workspace = str(body?.metadata?.workspace)
+      const limitName = str(body?.metadata?.limitName)
+      const retryAfter = num(error.data.responseHeaders?.["retry-after"])
+      const resetIn = iife(() => {
+        if (retryAfter === undefined) return ""
+        const seconds = Math.max(0, Math.ceil(retryAfter))
+        const days = Math.floor(seconds / 86_400)
+        const hours = Math.floor((seconds % 86_400) / 3_600)
+        const minutes = Math.ceil((seconds % 3_600) / 60)
+        const unit = (value: number, name: string) => `${value} ${name}${value === 1 ? "" : "s"}`
 
-    // kilocode_change start - Kilo does not support OpenCode Go upsells. FreeUsageLimitError is not retryable: retrying
-    // the same capped model is futile and the backoff loop cannot be broken by switching models in the chat selector
-    // because the retry loop holds a stale model ref.
-    if (error.data.responseBody?.includes("FreeUsageLimitError")) return undefined
-    // kilocode_change end
+        if (days > 0) return hours > 0 ? `${unit(days, "day")} ${unit(hours, "hour")}` : unit(days, "day")
+        if (hours > 0) return minutes > 0 ? `${unit(hours, "hour")} ${unit(minutes, "minute")}` : unit(hours, "hour")
+        return minutes > 0 ? unit(minutes, "minute") : "less than a minute"
+      })
+
+      const message = `${limitName ? `${limitName} usage limit` : "Usage limit"} reached. It will reset in ${resetIn}. To continue using this model now, enable usage from your available balance`
+
+      const link = `https://opencode.ai/workspace/${workspace}/go`
+      return {
+        message: `${message} - ${link}`,
+        action: {
+          reason: "account_rate_limit",
+          provider,
+          title: "Go limit reached",
+          message,
+          label: "open settings",
+          link,
+        },
+      }
+    }
     return { message: error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message }
   }
 
@@ -116,6 +151,17 @@ export function retryable(error: Err, _provider?: string): Retryable | undefined
   return undefined
 }
 
+function str(value: unknown) {
+  if (value === undefined || value === null) return ""
+  return String(value)
+}
+
+function num(value: unknown) {
+  const parsed = Number.parseFloat(str(value))
+  if (Number.isNaN(parsed)) return undefined
+  return parsed
+}
+
 function parseJSON(value: unknown) {
   return iife(() => {
     try {
@@ -131,37 +177,13 @@ export function policy(opts: {
   provider: string
   parse: (error: unknown) => Err
   set: (input: { attempt: number; message: string; action?: Retryable["action"]; next: number }) => Effect.Effect<void>
-  // kilocode_change start
-  limit?: number
-  offline?: (input: { error: unknown; message: string }) => Effect.Effect<"retry" | "blocked" | "aborted">
-  // kilocode_change end
 }) {
   return Schedule.fromStepWithMetadata(
     Effect.succeed((meta: Schedule.InputMetadata<unknown>) => {
-      // kilocode_change start — enforce retry limit
-      if (opts.limit !== undefined && meta.attempt > opts.limit) {
-        return Cause.done(meta.attempt)
-      }
-      // kilocode_change end
-
       const error = opts.parse(meta.input)
       const retry = retryable(error, opts.provider)
       if (!retry) return Cause.done(meta.attempt)
       return Effect.gen(function* () {
-        // kilocode_change start — handle network disconnect via offline handler
-        if (opts.offline && SessionNetwork.disconnected(meta.input)) {
-          const result = yield* opts.offline({
-            error: meta.input,
-            message: SessionNetwork.message(meta.input),
-          })
-          if (result !== "retry") {
-            return yield* Cause.done(meta.attempt)
-          }
-          yield* opts.set({ attempt: 0, message: "Reconnected", next: Date.now() })
-          return [0, Duration.zero] as [number, Duration.Duration]
-        }
-        // kilocode_change end
-
         const wait = delay(meta.attempt, SessionV1.APIError.isInstance(error) ? error : undefined)
         const now = yield* Clock.currentTimeMillis
         yield* opts.set({

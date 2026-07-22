@@ -19,7 +19,6 @@ import { NodePath } from "@effect/platform-node"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { AppProcess } from "@opencode-ai/core/process"
 import { InstanceState } from "@/effect/instance-state"
-import { WorktreeCleanup } from "@/kilocode/worktree-cleanup" // kilocode_change
 
 export const Event = {
   Ready: EventV2.define({
@@ -365,9 +364,9 @@ export const layer: Layer.Layer<
           if (!entry.path) return undefined
           const directory = yield* canonical(entry.path)
           if (directory === primary) return undefined
-          const name = pathSvc.basename(directory)
+          const name = pathSvc.basename(directory).toLowerCase()
           return {
-            name: name.toLowerCase() === primaryName ? pathSvc.basename(pathSvc.dirname(directory)) : name,
+            name: name === primaryName ? pathSvc.basename(pathSvc.dirname(directory)) : name,
             directory,
             ...(entry.branch ? { branch: entry.branch.replace(/^refs\/heads\//, "") } : {}),
           }
@@ -382,15 +381,25 @@ export const layer: Layer.Layer<
       )
     }
 
-    // kilocode_change start - use Kilo cleanup helper for slow Windows handle release
     function cleanDirectory(target: string) {
       return Effect.tryPromise({
-        try: () => WorktreeCleanup.removeDirectory(target),
+        try: async () => {
+          const fsp = await import("fs/promises")
+          const attempts = process.platform === "win32" ? 50 : 5
+          for (const attempt of Array.from({ length: attempts }, (_, i) => i)) {
+            try {
+              await fsp.rm(target, { recursive: true, force: true })
+              return
+            } catch (error) {
+              if (attempt === attempts - 1) throw error
+              await new Promise((resolve) => setTimeout(resolve, 100))
+            }
+          }
+        },
         catch: (error) =>
           new RemoveFailedError({ message: errorMessage(error) || "Failed to remove git worktree directory" }),
       })
     }
-    // kilocode_change end
 
     const remove = Effect.fn("Worktree.remove")(function* (input: RemoveInput) {
       const ctx = yield* InstanceState.context
@@ -422,12 +431,8 @@ export const layer: Layer.Layer<
 
       // Git may return the original casing when a caller supplied a normalized Windows path.
       yield* store.disposeDirectory(entry.path)
-      const removed = yield* WorktreeCleanup.remove({
-        root: ctx.worktree,
-        target: entry.path,
-        git,
-        stop: stopFsmonitor,
-      }) // kilocode_change
+      yield* stopFsmonitor(entry.path)
+      const removed = yield* git(["worktree", "remove", "--force", entry.path], { cwd: ctx.worktree })
       if (removed.code !== 0) {
         const next = yield* git(["worktree", "list", "--porcelain"], { cwd: ctx.worktree })
         if (next.code !== 0) {

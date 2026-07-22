@@ -66,11 +66,11 @@ Both `action` and `resource` use opencode's existing wildcard matching behavior.
 
 Examples:
 
-| Action | Resource | Matches |
-|---|---|---|
-| `provider.use` | `openai` | Only use of provider ID `openai` |
-| `provider.use` | `company-*` | Use of provider IDs such as `company-us` and `company-eu` |
-| `provider.*` | `*` | Any provider operation on any provider, if more actions are introduced later |
+| Action         | Resource    | Matches                                                                      |
+| -------------- | ----------- | ---------------------------------------------------------------------------- |
+| `provider.use` | `openai`    | Only use of provider ID `openai`                                             |
+| `provider.use` | `company-*` | Use of provider IDs such as `company-us` and `company-eu`                    |
+| `provider.*`   | `*`         | Any provider operation on any provider, if more actions are introduced later |
 
 No pattern-specific precedence exists. A specific resource does not automatically beat a wildcard resource. Written/evaluation order controls the result.
 

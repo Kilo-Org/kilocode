@@ -62,21 +62,10 @@ function init() {
       const toastOptions = { ...options, duration: options.duration ?? 5000 }
       setStore("currentToast", toastOptions)
       if (timeoutHandle) clearTimeout(timeoutHandle)
-      // kilocode_change start
-      timeoutHandle = null
-      if (toastOptions.duration && toastOptions.duration > 0) {
-        timeoutHandle = setTimeout(() => {
-          setStore("currentToast", null)
-          timeoutHandle = null
-        }, toastOptions.duration).unref()
-      }
+      timeoutHandle = setTimeout(() => {
+        setStore("currentToast", null)
+      }, toastOptions.duration).unref()
     },
-    dismiss() {
-      if (timeoutHandle) clearTimeout(timeoutHandle)
-      timeoutHandle = null
-      setStore("currentToast", null)
-    },
-    // kilocode_change end
     error: (err: any) => {
       if (err instanceof Error)
         return toast.show({

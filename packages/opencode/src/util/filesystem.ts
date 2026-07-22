@@ -1,9 +1,7 @@
-import { chmod, mkdir, readFile, rename, stat as statFile, writeFile } from "fs/promises" // kilocode_change
+import { chmod, mkdir, readFile, stat as statFile, writeFile } from "fs/promises"
 import { createWriteStream, existsSync, statSync } from "fs"
 import { realpathSync } from "fs"
-// kilocode_change start - harden containment checks
 import { dirname, isAbsolute, join, resolve as pathResolve, win32 } from "path"
-// kilocode_change end
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "@opencode-ai/core/util/glob"
@@ -24,13 +22,7 @@ export async function isDir(p: string): Promise<boolean> {
 }
 
 export function stat(p: string): ReturnType<typeof statSync> | undefined {
-  // kilocode_change start - also treat ENOTDIR/EACCES as absent, every caller expects undefined
-  try {
-    return statSync(p, { throwIfNoEntry: false }) ?? undefined
-  } catch {
-    return undefined
-  }
-  // kilocode_change end
+  return statSync(p, { throwIfNoEntry: false }) ?? undefined
 }
 
 export async function statAsync(p: string): Promise<ReturnType<typeof statSync> | undefined> {
@@ -67,29 +59,24 @@ function isEnoent(e: unknown): e is { code: "ENOENT" } {
 }
 
 export async function write(p: string, content: string | Buffer | Uint8Array, mode?: number): Promise<void> {
-  // kilocode_change start - atomic write via temp-file + rename to avoid partial reads on concurrent saves
-  // Include a random suffix so that concurrent writes to the same path never share a temp file,
-  // even on platforms where Date.now() has low resolution (e.g. Windows ~100ms).
-  const tmp = `${p}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`
-  async function doWrite() {
-    if (mode) {
-      await writeFile(tmp, content, { mode })
-    } else {
-      await writeFile(tmp, content)
-    }
-    await rename(tmp, p)
-  }
   try {
-    await doWrite()
+    if (mode) {
+      await writeFile(p, content, { mode })
+    } else {
+      await writeFile(p, content)
+    }
   } catch (e) {
     if (isEnoent(e)) {
       await mkdir(dirname(p), { recursive: true })
-      await doWrite()
+      if (mode) {
+        await writeFile(p, content, { mode })
+      } else {
+        await writeFile(p, content)
+      }
       return
     }
     throw e
   }
-  // kilocode_change end
 }
 
 export async function writeJson(p: string, data: unknown, mode?: number): Promise<void> {

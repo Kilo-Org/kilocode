@@ -901,9 +901,7 @@ export const layer = Layer.effect(
   }),
 )
 
-// kilocode_change start - prevent Kilo runtime cycles from erasing layer requirements
-export const defaultLayer: Layer.Layer<Service> = layer.pipe(
-  // kilocode_change end
+export const defaultLayer = layer.pipe(
   Layer.provide(Auth.defaultLayer),
   Layer.provide(Session.defaultLayer),
   Layer.provide(SessionPrompt.defaultLayer),

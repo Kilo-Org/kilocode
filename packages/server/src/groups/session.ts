@@ -19,7 +19,6 @@ import { SessionLocationMiddleware } from "../middleware/session-location"
 import { AgentV2 } from "@opencode-ai/core/agent"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { Location } from "@opencode-ai/core/location"
-import { LocationMiddleware } from "./location" // kilocode_change
 
 const SessionsQueryFields = {
   workspace: WorkspaceV2.ID.pipe(Schema.optional),
@@ -118,15 +117,13 @@ export const SessionGroup = HttpApiGroup.make("server.session")
         location: Location.Ref.pipe(Schema.optional),
       }),
       success: Schema.Struct({ data: SessionV2.Info }),
-    })
-      .middleware(LocationMiddleware) // kilocode_change - use the SDK's configured directory when payload location is omitted
-      .annotateMerge(
-        OpenApi.annotations({
-          identifier: "v2.session.create",
-          summary: "Create session",
-          description: "Create a session at the requested location.",
-        }),
-      ),
+    }).annotateMerge(
+      OpenApi.annotations({
+        identifier: "v2.session.create",
+        summary: "Create session",
+        description: "Create a session at the requested location.",
+      }),
+    ),
   )
   .add(
     HttpApiEndpoint.get("session.get", "/api/session/:sessionID", {

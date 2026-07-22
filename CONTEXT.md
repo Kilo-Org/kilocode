@@ -43,7 +43,7 @@ The point immediately before a provider call, after durable input promotion and 
 The bounded projection of a Core-executed tool result persisted in Session history and replayed to the model. A tool may shape this projection semantically, but the Tool Registry enforces the final size limit.
 
 **Managed Tool Output File**:
-A temporary file created under Kilo's shared tool-output directory to retain complete output that was too large for Session history.
+A temporary file created under OpenCode's shared tool-output directory to retain complete output that was too large for Session history.
 
 **Model Request Options**:
 Provider-semantic model settings selected from the Catalog and active Session variant before the LLM protocol adapter encodes them for a provider request.
@@ -51,6 +51,9 @@ _Avoid_: Request body, wire options
 
 **Generation Controls**:
 Provider-neutral sampling and output controls, partitioned from provider semantics and compatibility wire fields when model metadata enters the Catalog.
+
+**PTY Environment**:
+The host-supplied environment overlay applied by the server when creating a PTY, observed for the request Location and resolved PTY working directory.
 
 ## Relationships
 
@@ -99,6 +102,8 @@ Provider-neutral sampling and output controls, partitioned from provider semanti
 - A model/provider switch always starts a new **Context Epoch** while preserving chronological conversation history.
 - **Model Request Options** remain provider-semantic through Catalog resolution. The Session runner maps them into the LLM package's provider-option namespace; the selected protocol adapter alone owns provider wire encoding.
 - **Generation Controls**, protocol-semantic **Model Request Options**, and compatibility request body fields are separate Catalog domains. A shared ingestion adapter partitions legacy and models.dev AI-SDK-shaped options before routing.
+- The **PTY Environment** is a server concern rather than a Core PTY concern. PTY creation merges caller values, then the host overlay, then Core-forced terminal invariants such as `TERM` and `KILO_TERMINAL`.
+- A **PTY Environment** adapter observes plugins in the request Location while passing the resolved PTY working directory to the hook; standalone servers use an empty adapter.
 - A **Mid-Conversation System Message** lowers to the provider's native chronological instruction role when supported and to a wrapped chronological fallback otherwise.
 - When the effective aggregate instruction set changes, its **Mid-Conversation System Message** includes the complete current ordered set and supersedes the prior aggregate value; when no ambient instructions remain, the message states that previously loaded instructions no longer apply.
 - Ambient project instruction discovery honors `KILO_DISABLE_PROJECT_CONFIG`; global instructions remain eligible.

@@ -9,7 +9,6 @@ import { pathToFileURL } from "url"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
 import { Config } from "../../src/config/config"
 import { Env } from "../../src/env"
-import { Git } from "../../src/git" // kilocode_change
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { Plugin } from "../../src/plugin/index"
 
@@ -22,7 +21,6 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
 const configLayer = Config.layer.pipe(
-  Layer.provide(Git.defaultLayer), // kilocode_change
   Layer.provide(EffectFlock.defaultLayer),
   Layer.provide(FSUtil.defaultLayer),
   Layer.provide(Env.defaultLayer),

@@ -66,7 +66,7 @@ export const InstanceApi = HttpApi.make("instance")
           OpenApi.annotations({
             identifier: "instance.dispose",
             summary: "Dispose instance",
-            description: "Clean up and dispose the current Kilo instance, releasing all resources.", // kilocode_change
+            description: "Clean up and dispose the current OpenCode instance, releasing all resources.",
           }),
         ),
         HttpApiEndpoint.get("path", InstancePaths.path, {
@@ -76,7 +76,8 @@ export const InstanceApi = HttpApi.make("instance")
           OpenApi.annotations({
             identifier: "path.get",
             summary: "Get paths",
-            description: "Retrieve the current working directory and related path information for the Kilo instance.", // kilocode_change
+            description:
+              "Retrieve the current working directory and related path information for the OpenCode instance.",
           }),
         ),
         HttpApiEndpoint.get("vcs", InstancePaths.vcs, {
@@ -142,7 +143,7 @@ export const InstanceApi = HttpApi.make("instance")
           OpenApi.annotations({
             identifier: "command.list",
             summary: "List commands",
-            description: "Get a list of all available commands in the Kilo system.", // kilocode_change
+            description: "Get a list of all available commands in the OpenCode system.",
           }),
         ),
         HttpApiEndpoint.get("agent", InstancePaths.agent, {
@@ -152,7 +153,7 @@ export const InstanceApi = HttpApi.make("instance")
           OpenApi.annotations({
             identifier: "app.agents",
             summary: "List agents",
-            description: "Get a list of all available AI agents in the Kilo system.", // kilocode_change
+            description: "Get a list of all available AI agents in the OpenCode system.",
           }),
         ),
         HttpApiEndpoint.get("skill", InstancePaths.skill, {
@@ -162,7 +163,7 @@ export const InstanceApi = HttpApi.make("instance")
           OpenApi.annotations({
             identifier: "app.skills",
             summary: "List skills",
-            description: "Get a list of all available skills in the Kilo system.", // kilocode_change
+            description: "Get a list of all available skills in the OpenCode system.",
           }),
         ),
         HttpApiEndpoint.get("lsp", InstancePaths.lsp, {

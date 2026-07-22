@@ -1,6 +1,6 @@
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
-import { GlobalBus, type GlobalEvent } from "@/bus/global"
+import { GlobalBus } from "@/bus/global"
 import { EventV2 } from "@opencode-ai/core/event"
 import { Effect, Queue } from "effect"
 import * as Stream from "effect/Stream"
@@ -23,26 +23,43 @@ function eventID() {
 }
 
 function eventResponse(events: EventV2.Interface) {
-  void events
   return Effect.gen(function* () {
     const instance = yield* InstanceState.context
     const workspaceID = yield* InstanceState.workspaceID
-    // kilocode_change start - GlobalBus includes encoded EventV2 events, sync envelopes, and Kilo's legacy
-    // Bus events. EventV2.listen would silently drop the latter two groups. Register eagerly to avoid gaps.
-    const queue = yield* Queue.unbounded<GlobalEvent["payload"]>()
-    const listener = (event: GlobalEvent) => {
-      if (event.directory !== instance.directory) return
-      if (event.workspace !== undefined && event.workspace !== workspaceID) return
-      Queue.offerUnsafe(queue, event.payload)
-    }
-    yield* Effect.acquireRelease(
-      Effect.sync(() => GlobalBus.on("event", listener)),
-      () => Effect.sync(() => void GlobalBus.off("event", listener)),
+    // Listener registration is eager, so events published after this point cannot
+    // be lost while the HTTP body fiber is starting or emitting server.connected.
+    const queue = yield* Queue.unbounded<EventV2.Payload>()
+    const unsubscribe = yield* events.listen((event) => Effect.sync(() => Queue.offerUnsafe(queue, event)))
+    yield* Effect.addFinalizer(() => unsubscribe)
+    const stream = Stream.fromQueue(queue).pipe(
+      Stream.filter(
+        (event) =>
+          event.location?.directory === instance.directory &&
+          (event.location.workspaceID === undefined || event.location.workspaceID === workspaceID),
+      ),
+      Stream.map((event) => ({ id: event.id, type: event.type, properties: event.data })),
     )
-    const output = Stream.fromQueue(queue).pipe(
-      Stream.takeUntil((event) => event?.type === "server.instance.disposed"),
+    const disposed = Stream.callback<{ id: string; type: string; properties: unknown }>((queue) => {
+      const listener = (event: {
+        directory?: string
+        payload: { id?: string; type?: string; properties?: unknown }
+      }) => {
+        if (event.directory !== instance.directory || event.payload.type !== "server.instance.disposed") return
+        Queue.offerUnsafe(queue, {
+          id: event.payload.id ?? eventID(),
+          type: "server.instance.disposed",
+          properties: event.payload.properties ?? {},
+        })
+      }
+      return Effect.acquireRelease(
+        Effect.sync(() => GlobalBus.on("event", listener)),
+        () => Effect.sync(() => GlobalBus.off("event", listener)),
+      )
+    })
+    const output = stream.pipe(
+      Stream.merge(disposed, { haltStrategy: "left" }),
+      Stream.takeUntil((event) => event.type === "server.instance.disposed"),
     )
-    // kilocode_change end
     const heartbeat = Stream.tick("10 seconds").pipe(
       Stream.drop(1),
       Stream.map(() => ({ id: eventID(), type: "server.heartbeat", properties: {} })),

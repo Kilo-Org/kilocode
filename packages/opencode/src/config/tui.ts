@@ -19,7 +19,6 @@ import { makeRuntime } from "@opencode-ai/core/effect/runtime"
 import { Filesystem } from "@/util/filesystem"
 import { ConfigVariable } from "@/config/variable"
 import { Npm } from "@opencode-ai/core/npm"
-import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins" // kilocode_change
 import { FormatError, FormatUnknownError } from "@/cli/error"
 import { TuiConfig } from "@opencode-ai/tui/config"
 
@@ -39,7 +38,6 @@ export type HostMetadata = {
 
 export interface Interface {
   readonly get: () => Effect.Effect<Resolved>
-  readonly info: () => Effect.Effect<Info> // kilocode_change - editable config for Kilo console
   readonly pluginOrigins: () => Effect.Effect<ConfigPlugin.Origin[]>
   readonly waitForDependencies: () => Effect.Effect<void>
 }
@@ -96,20 +94,11 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       }
     })
 
-  // kilocode_change start - trusted gates {env:}; fileScope confines untrusted {file:} reads
-  const load = (
-    text: string,
-    configFilepath: string,
-    trusted: boolean,
-    fileScope?: ConfigVariable.FileScope,
-  ): Effect.Effect<Info> =>
-    // kilocode_change end
+  const load = (text: string, configFilepath: string): Effect.Effect<Info> =>
     Effect.gen(function* () {
-      // kilocode_change start - only trusted tui config resolves {env:}; untrusted {file:} confined to fileScope
       const expanded = yield* Effect.promise(() =>
-        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty", trusted, fileScope }),
+        ConfigVariable.substitute({ text, type: "path", path: configFilepath, missing: "empty" }),
       )
-      // kilocode_change end
       const data = ConfigParse.jsonc(expanded, configFilepath)
       if (!isRecord(data)) return {} as Info
       // Flatten a nested "tui" key so users who wrote `{ "tui": { ... } }` inside tui.json
@@ -137,9 +126,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       ),
     )
 
-  // kilocode_change start - trusted + fileScope threaded to load
-  const loadFile = (filepath: string, trusted: boolean, fileScope?: ConfigVariable.FileScope): Effect.Effect<Info> =>
-    // kilocode_change end
+  const loadFile = (filepath: string): Effect.Effect<Info> =>
     Effect.gen(function* () {
       // Silent-swallow non-NotFound read errors (perms, EISDIR, IO) → log + skip.
       // Matches how parse/schema/plugin failures in load() are handled — every
@@ -154,14 +141,12 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       )
       if (!text) return {} as Info
       yield* Effect.logInfo("loading tui config", { path: filepath })
-      return yield* load(text, filepath, trusted, fileScope) // kilocode_change
+      return yield* load(text, filepath)
     })
 
-  // kilocode_change start - trusted + fileScope threaded to loadFile
-  const mergeFile = (acc: Acc, file: string, trusted: boolean, fileScope?: ConfigVariable.FileScope) =>
-    // kilocode_change end
+  const mergeFile = (acc: Acc, file: string) =>
     Effect.gen(function* () {
-      const data = yield* loadFile(file, trusted, fileScope) // kilocode_change
+      const data = yield* loadFile(file)
       if (Object.keys(data).length) {
         appliedOrder += 1
         yield* Effect.logInfo("applying tui config", { path: file, order: appliedOrder })
@@ -181,10 +166,8 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       acc.plugin_origins = plugins
     })
 
-  // kilocode_change start - discover canonical and legacy Kilo config directories
-  // Every config dir we may read from: global config, .kilo and legacy .kilocode
+  // Every config dir we may read from: global config dir, any `.opencode`
   // folders between cwd and home, and KILO_CONFIG_DIR.
-  // kilocode_change end
   const directories = yield* ConfigPaths.directories(ctx.directory)
   yield* Effect.promise(() => migrateTuiConfig({ directories, cwd: ctx.directory }))
 
@@ -197,38 +180,31 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   // 1. Global tui config (lowest precedence).
   for (const file of ConfigPaths.fileInDirectory(Global.Path.config, "tui")) {
-    yield* mergeFile(acc, file, true) // kilocode_change - global config is trusted
+    yield* mergeFile(acc, file)
   }
 
   // 2. Explicit KILO_TUI_CONFIG override, if set.
   if (Flag.KILO_TUI_CONFIG) {
     const configFile = Flag.KILO_TUI_CONFIG
-    yield* mergeFile(acc, configFile, true) // kilocode_change - explicit env-provided path is trusted
+    yield* mergeFile(acc, configFile)
     yield* Effect.logDebug("loaded custom tui config", { path: configFile })
   }
 
   // 3. Project tui files, applied root-first so the closest file wins.
   for (const file of projectFiles) {
-    yield* mergeFile(acc, file, false, { root: ctx.directory, source: file }) // kilocode_change - untrusted, {file:} confined to project
+    yield* mergeFile(acc, file)
   }
 
-  // kilocode_change start - load tui.json from supported Kilo config directories
-  // 4. `.kilo` and legacy `.kilocode` directories (and KILO_CONFIG_DIR)
-  // discovered while walking up the tree. Also returned below so callers can
-  // install plugin dependencies from each location.
-  const dirs = unique(directories).filter(
-    (dir) => dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir === Flag.KILO_CONFIG_DIR,
-  )
-  // kilocode_change end
+  // 4. `.opencode` directories (and KILO_CONFIG_DIR) discovered while
+  // walking up the tree. Also returned below so callers can install plugin
+  // dependencies from each location.
+  const dirs = unique(directories).filter((dir) => dir.endsWith(".opencode") || dir === Flag.KILO_CONFIG_DIR)
 
   for (const dir of dirs) {
-    // kilocode_change start - trust global (home/KILO_CONFIG_DIR) dirs like config.ts; in-repo .kilo/.kilocode stay untrusted
-    const trusted = pluginScope(dir, ctx) === "global"
-    const fileScope = trusted ? undefined : { root: ctx.directory, source: dir }
+    if (!dir.endsWith(".opencode") && dir !== Flag.KILO_CONFIG_DIR) continue
     for (const file of ConfigPaths.fileInDirectory(dir, "tui")) {
-      yield* mergeFile(acc, file, trusted, fileScope)
+      yield* mergeFile(acc, file)
     }
-    // kilocode_change end
   }
 
   const result = TuiConfig.resolve(
@@ -239,20 +215,10 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       terminalSuspend: process.platform !== "win32",
     },
   )
-  if (acc.result.attention?.sound_pack === undefined) result.attention.sound_pack = "kilo.default" // kilocode_change - preserve Kilo's default sound pack
-
-  // kilocode_change start - inject Kilo default plugins to keep TUI aligned with server config
-  const defaults = KilocodeDefaultPlugins.apply(
-    { plugin: result.plugin ? [...result.plugin] : undefined, plugin_origins: acc.plugin_origins },
-    { disabled: Flag.KILO_DISABLE_DEFAULT_PLUGINS },
-  )
-  const config = { ...result, plugin: defaults.plugin }
-  // kilocode_change end
 
   return {
-    config,
-    info: { ...acc.result, plugin: defaults.plugin }, // kilocode_change - include applied Kilo defaults
-    pluginOrigins: defaults.plugin_origins ?? [], // kilocode_change - exclude builtins from dependency installation
+    config: result,
+    pluginOrigins: acc.plugin_origins,
     dirs: result.plugin?.length ? dirs : [],
   }
 })
@@ -282,13 +248,12 @@ export const layer = Layer.effect(
     )
 
     const get = Effect.fn("TuiConfig.get")(() => Effect.succeed(data.config))
-    const info = Effect.fn("TuiConfig.info")(() => Effect.succeed(data.info)) // kilocode_change
     const pluginOrigins = Effect.fn("TuiConfig.pluginOrigins")(() => Effect.succeed(data.pluginOrigins))
 
     const waitForDependencies = Effect.fn("TuiConfig.waitForDependencies")(() =>
       Effect.forEach(deps, Fiber.join, { concurrency: "unbounded" }).pipe(Effect.ignore(), Effect.asVoid),
     )
-    return Service.of({ get, info, pluginOrigins, waitForDependencies }) // kilocode_change
+    return Service.of({ get, pluginOrigins, waitForDependencies })
   }).pipe(Effect.withSpan("TuiConfig.layer")),
 )
 
@@ -302,10 +267,6 @@ export async function waitForDependencies() {
 
 export async function get() {
   return runPromise((svc) => svc.get())
-}
-
-export async function info() {
-  return runPromise((svc) => svc.info())
 }
 
 export async function pluginOrigins() {

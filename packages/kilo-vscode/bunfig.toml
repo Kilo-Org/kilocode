@@ -1,2 +1,0 @@
-[test]
-preload = ["./tests/setup/vscode-mock.ts"]

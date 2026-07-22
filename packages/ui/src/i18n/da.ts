@@ -1,7 +1,5 @@
 export const dict = {
   "ui.sessionReview.title": "Sessionsændringer",
-  "ui.sessionReview.title.git": "Git-ændringer",
-  "ui.sessionReview.title.branch": "Branch-ændringer",
   "ui.sessionReview.title.lastTurn": "Ændringer fra sidste tur",
   "ui.sessionReview.diffStyle.unified": "Samlet",
   "ui.sessionReview.diffStyle.split": "Opdelt",
@@ -38,10 +36,6 @@ export const dict = {
   "ui.sessionTurn.steps.hide": "Skjul trin",
   "ui.sessionTurn.summary.response": "Svar",
   "ui.sessionTurn.diff.showMore": "Vis flere ændringer ({{count}})",
-  "ui.sessionTurn.diffs.changed": "Ændret",
-  "ui.sessionTurn.diffs.showAll": "Vis alle",
-  "ui.sessionTurn.diffs.showLess": "Vis færre",
-  "ui.sessionTurn.diffs.more": "+{{count}} flere filer",
 
   "ui.sessionTurn.retry.retrying": "prøver igen",
   "ui.sessionTurn.retry.inSeconds": "om {{seconds}}s",
@@ -61,8 +55,6 @@ export const dict = {
   "dialog.usageExceeded.accountRateLimit.actionLabel": "Åbn indstillinger",
 
   "ui.sessionTurn.status.delegating": "Delegerer arbejde",
-  "ui.sessionTurn.status.delegatingWaitingPermission": "Subagent waiting for permission",
-  "ui.sessionTurn.status.delegatingWaitingQuestion": "Subagent waiting for response",
   "ui.sessionTurn.status.planning": "Planlægger næste trin",
   "ui.sessionTurn.status.gatheringContext": "Udforsker",
   "ui.sessionTurn.status.gatheredContext": "Udforsket",
@@ -84,8 +76,6 @@ export const dict = {
   "ui.messagePart.context.list.one": "{{count}} liste",
   "ui.messagePart.context.list.other": "{{count}} lister",
   "ui.messagePart.diagnostic.error": "Fejl",
-  "ui.messagePart.mcp.input": "Input",
-  "ui.messagePart.mcp.output": "Output",
   "ui.messagePart.title.edit": "Rediger",
   "ui.messagePart.title.write": "Skriv",
   "ui.messagePart.option.typeOwnAnswer": "Skriv dit eget svar",
@@ -104,23 +94,10 @@ export const dict = {
   "ui.textField.copied": "Kopieret",
 
   "ui.imagePreview.alt": "Billedforhåndsvisning",
-  // kilocode_change start
-  "ui.mermaid.rendering": "Renderer Mermaid-diagram...",
-  "ui.mermaid.renderError": "Mermaid-rendering mislykkedes: {{message}}",
-  "ui.mermaid.errorDefault": "Kan ikke rendere Mermaid-diagram.",
-  "ui.mermaid.errorEmpty": "Mermaid renderede et tomt diagram.",
-  "ui.mermaid.download": "Download",
-  "ui.mermaid.copySource": "Kopiér Mermaid-kilde",
-  "ui.mermaid.copySvg": "Kopiér SVG",
-  "ui.mermaid.copyPng": "Kopiér PNG",
-  "ui.mermaid.downloadSvg": "Download SVG",
-  "ui.mermaid.downloadPng": "Download PNG",
-  // kilocode_change end
   "ui.scrollView.ariaLabel": "rulbart indhold",
 
   "ui.tool.read": "Læs",
   "ui.tool.loaded": "Indlæst",
-  "ui.tool.swePruned": "SWE-Pruner · {{kept}} af {{total}} linjer beholdt", // kilocode_change
   "ui.tool.list": "Liste",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -160,7 +137,6 @@ export const dict = {
   "ui.message.revertMessage": "Nulstil til dette punkt",
   "ui.message.copyResponse": "Kopier svar",
   "ui.message.copied": "Kopieret!",
-  "ui.message.revert": "Revert to here",
   "ui.message.interrupted": "Afbrudt",
   "ui.message.queued": "I kø",
   "ui.message.attachment.alt": "vedhæftning",
@@ -171,9 +147,7 @@ export const dict = {
   "ui.patch.action.patched": "Patchet",
 
   "ui.question.subtitle.answered": "{{count}} besvaret",
-  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(intet svar)",
-  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(ikke besvaret)",
   "ui.question.multiHint": "Vælg alle der gælder",
   "ui.question.singleHint": "Vælg ét svar",

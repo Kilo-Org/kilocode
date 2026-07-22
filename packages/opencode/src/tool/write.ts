@@ -11,11 +11,8 @@ import { Watcher } from "@opencode-ai/core/filesystem/watcher"
 import { Format } from "../format"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
-import { trimDiff, buildFileDiff } from "./edit" // kilocode_change
+import { trimDiff } from "./edit"
 import { assertExternalDirectoryEffect } from "./external-directory"
-import { filterDiagnostics } from "./diagnostics" // kilocode_change
-import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
-import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
 import * as Bom from "@/util/bom"
 
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -47,18 +44,13 @@ export const WriteTool = Tool.define(
           yield* assertExternalDirectoryEffect(ctx, filepath)
 
           const exists = yield* fs.existsSafe(filepath)
-          // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
-          // derive the BOM flag from the detected encoding label instead of the decoded text.
-          const pre = exists ? yield* EncodedIO.read(fs, filepath) : { text: "", encoding: "utf-8" }
-          const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
-          // kilocode_change end
+          const source = exists ? yield* Bom.readFile(fs, filepath) : { bom: false, text: "" }
           const next = Bom.split(params.content)
           const desiredBom = source.bom || next.bom
           const contentOld = source.text
           const contentNew = next.text
 
           const diff = trimDiff(createTwoFilesPatch(filepath, filepath, contentOld, contentNew))
-          const filediff = buildFileDiff(filepath, contentOld, contentNew) // kilocode_change
           yield* ctx.ask({
             permission: "edit",
             patterns: [path.relative(instance.worktree, filepath)],
@@ -66,13 +58,12 @@ export const WriteTool = Tool.define(
             metadata: {
               filepath,
               diff,
-              filediff, // kilocode_change
             },
           })
 
-          yield* EncodedIO.write(fs, filepath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces fs.writeWithDirs
+          yield* fs.writeWithDirs(filepath, Bom.join(contentNew, desiredBom))
           if (yield* format.file(filepath)) {
-            yield* EncodedIO.sync(fs, filepath, desiredBom, source.encoding)
+            yield* Bom.syncFile(fs, filepath, desiredBom)
           }
           yield* events.publish(FileSystem.Event.Edited, { file: filepath })
           yield* events.publish(Watcher.Event.Updated, {
@@ -97,16 +88,13 @@ export const WriteTool = Tool.define(
             projectDiagnosticsCount++
             output += `\n\nLSP errors detected in other files:\n${block}`
           }
-          output += yield* Effect.promise(() => ConfigValidation.check(filepath)) // kilocode_change
 
           return {
             title: path.relative(instance.worktree, filepath),
             metadata: {
-              diagnostics: filterDiagnostics(diagnostics, [normalizedFilepath]), // kilocode_change
+              diagnostics,
               filepath,
               exists: exists,
-              diff, // kilocode_change
-              filediff, // kilocode_change
             },
             output,
           }
