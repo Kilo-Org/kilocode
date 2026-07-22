@@ -81,44 +81,22 @@ export function createDialogProviderOptions() {
   const { theme } = useTheme()
   const onboarded = useConnected()
 
-  async function promptCustomProviderID(): Promise<string | undefined> {
-    const value = await DialogPrompt.show(dialog, "Other", {
-      placeholder: "Provider id",
-      description: () => (
-        <text fg={theme.textMuted}>
-          This only stores a credential. Configure the provider in kilo.json to use it.{/* kilocode_change */}
-        </text>
-      ),
-    })
-    if (value === null) return
-
-    const providerID = normalizeCustomProviderID(value)
-    if (providerID) return providerID
-
-    toast.show({
-      variant: "error",
-      message:
-        "Provider ids must start with a lowercase letter or number and only use lowercase letters, numbers, hyphens, and underscores",
-    })
-    return promptCustomProviderID()
-  }
-
   const options = createMemo(() => {
     return pipe(
       providerOptions(sync.data.provider_next.all),
       map((provider) => {
         if (provider.type === "custom") {
+          // kilocode_change start - delegate to the custom-provider wizard
           return {
             title: provider.title,
             value: provider.value,
             description: provider.description,
             category: provider.category,
-            async onSelect() {
-              const providerID = await promptCustomProviderID()
-              if (!providerID) return
-              return dialog.replace(() => <ApiMethod providerID={providerID} title="API key" custom />)
+            onSelect() {
+              KiloProvider.launchAddCustomProvider(dialog.replace)
             },
           }
+          // kilocode_change end
         }
 
         const providerID = provider.providerID
@@ -140,6 +118,8 @@ export function createDialogProviderOptions() {
           gutter: failedGutter ?? (connected && onboarded() ? () => <text fg={theme.success}>✓</text> : undefined), // kilocode_change
           async onSelect() {
             if (consoleManaged) return
+            // kilocode_change start - intercept config-defined custom providers with Edit/Delete menu
+            if (KiloProvider.onConfiguredCustomProvider(providerID, dialog.replace)) return
             if (KiloProvider.selectProvider({ providerID, replace: dialog.replace, model: DialogModel })) return // kilocode_change
 
             const methods = sync.data.provider_auth[providerID] ?? [

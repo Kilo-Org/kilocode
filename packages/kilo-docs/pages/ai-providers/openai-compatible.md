@@ -61,6 +61,19 @@ This eliminates the need to manually look up and type model IDs. If auto-detecti
 {% /tab %}
 {% tab label="CLI" %}
 
+### Add a custom provider from the TUI
+
+In an interactive session, run `/connect` and pick **Other**. The guided wizard walks you through:
+
+1. Provider id and display name
+2. Base URL (the wizard validates http/https and tries to fetch the model list from `{baseURL}/models`)
+3. API key, or `{env:VAR_NAME}` to read it from an environment variable
+4. Model selection — toggle models from the auto-fetched list, add models manually, or retry the fetch
+
+On save the wizard writes the provider definition to your global `kilo.json` and stores the credential, then opens the model picker. To edit or delete a custom provider later, select it from the `/connect` list.
+
+### Edit `kilo.json` directly
+
 Define a custom provider in your `kilo.json` config file (`~/.config/kilo/kilo.json` or `./kilo.json`). The provider key (e.g., `"vllm"`) is your chosen identifier — it can be any name you like.
 
 You must define at least one model. Setting `name` and `limit` (context window and max output tokens) is recommended so the agent can manage context correctly:

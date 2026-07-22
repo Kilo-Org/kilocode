@@ -9,6 +9,14 @@ import type { JSX } from "solid-js"
 import type { RGBA } from "@opentui/core"
 import type { ProviderAuthAuthorization } from "@kilocode/sdk/v2"
 import { KiloAutoMethod } from "@/kilocode/components/dialog-kilo-auto-method"
+import { DialogSelect } from "@tui/ui/dialog-select"
+import { DialogModel } from "@tui/component/dialog-model"
+import { launchCustomProvider, removeCustomProvider } from "./dialog-custom-provider"
+import { isCustomProvider } from "./custom-provider"
+import { useSync } from "@tui/context/sync"
+import { useToast } from "@tui/ui/toast"
+import { useDialog } from "@tui/ui/dialog"
+import { useSDK } from "@tui/context/sdk"
 export { selectProvider } from "@/kilocode/anaconda-desktop/tui/setup"
 
 // ---------------------------------------------------------------------------
@@ -146,4 +154,58 @@ export function renderApiDescription(
 
 export function apiKeyPlaceholder(providerID: string) {
   return isLocalOptionalApiKey(providerID) ? "Optional for localhost" : "API key"
+}
+
+// ---------------------------------------------------------------------------
+// Custom provider wizard integration
+// ---------------------------------------------------------------------------
+
+/** Launch the add wizard when the user picks "Other". */
+export function launchAddCustomProvider(replace: (el: () => JSX.Element) => void) {
+  launchCustomProvider({ mode: "add", replace })
+}
+
+/**
+ * If `providerID` is a config-defined custom provider, show a small menu
+ * (Select model / Edit / Delete) and return true. Otherwise return false so
+ * the caller falls through to the default auth-method flow.
+ */
+export function onConfiguredCustomProvider(providerID: string, replace: (el: () => JSX.Element) => void): boolean {
+  const sync = useSync()
+  const existing = sync.data.globalConfig?.provider?.[providerID]
+  if (!existing || !isCustomProvider(existing)) return false
+  const sdk = useSDK()
+  const toast = useToast()
+  const dialog = useDialog()
+  const closeAnd = (fn: () => void) => {
+    dialog.clear()
+    fn()
+  }
+  replace(() => (
+    <DialogSelect
+      title={providerID}
+      options={[
+        {
+          title: "Select model",
+          value: "select",
+          onSelect: () => closeAnd(() => replace(() => <DialogModel providerID={providerID} />)),
+        },
+        {
+          title: "Edit provider",
+          value: "edit",
+          onSelect: () =>
+            closeAnd(() => launchCustomProvider({ mode: "edit", providerID, replace })),
+        },
+        {
+          title: "Delete provider",
+          value: "delete",
+          onSelect: () =>
+            closeAnd(() =>
+              void removeCustomProvider(providerID, { sdk, sync, toast, dialog }),
+            ),
+        },
+      ]}
+    />
+  ))
+  return true
 }
