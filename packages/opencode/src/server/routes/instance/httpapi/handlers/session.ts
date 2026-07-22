@@ -397,8 +397,8 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
         ),
       )
-      // The queued slot may have started before this request reached the server.
-      // Treat that race as a no-op rather than deleting the now-active message.
+      // A false result means the message is not in the waiting list. It may have
+      // already started, or the ID may be stale. Leave the message untouched.
       if (!remove) return false
       // kilocode_change end
       yield* session.removeMessage(ctx.params)
