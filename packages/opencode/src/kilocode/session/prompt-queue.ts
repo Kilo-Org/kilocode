@@ -188,6 +188,9 @@ export namespace KiloSessionPromptQueue {
       Effect.sync(() => {
         const mine = ++seq
         latest.set(sessionID, mine)
+        // Record whether this slot starts immediately
+        // (no existing tail) so we can publish the queue change exactly once
+        // on the transition that actually mutates the waiting list.
         const current = tails.get(sessionID)
         const previous = current ?? Promise.resolve()
         const done = Promise.withResolvers<void>()
