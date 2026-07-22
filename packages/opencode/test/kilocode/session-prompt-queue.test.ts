@@ -1204,14 +1204,24 @@ describe("session prompt queue", () => {
             )
 
             expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m2, m3])
-            await Bun.sleep(10)
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() => (events.length >= 2 ? true : undefined)),
+                "Timed out waiting for queued snapshot events",
+              ),
+            )
             expect(events).toEqual([{ queued: [m2] }, { queued: [m2, m3] }])
             events.length = 0
 
             expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, m2))).toBe(true)
             expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m3])
             expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(true)
-            await Bun.sleep(10)
+            await Effect.runPromise(
+              pollWithTimeout(
+                Effect.sync(() => (events.length >= 1 ? true : undefined)),
+                "Timed out waiting for dropped snapshot event",
+              ),
+            )
             expect(events).toEqual([{ queued: [m3] }])
 
             firstRelease.resolve()
