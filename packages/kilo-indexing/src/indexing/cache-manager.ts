@@ -1,10 +1,27 @@
 import { createHash } from "crypto"
 import fs from "fs/promises"
 import path from "path"
-import type { ICacheManager } from "./interfaces/cache"
+import type { CacheMetadata, ICacheManager } from "./interfaces/cache"
 import { Log } from "../util/log"
 
 const log = Log.create({ service: "indexing-cache" })
+const VERSION = 2
+
+type Entry = {
+  hash: string
+  size?: number
+  mtimeMs?: number
+  ctimeMs?: number
+}
+
+type Data = {
+  version: typeof VERSION
+  files: Record<string, Entry>
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
 
 /**
  * Manages the file-hash cache for code indexing.
@@ -14,7 +31,7 @@ const log = Log.create({ service: "indexing-cache" })
  */
 export class CacheManager implements ICacheManager {
   private readonly cachePath: string
-  private fileHashes: Record<string, string> = {}
+  private files: Record<string, Entry> = {}
   private saveTimer: ReturnType<typeof setTimeout> | undefined
   private saveTask = Promise.resolve()
 
@@ -28,10 +45,41 @@ export class CacheManager implements ICacheManager {
 
   async initialize(): Promise<void> {
     try {
-      const raw = await fs.readFile(this.cachePath, "utf-8")
-      this.fileHashes = JSON.parse(raw)
+      const data: unknown = JSON.parse(await fs.readFile(this.cachePath, "utf-8"))
+      if (!isRecord(data)) {
+        this.files = {}
+        return
+      }
+
+      if ("version" in data) {
+        if (data.version !== VERSION || !isRecord(data.files)) {
+          this.files = {}
+          return
+        }
+
+        this.files = Object.fromEntries(
+          Object.entries(data.files).flatMap(([file, value]) => {
+            if (!isRecord(value) || typeof value.hash !== "string") return []
+            const metadata =
+              typeof value.size === "number" &&
+              Number.isFinite(value.size) &&
+              typeof value.mtimeMs === "number" &&
+              Number.isFinite(value.mtimeMs) &&
+              typeof value.ctimeMs === "number" &&
+              Number.isFinite(value.ctimeMs)
+            return metadata
+              ? [[file, { hash: value.hash, size: value.size, mtimeMs: value.mtimeMs, ctimeMs: value.ctimeMs }]]
+              : [[file, { hash: value.hash }]]
+          }),
+        )
+        return
+      }
+
+      this.files = Object.fromEntries(
+        Object.entries(data).flatMap(([file, value]) => (typeof value === "string" ? [[file, { hash: value }]] : [])),
+      )
     } catch {
-      this.fileHashes = {}
+      this.files = {}
     }
   }
 
@@ -45,7 +93,8 @@ export class CacheManager implements ICacheManager {
   private async performSave(): Promise<void> {
     await fs.mkdir(path.dirname(this.cachePath), { recursive: true })
     const tmp = `${this.cachePath}.tmp`
-    await fs.writeFile(tmp, JSON.stringify(this.fileHashes), "utf-8")
+    const data: Data = { version: VERSION, files: this.files }
+    await fs.writeFile(tmp, JSON.stringify(data), "utf-8")
     await fs.rename(tmp, this.cachePath)
   }
 
@@ -60,35 +109,43 @@ export class CacheManager implements ICacheManager {
   }
 
   seedHashes(hashes: Readonly<Record<string, string>>): void {
-    this.fileHashes = { ...hashes }
+    this.files = Object.fromEntries(Object.entries(hashes).map(([file, hash]) => [file, { hash }]))
     this.scheduleSave()
   }
 
   async clearCacheFile(): Promise<void> {
-    this.fileHashes = {}
+    this.files = {}
     await this.flush()
   }
 
   getHash(filePath: string): string | undefined {
-    return this.fileHashes[filePath]
+    return this.files[filePath]?.hash
   }
 
-  updateHash(filePath: string, hash: string): void {
-    this.fileHashes[filePath] = hash
+  getMetadata(filePath: string): CacheMetadata | undefined {
+    const entry = this.files[filePath]
+    if (entry?.size === undefined || entry.mtimeMs === undefined || entry.ctimeMs === undefined) return
+    return { size: entry.size, mtimeMs: entry.mtimeMs, ctimeMs: entry.ctimeMs }
+  }
+
+  updateHash(filePath: string, hash: string, metadata?: CacheMetadata): void {
+    this.files[filePath] = metadata ? { hash, ...metadata } : { hash }
     this.scheduleSave()
   }
 
   deleteHash(filePath: string): void {
-    delete this.fileHashes[filePath]
+    delete this.files[filePath]
     this.scheduleSave()
   }
 
   getAllHashes(): Record<string, string> {
-    return { ...this.fileHashes }
+    return Object.fromEntries(Object.entries(this.files).map(([file, entry]) => [file, entry.hash]))
   }
 
   signature(): string {
-    const entries = Object.entries(this.fileHashes).sort(([left], [right]) => left.localeCompare(right))
+    const entries = Object.entries(this.files)
+      .map(([file, entry]) => [file, entry.hash])
+      .sort(([left], [right]) => left.localeCompare(right))
     return createHash("sha256").update(JSON.stringify(entries)).digest("hex")
   }
 
