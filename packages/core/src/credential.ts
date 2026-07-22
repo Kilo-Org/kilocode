@@ -1,6 +1,6 @@
 export * as Credential from "./credential"
 
-import { asc, eq } from "drizzle-orm"
+import { asc, desc, eq } from "drizzle-orm" // kilocode_change
 // kilocode_change start
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect"
 // kilocode_change end
@@ -122,30 +122,48 @@ export const legacyImportLayer = Layer.effectDiscard(
     const { db } = yield* Database.Service
     const fs = yield* FSUtil.Service
     const global = yield* Global.Service
-    // the v2 name re-runs the import because upstream migration 20260611192811 drops the credential table
-    const kiloName = "credential.kilo-account-json-v2"
+    // v3 repairs the active-only v2 import while remaining safe for users who already ran it.
+    const kiloName = "credential.kilo-account-json-v3"
     if (!(yield* db.select().from(DataMigrationTable).where(eq(DataMigrationTable.name, kiloName)).get())) {
       const current = yield* fs.readJson(path.join(global.data, "account.json")).pipe(Effect.option)
       const prior = yield* fs.readJson(path.join(global.data, "auth-v2.json")).pipe(Effect.option)
       const raw = Option.isSome(current) ? current.value : Option.getOrUndefined(prior)
-      // one credential per integration: only the active account of each service is imported
-      const values = parseKiloAccounts(raw).filter((item) => item.active)
+      const values = parseKiloAccounts(raw).toSorted(
+        (a, b) => a.connectorID.localeCompare(b.connectorID) || Number(a.active) - Number(b.active),
+      )
       if (values.length > 0) {
         yield* db.transaction((tx) =>
           Effect.gen(function* () {
-            const existing = new Set(
-              (yield* tx.select({ integrationID: CredentialTable.integration_id }).from(CredentialTable).all()).map(
-                (item) => item.integrationID,
-              ),
-            )
-            for (const item of values) {
+            const existing = yield* tx.select().from(CredentialTable).all()
+            const used = new Set<ID>()
+            const created = Date.now()
+            for (const [index, item] of values.entries()) {
               const integration = IntegrationSchema.ID.make(item.connectorID.replace(/\/+$/, ""))
-              if (existing.has(integration)) continue
+              const value = legacyValue(integration, item.credential)
+              const current = existing.find(
+                (row) =>
+                  !used.has(row.id) &&
+                  row.integration_id === integration &&
+                  row.label === item.label &&
+                  JSON.stringify(row.value) === JSON.stringify(value),
+              )
+              const time = created + index
+              if (current) {
+                used.add(current.id)
+                yield* tx
+                  .update(CredentialTable)
+                  .set({ time_created: time, time_updated: time })
+                  .where(eq(CredentialTable.id, current.id))
+                  .run()
+                continue
+              }
               yield* tx.insert(CredentialTable).values({
-                id: ID.create(),
+                id: ID.make(`cred_kilo_${Buffer.from(item.id).toString("base64url")}`),
                 integration_id: integration,
                 label: item.label,
-                value: legacyValue(integration, item.credential),
+                value,
+                time_created: time,
+                time_updated: time,
               })
             }
             yield* tx.insert(DataMigrationTable).values({ name: kiloName, time_completed: Date.now() }).run()
@@ -171,6 +189,7 @@ export const legacyImportLayer = Layer.effectDiscard(
             .select()
             .from(CredentialTable)
             .where(eq(CredentialTable.integration_id, item.integration))
+            .orderBy(desc(CredentialTable.time_created)) // kilocode_change - reconcile the active imported account
             .get()
           if (current) {
             yield* tx.update(CredentialTable).set({ value: item.value }).where(eq(CredentialTable.id, current.id)).run()
@@ -276,6 +295,7 @@ export const layer = Layer.effect(
             .select()
             .from(CredentialTable)
             .where(eq(CredentialTable.integration_id, integration))
+            .orderBy(desc(CredentialTable.time_created)) // kilocode_change - persist the active imported account
             .get()
             .pipe(Effect.orDie)
           delete data[integration + "/"]
