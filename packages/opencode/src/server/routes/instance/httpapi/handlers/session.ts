@@ -391,16 +391,15 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     }) {
       yield* requireSession(ctx.params.sessionID)
       // kilocode_change start - allow deleting prompts that are queued behind the active turn
-      yield* runState.assertNotBusy(ctx.params.sessionID).pipe(
+      const remove = yield* runState.assertNotBusy(ctx.params.sessionID).pipe(
+        Effect.as(true),
         Effect.catchTag("SessionBusyError", () =>
-          KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID).pipe(
-            Effect.flatMap((ok) =>
-              ok ? Effect.void : Effect.fail(new Session.BusyError({ sessionID: ctx.params.sessionID })),
-            ),
-          ),
+          KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
         ),
-        SessionError.mapBusy,
       )
+      // The queued slot may have started before this request reached the server.
+      // Treat that race as a no-op rather than deleting the now-active message.
+      if (!remove) return false
       // kilocode_change end
       yield* session.removeMessage(ctx.params)
       return true
