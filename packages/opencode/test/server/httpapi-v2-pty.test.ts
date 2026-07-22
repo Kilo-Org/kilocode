@@ -246,5 +246,6 @@ describe("v2 pty HttpApi", () => {
         yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
         yield* HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(directoryHeader(dir), HttpClient.execute)
       }),
+    30_000, // kilocode_change - external plugin loading and websocket setup can exceed Bun's 5s default
   )
 })

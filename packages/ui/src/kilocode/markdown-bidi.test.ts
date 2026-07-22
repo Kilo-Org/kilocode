@@ -33,11 +33,19 @@ describe("Markdown bidirectional rendering contract", () => {
         useMarked: () => ({ parse: async () => "" }),
         deferredHighlight: async () => {},
         fnv1a: (text) => text,
+        KiloTheme: { name: "Kilo" },
       }))
       mock.module("./src/kilocode/markdown-mermaid", () => ({
         hasMermaid: () => false,
         preserveMermaid: () => false,
         renderMermaid: async () => {},
+      }))
+      mock.module("./src/components/markdown-worker", () => ({
+        disposeStreamingCode: () => {},
+        highlightStreamingCode: async () => { throw new Error("unexpected worker call") },
+        MarkdownWorkerDisposedError: class extends Error {},
+        MarkdownWorkerSupersededError: class extends Error {},
+        MarkdownWorkerUnavailableError: class extends Error {},
       }))
 
       const { Markdown } = await import("./src/components/markdown")

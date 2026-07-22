@@ -93,9 +93,6 @@ export const layer = Layer.effect(
     const integrations = yield* Integration.Service
     const scope = yield* Scope.Scope
 
-    // kilocode_change start - upstream moved credential projection into SessionRunnerModel; the Kilo OAuth
-    // accountID -> kilocodeOrganizationId mapping is ported there, while this helper only filters availability.
-    // kilocode_change end
     const available = (provider: ProviderV2.Info, integration: Integration.Info | undefined, connected: boolean) => {
       if (provider.disabled) return false
       if (typeof provider.request.body.apiKey === "string") return true

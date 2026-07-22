@@ -1549,7 +1549,7 @@ it.instance(
       }
     }),
   { git: true },
-  10_000, // kilocode_change - Windows CI can take longer to cancel queued live loops
+  30_000, // kilocode_change - isolated suite load can delay queued live-loop cancellation
 )
 
 // Queue semantics
@@ -1665,7 +1665,12 @@ it.instance(
       expect(inputs).toHaveLength(2)
       const messages = inputs.at(-1)?.messages
       if (!Array.isArray(messages)) throw new Error("expected LLM messages")
-      expect(messages.at(-1)).toEqual({ role: "user", content: "second" })
+      // kilocode_change start - Kilo appends environment details to queued user prompts
+      expect(messages.at(-1)).toMatchObject({
+        role: "user",
+        content: expect.arrayContaining([{ type: "text", text: "second" }]),
+      })
+      // kilocode_change end
     }),
   10_000, // kilocode_change - loaded CI runners can exceed 3s for two prompt turns
 )

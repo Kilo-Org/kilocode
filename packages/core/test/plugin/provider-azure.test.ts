@@ -1,35 +1,10 @@
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
-import { Credential } from "@opencode-ai/core/credential"
-import { Integration } from "@opencode-ai/core/integration"
-import { Database } from "@opencode-ai/core/database/database"
+import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
-import { EventV2 } from "@opencode-ai/core/event"
-import { Location } from "@opencode-ai/core/location"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { AzurePlugin } from "@opencode-ai/core/plugin/provider/azure"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { AbsolutePath } from "@opencode-ai/core/schema"
-import { location } from "../fixture/location"
-import { testEffect } from "../lib/effect"
-import { fakeSelectorSdk, it, model, npmLayer, provider, withEnv } from "./provider-helper"
-
-const database = Database.layerFromPath(":memory:").pipe(Layer.fresh)
-const preferences = Credential.layer.pipe(Layer.provide(database))
-const accounts = Layer.merge(
-  Credential.layer.pipe(Layer.provide(database), Layer.provide(preferences), Layer.provide(EventV2.defaultLayer)),
-  preferences,
-)
-const itWithAccount = testEffect(
-  Catalog.locationLayer.pipe(
-    Layer.provideMerge(accounts),
-    Layer.provideMerge(EventV2.defaultLayer),
-    Layer.provideMerge(
-      Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make("test") }))),
-    ),
-    Layer.provideMerge(npmLayer),
-  ),
-)
+import { fakeSelectorSdk, it, model, provider, withEnv } from "./provider-helper"
 
 describe("AzurePlugin", () => {
   it.effect("resolves resourceName from env", () =>
@@ -73,35 +48,7 @@ describe("AzurePlugin", () => {
     ),
   )
 
-  itWithAccount.effect("prefers account resourceName over env", () =>
-    withEnv(
-      {
-        AZURE_RESOURCE_NAME: "from-env",
-      },
-      () =>
-        Effect.gen(function* () {
-          const plugin = yield* PluginV2.Service
-          const credentials = yield* Credential.Service
-          const catalog = yield* Catalog.Service
-          yield* credentials.create({
-            integrationID: Integration.ID.make("azure"),
-            value: new Credential.Key({
-              type: "key",
-              key: "key",
-              metadata: { resourceName: "from-account" },
-            }),
-          })
-          yield* plugin.add(AzurePlugin)
-          const transform = yield* catalog.transform()
-          yield* transform((catalog) => {
-            catalog.provider.update(ProviderV2.ID.azure, (item) => {
-              item.api = { type: "aisdk", package: "@ai-sdk/azure" }
-            })
-          })
-          expect((yield* catalog.provider.get(ProviderV2.ID.azure)).request.body.resourceName).toBe("from-account")
-        }),
-    ),
-  )
+  // kilocode_change - remove stale account projection coverage, matching the v1.17.10 upstream follow-up
 
   it.effect("falls back to env when configured resourceName is blank", () =>
     withEnv({ AZURE_RESOURCE_NAME: "from-env" }, () =>

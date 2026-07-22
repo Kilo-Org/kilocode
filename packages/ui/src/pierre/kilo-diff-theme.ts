@@ -1,5 +1,5 @@
 // kilocode_change - new file
-import { registerCustomTheme, RegisteredCustomThemes, type ThemeRegistrationResolved } from "@pierre/diffs"
+import { registerCustomTheme, type ThemeRegistrationResolved } from "@pierre/diffs"
 
 // The "Kilo" Pierre/Shiki theme used by every diff review surface (Code / Diff /
 // File / SessionReview) and by markdown code highlighting. Pierre resolves the
@@ -23,12 +23,23 @@ import { registerCustomTheme, RegisteredCustomThemes, type ThemeRegistrationReso
 
 export const KILO_DIFF_THEME = "Kilo"
 
+const registrations = (() => {
+  const key = Symbol.for("kilocode.ui.pierre.kilo-diff-theme")
+  const existing = Reflect.get(globalThis, key)
+  if (existing instanceof WeakSet) return existing as WeakSet<typeof registerCustomTheme>
+
+  const value = new WeakSet<typeof registerCustomTheme>()
+  Reflect.set(globalThis, key, value)
+  return value
+})()
+
 // Idempotent: this is reached from both the markdown context and the diff worker
-// factory. Guard against the authoritative Pierre registry (rather than a local
-// flag) so it stays a no-op even if this module is instantiated more than once
-// across separate bundles — @pierre/diffs otherwise logs an error on duplicates.
+// factory. Pierre no longer exposes its registered-theme set, so use a realm-wide
+// guard keyed by the public registration function. Duplicate Kilo modules sharing
+// one Pierre instance stay no-ops, while separately bundled Pierre instances still
+// receive their own registration.
 export function ensureKiloDiffTheme(): void {
-  if (RegisteredCustomThemes.has(KILO_DIFF_THEME)) return
+  if (registrations.has(registerCustomTheme)) return
 
   registerCustomTheme(KILO_DIFF_THEME, () => {
     return Promise.resolve({
@@ -400,4 +411,5 @@ export function ensureKiloDiffTheme(): void {
       },
     } as unknown as ThemeRegistrationResolved)
   })
+  registrations.add(registerCustomTheme)
 }

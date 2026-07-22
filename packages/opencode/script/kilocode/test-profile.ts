@@ -16,7 +16,7 @@ export namespace TestProfile {
           "kilocode/{external-directory-boundary,read-directory}.test.ts",
           "util/filesystem.test.ts",
         ],
-        pty: ["pty/*.test.ts", "server/httpapi-pty.test.ts"],
+        pty: ["server/httpapi-pty.test.ts", "server/httpapi-v2-pty.test.ts"],
         runtime: [
           "cli/serve/*.test.ts",
           "kilocode/background-process.test.ts",

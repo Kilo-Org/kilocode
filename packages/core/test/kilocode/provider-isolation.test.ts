@@ -1,6 +1,7 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
+import { Integration } from "@opencode-ai/core/integration"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { LLMGatewayPlugin } from "@opencode-ai/core/plugin/provider/llmgateway"
@@ -16,7 +17,12 @@ describe("provider attribution isolation", () => {
     Effect.gen(function* () {
       const plugins = yield* PluginV2.Service
       const catalog = yield* Catalog.Service
-      for (const plugin of [LLMGatewayPlugin, NvidiaPlugin, OpenRouterPlugin, VercelPlugin, ZenmuxPlugin]) {
+      const integrations = yield* Integration.Service
+      yield* plugins.add({
+        ...LLMGatewayPlugin,
+        effect: LLMGatewayPlugin.effect.pipe(Effect.provideService(Integration.Service, integrations)),
+      })
+      for (const plugin of [NvidiaPlugin, OpenRouterPlugin, VercelPlugin, ZenmuxPlugin]) {
         yield* plugins.add(plugin)
       }
 
@@ -24,7 +30,6 @@ describe("provider attribution isolation", () => {
       yield* transform((catalog) => {
         const items = [
           provider("custom-llmgateway", {
-            enabled: { via: "env", name: "CUSTOM_LLMGATEWAY_API_KEY" },
             api: { type: "aisdk", package: "@ai-sdk/openai-compatible", url: "https://api.llmgateway.io/v1" },
           }),
           provider("custom-nvidia", {
@@ -47,7 +52,6 @@ describe("provider attribution isolation", () => {
 
         for (const item of items) {
           catalog.provider.update(item.id, (draft) => {
-            draft.enabled = item.enabled
             draft.api = item.api
             draft.request.headers.Existing = "value"
           })

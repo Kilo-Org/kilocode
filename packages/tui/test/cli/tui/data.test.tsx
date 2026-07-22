@@ -193,9 +193,13 @@ test("refreshes effective catalog data after catalog updates", async () => {
     <TestTuiContexts>
       <SDKProvider url="http://test" directory={directory} events={events.source} fetch={calls.fetch}>
         <ProjectProvider>
-          <DataProvider>
-            <box />
-          </DataProvider>
+          {/* kilocode_change start - initialize Kilo's project filter before consuming catalog events */}
+          <Ready>
+            <DataProvider>
+              <box />
+            </DataProvider>
+          </Ready>
+          {/* kilocode_change end */}
         </ProjectProvider>
       </SDKProvider>
     </TestTuiContexts>

@@ -1,6 +1,5 @@
 import { marked, type Tokens } from "marked"
 import remend from "remend"
-import { stableBlocks } from "../kilocode/markdown-stable-blocks" // kilocode_change
 
 export type Block = {
   raw: string
@@ -54,9 +53,6 @@ export function stream(text: string, live: boolean): Block[] {
   if (!live) return [{ raw: text, src: text, mode: "full" }] satisfies Block[]
   if (refs(text)) return [{ raw: text, src: heal(text), mode: "live" }] satisfies Block[]
   const tokens = marked.lexer(text)
-  const candidate = tokens.findLast((token) => token.type !== "space") // kilocode_change
-  const blocks = candidate && !open(candidate.raw) ? stableBlocks(tokens, heal) : undefined // kilocode_change
-  if (blocks) return blocks // kilocode_change
   const tail = tokens.findLastIndex((token) => token.type !== "space")
   if (tail < 0) return [{ raw: text, src: heal(text), mode: "live" }] satisfies Block[]
   const last = tokens[tail]

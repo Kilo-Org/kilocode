@@ -1,36 +1,11 @@
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
-import { Credential } from "@opencode-ai/core/credential"
-import { Integration } from "@opencode-ai/core/integration"
-import { Database } from "@opencode-ai/core/database/database"
+import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
-import { Location } from "@opencode-ai/core/location"
-import { EventV2 } from "@opencode-ai/core/event"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { CloudflareWorkersAIPlugin } from "@opencode-ai/core/plugin/provider/cloudflare-workers-ai"
 import { ProviderV2 } from "@opencode-ai/core/provider"
-import { AbsolutePath } from "@opencode-ai/core/schema"
-import { location } from "../fixture/location"
-import { testEffect } from "../lib/effect"
-import { fakeSelectorSdk, it, model, npmLayer, withEnv } from "./provider-helper"
-
-const database = Database.layerFromPath(":memory:").pipe(Layer.fresh)
-const preferences = Credential.layer.pipe(Layer.provide(database))
-const accounts = Layer.merge(
-  Credential.layer.pipe(Layer.provide(database), Layer.provide(preferences), Layer.provide(EventV2.defaultLayer)),
-  preferences,
-)
-const itWithAccount = testEffect(
-  Catalog.locationLayer.pipe(
-    Layer.provideMerge(accounts),
-    Layer.provideMerge(EventV2.defaultLayer),
-    Layer.provideMerge(
-      Layer.succeed(Location.Service, Location.Service.of(location({ directory: AbsolutePath.make("test") }))),
-    ),
-    Layer.provideMerge(npmLayer),
-  ),
-)
+import { fakeSelectorSdk, it, model, withEnv } from "./provider-helper"
 
 function cloudflareLanguage(sdk: unknown, modelID = "@cf/model") {
   return (sdk as { languageModel: (id: string) => { config: CloudflareConfig; provider: string } }).languageModel(
@@ -126,41 +101,7 @@ describe("CloudflareWorkersAIPlugin", () => {
     ),
   )
 
-  itWithAccount.effect("falls back to account metadata when account env is absent", () =>
-    withEnv(
-      {
-        CLOUDFLARE_ACCOUNT_ID: undefined,
-        CLOUDFLARE_API_KEY: undefined,
-      },
-      () =>
-        Effect.gen(function* () {
-          const plugin = yield* PluginV2.Service
-          const credentials = yield* Credential.Service
-          const catalog = yield* Catalog.Service
-          yield* credentials.create({
-            integrationID: Integration.ID.make("cloudflare-workers-ai"),
-            value: new Credential.Key({
-              type: "key",
-              key: "account-key",
-              metadata: { accountId: "account-acct" },
-            }),
-          })
-          yield* plugin.add(CloudflareWorkersAIPlugin)
-          const transform = yield* catalog.transform()
-          yield* transform((catalog) =>
-            catalog.provider.update(ProviderV2.ID.make("cloudflare-workers-ai"), (provider) => {
-              provider.api = { type: "aisdk", package: "test-provider" }
-            }),
-          )
-          expect((yield* catalog.provider.get(ProviderV2.ID.make("cloudflare-workers-ai"))).request.body).toMatchObject(
-            {
-              apiKey: "account-key",
-              accountId: "account-acct",
-            },
-          )
-        }),
-    ),
-  )
+  // kilocode_change - remove stale account projection coverage, matching the v1.17.10 upstream follow-up
 
   it.effect("uses env account ID over configured account ID", () =>
     withEnv({ CLOUDFLARE_ACCOUNT_ID: "env-acct" }, () =>

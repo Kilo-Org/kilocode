@@ -1,7 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
-import { Credential } from "@opencode-ai/core/credential"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { ProviderPlugins } from "@opencode-ai/core/plugin/provider"
 import { KiloPlugin } from "@opencode-ai/core/plugin/provider/kilo"
@@ -151,20 +150,18 @@ describe("KiloPlugin", () => {
         const transform = yield* catalog.transform()
         yield* transform((catalog) => {
           const item = provider("kilo", {
-            enabled: { via: "credential", credentialID: Credential.ID.make("cred_kilo") },
             request: {
               headers: {},
               body: { apiKey: "authenticated-token", kilocodeOrganizationId: "authenticated-org" },
             },
           })
           catalog.provider.update(item.id, (draft) => {
-            draft.enabled = item.enabled
             draft.request = item.request
           })
         })
         const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
 
-        expect(result.enabled).toEqual({ via: "credential", credentialID: Credential.ID.make("cred_kilo") })
+        expect(result.request.body.apiKey).toBe("authenticated-token")
         expect(result.request.body.kilocodeToken).toBe("authenticated-token")
         expect(result.request.body.kilocodeOrganizationId).toBe("environment-org")
       }),
@@ -181,7 +178,10 @@ describe("KiloPlugin", () => {
         yield* transform((catalog) => catalog.provider.update(ProviderV2.ID.make("kilo"), () => {}))
         const result = yield* catalog.provider.get(ProviderV2.ID.make("kilo"))
 
-        expect(result.enabled).toEqual({ via: "custom", data: { anonymous: true } })
+        expect((yield* catalog.provider.available()).map((provider) => provider.id)).toContain(
+          ProviderV2.ID.make("kilo"),
+        )
+        expect(result.request.body.apiKey).toBe("anonymous")
         expect(result.request.body.kilocodeToken).toBe("anonymous")
       }),
     ),
