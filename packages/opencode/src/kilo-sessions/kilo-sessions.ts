@@ -221,8 +221,10 @@ export namespace KiloSessions {
   // create_session's catch block turns that into the sanitized failure
   // response and the user retries manually.
   const attachedState = AttachedState.create({
-    heartbeat: () =>
-      remote ? remote.conn.heartbeat() : Promise.reject(new Error("attachRemoteSession: no remote connection")),
+    heartbeat: (opts) =>
+      remote
+        ? remote.conn.heartbeat(opts)
+        : Promise.reject(new Error("attachRemoteSession: no remote connection")),
     log: attachedLog,
   })
   // kilocode_change end
