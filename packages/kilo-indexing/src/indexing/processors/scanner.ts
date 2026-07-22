@@ -607,7 +607,7 @@ export class DirectoryScanner implements IDirectoryScanner {
       provider: this.telemetryMeta?.provider,
       modelId: this.telemetryMeta?.modelId,
       vectorStore: this.telemetryMeta?.vectorStore,
-      fileCount: new Set(batchFileInfos.map((item) => item.filePath)).size,
+      fileCount: batchFileInfos.length,
       blockCount: batchBlocks.length,
       attemptCount: 0,
       deleteMs: 0,
