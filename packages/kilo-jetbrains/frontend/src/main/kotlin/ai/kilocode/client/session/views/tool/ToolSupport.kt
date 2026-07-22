@@ -6,6 +6,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
+import ai.kilocode.client.session.model.ToolKind
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -36,8 +37,14 @@ import com.intellij.ui.components.JBTextArea
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.xml.util.XmlStringUtil
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.awt.BorderLayout
-import java.awt.CardLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
@@ -345,9 +352,6 @@ private class ToolField(value: String, private var style: SessionEditorStyle, pr
     }
 }
 
-private const val SUB_CARD = "sub"
-private const val LINK_CARD = "link"
-
 @RequiresEdt
 internal fun toolParts(
     tool: Tool,
@@ -370,11 +374,10 @@ internal fun toolParts(
             }
         })
     }
-    val slot = JPanel(CardLayout()).apply {
-        isOpaque = false
+    val slot = Stack.fitHorizontal().apply {
         minimumSize = Dimension(0, minimumSize.height)
-        add(sub, SUB_CARD)
-        add(link, LINK_CARD)
+        next(sub)
+        next(link)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
@@ -407,11 +410,10 @@ internal fun searchParts(count: Int): ToolParts {
         }
     }
     val link = clip(JBLabel()).apply { isVisible = false }
-    val slot = JPanel(CardLayout()).apply {
-        isOpaque = false
+    val slot = Stack.fitHorizontal().apply {
         minimumSize = Dimension(0, minimumSize.height)
-        add(sub, SUB_CARD)
-        add(link, LINK_CARD)
+        next(sub)
+        next(link)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
     val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
@@ -449,9 +451,10 @@ internal fun icon(tool: Tool) = when (tool.name) {
     else -> SessionViewIcons.mcp
 }
 
-internal fun title(tool: Tool) = when (tool.name) {
-    "read" -> KiloBundle.message("session.part.tool.read")
-    "bash" -> KiloBundle.message("session.part.tool.shell")
+internal fun title(tool: Tool) = when {
+    tool.name == "read" -> KiloBundle.message("session.part.tool.read")
+    tool.name == "bash" -> KiloBundle.message("session.part.tool.shell")
+    tool.kind == ToolKind.WRITE -> KiloBundle.message("session.part.tool.edit")
     else -> toolTitle(tool)
 }
 
@@ -487,6 +490,30 @@ internal fun setLinkText(parts: ToolParts, text: String): Boolean {
     return true
 }
 
+/**
+ * Shows [path] as a clickable file link in the header slot, or clears the link when [path] is null.
+ * Shared by [ai.kilocode.client.session.views.tool.ReadToolView] and
+ * [ai.kilocode.client.session.views.tool.EditToolView] so both render file targets identically.
+ */
+@RequiresEdt
+internal fun setFileTarget(parts: ToolParts, path: String?, label: String): Boolean {
+    if (path == null) {
+        var changed = false
+        if (parts.href != null) {
+            parts.href = null
+            changed = true
+        }
+        return show(parts, false) || changed
+    }
+    var changed = false
+    if (parts.href != path) {
+        parts.href = path
+        changed = true
+    }
+    changed = setLinkText(parts, label.ifBlank { path }) || changed
+    return show(parts, true) || changed
+}
+
 private fun clip(label: JBLabel): JBLabel = label.apply {
     minimumSize = Dimension(0, minimumSize.height)
 }
@@ -504,9 +531,10 @@ private fun single(text: String): String = text.lineSequence()
 
 @RequiresEdt
 internal fun show(parts: ToolParts, link: Boolean): Boolean {
-    if (parts.link.isVisible == link && parts.sub.isVisible != link) return false
-    (parts.slot.layout as CardLayout).show(parts.slot, if (link) LINK_CARD else SUB_CARD)
-    return true
+    var changed = false
+    changed = setVisible(parts.link, link) || changed
+    changed = setVisible(parts.sub, !link) || changed
+    return changed
 }
 
 internal fun subtitleText(parts: ToolParts): String = if (parts.link.isVisible) parts.label else parts.sub.text
@@ -702,6 +730,108 @@ private fun toolSubtitle(tool: Tool): String {
     val args = listOf("pattern", "include", "offset", "limit")
         .mapNotNull { key -> tool.input[key]?.takeIf { it.isNotBlank() }?.let { "$key=$it" } }
     return listOfNotNull(base).plus(args).joinToString(" ")
+}
+
+/** Absolute file path targeted by a write tool, preferring the resolvable input path. */
+internal fun editPath(tool: Tool): String =
+    tool.input["filePath"]?.takeIf { it.isNotBlank() }
+        ?: tool.input["path"]?.takeIf { it.isNotBlank() }
+        ?: tool.title?.takeIf { it.isNotBlank() }
+        ?: tool.name
+
+private val DIFF_JSON = Json { ignoreUnknownKeys = true; isLenient = true }
+
+private fun parseJsonObject(raw: String?): JsonObject? =
+    raw?.takeIf { it.isNotBlank() }?.let { runCatching { DIFF_JSON.parseToJsonElement(it).jsonObject }.getOrNull() }
+
+private fun parseJsonArray(raw: String?): JsonArray? =
+    raw?.takeIf { it.isNotBlank() }?.let { runCatching { DIFF_JSON.parseToJsonElement(it) as? JsonArray }.getOrNull() }
+
+private fun patchOf(obj: JsonObject?): String? =
+    obj?.get("patch")?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() }
+
+/**
+ * Unified diff patch produced by a write tool, or empty when none is available. Kilo strips the raw
+ * `diff` field from stored parts (see stripPartMetadata) but keeps `filediff.patch` (edit/write) and
+ * per-file `files[].patch` (apply_patch) when under the size cap, so read those first.
+ */
+internal fun editDiff(tool: Tool): String {
+    tool.metadata["diff"]?.takeIf { it.isNotBlank() }?.let { return it }
+    patchOf(parseJsonObject(tool.metadata["filediff"]))?.let { return it }
+    parseJsonArray(tool.metadata["files"])?.let { files ->
+        val joined = files.mapNotNull { patchOf(it.jsonObject) }.joinToString("\n")
+        if (joined.isNotBlank()) return joined
+    }
+    return ""
+}
+
+/** Added/removed line counts, preferring the counts computed by the CLI, else counting patch lines. */
+internal fun diffStat(tool: Tool): Pair<Int, Int> {
+    parseJsonObject(tool.metadata["filediff"])?.let { fd ->
+        val add = fd["additions"]?.jsonPrimitive?.intOrNull
+        val del = fd["deletions"]?.jsonPrimitive?.intOrNull
+        if (add != null || del != null) return (add ?: 0) to (del ?: 0)
+    }
+    parseJsonArray(tool.metadata["files"])?.let { files ->
+        var add = 0
+        var del = 0
+        var found = false
+        files.forEach {
+            it.jsonObject["additions"]?.jsonPrimitive?.intOrNull?.let { v -> add += v; found = true }
+            it.jsonObject["deletions"]?.jsonPrimitive?.intOrNull?.let { v -> del += v; found = true }
+        }
+        if (found) return add to del
+    }
+    val patch = editDiff(tool)
+    if (patch.isBlank()) return 0 to 0
+    var added = 0
+    var removed = 0
+    for (line in patch.lineSequence()) {
+        when {
+            line.startsWith("+++") || line.startsWith("---") -> Unit
+            line.startsWith("+") -> added++
+            line.startsWith("-") -> removed++
+        }
+    }
+    return added to removed
+}
+
+/** Display-only diff body without VCS/file metadata headers (Index, diff --git, ---, +++, etc.). */
+internal fun pureDiff(diff: String): String = diff.lineSequence()
+    .filterNot(::diffMeta)
+    .joinToString("\n")
+    .trim('\n')
+
+private fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
+    line.startsWith("====") ||
+    line.startsWith("diff --git ") ||
+    line.startsWith("index ") ||
+    line.startsWith("--- ") ||
+    line.startsWith("+++ ") ||
+    line.startsWith("new file mode ") ||
+    line.startsWith("deleted file mode ") ||
+    line.startsWith("old mode ") ||
+    line.startsWith("new mode ") ||
+    line.startsWith("similarity index ") ||
+    line.startsWith("dissimilarity index ") ||
+    line.startsWith("rename from ") ||
+    line.startsWith("rename to ") ||
+    line.startsWith("copy from ") ||
+    line.startsWith("copy to ")
+
+/** Wraps a unified patch in a fenced `patch` block so the markdown code editor highlights it. */
+internal fun patchMarkdown(diff: String): String = buildString {
+    val body = pureDiff(diff).ifBlank { diff.trim('\n') }
+    val fence = fence(body)
+    append(fence).append("patch-pure\n")
+    append(body)
+    if (!body.endsWith('\n')) append('\n')
+    append(fence)
+}
+
+internal fun fence(text: String): String {
+    val size = Regex("`+").findAll(text).maxOfOrNull { it.value.length } ?: 0
+    return "`".repeat(maxOf(3, size + 1))
 }
 
 internal fun tail(path: String): String {

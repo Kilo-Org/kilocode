@@ -314,7 +314,7 @@ internal open class MdViewHybrid(
             is Desc.Html -> HtmlView(desc, htmlBlock(desc.body, disposable), disposable)
             is Desc.Table -> TableView(desc, tableBlock(desc.body, disposable), disposable)
             is Desc.Code -> when (val kind = desc.kind) {
-                is Kind.Source -> CodeView(desc, codeBlock(desc.text, kind.file, disposable), disposable)
+                is Kind.Source -> CodeView(desc, codeBlock(desc.text, kind, disposable), disposable)
                 is Kind.Terminal -> TermView(desc, terminalBlock(desc.text, kind, disposable), disposable)
             }
         }
@@ -424,20 +424,20 @@ internal open class MdViewHybrid(
         return pane
     }
 
-    private fun codeBlock(text: String, file: FileType, disposable: Disposable): JBScrollPane {
+    private fun codeBlock(text: String, kind: Kind.Source, disposable: Disposable): JBScrollPane {
         val opts = opts()
-        val value = text.trimEnd('\n')
+        val value = sourceText(text, kind)
         val field = runCatching {
-            codeField(file, opts, text, false, disposable)
+            codeField(kind.file, opts, value, false, disposable)
         }.getOrElse { err ->
             LOG.warn("kind=markdown codeEditor=true failed message=${err.message}", err)
             if (code.opts.editorOnly) runCatching {
-                codeField(PlainTextFileType.INSTANCE, opts, text, false, disposable)
+                codeField(PlainTextFileType.INSTANCE, opts, value, false, disposable)
             }.getOrElse { fallback ->
                 LOG.warn("kind=markdown codeEditor=true fallback=plain failed message=${fallback.message}", fallback)
                 throw fallback
             } else {
-                textArea(text, opts, disposable)
+                textArea(value, opts, disposable)
             }
         }
         sizeCodeField(field, value)
@@ -449,6 +449,12 @@ internal open class MdViewHybrid(
         styleCodePane(pane, opts)
         sizeCodePane(pane, field)
         return pane
+    }
+
+    private fun sourceText(text: String, kind: Kind.Source): String {
+        val value = text.trimEnd('\n')
+        if (kind.highlight == Highlight.DiffPure) return MdDiffHighlight.display(value).text
+        return value
     }
 
     private fun terminalBlock(text: String, kind: Kind.Terminal, disposable: Disposable): JBScrollPane {
@@ -823,12 +829,18 @@ internal open class MdViewHybrid(
 
     private inner class CodeView(desc: Desc.Code, private val pane: JBScrollPane, disposable: Disposable) :
         View(desc, pane, disposable) {
+        init {
+            overlay()
+        }
+
         override fun compatible(desc: Desc) = desc is Desc.Code && (this.desc as Desc.Code).kind == desc.kind
 
         override fun update(desc: Desc) {
             if (this.desc == desc) return
             this.desc = desc
-            val value = (desc as Desc.Code).text.trimEnd('\n')
+            val item = desc as Desc.Code
+            val kind = item.kind as? Kind.Source
+            val value = if (kind == null) item.text.trimEnd('\n') else sourceText(item.text, kind)
             val view = pane.viewport.view
             when (view) {
                 is CodeField -> view.text = value
@@ -838,6 +850,20 @@ internal open class MdViewHybrid(
                 sizeCodeField(view, value)
                 sizeCodePane(pane, view)
             }
+            overlay()
+        }
+
+        /** Applies unified-diff coloring on top of a `diff`/`patch` block; a no-op otherwise. */
+        private fun overlay() {
+            val kind = (desc as Desc.Code).kind
+            if (kind !is Kind.Source || kind.highlight == Highlight.None) return
+            val field = pane.viewport.view as? CodeField ?: return
+            val editor = field.getEditor(true) ?: return
+            if (kind.highlight == Highlight.DiffPure) {
+                MdDiffHighlight.applyPure(editor, (desc as Desc.Code).text.trimEnd('\n'))
+                return
+            }
+            MdDiffHighlight.apply(editor, field.text)
         }
 
         override fun grow(delta: String) {
@@ -861,6 +887,7 @@ internal open class MdViewHybrid(
                 sizeCodeField(view, text)
                 sizeCodePane(pane, view)
             }
+            overlay()
         }
     }
 

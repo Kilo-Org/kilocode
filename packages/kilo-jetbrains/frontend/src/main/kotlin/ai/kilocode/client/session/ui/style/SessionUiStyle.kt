@@ -169,6 +169,7 @@ object SessionUiStyle {
         object Tool {
             const val BODY_LINES = 15
             const val TASK_LINES = 10
+            const val DIFF_LINES = 20
             const val PREVIEW_LIMIT = 20_000
 
             fun pending(): Color = UiStyle.Colors.weak()

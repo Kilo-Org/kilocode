@@ -129,24 +129,9 @@ class ReadToolView(
 
     private fun syncSubtitle(): Boolean {
         val target = target(item)?.takeIf { it.type == "file" }
-        if (target != null) {
-            var changed = false
-            if (parts.href != target.path) {
-                parts.href = target.path
-                changed = true
-            }
-            changed = setLinkText(parts, tail(target.path).ifBlank { target.path }) || changed
-            changed = show(parts, true) || changed
-            return changed
-        }
-
-        var changed = false
-        if (parts.href != null) {
-            parts.href = null
-            changed = true
-        }
+        if (target != null) return setFileTarget(parts, target.path, tail(target.path))
+        var changed = setFileTarget(parts, null, "")
         changed = setText(parts.sub, subtitle(item)) || changed
-        changed = show(parts, false) || changed
         return changed
     }
 

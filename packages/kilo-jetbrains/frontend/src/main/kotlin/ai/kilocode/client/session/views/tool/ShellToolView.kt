@@ -14,12 +14,11 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
+import ai.kilocode.client.ui.md.MdView
 import ai.kilocode.client.ui.md.MdViewFactory
 import ai.kilocode.client.ui.md.hybrid.MdTerminal
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBHtmlPane
 import com.intellij.ui.components.JBScrollPane
@@ -34,8 +33,8 @@ class ShellToolView(
     tool: Tool,
     private val selection: SessionSelection? = null,
     private val parts: ToolParts = toolParts(tool),
-    private val holder: ShellHolder = ShellHolder(tool, selection),
-) : SecondarySessionPartView(parts.header, { holder.body().panel }), UiDataProvider {
+    private val body: ToolMarkdownBody = shellBody(selection),
+) : SecondarySessionPartView(parts.header, { body.mount(tool) }), UiDataProvider {
 
     override val contentId: String = tool.id
 
@@ -43,14 +42,14 @@ class ShellToolView(
     private var style = SessionEditorStyle.current()
 
     init {
-        holder.parent = this
+        body.parent = this
         bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot)
         applyStyle(style)
         sync()
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
-        selection?.provideCopy(sink) { holder.shell?.markdown() ?: fallbackText() }
+        selection?.provideCopy(sink) { body.markdown() ?: fallbackText() }
     }
 
     private fun fallbackText() = ShellContent(item).body
@@ -60,7 +59,7 @@ class ShellToolView(
         val changed = super.expand()
         if (!changed) return false
         syncBody()
-        holder.shell?.applyStyle(style)
+        body.applyStyle(style)
         return true
     }
 
@@ -68,7 +67,7 @@ class ShellToolView(
     override fun getPreferredSize(): Dimension {
         val size = super.getPreferredSize()
         if (!bodyVisible()) return size
-        val height = row.preferredSize.height + (holder.shell?.panel?.preferredSize?.height ?: 0)
+        val height = row.preferredSize.height + (body.panel()?.preferredSize?.height ?: 0)
         return Dimension(size.width, minOf(size.height, height))
     }
 
@@ -105,16 +104,16 @@ class ShellToolView(
     fun hasToggle(): Boolean = arrow.isVisible
 
     @RequiresEdt
-    internal fun bodyCreated() = holder.shell != null
+    internal fun bodyCreated() = body.created()
 
     @RequiresEdt
-    internal fun bodyVisible() = holder.shell?.panel?.parent === this
+    internal fun bodyVisible() = body.attached(this)
 
     @RequiresEdt
-    internal fun markdown() = holder.shell?.markdown() ?: ShellContent(item).markdown
+    internal fun markdown() = body.markdown() ?: ShellContent(item).markdown
 
     @RequiresEdt
-    internal fun codeEditors(): List<EditorTextField> = holder.shell?.codeEditors() ?: emptyList()
+    internal fun codeEditors(): List<EditorTextField> = body.codeEditors()
 
     @RequiresEdt
     internal fun commandFont() = codeEditors().firstOrNull()?.font ?: style.editorFont
@@ -138,10 +137,10 @@ class ShellToolView(
     internal fun controlCount() = if (arrow.isVisible) 1 else 0
 
     @RequiresEdt
-    internal fun mdComponent() = holder.shell?.mdComponent()
+    internal fun mdComponent() = body.panel()
 
     @RequiresEdt
-    internal fun horizontalPolicy() = holder.shell?.scrolls()?.firstOrNull()?.horizontalScrollBarPolicy
+    internal fun horizontalPolicy() = body.scrolls().firstOrNull()?.horizontalScrollBarPolicy
         ?: ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
 
     @RequiresEdt
@@ -161,7 +160,7 @@ class ShellToolView(
         changed = setFont(parts.sub, style.transcriptFont) || changed
         changed = setFont(parts.link, style.smallEditorFont) || changed
         changed = setFont(parts.state, style.smallEditorFont) || changed
-        holder.shell?.let { changed = it.applyStyle(style) || changed }
+        changed = body.applyStyle(style) || changed
         if (changed) refresh()
     }
 
@@ -181,10 +180,7 @@ class ShellToolView(
         return changed
     }
 
-    private fun syncBody(): Boolean {
-        val body = holder.shell ?: return false
-        return body.update(item)
-    }
+    private fun syncBody(): Boolean = body.update(item)
 
     @RequiresEdt
     private fun buildPopupBody(cmd: String): HeaderPopupBody {
@@ -234,94 +230,26 @@ private fun padPopup(root: JComponent) {
 
 private fun grow(size: Dimension, pad: Int) = Dimension(size.width, size.height + pad)
 
-class ShellHolder(
-    private val tool: Tool,
-    private val selection: SessionSelection?,
-) {
-    var parent: Disposable? = null
-    var shell: ShellBody? = null
+private fun shellBody(selection: SessionSelection?) = ToolMarkdownBody(
+    MdCodeBlockOptions(
+        border = MdCodeBlockBorder.Bottom,
+        maxLines = 15,
+        verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+        editorOnly = true,
+    ),
+    selection,
+    render = { ShellContent(it).markdown },
+    font = SessionEditorStyle::transcriptFont,
+    chrome = ::styleShellHtml,
+)
 
-    @RequiresEdt
-    fun body(): ShellBody {
-        val current = shell
-        if (current != null) return current
-        val owner = parent ?: error("Shell holder has no parent")
-        return ShellBody(tool, selection, owner).also {
-            shell = it
-            Disposer.register(owner, it)
-        }
+/** Pads the left edge of shell section headers ("Command"/"Output") to line up with code text. */
+@RequiresEdt
+private fun styleShellHtml(md: MdView) {
+    val root = md.component as? JPanel ?: return
+    root.components.filterIsInstance<JBHtmlPane>().forEach {
+        it.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING)
     }
-}
-
-class ShellBody(
-    tool: Tool,
-    selection: SessionSelection?,
-    parent: Disposable,
-) : Disposable {
-    private val md = MdViewFactory.create(
-        SessionEditorStyle.current(),
-        selection,
-        MdCodeBlockFactory.default(
-            MdCodeBlockOptions(
-                border = MdCodeBlockBorder.Bottom,
-                maxLines = 15,
-                verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                editorOnly = true,
-            ),
-        ),
-    )
-    val panel = md.component
-
-    init {
-        Disposer.register(parent, md)
-        applyStyle(SessionEditorStyle.current())
-        update(tool)
-    }
-
-    @RequiresEdt
-    fun update(tool: Tool): Boolean {
-        val content = ShellContent(tool)
-        if (md.markdown() == content.markdown) return false
-        md.set(content.markdown)
-        styleShell()
-        return true
-    }
-
-    @RequiresEdt
-    fun applyStyle(style: SessionEditorStyle): Boolean {
-        val before = md.font
-        md.applyStyle(style)
-        md.font = style.transcriptFont
-        md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
-        md.codeFont = style.editorFamily
-        md.component.border = JBUI.Borders.empty()
-        styleShell()
-        return before != md.font
-    }
-
-    @RequiresEdt
-    private fun styleShell() {
-        val root = md.component as? JPanel ?: return
-        root.components.filterIsInstance<JBHtmlPane>().forEach {
-            it.border = JBUI.Borders.emptyLeft(SessionUiStyle.View.Code.VIEWPORT_HORIZONTAL_PADDING)
-        }
-    }
-
-    @RequiresEdt
-    fun markdown() = md.markdown()
-
-    @RequiresEdt
-    fun mdComponent() = md.component
-
-    @RequiresEdt
-    fun scrolls(): List<JBScrollPane> = (md.component as? JPanel)?.components?.filterIsInstance<JBScrollPane>() ?: emptyList()
-
-    @RequiresEdt
-    fun codeEditors(): List<EditorTextField> = scrolls().mapNotNull { it.viewport.view as? EditorTextField }
-
-    override fun dispose() = Unit
 }
 
 private data class ShellContent(
@@ -404,11 +332,6 @@ private fun StringBuilder.section(title: String, text: String, lang: String) {
     append(text)
     if (!text.endsWith('\n')) append('\n')
     append(fence)
-}
-
-private fun fence(text: String): String {
-    val size = Regex("`+").findAll(text).maxOfOrNull { it.value.length } ?: 0
-    return "`".repeat(maxOf(3, size + 1))
 }
 
 private fun clean(text: String): String = MdTerminal.strip(MdTerminal.reduce(text, keepSgr = false))
