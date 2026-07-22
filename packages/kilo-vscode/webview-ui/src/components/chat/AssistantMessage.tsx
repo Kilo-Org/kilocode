@@ -26,7 +26,6 @@ import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
 import { messageMetrics, formatTG } from "../../context/session-utils"
-import { MemoryMarkerMeta } from "@kilocode/kilo-memory/marker-meta"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
@@ -234,25 +233,6 @@ const meta = createMemo(() =>
       (props.parts ?? (data.store.part?.[props.message.id] as TimelinePart[] | undefined) ?? []) as TimelinePart[],
     ),
   )
-  const fmt = (value: number) => value.toLocaleString(language.locale())
-  const count = (item: MemoryItem) => fmt(item.count)
-  const items = (item: MemoryItem) => item.items ?? []
-  const verbose = createMemo(() => Boolean(mem.status()?.state.verbose))
-  const tip = (item: MemoryItem) => {
-    const values = MemoryMarkerMeta.snippets(item, verbose())
-    return (
-      <div style={{ "text-align": "left", "white-space": "normal", "max-width": "280px" }}>
-        <Show
-          when={values.length > 0}
-          fallback={
-            <div>{`${language.t("chat.memory.badge.recalled")} · ${language.t("chat.memory.badge.items", { count: count(item) })}`}</div>
-          }
-        >
-          <For each={values}>{(value) => <div>{value}</div>}</For>
-        </Show>
-      </div>
-    )
-  }
   return (
     <>
       <For each={parts()}>
@@ -368,7 +348,20 @@ const meta = createMemo(() =>
           )
         }}
       </For>
+<<<<<<< HEAD
 <Show when={mem.enabled() && recall()}>
+        {(item) => (
+          <Tooltip value={tip(item())} placement="top">
+            <div data-component="assistant-memory-badge">
+              {language.t("chat.memory.badge.recalled")} ·{" "}
+              {language.t("chat.memory.badge.items", { count: count(item()) })}
+              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
+            </div>
+          </Tooltip>
+        )}
+      </Show>
+||||||| constructed fake ancestor
+      <Show when={mem.enabled() && recall()}>
         {(item) => (
           <Tooltip value={tip(item())} placement="top">
             <div data-component="assistant-memory-badge">
