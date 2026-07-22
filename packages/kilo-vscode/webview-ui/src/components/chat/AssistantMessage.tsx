@@ -348,20 +348,7 @@ const meta = createMemo(() =>
           )
         }}
       </For>
-<<<<<<< HEAD
 <Show when={mem.enabled() && recall()}>
-        {(item) => (
-          <Tooltip value={tip(item())} placement="top">
-            <div data-component="assistant-memory-badge">
-              {language.t("chat.memory.badge.recalled")} ·{" "}
-              {language.t("chat.memory.badge.items", { count: count(item()) })}
-              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
-            </div>
-          </Tooltip>
-        )}
-      </Show>
-||||||| constructed fake ancestor
-      <Show when={mem.enabled() && recall()}>
         {(item) => (
           <Tooltip value={tip(item())} placement="top">
             <div data-component="assistant-memory-badge">
