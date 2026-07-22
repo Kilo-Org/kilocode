@@ -1,5 +1,5 @@
 import { createHash } from "crypto"
-import { mkdir, mkdtemp, rm } from "fs/promises"
+import { mkdir, mkdtemp, rm, stat } from "fs/promises"
 import ignore from "ignore"
 import { tmpdir } from "os"
 import { join } from "path"
@@ -107,6 +107,7 @@ class ManyParser implements ICodeParser {
 
 class Store implements IVectorStore {
   public multi: string[][] = []
+  public single: string[] = []
   public points = 0
 
   public async initialize(): Promise<boolean> {
@@ -126,7 +127,9 @@ class Store implements IVectorStore {
     return []
   }
 
-  public async deletePointsByFilePath(_filePath: string): Promise<void> {}
+  public async deletePointsByFilePath(filePath: string): Promise<void> {
+    this.single.push(filePath)
+  }
 
   public async deletePointsByMultipleFilePaths(filePaths: string[]): Promise<void> {
     this.multi.push(filePaths)
@@ -256,16 +259,15 @@ describe("DirectoryScanner", () => {
       expect(discovery[0]?.outcome).toBe("success")
       expect(discovery[0]?.fields).toEqual({
         mode: "full",
-        discoveredCount: 5,
+        discoveredCount: 4,
         candidateCount: 4,
       })
-      expect(discovery[0]?.fields.discoveredCount).toBeGreaterThan(discovery[0]?.fields.candidateCount as number)
 
       expect(summary).toHaveLength(1)
       expect(summary[0]?.outcome).toBe("success")
       expect(summary[0]?.fields).toEqual({
         mode: "full",
-        discoveredCount: 5,
+        discoveredCount: 4,
         candidateCount: 4,
         inspectedCount: 4,
         readCount: 3,
@@ -542,6 +544,8 @@ describe("DirectoryScanner", () => {
     await Bun.write(file, content)
 
     const hash = createHash("sha256").update(content).digest("hex")
+    const info = await stat(file)
+    const metadata = { size: info.size, mtimeMs: info.mtimeMs, ctimeMs: info.ctimeMs }
     const cache = new CacheManager(cacheDir, root)
     await cache.initialize()
     cache.updateHash(file, "old-hash")
@@ -557,6 +561,7 @@ describe("DirectoryScanner", () => {
     expect(store.points).toBe(1)
     expect(store.multi).toEqual([[file]])
     expect(cache.getHash(file)).toBe(hash)
+    expect(cache.getMetadata(file)).toEqual(metadata)
   })
 
   test("does not mark hash current when a later batch fails for the same file", async () => {
@@ -614,6 +619,99 @@ describe("DirectoryScanner", () => {
     expect(count?.mode).toBe("full")
     expect(count?.source).toBe("scan")
     expect(count?.candidate).toBe(1)
+  })
+
+  test("discovers uppercase configured extensions without unsupported files", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+
+    try {
+      await Bun.write(join(root, "main.TS"), "export const value = 2\n")
+      await Bun.write(join(root, "notes.txt"), "unsupported\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const events: IndexingTelemetryEvent[] = []
+      const scan = new DirectoryScanner(
+        new Emb(),
+        new Store(),
+        new Parser(),
+        cache,
+        ignore(),
+        1,
+        1,
+        (event) => events.push(event),
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+        [".ts"],
+      )
+
+      const result = await scan.scanDirectory(root)
+      const count = events.find((event) => event.type === "file_count")
+
+      expect(result.stats.processed).toBe(1)
+      expect(count?.type).toBe("file_count")
+      expect(count?.discovered).toBe(1)
+      expect(count?.candidate).toBe(1)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("skips incremental reads when cached metadata matches", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const file = join(root, "main.ts")
+    const content = "export const value = 2\n"
+
+    try {
+      await Bun.write(file, content)
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const info = await stat(file)
+      const metadata = { size: info.size, mtimeMs: info.mtimeMs, ctimeMs: info.ctimeMs }
+      const hash = createHash("sha256").update(content).digest("hex")
+      cache.updateHash(file, hash, metadata)
+
+      const store = new Store()
+      const scan = new DirectoryScanner(new Emb(), store, new Parser(), cache, ignore(), 1, 1)
+      const results: { stats: { processed: number; skipped: number }; totalBlockCount: number }[] = []
+      const incremental = await captureProfiles(() =>
+        scan
+          .scanDirectory(root, undefined, undefined, undefined, "incremental")
+          .then((result) => void results.push(result)),
+      )
+      const [result] = results
+      const first = incremental.find((item) => item.event === "indexing.scan.summary")
+
+      expect(result).toEqual({ stats: { processed: 0, skipped: 1 }, totalBlockCount: 0 })
+      expect(first?.fields.readCount).toBe(0)
+      expect(first?.fields.bytesRead).toBe(0)
+      expect(first?.fields.unchangedCount).toBe(1)
+      expect(store.points).toBe(0)
+      expect(store.multi).toEqual([])
+      expect(store.single).toEqual([])
+      expect(cache.getHash(file)).toBe(hash)
+
+      const full = await captureProfiles(() =>
+        scan.scanDirectory(root, undefined, undefined, undefined, "full").then(() => undefined),
+      )
+      expect(full.find((item) => item.event === "indexing.scan.summary")?.fields.readCount).toBe(1)
+
+      cache.updateHash(file, cache.getHash(file)!, { ...metadata, mtimeMs: metadata.mtimeMs - 1 })
+      const fallback = await captureProfiles(() =>
+        scan.scanDirectory(root, undefined, undefined, undefined, "incremental").then(() => undefined),
+      )
+      expect(fallback.find((item) => item.event === "indexing.scan.summary")?.fields.readCount).toBe(1)
+      expect(cache.getMetadata(file)).toEqual(metadata)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
   })
 
   test("skips files matched by .kilocodeignore during full scans", async () => {

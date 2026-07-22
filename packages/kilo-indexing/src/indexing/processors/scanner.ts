@@ -169,15 +169,18 @@ export class DirectoryScanner implements IDirectoryScanner {
         discoveredCount: 0,
         candidateCount: 0,
       })
-      // Get all files recursively, filtering out ignored directories via glob
-      const allPaths = await glob("**/*", {
-        cwd: directoryPath,
-        absolute: true,
-        nodir: true,
-        dot: false,
-        ignore: FileIgnore.PATTERNS,
-        maxDepth: Infinity,
-      })
+      const patterns = [...this.extensions].map((ext) => `**/*${ext}`)
+      const allPaths = patterns.length
+        ? await glob(patterns, {
+            cwd: directoryPath,
+            absolute: true,
+            nodir: true,
+            dot: false,
+            nocase: true,
+            ignore: FileIgnore.PATTERNS,
+            maxDepth: Infinity,
+          })
+        : []
 
       // Filter by supported extensions, ignore patterns, and excluded directories
       const supportedPaths = allPaths.filter((filePath) => {
@@ -231,7 +234,7 @@ export class DirectoryScanner implements IDirectoryScanner {
     let currentBatchBlocks: CodeBlock[] = []
     let currentBatchTexts: string[] = []
     let currentBatchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[] = []
-    const batched = new Map<string, string>()
+    const batched = new Map<string, { hash: string; metadata: { size: number; mtimeMs: number; ctimeMs: number } }>()
     let failed = false
     const activeBatchPromises = new Set<Promise<void>>()
     let pendingBatchCount = 0
@@ -323,6 +326,28 @@ export class DirectoryScanner implements IDirectoryScanner {
             return
           }
 
+          const metadata = {
+            size: stats.size,
+            mtimeMs: stats.mtimeMs,
+            ctimeMs: stats.ctimeMs,
+          }
+          const hash = this.cacheManager.getHash(filePath)
+          const cached = this.cacheManager.getMetadata(filePath)
+          const unchangedMetadata =
+            mode === "incremental" &&
+            hash !== undefined &&
+            cached !== undefined &&
+            cached.size === metadata.size &&
+            cached.mtimeMs === metadata.mtimeMs &&
+            cached.ctimeMs === metadata.ctimeMs
+
+          if (unchangedMetadata) {
+            processedFiles.add(filePath)
+            unchanged++
+            skippedCount++
+            return
+          }
+
           // Read file content using fs/promises
           const bytes = await readFile(filePath)
           reads++
@@ -342,10 +367,11 @@ export class DirectoryScanner implements IDirectoryScanner {
           processedFiles.add(filePath)
 
           // Check against cache
-          const cachedFileHash = this.cacheManager.getHash(filePath)
+          const cachedFileHash = hash
           const isNewFile = !cachedFileHash
           if (cachedFileHash === currentFileHash) {
             // File is unchanged
+            this.cacheManager.updateHash(filePath, currentFileHash, metadata)
             unchanged++
             skippedCount++
             return
@@ -432,7 +458,7 @@ export class DirectoryScanner implements IDirectoryScanner {
               const release = await mutex.acquire()
               try {
                 totalBlockCount += fileBlockCount
-                batched.set(filePath, currentFileHash)
+                batched.set(filePath, { hash: currentFileHash, metadata })
                 if (!queued) {
                   currentBatchFileInfos.push(info)
                   queued = true
@@ -440,10 +466,12 @@ export class DirectoryScanner implements IDirectoryScanner {
               } finally {
                 release()
               }
+            } else {
+              this.cacheManager.updateHash(filePath, currentFileHash, metadata)
             }
           } else {
             // Only update hash if not being processed in a batch
-            this.cacheManager.updateHash(filePath, currentFileHash)
+            this.cacheManager.updateHash(filePath, currentFileHash, metadata)
           }
         } catch (error) {
           log.error(`Error processing file ${filePath} in workspace ${scanWorkspace}`, {
@@ -524,8 +552,8 @@ export class DirectoryScanner implements IDirectoryScanner {
     }
 
     if (!failed) {
-      for (const [filePath, fileHash] of batched.entries()) {
-        this.cacheManager.updateHash(filePath, fileHash)
+      for (const [filePath, entry] of batched.entries()) {
+        this.cacheManager.updateHash(filePath, entry.hash, entry.metadata)
       }
     }
 
