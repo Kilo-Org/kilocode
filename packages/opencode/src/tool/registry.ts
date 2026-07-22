@@ -553,7 +553,7 @@ export const node = LayerNode.suspend(() =>
     SessionStatus.node,
     notebookNode,
     repositoryCacheNode,
-    KiloSessions.getNode(), // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the runtime node graph
+    KiloSessions.node, // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the runtime node graph
   ]),
 )
 // kilocode_change end

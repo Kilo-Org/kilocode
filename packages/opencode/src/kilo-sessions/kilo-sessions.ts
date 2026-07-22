@@ -448,17 +448,7 @@ export namespace KiloSessions {
     sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
   })
 
-  // KiloSessions state is module-global (remote client, bootstrapInflight,
-  // attachedState, enabling/remote status, etc. live in module-scoped lets/consts).
-  // A single cached LayerNode is therefore sufficient for both the bootstrap graph
-  // and the tool-registry graph to observe the same connection/bootstrap state.
-  let node: LayerNode.Node<unknown, unknown> | undefined
-  export const getNode = () => {
-    if (!node) {
-      node = LayerNode.make(layer, [Bus.node, Config.node, Session.node])
-    }
-    return node
-  }
+  export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
 
   export async function enableRemote() {
     if (remote) return

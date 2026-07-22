@@ -108,7 +108,7 @@ export namespace KilocodeBootstrap {
   const watcher = LayerNode.make(KilocodeWatcher.defaultLayer, [])
   export const node = LayerNode.suspend(() =>
     LayerNode.make(layer, [
-      KiloSessions.getNode(),
+      KiloSessions.node,
       Session.node,
       SessionSummary.node,
       Provider.node,
