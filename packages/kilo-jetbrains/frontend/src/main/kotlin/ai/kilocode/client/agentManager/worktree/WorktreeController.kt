@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
+import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
@@ -70,13 +71,31 @@ class WorktreeController(
         }
     }
 
-    fun remove(dto: WorktreeDto) {
+    /**
+     * Removes [dto]. Pass [force] to unlock a locked worktree before removing it. On failure the
+     * row is kept and [onFailure] is invoked on the EDT so the caller can surface a follow-up
+     * (e.g. a "force delete" notification), then the list reconciles with git ground truth.
+     */
+    fun remove(dto: WorktreeDto, force: Boolean = false, onFailure: (RemoveWorktreeResultDto) -> Unit = {}) {
         cs.launch {
-            service.remove(directory, dto.path, dto.branch)
-            edt {
-                model.remove(dto)
-                telemetry("Worktree Deleted", mapOf("branch" to dto.branch))
+            val result = service.remove(directory, dto.path, dto.branch, force)
+            if (result.ok) {
+                edt {
+                    model.remove(dto)
+                    telemetry("Worktree Deleted", mapOf("branch" to dto.branch, "force" to force.toString()))
+                }
+                return@launch
             }
+            // Removal failed: git still tracks the worktree. Keep the row and reconcile with
+            // ground truth so a stale optimistic delete can't make the entry reappear later.
+            edt {
+                telemetry(
+                    "Worktree Delete Failed",
+                    mapOf("branch" to dto.branch, "force" to force.toString(), "locked" to result.locked.toString()),
+                )
+                onFailure(result)
+            }
+            reload()
         }
     }
 }

@@ -49,6 +49,50 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `parseWorktreeList captures the lock flag and reason`() {
+        val raw = """
+            worktree /repo
+            HEAD 1111111111111111111111111111111111111111
+            branch refs/heads/main
+
+            worktree /repo/.kilo/worktrees/hyper-video
+            HEAD 2222222222222222222222222222222222222222
+            branch refs/heads/hyper-video
+            locked Air Agent worktree
+
+        """.trimIndent()
+
+        val list = parseWorktreeList(raw)
+
+        assertFalse(list[0].locked, "main tree is not locked")
+        assertTrue(list[1].locked, "second tree should be flagged locked")
+        assertEquals("Air Agent worktree", list[1].lockReason)
+    }
+
+    @Test
+    fun `remove reports locked and force removes a locked worktree`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+        git(repo, "worktree", "lock", "--reason", "held by test", created.path)
+
+        // list should surface the lock so the UI can show it in advance.
+        val locked = api.list(repo.toString()).worktrees.first { it.branch == "feature/x" }
+        assertTrue(locked.locked, "locked worktree should be flagged in the list")
+        assertEquals("held by test", locked.lockReason)
+
+        // a plain remove is blocked and reports the lock.
+        val blocked = api.remove(repo.toString(), created.path, created.branch, force = false)
+        assertFalse(blocked.ok)
+        assertTrue(blocked.locked, "blocked removal should report locked=true: ${blocked.error}")
+        assertTrue(Files.exists(Path.of(created.path)), "locked worktree must survive a non-force remove")
+
+        // force unlocks then removes.
+        val forced = api.remove(repo.toString(), created.path, created.branch, force = true)
+        assertTrue(forced.ok, "force remove should succeed: ${forced.error}")
+        assertFalse(Files.exists(Path.of(created.path)), "force remove should delete the worktree")
+    }
+
+    @Test
     fun `create adds a worktree that list reports and remove deletes it`() = runBlocking {
         initRepo()
 
@@ -64,11 +108,23 @@ class KiloWorktreeRpcApiImplTest {
         assertTrue(listed.any { it.branch == "feature/x" }, "list should contain the new worktree")
         assertTrue(listed.any { it.main }, "list should include the main working tree")
 
-        api.remove(repo.toString(), created.path, created.branch)
+        val removed = api.remove(repo.toString(), created.path, created.branch)
+        assertTrue(removed.ok, "remove should report success: ${removed.error}")
+        assertNull(removed.error)
 
         assertFalse(Files.exists(dir), "worktree directory should be removed")
         val after = api.list(repo.toString()).worktrees
         assertFalse(after.any { it.branch == "feature/x" }, "removed worktree should be gone")
+    }
+
+    @Test
+    fun `remove reports failure when git cannot remove the worktree`() = runBlocking {
+        initRepo()
+
+        val result = api.remove(repo.toString(), repo.resolve("does-not-exist").toString(), null)
+
+        assertFalse(result.ok, "remove of a missing worktree should not report success")
+        assertNotNull(result.error, "failure should carry an error message")
     }
 
     @Test

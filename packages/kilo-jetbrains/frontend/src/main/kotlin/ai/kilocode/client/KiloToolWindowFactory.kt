@@ -89,7 +89,7 @@ internal class KiloToolWindowSetupService(
             val manager = SessionSidePanelManager(project, workspace)
 
             val worktrees = WorktreeController(service<KiloWorktreeService>(), workspace.directory, cs)
-            val agentManagerPanel = AgentManagerPanel(manager, worktrees)
+            val agentManagerPanel = AgentManagerPanel(manager, worktrees, project)
 
             val chat = object : JPanel(BorderLayout()), DataProvider {
                 override fun getData(dataId: String): Any? {

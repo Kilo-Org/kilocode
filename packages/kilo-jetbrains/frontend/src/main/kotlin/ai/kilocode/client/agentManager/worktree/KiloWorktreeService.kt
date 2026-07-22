@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
+import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import com.intellij.openapi.components.Service
@@ -51,7 +52,10 @@ class KiloWorktreeService internal constructor(
     suspend fun create(directory: String, req: CreateWorktreeRequestDto): CreateWorktreeResultDto =
         call { create(directory, req) }
 
-    suspend fun remove(directory: String, path: String, branch: String?) {
-        call { remove(directory, path, branch) }
+    suspend fun remove(directory: String, path: String, branch: String?, force: Boolean = false): RemoveWorktreeResultDto = try {
+        call { remove(directory, path, branch, force) }
+    } catch (e: Exception) {
+        LOG.warn("worktree remove failed for $path", e)
+        RemoveWorktreeResultDto(error = e.message ?: "worktree remove failed")
     }
 }

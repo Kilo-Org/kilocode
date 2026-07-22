@@ -6,6 +6,7 @@ import ai.kilocode.client.agentManager.worktree.WorktreeNames
 import ai.kilocode.client.agentManager.worktree.WorktreeRenderer
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -67,6 +68,39 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf(Triple("/test", item.path, "feature/x")), rpc.removes.toList())
+        assertEquals(0, controller.model.size)
+    }
+
+    fun `test failed remove keeps the row and invokes the failure callback`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        rpc.removeResult = { _, _, _ -> RemoveWorktreeResultDto(error = "cannot remove a locked working tree", locked = true) }
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        val failures = mutableListOf<RemoveWorktreeResultDto>()
+        controller.remove(controller.model.getElementAt(0), onFailure = { failures.add(it) })
+        flush()
+
+        // git rejected the removal, so the entry must remain instead of vanishing optimistically.
+        assertEquals(1, controller.model.size)
+        assertEquals("feature/x", controller.model.getElementAt(0).branch)
+        assertEquals(1, failures.size)
+        assertTrue(failures.first().locked)
+    }
+
+    fun `test force remove passes the force flag and drops the row on success`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x", locked = true)
+        rpc.listed += item
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        controller.remove(controller.model.getElementAt(0), force = true)
+        flush()
+
+        assertEquals(listOf(true), rpc.removeForces.toList())
         assertEquals(0, controller.model.size)
     }
 

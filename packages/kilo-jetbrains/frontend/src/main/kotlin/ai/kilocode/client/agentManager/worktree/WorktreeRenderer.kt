@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.icons.AllIcons
@@ -25,6 +26,7 @@ internal class WorktreeRenderer :
     companion object {
         private val gc: Icon = AllIcons.Actions.GC
         private val empty: Icon = EmptyIcon.create(gc)
+        private val locked: Icon = AllIcons.Nodes.Locked
 
         fun isDeleteClick(list: JList<*>, bounds: Rectangle, point: Point): Boolean {
             val width = JBUI.scale(DELETE_AREA_WIDTH)
@@ -65,9 +67,15 @@ internal class WorktreeRenderer :
 
         background = UIUtil.getListBackground(selected, focused)
         text.clear()
+        text.icon = if (value?.locked == true) locked else null
         text.append(value?.name.orEmpty(), SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
         value?.branch?.takeIf { it.isNotBlank() }?.let {
             text.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
+        }
+        if (value?.locked == true) {
+            val reason = value.lockReason?.let { KiloBundle.message("worktree.locked.reason", it) }
+                ?: KiloBundle.message("worktree.locked")
+            text.append("  $reason", SimpleTextAttributes.GRAYED_ITALIC_ATTRIBUTES)
         }
         del.icon = if (selected && value?.main == false) gc else empty
         return this
