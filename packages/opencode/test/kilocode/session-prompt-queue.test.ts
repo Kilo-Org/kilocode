@@ -856,7 +856,7 @@ describe("session prompt queue", () => {
     })
   })
 
-  // kilocode_change start - session.queue.changed event surface + snapshot accessor
+  // session.queue.changed event surface + snapshot accessor
   describe("session.queue.changed", () => {
     test("snapshot() returns an empty list for an unknown session", () => {
       expect(KiloSessionPromptQueue.snapshot(SessionID.make("session_unknown"))).toEqual([])
@@ -1148,5 +1148,4 @@ describe("session prompt queue", () => {
       })
     })
   })
-  // kilocode_change end
 })

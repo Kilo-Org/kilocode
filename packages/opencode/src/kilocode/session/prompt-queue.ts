@@ -26,12 +26,11 @@ export namespace KiloSessionPromptQueue {
   // a newer slot was enqueued after the active one began running.
   const latest = new Map<SessionID, number>()
   const activeSince = new Map<SessionID, number>()
-  // kilocode_change start - FIFO waiting list of user message IDs that have been
+  // FIFO waiting list of user message IDs that have been
   // enqueued but have not yet started running. The currently-running slot's
   // own message is never in this list. Published via session.queue.changed so
   // remote clients can reconcile "Queued" badges.
   const waiting = new Map<SessionID, MessageID[]>()
-  // kilocode_change end
   let seq = 0
 
   /** @internal - test-only helper */
@@ -52,15 +51,14 @@ export namespace KiloSessionPromptQueue {
       () => undefined,
     )
 
-  // kilocode_change start - read-only FIFO snapshot of the per-session waiting
+  // Read-only FIFO snapshot of the per-session waiting
   // list. Used by replay-on-subscribe in remote-sender.ts to always emit the
   // current queue state (including empty) to a resubscribing client.
   export function snapshot(sessionID: SessionID): MessageID[] {
     return [...(waiting.get(sessionID) ?? [])]
   }
-  // kilocode_change end
 
-  // kilocode_change start - emit session.queue.changed when the waiting set
+  // Emit session.queue.changed when the waiting set
   // actually changes; suppress the redundant empty→empty transition to keep
   // the bus quiet. Replay uses snapshot() directly so it is never affected.
   const publishIfChanged = (sessionID: SessionID, next: MessageID[]) => {
@@ -71,7 +69,6 @@ export namespace KiloSessionPromptQueue {
     else waiting.set(sessionID, next)
     KiloSession.publishQueueChangedAsync({ sessionID, queued: snapshot(sessionID) })
   }
-  // kilocode_change end
 
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
@@ -80,16 +77,14 @@ export namespace KiloSessionPromptQueue {
         targets.delete(sessionID)
         latest.delete(sessionID)
         activeSince.delete(sessionID)
-        // kilocode_change start - cancel on an idle session still drops any
+        // Cancel on an idle session still drops any
         // lingering waiting entry, then publishes an empty snapshot.
         publishIfChanged(sessionID, [])
-        // kilocode_change end
         return
       }
-      // kilocode_change start - active turn: bump version invalidates the
+      // Active turn: bump version invalidates the
       // queued slots, then drop the waiting list and publish empty.
       publishIfChanged(sessionID, [])
-      // kilocode_change end
       versions.set(sessionID, version(sessionID) + 1)
     })
   }
@@ -170,7 +165,7 @@ export namespace KiloSessionPromptQueue {
       Effect.sync(() => {
         const mine = ++seq
         latest.set(sessionID, mine)
-        // kilocode_change start - record whether this slot starts immediately
+        // Record whether this slot starts immediately
         // (no existing tail) so we can publish the queue change exactly once
         // on the transition that actually mutates the waiting list.
         const startsImmediately = !tails.has(sessionID)
@@ -185,7 +180,6 @@ export namespace KiloSessionPromptQueue {
           publishIfChanged(sessionID, [...list, target])
         }
         return { seq: mine, version: version(sessionID), previous, done, tail } satisfies Slot
-        // kilocode_change end
       }),
       (slot) =>
         Effect.promise(() => settle(slot.previous)).pipe(
@@ -195,7 +189,7 @@ export namespace KiloSessionPromptQueue {
             // running. hasFollowup compares against this value so the slot only
             // breaks when something newer than itself arrives.
             activeSince.set(sessionID, latest.get(sessionID) ?? slot.seq)
-            // kilocode_change start - this slot is taking over, so drop its
+            // This slot is taking over, so drop its
             // own message ID from the head of the waiting list (if present)
             // and publish the updated snapshot. Cancelled slots never reach
             // this branch, so the waiting list retains only truly-pending IDs.
@@ -206,7 +200,6 @@ export namespace KiloSessionPromptQueue {
                 publishIfChanged(sessionID, list.slice(1))
               }
             }
-            // kilocode_change end
             return Effect.acquireUseRelease(
               Effect.sync(() => {
                 targets.set(sessionID, { base: target, extras: new Set() })
@@ -228,10 +221,9 @@ export namespace KiloSessionPromptQueue {
           targets.delete(sessionID)
           latest.delete(sessionID)
           activeSince.delete(sessionID)
-          // kilocode_change start - last slot of the session finished cleanly;
+          // Last slot of the session finished cleanly;
           // drop any lingering waiting entry and clear internal state.
           waiting.delete(sessionID)
-          // kilocode_change end
         }),
     )
   }

@@ -39,7 +39,7 @@ export namespace KiloSession {
   export const publishTurnClose = (input: { sessionID: SessionID; parentID?: SessionID; reason: CloseReason }) =>
     Effect.promise(() => Bus.publish(Instance.current, Event.TurnClose, input))
 
-  // kilocode_change start - FIFO snapshot of the per-session waiting list.
+  // FIFO snapshot of the per-session waiting list.
   // Emitted by KiloSessionPromptQueue on every transition that changes the set
   // of queued (not-yet-running) user messages.
   export const publishQueueChanged = (input: { sessionID: SessionID; queued: MessageID[] }) =>
@@ -60,7 +60,6 @@ export namespace KiloSession {
     if (!ctx) return
     Bus.publish(ctx, Event.QueueChanged, input).catch(err => log.warn("queue changed publish failed", { err }))
   }
-  // kilocode_change end
 
   // ---------------------------------------------------------------------------
   // Per-session platform override (telemetry attribution)

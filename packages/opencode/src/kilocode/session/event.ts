@@ -19,7 +19,7 @@ export const KiloSessionEvent = {
       reason: CloseReason,
     }),
   ),
-  // kilocode_change start - FIFO snapshot of queued (waiting, not-yet-running)
+  // FIFO snapshot of queued (waiting, not-yet-running)
   // user message IDs per session, for remote clients (mobile) to show
   // "Queued" badges. The currently-running turn's own message is not included.
   QueueChanged: BusEvent.define(
@@ -29,7 +29,6 @@ export const KiloSessionEvent = {
       queued: Schema.Array(MessageID),
     }),
   ),
-  // kilocode_change end
 }
 
 export type KiloSessionCloseReason = Schema.Schema.Type<typeof CloseReason>

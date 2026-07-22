@@ -16,8 +16,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "../../../src/session/schema"
 import { Session } from "../../../src/session/session"
-import { Suggestion } from "../../../src/kilocode/suggestion" // kilocode_change
-import { KiloSessionPromptQueue } from "../../../src/kilocode/session/prompt-queue" // kilocode_change - queue snapshot replay
+import { Suggestion } from "../../../src/kilocode/suggestion"
+import { KiloSessionPromptQueue } from "../../../src/kilocode/session/prompt-queue"
 
 function fakeConn() {
   const sent: any[] = []
@@ -1659,9 +1659,8 @@ describe("RemoteSender", () => {
     spyOn(Suggestion, "list").mockResolvedValue([
       { id: "sug_1", sessionID: "ses_other", text: "Review?", actions: [] } as any,
     ])
-    // kilocode_change start - queue snapshot is always replayed, even when empty
+    // Queue snapshot is always replayed, even when empty
     spyOn(KiloSessionPromptQueue, "snapshot").mockReturnValue([])
-    // kilocode_change end
 
     const sender = RemoteSender.create({
       conn,
@@ -1699,7 +1698,7 @@ describe("RemoteSender", () => {
     ])
   })
 
-  // kilocode_change start - queue snapshot replay-on-subscribe coverage
+  // Queue snapshot replay-on-subscribe coverage
   test("subscribe always replays the current queue snapshot, including empty", async () => {
     // A resubscribing/reconnecting client must see the authoritative queue
     // state immediately, even when the session has no queued messages. This
@@ -1765,7 +1764,6 @@ describe("RemoteSender", () => {
       },
     ])
   })
-  // kilocode_change end
 
   test("subscribe replays pending suggestion for the subscribed session", async () => {
     const { conn, sent } = fakeConn()
