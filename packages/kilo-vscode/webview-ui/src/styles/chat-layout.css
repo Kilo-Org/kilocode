@@ -228,18 +228,18 @@
   width: 100%;
 }
 
-[data-component="assistant-throughput-badge"] {
-  /* Plain-text throughput display — matches the muted descriptionForeground
-   * the Tokens row uses so the two read as the same family of secondary
-   * info. No pill, no border, no background; just text. */
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+[data-component="assistant-throughput"] {
+  /* Plain-text generation-speed footer beneath an assistant message.
+   * Matches the muted description-foreground tone used elsewhere for session
+   * metadata and reads as a single line of tertiary info — no icon, no
+   * border, no background, so it never competes with the upstream action
+   * row (copy / feedback) for visual weight. */
+  display: block;
+  margin-top: 4px;
   color: var(--vscode-descriptionForeground);
   font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-11);
   line-height: var(--line-height-normal);
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 

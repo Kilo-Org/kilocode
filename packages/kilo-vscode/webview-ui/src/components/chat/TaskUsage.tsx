@@ -2,22 +2,15 @@ import type { Component } from "solid-js"
 import { For, Show, createMemo } from "solid-js"
 import { Collapsible } from "@kilocode/kilo-ui/collapsible"
 import { Icon } from "@kilocode/kilo-ui/icon"
-import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../context/language"
 import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
 import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
 import { formatCompactCount } from "../../utils/format"
-import { formatTG } from "../../context/session-utils"
 
 interface TaskUsageProps {
   tokens: TokenSummary
   usage?: SessionModelUsage
-  /** Latest text-generation rate (tokens/sec) for the session. Renders inline
-   *  in the summary row when defined, prefixed by a gauge icon, matching the
-   *  existing token-value spans so the row reads as one line of secondary
-   *  info. */
-  throughput?: number
   defaultOpen?: boolean
 }
 
@@ -25,7 +18,6 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
   const language = useLanguage()
   const provider = useProvider()
   const groups = createMemo(() => groupModelUsage(props.usage?.models ?? [], provider.providers()))
-  const speedText = createMemo(() => formatTG(props.throughput, language.locale()))
   const money = createMemo(
     () =>
       new Intl.NumberFormat(language.locale(), {
@@ -69,14 +61,6 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
           <Icon name="arrow-down-to-line" size="small" />
           {number(props.tokens.output)}
         </span>
-      </Show>
-      <Show when={speedText()}>
-        <Tooltip value={language.t("chat.throughput.speed.tooltip", { speed: speedText() })} placement="top">
-          <span class="task-header-tokens-value" data-component="generation-speed">
-            <Icon name="gauge" size="small" />
-            {language.t("chat.throughput.speed.label")} {speedText()}
-          </span>
-        </Tooltip>
       </Show>
     </>
   )

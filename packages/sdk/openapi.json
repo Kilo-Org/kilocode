@@ -26021,6 +26021,17 @@
           },
           "snapshot": {
             "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": ["start"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "sessionID", "messageID", "type"],
@@ -26079,6 +26090,24 @@
               }
             },
             "required": ["source"],
+            "additionalProperties": false
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number",
+                "minimum": 0
+              },
+              "end": {
+                "type": "number",
+                "minimum": 0
+              },
+              "elapsed": {
+                "type": "number"
+              }
+            },
+            "required": ["start", "end", "elapsed"],
             "additionalProperties": false
           },
           "cost": {

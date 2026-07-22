@@ -11,6 +11,19 @@ const step = (metrics: { generation?: number }) => ({
   generated: 0,
 })
 
+const weightedStep = (overrides: {
+  generation: number
+  output: number
+  reasoning?: number
+  elapsedMs: number
+}) => ({
+  metrics: { generation: overrides.generation, source: "computed" as const },
+  generated: overrides.output + (overrides.reasoning ?? 0),
+  elapsedMs: overrides.elapsedMs,
+  output: overrides.output,
+  reasoning: overrides.reasoning ?? 0,
+})
+
 describe("kilocode.plugins.model-usage throughput helpers", () => {
   test("formatRateValue renders positive values with grouping", () => {
     expect(formatRateValue(412)).toBe("412 t/s")
@@ -31,7 +44,9 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
     expect(throughputLabel.generation).toBe("Generation speed")
   })
 
-  test("surfaces the most recent non-empty generation rate as the snapshot", () => {
+  test("surfaces the most recent non-empty generation rate as the snapshot (fallback)", () => {
+    // Fallback path — used when callers don't pass timing on the wire.
+    // The weighted path is exercised by the dedicated tests below.
     const aggregated = aggregateMetrics([
       { ...step({ generation: 20 }), generated: 100 },
       { ...step({ generation: 60 }), generated: 300 },
@@ -41,10 +56,36 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
 
   test("skips samples without metrics", () => {
     const aggregated = aggregateMetrics([
-      { metrics: undefined, generated: 100 },
-      { ...step({ generation: 40 }), generated: 50 },
+      { metrics: undefined, generated: 100, elapsedMs: 1000 },
+      weightedStep({ generation: 40, output: 50, elapsedMs: 1000 }),
     ])
-    expect(aggregated.generation).toBe(40)
+    // weighted step contributes (50, 1000) → 50 t/s.
+    expect(aggregated.generation).toBe(50)
+  })
+
+  test("weights samples by elapsed time across steps", () => {
+    const aggregated = aggregateMetrics([
+      weightedStep({ generation: 100, output: 100, elapsedMs: 1000 }),
+      weightedStep({ generation: 50, output: 200, elapsedMs: 4000 }),
+    ])
+    // totalGenerated=300, totalElapsedMs=5000 → 60 t/s
+    expect(aggregated.generation).toBe(60)
+  })
+
+  test("includes reasoning tokens in the weighted numerator", () => {
+    const aggregated = aggregateMetrics([
+      weightedStep({ generation: 200, output: 50, reasoning: 150, elapsedMs: 1000 }),
+    ])
+    // (50 + 150) tokens / 1000 ms = 200 t/s
+    expect(aggregated.generation).toBe(200)
+  })
+
+  test("falls back to last-wins snapshot when no sample carries timing", () => {
+    const aggregated = aggregateMetrics([
+      { ...step({ generation: 20 }), generated: 100 },
+      { ...step({ generation: 60 }), generated: 300 },
+    ])
+    expect(aggregated.generation).toBe(60)
   })
 
   test("skips zero-weight samples when picking the latest snapshot", () => {

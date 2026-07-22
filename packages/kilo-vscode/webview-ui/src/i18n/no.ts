@@ -1716,10 +1716,9 @@ export const dict = {
   "settings.display.tokenThroughput.description":
     "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
 
-  "chat.throughput.speed.label": "Genereringshastighet",
-  "chat.throughput.speed.row": "Genereringshastighet {{speed}}",
-  "chat.throughput.speed.tooltip": "Genereringshastighet {{speed}} (beregnet fra stegvarighet)",
-  "chat.throughput.speed.tooltip.missing": "Gjennomstrømningsmålinger er ikke tilgjengelige for dette steget",
+  "chat.throughput.tooltip": "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

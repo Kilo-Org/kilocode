@@ -1609,10 +1609,9 @@ export const dict = {
   "settings.display.tokenThroughput.description":
     "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
 
-  "chat.throughput.speed.label": "Generation speed",
-  "chat.throughput.speed.row": "Generation speed {{speed}}",
-  "chat.throughput.speed.tooltip": "Generation speed {{speed}} (computed from step duration)",
-  "chat.throughput.speed.tooltip.missing": "Throughput metrics unavailable for this step",
+  "chat.throughput.tooltip": "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "預設模型",
   "settings.providers.defaultModel.description": "對話的主要模型",
   "settings.providers.smallModel.title": "小模型",

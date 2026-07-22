@@ -7,6 +7,8 @@ import {
   aggregateMetrics,
   latestMetrics,
   messageMetrics,
+  messageThroughput,
+  sessionThroughput,
   formatTG,
   buildFamilyCosts,
   buildFamilyParents,
@@ -724,11 +726,29 @@ describe("collapseCostBreakdown", () => {
 
 // ── Throughput aggregation ─────────────────────────────────────────────
 
-function stepFinish(id: string, metrics?: NonNullable<Part["metrics"]>): Part {
+type StepFinishOverrides = {
+  metrics?: NonNullable<Part["metrics"]>
+  tokens?: { input: number; output: number; reasoning?: number; cache?: { read: number; write: number } }
+  time?: { start: number; end: number; elapsed: number }
+}
+
+function stepFinish(id: string, metricsOrOverrides?: NonNullable<Part["metrics"]> | StepFinishOverrides): Part {
+  // Older call sites pass only metrics directly. Keep that signature so
+  // the existing latestMetrics / messageMetrics tests stay readable.
+  if (metricsOrOverrides && "metrics" in metricsOrOverrides === false && "tokens" in metricsOrOverrides === false && "time" in metricsOrOverrides === false) {
+    return {
+      type: "step-finish",
+      id,
+      ...(metricsOrOverrides ? { metrics: metricsOrOverrides } : {}),
+    }
+  }
+  const overrides = (metricsOrOverrides ?? {}) as StepFinishOverrides
   return {
     type: "step-finish",
     id,
-    ...(metrics ? { metrics } : {}),
+    ...(overrides.metrics ? { metrics: overrides.metrics } : {}),
+    ...(overrides.tokens ? { tokens: overrides.tokens } : {}),
+    ...(overrides.time ? { time: overrides.time } : {}),
   }
 }
 
@@ -829,5 +849,132 @@ describe("throughput formatters", () => {
     expect(formatTG(-5, locale)).toBe("–")
     expect(formatTG(Number.NaN, locale)).toBe("–")
     expect(formatTG(Number.POSITIVE_INFINITY, locale)).toBe("–")
+  })
+})
+
+// Weighted throughput — the value rendered beneath each assistant message
+// after the v2 refactor. Behaves like a per-turn weighted average: total
+// generated tokens across step-finish parts divided by total active
+// model-generation duration, excluding tool-only or untimed steps.
+describe("messageThroughput", () => {
+  it("returns undefined when no step-finish parts carry timing", () => {
+    const parts: Part[] = [
+      { type: "step-start", id: "s1" },
+      stepFinish("f1", { metrics: { generation: 100, source: "computed" } }),
+    ]
+    expect(messageThroughput(parts)).toBeUndefined()
+  })
+
+  it("computes a single-step rate from tokens and elapsed ms", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+    ]
+    // (200 + 0) * 1000 / 1000 = 200
+    expect(messageThroughput(parts)).toEqual({ generation: 200, source: "computed" })
+  })
+
+  it("weights multiple steps by their elapsed time rather than averaging rates", () => {
+    // Discriminating case: weighted = (300 * 1000 / 5000) = 60 t/s,
+    // last-wins = 50 t/s. Confirms the formula doesn't just take the final
+    // step's value.
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+      stepFinish("f2", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 1000, end: 5000, elapsed: 4000 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toEqual({ generation: 60, source: "computed" })
+  })
+
+  it("includes reasoning tokens in the numerator", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 200, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+    ]
+    // (100 + 200) * 1000 / 1000 = 300
+    expect(messageThroughput(parts)).toEqual({ generation: 300, source: "computed" })
+  })
+
+  it("ignores step-finish parts without timing", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+      // No `time` field — older part shape, possibly replayed session.
+      stepFinish("f2", { metrics: { generation: 999, source: "computed" } }),
+    ]
+    expect(messageThroughput(parts)).toEqual({ generation: 200, source: "computed" })
+  })
+
+  it("ignores tool-only steps that produced no output tokens", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 500, elapsed: 500 },
+      }),
+      stepFinish("f2", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 500, end: 1500, elapsed: 1000 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toEqual({ generation: 100, source: "computed" })
+  })
+
+  it("returns undefined when only tool-only steps are present", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 500, elapsed: 500 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toBeUndefined()
+  })
+
+  it("returns undefined when timing is non-positive across all steps", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 0, elapsed: 0 },
+      }),
+    ]
+    expect(messageThroughput(parts)).toBeUndefined()
+  })
+})
+
+describe("sessionThroughput", () => {
+  it("aggregates the same way as messageThroughput across a flat part array", () => {
+    const parts: Part[] = [
+      stepFinish("f1", {
+        tokens: { input: 10, output: 100, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 0, end: 1000, elapsed: 1000 },
+      }),
+      stepFinish("f2", {
+        tokens: { input: 10, output: 200, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 2000, end: 5000, elapsed: 3000 },
+      }),
+      // From the "next" message — still rolled up correctly.
+      stepFinish("f3", {
+        tokens: { input: 10, output: 500, reasoning: 0, cache: { read: 0, write: 0 } },
+        time: { start: 6000, end: 11000, elapsed: 5000 },
+      }),
+    ]
+    // (800 * 1000) / 9000 = 88.888...
+    const result = sessionThroughput(parts)
+    expect(result?.source).toBe("computed")
+    expect(result?.generation).toBeCloseTo((800 * 1000) / 9000, 5)
+  })
+
+  it("returns undefined for empty input", () => {
+    expect(sessionThroughput([])).toBeUndefined()
   })
 })

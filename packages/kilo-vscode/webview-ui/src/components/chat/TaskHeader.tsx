@@ -14,8 +14,7 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { useDisplay } from "../../context/display"
-import { calcTokenUsage, collapseCostBreakdown, latestMetrics } from "../../context/session-utils"
+import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
 import { TaskTimeline } from "./TaskTimeline"
@@ -36,7 +35,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const search = useTranscriptSearch()
-  const display = useDisplay()
 
   const title = createMemo(() => session.currentSession()?.title ?? language.t("command.session.new"))
   const canRename = createMemo(() => !props.readonly && !!session.currentSession())
@@ -88,24 +86,8 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return false
   })
 
-  // Throughput is the latest step-finish snapshot across the session so the
-  // figure reflects the most recent assistant turn rather than a session-wide
-  // average. Result is consumed by the TaskUsage summary row, which renders
-  // the value inline with the token counts — there is no standalone element.
-  const throughput = createMemo(() => {
-    const all = session.allParts() as Record<string, Part[]>
-    const flat: Part[] = []
-    for (const parts of Object.values(all)) {
-      for (const part of parts) flat.push(part)
-    }
-    return latestMetrics(flat)
-  })
-
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
-  // Throughput row visibility is shared with AssistantMessage via the
-  // DisplayProvider so the setting toggles both surfaces together.
-  const throughputVisible = createMemo(() => display.throughputVisible())
 
   // Read initial value from VS Code settings
   onMount(() => vscode.postMessage({ type: "requestTimelineSetting" }))
@@ -310,7 +292,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
               <TaskUsage
                 tokens={tk()}
                 usage={session.modelUsage()}
-                throughput={throughputVisible() ? throughput()?.generation : undefined}
               />
             )}
           </Show>

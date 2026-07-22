@@ -24,7 +24,13 @@ import { ModelRow, UsageRow } from "@/kilocode/plugins/sidebar-usage-row"
 
 const id = "internal:kilo-sidebar-usage"
 
-type MetricSample = { metrics?: StepMetrics; generated: number }
+type MetricSample = {
+  metrics?: StepMetrics
+  generated: number
+  elapsedMs?: number
+  output?: number
+  reasoning?: number
+}
 
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const [usageOpen, setUsageOpen] = createSignal(true)
@@ -83,12 +89,35 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
     const refresh = () => void refetch()
     const related = (sessionID: string, info?: ReturnType<typeof props.api.state.session.get>) =>
       isSessionTreeMember({ root: props.session_id, sessionID, info, get: props.api.state.session.get })
-    const recordSample = (sessionID: string, part: { type?: string; metrics?: unknown; tokens?: unknown }) => {
+    const recordSample = (
+      sessionID: string,
+      part: {
+        type?: string
+        metrics?: unknown
+        tokens?: unknown
+        // Loose time shape — different part kinds (e.g. retry) ship their own
+        // time fields; we only care about `elapsed` for step-finish weighting.
+        time?: { elapsed?: number; [k: string]: unknown }
+      },
+    ) => {
       if (part.type !== "step-finish") return
       if (!related(sessionID)) return
       const metrics = isStepMetrics(part.metrics) ? part.metrics : undefined
       const generated = generatedTokens(part.tokens)
-      setSamples((current) => [...current, { ...(metrics ? { metrics } : {}), generated }])
+      const elapsed = part.time?.elapsed
+      const { output, reasoning } = splitTokens(part.tokens)
+      setSamples((current) => [
+        ...current,
+        {
+          ...(metrics ? { metrics } : {}),
+          generated,
+          ...(typeof elapsed === "number" && Number.isFinite(elapsed) && elapsed > 0
+            ? { elapsedMs: elapsed }
+            : {}),
+          ...(typeof output === "number" ? { output } : {}),
+          ...(typeof reasoning === "number" ? { reasoning } : {}),
+        },
+      ])
     }
     const offs = [
       props.api.event.on("message.part.updated", (event) => {
@@ -249,6 +278,15 @@ function generatedTokens(value: unknown): number {
   const output = typeof record.output === "number" ? record.output : 0
   const reasoning = typeof record.reasoning === "number" ? record.reasoning : 0
   return output + reasoning
+}
+
+function splitTokens(value: unknown): { output?: number; reasoning?: number } {
+  if (!value || typeof value !== "object") return {}
+  const record = value as Record<string, unknown>
+  const out: { output?: number; reasoning?: number } = {}
+  if (typeof record.output === "number") out.output = record.output
+  if (typeof record.reasoning === "number") out.reasoning = record.reasoning
+  return out
 }
 
 const tui: TuiPlugin = async (api) => {

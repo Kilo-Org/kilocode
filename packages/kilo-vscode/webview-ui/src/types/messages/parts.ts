@@ -62,6 +62,12 @@ export interface ReasoningPart extends BasePart {
 // Step parts from the backend
 export interface StepStartPart extends BasePart {
   type: "step-start"
+  // Wall-clock timestamps captured at the processor when the LLM stream
+  // emits `step-start`. Used by the webview to compute per-message
+  // throughput as a weighted aggregate of step durations.
+  time?: {
+    start: number
+  }
 }
 
 // Tokens-per-second throughput metrics reported by the backend on step-finish.
@@ -79,6 +85,15 @@ export interface StepThroughputMetrics {
 export interface StepFinishPart extends BasePart {
   type: "step-finish"
   reason?: string
+  // Wall-clock timestamps captured at the processor across the LLM step.
+  // `elapsed` is the active model-generation duration in milliseconds — it
+  // excludes tool execution and idle waiting — and is what the webview uses
+  // to weight the throughput aggregate.
+  time?: {
+    start: number
+    end: number
+    elapsed: number
+  }
   model?: {
     providerID: string
     modelID: string

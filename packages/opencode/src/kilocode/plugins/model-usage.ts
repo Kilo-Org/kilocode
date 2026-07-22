@@ -92,15 +92,29 @@ export function formatCost(input: number) {
 
 // Local aggregation of step-finish metrics for the sidebar/usage panel.
 //
-// We surface the *most recent* generation rate (last non-empty sample wins)
-// so the displayed figure tracks the latest assistant turn the user is
-// waiting on rather than a weighted session-wide average that drifts toward
-// long-ago turns. Steps with no generated output (e.g. tool-only steps)
-// contribute nothing — they simply don't replace the running snapshot.
+// When samples carry `elapsedMs` (kilocode_change: persisted on the
+// step-finish part by the session processor) and matching `generated`
+// counts, the figure is the *weighted* generation rate across the
+// aggregated steps — total generated tokens over total active
+// model-generation duration. That excludes tool execution and idle waiting
+// so the value represents what the user paid for.
+//
+// When timing is missing or non-positive, the function falls back to the
+// historical last-wins snapshot so older callers that haven't migrated to
+// the new wire shape continue to surface a meaningful figure rather than
+// silently dropping to `undefined`.
 export function aggregateMetrics(
-  samples: ReadonlyArray<{ metrics?: StepMetrics; generated: number }>,
+  samples: ReadonlyArray<{
+    metrics?: StepMetrics
+    generated: number
+    elapsedMs?: number
+    output?: number
+    reasoning?: number
+  }>,
 ): AggregatedMetrics {
-  let generation: number | undefined
+  let generatedTotal = 0
+  let elapsedTotal = 0
+  let fallback: number | undefined
   for (const sample of samples) {
     const metrics = sample.metrics
     if (!metrics) continue
@@ -108,10 +122,25 @@ export function aggregateMetrics(
     if (typeof value !== "number" || !Number.isFinite(value)) continue
     if (value <= 0) continue
     if (sample.generated <= 0) continue
-    generation = value
+    fallback = value
+    const elapsed = sample.elapsedMs
+    if (typeof elapsed !== "number" || !Number.isFinite(elapsed) || elapsed <= 0) continue
+    const tokens =
+      typeof sample.output === "number" && typeof sample.reasoning === "number"
+        ? sample.output + sample.reasoning
+        : sample.generated
+    if (tokens <= 0) continue
+    generatedTotal += tokens
+    elapsedTotal += elapsed
+  }
+  if (generatedTotal > 0 && elapsedTotal > 0) {
+    const weighted = (generatedTotal * 1000) / elapsedTotal
+    if (Number.isFinite(weighted) && weighted > 0) {
+      return { generation: weighted }
+    }
   }
   return {
-    ...(generation !== undefined ? { generation } : {}),
+    ...(fallback !== undefined ? { generation: fallback } : {}),
   }
 }
 

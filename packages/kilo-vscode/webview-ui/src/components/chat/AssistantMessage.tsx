@@ -25,11 +25,10 @@ import { useLanguage } from "../../context/language"
 import { useServer } from "../../context/server"
 import { planDisplayPath } from "../../utils/plan-path"
 import { isRenderable, UPSTREAM_SUPPRESSED_TOOLS } from "../../utils/transcript-parts"
-import { messageMetrics, formatTG } from "../../context/session-utils"
+import { messageThroughput, formatTG } from "../../context/session-utils"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
-import { Icon } from "@kilocode/kilo-ui/icon"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
@@ -167,28 +166,31 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
   )
 }
 
-/** Compact generation-speed line shown beneath the last assistant message.
- * Only renders when the user has opted in via the
- * `kilo-code.new.showTokenThroughput` setting and the message has a
- * step-finish part that carries throughput metrics. Renders as plain text
- * prefixed by a gauge icon that matches the description-foreground tone of
- * the Tokens row in the task header — no pill, no border. */
-function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof messageMetrics>> }) {
+/** Plain-text generation-speed value shown beneath an assistant message.
+ *
+ * Renders as muted metadata — no icon, no background, no border — so it
+ * reads as a one-line footer rather than an interactive control. The
+ * description on hover explains that the value is a weighted generation
+ * rate across the turn's model-generation steps (output + reasoning
+ * tokens over active generation time).
+ *
+ * Visibility is gated by the same `kilo-code.new.showTokenThroughput`
+ * toggle that previously controlled the multi-row badge. The metric only
+ * renders when the message has at least one step-finish part carrying both
+ * a token count and elapsed timing.
+ */
+function ThroughputBadge(props: { metrics: { generation?: number } }) {
   const language = useLanguage()
   const speedText = createMemo(() => formatTG(props.metrics.generation, language.locale()))
-  const label = createMemo(() => language.t("chat.throughput.speed.row", { speed: speedText() }))
   const tooltip = createMemo(() => {
-    if (props.metrics.generation !== undefined) {
-      return language.t("chat.throughput.speed.tooltip", { speed: speedText() })
+    if (props.metrics.generation === undefined) {
+      return language.t("chat.throughput.tooltip.missing")
     }
-    return language.t("chat.throughput.speed.tooltip.missing")
+    return language.t("chat.throughput.tooltip", { speed: speedText() })
   })
   return (
     <Tooltip value={tooltip()} placement="top">
-      <span data-component="assistant-throughput-badge">
-        <Icon name="gauge" size="small" />
-        {label()}
-      </span>
+      <span data-component="assistant-throughput">{speedText()}</span>
     </Tooltip>
   )
 }
@@ -217,11 +219,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
-  // Pull the latest step-finish metrics for this message so the per-message
-  // badge can render its generation rate when the toggle is on.
+  // Pull the weighted generation rate across the turn's step-finish parts
+  // (output + reasoning tokens over active generation duration) so the badge
+  // represents the turn as a whole rather than whichever step happened to
+  // finish most recently. We intentionally read from the full message parts
+  // in the data store rather than `props.parts` — the parent chunks
+  // messages into rows of ~8 parts, and step-finish may land in a row
+  // different from the one currently rendered.
   const throughput = createMemo(() =>
-    messageMetrics(
-      (props.parts ?? (data.store.part?.[props.message.id] as TimelinePart[] | undefined) ?? []) as TimelinePart[],
+    messageThroughput(
+      (data.store.part?.[props.message.id] as TimelinePart[] | undefined) ??
+        (props.parts as TimelinePart[] | undefined) ??
+        ([] as TimelinePart[]),
     ),
   )
   return (
