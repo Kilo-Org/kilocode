@@ -65,6 +65,8 @@ test("routes only aggregate profile fields with authoritative metadata", () => {
       outcome: "success",
       fields: {
         mode: "full",
+        prepareMs: 3,
+        storePrepareMs: 4,
         files: 10,
         blockCount: 2,
         source: "profile",
@@ -96,6 +98,7 @@ test("routes only aggregate profile fields with authoritative metadata", () => {
   const fields = indexingProfileLogFields(directory, record!)
   expect(fields).toEqual({
     mode: "full",
+    prepareMs: 3,
     files: 10,
     blockCount: 2,
     source: "worker",
@@ -106,6 +109,7 @@ test("routes only aggregate profile fields with authoritative metadata", () => {
   })
   expect(Object.keys(fields)).toEqual([
     "mode",
+    "prepareMs",
     "files",
     "blockCount",
     "source",
@@ -129,4 +133,5 @@ test("routes only aggregate profile fields with authoritative metadata", () => {
   ]) {
     expect(fields[key]).toBeUndefined()
   }
+  expect(fields.storePrepareMs).toBeUndefined()
 })

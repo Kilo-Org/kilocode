@@ -15,7 +15,6 @@ const allowed = new Set([
   "mode",
   "watcherInitMs",
   "storeInitMs",
-  "storePrepareMs",
   "scanMs",
   "finalizeMs",
   "discoveredCount",

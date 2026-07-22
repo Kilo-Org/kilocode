@@ -179,13 +179,12 @@ export class CodeIndexOrchestrator {
     const cfg = this.configManager.getConfig()
     using span = IndexingProfile.start("indexing.index.run", {
       trigger,
-      mode: "full",
       provider: cfg.embedderProvider,
       modelId: cfg.modelId,
       vectorStore: cfg.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
       watcherInitMs: 0,
       storeInitMs: 0,
-      storePrepareMs: 0,
+      prepareMs: 0,
       scanMs: 0,
       finalizeMs: 0,
     })
@@ -198,10 +197,10 @@ export class CodeIndexOrchestrator {
     let mode: IndexingTelemetryMode | undefined
 
     try {
-      const overlay = performance.now()
+      const overlayAt = performance.now()
       this.overlay?.prepare()
-      const overlayMs = Math.max(0, performance.now() - overlay)
-      span.add({ storePrepareMs: overlayMs })
+      const overlayMs = Math.max(0, performance.now() - overlayAt)
+      span.add({ prepareMs: overlayMs })
       const watcher = performance.now()
       await this._startWatcher().finally(() => {
         span.add({ watcherInitMs: Math.max(0, performance.now() - watcher) })
@@ -258,7 +257,7 @@ export class CodeIndexOrchestrator {
           })
           return existing
         } finally {
-          span.add({ storePrepareMs: overlayMs + Math.max(0, performance.now() - prepare) })
+          span.add({ prepareMs: overlayMs + Math.max(0, performance.now() - prepare) })
         }
       })()
 

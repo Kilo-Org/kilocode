@@ -205,7 +205,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
       vectorStore: "lancedb",
       watcherInitMs: expect.any(Number),
       storeInitMs: expect.any(Number),
-      storePrepareMs: expect.any(Number),
+      prepareMs: expect.any(Number),
       scanMs: expect.any(Number),
       finalizeMs: expect.any(Number),
     })
@@ -253,7 +253,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
     expect(records.find((item) => item.event === "indexing.index.run")?.outcome).toBe("cancelled")
   })
 
-  test.serial("profiles early cancellation as full mode", async () => {
+  test.serial("omits mode for early cancellation", async () => {
     const orchestrator = new CodeIndexOrchestrator(
       createConfig(),
       new CodeIndexStateManager(),
@@ -271,10 +271,10 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const run = records.find((item) => item.event === "indexing.index.run")
 
     expect(run?.outcome).toBe("cancelled")
-    expect(run?.fields.mode).toBe("full")
+    expect(run?.fields).not.toHaveProperty("mode")
   })
 
-  test.serial("profiles early watcher failures as full mode", async () => {
+  test.serial("omits mode for early watcher failures", async () => {
     const records = await captureProfiles(async () => {
       const orchestrator = new CodeIndexOrchestrator(
         createConfig(),
@@ -291,7 +291,7 @@ describe("CodeIndexOrchestrator telemetry", () => {
     const run = records.find((item) => item.event === "indexing.index.run")
 
     expect(run?.outcome).toBe("error")
-    expect(run?.fields.mode).toBe("full")
+    expect(run?.fields).not.toHaveProperty("mode")
   })
 
   test.serial("profiles failures after cancellation as errors", async () => {
