@@ -224,6 +224,7 @@ const providerErrorEnv = LayerNode.buildLayer(root, {
 })
 const itProviderError = testEffect(providerErrorEnv)
 
+// kilocode_change start
 const lateToolInputLLM = Layer.succeed(
   LLM.Service,
   LLM.Service.of({
@@ -251,6 +252,7 @@ const lateToolInputEnv = LayerNode.buildLayer(root, {
   replacements: [...replacements, LayerNode.replace(LLM.node, lateToolInputLLM)],
 })
 const itLateToolInput = testEffect(lateToolInputEnv)
+// kilocode_change end
 
 const fragmentFailureLLM = Layer.succeed(
   LLM.Service,
@@ -1109,8 +1111,9 @@ itProviderError.live("session.processor effect tests fail provider-executed erro
       }),
     { config: cfg },
   ),
-)
+) // kilocode_change
 
+// kilocode_change start
 itLateToolInput.live("session.processor effect tests ignore tool input after the call settles", () =>
   provideTmpdirInstance(
     (dir) =>
@@ -1150,6 +1153,7 @@ itLateToolInput.live("session.processor effect tests ignore tool input after the
     { config: cfg },
   ),
 )
+// kilocode_change end
 
 itFragmentFailure.live("session.processor effect tests flush partial v2 fragments before step failure", () =>
   provideTmpdirInstance(

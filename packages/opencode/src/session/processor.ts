@@ -538,10 +538,12 @@ export const layer = Layer.effect(
             yield* ensureToolCall(value)
             return
 
+          // kilocode_change start
           case "tool-input-delta":
             {
               const toolCall = yield* readToolCall(value.id)
               if (!toolCall) return
+              // kilocode_change end
               const assistantMessageID = mirrorAssistant ? yield* requireV2AssistantMessage(toolCall.call) : undefined
               if (assistantMessageID) {
                 yield* events.publish(SessionEvent.Tool.Input.Delta, {
@@ -556,9 +558,11 @@ export const layer = Layer.effect(
             }
             return
 
+          // kilocode_change start
           case "tool-input-end": {
             const toolCall = yield* readToolCall(value.id)
             if (!toolCall) return
+            // kilocode_change end
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
             if (mirrorAssistant) {
               const assistantMessageID = yield* requireV2AssistantMessage(toolCall.call)
