@@ -3787,18 +3787,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       await this.client.instance.reload({ directory: dir }, { throwOnError: true })
     } catch (err) {
+      // wrapClientError exposes the HTTP status via `cause`, not `response`.
+      const cause = err instanceof Error ? err.cause : undefined
       const status =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { status?: number } }).response?.status
-          : undefined
+        cause && typeof cause === "object" && "status" in cause ? (cause as { status?: number }).status : undefined
       if (status === 409) {
         vscode.window.showWarningMessage(
           "Cannot reload while a session is running. Wait for it to finish or abort it first.",
         )
-      } else {
-        console.error("[Kilo New] handleReload: reload endpoint failed:", err)
-        vscode.window.showErrorMessage("Reload failed. See extension logs for details.")
+        return
       }
+      console.error("[Kilo New] handleReload: reload endpoint failed:", err)
+      const detail = err instanceof Error && err.message ? err.message : "See extension logs for details."
+      vscode.window.showErrorMessage(`Reload failed. ${detail}`)
       return
     }
     this.clearCommandsCache()
