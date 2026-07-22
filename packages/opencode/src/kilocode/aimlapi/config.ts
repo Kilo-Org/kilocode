@@ -29,9 +29,9 @@ const DEFAULT_ENDPOINTS: AimlapiEndpoints = {
 
 /**
  * Partner id (`^part_[A-Za-z0-9]{1,64}$`) — rebate attribution for Kilo Code.
- * The same id is provisioned on both the staging and production backends, so it
- * ships as the compiled-in default and one build runs against either (only the
- * AIMLAPI_*_URL endpoints differ). Overridable via AIMLAPI_PARTNER_ID.
+ * Fixed for the aimlapi.com provider and not configurable: the same id is
+ * provisioned on both the staging and production backends, so one build runs
+ * against either (only the AIMLAPI_*_URL endpoints differ).
  */
 export const DEFAULT_PARTNER_ID = "part_NcwZvHtWloCePPggbSypywxq"
 export const DEFAULT_PARTNER_NAME = "Kilo Code"
@@ -56,11 +56,6 @@ export function resolveEndpoints(): AimlapiEndpoints {
   }
 }
 
-/** Resolve checkout attribution with one shared precedence. */
-export function resolvePartnerId(explicit?: string): string {
-  return explicit?.trim() || process.env["AIMLAPI_PARTNER_ID"]?.trim() || DEFAULT_PARTNER_ID
-}
-
 /** Attribution header names (AIMLAPI backend contract). */
 export const AIMLAPI_SOURCE_HEADER = "X-AIMLAPI-Source"
 export const AIMLAPI_PARTNER_HEADER = "X-AIMLAPI-Partner-ID"
@@ -71,15 +66,13 @@ export const AIMLAPI_SOURCE_VALUE = "agent"
  * Headers every request to aimlapi.com must carry so the traffic is tagged as
  * agent-originated and attributed to the Kilo Code partner — inference, catalog,
  * auth and checkout alike, not just sign-up. Set once in each shared HTTP client
- * so no individual call site can forget them. `X-AIMLAPI-Source` is always sent;
- * `X-AIMLAPI-Partner-ID` is added only when a partner id is known (empty default
- * until the production id ships, overridable via AIMLAPI_PARTNER_ID).
+ * so no individual call site can forget them.
  */
-export function aimlapiAttributionHeaders(partnerId?: string): Record<string, string> {
-  const headers: Record<string, string> = { [AIMLAPI_SOURCE_HEADER]: AIMLAPI_SOURCE_VALUE }
-  const partner = resolvePartnerId(partnerId)
-  if (partner) headers[AIMLAPI_PARTNER_HEADER] = partner
-  return headers
+export function aimlapiAttributionHeaders(): Record<string, string> {
+  return {
+    [AIMLAPI_SOURCE_HEADER]: AIMLAPI_SOURCE_VALUE,
+    [AIMLAPI_PARTNER_HEADER]: DEFAULT_PARTNER_ID,
+  }
 }
 
 /**

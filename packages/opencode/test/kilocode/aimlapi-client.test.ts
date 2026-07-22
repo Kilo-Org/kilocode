@@ -15,7 +15,6 @@ const realFetch = globalThis.fetch
 
 afterEach(() => {
   globalThis.fetch = realFetch
-  delete process.env["AIMLAPI_PARTNER_ID"]
 })
 
 function captureHeaders(): { headers: () => Headers } {
@@ -28,24 +27,13 @@ function captureHeaders(): { headers: () => Headers } {
 }
 
 test("onboarding client sends the attribution headers on every request", async () => {
-  process.env["AIMLAPI_PARTNER_ID"] = "part_test123"
   const cap = captureHeaders()
 
   await new AimlapiClient(endpoints).checkAccount("user@example.com")
 
   const headers = cap.headers()
   expect(headers.get("x-aimlapi-source")).toBe("agent")
-  expect(headers.get("x-aimlapi-partner-id")).toBe("part_test123")
-})
-
-test("partner-id header carries the compiled-in default when no override is set", async () => {
-  const cap = captureHeaders()
-
-  await new AimlapiClient(endpoints).checkAccount("user@example.com")
-
-  const headers = cap.headers()
-  expect(headers.get("x-aimlapi-source")).toBe("agent")
-  // The default id is provisioned on both backends, so it ships without an env override.
+  // Fixed compiled-in partner id, provisioned on both backends.
   expect(DEFAULT_PARTNER_ID).not.toBe("")
   expect(headers.get("x-aimlapi-partner-id")).toBe(DEFAULT_PARTNER_ID)
 })

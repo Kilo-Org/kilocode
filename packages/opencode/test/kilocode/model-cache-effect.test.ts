@@ -4,6 +4,7 @@ import { Deferred, Effect, Exit, Fiber, Layer, Option, Ref } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { Auth } from "../../src/auth"
 import { ModelCache } from "../../src/provider/model-cache"
+import { DEFAULT_PARTNER_ID } from "../../src/kilocode/aimlapi/config"
 import { TestConfig } from "../fixture/config"
 import { pollWithTimeout, testEffect } from "../lib/effect"
 
@@ -407,26 +408,19 @@ it.live("exposes the catalog description via model options", () =>
 
 it.live("tags the catalog fetch and every model with the attribution headers", () =>
   Effect.gen(function* () {
-    const prev = process.env["AIMLAPI_PARTNER_ID"]
-    process.env["AIMLAPI_PARTNER_ID"] = "part_test123"
-    try {
-      const hits = yield* Ref.make<Hit[]>([])
-      const item = { id: "vendor/tagged", type: "openai/chat-completions", info: { name: "Tagged" } }
-      const models = yield* ModelCache.Service.use((cache) =>
-        cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
-      ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+    const hits = yield* Ref.make<Hit[]>([])
+    const item = { id: "vendor/tagged", type: "openai/chat-completions", info: { name: "Tagged" } }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
 
-      // The public catalog request carries the attribution headers.
-      const headers = (yield* Ref.get(hits))[0]!.headers
-      expect(headers["x-aimlapi-source"]).toBe("agent")
-      expect(headers["x-aimlapi-partner-id"]).toBe("part_test123")
+    // The public catalog request carries the attribution headers.
+    const headers = (yield* Ref.get(hits))[0]!.headers
+    expect(headers["x-aimlapi-source"]).toBe("agent")
+    expect(headers["x-aimlapi-partner-id"]).toBe(DEFAULT_PARTNER_ID)
 
-      // Every model carries them too, so getSDK stamps them on inference calls.
-      const model = models["vendor/tagged"] as { headers?: Record<string, string> }
-      expect(model.headers).toEqual({ "X-AIMLAPI-Source": "agent", "X-AIMLAPI-Partner-ID": "part_test123" })
-    } finally {
-      if (prev === undefined) delete process.env["AIMLAPI_PARTNER_ID"]
-      else process.env["AIMLAPI_PARTNER_ID"] = prev
-    }
+    // Every model carries them too, so getSDK stamps them on inference calls.
+    const model = models["vendor/tagged"] as { headers?: Record<string, string> }
+    expect(model.headers).toEqual({ "X-AIMLAPI-Source": "agent", "X-AIMLAPI-Partner-ID": DEFAULT_PARTNER_ID })
   }),
 )

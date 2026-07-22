@@ -12,6 +12,7 @@
 
 import {
   DEFAULT_AMOUNT_USD_MINOR,
+  DEFAULT_PARTNER_ID,
   DEFAULT_PARTNER_NAME,
   ISSUED_KEY_NAME,
   MAX_AMOUNT_USD_MINOR,
@@ -19,7 +20,6 @@ import {
   buildPartnerCheckoutReturnUrls,
   buildPartnerReturnUrl,
   resolveEndpoints,
-  resolvePartnerId,
 } from "./config"
 import { AimlapiApiError, AimlapiClient, type PartnerCheckoutSession } from "./client"
 
@@ -267,7 +267,7 @@ export class AimlapiFlow {
       if (!this.checkoutSessionToken) {
         const session = await this.client.createSession(
           {
-            partnerId: resolvePartnerId(),
+            partnerId: DEFAULT_PARTNER_ID,
             partnerName: DEFAULT_PARTNER_NAME,
             returnUrl: buildPartnerReturnUrl(this.endpoints.verificationBaseUrl),
           },
