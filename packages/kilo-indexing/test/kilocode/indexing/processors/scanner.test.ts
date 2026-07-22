@@ -458,18 +458,23 @@ describe("DirectoryScanner", () => {
     }
   })
 
-  test.serial("profiles cancellation requested while batches settle", async () => {
+  test.serial("waits for cancelled batches before allowing an incremental retry", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-profile-settling-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
     const emb = new BlockingEmb()
+    const file = join(root, "main.ts")
 
     try {
-      await Bun.write(join(root, "main.ts"), "export const value = 2\n")
+      const content = "export const value = 2\n"
+      const metadata = { size: 7, mtimeMs: 11, ctimeMs: 13 }
+      await Bun.write(file, content)
       const cache = new CacheManager(cacheDir, root)
       await cache.initialize()
+      cache.updateHash(file, "seeded-hash", metadata)
+      const store = new Store()
       const scan = new DirectoryScanner(
         emb,
-        new Store(),
+        store,
         new Parser(),
         cache,
         ignore(),
@@ -489,12 +494,32 @@ describe("DirectoryScanner", () => {
         // RATIONALE: Keep the batch pending until scanDirectory is waiting for active batches.
         await new Promise<void>((resolve) => setImmediate(resolve))
         scan.cancel()
+        const state = { settled: false }
+        void task.then(() => {
+          state.settled = true
+        })
+        await new Promise<void>((resolve) => setImmediate(resolve))
+        expect(state.settled).toBe(false)
         emb.release()
         await task
       })
       const summary = records.find((item) => item.event === "indexing.scan.summary")
 
       expect(summary?.outcome).toBe("cancelled")
+      expect(cache.getHash(file)).toBe("seeded-hash")
+      expect(cache.getMetadata(file)).toEqual(metadata)
+      expect(store.points).toBe(0)
+
+      await scan.scanDirectory(root, undefined, undefined, undefined, "incremental")
+
+      expect(store.points).toBe(1)
+      expect(cache.getHash(file)).toBe(createHash("sha256").update(content).digest("hex"))
+      const info = await stat(file)
+      expect(cache.getMetadata(file)).toEqual({
+        size: info.size,
+        mtimeMs: info.mtimeMs,
+        ctimeMs: info.ctimeMs,
+      })
     } finally {
       emb.release()
       await rm(root, { recursive: true, force: true })
@@ -573,7 +598,8 @@ describe("DirectoryScanner", () => {
 
     const cache = new CacheManager(cacheDir, root)
     await cache.initialize()
-    cache.updateHash(file, "old-hash")
+    const metadata = { size: 7, mtimeMs: 11, ctimeMs: 13 }
+    cache.updateHash(file, "old-hash", metadata)
 
     const emb = new Emb()
     const parser = new ManyParser()
@@ -583,6 +609,7 @@ describe("DirectoryScanner", () => {
     await scan.scanDirectory(root)
 
     expect(cache.getHash(file)).toBe("old-hash")
+    expect(cache.getMetadata(file)).toEqual(metadata)
   })
 
   test("emits candidate counts for scan telemetry", async () => {
@@ -656,6 +683,40 @@ describe("DirectoryScanner", () => {
       expect(count?.type).toBe("file_count")
       expect(count?.discovered).toBe(1)
       expect(count?.candidate).toBe(1)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test("preserves case-sensitive built-in ignore patterns while discovering uppercase extensions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const blocked = join(root, "logs", "blocked.TS")
+    const eligible = join(root, "LOGS", "eligible.TS")
+    const upper = join(root, "main.TS")
+
+    try {
+      await mkdir(join(root, "logs"), { recursive: true })
+      await mkdir(join(root, "LOGS"), { recursive: true })
+      await Bun.write(blocked, "export const blocked = 1\n")
+      await Bun.write(eligible, "export const eligible = 1\n")
+      await Bun.write(upper, "export const upper = 1\n")
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const store = new Store()
+      const scan = new DirectoryScanner(new Emb(), store, new Parser(), cache, ignore(), 1, 1, undefined, undefined, [
+        ".ts",
+      ])
+
+      const result = await scan.scanDirectory(root)
+
+      expect(result.stats.processed).toBe(2)
+      expect(store.points).toBe(2)
+      expect(cache.getHash(blocked)).toBeUndefined()
+      expect(cache.getHash(eligible)).toBeDefined()
+      expect(cache.getHash(upper)).toBeDefined()
     } finally {
       await rm(root, { recursive: true, force: true })
       await rm(cacheDir, { recursive: true, force: true })

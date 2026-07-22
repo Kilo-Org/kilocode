@@ -177,7 +177,6 @@ export class DirectoryScanner implements IDirectoryScanner {
             nodir: true,
             dot: false,
             nocase: true,
-            ignore: FileIgnore.PATTERNS,
             maxDepth: Infinity,
           })
         : []
@@ -530,7 +529,9 @@ export class DirectoryScanner implements IDirectoryScanner {
       await queueBatch(finalBatch.batchBlocks, finalBatch.batchTexts, finalBatch.batchFileInfos)
     }
 
-    // Short-circuit if cancelled before handling deletions
+    await Promise.all(activeBatchPromises)
+
+    // Short-circuit if cancellation was requested while batches were settling.
     if (this._cancelled) {
       log.info("directory scan cancelled", {
         workspacePath: scanWorkspace,
@@ -547,8 +548,6 @@ export class DirectoryScanner implements IDirectoryScanner {
         },
         totalBlockCount,
       }
-    } else {
-      await Promise.all(activeBatchPromises)
     }
 
     if (!failed) {

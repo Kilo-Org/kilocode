@@ -54,6 +54,7 @@ describe("CacheManager", () => {
 
       second.updateHash(source, "hash-without-metadata")
       expect(second.getMetadata(source)).toBeUndefined()
+      await second.flush()
     } finally {
       await rm(cacheDir, { recursive: true, force: true })
     }
@@ -110,6 +111,7 @@ describe("CacheManager", () => {
 
       second.updateHash(path.join(workspace, "a.ts"), "changed")
       expect(second.signature()).not.toBe(first.signature())
+      await second.flush()
     } finally {
       await rm(cacheDir, { recursive: true, force: true })
     }

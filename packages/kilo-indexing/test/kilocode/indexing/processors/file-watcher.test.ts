@@ -260,6 +260,45 @@ describe("FileWatcher", () => {
     }
   })
 
+  test("preserves cached metadata when watcher upserts fail", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
+    const cacheDir = path.join(root, ".cache")
+    const file = path.join(root, "error.ts")
+    const cache = new CacheManager(cacheDir, root)
+
+    try {
+      const metadata = { size: 7, mtimeMs: 11, ctimeMs: 13 }
+      await mkdir(cacheDir, { recursive: true })
+      await writeFile(file, "const watcher = true\n")
+      await cache.initialize()
+      cache.updateHash(file, "seeded-hash", metadata)
+      const watcher = new FileWatcher(
+        root,
+        cache,
+        createEmbedder(),
+        new RetryStore(1),
+        undefined,
+        1,
+        1,
+        undefined,
+        undefined,
+        [".ts"],
+        createParser(),
+      )
+      const data = watcher as unknown as {
+        processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+      }
+
+      await data.processBatch(new Map([[file, { path: file, type: "create" }]]))
+
+      expect(cache.getHash(file)).toBe("seeded-hash")
+      expect(cache.getMetadata(file)).toEqual(metadata)
+    } finally {
+      await cache.flush()
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test.serial("profiles wrong-count watcher embeddings as errors without source data", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "file-watcher-profile-embedding-error-"))
     const cacheDir = path.join(root, ".cache")
