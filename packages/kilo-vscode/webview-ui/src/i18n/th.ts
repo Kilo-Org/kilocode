@@ -1694,7 +1694,8 @@ export const dict = {
     "Display tokens-per-second (prompt-processing / text-generation) on each assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
 
   "chat.throughput.badge.computed": "PP – · TG {{tg}}",
-  "chat.throughput.badge.tooltip.computed": "Prompt-processing unavailable · text-generation {{tg}} t/s (computed from step duration)",
+  "chat.throughput.badge.tooltip.computed":
+    "Prompt-processing unavailable · text-generation {{tg}} t/s (computed from step duration)",
   "chat.throughput.badge.tooltip.missing": "Throughput metrics unavailable for this step",
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",

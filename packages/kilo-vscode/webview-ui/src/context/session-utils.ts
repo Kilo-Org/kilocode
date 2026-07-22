@@ -223,9 +223,7 @@ export function calcTokenUsage(
  * Returns `undefined` when no step-finish part in the input carries metrics,
  * which is the signal callers use to hide the throughput UI.
  */
-export function aggregateMetrics(
-  parts: readonly Part[],
-): { generation?: number; source: "computed" } | undefined {
+export function aggregateMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
   let generation: number | undefined
   for (const part of parts) {
     if (part.type !== "step-finish") continue
@@ -242,9 +240,7 @@ export function aggregateMetrics(
  * Same aggregation strategy as `aggregateMetrics` so the per-message badge
  * and the header row stay consistent.
  */
-export function messageMetrics(
-  parts: readonly Part[],
-): { generation?: number; source: "computed" } | undefined {
+export function messageMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
   return aggregateMetrics(parts)
 }
 

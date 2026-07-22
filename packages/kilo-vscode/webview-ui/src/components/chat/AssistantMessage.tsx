@@ -174,9 +174,7 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
 function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof messageMetrics>> }) {
   const language = useLanguage()
   const tgText = createMemo(() => formatTG(props.metrics.generation, language.locale()))
-  const label = createMemo(() =>
-    language.t("chat.throughput.badge.computed", { tg: tgText() }),
-  )
+  const label = createMemo(() => language.t("chat.throughput.badge.computed", { tg: tgText() }))
   const tooltip = createMemo(() => {
     if (props.metrics.generation !== undefined) {
       return language.t("chat.throughput.badge.tooltip.computed", {
@@ -187,9 +185,7 @@ function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof message
   })
   return (
     <Tooltip value={tooltip()} placement="top">
-      <span data-component="assistant-throughput-badge">
-        {label()}
-      </span>
+      <span data-component="assistant-throughput-badge">{label()}</span>
     </Tooltip>
   )
 }
@@ -359,9 +355,7 @@ const meta = createMemo(() =>
           </Tooltip>
         )}
       </Show>
-      <Show when={throughputVisible() && throughput()}>
-        {(metrics) => <ThroughputBadge metrics={metrics()} />}
-      </Show>
+      <Show when={throughputVisible() && throughput()}>{(metrics) => <ThroughputBadge metrics={metrics()} />}</Show>
     </>
   )
 }
