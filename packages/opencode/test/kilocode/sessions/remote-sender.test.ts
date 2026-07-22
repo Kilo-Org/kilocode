@@ -294,6 +294,383 @@ describe("RemoteSender", () => {
     await provideStarted
   })
 
+  test("send_message ACKs before the attachment materializer resolves", async () => {
+    const { conn, sent } = fakeConn()
+    let resolveMaterialize!: (parts: any[]) => void
+    const materializeStarted = new Promise<void>((r) => {
+      // signal when the materializer has been invoked
+      r()
+    })
+    const materializeInvoked = Promise.withResolvers<void>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      attachments: () => ({
+        materialize: (parts: readonly any[]) =>
+          new Promise<any[]>((resolve) => {
+            resolveMaterialize = resolve
+            materializeInvoked.resolve()
+            // never resolves on its own — proves the ACK is sent first
+          }),
+        dispose: async () => {},
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_attach_ack",
+      command: "send_message",
+      data: {
+        sessionID: "ses_attach",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://r2.example/a.png" }],
+      },
+    })
+
+    // ACK is sent synchronously, BEFORE the materializer (or provide) completes
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toEqual({ type: "response", id: "req_attach_ack", result: {} })
+
+    // The materializer IS invoked after the ACK, confirming the work is queued
+    // but does not block the synchronous response.
+    await materializeInvoked.promise
+    // Resolve to let the trailing microtask settle.
+    resolveMaterialize([])
+    await Promise.resolve()
+    await materializeStarted
+  })
+
+  test("does not create attachments when delayed send resumes after dispose", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const finished = Promise.withResolvers<void>()
+    let factories = 0
+    let materialized = 0
+    let subscriptions = 0
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: (callback) => {
+        subscriptions++
+        return bus.subscribe(callback)
+      },
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        entered.resolve()
+        await release.promise
+        try {
+          return await input.fn()
+        } finally {
+          finished.resolve()
+        }
+      },
+      prompt: async () => {},
+      attachments: () => {
+        factories++
+        return {
+          materialize: async (parts) => {
+            materialized++
+            return parts
+          },
+          dispose: async () => {},
+        }
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_disposed_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_disposed_attachment",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://example.com/a.png" }],
+      },
+    })
+    await entered.promise
+    sender.dispose()
+    release.resolve()
+    await finished.promise
+
+    expect(factories).toBe(0)
+    expect(materialized).toBe(0)
+    expect(subscriptions).toBe(1)
+    expect(bus.count()).toBe(0)
+  })
+
+  test("does not create first attachments when delayed send resumes after session deletion", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const finished = Promise.withResolvers<void>()
+    const again = Promise.withResolvers<void>()
+    const cleaned = Promise.withResolvers<void>()
+    let factories = 0
+    let materialized = 0
+    let disposed = 0
+    let subscriptions = 0
+    const prompts: SessionPrompt.PromptInput["parts"][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: (callback) => {
+        subscriptions++
+        return bus.subscribe(callback)
+      },
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        entered.resolve()
+        await release.promise
+        try {
+          return await input.fn()
+        } finally {
+          finished.resolve()
+        }
+      },
+      prompt: async (input) => {
+        prompts.push(input.parts)
+      },
+      attachments: () => {
+        factories++
+        return {
+          materialize: async (parts) => {
+            materialized++
+            again.resolve()
+            return parts
+          },
+          dispose: async () => {
+            disposed++
+            cleaned.resolve()
+          },
+        }
+      },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_deleted_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_deleted_attachment",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://example.com/a.png" }],
+      },
+    })
+    await entered.promise
+    bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_deleted_attachment" } })
+    release.resolve()
+    await finished.promise
+
+    expect(factories).toBe(0)
+    expect(materialized).toBe(0)
+    expect(disposed).toBe(0)
+    expect(subscriptions).toBe(1)
+    expect(bus.count()).toBe(1)
+    expect(prompts[0]).toEqual([
+      { type: "text", text: "attachment a.png could not be retrieved: attachment session is closed" },
+    ])
+    expect(JSON.stringify(prompts[0])).not.toContain("example.com")
+
+    sender.handle({
+      type: "command",
+      id: "req_reused_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_deleted_attachment",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://example.com/a.png" }],
+      },
+    })
+    await again.promise
+    expect(factories).toBe(1)
+    expect(materialized).toBe(1)
+    sender.dispose()
+    await cleaned.promise
+    expect(disposed).toBe(1)
+  })
+
+  test("keeps materialized scratch owned until an in-flight prompt settles after deletion", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const started = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const cleanupStarted = Promise.withResolvers<void>()
+    const cleanupRelease = Promise.withResolvers<void>()
+    const cleaned = Promise.withResolvers<void>()
+    const repeated = Promise.withResolvers<void>()
+    let factories = 0
+    let materialized = 0
+    let disposed = 0
+    const seen: SessionPrompt.PromptInput["parts"][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: bus.subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      prompt: async (input) => {
+        seen.push(input.parts)
+        if (seen.length > 1) {
+          repeated.resolve()
+          return
+        }
+        started.resolve()
+        await release.promise
+      },
+      attachments: () => {
+        factories++
+        return {
+          materialize: async () => {
+            materialized++
+            return [{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }]
+          },
+          dispose: async () => {
+            disposed++
+            cleanupStarted.resolve()
+            await cleanupRelease.promise
+            cleaned.resolve()
+          },
+        }
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_prompt_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_prompt_attachment",
+        parts: [
+          { type: "file", mime: "application/octet-stream", filename: "a.bin", url: "https://example.com/a.bin" },
+        ],
+      },
+    })
+    await started.promise
+    bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_prompt_attachment" } })
+
+    expect(seen[0]).toEqual([{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }])
+    expect(disposed).toBe(0)
+    release.resolve()
+    await cleanupStarted.promise
+
+    sender.handle({
+      type: "command",
+      id: "req_prompt_attachment_reused",
+      command: "send_message",
+      data: {
+        sessionID: "ses_prompt_attachment",
+        parts: [
+          { type: "file", mime: "application/octet-stream", filename: "a.bin", url: "https://example.com/a.bin" },
+        ],
+      },
+    })
+    await repeated.promise
+    expect(factories).toBe(1)
+    expect(materialized).toBe(1)
+    expect(disposed).toBe(1)
+    expect(seen[1]).toEqual([
+      { type: "text", text: "attachment a.bin could not be retrieved: attachment session is closed" },
+    ])
+    expect(JSON.stringify(seen[1])).not.toContain("example.com")
+
+    cleanupRelease.resolve()
+    await cleaned.promise
+    expect(disposed).toBe(1)
+    sender.dispose()
+  })
+
+  test("blocks a new attachment generation while idle-cache deletion cleanup runs", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const first = Promise.withResolvers<void>()
+    const cleanupStarted = Promise.withResolvers<void>()
+    const cleanupRelease = Promise.withResolvers<void>()
+    const cleaned = Promise.withResolvers<void>()
+    const repeated = Promise.withResolvers<void>()
+    let runs = 0
+    let factories = 0
+    let materialized = 0
+    const seen: SessionPrompt.PromptInput["parts"][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: bus.subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        try {
+          return await input.fn()
+        } finally {
+          runs++
+          if (runs === 1) first.resolve()
+        }
+      },
+      prompt: async (input) => {
+        seen.push(input.parts)
+        if (seen.length === 2) repeated.resolve()
+      },
+      attachments: () => {
+        factories++
+        return {
+          materialize: async () => {
+            materialized++
+            return [{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }]
+          },
+          dispose: async () => {
+            cleanupStarted.resolve()
+            await cleanupRelease.promise
+            cleaned.resolve()
+          },
+        }
+      },
+    })
+    const send = (id: string) =>
+      sender.handle({
+        type: "command",
+        id,
+        command: "send_message",
+        data: {
+          sessionID: "ses_idle_cleanup",
+          parts: [
+            { type: "file", mime: "application/octet-stream", filename: "a.bin", url: "https://example.com/a.bin" },
+          ],
+        },
+      })
+
+    send("req_idle_first")
+    await first.promise
+    bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_idle_cleanup" } })
+    await cleanupStarted.promise
+    send("req_idle_repeated")
+    await repeated.promise
+
+    expect(factories).toBe(1)
+    expect(materialized).toBe(1)
+    expect(seen[1]).toEqual([
+      { type: "text", text: "attachment a.bin could not be retrieved: attachment session is closed" },
+    ])
+    expect(JSON.stringify(seen[1])).not.toContain("example.com")
+    cleanupRelease.resolve()
+    await cleaned.promise
+    sender.dispose()
+  })
+
   test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
     const { conn } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []
