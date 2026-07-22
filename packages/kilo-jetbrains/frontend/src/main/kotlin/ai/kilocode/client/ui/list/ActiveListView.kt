@@ -7,13 +7,18 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
+import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.ui.AnimatedIcon
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBList
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
 import java.awt.Dimension
+import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.FocusAdapter
 import java.awt.event.FocusEvent
@@ -53,7 +58,7 @@ internal class ActiveListView(
             val cell = activeListVisibleCells(item, selected).firstOrNull { it.id == id }
             if (cell != null) return cell.label.takeIf { it.isNotBlank() }
             if (!cfg.description || !cfg.tooltip) return null
-            val note = item.description?.takeIf { it.isNotBlank() } ?: return null
+            val note = item.tooltip?.takeIf { it.isNotBlank() } ?: return null
             val text = note.lines().joinToString("<br>") { XmlStringUtil.escapeString(it) }
             return XmlStringUtil.wrapInHtml(text)
         }
@@ -73,6 +78,7 @@ internal class ActiveListView(
     }
 
     init {
+        list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         list.cellRenderer = ActiveListRenderer(model, cfg)
         list.registerKeyboardAction(
             { primary() },
@@ -146,6 +152,26 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
+    fun selectIndex(index: Int) {
+        checkEdt()
+        choose(index)
+    }
+
+    @RequiresEdt
+    fun point(key: String, cell: String? = null): RelativePoint {
+        checkEdt()
+        val idx = activeListIndex(model.items, key)
+        if (idx < 0) return RelativePoint(list, Point(0, 0))
+        val bounds = list.getCellBounds(idx, idx) ?: return RelativePoint(list, Point(0, 0))
+        val rect = cell?.let { activeListCellBounds(list, idx, list.isSelectedIndex(idx))[it] }
+        val target = rect ?: bounds
+        val x = if (rect != null) target.x + target.width / 2 else target.x + JBUI.scale(48)
+        // Anchor to the icon's bottom edge so the balloon callout points at the icon, not its center.
+        val y = if (rect != null) target.y + target.height else target.y + target.height / 2
+        return RelativePoint(list, Point(x.coerceIn(bounds.x, bounds.x + bounds.width), y))
+    }
+
+    @RequiresEdt
     fun focusList() {
         checkEdt()
         list.requestFocusInWindow()
@@ -202,6 +228,22 @@ internal class ActiveListView(
             }
         })
         if (popup.isVisible) activate()
+    }
+
+    @RequiresEdt
+    fun trackBalloon(balloon: Balloon) {
+        checkEdt()
+        var tracked = true
+        popups++
+        list.repaint()
+        balloon.addListener(object : JBPopupListener {
+            override fun onClosed(event: LightweightWindowEvent) {
+                if (!tracked) return
+                tracked = false
+                popups = maxOf(0, popups - 1)
+                list.repaint()
+            }
+        })
     }
 
     @RequiresEdt
@@ -266,6 +308,12 @@ internal class ActiveListView(
         primary(item)
     }
 
+    /**
+     * Default action for a double-click. Resolves to the row's explicit activation only: an
+     * [onActivate] handler, then the row's [ActiveListItem.doubleClick] cell, then a [primary] cell.
+     * Unlike Enter, it never falls back to firing an arbitrary first action cell, so a row whose only
+     * action is destructive (e.g. delete) does nothing on double-click.
+     */
     private fun activate(item: ActiveListItem) {
         val action = onActivate
         if (action != null) {
@@ -276,7 +324,9 @@ internal class ActiveListView(
             onCell(item.key, id)
             return
         }
-        primary(item)
+        activeListVisibleCells(item, true)
+            .firstOrNull { it.enabled && it.primary }
+            ?.let { onCell(item.key, it.id) }
     }
 
     private fun primary(item: ActiveListItem) {

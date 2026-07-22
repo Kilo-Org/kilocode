@@ -2,8 +2,9 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
-import ai.kilocode.client.agentManager.worktree.DeleteWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.showWorktreeDeletePopup
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
@@ -13,8 +14,14 @@ import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.icons.AllIcons
+import com.intellij.ide.DeleteProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.DataContext
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.PlatformDataKeys
+import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
@@ -33,14 +40,15 @@ class AgentManagerPanel(
     parent: Disposable,
     private val controller: WorktreeController,
     private val project: Project? = null,
-) : BorderLayoutPanel(), Disposable {
+) : BorderLayoutPanel(), Disposable, UiDataProvider {
+    private val provider = WorktreeDeleteProvider()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
         placeholder = KiloBundle.message("worktree.search.placeholder"),
         onCell = { key, id ->
             if (id != DELETE_CELL) return@ActiveList
             val item = item(key) ?: return@ActiveList
-            if (!item.main) confirm(item)
+            if (worktreeDeletable(item, controller.isPending(item.id))) showDeletePopup(item, id)
         },
     )
 
@@ -51,6 +59,12 @@ class AgentManagerPanel(
         sync()
         bindModel()
         bindTheme()
+        controller.onSelect = { key ->
+            // Focus the list so the freshly created worktree renders as an active selection rather
+            // than the muted, inactive highlight it would get while focus stays on the toolbar.
+            if (list.view.select(key)) list.view.focusList()
+        }
+        controller.onCreateFailure = { err -> notifyCreateFailed(err) }
     }
 
     val component: JComponent get() = this
@@ -69,14 +83,36 @@ class AgentManagerPanel(
         if (dialog.showAndGet()) controller.create(dialog.branch, dialog.baseBranch)
     }
 
-    private fun confirm(item: WorktreeDto) {
-        val dialog = DeleteWorktreeDialog(this, item)
-        if (!dialog.showAndGet()) return
-        remove(item, dialog.forceRequested)
+    private fun remove(item: WorktreeDto, force: Boolean) {
+        controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
     }
 
-    private fun remove(item: WorktreeDto, force: Boolean) {
-        controller.remove(item, force) { result -> notifyFailed(item, result, force) }
+    private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
+        val idx = list.view.selectedIndex().takeIf { it >= 0 } ?: controller.model.getElementIndex(item)
+        val balloon = showWorktreeDeletePopup(list.view.point(item.id, cell), item) { force ->
+            controller.remove(
+                item,
+                force,
+                onSuccess = { restoreFocus(idx) },
+                onFailure = { result -> notifyFailed(item, result, force) },
+            )
+        }
+        list.view.trackBalloon(balloon)
+    }
+
+    /**
+     * After a delete, move the selection to the row that took the deleted row's place (the next
+     * worktree) rather than letting the list reset to the top. [index] is the removed row's index,
+     * captured before removal, so the same index now points at the following row.
+     */
+    private fun restoreFocus(index: Int) {
+        val size = controller.model.size
+        if (size > 0) list.view.selectIndex(index.coerceIn(0, size - 1))
+        list.view.focusList()
+    }
+
+    private fun notifyCreateFailed(err: String?) {
+        KiloNotifications.error(project, KiloBundle.message("worktree.create.failed.title"), err)
     }
 
     /** Surfaces a failed removal; offers a force-delete retry when git reported a lock. */
@@ -116,7 +152,13 @@ class AgentManagerPanel(
     }
 
     private fun sync() {
-        list.update((0 until controller.model.size).map { WorktreeRow(controller.model.getElementAt(it)) }, ActiveListSelection.PreserveNoScroll)
+        list.update(
+            (0 until controller.model.size).map {
+                val item = controller.model.getElementAt(it)
+                WorktreeRow(item, controller.isPending(item.id))
+            },
+            ActiveListSelection.PreserveNoScroll,
+        )
     }
 
     private fun item(key: String): WorktreeDto? {
@@ -127,17 +169,36 @@ class AgentManagerPanel(
 
     override fun dispose() {}
 
-    private data class WorktreeRow(val dto: WorktreeDto) : ActiveListItem {
+    override fun uiDataSnapshot(sink: DataSink) {
+        sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
+    }
+
+    private fun selectedRow(): WorktreeRow? = list.view.selected() as? WorktreeRow
+
+    private inner class WorktreeDeleteProvider : DeleteProvider {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun canDeleteElement(dataContext: DataContext): Boolean {
+            val row = selectedRow()
+            return worktreeDeletable(row?.dto, row?.pending == true)
+        }
+
+        override fun deleteElement(dataContext: DataContext) {
+            val row = selectedRow() ?: return
+            if (!worktreeDeletable(row.dto, row.pending)) return
+            showDeletePopup(row.dto)
+        }
+    }
+
+    private data class WorktreeRow(val dto: WorktreeDto, val pending: Boolean) : ActiveListItem {
         override val key: String get() = dto.id
         override val title: String get() = dto.name
-        override val note: String get() = dto.branch
-        override val description: String?
-            get() = if (!dto.locked) null else dto.lockReason?.let { KiloBundle.message("worktree.locked.reason", it) }
-                ?: KiloBundle.message("worktree.locked")
-        override val icon = AllIcons.Nodes.Locked.takeIf { dto.locked }
-        override val search: String get() = listOfNotNull(dto.branch, dto.path, dto.lockReason).joinToString(" ")
+        override val description: String get() = dto.path.trimEnd('/').substringAfterLast('/')
+        override val tooltip: String get() = dto.path
+        override val icon = WorktreeIcons.forRow(dto.locked, pending)
+        override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         override val cells: List<ActiveListCell>
-            get() = if (dto.main) emptyList() else listOf(ActiveListCell(
+            get() = if (dto.main || pending) emptyList() else listOf(ActiveListCell(
                 DELETE_CELL,
                 KiloBundle.message("worktree.delete.action"),
                 icon = AllIcons.Actions.GC,
@@ -149,3 +210,5 @@ class AgentManagerPanel(
         const val DELETE_CELL = "delete"
     }
 }
+
+internal fun worktreeDeletable(item: WorktreeDto?, pending: Boolean): Boolean = item != null && !item.main && !pending

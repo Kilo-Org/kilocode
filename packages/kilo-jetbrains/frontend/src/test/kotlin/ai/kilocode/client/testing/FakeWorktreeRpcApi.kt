@@ -20,6 +20,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val creates = CopyOnWriteArrayList<CreateWorktreeRequestDto>()
     val removes = CopyOnWriteArrayList<Triple<String, String, String?>>()
     val removeForces = CopyOnWriteArrayList<Boolean>()
+    var beforeCreate: suspend () -> Unit = {}
     var createResult: (CreateWorktreeRequestDto) -> CreateWorktreeResultDto = { req ->
         CreateWorktreeResultDto(WorktreeDto(req.branch, req.branch, req.branch, req.branch))
     }
@@ -38,6 +39,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     override suspend fun create(directory: String, request: CreateWorktreeRequestDto): CreateWorktreeResultDto {
         assertNotEdt("create")
         creates.add(request)
+        beforeCreate()
         return createResult(request)
     }
 

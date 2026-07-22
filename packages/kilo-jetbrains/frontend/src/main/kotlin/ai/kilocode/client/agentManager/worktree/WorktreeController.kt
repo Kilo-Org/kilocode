@@ -20,6 +20,9 @@ class WorktreeController(
     private val telemetry: (String, Map<String, String>) -> Unit = { event, props -> Telemetry.send(event, props) },
 ) {
     val model = CollectionListModel<WorktreeDto>()
+    private val pending = LinkedHashMap<String, WorktreeDto>()
+    var onSelect: ((String) -> Unit)? = null
+    var onCreateFailure: ((String?) -> Unit)? = null
 
     /** Branch checked out in the main worktree; used as the base for quick worktree creation. */
     @Volatile
@@ -35,6 +38,8 @@ class WorktreeController(
     @Volatile
     private var known: Set<String> = emptySet()
 
+    fun isPending(id: String): Boolean = id in pending
+
     fun reload() {
         cs.launch {
             val result = service.list(directory)
@@ -42,11 +47,12 @@ class WorktreeController(
             edt {
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
-                model.replaceAll(extra)
+                val rows = extra + pending.values
+                model.replaceAll(rows)
                 defaultBranch = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
-                val worktreeBranches = extra.mapTo(HashSet()) { it.branch }
+                val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
-                known = branchInfo.branches.toMutableSet().apply { addAll(result.worktrees.map { it.branch }) }
+                known = branchInfo.branches.toMutableSet().apply { addAll(rows.map { it.branch }) }
                 telemetry("Worktree List Loaded", mapOf("count" to extra.size.toString()))
             }
         }
@@ -59,14 +65,28 @@ class WorktreeController(
     fun quickCreate() = create(suggestName(), defaultBranch)
 
     fun create(branch: String, base: String?) {
+        val id = "pending:$branch:${System.nanoTime()}"
+        val temp = WorktreeDto(id, branch, branch, id)
+        edt {
+            pending[temp.id] = temp
+            model.add(temp)
+            onSelect?.invoke(temp.id)
+        }
         cs.launch {
             val result = service.create(directory, CreateWorktreeRequestDto(branch, base))
             val created = result.worktree
-            if (created != null) {
-                edt {
-                    model.add(created)
+            edt {
+                pending.remove(temp.id)
+                val idx = model.getElementIndex(temp)
+                if (created != null) {
+                    if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
+                    onSelect?.invoke(created.id)
                     telemetry("Worktree Created", mapOf("branch" to branch))
+                    return@edt
                 }
+                if (idx >= 0) model.remove(temp)
+                telemetry("Worktree Create Failed", mapOf("branch" to branch))
+                onCreateFailure?.invoke(result.error)
             }
         }
     }
@@ -76,12 +96,18 @@ class WorktreeController(
      * row is kept and [onFailure] is invoked on the EDT so the caller can surface a follow-up
      * (e.g. a "force delete" notification), then the list reconciles with git ground truth.
      */
-    fun remove(dto: WorktreeDto, force: Boolean = false, onFailure: (RemoveWorktreeResultDto) -> Unit = {}) {
+    fun remove(
+        dto: WorktreeDto,
+        force: Boolean = false,
+        onSuccess: () -> Unit = {},
+        onFailure: (RemoveWorktreeResultDto) -> Unit = {},
+    ) {
         cs.launch {
             val result = service.remove(directory, dto.path, dto.branch, force)
             if (result.ok) {
                 edt {
                     model.remove(dto)
+                    onSuccess()
                     telemetry("Worktree Deleted", mapOf("branch" to dto.branch, "force" to force.toString()))
                 }
                 return@launch

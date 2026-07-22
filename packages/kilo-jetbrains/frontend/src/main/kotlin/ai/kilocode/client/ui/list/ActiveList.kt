@@ -1,12 +1,12 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
@@ -21,21 +21,23 @@ internal class ActiveList(
     onCell: (String, String) -> Unit,
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     onActivate: ((ActiveListItem) -> Unit)? = null,
-) : Stack(StackAxis.VERTICAL) {
+) : BorderLayoutPanel() {
     val view = ActiveListView(emptyText, cfg, matcher, onActivate, onCell)
     val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
 
     init {
+        // Center the scroll pane so the list fills the panel vertically and horizontally, with the
+        // search field pinned above it.
+        val scroll = JBScrollPane(view).apply {
+            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        }
         search?.let {
             it.textEditor.emptyText.text = placeholder
             wireActiveListSearch(it, view)
-            next(it)
-            gap(UiStyle.Gap.sm())
-        }
-        next(JBScrollPane(view).apply {
-            border = null
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        })
+            addToTop(it)
+            scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.sm())
+        } ?: run { scroll.border = JBUI.Borders.empty() }
+        addToCenter(scroll)
     }
 
     @RequiresEdt

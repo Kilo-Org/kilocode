@@ -52,6 +52,8 @@ internal interface ActiveListItem {
     val title: String
     val note: String? get() = null
     val description: String? get() = null
+    /** Hover tooltip text; defaults to [description] when not overridden. */
+    val tooltip: String? get() = description
     /** Right-aligned secondary text shown before the action cells (e.g. a relative timestamp). */
     val meta: String? get() = null
     val doubleClick: String? get() = null

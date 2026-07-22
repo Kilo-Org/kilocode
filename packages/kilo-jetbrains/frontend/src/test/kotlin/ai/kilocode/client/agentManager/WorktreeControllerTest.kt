@@ -1,17 +1,18 @@
 package ai.kilocode.client.agentManager
 
+import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
-import ai.kilocode.client.agentManager.worktree.WorktreeRenderer
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
-import javax.swing.JList
+import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
 class WorktreeControllerTest : BasePlatformTestCase() {
@@ -48,13 +49,54 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     fun `test create invokes rpc and adds the created worktree`() {
         val controller = controller()
+        val selected = mutableListOf<String>()
+        controller.onSelect = { selected.add(it) }
 
-        controller.create("feature/y", null)
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+
+        assertEquals(1, controller.model.size)
+        assertTrue(controller.isPending(controller.model.getElementAt(0).id))
+        assertEquals(controller.model.getElementAt(0).id, selected.single())
         flush()
 
         assertEquals(listOf("feature/y"), rpc.creates.map { it.branch })
         assertEquals(1, controller.model.size)
         assertEquals("feature/y", controller.model.getElementAt(0).branch)
+        assertFalse(controller.isPending(controller.model.getElementAt(0).id))
+        assertEquals("feature/y", selected.last())
+    }
+
+    fun `test create failure removes placeholder and reports the error`() {
+        rpc.createResult = { CreateWorktreeResultDto(error = "boom") }
+        val controller = controller()
+        val failures = mutableListOf<String?>()
+        controller.onCreateFailure = { failures.add(it) }
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        val id = controller.model.getElementAt(0).id
+        assertTrue(controller.isPending(id))
+        flush()
+
+        assertEquals(0, controller.model.size)
+        assertFalse(controller.isPending(id))
+        assertEquals(listOf("boom"), failures)
+    }
+
+    fun `test reload preserves pending worktrees`() {
+        rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val gate = CompletableDeferred<Unit>()
+        rpc.beforeCreate = { gate.await() }
+        val controller = controller()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.create("feature/y", null) }
+        val id = controller.model.getElementAt(0).id
+        controller.reload()
+        flush()
+
+        assertEquals(listOf("feature/x", "feature/y"), (0 until controller.model.size).map { controller.model.getElementAt(it).branch })
+        assertTrue(controller.isPending(id))
+        gate.complete(Unit)
+        flush()
     }
 
     fun `test remove invokes rpc and removes from the model`() {
@@ -64,11 +106,13 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         controller.reload()
         flush()
 
-        controller.remove(controller.model.getElementAt(0))
+        var success = false
+        controller.remove(controller.model.getElementAt(0), onSuccess = { success = true })
         flush()
 
         assertEquals(listOf(Triple("/test", item.path, "feature/x")), rpc.removes.toList())
         assertEquals(0, controller.model.size)
+        assertTrue(success)
     }
 
     fun `test failed remove keeps the row and invokes the failure callback`() {
@@ -164,20 +208,27 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test renderer shows delete icon only when selected and not main`() {
+    fun `test worktree icons prefer pending then locked then branch`() {
+        assertSame(WorktreeIcons.spinner, WorktreeIcons.forRow(locked = false, pending = true))
+        assertSame(WorktreeIcons.locked, WorktreeIcons.forRow(locked = true, pending = false))
+        assertSame(WorktreeIcons.branch, WorktreeIcons.forRow(locked = false, pending = false))
+    }
+
+    fun `test branch and lock icons load at the same size`() {
+        assertTrue("branch icon should load", WorktreeIcons.branch.iconWidth > 0)
+        assertTrue("lock icon should load", WorktreeIcons.locked.iconWidth > 0)
+        assertEquals(WorktreeIcons.branch.iconWidth, WorktreeIcons.locked.iconWidth)
+        assertEquals(WorktreeIcons.branch.iconHeight, WorktreeIcons.locked.iconHeight)
+    }
+
+    fun `test worktree delete eligibility excludes missing main and pending rows`() {
         val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
         val child = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
-        val renderer = WorktreeRenderer()
-        val list = JList(arrayOf(main, child))
 
-        renderer.getListCellRendererComponent(list, child, 1, false, false)
-        assertFalse(renderer.deleteVisible())
-
-        renderer.getListCellRendererComponent(list, child, 1, true, false)
-        assertTrue(renderer.deleteVisible())
-
-        renderer.getListCellRendererComponent(list, main, 0, true, false)
-        assertFalse(renderer.deleteVisible())
+        assertFalse(worktreeDeletable(null, pending = false))
+        assertFalse(worktreeDeletable(main, pending = false))
+        assertFalse(worktreeDeletable(child, pending = true))
+        assertTrue(worktreeDeletable(child, pending = false))
     }
 
     private fun controller() =
