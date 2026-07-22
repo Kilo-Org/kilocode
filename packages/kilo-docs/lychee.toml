@@ -50,6 +50,7 @@ exclude = [
   '^https?://vercel\.link/',
   # API base URL, returns 404 when fetched directly
   '^https?://api\.apertis\.ai/v1/?$',
+  '^https?://cloud-agent-next\.kilosessions\.ai/?$',
   # Redirects to authenticated Google Cloud console
   '^https?://console\.cloud\.google\.com',
   # Google AI Studio API keys page redirects to Google sign-in
