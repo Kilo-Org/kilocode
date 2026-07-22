@@ -17,7 +17,3 @@ export function watchThroughputConfig(post: Post): vscode.Disposable {
     }
   })
 }
-
-export function validThroughputSetting(key: string, value: unknown) {
-  return key === "showTokenThroughput" && typeof value === "boolean"
-}

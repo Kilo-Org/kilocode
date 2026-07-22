@@ -8,6 +8,7 @@ import { useProvider } from "../../context/provider"
 import type { SessionModelUsage } from "../../types/messages"
 import { groupModelUsage, modelUsageName, type TokenSummary } from "../../context/model-usage"
 import { formatCompactCount } from "../../utils/format"
+import { formatTG } from "../../context/session-utils"
 
 interface TaskUsageProps {
   tokens: TokenSummary
@@ -24,11 +25,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
   const language = useLanguage()
   const provider = useProvider()
   const groups = createMemo(() => groupModelUsage(props.usage?.models ?? [], provider.providers()))
-  const speedText = createMemo(() => {
-    const v = props.throughput
-    if (v === undefined || !Number.isFinite(v) || v <= 0) return undefined
-    return `${new Intl.NumberFormat(language.locale(), { maximumFractionDigits: 1 }).format(v)} t/s`
-  })
+  const speedText = createMemo(() => formatTG(props.throughput, language.locale()))
   const money = createMemo(
     () =>
       new Intl.NumberFormat(language.locale(), {
@@ -74,7 +71,7 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
         </span>
       </Show>
       <Show when={speedText()}>
-        <Tooltip value={language.t("chat.throughput.speed.tooltip")} placement="top">
+        <Tooltip value={language.t("chat.throughput.speed.tooltip", { speed: speedText() })} placement="top">
           <span class="task-header-tokens-value" data-component="generation-speed">
             <Icon name="gauge" size="small" />
             {language.t("chat.throughput.speed.label")} {speedText()}

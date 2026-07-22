@@ -69,8 +69,8 @@ export function formatRate(tokens: SessionModelUsage["totals"]["tokens"]) {
 }
 
 export function formatRateValue(value: number | undefined) {
-  if (!Number.isFinite(value) || value === undefined || value <= 0) return "-"
-  return `${throughput.format(value as number)} t/s`
+  if (value === undefined || !Number.isFinite(value) || value <= 0) return "-"
+  return `${throughput.format(value)} t/s`
 }
 
 // Throughput label used by the sidebar / usage panel. Centralized here so a
@@ -105,10 +105,10 @@ export function aggregateMetrics(
     const metrics = sample.metrics
     if (!metrics) continue
     const value = metrics.generation
-    if (value === undefined) continue
-    if (!Number.isFinite(value) || (value as number) <= 0) continue
-    if ((sample.generated ?? 0) <= 0) continue
-    generation = value as number
+    if (typeof value !== "number" || !Number.isFinite(value)) continue
+    if (value <= 0) continue
+    if (sample.generated <= 0) continue
+    generation = value
   }
   return {
     ...(generation !== undefined ? { generation } : {}),

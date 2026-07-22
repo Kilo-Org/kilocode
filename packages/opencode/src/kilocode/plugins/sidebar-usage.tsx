@@ -1,5 +1,5 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@kilocode/plugin/tui"
-import { createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js"
+import { createEffect, createMemo, createResource, createSignal, For, onCleanup, onMount, Show } from "solid-js"
 import { useLocal } from "@tui/context/local"
 import * as Model from "@tui/util/model"
 import { Locale } from "@/util/locale"
@@ -47,6 +47,21 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
   const providers = createMemo(() => Model.index([...props.api.state.provider]))
   const groups = createMemo(() => groupModelsByProvider(usage()?.models ?? [], props.api.state.provider))
   const throughput = createMemo(() => aggregateMetrics(samples()))
+
+  // Reset accumulated samples whenever the sidebar is mounted against a new
+  // session. Without this guard, switching tabs in the TUI would blend
+  // step-finish metrics from the previous session into the new session's
+  // generation rate, and `samples` would grow without bound across
+  // long-lived plugin instances.
+  createEffect(
+    () => {
+      props.session_id
+      setSamples([])
+    },
+    () => {
+      setSamples([])
+    },
+  )
   const bench = createMemo(() => {
     const current = local.model.current()
     if (!current) return undefined
