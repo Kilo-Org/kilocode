@@ -75,7 +75,7 @@ import {
 import { ReviewComments } from "./ReviewComments"
 import { partReview, reviewBody } from "../../../../src/shared/review-comments"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import { MEMORY_USAGE, parseMemoryCommand } from "../../utils/memory-command"
+import { parseMemoryCommand } from "../../utils/memory-command"
 import { useMemory } from "../../context/memory"
 
 function mergeReviewComments(current: ReviewComment[], incoming: ReviewComment[]): ReviewComment[] {
@@ -986,8 +986,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       return false
     }
     if (memory.kind === "help") {
-      showToast({ variant: "default", title: "/memory", description: MEMORY_USAGE })
-      return true
+      const value = "/memory "
+      setText(value)
+      if (textareaRef) {
+        textareaRef.value = value
+        textareaRef.setSelectionRange(value.length, value.length)
+        textareaRef.focus()
+      }
+      slash.onInput(value, value.length)
+      adjustHeight()
+      return false
     }
     if (isDisabled() || speech.active() || terminal.pending() || git.pending() || props.blocked?.()) return false
     const status = projectMemory.status()
@@ -1000,13 +1008,17 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       showToast({ variant: "error", title: language.t("chat.memory.project.disabled") })
       return false
     }
-    if (memory.kind === "show") vscode.postMessage({ type: "memoryShow", sessionID: sid() })
+    if (memory.kind === "show") vscode.postMessage({ type: "memoryShow", mode: "show", sessionID: sid() })
     if (memory.kind === "operation") {
+      if (memory.operation === "status") {
+        vscode.postMessage({ type: "memoryShow", mode: "status", sessionID: sid() })
+        return true
+      }
       vscode.postMessage({
         type: "memoryOperation",
         operation: memory.operation,
         sessionID: sid(),
-        ...(memory.operation === "auto" || memory.operation === "verbose" ? { mode: memory.mode } : {}),
+        ...(memory.operation === "auto" ? { mode: memory.mode } : {}),
         ...(memory.operation === "purge" ? { confirm: memory.confirm } : {}),
         ...(memory.operation === "remember" || memory.operation === "correct" ? { text: memory.text } : {}),
         ...(memory.operation === "forget" ? { query: memory.query } : {}),

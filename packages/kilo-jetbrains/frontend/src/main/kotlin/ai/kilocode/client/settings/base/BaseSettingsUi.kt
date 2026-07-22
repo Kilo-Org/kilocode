@@ -36,7 +36,9 @@ internal abstract class BaseSettingsUi<C : BaseContentPanel, D, P, R, W>(
     private val workspaces: KiloWorkspaceService = service(),
     private val hint: String? = null,
     private val loginBanner: Boolean = true,
-) : SettingsPanel(), SettingsDraftPage {
+    scroll: Boolean = true,
+    pad: Boolean = true,
+) : SettingsPanel(scroll, pad), SettingsDraftPage {
     protected lateinit var form: C
         private set
     protected val jobs = mutableListOf<Job>()
