@@ -191,13 +191,13 @@ export namespace KiloSessionPromptQueue {
         // Record whether this slot starts immediately
         // (no existing tail) so we can publish the queue change exactly once
         // on the transition that actually mutates the waiting list.
-        const current = tails.get(sessionID)
-        const previous = current ?? Promise.resolve()
+        const startsImmediately = !tails.has(sessionID)
+        const previous = tails.get(sessionID) ?? Promise.resolve()
         const done = Promise.withResolvers<void>()
         // Keep later queued prompts moving; each caller still observes its own failure.
         const tail = settle(previous).then(() => done.promise)
         tails.set(sessionID, tail)
-        if (current) {
+        if (!startsImmediately) {
           // Another slot is still running; this prompt joins the waiting FIFO.
           const list = waiting.get(sessionID) ?? []
           publishIfChanged(sessionID, [...list, target])
