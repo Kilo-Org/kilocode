@@ -17,6 +17,9 @@ import { useTheme, selectedForeground } from "../../context/theme"
 import { SplitBorder } from "../../ui/border"
 import { useTerminalDimensions } from "@opentui/solid"
 import { slashDisplay } from "@/kilocode/cli/cmd/command-display" // kilocode_change
+import { createSessionPart, sessionMentionText } from "../../kilocode/session-mentions" // kilocode_change
+import { DialogSessionMention } from "../../kilocode/dialog-session-mention" // kilocode_change
+import { useDialog } from "../../ui/dialog" // kilocode_change
 import { Locale } from "../../util/locale"
 import type { PromptInfo } from "../../prompt/history"
 import { useFrecency } from "../../prompt/frecency"
@@ -357,6 +360,26 @@ export function Autocomplete(props: {
     },
   )
 
+  // kilocode_change start - "Past chats" opens a searchable session picker dialog
+  const dialog = useDialog()
+  const pastChatsOption: AutocompleteOption = {
+    display: "Past chats",
+    value: "Past chats",
+    description: "Search previous sessions",
+    onSelect: () => {
+      hide()
+      dialog.replace(() => (
+        <DialogSessionMention
+          onPick={(session) => {
+            const { part } = createSessionPart(session)
+            insertPart(sessionMentionText(session.title), part)
+          }}
+        />
+      ))
+    },
+  }
+  // kilocode_change end
+
   const mcpResources = createMemo(() => {
     if (!store.visible || store.visible === "/") return []
 
@@ -484,7 +507,7 @@ export function Autocomplete(props: {
     // it shouldn't be additionally sorted by fuzzysort as it will loose the results
     const fileOptions: AutocompleteOption[] = store.visible === "@" ? filesValue || [] : []
     const nonFileOptions: AutocompleteOption[] =
-      store.visible === "@" ? [...referenceAliasesValue, ...agentsValue, ...mcpResources()] : [...commandsValue]
+      store.visible === "@" ? [...referenceAliasesValue, ...agentsValue, ...mcpResources(), pastChatsOption] : [...commandsValue] // kilocode_change - add past chats option
 
     if (!searchValue) {
       return [...nonFileOptions, ...fileOptions]

@@ -951,8 +951,16 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
   const data = useData()
 
   const click = (segment: HighlightSegment, e: MouseEvent) => {
-    if (segment.type !== "file" || !data.openFile) return
+    if (segment.type !== "file") return
     e.preventDefault()
+    // Past-chat mentions carry a session: URL — open that session instead of a file.
+    const ref = props.references.find((ref) => ref.source?.text?.value === segment.text)
+    const url = (ref as { url?: unknown } | undefined)?.url
+    if (typeof url === "string" && url.startsWith("session:")) {
+      data.navigateToSession?.(url.slice("session:".length))
+      return
+    }
+    if (!data.openFile) return
     const path = segment.text.replace(/^@/, "")
     if (path) data.openFile(path)
   }

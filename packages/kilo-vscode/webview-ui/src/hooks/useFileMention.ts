@@ -1,15 +1,18 @@
 import { createEffect, createSignal, onCleanup } from "solid-js"
 import type { Accessor } from "solid-js"
-import type { FileAttachment, WebviewMessage, ExtensionMessage } from "../types/messages"
+import type { FileAttachment, SessionSearchItem, WebviewMessage, ExtensionMessage } from "../types/messages"
 import {
   AT_PATTERN,
   syncMentionedPaths as _syncMentionedPaths,
   buildFileAttachments,
   buildMentionResults,
+  buildSessionAttachments,
   filterMentionResults,
   isCursorAtMentionEnd,
   getMentionRemovalRange,
   findMentionRange,
+  sessionMentionText,
+  syncMentionedSessions as _syncMentionedSessions,
   FILE_PICKER_RESULT,
   type MentionResult,
 } from "./file-mention-utils"
@@ -23,6 +26,12 @@ interface VSCodeContext {
 
 export interface FileMention {
   mentionedPaths: Accessor<Set<string>>
+  /** Mentioned past chats, keyed by their `@title` token in the text. */
+  mentionedSessions: Accessor<Map<string, SessionSearchItem>>
+  /** Whether the past-chat session picker (AM-style search) is open. */
+  sessionPicker: Accessor<boolean>
+  /** Directory-scoped past chats shown in the session picker. */
+  sessionCandidates: Accessor<SessionSearchItem[]>
   mentionResults: Accessor<MentionResult[]>
   mentionIndex: Accessor<number>
   showMention: Accessor<boolean>
@@ -75,6 +84,18 @@ export interface FileMention {
    * cannot correctly rediscover paths containing spaces from raw text alone.
    */
   seedFromParts: (paths: string[], text: string) => void
+  /**
+   * Seed mentioned past chats (e.g. from a reverted message's session
+   * attachments), then prune against `text`.
+   */
+  seedSessions: (sessions: SessionSearchItem[], text: string) => void
+  /** Insert a session picked from the past-chat picker as an @-mention. */
+  selectSession: (
+    session: SessionSearchItem,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => void
 }
 
 export function useFileMention(
@@ -83,17 +104,23 @@ export function useFileMention(
   git?: Accessor<boolean>,
 ): FileMention {
   const [mentionedPaths, setMentionedPaths] = createSignal<Set<string>>(new Set())
+  const [mentionedSessions, setMentionedSessions] = createSignal<Map<string, SessionSearchItem>>(new Map())
   const [mentionQuery, setMentionQuery] = createSignal<string | null>(null)
   const [mentionResults, setMentionResults] = createSignal<MentionResult[]>([])
   const [mentionIndex, setMentionIndex] = createSignal(0)
+  const [sessionPicker, setSessionPicker] = createSignal(false)
+  const [sessionCandidates, setSessionCandidates] = createSignal<SessionSearchItem[]>([])
   let workspaceDir = ""
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
   const knownPaths = new Set<string>()
+  // Same accumulation for past-chat mentions, keyed by their title token.
+  const knownSessions = new Map<string, SessionSearchItem>()
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
   let fileSearchCounter = 0
   let filePickerCounter = 0
+  let sessionSearchCounter = 0
   let pickerState: {
     requestId: string
     textarea: HTMLTextAreaElement
@@ -111,6 +138,17 @@ export function useFileMention(
   })
 
   const unsubscribe = vscode.onMessage((message) => {
+    if (message.type === "sessionSearchResult") {
+      if (message.requestId !== `session-search-${sessionSearchCounter}`) return
+      // Most recently updated first; with a query the List re-ranks by fuzzy score.
+      setSessionCandidates(
+        message.sessions
+          .map((session) => ({ ...session, title: sessionMentionText(session.title) }))
+          .filter((session) => session.title)
+          .sort((a, b) => b.updated - a.updated),
+      )
+      return
+    }
     if (message.type !== "fileSearchResult") return
     if (message.requestId === `file-search-${fileSearchCounter}`) {
       const items = message.items ?? message.paths.map((path) => ({ path, type: "file" as const }))
@@ -143,10 +181,30 @@ export function useFileMention(
   const closeMention = () => {
     setMentionQuery(null)
     setMentionResults([])
+    setSessionPicker(false)
+  }
+
+  const closeSessionPicker = () => {
+    setSessionPicker(false)
   }
 
   const syncMentionedPaths = (text: string) => {
     setMentionedPaths(() => _syncMentionedPaths(knownPaths, text))
+    setMentionedSessions(() => _syncMentionedSessions(knownSessions, text))
+  }
+
+  // The past-chat picker searches a directory-scoped session list client-side
+  // (fuzzysort via the kilo-ui List component, same as the Agent Manager
+  // session search). Candidates are refetched each time the picker opens.
+  const openSessionPicker = () => {
+    setSessionPicker(true)
+    sessionSearchCounter++
+    const id = sessionID?.()
+    vscode.postMessage({
+      type: "requestSessionSearch",
+      requestId: `session-search-${sessionSearchCounter}`,
+      ...(id ? { sessionID: id } : {}),
+    })
   }
 
   const selectMention = (
@@ -172,10 +230,18 @@ export function useFileMention(
       return
     }
 
+    if (result.type === "past-chats") {
+      // Switch the dropdown into the AM-style session search; the actual
+      // insertion happens when a session is picked there.
+      openSessionPicker()
+      return
+    }
+
     // Add to knownPaths BEFORE execCommand so syncMentionedPaths (triggered
     // by the input event) can discover the new path.
     if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
       knownPaths.add(result.value)
+    if (result.type === "session") knownSessions.set(result.value, result.session)
 
     // Replace the @query with the selected @path via execCommand so the
     // change lands on the browser's native undo stack. AT_PATTERN is
@@ -184,6 +250,10 @@ export function useFileMention(
     const prefix = /^\s/.test(match[0]) ? 1 : 0
     const atPos = match.index! + prefix
     const suffix = /^\s/.test(after) ? "" : " "
+    // Restore focus before execCommand: pickers (session search, native file
+    // dialog) move focus away from the textarea, which makes execCommand
+    // silently no-op.
+    textarea.focus()
     suppress = true
     try {
       textarea.setSelectionRange(atPos, cursor)
@@ -196,9 +266,17 @@ export function useFileMention(
 
     if (result.type === "file" || result.type === "folder" || result.type === "opened-file")
       setMentionedPaths((prev) => new Set([...prev, result.value]))
+    if (result.type === "session") setMentionedSessions((prev) => new Map(prev).set(result.value, result.session))
     closeMention()
     onSelect?.()
   }
+
+  const selectSession = (
+    session: SessionSearchItem,
+    textarea: HTMLTextAreaElement,
+    setText: (text: string) => void,
+    onSelect?: () => void,
+  ) => selectMention({ type: "session", value: session.title, session }, textarea, setText, onSelect)
 
   // When true, onInput skips dropdown logic (used during execCommand changes)
   let suppress = false
@@ -206,6 +284,7 @@ export function useFileMention(
   const onInput = (val: string, cursor: number) => {
     syncMentionedPaths(val)
     if (suppress) return
+    closeSessionPicker()
     const before = val.substring(0, cursor)
     const match = before.match(AT_PATTERN)
     if (match) {
@@ -269,8 +348,14 @@ export function useFileMention(
     })
   }
 
-  const parseFileAttachments = (text: string): FileAttachment[] =>
-    buildFileAttachments(text, mentionedPaths(), workspaceDir)
+  // Mention tokens that count as atomic units for cursor movement, deletion
+  // and selection snapping: file paths plus past-chat title tokens.
+  const mentionTokens = () => new Set([...mentionedPaths(), ...mentionedSessions().keys()])
+
+  const parseFileAttachments = (text: string): FileAttachment[] => [
+    ...buildFileAttachments(text, mentionedPaths(), workspaceDir),
+    ...buildSessionAttachments(text, mentionedSessions()),
+  ]
 
   const handleBackspace = (
     e: KeyboardEvent,
@@ -286,12 +371,12 @@ export function useFileMention(
 
     const charBefore = val[cursor - 1]
     if (charBefore !== " " && charBefore !== "\n") return false
-    if (!isCursorAtMentionEnd(val, cursor - 1, mentionedPaths())) return false
+    if (!isCursorAtMentionEnd(val, cursor - 1, mentionTokens())) return false
 
     // Cursor is on the space right after a mention — remove the entire
     // mention + trailing space in one step via execCommand so the change
     // lands on the browser's native undo stack.
-    const range = getMentionRemovalRange(val, cursor - 1, mentionedPaths())
+    const range = getMentionRemovalRange(val, cursor - 1, mentionTokens())
     if (!range) return false
 
     e.preventDefault()
@@ -319,7 +404,7 @@ export function useFileMention(
 
     if (start === pending.prevPosition) return
 
-    const range = findMentionRange(pending.prevValue, start, mentionedPaths())
+    const range = findMentionRange(pending.prevValue, start, mentionTokens())
     if (!range) return
 
     const pos = start > pending.prevPosition ? range.end : range.start
@@ -363,7 +448,7 @@ export function useFileMention(
     }
 
     const val = textarea.value
-    const paths = mentionedPaths()
+    const paths = mentionTokens()
     let snapped = start
     let snappedEnd = end
 
@@ -450,8 +535,19 @@ export function useFileMention(
     syncMentionedPaths(text)
   }
 
+  const seedSessions = (sessions: SessionSearchItem[], text: string) => {
+    for (const session of sessions) {
+      const token = sessionMentionText(session.title)
+      if (token) knownSessions.set(token, { ...session, title: token })
+    }
+    syncMentionedPaths(text)
+  }
+
   return {
     mentionedPaths,
+    mentionedSessions,
+    sessionPicker,
+    sessionCandidates,
     mentionResults,
     mentionIndex,
     showMention,
@@ -468,5 +564,7 @@ export function useFileMention(
     seedFromText,
     insertFilePickerResult,
     seedFromParts,
+    seedSessions,
+    selectSession,
   }
 }

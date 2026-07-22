@@ -2793,8 +2793,16 @@ export const SessionProvider: ParentComponent = (props) => {
       const paths = parts
         .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
         .map((p) => p.source?.path)
-        .filter((p): p is string => !!p)
-      if (text) window.postMessage({ type: "setChatBoxMessage", text, paths }, "*")
+        .filter((p): p is string => !!p && !p.startsWith("session:"))
+      const sessions = parts
+        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+        .filter((p) => p.url.startsWith("session:"))
+        .map((p) => ({
+          id: p.url.slice("session:".length),
+          title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
+          updated: 0,
+        }))
+      if (text) window.postMessage({ type: "setChatBoxMessage", text, paths, sessions }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
