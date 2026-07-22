@@ -11,7 +11,7 @@ import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Auth } from "../../src/auth" // kilocode_change
+import { Auth } from "../../src/auth"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
@@ -51,6 +51,7 @@ import { Storage } from "../../src/storage/storage"
 import { SyncEvent } from "../../src/sync"
 import { ToolRegistry } from "../../src/tool/registry"
 import { Truncate } from "../../src/tool/truncate"
+import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import { MemoryService } from "@kilocode/kilo-memory/effect/service"
 import { provideTmpdirServer } from "../fixture/fixture"
@@ -160,7 +161,8 @@ function makeHttp() {
     Layer.provide(Format.defaultLayer),
     Layer.provide(Git.defaultLayer),
     Layer.provide(Command.defaultLayer),
-    Layer.provide(Auth.defaultLayer), // kilocode_change
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(KiloSessions.testLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
