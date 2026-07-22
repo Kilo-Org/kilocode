@@ -1712,14 +1712,16 @@ export const dict = {
   "settings.display.codeEdit.expanded": "Utvidet",
   "settings.display.codeEdit.collapsed": "Skjult",
 
-  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.title": "Vis genereringshastighet",
   "settings.display.tokenThroughput.description":
-    "Display tokens-per-second (prompt-processing / text-generation) on each assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+    "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
 
-  "chat.throughput.badge.computed": "PP – · TG {{tg}}",
-  "chat.throughput.badge.tooltip.computed":
-    "Prompt-processing unavailable · text-generation {{tg}} t/s (computed from step duration)",
-  "chat.throughput.badge.tooltip.missing": "Throughput metrics unavailable for this step",
+  "chat.throughput.speed.label": "Genereringshastighet",
+  "chat.throughput.speed.row": "Genereringshastighet {{speed}}",
+  "chat.throughput.speed.tooltip":
+    "Genereringshastighet {{speed}} (beregnet fra stegvarighet)",
+  "chat.throughput.speed.tooltip.missing":
+    "Gjennomstrømningsmålinger er ikke tilgjengelige for dette steget",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

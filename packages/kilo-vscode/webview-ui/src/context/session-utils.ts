@@ -205,16 +205,13 @@ export function calcTokenUsage(
 }
 
 /**
- * Aggregate tokens-per-second throughput across the step-finish parts of a
- * session.
+ * Pick the throughput snapshot from the last step-finish part that carries a
+ * `metrics` block. We surface only the most recent assistant turn's rate so
+ * the figure reflects what the user is currently waiting on rather than a
+ * stale session-wide average — older turns scroll out of view and shouldn't
+ * keep pulling the displayed value down.
  *
- * Combines every step-finish that carries a `metrics` block so the header
- * reflects all of the assistant's reasoning + answer steps, not just the last
- * one. Generation adopts the first non-empty sample we see — that gives a
- * stable "snapshot" view of the session pace that won't double-count when
- * later steps report zero.
- *
- * PP (prompt-processing) is intentionally not aggregated here: the AI SDK
+ * PP (prompt-processing) is intentionally not surfaced here: the AI SDK
  * adapter drops llama.cpp's `prompt_per_second` before providerMetadata
  * reaches computeMetrics, so the wire shape stays `{ prompt?, generation? }`
  * for future use but only `generation` is populated today. PP support lands
@@ -223,25 +220,35 @@ export function calcTokenUsage(
  * Returns `undefined` when no step-finish part in the input carries metrics,
  * which is the signal callers use to hide the throughput UI.
  */
-export function aggregateMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+export function latestMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
   let generation: number | undefined
   for (const part of parts) {
     if (part.type !== "step-finish") continue
     const metrics = part.metrics
     if (!metrics) continue
-    if (metrics.generation !== undefined && generation === undefined) generation = metrics.generation
+    if (metrics.generation !== undefined) generation = metrics.generation
   }
   if (generation === undefined) return undefined
   return { generation, source: "computed" }
 }
 
 /**
+ * Aggregate tokens-per-second throughput across the step-finish parts of a
+ * session. Kept as an alias of `latestMetrics` because the historical name
+ * still appears in tests and external callers — both now resolve to the same
+ * "last non-empty sample wins" snapshot semantics.
+ */
+export function aggregateMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
+  return latestMetrics(parts)
+}
+
+/**
  * Pick the throughput snapshot from a single assistant message's parts.
- * Same aggregation strategy as `aggregateMetrics` so the per-message badge
- * and the header row stay consistent.
+ * Same selection strategy as `latestMetrics` so the per-message badge and
+ * the header row stay consistent.
  */
 export function messageMetrics(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
-  return aggregateMetrics(parts)
+  return latestMetrics(parts)
 }
 
 /**

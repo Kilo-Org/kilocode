@@ -79,10 +79,10 @@ export function formatRateValue(value: number | undefined) {
 // PP (prompt-processing) is intentionally omitted: llama.cpp's
 // `prompt_per_second` is dropped upstream by the AI SDK adapter before it
 // reaches providerMetadata, so the current build can only emit the
-// generation rate. The PP row lands alongside TG once the upstream
-// metadataExtractor wiring ships.
+// generation rate. The PP row lands alongside generation speed once the
+// upstream metadataExtractor wiring ships.
 export const throughputLabel = {
-  generation: "TG",
+  generation: "Generation speed",
 } as const
 
 export function formatCost(input: number) {
@@ -92,24 +92,24 @@ export function formatCost(input: number) {
 
 // Local aggregation of step-finish metrics for the sidebar/usage panel.
 //
-// We weight the *generation* rate by generated tokens so longer generations
-// pull the average toward their own reported rate. Steps with no generated
-// output (e.g. tool-only steps) contribute nothing to the weighted average.
+// We surface the *most recent* generation rate (last non-empty sample wins)
+// so the displayed figure tracks the latest assistant turn the user is
+// waiting on rather than a weighted session-wide average that drifts toward
+// long-ago turns. Steps with no generated output (e.g. tool-only steps)
+// contribute nothing — they simply don't replace the running snapshot.
 export function aggregateMetrics(
   samples: ReadonlyArray<{ metrics?: StepMetrics; generated: number }>,
 ): AggregatedMetrics {
-  let generationSum = 0
-  let generationWeight = 0
+  let generation: number | undefined
   for (const sample of samples) {
     const metrics = sample.metrics
     if (!metrics) continue
-    const generated = sample.generated
-    if (Number.isFinite(metrics.generation) && (metrics.generation as number) > 0 && generated > 0) {
-      generationSum += (metrics.generation as number) * generated
-      generationWeight += generated
-    }
+    const value = metrics.generation
+    if (value === undefined) continue
+    if (!Number.isFinite(value) || (value as number) <= 0) continue
+    if ((sample.generated ?? 0) <= 0) continue
+    generation = value as number
   }
-  const generation = generationWeight > 0 ? generationSum / generationWeight : undefined
   return {
     ...(generation !== undefined ? { generation } : {}),
   }

@@ -27,16 +27,16 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
     expect(formatRateValue(Infinity)).toBe("-")
   })
 
-  test("throughputLabel centralizes the TG label so a future i18n sweep is one file", () => {
-    expect(throughputLabel.generation).toBe("TG")
+  test("throughputLabel centralizes the generation-speed label so a future i18n sweep is one file", () => {
+    expect(throughputLabel.generation).toBe("Generation speed")
   })
 
-  test("aggregates per-step generation weighted by generated tokens", () => {
+  test("surfaces the most recent non-empty generation rate as the snapshot", () => {
     const aggregated = aggregateMetrics([
       { ...step({ generation: 20 }), generated: 100 },
       { ...step({ generation: 60 }), generated: 300 },
     ])
-    expect(aggregated.generation).toBeCloseTo((20 * 100 + 60 * 300) / (100 + 300))
+    expect(aggregated.generation).toBe(60)
   })
 
   test("skips samples without metrics", () => {
@@ -47,7 +47,7 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
     expect(aggregated.generation).toBe(40)
   })
 
-  test("skips zero-weight samples for the generation average", () => {
+  test("skips zero-weight samples when picking the latest snapshot", () => {
     const aggregated = aggregateMetrics([
       { ...step({ generation: 9999 }), generated: 0 },
       { ...step({ generation: 25 }), generated: 50 },
@@ -60,7 +60,7 @@ describe("kilocode.plugins.model-usage throughput helpers", () => {
     expect(aggregateMetrics([{ metrics: undefined, generated: 100 }])).toEqual({})
   })
 
-  test("ignores bogus per-call values without poisoning the aggregate", () => {
+  test("ignores bogus per-call values without poisoning the snapshot", () => {
     const aggregated = aggregateMetrics([
       { ...step({ generation: -1 }), generated: 100 },
       { ...step({ generation: Number.POSITIVE_INFINITY }), generated: 100 },

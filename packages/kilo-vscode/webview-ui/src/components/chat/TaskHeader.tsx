@@ -14,7 +14,6 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { useMemory } from "../../context/memory"
 import { useDisplay } from "../../context/display"
 import { calcTokenUsage, collapseCostBreakdown, latestMetrics } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
@@ -89,7 +88,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return false
   })
 
-// Throughput is the latest step-finish snapshot across the session so the
+  // Throughput is the latest step-finish snapshot across the session so the
   // figure reflects the most recent assistant turn rather than a session-wide
   // average. Result is consumed by the TaskUsage summary row, which renders
   // the value inline with the token counts — there is no standalone element.
@@ -102,75 +101,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return latestMetrics(flat)
   })
 
-  const memoryVerbose = createMemo(() => Boolean(memory.status()?.state.verbose))
-  const memoryActive = createMemo(() => {
-    if (!memory.enabled()) return false
-    const stats = memory.status()?.state.stats
-    return !!stats && stats.lastInjectedSessionID === session.currentSessionID() && stats.lastInjectedTokens > 0
-  })
-  const memoryStatus = createMemo(() => {
-    if (memory.error()) return memory.error()!
-    if (memory.loading()) return language.t("chat.memory.status.loading")
-    if (!memory.enabled()) return language.t("chat.memory.project.disabled")
-    if (memoryActive()) return language.t("chat.memory.status.active")
-    return language.t("chat.memory.project.enabled")
-  })
-  const activity = createMemo(() => [...memory.activity()].sort((a, b) => b.at - a.at))
-  const activityLines = createMemo(() => {
-    if (memory.error() || !memory.enabled()) return []
-    const loaded = activity().reduce((sum, item) => sum + (item.type === "loaded" ? item.tokens : 0), 0)
-    const recalled = activity().reduce((sum, item) => sum + (item.type === "recalled" ? item.count : 0), 0)
-    const saved = activity().reduce((sum, item) => sum + (item.type === "saved" ? item.count : 0), 0)
-    return [
-      ...(loaded > 0
-        ? [language.t("chat.memory.activity.loaded", { tokens: loaded.toLocaleString(language.locale()) })]
-        : []),
-      ...(recalled > 0
-        ? [language.t("chat.memory.activity.recalled", { count: recalled.toLocaleString(language.locale()) })]
-        : []),
-      ...(saved > 0
-        ? [language.t("chat.memory.activity.saved", { count: saved.toLocaleString(language.locale()) })]
-        : []),
-    ]
-  })
-  const activityItems = createMemo(() =>
-    activity()
-      .flatMap((item) => {
-        const values =
-          item.type === "saved" ? [...item.refs, ...item.items] : item.items.length > 0 ? item.items : item.refs
-        return values.flatMap((value) => {
-          const text = value.trim()
-          return text ? [{ type: item.type, value: text }] : []
-        })
-      })
-      .slice(0, 5),
-  )
-  const activityLabel = (item: { type: MemoryActivity["type"]; value: string }) =>
-    language.t(`chat.memory.activity.${item.type}.item`, { item: item.value })
-  const activitySummaryView = () => (
-    <div data-slot="task-header-memory-activity">
-      <Show
-        when={activityLines().length > 0}
-        fallback={<div data-slot="task-header-memory-activity-summary">{language.t("chat.memory.activity.idle")}</div>}
-      >
-        <div data-slot="task-header-memory-activity-summary">
-          <For each={activityLines()}>{(line) => <div>{line}</div>}</For>
-        </div>
-      </Show>
-    </div>
-  )
-  const activityTooltip = () => (
-    <>
-      <div data-slot="task-header-context-tooltip-title">{language.t("settings.context.title")}</div>
-      <div data-slot="task-header-context-tooltip-status">{memoryStatus()}</div>
-      {activitySummaryView()}
-      <Show when={memoryVerbose() && activityItems().length > 0}>
-        <div data-slot="task-header-memory-activity-list">
-          <For each={activityItems()}>{(item) => <div>{activityLabel(item)}</div>}</For>
-        </div>
-      </Show>
-    </>
-  )
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
   // Throughput row visibility is shared with AssistantMessage via the

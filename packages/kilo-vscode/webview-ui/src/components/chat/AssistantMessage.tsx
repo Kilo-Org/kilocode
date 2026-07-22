@@ -29,6 +29,8 @@ import { messageMetrics, formatTG } from "../../context/session-utils"
 import { color as timelineColor } from "../../utils/timeline/colors"
 import type { Part as TimelinePart } from "../../types/messages"
 import type { TimelineHighlight } from "../../utils/timeline/highlight"
+import { Icon } from "@kilocode/kilo-ui/icon"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { QuestionDock } from "./QuestionDock"
 import { SuggestBar } from "./SuggestBar"
 import { toolDefaultOpen } from "./tool-default-open"
@@ -165,27 +167,28 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
   )
 }
 
-/** Compact tokens-per-second line shown beneath the last assistant message.
+/** Compact generation-speed line shown beneath the last assistant message.
  * Only renders when the user has opted in via the
  * `kilo-code.new.showTokenThroughput` setting and the message has a
  * step-finish part that carries throughput metrics. Renders as plain text
- * that matches the description-foreground tone of the Tokens row in the
- * task header — no pill, no border. */
+ * prefixed by a gauge icon that matches the description-foreground tone of
+ * the Tokens row in the task header — no pill, no border. */
 function ThroughputBadge(props: { metrics: NonNullable<ReturnType<typeof messageMetrics>> }) {
   const language = useLanguage()
-  const tgText = createMemo(() => formatTG(props.metrics.generation, language.locale()))
-  const label = createMemo(() => language.t("chat.throughput.badge.computed", { tg: tgText() }))
+  const speedText = createMemo(() => formatTG(props.metrics.generation, language.locale()))
+  const label = createMemo(() => language.t("chat.throughput.speed.row", { speed: speedText() }))
   const tooltip = createMemo(() => {
     if (props.metrics.generation !== undefined) {
-      return language.t("chat.throughput.badge.tooltip.computed", {
-        tg: formatTG(props.metrics.generation, language.locale()),
-      })
+      return language.t("chat.throughput.speed.tooltip", { speed: speedText() })
     }
-    return language.t("chat.throughput.badge.tooltip.missing")
+    return language.t("chat.throughput.speed.tooltip.missing")
   })
   return (
     <Tooltip value={tooltip()} placement="top">
-      <span data-component="assistant-throughput-badge">{label()}</span>
+      <span data-component="assistant-throughput-badge">
+        <Icon name="gauge" size="small" />
+        {label()}
+      </span>
     </Tooltip>
   )
 }
@@ -194,7 +197,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
   const data = useData()
   const session = useSession()
   const display = useDisplay()
-const mem = useMemory()
   const language = useLanguage()
   const { config } = useConfig()
   const open = createMemo(() => config().terminal_command_display !== "collapsed")
@@ -215,15 +217,8 @@ const mem = useMemory()
       return !!matchToolRequest(part, "question", session.questions())
     })
   })
-const meta = createMemo(() =>
-    MemoryMarkerMeta.fromParts((props.parts ?? data.store.part?.[props.message.id] ?? []) as MemoryMarkerMeta.Part[]),
-  )
-  const recall = createMemo(() => {
-    const item = meta()
-    if (item?.type === "recall") return item
-  })
   // Pull the latest step-finish metrics for this message so the per-message
-  // badge can render its PP/TG rates when the toggle is on.
+  // badge can render its generation rate when the toggle is on.
   const throughput = createMemo(() =>
     messageMetrics(
       (props.parts ?? (data.store.part?.[props.message.id] as TimelinePart[] | undefined) ?? []) as TimelinePart[],
@@ -344,17 +339,6 @@ const meta = createMemo(() =>
           )
         }}
       </For>
-<Show when={mem.enabled() && recall()}>
-        {(item) => (
-          <Tooltip value={tip(item())} placement="top">
-            <div data-component="assistant-memory-badge">
-              {language.t("chat.memory.badge.recalled")} ·{" "}
-              {language.t("chat.memory.badge.items", { count: count(item()) })}
-              <Show when={verbose() && items(item()).length > 0}> · {items(item())[0]}</Show>
-            </div>
-          </Tooltip>
-        )}
-      </Show>
       <Show when={throughputVisible() && throughput()}>{(metrics) => <ThroughputBadge metrics={metrics()} />}</Show>
     </>
   )

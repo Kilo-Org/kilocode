@@ -5,6 +5,7 @@ import {
   calcContextUsage,
   calcTokenUsage,
   aggregateMetrics,
+  latestMetrics,
   messageMetrics,
   formatTG,
   buildFamilyCosts,
@@ -731,41 +732,41 @@ function stepFinish(id: string, metrics?: NonNullable<Part["metrics"]>): Part {
   }
 }
 
-describe("aggregateMetrics", () => {
+describe("latestMetrics", () => {
   it("returns undefined when no step-finish parts carry metrics", () => {
     const parts: Part[] = [
       { type: "step-start", id: "s1" },
       stepFinish("f1"),
       { type: "text", id: "t1", text: "hello" },
     ]
-    expect(aggregateMetrics(parts)).toBeUndefined()
+    expect(latestMetrics(parts)).toBeUndefined()
   })
 
-  it("merges the first non-empty metrics across every step in the session", () => {
+  it("picks the last non-empty generation rate across every step in the session", () => {
     const parts: Part[] = [
       stepFinish("f1", { prompt: 100, generation: 20, source: "computed" }),
       { type: "text", id: "t1", text: "mid" },
       stepFinish("f2", { prompt: 412, generation: 38, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ generation: 20, source: "computed" })
+    expect(latestMetrics(parts)).toEqual({ generation: 38, source: "computed" })
   })
 
-  it("keeps the first computed sample when later steps report zero", () => {
+  it("uses the latest computed value when earlier steps report lower rates", () => {
     const parts: Part[] = [
       stepFinish("f1", { prompt: 500, generation: 50, source: "computed" }),
       stepFinish("f2", { generation: 30, source: "computed" }),
     ]
-    const result = aggregateMetrics(parts)
+    const result = latestMetrics(parts)
     expect(result?.source).toBe("computed")
-    expect(result?.generation).toBe(50)
+    expect(result?.generation).toBe(30)
   })
 
-  it("uses the first computed value when no earlier value is present", () => {
+  it("falls back to the only computed sample when no later one is present", () => {
     const parts: Part[] = [
       stepFinish("f1", { generation: 12, source: "computed" }),
-      stepFinish("f2", { generation: 18, source: "computed" }),
+      stepFinish("f2"),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ generation: 12, source: "computed" })
+    expect(latestMetrics(parts)).toEqual({ generation: 12, source: "computed" })
   })
 
   it("ignores non-step-finish parts even when they look like metrics", () => {
@@ -773,28 +774,42 @@ describe("aggregateMetrics", () => {
       { type: "text", id: "t1", text: "noise" },
       stepFinish("f1", { prompt: 200, generation: 22, source: "computed" }),
     ]
-    expect(aggregateMetrics(parts)).toEqual({ generation: 22, source: "computed" })
+    expect(latestMetrics(parts)).toEqual({ generation: 22, source: "computed" })
   })
+})
 
-  it("merges multi-step metrics into a single snapshot per message", () => {
-    // An assistant turn that runs reasoning + answer produces two step-finish
-    // parts; the badge should merge them so the generation rate from the
-    // final step wins.
+describe("aggregateMetrics", () => {
+  // Historical alias of latestMetrics — kept so external callers and tests
+  // that still use the original name keep working. Behaviour matches: the
+  // last non-empty step-finish generation rate wins.
+  it("matches latestMetrics for the same input", () => {
     const parts: Part[] = [
       stepFinish("f1", { generation: 25, source: "computed" }),
       stepFinish("f2", { generation: 12, source: "computed" }),
     ]
-    expect(messageMetrics(parts)).toEqual({ generation: 25, source: "computed" })
+    expect(aggregateMetrics(parts)).toEqual(latestMetrics(parts))
   })
 })
 
 describe("messageMetrics", () => {
-  it("matches aggregateMetrics behavior on the same input", () => {
+  it("picks the last non-empty generation rate within a single assistant message", () => {
+    // An assistant turn that runs reasoning + answer produces two step-finish
+    // parts; the badge surfaces the final step's generation rate so the
+    // user sees the rate for the most recent reasoning or text generation
+    // in that turn.
+    const parts: Part[] = [
+      stepFinish("f1", { generation: 25, source: "computed" }),
+      stepFinish("f2", { generation: 12, source: "computed" }),
+    ]
+    expect(messageMetrics(parts)).toEqual({ generation: 12, source: "computed" })
+  })
+
+  it("matches latestMetrics behavior on the same input", () => {
     const parts: Part[] = [
       stepFinish("f1", { generation: 8, source: "computed" }),
       stepFinish("f2", { prompt: 99, generation: 33, source: "computed" }),
     ]
-    expect(messageMetrics(parts)).toEqual(aggregateMetrics(parts))
+    expect(messageMetrics(parts)).toEqual(latestMetrics(parts))
   })
 
   it("returns undefined when no throughput metrics are present", () => {
