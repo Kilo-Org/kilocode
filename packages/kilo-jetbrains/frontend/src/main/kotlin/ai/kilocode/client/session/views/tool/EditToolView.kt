@@ -185,7 +185,7 @@ class EditToolView(
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
         md.set(patchMarkdown(diff))
-        return HeaderPopupBody(md.component, md, style.editorBackground)
+        return HeaderPopupBody(md.component, md, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "EditToolView#$contentId(${labelText()})"

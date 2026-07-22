@@ -204,7 +204,7 @@ class ShellToolView(
         md.component.border = JBUI.Borders.empty()
         md.set(popupMd(formatCommand(cmd)))
         padPopup(md.component)
-        return HeaderPopupBody(md.component, md, style.editorBackground)
+        return HeaderPopupBody(md.component, md, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "ShellToolView#$contentId(${labelText()})"

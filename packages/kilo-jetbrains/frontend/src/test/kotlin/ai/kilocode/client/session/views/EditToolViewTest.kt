@@ -3,6 +3,7 @@ package ai.kilocode.client.session.views
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
@@ -12,6 +13,7 @@ import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -164,6 +166,47 @@ class EditToolViewTest : BasePlatformTestCase() {
         view.toggle()
 
         assertNull(view.headerPopup())
+    }
+
+    fun `test edit header popup widens to diff content`() {
+        val patch = """
+            --- src/App.kt
+            +++ src/App.kt
+            @@ -1 +1 @@
+            -old
+            +${"x".repeat(180)}
+        """.trimIndent()
+        val view = track(EditToolView(tool().also {
+            it.metadata = mapOf("filediff" to fileDiff(1, 1, patch))
+        }))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(body.component.preferredSize.width > JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
+            assertTrue(body.component.preferredSize.width <= JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test edit header popup stays narrow for short diff`() {
+        val patch = """
+            --- src/App.kt
+            +++ src/App.kt
+            @@ -1 +1 @@
+            -old
+            +new
+        """.trimIndent()
+        val view = track(EditToolView(tool().also {
+            it.metadata = mapOf("filediff" to fileDiff(1, 1, patch))
+        }))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(body.component.preferredSize.width < JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
     }
 
     fun `test no hover popup without diff`() {

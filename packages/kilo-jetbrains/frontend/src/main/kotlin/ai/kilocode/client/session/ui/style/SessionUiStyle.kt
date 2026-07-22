@@ -37,6 +37,12 @@ object SessionUiStyle {
             const val BODY_EXTRA_HEIGHT = 16
         }
 
+        object Popup {
+            const val MAX_WIDTH = 350
+            const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
+            const val MAX_HEIGHT = 450
+        }
+
         internal const val BORDER_DELTA = 80
         internal const val HOVER_BORDER_ALPHA = 0.18f
         internal const val HOVER_FILL_ALPHA = 0.10f
