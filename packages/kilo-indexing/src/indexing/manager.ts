@@ -576,12 +576,12 @@ export class CodeIndexManager {
 
   private async _recreateServices(prepared?: Baseline): Promise<void> {
     log.info("starting indexing service recreation", { workspacePath: this.workspacePath })
-    const profile = this._configManager!.getConfig()
+    const initialConfig = this._configManager!.getConfig()
     using span = IndexingProfile.start("indexing.manager.services")
     span.add({
-      provider: profile.embedderProvider,
-      modelId: profile.modelId,
-      vectorStore: profile.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
+      provider: initialConfig.embedderProvider,
+      modelId: initialConfig.modelId,
+      vectorStore: initialConfig.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
       baseline: "none",
       validationMs: 0,
     })
@@ -593,7 +593,7 @@ export class CodeIndexManager {
       (event) => this.handleTelemetry(event),
     )
     const ignoreInstance = await loadIgnore(this.workspacePath)
-    const config = this._configManager!.getConfig()
+    const refreshedConfig = this._configManager!.getConfig()
     const baseline = prepared ?? (await this.createBaseline(factory))
     span.add({ baseline: baseline?.store ? "ready" : baseline ? "waiting" : "none" })
     const { embedder, vectorStore, scanner, fileWatcher } = factory.createServices(this._cacheManager!, ignoreInstance)
@@ -601,11 +601,11 @@ export class CodeIndexManager {
     log.info("created indexing services", {
       workspacePath: this.workspacePath,
       provider: embedder.embedderInfo.name,
-      vectorStore: config.vectorStoreProvider,
-      model: config.modelId ?? "default",
+      vectorStore: refreshedConfig.vectorStoreProvider,
+      model: refreshedConfig.modelId ?? "default",
     })
 
-    const shouldValidate = embedder && embedder.embedderInfo.name === config.embedderProvider
+    const shouldValidate = embedder && embedder.embedderInfo.name === refreshedConfig.embedderProvider
     if (shouldValidate) {
       const validation = performance.now()
       log.info("validating embedder configuration", {
