@@ -65,15 +65,19 @@ test.serial("disposes profiles only once and defaults to an error outcome", () =
 
 test.serial("does not throw when optional profile emission fails", () => {
   const env = process.env.KILO_INDEXING_PROFILE
+  const failure = new Error("profile emission failed")
   const info = spyOn(console, "info").mockImplementation(() => {
-    throw new Error("profile emission failed")
+    throw failure
   })
+  const error = spyOn(console, "error").mockImplementation(() => undefined)
   try {
     process.env.KILO_INDEXING_PROFILE = "1"
 
     expect(() => IndexingProfile.start("indexing.test").end()).not.toThrow()
     expect(info).toHaveBeenCalledTimes(1)
+    expect(error).toHaveBeenCalledWith("failed to emit indexing profile", failure)
   } finally {
+    error.mockRestore()
     info.mockRestore()
     if (env === undefined) delete process.env.KILO_INDEXING_PROFILE
     else process.env.KILO_INDEXING_PROFILE = env

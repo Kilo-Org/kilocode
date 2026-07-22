@@ -35,8 +35,8 @@ function clean(input: IndexingProfileFields) {
 function emit(record: IndexingProfileRecord) {
   try {
     console.info(JSON.stringify(record))
-  } catch {
-    return
+  } catch (err) {
+    console.error("failed to emit indexing profile", err)
   }
 }
 

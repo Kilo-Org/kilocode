@@ -376,11 +376,7 @@ export namespace KiloIndexing {
     const output = Instance.bind((event: Parameters<IndexingWorker.Hooks["log"]>[0]) => {
       if (disposed) return
       if (event.profile) {
-        try {
-          log.info(event.message, indexingProfileLogFields(dir, event.profile))
-        } catch {
-          return
-        }
+        log.info(event.message, indexingProfileLogFields(dir, event.profile))
         return
       }
       log[event.level](event.message, { source: "worker", workspacePath: dir })
