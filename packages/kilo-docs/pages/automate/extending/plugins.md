@@ -51,7 +51,7 @@ Each entry can be:
 | `["package-name", { options }]` | npm package with options passed to the plugin function |
 | `"./path/plugin.ts"` / `"file:///..."` | Local file (relative to the config file or absolute `file:` URL) |
 
-Config files live in the same locations as the rest of your CLI configuration — see the [CLI configuration reference](/docs/code-with-ai/platforms/cli#configuration).
+Config files live in the same locations as the rest of your CLI configuration - see the [CLI configuration reference](/docs/code-with-ai/platforms/cli#configuration). Kilo automatically discovers only `kilo.json` and `kilo.jsonc`, with JSONC taking precedence when both exist in one location. Automatically discovered `opencode.json`, `opencode.jsonc`, `.opencode` directories, global legacy `config.json`, and the legacy TOML `config` file are ignored. Rename OpenCode files to Kilo filenames and move them to a Kilo config location. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file. `KILO_CONFIG` remains an explicit arbitrary-file override, while `KILO_CONFIG_DIR` loads only Kilo filenames from its supplied directory.
 
 ### From a plugin directory
 
@@ -86,7 +86,7 @@ kilo plugin my-plugin --global
 kilo plugin my-plugin --force
 ```
 
-The command resolves the package, reads its `package.json` for plugin entrypoints, and writes the entry into the appropriate config file (`.kilo/opencode.jsonc` / `.kilo/tui.jsonc` for local installs, or `~/.config/kilo/opencode.jsonc` / `~/.config/kilo/tui.jsonc` for `--global`) while preserving JSONC comments.
+The command resolves the package, reads its `package.json` for plugin entrypoints, and writes the entry into the appropriate config file (`.kilo/kilo.jsonc` / `.kilo/tui.jsonc` for local installs, or `~/.config/kilo/kilo.jsonc` / `~/.config/kilo/tui.jsonc` for `--global`) while preserving JSONC comments.
 
 ### How plugins are installed
 
@@ -100,9 +100,9 @@ The command resolves the package, reads its `package.json` for plugin entrypoint
 Plugins from all sources run on every session. They load in this order:
 
 1. Internal built-ins (Kilo Gateway auth, Codex auth, Copilot auth, Cloudflare, etc.)
-2. Global config plugin array (`~/.config/kilo/kilo.json`)
+2. Global config plugin arrays (`~/.config/kilo/kilo.json`, then `~/.config/kilo/kilo.jsonc`)
 3. Global plugin directory (`~/.config/kilo/plugin/`)
-4. Project config plugin array (`kilo.json` / `opencode.json`)
+4. Project Kilo config plugin arrays (`kilo.json`, then `kilo.jsonc`)
 5. Project plugin directory (`.kilo/plugin/` and friends)
 
 Duplicates (same package, same version) are deduplicated. Hooks from multiple plugins run sequentially in load order.
@@ -446,7 +446,7 @@ If a custom tool uses the same name as a built-in tool, **the custom tool wins**
 
 ### Alternative: standalone tool files
 
-For tools that don't need the full plugin context, drop them in a `tool/` or `tools/` folder inside any config directory — for example `.kilo/tool/database.ts` or `~/.config/kilo/tool/database.ts`. The filename becomes the tool name, and each file exports a `tool()` definition directly. The layout is identical to the [OpenCode custom tools guide](https://opencode.ai/docs/custom-tools); use `.kilo/`, or legacy `.kilocode/`, instead of `.opencode/`.
+For tools that don't need the full plugin context, drop them in a `tool/` or `tools/` folder inside any config directory, for example `.kilo/tool/database.ts` or `~/.config/kilo/tool/database.ts`. The filename becomes the tool name, and each file exports a `tool()` definition directly. The layout is identical to the [OpenCode custom tools guide](https://opencode.ai/docs/custom-tools); use a Kilo config directory such as `.kilo/` or legacy `.kilocode/`.
 
 ---
 

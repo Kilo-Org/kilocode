@@ -5,9 +5,9 @@ import os from "os"
 import path from "path"
 import { Process } from "@/util/process"
 
-const MANAGED_PLIST_DOMAIN = "ai.opencode.managed"
+export const managedPlistDomain = "ai.kilo.managed" // kilocode_change
 
-// Keys injected by macOS/MDM into the managed plist that are not OpenCode config
+// Keys injected by macOS/MDM into the managed plist that are not Kilo config // kilocode_change
 const PLIST_META = new Set([
   "PayloadDisplayName",
   "PayloadIdentifier",
@@ -50,10 +50,12 @@ export async function readManagedPreferences() {
       return "user"
     }
   })()
+  // kilocode_change start
   const paths = [
-    path.join("/Library/Managed Preferences", user, `${MANAGED_PLIST_DOMAIN}.plist`),
-    path.join("/Library/Managed Preferences", `${MANAGED_PLIST_DOMAIN}.plist`),
+    path.join("/Library/Managed Preferences", user, `${managedPlistDomain}.plist`),
+    path.join("/Library/Managed Preferences", `${managedPlistDomain}.plist`),
   ]
+  // kilocode_change end
 
   for (const plist of paths) {
     if (!existsSync(plist)) continue

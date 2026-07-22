@@ -228,7 +228,7 @@ const canRun = (scenario: RecordedScenario) =>
   shouldRecord
     ? scenario.canRecord()
     : HttpRecorderInternal.hasCassetteSync(scenario.cassette, { directory: KILO_FIXTURES_DIR })
-  // kilocode_change end
+// kilocode_change end
 
 const recordError = (scenario: RecordedScenario) =>
   scenario.id === "openai-oauth"
@@ -313,7 +313,7 @@ function recordedNativeLLMLayer(scenario: RecordedScenario) {
 const writeConfig = (directory: string, scenario: RecordedScenario, model: ModelsDev.Provider["models"][string]) =>
   Effect.promise(() =>
     Bun.write(
-      path.join(directory, "opencode.json"),
+      path.join(directory, "kilo.jsonc"), // kilocode_change
       JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...scenario.config(model) }), // kilocode_change
     ),
   )

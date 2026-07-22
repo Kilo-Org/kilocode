@@ -33,7 +33,7 @@ function layer(directory: string, plugins: string[]) {
                 plugin: plugins,
                 plugin_origins: plugins.map((plugin) => ({
                   spec: plugin,
-                  source: path.join(directory, "opencode.json"),
+                  source: path.join(directory, "kilo.jsonc"), // kilocode_change
                   scope: "local" as const,
                 })),
               }),

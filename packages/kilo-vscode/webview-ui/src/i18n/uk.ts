@@ -423,7 +423,7 @@ export const dict = {
   "dialog.mcp.empty": "MCP не налаштовано",
 
   "dialog.lsp.empty": "LSP автоматично визначаються за типами файлів",
-  "dialog.plugins.empty": "Плагіни налаштовуються в opencode.json",
+  "dialog.plugins.empty": "Плагіни налаштовуються в kilo.jsonc",
 
   "mcp.status.connected": "підключено",
   "mcp.status.failed": "помилка",
@@ -611,7 +611,7 @@ export const dict = {
   "error.chain.responseBody": "Тіло відповіді:\n{{body}}",
   "error.chain.didYouMean": "Можливо ви мали на увазі: {{suggestions}}",
   "error.chain.modelNotFound": "Модель не знайдено: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Перевірте назви провайдера/моделі у файлі конфігурації (opencode.json)",
+  "error.chain.checkConfig": "Перевірте назви провайдера/моделі у файлі конфігурації (kilo.jsonc)",
   "error.chain.mcpFailed": 'MCP-сервер "{{name}}" зазнав помилки. Примітка: Kilo поки не підтримує автентифікацію MCP.',
   "error.chain.providerAuthFailed": "Автентифікація провайдера не вдалася ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -1042,14 +1042,12 @@ export const dict = {
   "settings.config.source.xdg": "Глобальна конфігурація XDG",
   "settings.config.source.homeKilo": "Конфігурація .kilo (Home)",
   "settings.config.source.homeKilocode": "Конфігурація .kilocode (Home)",
-  "settings.config.source.homeOpencode": "Конфігурація .opencode (Home)",
   "settings.config.source.envFile": "Файл середовища KILO_CONFIG",
   "settings.config.source.envDir": "KILO_CONFIG_DIR",
   "settings.config.source.envContent": "Вбудована конфігурація середовища",
   "settings.config.source.projectKilo": "Конфігурація .kilo проєкту",
   "settings.config.source.projectRoot": "Коренева конфігурація проєкту",
   "settings.config.source.projectKilocode": "Застаріла конфігурація .kilocode",
-  "settings.config.source.projectOpencode": "Застаріла конфігурація .opencode",
   "settings.models.title": "Моделі",
   "settings.models.description": "Тут можна буде налаштовувати параметри моделей.",
   "settings.agents.title": "Агенти",
@@ -1563,9 +1561,9 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Робочими процесами керують файли робочих процесів у вашому робочому просторі.",
   "settings.agentBehaviour.workflows.description":
-    "Робочі процеси — це власні команди з косою рискою, визначені у вашій конфігурації. Введіть /назва-команди в чаті, щоб викликати їх. Команди налаштовуються в розділі 'command' файлу opencode.json.",
+    "Робочі процеси — це власні команди з косою рискою, визначені у вашій конфігурації. Введіть /назва-команди в чаті, щоб викликати їх. Команди налаштовуються в розділі 'command' файлу kilo.jsonc.",
   "settings.agentBehaviour.workflows.empty":
-    "Власних команд не налаштовано. Додайте команди до opencode.json, щоб вони з'явилися тут.",
+    "Власних команд не налаштовано. Додайте команди до kilo.jsonc, щоб вони з'явилися тут.",
   "settings.agentBehaviour.workflows.detail.description": "Опис",
   "settings.agentBehaviour.workflows.detail.template": "Шаблон",
 

@@ -86,7 +86,7 @@ const scenarios: Scenario[] = [
     .seeded(() =>
       Effect.promise(() =>
         Bun.write(
-          path.join(exerciseConfigDirectory, "opencode.jsonc"),
+          path.join(exerciseConfigDirectory, "kilo.jsonc"), // kilocode_change
           JSON.stringify({ username: "httpapi-global" }, null, 2),
         ),
       ),
@@ -98,9 +98,9 @@ const scenarios: Scenario[] = [
         Effect.gen(function* () {
           object(body)
           check(body.username === "httpapi-global", "global config update should return patched config")
-          const text = yield* Effect.promise(() =>
-            Bun.file(path.join(exerciseConfigDirectory, "opencode.jsonc")).text(),
-          )
+          // kilocode_change start
+          const text = yield* Effect.promise(() => Bun.file(path.join(exerciseConfigDirectory, "kilo.jsonc")).text())
+          // kilocode_change end
           check(text.includes('"username": "httpapi-global"'), "global config update should write isolated config file")
         }),
       "status",

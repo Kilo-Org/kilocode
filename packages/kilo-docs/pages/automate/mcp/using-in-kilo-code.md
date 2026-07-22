@@ -14,10 +14,10 @@ Model Context Protocol (MCP) extends Kilo Code's capabilities by connecting to e
 
 MCP server configurations are stored inside the main Kilo config file. There are two levels:
 
-1. **Global Configuration**: `~/.config/kilo/kilo.jsonc` — applies to all projects.
-2. **Project-level Configuration**: `kilo.jsonc` in your project root, or `.kilo/kilo.jsonc` for a cleaner setup.
+1. **Global Configuration**: `~/.config/kilo/kilo.jsonc` (preferred) or `~/.config/kilo/kilo.json` applies to all projects.
+2. **Project-level Configuration**: `kilo.jsonc` or `kilo.json` in your project root, or the matching file in `.kilo/` for a cleaner setup.
 
-**Precedence**: Project-level configuration takes precedence over global configuration.
+**Precedence**: Project-level configuration takes precedence over global configuration. At one location, Kilo loads `kilo.json` before `kilo.jsonc`, so JSONC takes precedence.
 
 ### Editing MCP Settings
 
@@ -76,12 +76,16 @@ Remote servers support OAuth 2.0 authentication. If the server supports it, Kilo
 {% /tab %}
 {% tab label="CLI" %}
 
-The CLI accepts several config filenames. The recommended file is `kilo.json`:
+Kilo automatically discovers only its canonical main configuration files:
 
-| Scope | Recommended Path | Also supported |
-|---|---|---|
-| **Global** | `~/.config/kilo/kilo.json` | `kilo.jsonc`, `opencode.json`, `opencode.jsonc`, `config.json` |
-| **Project** | `./kilo.json` or `./.kilo/kilo.json` | `kilo.jsonc`, `opencode.jsonc`, `opencode.json` |
+| Scope | Path |
+|---|---|
+| **Global** | `~/.config/kilo/kilo.jsonc` (preferred) or `~/.config/kilo/kilo.json` |
+| **Project** | `./kilo.jsonc` or `./kilo.json`, or the matching file in `./.kilo/` |
+
+When both files exist in the same location, `kilo.jsonc` takes precedence. Automatically discovered `opencode.json`, `opencode.jsonc`, `.opencode` directories, global legacy `config.json`, and the legacy TOML `config` file are ignored. Rename OpenCode files to `kilo.json` or `kilo.jsonc`, and move them to one of the locations above. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file.
+
+`KILO_CONFIG` is an explicit opt-in that loads exactly the file path you provide, regardless of its filename. `KILO_CONFIG_DIR` can name any directory, but Kilo automatically loads only `kilo.json` and `kilo.jsonc` inside it.
 
 {% /tab %}
 {% /tabs %}

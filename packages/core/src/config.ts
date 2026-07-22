@@ -139,7 +139,8 @@ export const layer = Layer.effect(
     const global = yield* Global.Service
     const location = yield* Location.Service
     const policy = yield* Policy.Service
-    const names = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"] // kilocode_change
+    const names = ["kilo.json", "kilo.jsonc"] // kilocode_change
+    const folders = [".kilocode", ".kilo"] // kilocode_change
     const decodeOptions = { errors: "all", onExcessProperty: "ignore", propertyOrder: "original" } as const
     const decodeInfo = Schema.decodeUnknownOption(Info, decodeOptions)
     const decodeV1Info = Schema.decodeUnknownOption(ConfigV1.Info, decodeOptions)
@@ -174,27 +175,26 @@ export const layer = Layer.effect(
     const locationIsGlobal = path.resolve(location.directory) === path.resolve(global.config)
     // Read configuration once when this location opens. Later calls reuse these
     // values until the location is reopened.
-    const discovered = locationIsGlobal || Flag.KILO_DISABLE_PROJECT_CONFIG // kilocode_change
-      ? []
-      : yield* fs
-          .up({
-            targets: [".kilo", ".kilocode", ...names.toReversed()], // kilocode_change
-            start: location.directory,
-            stop: location.project.directory,
-          })
-          .pipe(Effect.orDie)
+    const discovered =
+      locationIsGlobal || Flag.KILO_DISABLE_PROJECT_CONFIG // kilocode_change
+        ? []
+        : yield* fs
+            .up({
+              targets: [...folders.toReversed(), ...names.toReversed()], // kilocode_change
+              start: location.directory,
+              stop: location.project.directory,
+            })
+            .pipe(Effect.orDie)
     const directories = [
       globalDirectory,
       ...discovered
-        .filter((item) => [".kilo", ".kilocode"].includes(path.basename(item))) // kilocode_change
+        .filter((item) => folders.includes(path.basename(item))) // kilocode_change
         .toReversed()
         .map((directory) => AbsolutePath.make(directory)),
     ]
     // A config closer to the opened directory should win over one higher up.
     // Search starts nearby, so reverse the results before applying them.
-    // kilocode_change start
-    const directPaths = discovered.filter((item) => ![".kilo", ".kilocode"].includes(path.basename(item))).toReversed()
-    // kilocode_change end
+    const directPaths = discovered.filter((item) => !folders.includes(path.basename(item))).toReversed() // kilocode_change
     const direct = yield* Effect.forEach(directPaths, loadFile).pipe(
       Effect.orDie,
       Effect.map((configs) => configs.filter((config): config is Document => config !== undefined)),

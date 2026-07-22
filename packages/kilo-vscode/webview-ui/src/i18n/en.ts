@@ -421,7 +421,7 @@ export const dict = {
   "dialog.mcp.empty": "No MCPs configured",
 
   "dialog.lsp.empty": "LSPs auto-detected from file types",
-  "dialog.plugins.empty": "Plugins configured in opencode.json",
+  "dialog.plugins.empty": "Plugins configured in kilo.jsonc",
 
   "mcp.status.connected": "connected",
   "mcp.status.failed": "failed",
@@ -607,7 +607,7 @@ export const dict = {
   "error.chain.responseBody": "Response body:\n{{body}}",
   "error.chain.didYouMean": "Did you mean: {{suggestions}}",
   "error.chain.modelNotFound": "Model not found: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Check your config (opencode.json) provider/model names",
+  "error.chain.checkConfig": "Check your config (kilo.jsonc) provider/model names",
   "error.chain.mcpFailed": 'MCP server "{{name}}" failed. Note, Kilo does not support MCP authentication yet.',
   "error.chain.providerAuthFailed": "Provider authentication failed ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -1007,14 +1007,12 @@ export const dict = {
   "settings.config.source.xdg": "XDG global config",
   "settings.config.source.homeKilo": "Home .kilo config",
   "settings.config.source.homeKilocode": "Home .kilocode config",
-  "settings.config.source.homeOpencode": "Home .opencode config",
   "settings.config.source.envFile": "KILO_CONFIG environment file",
   "settings.config.source.envDir": "KILO_CONFIG_DIR",
   "settings.config.source.envContent": "Inline environment config",
   "settings.config.source.projectKilo": "Project .kilo config",
   "settings.config.source.projectRoot": "Project root config",
   "settings.config.source.projectKilocode": "Legacy .kilocode config",
-  "settings.config.source.projectOpencode": "Legacy .opencode config",
   "settings.models.title": "Models",
   "settings.models.description": "Model settings will be configurable here.",
   "settings.agents.title": "Agents",
@@ -1543,9 +1541,9 @@ export const dict = {
     "No MCP servers configured. Add MCP servers in kilo.jsonc, or ask the agent to add them for you.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows are managed via workflow files in your workspace.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in opencode.json under the 'command' section.",
+    "Workflows are custom slash commands defined in your config. Type /command-name in the chat to invoke them. Commands are configured in kilo.jsonc under the 'command' section.",
   "settings.agentBehaviour.workflows.empty":
-    "No custom commands configured. Add commands to your opencode.json to see them here.",
+    "No custom commands configured. Add commands to your kilo.jsonc to see them here.",
   "settings.agentBehaviour.workflows.detail.description": "Description",
   "settings.agentBehaviour.workflows.detail.template": "Template",
 

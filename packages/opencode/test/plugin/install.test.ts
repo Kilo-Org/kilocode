@@ -123,7 +123,7 @@ describe("plugin.install.task", () => {
     expect(ok).toBe(true)
 
     // kilocode_change start
-    const server = await read(path.join(tmp.path, ".kilo", "opencode.jsonc"))
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
     const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
     // kilocode_change end
     expect(server.plugin).toEqual(["acme@1.2.3"])
@@ -147,18 +147,87 @@ describe("plugin.install.task", () => {
     expect(ok).toBe(true)
 
     // kilocode_change start
-    const server = await read(path.join(tmp.path, ".kilo", "opencode.jsonc"))
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
     const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
     // kilocode_change end
     expect(server.plugin).toEqual([["acme@1.2.3", { custom: true, other: false }]])
     expect(tui.plugin).toEqual([["acme@1.2.3", { compact: true }]])
   })
 
+  // kilocode_change start
+  test("prefers kilo JSONC and leaves OpenCode config unchanged", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const dir = path.join(tmp.path, ".kilo")
+    const jsonc = path.join(dir, "kilo.jsonc")
+    const json = path.join(dir, "kilo.json")
+    const legacy = path.join(dir, "opencode.jsonc")
+    await fs.mkdir(dir, { recursive: true })
+    await Bun.write(jsonc, JSON.stringify({ plugin: ["jsonc@1.0.0"] }, null, 2))
+    await Bun.write(json, JSON.stringify({ plugin: ["json@1.0.0"] }, null, 2))
+    await Bun.write(legacy, JSON.stringify({ plugin: ["legacy@1.0.0"] }, null, 2))
+
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    expect(await run(ctx(tmp.path))).toBe(true)
+    expect((await read(jsonc)).plugin).toEqual(["jsonc@1.0.0", "acme@1.2.3"])
+    expect((await read(json)).plugin).toEqual(["json@1.0.0"])
+    expect((await read(legacy)).plugin).toEqual(["legacy@1.0.0"])
+  })
+
+  test("creates local Kilo config instead of using OpenCode config", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const dir = path.join(tmp.path, ".kilo")
+    const legacy = path.join(dir, "opencode.jsonc")
+    await fs.mkdir(dir, { recursive: true })
+    await Bun.write(legacy, JSON.stringify({ plugin: ["legacy@1.0.0"] }, null, 2))
+
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    expect(await run(ctx(tmp.path))).toBe(true)
+    expect((await read(path.join(dir, "kilo.jsonc"))).plugin).toEqual(["acme@1.2.3"])
+    expect((await read(legacy)).plugin).toEqual(["legacy@1.0.0"])
+  })
+
+  test("writes local server plugins only under .kilo", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const nested = path.join(tmp.path, ".kilocode", "kilo.jsonc")
+    const root = path.join(tmp.path, "kilo.jsonc")
+    await fs.mkdir(path.dirname(nested), { recursive: true })
+    await Bun.write(nested, JSON.stringify({ plugin: ["nested@1.0.0"] }, null, 2))
+    await Bun.write(root, JSON.stringify({ plugin: ["root@1.0.0"] }, null, 2))
+
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+      },
+      deps(path.join(tmp.path, "global"), target),
+    )
+
+    expect(await run(ctx(tmp.path))).toBe(true)
+    expect((await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))).plugin).toEqual(["acme@1.2.3"])
+    expect((await read(nested)).plugin).toEqual(["nested@1.0.0"])
+    expect((await read(root)).plugin).toEqual(["root@1.0.0"])
+  })
+  // kilocode_change end
+
   test("preserves JSONC comments when adding plugins to server and tui config", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server", "tui"])
     const cfg = path.join(tmp.path, ".kilo") // kilocode_change
-    const server = path.join(cfg, "opencode.jsonc")
+    const server = path.join(cfg, "kilo.jsonc")
     const tui = path.join(cfg, "tui.jsonc")
     await fs.mkdir(cfg, { recursive: true })
     await Bun.write(
@@ -216,7 +285,7 @@ describe("plugin.install.task", () => {
   test("preserves JSONC comments when force replacing plugin version", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.jsonc") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.jsonc") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     await Bun.write(
       cfg,
@@ -261,14 +330,14 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
-    const server = await read(path.join(tmp.path, ".kilo", "opencode.jsonc")) // kilocode_change
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc")) // kilocode_change
     expect(server.plugin).toEqual(["acme@1.2.3"])
   })
 
   test("does not change configured package version without force", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.json") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.json") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     await Bun.write(cfg, JSON.stringify({ plugin: ["acme@1.0.0"] }, null, 2))
 
@@ -288,7 +357,7 @@ describe("plugin.install.task", () => {
   test("does not change scoped package version without force", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.json") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.json") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     await Bun.write(cfg, JSON.stringify({ plugin: ["@scope/acme@1.0.0"] }, null, 2))
 
@@ -308,7 +377,7 @@ describe("plugin.install.task", () => {
   test("keeps file plugin entries and still adds npm plugin", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.json") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.json") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     await Bun.write(cfg, JSON.stringify({ plugin: ["file:///tmp/acme.ts"] }, null, 2))
 
@@ -328,7 +397,7 @@ describe("plugin.install.task", () => {
   test("force replaces configured package version and keeps tuple options", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.json") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.json") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     await Bun.write(
       cfg,
@@ -370,9 +439,31 @@ describe("plugin.install.task", () => {
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(true)
 
-    expect(await Filesystem.exists(path.join(global, "opencode.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false) // kilocode_change
+    expect(await Filesystem.exists(path.join(global, "kilo.jsonc"))).toBe(true) // kilocode_change
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false) // kilocode_change
   })
+
+  // kilocode_change start
+  test("creates global Kilo config instead of using OpenCode config", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const global = path.join(tmp.path, "global")
+    const legacy = path.join(global, "opencode.jsonc")
+    await fs.mkdir(global, { recursive: true })
+    await Bun.write(legacy, JSON.stringify({ plugin: ["legacy@1.0.0"] }, null, 2))
+    const run = createPlugTask(
+      {
+        mod: "acme@1.2.3",
+        global: true,
+      },
+      deps(global, target),
+    )
+
+    expect(await run(ctx(tmp.path))).toBe(true)
+    expect((await read(path.join(global, "kilo.jsonc"))).plugin).toEqual(["acme@1.2.3"])
+    expect((await read(legacy)).plugin).toEqual(["legacy@1.0.0"])
+  })
+  // kilocode_change end
 
   test("writes local scope under directory when vcs is not git", async () => {
     await using tmp = await tmpdir()
@@ -391,8 +482,8 @@ describe("plugin.install.task", () => {
     const ok = await run(ctxDir(directory, worktree))
     expect(ok).toBe(true)
     // kilocode_change start
-    expect(await Filesystem.exists(path.join(directory, ".kilo", "opencode.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(worktree, ".kilo", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(directory, ".kilo", "kilo.jsonc"))).toBe(true)
+    expect(await Filesystem.exists(path.join(worktree, ".kilo", "kilo.jsonc"))).toBe(false)
     // kilocode_change end
   })
 
@@ -410,7 +501,7 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctxRoot(directory))
     expect(ok).toBe(true)
-    expect(await Filesystem.exists(path.join(directory, ".kilo", "opencode.jsonc"))).toBe(true) // kilocode_change
+    expect(await Filesystem.exists(path.join(directory, ".kilo", "kilo.jsonc"))).toBe(true) // kilocode_change
   })
 
   test("writes tui local scope under directory when worktree is root slash", async () => {
@@ -444,7 +535,7 @@ describe("plugin.install.task", () => {
     expect(ok).toBe(true)
     // kilocode_change start
     expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
     // kilocode_change end
   })
 
@@ -464,7 +555,7 @@ describe("plugin.install.task", () => {
     expect(ok).toBe(true)
     // kilocode_change start
     expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(true)
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
     // kilocode_change end
 
     const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc")) // kilocode_change
@@ -493,7 +584,7 @@ describe("plugin.install.task", () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server", "tui"])
     // kilocode_change start
-    const server = path.join(tmp.path, ".kilo", "opencode.json")
+    const server = path.join(tmp.path, ".kilo", "kilo.json")
     const tui = path.join(tmp.path, ".kilo", "tui.json")
     // kilocode_change end
     await fs.mkdir(path.dirname(server), { recursive: true })
@@ -519,7 +610,7 @@ describe("plugin.install.task", () => {
   test("returns false and keeps config unchanged for invalid JSONC", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.jsonc") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.jsonc") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     const bad = '{"plugin": ["acme@1.0.0",}'
     await Bun.write(cfg, bad)
@@ -549,7 +640,7 @@ describe("plugin.install.task", () => {
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
     // kilocode_change start
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false)
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false)
     expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "tui.jsonc"))).toBe(false)
     // kilocode_change end
   })
@@ -567,7 +658,7 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false) // kilocode_change
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false) // kilocode_change
   })
 
   test("returns false when install fails", async () => {
@@ -581,6 +672,6 @@ describe("plugin.install.task", () => {
 
     const ok = await run(ctx(tmp.path))
     expect(ok).toBe(false)
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false) // kilocode_change
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false) // kilocode_change
   })
 })

@@ -57,7 +57,6 @@ export namespace KilocodeConfigSources {
   type Pending = Omit<Source, "order">
 
   const roots = [".kilocode", ".kilo"] as const
-  const global = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"] as const
 
   export async function list(input: Input): Promise<Result> {
     const project = Flag.KILO_DISABLE_PROJECT_CONFIG ? [] : await projectSources(input)
@@ -98,7 +97,7 @@ export namespace KilocodeConfigSources {
 
   async function globalSources(): Promise<Pending[]> {
     return Promise.all(
-      global.map(async (name) => {
+      KilocodeConfig.KILO_CONFIG_FILES.toReversed().map(async (name) => {
         const file = path.join(Global.Path.config, name)
         return fileSource({ kind: "global-file", scope: "global", label: `Global ${name}`, file })
       }),
@@ -120,11 +119,8 @@ export namespace KilocodeConfigSources {
 
   async function projectSources(input: Input): Promise<Pending[]> {
     const kilo = await projectFiles("kilo", input)
-    const opencode = await projectFiles("opencode", input)
     return Promise.all(
-      [...kilo, ...opencode].map((file) =>
-        fileSource({ kind: "project-file", scope: "project", label: "Project config", file }),
-      ),
+      kilo.map((file) => fileSource({ kind: "project-file", scope: "project", label: "Project config", file })),
     )
   }
 
@@ -153,7 +149,7 @@ export namespace KilocodeConfigSources {
         editable: scope !== "managed" && scope !== "cloud",
       })
 
-      for (const name of KilocodeConfig.ALL_CONFIG_FILES) {
+      for (const name of KilocodeConfig.KILO_CONFIG_FILES.toReversed()) {
         const file = path.join(dir, name)
         result.push(await fileSource({ kind: "config-dir-file", scope, label: `Config directory ${name}`, file }))
       }
@@ -225,7 +221,7 @@ export namespace KilocodeConfigSources {
   async function managedSources(): Promise<Pending[]> {
     const dir = ConfigManaged.managedConfigDir()
     const files = await Promise.all(
-      KilocodeConfig.ALL_CONFIG_FILES.map((name) =>
+      KilocodeConfig.KILO_CONFIG_FILES.toReversed().map((name) =>
         fileSource({
           kind: "managed-file",
           scope: "managed",
@@ -255,8 +251,8 @@ export namespace KilocodeConfigSources {
     if (process.platform !== "darwin") return []
     const user = os.userInfo().username
     const files = [
-      path.join("/Library/Managed Preferences", user, "ai.opencode.managed.plist"),
-      path.join("/Library/Managed Preferences", "ai.opencode.managed.plist"),
+      path.join("/Library/Managed Preferences", user, `${ConfigManaged.managedPlistDomain}.plist`),
+      path.join("/Library/Managed Preferences", `${ConfigManaged.managedPlistDomain}.plist`),
     ]
     return Promise.all(
       files.map(async (file) => ({

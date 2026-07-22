@@ -254,7 +254,7 @@ Later sources override earlier values during instance config load:
 | 3 | Auth-record `.well-known/opencode` remote config |
 | 4 | Global config files |
 | 5 | Explicit `KILO_CONFIG` file |
-| 6 | Project `kilo.json[c]` and `opencode.json[c]` files plus discovered config directories |
+| 6 | Project `kilo.json` and `kilo.jsonc` files plus discovered Kilo config directories |
 | 7 | `KILO_CONFIG_DIR` directory |
 | 8 | `KILO_CONFIG_CONTENT` |
 | 9 | Active Kilo Cloud organization config |
@@ -262,7 +262,9 @@ Later sources override earlier values during instance config load:
 | 11 | macOS managed preferences |
 | 12 | Runtime flag-derived permission, tool, compaction, and plugin behavior |
 
-Global config files load from `${Global.Path.config}`. Project updates prefer existing config files found in ancestor `.kilo` or legacy `.kilocode` directories, then existing project root config files, then create `.kilo/kilo.json`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
+Automatic main-config discovery loads only `kilo.json` and `kilo.jsonc`. At one location, `kilo.json` loads first and `kilo.jsonc` wins. Automatically discovered `opencode.json`, `opencode.jsonc`, `.opencode` directories, global legacy `config.json`, and the legacy TOML `config` file are ignored and must be renamed or moved to Kilo config locations. `KILO_CONFIG` is an explicit arbitrary-file override and still loads the exact supplied path. `KILO_CONFIG_DIR` may point to any directory name, but it loads only `kilo.json` and `kilo.jsonc` from that directory.
+
+Global config files load from `${Global.Path.config}`. Project updates prefer existing Kilo config files found in ancestor `.kilo` or legacy `.kilocode` directories, then existing project-root Kilo config files, then create `.kilo/kilo.jsonc`. Global indexing settings can carry provider and storage defaults, but global `indexing.enabled` is stripped so project enablement remains local in effective instance config.
 
 Signed-in organization modes become normal agent configuration during load. They override migrated legacy modes and remain overridable by later config sources in table.
 

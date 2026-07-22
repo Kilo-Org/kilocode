@@ -47,7 +47,7 @@ For additional model configuration (token limits, tool calling, reasoning, varia
 {% /tab %}
 {% tab label="CLI" %}
 
-**Config file** (`~/.config/kilo/kilo.jsonc` or `./kilo.jsonc`):
+**Config file** (`~/.config/kilo/kilo.jsonc` or `~/.config/kilo/kilo.json` globally, or `./kilo.jsonc` / `./kilo.json` for a project):
 
 ```jsonc
 {
@@ -67,6 +67,8 @@ For additional model configuration (token limits, tool calling, reasoning, varia
 
 {% /tab %}
 {% /tabs %}
+
+Kilo automatically discovers only `kilo.json` and `kilo.jsonc`; at one location, JSONC takes precedence. Automatically discovered `opencode.json`, `opencode.jsonc`, `.opencode` directories, global legacy `config.json`, and the legacy TOML `config` file are ignored. Rename OpenCode files to Kilo filenames and move them to `~/.config/kilo/`, your project root, or `.kilo/`. Copy settings from the legacy TOML file into a Kilo JSON or JSONC file. `KILO_CONFIG` remains an explicit arbitrary-file override, while `KILO_CONFIG_DIR` loads only Kilo filenames from its supplied directory.
 
 The `model` key uses the format `provider_id/model_id`, where:
 
@@ -391,7 +393,7 @@ You can also set options that apply to all models from a provider:
 | `chunkTimeout` | `number` | Timeout in milliseconds between streamed response chunks. If no chunk arrives within this window, the request is aborted and retried. This catches silent provider dropouts where the TCP connection stays open but SSE streaming stops. Recommended: `15000`–`30000` (15–30 seconds) for providers with unreliable streaming. |
 
 {% callout type="warning" title="{env:} / {file:} only resolve in trusted config" %}
-`{env:VAR}` and `{file:...}` references in `apiKey` (or any option) are resolved **only** when the config lives in a trusted location: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** resolve `{env:VAR}` — the reference is ignored and a warning is logged, so a provider configured this way in a repo will not authenticate. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` just by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected. Keep provider credentials in your global config.
+`{env:VAR}` and `{file:...}` references in `apiKey` (or any option) are resolved **only** when the config lives in a trusted location: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` or `kilo.jsonc` committed to a repository **cannot** resolve `{env:VAR}` - the reference is ignored and a warning is logged, so a provider configured this way in a repo will not authenticate. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` just by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root - references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected. Keep provider credentials in your global config.
 {% /callout %}
 
 ## Filtering Available Models

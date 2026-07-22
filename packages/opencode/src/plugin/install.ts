@@ -8,6 +8,7 @@ import {
 } from "jsonc-parser"
 
 import * as ConfigPaths from "@/config/paths"
+import { KilocodeConfig } from "@/kilocode/config/config" // kilocode_change
 import { Global } from "@opencode-ai/core/global"
 import { Filesystem } from "@/util/filesystem"
 import { Flock } from "@opencode-ai/core/util/flock"
@@ -31,7 +32,7 @@ export type PatchDeps = {
   readText: (file: string) => Promise<string>
   write: (file: string, text: string) => Promise<void>
   exists: (file: string) => Promise<boolean>
-  files: (dir: string, name: "opencode" | "tui") => string[]
+  files: (dir: string, name: "kilo" | "tui") => string[] // kilocode_change
 }
 
 export type PatchInput = {
@@ -85,7 +86,9 @@ const defaultPatchDeps: PatchDeps = {
     await Filesystem.write(file, text)
   },
   exists: (file) => Filesystem.exists(file),
-  files: (dir, name) => ConfigPaths.fileInDirectory(dir, name),
+  // kilocode_change start
+  files: (dir, name) => (name === "kilo" ? KilocodeConfig.files(dir) : ConfigPaths.fileInDirectory(dir, name)),
+  // kilocode_change end
 }
 
 function pluginSpec(item: unknown) {
@@ -337,10 +340,12 @@ function patchDir(input: PatchInput) {
   return path.join(root, ".kilo") // kilocode_change
 }
 
-function patchName(kind: Kind): "opencode" | "tui" {
-  if (kind === "server") return "opencode"
+// kilocode_change start
+function patchName(kind: Kind): "kilo" | "tui" {
+  if (kind === "server") return "kilo" // kilocode_change
   return "tui"
 }
+// kilocode_change end
 
 async function patchOne(dir: string, target: Target, spec: string, force: boolean, dep: PatchDeps): Promise<PatchOne> {
   const name = patchName(target.kind)

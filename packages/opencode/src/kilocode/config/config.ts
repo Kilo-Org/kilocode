@@ -1,5 +1,4 @@
 import path from "path"
-import { pathToFileURL } from "url"
 import { existsSync } from "fs"
 import { Effect, Schema } from "effect"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
@@ -37,11 +36,13 @@ export namespace KilocodeConfig {
 
   // ── Config file constants ────────────────────────────────────────────
 
-  /** Kilo-specific config file names (highest-to-lowest precedence within kilo). */
+  /** Kilo-specific config file names, ordered from highest to lowest precedence. */
   export const KILO_CONFIG_FILES = ["kilo.jsonc", "kilo.json"] as const
 
-  /** All config file names in precedence order (kilo + opencode). */
-  export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
+  /** Kilo config paths, ordered from highest to lowest precedence. */
+  export function files(dir: string) {
+    return KILO_CONFIG_FILES.map((file) => path.join(dir, file))
+  }
 
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
@@ -72,10 +73,11 @@ export namespace KilocodeConfig {
     const dirs = yield* input.fs
       .up({ targets: [...KILO_DIR_SUFFIXES], start: input.directory, stop: input.worktree })
       .pipe(Effect.orDie)
+    const names = KILO_CONFIG_FILES
     const roots = yield* input.fs
-      .up({ targets: [...ALL_CONFIG_FILES], start: input.directory, stop: input.worktree })
+      .up({ targets: [...names], start: input.directory, stop: input.worktree })
       .pipe(Effect.orDie)
-    const files = [...dirs.flatMap((dir) => ALL_CONFIG_FILES.map((file) => path.join(dir, file))), ...roots]
+    const files = [...dirs.flatMap((dir) => names.map((file) => path.join(dir, file))), ...roots]
     return files.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
   })
 
@@ -333,24 +335,20 @@ export namespace KilocodeConfig {
 
   // ── Bash permission migration ────────────────────────────────────────
 
-  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
-
   /**
    * Migrate bash permission for existing users before config is consumed.
    *
-   * Existing users (those with at least one global config file or the legacy TOML
-   * config) who have no explicit `permission.bash` setting get `bash: "allow"`
-   * written to their highest-precedence config file. This preserves their current
-   * behavior now that the new default is `bash: "ask"`.
+   * Existing users with at least one global Kilo config file who have no explicit
+   * `permission.bash` setting get `bash: "allow"` written to their highest-precedence
+   * config file. This preserves their current behavior now that the new default is
+   * `bash: "ask"`.
    */
   export async function migrateBashPermission() {
-    const files = GLOBAL_CONFIG_FILES.map((f) => path.join(Global.Path.config, f))
-    const legacy = path.join(Global.Path.config, "config")
+    const files = KILO_CONFIG_FILES.toReversed().map((file) => path.join(Global.Path.config, file))
     const existing = files.filter((f) => existsSync(f))
-    const hasLegacy = existsSync(legacy)
 
     // no global config → new user, they'll get the new bash:ask default
-    if (existing.length === 0 && !hasLegacy) return
+    if (existing.length === 0) return
 
     const configs: Array<{ file: string; data: Record<string, unknown> }> = []
     // check if any config file already has an explicit bash permission
@@ -365,16 +363,10 @@ export namespace KilocodeConfig {
 
     // A schema-only file is generated for editor completion. It does not mean
     // the user predates the bash permission default.
-    if (!hasLegacy && configs.every((item) => Object.keys(item.data).every((key) => key === "$schema"))) return
-
-    // also check legacy TOML config for bash permission
-    if (hasLegacy) {
-      const toml = await import(pathToFileURL(legacy).href, { with: { type: "toml" } }).catch(() => undefined)
-      if (toml?.default?.permission?.bash) return
-    }
+    if (configs.every((item) => Object.keys(item.data).every((key) => key === "$schema"))) return
 
     // existing user without bash permission → write bash:allow to highest-precedence file
-    const target = existing.length > 0 ? existing[existing.length - 1] : path.join(Global.Path.config, "config.json")
+    const target = existing[existing.length - 1]!
     const text = await Bun.file(target)
       .text()
       .catch(() => "{}")
@@ -457,22 +449,39 @@ export namespace KilocodeConfig {
 
   /**
    * Detect leftover opencode config directories. Kilo used to fall back to
-   * opencode configuration but no longer reads `.opencode` directories.
-   * Returns the existing `.opencode` locations (global + project), highest first.
+   * OpenCode configuration but no longer loads its files or directories.
+   * Returns ignored legacy locations (global + project), highest first.
    */
-  export function detectOpencodeConfig(input: { directory: string; worktree?: string; scanProject: boolean }): string[] {
+  export function detectOpencodeConfig(input: {
+    directory: string
+    worktree?: string
+    scanProject: boolean
+  }): string[] {
     const found: string[] = []
+    const names = ["opencode.jsonc", "opencode.json"]
+    const push = (candidate: string) => {
+      if (existsSync(candidate) && !found.includes(candidate)) found.push(candidate)
+    }
 
-    // Global opencode config dir (sibling of the kilo global config dir, e.g. ~/.config/opencode).
+    // Global files previously loaded alongside Kilo config are ignored but merit migration guidance.
+    for (const name of [...names, "config.json", "config"]) {
+      push(path.join(Global.Path.config, name))
+    }
+
+    // Global opencode config dir (sibling of the Kilo global config dir, e.g. ~/.config/opencode).
     const globalDir = path.join(path.dirname(Global.Path.config), "opencode")
-    if (existsSync(globalDir)) found.push(globalDir)
+    push(globalDir)
 
-    // Project `.opencode` directories, walked from the working directory up to the worktree root.
+    // Project OpenCode directories and filenames are ignored, whether they are at the root or in legacy Kilo dirs.
     if (input.scanProject) {
       let current = input.directory
       while (true) {
-        const candidate = path.join(current, ".opencode")
-        if (existsSync(candidate) && !found.includes(candidate)) found.push(candidate)
+        push(path.join(current, ".opencode"))
+        for (const dir of [".kilo", ".kilocode", ""]) {
+          for (const name of names) {
+            push(path.join(current, dir, name))
+          }
+        }
         if (input.worktree === current) break
         const parent = path.dirname(current)
         if (parent === current) break
@@ -484,8 +493,8 @@ export namespace KilocodeConfig {
   }
 
   /**
-   * Build the synthetic notification shown when a leftover `.opencode` config
-   * directory is found. Returns undefined when nothing needs migrating.
+   * Build the synthetic notification shown when ignored legacy config is found.
+   * Returns undefined when nothing needs migrating.
    * The shape matches the gateway `Notification` schema so it can be appended
    * to the cloud notifications list and reuse each client's dismissal path.
    */
@@ -495,11 +504,11 @@ export namespace KilocodeConfig {
     const suffix = found.length > 1 ? ` (and ${found.length - 1} more)` : ""
     return {
       id: OPENCODE_NOTIFICATION_ID,
-      title: "Move your opencode configuration",
+      title: "Move your legacy configuration",
       message:
-        `Kilo no longer falls back to opencode configuration. ` +
-        `Found opencode config at ${found[0]}${suffix}. ` +
-        `Move it into a .kilo directory (project) or ${Global.Path.config} (global).`,
+        `Kilo ignores legacy configuration. ` +
+        `Found legacy config at ${found[0]}${suffix}. ` +
+        `Move or rename it to kilo.jsonc or kilo.json in a .kilo directory (project) or ${Global.Path.config} (global).`,
       action: { actionText: "Learn more", actionURL: CONFIG_DOCS_URL },
       showIn: ["cli", "extension"],
     }

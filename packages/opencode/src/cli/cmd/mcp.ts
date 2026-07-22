@@ -14,7 +14,6 @@ import { Config } from "@/config/config"
 import { ConfigMCPV1 } from "@opencode-ai/core/v1/config/mcp"
 import { InstanceRef } from "@/effect/instance-ref"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
-import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { modify, applyEdits } from "jsonc-parser"
 import { KilocodeMcpConfig } from "@/kilocode/cli/cmd/mcp" // kilocode_change
@@ -404,36 +403,7 @@ export const McpLogoutCommand = effectCmd({
 })
 
 async function resolveConfigPath(baseDir: string, global = false) {
-  // kilocode_change start - prefer supported Kilo config directories over root files
-  const roots = [
-    path.join(baseDir, "kilo.jsonc"),
-    path.join(baseDir, "kilo.json"),
-    path.join(baseDir, "opencode.jsonc"),
-    path.join(baseDir, "opencode.json"),
-  ]
-  const candidates = global
-    ? roots
-    : [
-        path.join(baseDir, ".kilo", "kilo.jsonc"),
-        path.join(baseDir, ".kilo", "kilo.json"),
-        path.join(baseDir, ".kilo", "opencode.jsonc"),
-        path.join(baseDir, ".kilo", "opencode.json"),
-        path.join(baseDir, ".kilocode", "kilo.jsonc"),
-        path.join(baseDir, ".kilocode", "kilo.json"),
-        path.join(baseDir, ".kilocode", "opencode.jsonc"),
-        path.join(baseDir, ".kilocode", "opencode.json"),
-        ...roots,
-      ]
-
-  for (const candidate of candidates) {
-    if (await Filesystem.exists(candidate)) {
-      return candidate
-    }
-  }
-
-  // Default to kilo.json if none exist
-  return path.join(baseDir, "kilo.json")
-  // kilocode_change end
+  return KilocodeMcpConfig.resolve(baseDir, global) // kilocode_change
 }
 
 async function addMcpToConfig(name: string, mcpConfig: ConfigMCPV1.Info, configPath: string) {

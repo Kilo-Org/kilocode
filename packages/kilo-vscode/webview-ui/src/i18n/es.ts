@@ -427,7 +427,7 @@ export const dict = {
   "dialog.mcp.empty": "No hay MCPs configurados",
 
   "dialog.lsp.empty": "LSPs detectados automáticamente por tipo de archivo",
-  "dialog.plugins.empty": "Plugins configurados en opencode.json",
+  "dialog.plugins.empty": "Plugins configurados en kilo.jsonc",
 
   "mcp.status.connected": "conectado",
   "mcp.status.failed": "fallido",
@@ -613,7 +613,7 @@ export const dict = {
   "error.chain.responseBody": "Cuerpo de la respuesta:\n{{body}}",
   "error.chain.didYouMean": "¿Quisiste decir: {{suggestions}}",
   "error.chain.modelNotFound": "Modelo no encontrado: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Comprueba los nombres de proveedor/modelo en tu configuración (opencode.json)",
+  "error.chain.checkConfig": "Comprueba los nombres de proveedor/modelo en tu configuración (kilo.jsonc)",
   "error.chain.mcpFailed": 'El servidor MCP "{{name}}" falló. Nota, Kilo no soporta autenticación MCP todavía.',
   "error.chain.providerAuthFailed": "Autenticación de proveedor fallida ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -1103,14 +1103,12 @@ export const dict = {
   "settings.config.source.xdg": "Configuración global XDG",
   "settings.config.source.homeKilo": "Configuración .kilo de Home",
   "settings.config.source.homeKilocode": "Configuración .kilocode de Home",
-  "settings.config.source.homeOpencode": "Configuración .opencode de Home",
   "settings.config.source.envFile": "Archivo de entorno KILO_CONFIG",
   "settings.config.source.envDir": "KILO_CONFIG_DIR",
   "settings.config.source.envContent": "Configuración de entorno en línea",
   "settings.config.source.projectKilo": "Configuración .kilo del proyecto",
   "settings.config.source.projectRoot": "Configuración raíz del proyecto",
   "settings.config.source.projectKilocode": "Configuración heredada .kilocode",
-  "settings.config.source.projectOpencode": "Configuración heredada .opencode",
   "settings.models.title": "Modelos",
   "settings.models.description": "La configuración de modelos estará disponible aquí.",
   "settings.agents.title": "Agentes",
@@ -1624,9 +1622,9 @@ export const dict = {
   "settings.agentBehaviour.workflowsPlaceholder":
     "Los flujos de trabajo se gestionan mediante archivos de flujo de trabajo en su espacio de trabajo.",
   "settings.agentBehaviour.workflows.description":
-    "Los flujos de trabajo son comandos de barra personalizados definidos en su configuración. Escriba /command-name en el chat para invocarlos. Los comandos se configuran en opencode.json en la sección 'command'.",
+    "Los flujos de trabajo son comandos de barra personalizados definidos en su configuración. Escriba /command-name en el chat para invocarlos. Los comandos se configuran en kilo.jsonc en la sección 'command'.",
   "settings.agentBehaviour.workflows.empty":
-    "No hay comandos personalizados configurados. Añada comandos a opencode.json para verlos aquí.",
+    "No hay comandos personalizados configurados. Añada comandos a kilo.jsonc para verlos aquí.",
   "settings.agentBehaviour.workflows.detail.description": "Descripción",
   "settings.agentBehaviour.workflows.detail.template": "Plantilla",
   "settings.sandboxing.enabled.title": "Sandbox",

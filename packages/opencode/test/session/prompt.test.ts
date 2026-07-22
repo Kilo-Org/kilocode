@@ -340,7 +340,7 @@ const ensureDir = Effect.fn("test.ensureDir")(function* (dir: string) {
 
 const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config: Partial<ConfigV1.Info>) {
   yield* writeText(
-    path.join(dir, "opencode.json"),
+    path.join(dir, "kilo.jsonc"), // kilocode_change
     JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...config }), // kilocode_change
   )
 })

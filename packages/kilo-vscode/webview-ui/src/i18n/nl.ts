@@ -427,7 +427,7 @@ export const dict = {
   "dialog.mcp.empty": "Geen MCP's geconfigureerd",
 
   "dialog.lsp.empty": "LSP's automatisch gedetecteerd uit bestandstypen",
-  "dialog.plugins.empty": "Plug-ins geconfigureerd in opencode.json",
+  "dialog.plugins.empty": "Plug-ins geconfigureerd in kilo.jsonc",
 
   "mcp.status.connected": "verbonden",
   "mcp.status.failed": "mislukt",
@@ -613,7 +613,7 @@ export const dict = {
   "error.chain.responseBody": "Antwoord-body:\n{{body}}",
   "error.chain.didYouMean": "Bedoelde je: {{suggestions}}",
   "error.chain.modelNotFound": "Model niet gevonden: {{provider}}/{{model}}",
-  "error.chain.checkConfig": "Controleer je configuratie (opencode.json) provider/model namen",
+  "error.chain.checkConfig": "Controleer je configuratie (kilo.jsonc) provider/model namen",
   "error.chain.mcpFailed": 'MCP-server "{{name}}" is mislukt. Let op, Kilo ondersteunt nog geen MCP-authenticatie.',
   "error.chain.providerAuthFailed": "Provider-authenticatie mislukt ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
@@ -1046,14 +1046,12 @@ export const dict = {
   "settings.config.source.xdg": "XDG globale configuratie",
   "settings.config.source.homeKilo": "Home .kilo-configuratie",
   "settings.config.source.homeKilocode": "Home .kilocode-configuratie",
-  "settings.config.source.homeOpencode": "Home .opencode-configuratie",
   "settings.config.source.envFile": "KILO_CONFIG omgevingsbestand",
   "settings.config.source.envDir": "KILO_CONFIG_DIR",
   "settings.config.source.envContent": "Inline omgevingsconfiguratie",
   "settings.config.source.projectKilo": "Project .kilo-configuratie",
   "settings.config.source.projectRoot": "Project root configuratie",
   "settings.config.source.projectKilocode": "Verouderde .kilocode-configuratie",
-  "settings.config.source.projectOpencode": "Verouderde .opencode-configuratie",
   "settings.models.title": "Modellen",
   "settings.models.description": "Model-instellingen zullen hier configureerbaar zijn.",
   "settings.agents.title": "Agenten",
@@ -1577,9 +1575,9 @@ export const dict = {
     "Geen MCP-servers geconfigureerd. Voeg MCP-servers toe in kilo.jsonc of vraag de agent om ze toe te voegen.",
   "settings.agentBehaviour.workflowsPlaceholder": "Workflows worden beheerd via workflowbestanden in je workspace.",
   "settings.agentBehaviour.workflows.description":
-    "Workflows zijn aangepaste slash-commando's gedefinieerd in je configuratie. Typ /command-name in de chat om ze aan te roepen. Commando's worden geconfigureerd in opencode.json onder de sectie 'command'.",
+    "Workflows zijn aangepaste slash-commando's gedefinieerd in je configuratie. Typ /command-name in de chat om ze aan te roepen. Commando's worden geconfigureerd in kilo.jsonc onder de sectie 'command'.",
   "settings.agentBehaviour.workflows.empty":
-    "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan opencode.json om ze hier te zien.",
+    "Geen aangepaste commando's geconfigureerd. Voeg commando's toe aan kilo.jsonc om ze hier te zien.",
   "settings.agentBehaviour.workflows.detail.description": "Beschrijving",
   "settings.agentBehaviour.workflows.detail.template": "Sjabloon",
 

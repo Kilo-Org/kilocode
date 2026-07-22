@@ -348,7 +348,7 @@ it.effect("does not create global config when KILO_CONFIG_DIR is set", () =>
         Effect.gen(function* () {
           yield* Config.use.get().pipe(provideInstanceEffect(dir))
 
-          expect(yield* FSUtil.use.existsSafe(path.join(dir, "opencode.jsonc"))).toBe(false)
+          expect(yield* FSUtil.use.existsSafe(path.join(dir, "kilo.jsonc"))).toBe(false) // kilocode_change
         }).pipe(Effect.provide(testInstanceStoreLayer), Effect.provide(CrossSpawnSpawner.defaultLayer)),
       ),
     )
@@ -431,12 +431,13 @@ it.effect("updates global config and omits empty shell key in json", () =>
   ),
 )
 
+// kilocode_change start
 it.effect("updates global config and omits empty shell key in jsonc", () =>
-  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "opencode.jsonc" }, ({ dir }) =>
+  withGlobalConfig({ config: { shell: "bash", model: "test/model" }, name: "kilo.jsonc" }, ({ dir }) =>
     Effect.gen(function* () {
       yield* Config.use.updateGlobal({ shell: "" })
 
-      const file = path.join(dir, "opencode.jsonc")
+      const file = path.join(dir, "kilo.jsonc") // kilocode_change
       const writtenConfig = yield* FSUtil.use.readFileString(file)
       const parsed = ConfigParse.schema(ConfigV1.Info, ConfigParse.jsonc(writtenConfig, file), file)
       expect(writtenConfig).not.toContain('"shell"')
@@ -445,6 +446,7 @@ it.effect("updates global config and omits empty shell key in jsonc", () =>
     }),
   ),
 )
+// kilocode_change end
 
 it.instance(
   "loads formatter boolean config",
@@ -1353,15 +1355,18 @@ it.instance(
   { config: { autoupdate: true, disabled_providers: [] } },
 )
 
+// kilocode_change start
 it.instance("managed jsonc settings override managed json settings", () =>
   Effect.gen(function* () {
     yield* writeManagedSettingsEffect({ model: "managed/json" })
-    yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "opencode.jsonc")
+    yield* writeManagedSettingsEffect({ model: "managed/jsonc" }, "kilo.jsonc") // kilocode_change
+    yield* writeManagedSettingsEffect({ model: "legacy/opencode" }, "opencode.jsonc") // kilocode_change
 
     const config = yield* Config.use.get()
     expect(config.model).toBe("managed/jsonc")
   }),
 )
+// kilocode_change end
 
 it.instance(
   "missing managed settings file is not an error",
@@ -2171,15 +2176,16 @@ describe("KILO_CONFIG_CONTENT token substitution", () => {
 
 // parseManagedPlist unit tests — pure function, no OS interaction
 
+// kilocode_change start
 test("parseManagedPlist strips MDM metadata keys", async () => {
   const config = ConfigParse.schema(
     ConfigV1.Info,
     ConfigParse.jsonc(
       await ConfigManaged.parseManagedPlist(
         JSON.stringify({
-          PayloadDisplayName: "OpenCode Managed",
-          PayloadIdentifier: "ai.opencode.managed.test",
-          PayloadType: "ai.opencode.managed",
+          PayloadDisplayName: "Kilo Managed",
+          PayloadIdentifier: "ai.kilo.managed.test",
+          PayloadType: "ai.kilo.managed",
           PayloadUUID: "AAAA-BBBB-CCCC",
           PayloadVersion: 1,
           _manualProfile: true,
@@ -2198,6 +2204,7 @@ test("parseManagedPlist strips MDM metadata keys", async () => {
   expect((config as any).PayloadType).toBeUndefined()
   expect((config as any)._manualProfile).toBeUndefined()
 })
+// kilocode_change end
 
 test("parseManagedPlist parses server settings", async () => {
   const config = ConfigParse.schema(

@@ -136,8 +136,8 @@ export function Tips(props: { api: TuiPluginApi; connected?: boolean }) {
     // kilocode_change start
     const tips = [...KILO_TIPS, ...TIPS, process.platform !== "win32" ? TERMINAL_SUSPEND_TIP : INPUT_UNDO_TIP].flatMap(
       (item) => {
-      const value = typeof item === "string" ? item : item(shortcuts)
-      return value ? [value] : []
+        const value = typeof item === "string" ? item : item(shortcuts)
+        return value ? [value] : []
       },
     )
     // kilocode_change end
@@ -214,8 +214,8 @@ const TIPS: Tip[] = [
     if (!items.length) return undefined
     return `Use ${items.map(shortcutText).join(" / ")} to move between parent and child sessions`
   },
-  "Create {highlight}opencode.json{/highlight} for server settings and {highlight}tui.json{/highlight} for TUI settings",
-  "Place TUI settings in {highlight}~/.config/opencode/tui.json{/highlight} for global config",
+  "Create {highlight}kilo.jsonc{/highlight} for server settings and {highlight}tui.json{/highlight} for TUI settings", // kilocode_change
+  "Place TUI settings in {highlight}~/.config/kilo/tui.json{/highlight} for global config", // kilocode_change
   "Add {highlight}$schema{/highlight} to your config for autocomplete in your editor",
   "Configure {highlight}model{/highlight} in config to set your default model",
   "Override any keybind in {highlight}tui.json{/highlight} via the {highlight}keybinds{/highlight} section",

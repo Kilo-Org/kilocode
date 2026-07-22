@@ -2,11 +2,9 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient } from "@opencode-ai/core/effect/layer-node-platform"
 import { serviceUse } from "@opencode-ai/core/effect/service-use"
 import path from "path"
-import { pathToFileURL } from "url"
 import os from "os"
 import { mergeDeep } from "remeda"
 import { Global } from "@opencode-ai/core/global"
-import fsNode from "fs/promises"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
@@ -190,10 +188,8 @@ export const use = serviceUse(Service)
 
 function globalConfigFile() {
   // kilocode_change start
-  const candidates = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json", "config.json"].map((file) =>
-    // kilocode_change end
-    path.join(Global.Path.config, file),
-  )
+  const candidates = KilocodeConfig.KILO_CONFIG_FILES.map((file) => path.join(Global.Path.config, file))
+  // kilocode_change end
   for (const file of candidates) {
     if (existsSync(file)) return file
   }
@@ -356,30 +352,12 @@ export const layer = Layer.effect(
             .pipe(Effect.catch(() => Effect.void))
         }
       }
-      // kilocode_change - global config is user-owned and trusted to resolve {file:}/{env:} tokens
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "config.json"), env, true))
       // kilocode_change start
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.json"), env, true))
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "kilo.jsonc"), env, true))
-      // kilocode_change end
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.json"), env, true)) // kilocode_change
-      result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, "opencode.jsonc"), env, true)) // kilocode_change
-
-      const legacy = path.join(Global.Path.config, "config")
-      if (existsSync(legacy)) {
-        yield* Effect.promise(() =>
-          import(pathToFileURL(legacy).href, { with: { type: "toml" } })
-            .then(async (mod) => {
-              const { provider, model, ...rest } = mod.default
-              if (provider && model) result.model = `${provider}/${model}`
-              result["$schema"] = "https://app.kilo.ai/config.json" // kilocode_change
-              result = mergeConfig(result, rest)
-              await fsNode.writeFile(path.join(Global.Path.config, "config.json"), JSON.stringify(result, null, 2))
-              await fsNode.unlink(legacy)
-            })
-            .catch(() => {}),
-        )
+      // Global Kilo config loads low-to-high so JSONC overrides JSON when both exist.
+      for (const file of KilocodeConfig.KILO_CONFIG_FILES.toReversed()) {
+        result = mergeConfig(result, yield* loadFile(path.join(Global.Path.config, file), env, true))
       }
+      // kilocode_change end
 
       globalStamp = yield* KilocodeGlobalConfigStamp.read(fs, Global.Path.config) // kilocode_change
       return result
@@ -626,21 +604,19 @@ export const layer = Layer.effect(
         }
 
         if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
-          // kilocode_change start - also discover kilo.json project files
-          for (const name of ["kilo", "opencode"] as const) {
-            for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
-              yield* merge(
-                file,
-                // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
-                yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }).pipe(
-                  Effect.catchDefect((err: unknown) => {
-                    caughtWarning(warnings, file, err)
-                    return Effect.succeed({} as Info)
-                  }),
-                ),
-                "local",
-              )
-            }
+          // kilocode_change start - project root config only recognizes kilo.json and kilo.jsonc
+          for (const file of yield* ConfigPaths.files("kilo", ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
+            yield* merge(
+              file,
+              // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
+              yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }).pipe(
+                Effect.catchDefect((err: unknown) => {
+                  caughtWarning(warnings, file, err)
+                  return Effect.succeed({} as Info)
+                }),
+              ),
+              "local",
+            )
           }
           // kilocode_change end
         }
@@ -677,7 +653,7 @@ export const layer = Layer.effect(
             ? undefined
             : { root: primarySet.has(dir) ? path.dirname(dir) : projectRoot, source: dir }
           if (KilocodeConfig.isConfigDir(dir, Flag.KILO_CONFIG_DIR)) {
-            for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+            for (const file of KilocodeConfig.KILO_CONFIG_FILES.toReversed()) {
               const source = path.join(dir, file)
               yield* Effect.logDebug(`loading config from ${source}`)
               // kilocode_change - untrusted config dirs confine {file:} reads to projectRoot
@@ -814,9 +790,9 @@ export const layer = Layer.effect(
         }
 
         const managedDir = ConfigManaged.managedConfigDir()
-        // kilocode_change start - include kilo.json/kilo.jsonc in managed dir loading
+        // kilocode_change start - managed directories only load Kilo config files
         if (existsSync(managedDir)) {
-          for (const file of KilocodeConfig.ALL_CONFIG_FILES) {
+          for (const file of KilocodeConfig.KILO_CONFIG_FILES.toReversed()) {
             const source = path.join(managedDir, file)
             // kilocode_change - MDM/enterprise-managed config is a trusted source
             yield* merge(source, yield* loadFile(source, undefined, true), "global")

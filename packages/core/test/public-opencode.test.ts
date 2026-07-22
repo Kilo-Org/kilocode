@@ -158,7 +158,7 @@ const ref = (input: { id?: string; variant?: string } = {}) =>
 const writeProvider = (directory: string, disabled = false) =>
   Effect.promise(() =>
     fs.writeFile(
-      path.join(directory, "opencode.json"),
+      path.join(directory, "kilo.json"), // kilocode_change
       JSON.stringify({
         providers: {
           "public-test": {

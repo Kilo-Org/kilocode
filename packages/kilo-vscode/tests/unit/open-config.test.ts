@@ -29,10 +29,8 @@ const labels = {
   sourceEnvFile: "Env file",
   sourceHomeKilo: "Home Kilo",
   sourceHomeKilocode: "Home Kilocode",
-  sourceHomeOpencode: "Home Opencode",
   sourceProjectKilo: "Project Kilo",
   sourceProjectKilocode: "Project Kilocode",
-  sourceProjectOpencode: "Project Opencode",
   sourceProjectRoot: "Project root",
   sourceXdg: "XDG",
   statusCreate: "Create",
@@ -102,13 +100,13 @@ afterEach(async () => {
 })
 
 describe("config file discovery", () => {
-  it("discovers global, env, legacy, and virtual config sources", async () => {
+  it("discovers Kilo global, env, legacy, and virtual config sources", async () => {
     reset()
     const root = await temp()
     const home = path.join(root, "home")
     const xdg = path.join(root, "xdg")
     const extra = path.join(root, "extra")
-    const envfile = path.join(root, "env.jsonc")
+    const envfile = path.join(root, "opencode.json")
     const spy = spyOn(os, "homedir").mockReturnValue(home)
     process.env.HOME = home
     process.env.XDG_CONFIG_HOME = xdg
@@ -116,20 +114,39 @@ describe("config file discovery", () => {
     process.env.KILO_CONFIG_DIR = extra
     process.env.KILO_CONFIG_CONTENT = "{}"
     await file(path.join(xdg, "kilo", "kilo.json"))
+    await file(path.join(xdg, "kilo", "opencode.json"))
+    await file(path.join(xdg, "kilo", "config.json"))
+    await file(path.join(home, ".kilo", "kilo.jsonc"))
+    await file(path.join(home, ".kilo", "opencode.jsonc"))
+    await file(path.join(home, ".kilocode", "kilo.json"))
     await file(path.join(home, ".kilocode", "opencode.json"))
     await file(path.join(home, ".opencode", "kilo.jsonc"))
+    await file(path.join(extra, "opencode.jsonc"))
     await file(envfile)
 
     const list = globalFiles()
     const sources = list.map((item) => item.source)
+    const files = list.flatMap((item) => (item.file ? [item.file] : []))
 
     expect(sources).toContain("sourceXdg")
+    expect(sources).toContain("sourceHomeKilo")
     expect(sources).toContain("sourceHomeKilocode")
-    expect(sources).toContain("sourceHomeOpencode")
     expect(sources).toContain("sourceEnvFile")
     expect(sources).toContain("sourceEnvDir")
     expect(sources).toContain("sourceEnvContent")
-    expect(list.find((item) => item.source === "sourceEnvDir")?.recommended).toBe(true)
+    expect(files).toContain(envfile)
+    expect(files).not.toContain(path.join(xdg, "kilo", "opencode.json"))
+    expect(files).not.toContain(path.join(xdg, "kilo", "config.json"))
+    expect(files).not.toContain(path.join(home, ".kilo", "opencode.jsonc"))
+    expect(files).not.toContain(path.join(home, ".kilocode", "opencode.json"))
+    expect(files).not.toContain(path.join(home, ".opencode", "kilo.jsonc"))
+    expect(files).not.toContain(path.join(extra, "opencode.jsonc"))
+    expect(list.find((item) => item.file === path.join(home, ".kilocode", "kilo.json"))?.legacy).toBe(true)
+    expect(list.find((item) => item.file === envfile)?.legacy).toBe(false)
+    expect(list.find((item) => item.source === "sourceEnvDir")).toMatchObject({
+      file: path.join(extra, "kilo.jsonc"),
+      recommended: true,
+    })
     expect(list.find((item) => item.source === "sourceEnvContent")?.virtual).toBe(true)
     spy.mockRestore()
   })
@@ -139,14 +156,23 @@ describe("config file discovery", () => {
     const root = await temp()
     process.env.KILO_DISABLE_PROJECT_CONFIG = "1"
     await file(path.join(root, "kilo.json"))
+    await file(path.join(root, ".kilo", "kilo.jsonc"))
+    await file(path.join(root, ".kilocode", "kilo.json"))
     await file(path.join(root, ".opencode", "opencode.json"))
+    await file(path.join(root, ".kilo", "opencode.json"))
+    await file(path.join(root, "opencode.jsonc"))
+    await file(path.join(root, "config.json"))
 
     const list = localFiles(root)
+    const files = list.flatMap((item) => (item.file ? [item.file] : []))
 
     expect(list.every((item) => !item.loaded)).toBe(true)
     expect(list.some((item) => item.source === "sourceProjectRoot" && item.exists)).toBe(true)
-    expect(list.some((item) => item.source === "sourceProjectOpencode" && item.legacy)).toBe(true)
-    expect(list.find((item) => item.recommended)?.file).toBe(path.join(root, ".kilo", "kilo.jsonc"))
+    expect(list.some((item) => item.source === "sourceProjectKilocode" && item.legacy)).toBe(true)
+    expect(files).not.toContain(path.join(root, ".opencode", "opencode.json"))
+    expect(files).not.toContain(path.join(root, ".kilo", "opencode.json"))
+    expect(files).not.toContain(path.join(root, "opencode.jsonc"))
+    expect(files).not.toContain(path.join(root, "config.json"))
   })
 })
 
@@ -182,7 +208,7 @@ describe("openConfig", () => {
     reset()
     const root = await temp()
     const cfg = path.join(root, ".kilo", "kilo.jsonc")
-    await file(path.join(root, ".opencode", "opencode.json"))
+    await file(path.join(root, "kilo.json"))
     win.showQuickPick = mock(async (items: Array<{ item: { recommended?: boolean } }>) =>
       items.find((item) => item.item.recommended),
     )

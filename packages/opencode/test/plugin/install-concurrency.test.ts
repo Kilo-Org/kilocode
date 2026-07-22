@@ -82,7 +82,7 @@ describe("plugin.install.concurrent", () => {
     expect(out.map((x) => x.code)).toEqual(Array.from({ length: all.length }, () => 0))
     expect(out.map((x) => x.stderr.toString()).filter(Boolean)).toEqual([])
 
-    const cfg = await read(path.join(tmp.path, ".kilo", "opencode.jsonc")) // kilocode_change
+    const cfg = await read(path.join(tmp.path, ".kilo", "kilo.jsonc")) // kilocode_change
     expectPlugins(cfg.plugin, all)
   }, 25_000)
 
@@ -106,17 +106,45 @@ describe("plugin.install.concurrent", () => {
     expect(out.map((x) => x.stderr.toString()).filter(Boolean)).toEqual([])
 
     // kilocode_change start
-    const server = await read(path.join(tmp.path, ".kilo", "opencode.jsonc"))
+    const server = await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))
     const tui = await read(path.join(tmp.path, ".kilo", "tui.jsonc"))
     // kilocode_change end
     expectPlugins(server.plugin, all)
     expectPlugins(tui.plugin, all)
   }, 25_000)
 
+  // kilocode_change start
+  test("does not update OpenCode config while serializing Kilo updates", async () => {
+    await using tmp = await tmpdir()
+    const target = await plugin(tmp.path, ["server"])
+    const legacy = path.join(tmp.path, ".kilo", "opencode.jsonc")
+    const text = JSON.stringify({ plugin: ["legacy@1.0.0"] }, null, 2)
+    await fs.mkdir(path.dirname(legacy), { recursive: true })
+    await Bun.write(legacy, text)
+    const all = mods("mod-kilo", 6)
+
+    const out = await Promise.all(
+      all.map((mod) =>
+        run({
+          dir: tmp.path,
+          target,
+          mod,
+          holdMs: 30,
+        }),
+      ),
+    )
+
+    expect(out.map((x) => x.code)).toEqual(Array.from({ length: all.length }, () => 0))
+    expect(out.map((x) => x.stderr.toString()).filter(Boolean)).toEqual([])
+    expectPlugins((await read(path.join(tmp.path, ".kilo", "kilo.jsonc"))).plugin, all)
+    expect(await fs.readFile(legacy, "utf8")).toBe(text)
+  }, 25_000)
+  // kilocode_change end
+
   test("preserves updates when existing config uses .json", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, ["server"])
-    const cfg = path.join(tmp.path, ".kilo", "opencode.json") // kilocode_change
+    const cfg = path.join(tmp.path, ".kilo", "kilo.json") // kilocode_change
     await fs.mkdir(path.dirname(cfg), { recursive: true })
     await Bun.write(cfg, JSON.stringify({ plugin: ["seed@1.0.0"] }, null, 2))
 
@@ -137,6 +165,6 @@ describe("plugin.install.concurrent", () => {
 
     const json = await read(cfg)
     expectPlugins(json.plugin, ["seed@1.0.0", ...next])
-    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "opencode.jsonc"))).toBe(false) // kilocode_change
+    expect(await Filesystem.exists(path.join(tmp.path, ".kilo", "kilo.jsonc"))).toBe(false) // kilocode_change
   }, 25_000)
 })

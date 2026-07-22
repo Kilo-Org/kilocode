@@ -199,9 +199,10 @@ describe("Config", () => {
       ),
     ),
   )
-            // kilocode_change end
+  // kilocode_change end
 
-  it.live("loads JSON and JSONC files from lowest to highest priority", () =>
+  // kilocode_change start
+  it.live("loads only Kilo JSON and JSONC files from lowest to highest priority", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -211,48 +212,49 @@ describe("Config", () => {
           yield* Effect.promise(() =>
             Promise.all([
               fs.writeFile(
-                path.join(tmp.path, "config.json"),
+                path.join(tmp.path, "kilo.json"),
                 JSON.stringify({ $schema: "base", providers: { base: provider } }),
               ),
               fs.writeFile(
-                path.join(tmp.path, "opencode.json"),
-                JSON.stringify({ $schema: "middle", providers: { middle: provider } }),
-              ),
-              fs.writeFile(
-                path.join(tmp.path, "opencode.jsonc"),
+                path.join(tmp.path, "kilo.jsonc"),
                 `{
                   // Later global files override scalar fields while retaining providers.
                   "$schema": "last",
                   "providers": { "last": ${JSON.stringify(provider)} },
                 }`,
               ),
+              fs.writeFile(path.join(tmp.path, "config.json"), JSON.stringify({ $schema: "ignored-generic" })),
+              fs.writeFile(path.join(tmp.path, "opencode.json"), JSON.stringify({ $schema: "ignored-open" })),
+              fs.writeFile(path.join(tmp.path, "opencode.jsonc"), JSON.stringify({ $schema: "ignored-open-jsonc" })),
             ]),
           )
           return yield* Effect.gen(function* () {
             const config = yield* Config.Service
             const documents = (yield* config.entries()).filter((entry) => entry.type === "document")
 
-            expect(documents).toHaveLength(3)
-            expect(documents.map((document) => document.type)).toEqual(["document", "document", "document"])
-            expect(documents.map((document) => document.info.$schema)).toEqual(["base", "middle", "last"])
+            expect(documents).toHaveLength(2)
+            expect(documents.map((document) => document.type)).toEqual(["document", "document"])
+            expect(documents.map((document) => document.info.$schema)).toEqual(["base", "last"])
             expect(documents[0]).toBeInstanceOf(Config.Document)
-            expect(documents[0]?.path).toBe(path.join(tmp.path, "config.json"))
-            expect(documents[2]?.info.providers?.last).toBeInstanceOf(ConfigProvider.Info)
+            expect(documents[0]?.path).toBe(path.join(tmp.path, "kilo.json"))
+            expect(documents[1]?.info.providers?.last).toBeInstanceOf(ConfigProvider.Info)
 
             yield* Effect.promise(() =>
-              fs.writeFile(path.join(tmp.path, "opencode.jsonc"), JSON.stringify({ $schema: "changed" })),
+              fs.writeFile(path.join(tmp.path, "kilo.jsonc"), JSON.stringify({ $schema: "changed" })),
             )
             expect(
               (yield* config.entries())
                 .filter((entry) => entry.type === "document")
                 .map((document) => document.info.$schema),
-            ).toEqual(["base", "middle", "last"])
+            ).toEqual(["base", "last"])
           }).pipe(Effect.provide(testLayer(tmp.path)))
         }),
       ),
     ),
   )
+  // kilocode_change end
 
+  // kilocode_change start
   it.live("accepts $schema metadata without writing it into config files", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -260,7 +262,7 @@ describe("Config", () => {
     ).pipe(
       Effect.flatMap((tmp) =>
         Effect.gen(function* () {
-          const file = path.join(tmp.path, "opencode.json")
+          const file = path.join(tmp.path, "kilo.json")
           const contents = JSON.stringify({
             shell: "/bin/zsh",
             experimental: { policies: [{ effect: "deny", action: "provider.use", resource: "openai" }] },
@@ -285,7 +287,9 @@ describe("Config", () => {
       ),
     ),
   )
+  // kilocode_change end
 
+  // kilocode_change start
   it.live("loads supported scalar and resource configuration", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -295,7 +299,7 @@ describe("Config", () => {
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             fs.writeFile(
-              path.join(tmp.path, "opencode.json"),
+              path.join(tmp.path, "kilo.json"),
               JSON.stringify({
                 shell: "/bin/bash",
                 model: "anthropic/claude",
@@ -471,7 +475,9 @@ describe("Config", () => {
       ),
     ),
   )
+  // kilocode_change end
 
+  // kilocode_change start
   it.live("migrates the deprecated reference key into references", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -481,7 +487,7 @@ describe("Config", () => {
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             fs.writeFile(
-              path.join(tmp.path, "opencode.json"),
+              path.join(tmp.path, "kilo.json"),
               JSON.stringify({
                 reference: {
                   local: { path: "../library" },
@@ -507,7 +513,9 @@ describe("Config", () => {
       ),
     ),
   )
+  // kilocode_change end
 
+  // kilocode_change start
   it.live("migrates v1 configuration when a v1-only key is present", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -517,7 +525,7 @@ describe("Config", () => {
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             fs.writeFile(
-              path.join(tmp.path, "opencode.json"),
+              path.join(tmp.path, "kilo.json"),
               JSON.stringify({
                 shell: "/bin/zsh",
                 default_agent: "reviewer",
@@ -678,7 +686,9 @@ describe("Config", () => {
       ),
     ),
   )
+  // kilocode_change end
 
+  // kilocode_change start
   it.live("ignores invalid files while loading valid config values", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -688,9 +698,9 @@ describe("Config", () => {
         Effect.gen(function* () {
           yield* Effect.promise(() =>
             Promise.all([
-              fs.writeFile(path.join(tmp.path, "config.json"), JSON.stringify({ $schema: "base" })),
-              fs.writeFile(path.join(tmp.path, "opencode.json"), "{ invalid"),
-              fs.writeFile(path.join(tmp.path, "opencode.jsonc"), JSON.stringify({ providers: { invalid: true } })),
+              fs.writeFile(path.join(tmp.path, "kilo.json"), JSON.stringify({ $schema: "base" })),
+              fs.writeFile(path.join(tmp.path, "kilo.jsonc"), "{ invalid"),
+              fs.writeFile(path.join(tmp.path, "opencode.json"), JSON.stringify({ $schema: "ignored" })),
             ]),
           )
           return yield* Effect.gen(function* () {
@@ -703,7 +713,9 @@ describe("Config", () => {
       ),
     ),
   )
+  // kilocode_change end
 
+  // kilocode_change start
   it.live("loads policy statements in reverse config order", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
@@ -715,13 +727,13 @@ describe("Config", () => {
           yield* Effect.promise(async () => {
             await fs.mkdir(global, { recursive: true })
             await fs.writeFile(
-              path.join(global, "opencode.json"),
+              path.join(global, "kilo.json"),
               JSON.stringify({
                 experimental: { policies: [{ effect: "deny", action: "provider.use", resource: "openai" }] },
               }),
             )
             await fs.writeFile(
-              path.join(tmp.path, "opencode.json"),
+              path.join(tmp.path, "kilo.json"),
               JSON.stringify({
                 experimental: { policies: [{ effect: "allow", action: "provider.use", resource: "openai" }] },
               }),
@@ -737,6 +749,7 @@ describe("Config", () => {
       }),
     ),
   )
+  // kilocode_change end
 
   // kilocode_change start - V2 config discovery follows Kilo roots and precedence
   it.live("loads Kilo configuration roots up to the project boundary", () =>
@@ -762,16 +775,19 @@ describe("Config", () => {
               fs.writeFile(path.join(tmp.path, "opencode.json"), JSON.stringify({ $schema: "outside" })),
               fs.writeFile(path.join(global, "kilo.json"), JSON.stringify({ $schema: "global" })),
               fs.writeFile(path.join(root, "kilo.json"), JSON.stringify({ $schema: "root" })),
-              fs.writeFile(path.join(parent, "opencode.jsonc"), JSON.stringify({ $schema: "parent" })),
-              fs.writeFile(path.join(directory, "config.json"), JSON.stringify({ $schema: "directory" })),
-              fs.writeFile(path.join(root, ".kilocode", "opencode.json"), JSON.stringify({ $schema: "root-kilocode" })),
-              fs.writeFile(path.join(root, ".kilo", "kilo.json"), JSON.stringify({ $schema: "root-kilo" })),
+              fs.writeFile(path.join(parent, "kilo.jsonc"), JSON.stringify({ $schema: "parent" })),
+              fs.writeFile(path.join(directory, "kilo.json"), JSON.stringify({ $schema: "directory" })),
+              fs.writeFile(path.join(root, ".kilocode", "kilo.json"), JSON.stringify({ $schema: "root-kilocode" })),
+              fs.writeFile(path.join(root, ".kilo", "kilo.jsonc"), JSON.stringify({ $schema: "root-kilo" })),
               fs.writeFile(
-                path.join(directory, ".kilocode", "opencode.jsonc"),
+                path.join(directory, ".kilocode", "kilo.json"),
                 JSON.stringify({ $schema: "directory-kilocode" }),
               ),
               fs.writeFile(path.join(directory, ".kilo", "kilo.jsonc"), JSON.stringify({ $schema: "directory-kilo" })),
-              fs.writeFile(path.join(root, ".opencode", "opencode.json"), JSON.stringify({ $schema: "ignored" })),
+              fs.writeFile(path.join(directory, "config.json"), JSON.stringify({ $schema: "ignored-generic" })),
+              fs.writeFile(path.join(directory, "opencode.json"), JSON.stringify({ $schema: "ignored-open" })),
+              fs.writeFile(path.join(directory, "opencode.jsonc"), JSON.stringify({ $schema: "ignored-open-jsonc" })),
+              fs.writeFile(path.join(directory, ".opencode", "kilo.json"), JSON.stringify({ $schema: "ignored-dot" })),
             ])
           })
 
