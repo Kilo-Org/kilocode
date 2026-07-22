@@ -3,7 +3,6 @@ import { HttpClient } from "effect/unstable/http"
 import * as Tool from "./tool"
 import * as McpWebSearch from "./mcp-websearch"
 import DESCRIPTION from "./websearch.txt"
-import { checksum } from "@opencode-ai/core/util/encode"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 
@@ -22,19 +21,32 @@ export const Parameters = Schema.Struct({
   contextMaxCharacters: Schema.optional(Schema.Number).annotate({
     description: "Maximum characters for context string optimized for LLMs (default: 10000)",
   }),
+  // kilocode_change start - agent-selectable provider
+  provider: Schema.optional(Schema.Literals(["exa", "parallel"])).annotate({
+    description:
+      "Which backend to use. Prefer 'exa' for primary-source research and topic exploration (canonical sources like arXiv, vendor papers, model cards with deep content extraction). Prefer 'parallel' for specific facts, current pricing/comparisons, leaderboards, or compound questions that benefit from multi-query fan-out. Defaults to 'exa'.",
+  }),
+  // kilocode_change end
 })
 
 const WebSearchProviderSchema = Schema.Literals(["exa", "parallel"])
 export type WebSearchProvider = Schema.Schema.Type<typeof WebSearchProviderSchema>
 
-export function selectWebSearchProvider(sessionID: string, flags = { exa: false, parallel: false }): WebSearchProvider {
+// kilocode_change start - agent-selectable provider with flag kill-switch
+export function selectWebSearchProvider(
+  sessionID: string,
+  flags = { exa: false, parallel: false },
+  explicit?: WebSearchProvider,
+): WebSearchProvider {
+  if (flags.parallel && !flags.exa) return "parallel"
+  if (flags.exa && !flags.parallel) return "exa"
+  if (explicit === "exa" || explicit === "parallel") return explicit
   const override = process.env.KILO_WEBSEARCH_PROVIDER
   if (override === "exa" || override === "parallel") return override
-  if (flags.parallel) return "parallel"
-  if (flags.exa) return "exa"
 
-  return Number.parseInt(checksum(sessionID) ?? "0", 36) % 2 === 0 ? "exa" : "parallel"
+  return "exa"
 }
+// kilocode_change end
 
 export function webSearchProviderLabel(provider: unknown) {
   if (provider === "parallel") return "Parallel Web Search"
@@ -109,10 +121,13 @@ export const WebSearchTool = Tool.define(
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
-          const provider = selectWebSearchProvider(ctx.sessionID, {
-            exa: flags.enableExa,
-            parallel: flags.enableParallel,
-          })
+          // kilocode_change start - pass agent-chosen provider
+          const provider = selectWebSearchProvider(
+            ctx.sessionID,
+            { exa: flags.enableExa, parallel: flags.enableParallel },
+            params.provider,
+          )
+          // kilocode_change end
           const title = webSearchProviderLabel(provider)
           yield* ctx.metadata({ title: `${title} "${params.query}"`, metadata: { provider } })
 

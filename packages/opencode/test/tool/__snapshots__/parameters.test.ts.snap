@@ -465,6 +465,14 @@ exports[`tool parameters JSON Schema (wire shape) websearch 1`] = `
       "description": "Number of search results to return (default: 8)",
       "type": "number",
     },
+    "provider": {
+      "description": "Which backend to use. Prefer 'exa' for primary-source research and topic exploration (canonical sources like arXiv, vendor papers, model cards with deep content extraction). Prefer 'parallel' for specific facts, current pricing/comparisons, leaderboards, or compound questions that benefit from multi-query fan-out. Defaults to 'exa'.",
+      "enum": [
+        "exa",
+        "parallel",
+      ],
+      "type": "string",
+    },
     "query": {
       "description": "Websearch query",
       "type": "string",
