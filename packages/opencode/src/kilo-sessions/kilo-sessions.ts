@@ -27,7 +27,6 @@ import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { AttachedState } from "@/kilo-sessions/attached-state"
-import { SessionPrompt } from "@/session/prompt" // kilocode_change - K1 W1: in-process prompt-cancel seam for exit_cli
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -576,7 +575,13 @@ export namespace KiloSessions {
         hasSession: (id) => KiloSessions.hasRemoteSession(id),
         ownedCount: () => KiloSessions.ownedRemoteSessionCount(),
         cancelPrompt: async (id) => {
-          const { AppRuntime } = await import("@/effect/app-runtime")
+          // kilocode_change - K1 W1: dynamic import breaks the module-load cycle
+          // (@/session/prompt reads KiloSessionPrompt at eval; a static edge here
+          // races that init). Mirrors remote-command.ts's lazy SessionPrompt use.
+          const [{ AppRuntime }, { SessionPrompt }] = await Promise.all([
+            import("@/effect/app-runtime"),
+            import("@/session/prompt"),
+          ])
           await AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.cancel(id)))
         },
       })
