@@ -127,18 +127,24 @@ export namespace RemoteSender {
       // Production falls back to Session.Service.create with `{}`.
       readonly create?: (input?: Record<string, never>) => Promise<Session.Info>
       // kilocode_change - injectable remove hook used to roll back an orphan
-      // root session when attachSession fails after creation. The default
+      // root session when the spawn fails after creation. The default
       // delegates to Session.Service.remove and only swallows its own errors
-      // so the original attach failure is what reaches the caller.
+      // so the original spawn failure is what reaches the caller.
       readonly remove?: (sessionID: SessionID) => Promise<void>
       // kilocode_change end
     }
-    // kilocode_change start - duplicate-safe attach hook used by create_session.
-    // Production wires this to KiloSessions.attachRemoteSession so the attached
-    // set is mutated exactly once and the relay heartbeat fires only when the
-    // set actually changes.
+    // kilocode_change - K1 W1: in-process attach/detach/ownership/cancel
+    // seams. All four are optional and default to a lazy import of
+    // `KiloSessions` (production wires them in `enableRemote`, so the
+    // default branch is never hit there; tests that don't care about
+    // these paths simply omit them and the defaults supply no-op-safe
+    // shims so the production call sites stay the only places that
+    // actually touch the AttachedState).
     attachSession?: (sessionID: SessionID) => Promise<void>
-    // kilocode_change end
+    detachSession?: (sessionID: SessionID) => Promise<void>
+    hasSession?: (sessionID: SessionID) => boolean
+    ownedCount?: () => number
+    cancelPrompt?: (sessionID: SessionID) => Promise<void>
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
@@ -231,10 +237,10 @@ export namespace RemoteSender {
       },
     }
     // kilocode_change start - orphan rollback for create_session: when
-    // sessionCreate succeeds but attachSession fails, the newly-created root
-    // session would otherwise stay in the DB with no relay awareness. The
+    // sessionCreate succeeds but the spawn fails, the newly-created root
+    // session would otherwise stay in the DB with no child to serve it. The
     // default remove() delegates to Session.Service.remove and swallows its
-    // own errors so the caller still observes the original attach failure.
+    // own errors so the caller still observes the original spawn failure.
     const sessionRemove =
       session.remove ??
       (async (id: SessionID) => {
@@ -242,7 +248,12 @@ export namespace RemoteSender {
         await AppRuntime.runPromise(Session.Service.use((svc) => svc.remove(id)))
       })
     // kilocode_change end
-    // kilocode_change start - session create + duplicate-safe attach used by create_session
+    // kilocode_change - K1 W1: session create + in-process attach seams used by
+    // create_session. Production wires `attachSession` to
+    // `KiloSessions.attachRemoteSession` from inside `enableRemote` (see
+    // kilo-sessions.ts). Test fixtures inject stubs via the Options object.
+    // When omitted, the create_session / exit_cli handlers treat the seam
+    // as a wiring bug (a missing seam is never a runtime fallback).
     const sessionCreate =
       session.create ??
       (async (input?: Record<string, never>) => {
@@ -256,6 +267,20 @@ export namespace RemoteSender {
       (async (id: SessionID) => {
         const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
         await KiloSessions.attachRemoteSession(id)
+      })
+    const detachSession =
+      options.detachSession ??
+      (async (id: SessionID) => {
+        const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+        await KiloSessions.detachRemoteSession(id)
+      })
+    const hasSession = options.hasSession ?? (() => false)
+    const ownedCount = options.ownedCount ?? (() => 0)
+    const cancelPrompt =
+      options.cancelPrompt ??
+      (async (id: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(SessionPrompt.Service.use((svc) => svc.cancel(id)))
       })
     // kilocode_change end
     // kilocode_change start - injectable slash command discovery + execution
@@ -541,42 +566,117 @@ export namespace RemoteSender {
         return
       }
       if (msg.command === "exit_cli") {
+        // kilocode_change - K1 W1: `exit_cli` now means "detach THIS remote
+        // session and (if this is the last interactive session) close the
+        // CLI." It is NOT "terminate the CLI." A headless `kilo remote` host
+        // never invokes the RemoteExit callback (it is never registered for
+        // headless mode), so the same command cleanly handles both the
+        // interactive TUI shutdown path and the per-session-detach path
+        // without introducing a new wire command.
+        //
+        // The wire command literal `exit_cli` is intentionally unchanged
+        // (the prior PR's review accepted this: the contract shifts from
+        // "exit" to "exit session" but the literal is kept for compatibility
+        // with older clients already in the field).
+        //
+        // Steps:
+        //   1. Verify the target id is a real SessionID.
+        //   2. Verify this CLI OWNS the target (AttachedState.has). A
+        //      non-owning detach would silently re-add the id to presence
+        //      (the tombstone) and we don't want that.
+        //   3. Cancel any active prompt for the target session so the user
+        //      doesn't see a "still working" indicator after they leave.
+        //   4. Detach the id (removes from BOTH presence and pending; awaits
+        //      a fresh heartbeat whose payload no longer contains the id;
+        //      rolls back on failure).
+        //   5. Snapshot the remaining-count AFTER detach from
+        //      attachedState.union() (NOT mobile subscriptions).
+        //   6. If zero remain + a RemoteExit callback is registered, ACK
+        //      then invoke the callback in a microtask so the response can
+        //      flush first. If zero remain + no callback (headless `kilo
+        //      remote`), ACK and keep the host alive (the host keeps
+        //      advertising and can create a new session from zero). If
+        //      sessions remain, ACK and keep the process alive.
+        //   7. On any failure (owns-check, cancel, detach), surface a
+        //      sanitized error and do NOT ACK; the CLI keeps the session
+        //      attached and the process stays alive.
         const parsed = RemoteCommand.ExitRequest.safeParse(msg.data)
         const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
         if (!parsed.success || Option.isNone(current)) {
           options.conn.send({ type: "response", id: msg.id, error: "invalid exit_cli command" })
           return
         }
+        const target = current.value
+        // Verify ownership first — a non-owning detach would silently re-add
+        // the id to the tombstone, which is a wiring bug we want to surface
+        // (and a mobile client trying to detach a session it does not own
+        // is a contract violation we should not paper over).
+        if (!hasSession(target)) {
+          options.conn.send({ type: "response", id: msg.id, error: "session not owned by this CLI" })
+          return
+        }
+        const exit = remoteExit.get()
         void (async () => {
           try {
-            await session.get(current.value)
-            const exit = remoteExit.get()
-            if (!exit) {
-              options.conn.send({ type: "response", id: msg.id, error: "graceful exit unavailable" })
-              return
-            }
+            // 1. Cancel any active prompt for the target session. We await
+            //    this (not fire-and-forget) because the detach fence that
+            //    follows depends on a coherent session state — the prompt
+            //    cancel may need to flush queued messages before the
+            //    session is no longer "busy" to the relay.
+            await cancelPrompt(target)
+            // 2. Detach + await the negative-containment heartbeat.
+            await detachSession(target)
+            // 3. Snapshot remaining sessions AFTER detach. Headless hosts
+            //    (`kilo remote`) never register a RemoteExit callback, so
+            //    `exit` is undefined there and the host stays alive.
+            const remaining = ownedCount()
             options.conn.send({ type: "response", id: msg.id, result: {} })
-            queueMicrotask(() => {
-              void exit().catch((error) => {
-                options.log.error("exit CLI failed after ACK", {
-                  id: msg.id,
-                  operation: "exit_cli",
-                  error: errorName(error),
+            if (remaining === 0 && exit) {
+              queueMicrotask(() => {
+                void exit().catch((error) => {
+                  options.log.error("exit CLI failed after ACK", {
+                    id: msg.id,
+                    operation: "exit_cli",
+                    error: errorName(error),
+                  })
                 })
               })
-            })
+            }
           } catch (error) {
-            options.log.error("exit CLI preflight failed", { id: msg.id, error: errorName(error) })
-            options.conn.send({ type: "response", id: msg.id, error: "failed to exit CLI" })
+            // Roll-back path: the detach may have partially applied. The
+            // AttachedState.detach rollback restores presence/pending on
+            // its own. We MUST NOT ACK here — the CLI keeps the session
+            // attached and the process stays alive.
+            options.log.error("exit CLI failed before ACK", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to exit session" })
           }
         })()
         return
       }
       if (msg.command === "create_session") {
-        // kilocode_change start - remote /new creation: root session, attached + heartbeat before response
+        // kilocode_change - K1 W1: in-process create_session. The wire
+        // shape is unchanged (`{protocolVersion: 1}`), but the handler now
+        // (a) accepts an absent `sessionId` (the instance-picker path is
+        // connectionId-targeted — no source session needed), (b) resolves
+        // the target directory to that existing session's directory when
+        // a `sessionId` is present (legacy mobile /new-inside-a-session
+        // path) or to `options.directory` (the instance's own launch
+        // directory) otherwise, and (c) attaches the new session in the
+        // same CLI process (concurrent sessions share the process with
+        // per-directory InstanceRef isolation) instead of spawning a child.
+        // Attach failures roll back the pre-created session via
+        // `sessionRemove`.
         const parsed = CreateSessionRequest.safeParse(msg.data)
+        if (!parsed.success) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session command",
+          })
+          return
+        }
         const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
-        if (!parsed.success || Option.isNone(current)) {
+        if (msg.sessionId && Option.isNone(current)) {
           options.conn.send({
             type: "response",
             id: msg.id,
@@ -587,8 +687,17 @@ export namespace RemoteSender {
         const run = options.provide ?? provide
         void (async () => {
           try {
+            // Resolve the target directory: a present `sessionId` keeps the
+            // legacy mobile /new-inside-a-session behavior (target = that
+            // session's directory); an absent `sessionId` targets the
+            // instance's own launch directory (the new instance-picker path).
+            const targetDirectory = await current.pipe(
+              Option.map((sid) => session.get(sid)),
+              Option.map((p) => p.then((info) => info.directory)),
+              Option.getOrElse(() => Promise.resolve(options.directory)),
+            )
             const result = await run({
-              directory: (await session.get(current.value)).directory,
+              directory: targetDirectory,
               fn: async () => {
                 const created = await sessionCreate({})
                 // attachSession is the duplicate-safe seam: it mutates the
@@ -599,9 +708,10 @@ export namespace RemoteSender {
                   await attachSession(created.id)
                 } catch (attachError) {
                   // Roll back the newly-created root session so the DB does
-                  // not keep an orphan the relay never learned about. Swallow
-                  // the cleanup error here — the original attach failure is
-                  // what the caller must see, so we re-throw it below.
+                  // not keep an orphan the relay never learned about.
+                  // Swallow the cleanup error here — the original attach
+                  // failure is what the caller must see, so we re-throw it
+                  // below.
                   try {
                     await sessionRemove(created.id)
                   } catch (cleanupError) {

@@ -769,4 +769,125 @@ describe("AttachedState", () => {
 
     expect(calls).toEqual([{}, { requireSessionId: "ses_b" }])
   })
+
+  // K1 W1: detach semantics — basic happy path.
+  test("detach removes the id from both sets and awaits a heartbeat whose payload no longer contains it", async () => {
+    let detachResolved = false
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        if (opts?.detachSessionId) {
+          detachResolved = true
+          return Promise.resolve()
+        }
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+    state.setPresence(["ses_a"])
+    await Promise.resolve()
+    expect(state.has("ses_a")).toBe(true)
+
+    // Detach awaits a heartbeat whose payload no longer contains ses_a.
+    // The state machine removes the id synchronously before awaiting.
+    await state.detach("ses_a")
+    expect(detachResolved).toBe(true)
+    expect([...state.union()]).toEqual([])
+  })
+
+  // K1 W1: detach surfaces a specific error for an id this CLI does not own.
+  test("detach throws for an id this CLI does not own (no silent re-attach)", async () => {
+    const state = AttachedState.create({
+      heartbeat: () => Promise.resolve(),
+      log: nolog,
+    })
+    await expect(state.detach("ses_missing")).rejects.toThrow("not owned")
+  })
+
+  // K1 W1: heartbeat failure during detach rolls back by restoring ownership.
+  test("detach rolls back by restoring prior ownership on heartbeat failure", async () => {
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        if (opts?.detachSessionId) return Promise.reject(new Error("relay down"))
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+    state.setPresence(["ses_a"])
+    await Promise.resolve()
+    await expect(state.detach("ses_a")).rejects.toThrow("relay down")
+    // The id must be back in presence so a future setPresence does not
+    // accidentally treat the session as detached.
+    expect(state.has("ses_a")).toBe(true)
+  })
+
+  // K1 W1: suppression tombstone prevents a presence replacement that
+  // still includes a just-exited id from instantly re-adopting it.
+  test("setPresence does not re-adopt a detached id while presence still reports it", async () => {
+    const state = AttachedState.create({
+      heartbeat: () => Promise.resolve(),
+      log: nolog,
+    })
+    state.setPresence(["ses_a", "ses_b"])
+    expect(state.has("ses_a")).toBe(true)
+
+    // Detach ses_a; the tombstone is set BEFORE the sets are mutated.
+    await state.detach("ses_a")
+    expect(state.has("ses_a")).toBe(false)
+
+    // A presence churn that still includes ses_a must NOT re-adopt it
+    // (the relay is the source of truth and the upstream side has not
+    // dropped the id yet).
+    state.setPresence(["ses_a", "ses_b"])
+    expect(state.has("ses_a")).toBe(false)
+
+    // Once presence genuinely drops ses_a, the tombstone is released
+    // and a later real re-open (via announce) is not blocked.
+    state.setPresence(["ses_b"])
+    expect(state.has("ses_a")).toBe(false)
+    await state.announce("ses_a")
+    expect(state.has("ses_a")).toBe(true)
+  })
+
+  // K1 W1: has(id) reflects presence ∪ pending.
+  test("has(id) is true for presence-owned and pending ids, false otherwise", async () => {
+    const announced = Promise.withResolvers<void>()
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        if (opts?.requireSessionId === "ses_pending") return announced.promise
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+    state.setPresence(["ses_present"])
+    expect(state.has("ses_present")).toBe(true)
+    expect(state.has("ses_pending")).toBe(false)
+    expect(state.has("ses_other")).toBe(false)
+
+    // Announce with a held heartbeat so the id sits in pending.
+    const p = state.announce("ses_pending")
+    await Promise.resolve()
+    expect(state.has("ses_pending")).toBe(true)
+    announced.resolve()
+    await p
+    expect(state.has("ses_pending")).toBe(true)
+  })
+
+  // K1 W1: reset() also clears the detach in-flight map and tombstones
+  // so a new connection lifecycle does not inherit stale state.
+  test("reset() clears tombstones and detach in-flight map", async () => {
+    const state = AttachedState.create({
+      heartbeat: () => Promise.resolve(),
+      log: nolog,
+    })
+    state.setPresence(["ses_a"])
+    await state.detach("ses_a")
+    state.setPresence(["ses_a"])
+    expect(state.has("ses_a")).toBe(false) // tombstone held
+
+    state.reset()
+    // After reset, a presence report including ses_a is accepted (the
+    // previous tombstone is gone).
+    state.setPresence(["ses_a"])
+    expect(state.has("ses_a")).toBe(true)
+  })
 })

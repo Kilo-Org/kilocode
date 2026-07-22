@@ -265,4 +265,143 @@ describe("RemoteProtocol", () => {
       expect(result.data.type).toBe("heartbeat_ack")
     }
   })
+
+  // kilocode_change - K1 W1: instance advertisement + per-session platform
+
+  test("heartbeat without instance still parses (legacy compatibility)", () => {
+    const msg = { type: "heartbeat", sessions: [{ id: "ses_1", status: "busy", title: "Fix auth" }] }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance).toBeUndefined()
+    }
+  })
+
+  test("heartbeat round-trips instance advertisement", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "mbp-igor", projectName: "cloud", version: "1.2.3" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+    }
+    // round-trip via JSON
+    const json = JSON.parse(JSON.stringify(result.success ? result.data : null))
+    const result2 = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result2.success).toBe(true)
+    if (result2.success) {
+      expect(result2.data.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+    }
+  })
+
+  test("instance advertisement version is optional", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "h", projectName: "p" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance?.version).toBeUndefined()
+    }
+  })
+
+  test("instance advertisement rejects empty name", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "", projectName: "p" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("instance advertisement rejects oversized name", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "x".repeat(65), projectName: "p" },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("instance advertisement rejects oversized projectName", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "h", projectName: "p".repeat(65) },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("instance advertisement rejects oversized version", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "h", projectName: "p", version: "v".repeat(33) },
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("session info accepts optional platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t", platform: "vscode" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].platform).toBe("vscode")
+    }
+  })
+
+  test("session info platform optional (legacy)", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t" }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions[0].platform).toBeUndefined()
+    }
+  })
+
+  test("session info rejects oversized platform", () => {
+    const msg = {
+      type: "heartbeat",
+      sessions: [{ id: "s1", status: "busy", title: "t", platform: "p".repeat(33) }],
+    }
+    const result = RemoteProtocol.Heartbeat.safeParse(msg)
+    expect(result.success).toBe(false)
+  })
+
+  test("full heartbeat round-trips sessions + instance", () => {
+    const msg = {
+      type: "heartbeat",
+      protocolVersion: "1.0.0",
+      sessions: [
+        { id: "ses_1", status: "busy", title: "Fix auth", platform: "cli" },
+        { id: "ses_2", status: "idle", title: "Sub task", parentSessionId: "ses_1", platform: "vscode" },
+      ],
+      instance: { name: "mbp-igor", projectName: "cloud", version: "1.2.3" },
+    }
+    const json = JSON.parse(JSON.stringify(msg))
+    const result = RemoteProtocol.Heartbeat.safeParse(json)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.sessions).toHaveLength(2)
+      expect(result.data.sessions[0].platform).toBe("cli")
+      expect(result.data.sessions[1].platform).toBe("vscode")
+      expect(result.data.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+      expect(result.data.protocolVersion).toBe("1.0.0")
+    }
+  })
 })

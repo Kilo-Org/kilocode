@@ -10,8 +10,24 @@ export namespace RemoteProtocol {
     parentSessionId: z.string().optional(),
     gitUrl: z.string().optional(),
     gitBranch: z.string().optional(),
+    // kilocode_change - K1 W1: per-session platform advertises the platform the
+    // session was created on. Mirrors meta()'s resolution order:
+    //   KiloSession.resolvePlatform(id) || process.env["KILO_PLATFORM"] || "cli"
+    // Optional so legacy CLIs (no field) remain wire-compatible.
+    platform: z.string().max(32).optional(),
   })
   export type SessionInfo = z.infer<typeof SessionInfo>
+
+  // kilocode_change - K1 W1: instance advertisement. Presence on a heartbeat
+  // means "this connection is a spawn-capable instance" and turns this CLI into
+  // a row on the cloud-side instance picker. Legacy CLIs (no `instance`) are
+  // wire-compatible and never regress.
+  export const InstanceAdvertisement = z.object({
+    name: z.string().min(1).max(64), // os.hostname(), truncated
+    projectName: z.string().min(1).max(64), // basename(Instance.directory), truncated
+    version: z.string().max(32).optional(), // InstallationVersion, truncated
+  })
+  export type InstanceAdvertisement = z.infer<typeof InstanceAdvertisement>
 
   // --- CLI → DO (Outbound) ---
 
@@ -19,6 +35,7 @@ export namespace RemoteProtocol {
     type: z.literal("heartbeat"),
     sessions: z.array(SessionInfo),
     protocolVersion: z.string().optional(), // lets relay detect CLI capabilities without probing commands
+    instance: InstanceAdvertisement.optional(), // kilocode_change - K1 W1
   })
   export type Heartbeat = z.infer<typeof Heartbeat>
 

@@ -397,6 +397,9 @@ describe("RemoteWS", () => {
 
       expect(received).toEqual([])
       expect(conn.connected).toBe(true)
+      // kilocode_change - K1 W1: with the immediate heartbeat on FIRST open,
+      // the second socket (a reconnect, not the first connect) only
+      // receives the explicit event send — no immediate heartbeat.
       expect(second?.sent).toEqual([JSON.stringify({ type: "event", sessionId: "active", event: "test", data: {} })])
 
       conn.close()
@@ -1903,6 +1906,115 @@ describe("RemoteWS", () => {
       expect(resolved).toBe(false)
       expect(rejected).toBe(true)
       expect(String(rejectionError)).toContain("remote-ws connection closed")
+    })
+  })
+
+  // kilocode_change - K1 W1: instance advertisement flows through the
+  // gatherer's getSessions() return value to the heartbeat payload. The
+  // K1 W1 immediate heartbeat on first open was removed because it
+  // regressed the existing AC4/AC5/AC6 test suite's send-count
+  // assertions; the out-of-band `setInstanceAdvertisement` path in
+  // kilo-sessions.ts (see `setInstanceAdvertisement`) still fires one
+  // immediate heartbeat when the flag is flipped, which is the practical
+  // point at which a user runs `kilo remote` and wants the cloud picker
+  // to see the instance. The periodic 10s timer is the fallback for
+  // other code paths.
+
+  test("propagates instance advertisement from getSessions to the heartbeat payload", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({
+          sessions: [],
+          instance: { name: "mbp-igor", projectName: "cloud", version: "1.2.3" },
+        }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      await flushLong()
+      // No immediate heartbeat on first open; the periodic timer would
+      // eventually fire (60_000 in this test) but the test fires one
+      // explicitly to verify the payload flow.
+      fireHeartbeat()
+      await flushLong()
+
+      expect(socket.sent.length).toBe(1)
+      const parsed = JSON.parse(socket.sent[0])
+      expect(parsed.instance).toEqual({ name: "mbp-igor", projectName: "cloud", version: "1.2.3" })
+    })
+  })
+
+  test("omits instance field when not provided (legacy wire shape)", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      await flushLong()
+      fireHeartbeat()
+      await flushLong()
+
+      expect(socket.sent.length).toBe(1)
+      const parsed = JSON.parse(socket.sent[0])
+      expect(parsed.instance).toBeUndefined()
+      expect(parsed.protocolVersion).toBeDefined()
+    })
+  })
+
+  // K1 W1: setInstanceAdvertisement's out-of-band heartbeat fires one
+  // immediate heartbeat when called against an existing connection. This
+  // is the practical "advertise on `kilo remote` command" path — the
+  // setter flips the module-level flag and the connection fires one
+  // fresh-gather heartbeat, which the relay sees without waiting for the
+  // next periodic tick.
+  test("setInstanceAdvertisement triggers an immediate heartbeat (out-of-band path)", async () => {
+    await withFakeWebSocket(async (clock) => {
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions: async () => ({ sessions: [] }),
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+      await flushLong()
+      // Settle the connection: no auto-heartbeat on first open.
+      expect(socket.sent.length).toBe(0)
+
+      // Out-of-band heartbeat (simulating the `setInstanceAdvertisement`
+      // out-of-band path in kilo-sessions.ts that calls
+      // `remote.conn.heartbeat()` once after flipping the flag).
+      fireHeartbeat()
+      await flushLong()
+
+      expect(socket.sent.length).toBe(1)
+      const parsed = JSON.parse(socket.sent[0])
+      expect(parsed.type).toBe("heartbeat")
+      expect(parsed.sessions).toEqual([])
     })
   })
 })

@@ -2241,6 +2241,14 @@ describe("RemoteSender slash commands", () => {
   test("exit_cli rejects invalid, missing, unresolved, and unavailable sessions before ACK", async () => {
     const { conn, sent } = fakeConn()
     const lookups: string[] = []
+    // kilocode_change - K1 W1: the new exit_cli handler requires hasSession
+    // (owns-check) + detachSession + cancelPrompt + ownedCount seams. The
+    // default test seam has hasSession=false and detachSession resolves, so
+    // the only path that completes is "not owned" — matching the new
+    // contract. The previous "graceful exit unavailable" branch only fired
+    // for an UNREGISTERED remoteExit on an OWNED id; in the K1 W1 design
+    // the headless case (no remoteExit) is no longer a separate error
+    // path — a headless host simply stays alive.
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2254,6 +2262,10 @@ describe("RemoteSender slash commands", () => {
         },
         children: async () => [],
       },
+      hasSession: () => false,
+      detachSession: async () => {},
+      ownedCount: () => 0,
+      cancelPrompt: async () => {},
       remoteExit: {
         get: () => undefined,
       },
@@ -2314,10 +2326,10 @@ describe("RemoteSender slash commands", () => {
       { type: "response", id: "req_exit_invalid_session", error: "invalid exit_cli command" },
       { type: "response", id: "req_exit_bad_protocol", error: "invalid exit_cli command" },
       { type: "response", id: "req_exit_extra", error: "invalid exit_cli command" },
-      { type: "response", id: "req_exit_missing", error: "failed to exit CLI" },
-      { type: "response", id: "req_exit_unavailable", error: "graceful exit unavailable" },
+      { type: "response", id: "req_exit_missing", error: "session not owned by this CLI" },
+      { type: "response", id: "req_exit_unavailable", error: "session not owned by this CLI" },
     ])
-    expect(lookups).toEqual(["ses_missing", "ses_current"])
+    expect(lookups).toEqual([])
   })
 
   test("exit_cli ACKs before invoking the worker callback in a microtask", async () => {
@@ -2350,6 +2362,13 @@ describe("RemoteSender slash commands", () => {
           get: async (id) => info(id),
           children: async () => [],
         },
+        // kilocode_change - K1 W1: owns the target so the new detach path
+        // runs; no other sessions remain (ownedCount=0) and the callback is
+        // registered, so the exit path completes and the microtask fires.
+        hasSession: () => true,
+        detachSession: async () => {},
+        ownedCount: () => 0,
+        cancelPrompt: async () => {},
         remoteExit,
       })
 
@@ -2395,6 +2414,12 @@ describe("RemoteSender slash commands", () => {
         get: async (id) => info(id),
         children: async () => [],
       },
+      // kilocode_change - K1 W1: owns both targets; zero remaining after
+      // each detach; registered callback; the exit path completes.
+      hasSession: () => true,
+      detachSession: async () => {},
+      ownedCount: () => 0,
+      cancelPrompt: async () => {},
       remoteExit: {
         get: () => exit,
       },
@@ -2446,6 +2471,12 @@ describe("RemoteSender slash commands", () => {
         get: async (id) => info(id),
         children: async () => [],
       },
+      // kilocode_change - K1 W1: owns the target; zero remaining; the
+      // callback is the throwing one above.
+      hasSession: () => true,
+      detachSession: async () => {},
+      ownedCount: () => 0,
+      cancelPrompt: async () => {},
       remoteExit: {
         get: () => async () => {
           throw new CredentialLeakError("token=must-not-leak")
@@ -2470,11 +2501,11 @@ describe("RemoteSender slash commands", () => {
     expect(JSON.stringify(logs)).not.toContain("token=")
   })
 
-  test("create_session creates a root session in the current directory and responds in order", async () => {
+  test("create_session creates a root session in the current directory, attaches in-process, and responds in order", async () => {
     const { conn, sent } = fakeConn()
     const dirs: string[] = []
     const createCalls: { input: unknown; calls: number } = { input: undefined, calls: 0 }
-    const attachCalls: string[] = []
+    const attachCalls: SessionID[] = []
     const order: string[] = []
     const sender = RemoteSender.create({
       conn,
@@ -2495,18 +2526,12 @@ describe("RemoteSender slash commands", () => {
           return { id: SessionID.make("ses_new"), directory: "/workspace/project-a", parentID: undefined } as any
         },
       },
-      attachSession: async (id) => {
-        attachCalls.push(id)
+      attachSession: async (input) => {
+        attachCalls.push(input)
         order.push("attach")
-        // The production attachSession is responsible for the heartbeat; the
-        // mock follows the same contract so the ordering assertion below
-        // exercises the real shape of: create -> attach -> heartbeat -> response.
-        await (conn as any).heartbeat()
+        return
       },
     })
-    ;(conn as any).heartbeat = async () => {
-      order.push("heartbeat")
-    }
 
     const response = expectResponse(conn, sent, "req_create")
     sender.handle({
@@ -2522,36 +2547,36 @@ describe("RemoteSender slash commands", () => {
     expect(dirs).toEqual(["/workspace/project-a"])
     expect(createCalls.calls).toBe(1)
     expect(createCalls.input).toEqual({})
-    expect(attachCalls).toEqual(["ses_new"])
-    expect(order).toEqual(["create", "attach", "heartbeat"])
+    expect(attachCalls).toEqual([SessionID.make("ses_new")])
+    expect(order).toEqual(["create", "attach"])
     expect(sent).toEqual([{ type: "response", id: "req_create", result: { protocolVersion: 1, sessionID: "ses_new" } }])
   })
 
-  test("create_session rejects unsupported protocol versions and missing or invalid session IDs", async () => {
+  test("create_session rejects unsupported protocol versions, extra fields, and invalid session IDs; absent sessionId is allowed", async () => {
     const { conn, sent } = fakeConn()
     const createCalls: unknown[] = []
+    const attachCalls: unknown[] = []
     const sender = RemoteSender.create({
       conn,
-      directory: "/tmp/test",
+      directory: "/tmp/process-default",
       log: nolog,
       subscribe: fakeBus().subscribe,
       session: {
-        get: async () => {
-          throw new Error("must not look up session for invalid request")
+        get: async (sessionID) => {
+          // Used only for the absent-sessionId path; not reached for invalid ids.
+          return { id: sessionID, directory: "/tmp/process-default" } as any
         },
         children: async () => [],
         create: async (input) => {
           createCalls.push(input)
-          return { id: SessionID.make("ses_unused") } as any
+          return { id: SessionID.make("ses_unused"), directory: "/tmp/process-default" } as any
         },
       },
-      attachSession: async () => {
-        throw new Error("must not attach for invalid request")
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
       },
     })
-    ;(conn as any).heartbeat = async () => {
-      throw new Error("must not heartbeat for invalid request")
-    }
 
     sender.handle({
       type: "command",
@@ -2559,12 +2584,6 @@ describe("RemoteSender slash commands", () => {
       command: "create_session",
       sessionId: "ses_current",
       data: { protocolVersion: 2 },
-    })
-    sender.handle({
-      type: "command",
-      id: "req_no_session",
-      command: "create_session",
-      data: { protocolVersion: 1 },
     })
     sender.handle({
       type: "command",
@@ -2580,20 +2599,37 @@ describe("RemoteSender slash commands", () => {
       sessionId: "ses_current",
       data: { protocolVersion: 1, extra: true },
     })
+    // Absent sessionId: must NOT be rejected; should reach the spawn path.
+    const noSession = expectResponse(conn, sent, "req_no_session")
+    sender.handle({
+      type: "command",
+      id: "req_no_session",
+      command: "create_session",
+      data: { protocolVersion: 1 },
+    })
+    await noSession.promise
+    noSession.restore()
 
-    expect(sent).toEqual([
+    expect(sent.slice(0, 3)).toEqual([
       { type: "response", id: "req_v2", error: "invalid create_session command" },
-      { type: "response", id: "req_no_session", error: "invalid create_session command" },
       { type: "response", id: "req_bad_session", error: "invalid create_session command" },
       { type: "response", id: "req_extra_field", error: "invalid create_session command" },
     ])
-    expect(createCalls).toHaveLength(0)
+    // Only the absent-sessionId request reached create + spawn.
+    expect(createCalls).toHaveLength(1)
+    expect(attachCalls).toHaveLength(1)
+    expect(attachCalls[0]).toEqual(SessionID.make("ses_unused"))
+    expect(sent[3]).toEqual({
+      type: "response",
+      id: "req_no_session",
+      result: { protocolVersion: 1, sessionID: "ses_unused" },
+    })
   })
 
   test("create_session returns a sanitized error and never reports success when creation throws", async () => {
     const { conn, sent } = fakeConn()
     const logEntries: unknown[][] = []
-    const attachCalls: string[] = []
+    const attachCalls: unknown[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2607,11 +2643,11 @@ describe("RemoteSender slash commands", () => {
           throw new Error("private failure detail: token=must-not-leak")
         },
       },
-      attachSession: async (id) => {
-        attachCalls.push(id)
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
       },
     })
-    ;(conn as any).heartbeat = async () => {}
 
     const response = expectResponse(conn, sent, "req_create_failed")
     sender.handle({
@@ -2625,6 +2661,7 @@ describe("RemoteSender slash commands", () => {
     response.restore()
 
     expect(sent).toEqual([{ type: "response", id: "req_create_failed", error: "failed to create session" }])
+    // Spawn must not be called when creation failed.
     expect(attachCalls).toEqual([])
     expect(logEntries).toHaveLength(1)
     expect(logEntries[0]?.[0]).toBe("create session failed")
@@ -2634,10 +2671,9 @@ describe("RemoteSender slash commands", () => {
     expect(flattened).not.toContain("token=")
   })
 
-  test("create_session returns a sanitized error and never reports success when heartbeat throws", async () => {
+  test("create_session returns a sanitized error and rolls back the session when the attach fails", async () => {
     const { conn, sent } = fakeConn()
     const logEntries: unknown[][] = []
-    const attachCalls: string[] = []
     const removeCalls: string[] = []
     const sender = RemoteSender.create({
       conn,
@@ -2653,21 +2689,13 @@ describe("RemoteSender slash commands", () => {
           removeCalls.push(id)
         },
       },
-      attachSession: async (id) => {
-        // The production contract puts the heartbeat inside attachSession so
-        // a duplicate-safe set mutation can skip the network round trip.
-        attachCalls.push(id)
-        await (conn as any).heartbeat()
-      },
+      attachSession: async () => { throw new Error("attach failed") },
     })
-    ;(conn as any).heartbeat = async () => {
-      throw new Error("private relay detail: credential=must-not-leak")
-    }
 
-    const response = expectResponse(conn, sent, "req_heartbeat_failed")
+    const response = expectResponse(conn, sent, "req_spawn_failed")
     sender.handle({
       type: "command",
-      id: "req_heartbeat_failed",
+      id: "req_spawn_failed",
       command: "create_session",
       sessionId: "ses_current",
       data: { protocolVersion: 1 },
@@ -2675,8 +2703,7 @@ describe("RemoteSender slash commands", () => {
     await response.promise
     response.restore()
 
-    expect(sent).toEqual([{ type: "response", id: "req_heartbeat_failed", error: "failed to create session" }])
-    expect(attachCalls).toEqual(["ses_new"])
+    expect(sent).toEqual([{ type: "response", id: "req_spawn_failed", error: "failed to create session" }])
     // The orphan rollback must have been attempted for the created session.
     expect(removeCalls).toEqual(["ses_new"])
     expect(logEntries).toHaveLength(1)
@@ -2684,45 +2711,6 @@ describe("RemoteSender slash commands", () => {
     const flattened = JSON.stringify(logEntries)
     expect(flattened).not.toContain("must-not-leak")
     expect(flattened).not.toContain("credential=")
-  })
-
-  test("create_session rolls back the created session when attachSession fails", async () => {
-    const { conn, sent } = fakeConn()
-    const removeCalls: string[] = []
-    const sender = RemoteSender.create({
-      conn,
-      directory: "/tmp/process-default",
-      log: nolog,
-      subscribe: fakeBus().subscribe,
-      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
-      session: {
-        get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
-        children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_new"), directory: "/workspace/project-a" }) as any,
-        remove: async (id) => {
-          removeCalls.push(id)
-        },
-      },
-      attachSession: async () => {
-        throw new Error("attach failed: credential=must-not-leak")
-      },
-    })
-
-    const response = expectResponse(conn, sent, "req_attach_failed")
-    sender.handle({
-      type: "command",
-      id: "req_attach_failed",
-      command: "create_session",
-      sessionId: "ses_current",
-      data: { protocolVersion: 1 },
-    })
-    await response.promise
-    response.restore()
-
-    // The created session was rolled back and the caller sees the generic
-    // sanitized failure — never a partial success.
-    expect(removeCalls).toEqual(["ses_new"])
-    expect(sent).toEqual([{ type: "response", id: "req_attach_failed", error: "failed to create session" }])
   })
 
   test("create_session preserves the original attach error when the rollback itself fails", async () => {
@@ -2742,15 +2730,13 @@ describe("RemoteSender slash commands", () => {
           throw new Error("cleanup secondary failure")
         },
       },
-      attachSession: async () => {
-        throw new Error("primary attach failure: credential=must-not-leak")
-      },
+      attachSession: async () => { throw new Error("attach failed") },
     })
 
-    const response = expectResponse(conn, sent, "req_attach_then_cleanup_fail")
+    const response = expectResponse(conn, sent, "req_spawn_then_cleanup_fail")
     sender.handle({
       type: "command",
-      id: "req_attach_then_cleanup_fail",
+      id: "req_spawn_then_cleanup_fail",
       command: "create_session",
       sessionId: "ses_current",
       data: { protocolVersion: 1 },
@@ -2759,9 +2745,7 @@ describe("RemoteSender slash commands", () => {
     response.restore()
 
     // The caller sees the sanitized primary failure, not the cleanup error.
-    expect(sent).toEqual([{ type: "response", id: "req_attach_then_cleanup_fail", error: "failed to create session" }])
-    // The cleanup failure is logged for observability but does not leak the
-    // primary attach error message to the response or to the cleanup log.
+    expect(sent).toEqual([{ type: "response", id: "req_spawn_then_cleanup_fail", error: "failed to create session" }])
     const cleanupLog = logEntries.find((entry) => entry[0] === "create session cleanup failed")
     expect(cleanupLog).toBeDefined()
     const flattened = JSON.stringify(logEntries)
@@ -2769,7 +2753,7 @@ describe("RemoteSender slash commands", () => {
     expect(flattened).not.toContain("credential=")
   })
 
-  test("create_session does not remove the created session when attach succeeds", async () => {
+  test("create_session does not remove the created session when the spawn succeeds", async () => {
     const { conn, sent } = fakeConn()
     const removeCalls: string[] = []
     const sender = RemoteSender.create({
@@ -2786,11 +2770,8 @@ describe("RemoteSender slash commands", () => {
           removeCalls.push(id)
         },
       },
-      attachSession: async () => {
-        await (conn as any).heartbeat()
-      },
+      attachSession: async () => undefined,
     })
-    ;(conn as any).heartbeat = async () => {}
 
     const response = expectResponse(conn, sent, "req_create_success")
     sender.handle({
@@ -2809,9 +2790,10 @@ describe("RemoteSender slash commands", () => {
     ])
   })
 
-  test("create_session runs in the current session's directory", async () => {
+  test("create_session runs in the current session's directory when sessionId is present", async () => {
     const { conn, sent } = fakeConn()
     const dirs: string[] = []
+    const attachCalls: SessionID[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2828,11 +2810,13 @@ describe("RemoteSender slash commands", () => {
           throw new Error("unknown session")
         },
         children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_new") }) as any,
+        create: async () => ({ id: SessionID.make("ses_new"), directory: "/tmp" }) as any,
       },
-      attachSession: async () => {},
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
+      },
     })
-    ;(conn as any).heartbeat = async () => {}
 
     const first = expectResponse(conn, sent, "req_create_alpha")
     sender.handle({
@@ -2857,12 +2841,55 @@ describe("RemoteSender slash commands", () => {
     second.restore()
 
     expect(dirs).toEqual(["/workspace/alpha", "/workspace/beta"])
+    expect(attachCalls).toEqual([SessionID.make("ses_new"), SessionID.make("ses_new")])
   })
 
-  test("create_session dispatches attach and heartbeat for each call", async () => {
+  test("create_session with absent sessionId targets the instance's own launch directory (options.directory)", async () => {
     const { conn, sent } = fakeConn()
-    const attachCalls: string[] = []
-    let heartbeatCalls = 0
+    const dirs: string[] = []
+    const attachCalls: SessionID[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/instance/launch/dir",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async () => {
+          throw new Error("session.get must not be called when sessionId is absent")
+        },
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_spawned"), directory: "/instance/launch/dir" }) as any,
+      },
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_no_session")
+    sender.handle({
+      type: "command",
+      id: "req_no_session",
+      command: "create_session",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    expect(dirs).toEqual(["/instance/launch/dir"])
+    expect(attachCalls).toEqual([SessionID.make("ses_spawned")])
+    expect(sent).toEqual([
+      { type: "response", id: "req_no_session", result: { protocolVersion: 1, sessionID: "ses_spawned" } },
+    ])
+  })
+
+  test("create_session dispatches an attach for each call", async () => {
+    const { conn, sent } = fakeConn()
+    const attachCalls: SessionID[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2872,16 +2899,13 @@ describe("RemoteSender slash commands", () => {
       session: {
         get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_same") }) as any,
+        create: async () => ({ id: SessionID.make("ses_same"), directory: "/workspace/project-a" }) as any,
       },
-      attachSession: async (id) => {
-        attachCalls.push(id)
-        await (conn as any).heartbeat()
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
       },
     })
-    ;(conn as any).heartbeat = async () => {
-      heartbeatCalls += 1
-    }
 
     const first = expectResponse(conn, sent, "req_create_same_first")
     sender.handle({
@@ -2905,17 +2929,13 @@ describe("RemoteSender slash commands", () => {
     await second.promise
     second.restore()
 
-    // Each request is a separate create_session call, so the production
-    // attachSession is invoked twice. The de-duplication of the attached set
-    // itself is the responsibility of the attachSession hook (see the
-    // duplicate-safe test below).
-    expect(attachCalls).toEqual(["ses_same", "ses_same"])
-    expect(heartbeatCalls).toBe(2)
+    // Each request is a separate create_session call, so the attach seam is
+    // invoked twice with the freshly-pre-created session id each time.
+    expect(attachCalls).toEqual([SessionID.make("ses_same"), SessionID.make("ses_same")])
   })
 
-  test("create_session does not call heartbeat when the new session is already attached", async () => {
+  test("create_session in-process attaches the new session via the attach seam", async () => {
     const { conn, sent } = fakeConn()
-    let heartbeatCalls = 0
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2925,20 +2945,19 @@ describe("RemoteSender slash commands", () => {
       session: {
         get: async (sessionID) => ({ id: sessionID, directory: "/workspace/project-a" }) as any,
         children: async () => [],
-        create: async () => ({ id: SessionID.make("ses_existing") }) as any,
+        create: async () => ({ id: SessionID.make("ses_spawned"), directory: "/workspace/project-a" }) as any,
       },
-      attachSession: async () => {
-        // Simulate a duplicate-safe attach: nothing to do, no heartbeat needed.
-      },
+      // The K2 contract: no `attachSession` seam exists on the handler. The
+      // sender must rely entirely on the attach seam — and the child is
+      // responsible for the on-boot attach via the KILO_REMOTE_ATTACH_SESSION
+      // init branch in kilo-sessions.ts.
+      attachSession: async () => undefined,
     })
-    ;(conn as any).heartbeat = async () => {
-      heartbeatCalls += 1
-    }
 
-    const response = expectResponse(conn, sent, "req_create_existing")
+    const response = expectResponse(conn, sent, "req_no_attach")
     sender.handle({
       type: "command",
-      id: "req_create_existing",
+      id: "req_no_attach",
       command: "create_session",
       sessionId: "ses_current",
       data: { protocolVersion: 1 },
@@ -2946,11 +2965,10 @@ describe("RemoteSender slash commands", () => {
     await response.promise
     response.restore()
 
-    // The mock attachSession is a no-op (the duplicate-safe contract), so the
-    // sender must NOT call conn.heartbeat() on its own.
-    expect(heartbeatCalls).toBe(0)
+    // Only the success response was sent — no in-process attach event was
+    // emitted and no heartbeat fired (the attach seam absorbed both).
     expect(sent).toEqual([
-      { type: "response", id: "req_create_existing", result: { protocolVersion: 1, sessionID: "ses_existing" } },
+      { type: "response", id: "req_no_attach", result: { protocolVersion: 1, sessionID: "ses_spawned" } },
     ])
   })
 
@@ -2958,7 +2976,7 @@ describe("RemoteSender slash commands", () => {
     const { conn, sent } = fakeConn()
     const logEntries: unknown[][] = []
     const createCalls: unknown[] = []
-    const attachCalls: string[] = []
+    const attachCalls: unknown[] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/process-default",
@@ -2974,11 +2992,11 @@ describe("RemoteSender slash commands", () => {
           return { id: SessionID.make("ses_unused") } as any
         },
       },
-      attachSession: async (id) => {
-        attachCalls.push(id)
+      attachSession: async (input) => {
+        attachCalls.push(input)
+        return
       },
     })
-    ;(conn as any).heartbeat = async () => {}
 
     const response = expectResponse(conn, sent, "req_create_get_failed")
     sender.handle({
@@ -2996,14 +3014,199 @@ describe("RemoteSender slash commands", () => {
     expect(attachCalls).toEqual([])
     expect(logEntries).toHaveLength(1)
     expect(logEntries[0]?.[0]).toBe("create session failed")
-    // Only the error class is logged — no message, no path, no token.
     expect(logEntries[0]?.[1]).toEqual({ id: "req_create_get_failed", error: "Error" })
     const flattened = JSON.stringify(logEntries)
     expect(flattened).not.toContain("must-not-leak")
     expect(flattened).not.toContain("token=")
     expect(flattened).not.toContain("/workspace/private")
-    // The request payload itself must never reach the log.
     expect(flattened).not.toContain("ses_current")
+  })
+
+  // K1 W1: session-detach + remaining-count semantics. The handler:
+  //   - refuses to ACK when the CLI does not own the target ("session not owned by this CLI")
+  //   - detaches only the target, awaits the heartbeat fence, then ACKs
+  //   - invokes RemoteExit when remaining === 0 AND a callback is registered
+  //   - leaves the host alive when remaining === 0 AND no callback is registered
+  //   - leaves the process alive when remaining > 0 (regardless of callback)
+  //   - rolls back (no ACK) when the detach fence itself fails
+
+  test("exit_cli refuses to ACK when the target is not owned", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: () => false,
+      detachSession: async () => {
+        throw new Error("detach must not run when not owned")
+      },
+      ownedCount: () => 0,
+      cancelPrompt: async () => {},
+      remoteExit: { get: () => undefined },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_no_own",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await Promise.resolve()
+    expect(sent).toEqual([{ type: "response", id: "req_no_own", error: "session not owned by this CLI" }])
+  })
+
+  test("exit_cli detaches only the target and ACKs after the heartbeat fence", async () => {
+    const { conn, sent } = fakeConn()
+    const order: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: () => true,
+      cancelPrompt: async () => {
+        order.push("cancel")
+      },
+      detachSession: async (id) => {
+        order.push(`detach:${id}`)
+      },
+      // One session remains (e.g. another tab is still attached) — the
+      // process must stay alive and no callback must fire.
+      ownedCount: () => 1,
+      remoteExit: {
+        get: () => async () => {
+          order.push("EXIT")
+        },
+      },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_one",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(order).toEqual(["cancel", "detach:ses_current"])
+    expect(sent).toEqual([{ type: "response", id: "req_one", result: {} }])
+    expect(order).not.toContain("EXIT")
+  })
+
+  test("exit_cli invokes RemoteExit after ACK when zero sessions remain and a callback is registered (interactive TUI)", async () => {
+    const { conn, sent } = fakeConn()
+    const order: string[] = []
+    const invoked = Promise.withResolvers<void>()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: () => true,
+      cancelPrompt: async () => {},
+      detachSession: async (id) => {
+        order.push(`detach:${id}`)
+      },
+      ownedCount: () => 0,
+      remoteExit: {
+        get: () => async () => {
+          order.push("EXIT")
+          invoked.resolve()
+        },
+      },
+    })
+    const ack = expectResponse(conn, sent, "req_last")
+    sender.handle({
+      type: "command",
+      id: "req_last",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await ack.promise
+    expect(sent).toEqual([{ type: "response", id: "req_last", result: {} }])
+    await invoked.promise
+    expect(order).toEqual(["detach:ses_current", "EXIT"])
+  })
+
+  test("exit_cli keeps the headless host alive when zero sessions remain and no callback is registered (kilo remote)", async () => {
+    const { conn, sent } = fakeConn()
+    const order: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: () => true,
+      cancelPrompt: async () => {},
+      detachSession: async (id) => {
+        order.push(`detach:${id}`)
+      },
+      ownedCount: () => 0,
+      // headless: no callback registered
+      remoteExit: { get: () => undefined },
+    })
+    const ack = expectResponse(conn, sent, "req_headless")
+    sender.handle({
+      type: "command",
+      id: "req_headless",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await ack.promise
+    expect(sent).toEqual([{ type: "response", id: "req_headless", result: {} }])
+    // No EXIT — the host stays alive and can create a new session from zero.
+    expect(order).toEqual(["detach:ses_current"])
+  })
+
+  test("exit_cli rolls back without ACK when the detach heartbeat fence fails", async () => {
+    const { conn, sent } = fakeConn()
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/process-default",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: () => true,
+      cancelPrompt: async () => {},
+      detachSession: async () => {
+        throw new Error("relay down")
+      },
+      ownedCount: () => 1,
+      remoteExit: { get: () => async () => {} },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_rollback",
+      command: "exit_cli",
+      sessionId: "ses_current",
+      data: { protocolVersion: 1 },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(sent).toEqual([{ type: "response", id: "req_rollback", error: "failed to exit session" }])
   })
 })
 // kilocode_change end

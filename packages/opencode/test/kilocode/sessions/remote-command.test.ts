@@ -104,6 +104,7 @@ describe("RemoteCommand", () => {
           subtask: true,
         },
       ],
+      canExitSession: true,
     })
     expect(JSON.stringify(catalog)).not.toContain("template")
     expect(JSON.stringify(catalog)).not.toContain("secret-skill")
@@ -115,6 +116,9 @@ describe("RemoteCommand", () => {
       { name: "alpha", source: "command", hints: [], template: "alpha" },
     ])
     expect(base.commands.map((item) => item.name)).toEqual(["alpha", "beta", "compact"])
+    // kilocode_change - K1 W1: canExitSession is always true, independent of
+    // exitAvailable (which gates the synthetic `/exit` entry).
+    expect(base.canExitSession).toBe(true)
 
     const catalog = RemoteCommand.build(
       [
@@ -155,16 +159,26 @@ describe("RemoteCommand", () => {
       compaction: { create: async () => {} },
       prompt: { loop: async () => {} },
     })
-    expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(false)
+    // kilocode_change - K1 W1: canExitSession is true even when the synthetic
+    // `/exit` entry is absent (e.g. a headless `kilo remote` host has no
+    // RemoteExit callback, so `/exit` is gated off — but the host still
+    // interprets `exit_cli` as session-detach).
+    const baseList = await remote.list()
+    expect(baseList.canExitSession).toBe(true)
+    expect(baseList.commands.some((item) => item.name === "exit")).toBe(false)
 
     const unregister = RemoteExit.register(async () => {})
     try {
-      expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(true)
+      const list = await remote.list()
+      expect(list.commands.some((item) => item.name === "exit")).toBe(true)
+      expect(list.canExitSession).toBe(true)
     } finally {
       unregister()
     }
 
-    expect((await remote.list()).commands.some((item) => item.name === "exit")).toBe(false)
+    const after = await remote.list()
+    expect(after.commands.some((item) => item.name === "exit")).toBe(false)
+    expect(after.canExitSession).toBe(true)
   })
 
   test("keeps compact and exit within command and byte caps", () => {

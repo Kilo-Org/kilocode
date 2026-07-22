@@ -14,7 +14,12 @@ export namespace RemoteWS {
   export type Options = {
     url: string
     getToken: () => Promise<string | undefined>
-    getSessions: () => Promise<{ sessions: SessionInfo[] }>
+    // kilocode_change - K1 W1: widened return type so the optional `instance`
+    // advertisement (RemoteProtocol.Heartbeat.instance) flows through to the
+    // wire unchanged when the gatherer provides it. Legacy callers
+    // (older test mocks) still satisfy the contract by returning a bare
+    // `{ sessions }` shape.
+    getSessions: () => Promise<{ sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] }>
     log: {
       info: (...args: any[]) => void
       error: (...args: any[]) => void
@@ -57,8 +62,15 @@ export namespace RemoteWS {
      * fences attach-announce waiters so a fresh heartbeat that legitimately
      * omits the announced id (e.g. the gather's `Effect.orElseSucceed`
      * filtered it out) does not falsely report the session as attached.
+     *
+     * When `opts.detachSessionId` is provided, the promise only resolves
+     * when the sent fresh payload's session list DOES NOT contain that id
+     * (the negative-containment fence used by K1 W1 session-detach).
+     * Stale "still contains" cycles are rejected via requeue (handled
+     * below) so the detach does not falsely report success while the
+     * upstream side still observes the session.
      */
-    heartbeat(opts?: { requireSessionId?: string }): Promise<void>
+    heartbeat(opts?: { requireSessionId?: string; detachSessionId?: string }): Promise<void>
     close(): void
     readonly connected: boolean
   }
@@ -119,7 +131,7 @@ export namespace RemoteWS {
     let lastGood: SessionInfo[] | undefined
     let outstanding = 0
     let degradedCount = 0
-    type Waiter = { resolve: () => void; reject: (err: unknown) => void; requireSessionId?: string }
+    type Waiter = { resolve: () => void; reject: (err: unknown) => void; requireSessionId?: string; detachSessionId?: string }
     let waiters: Waiter[] = []
 
     function makeWaiter(): { promise: Promise<void>; waiter: Waiter } {
@@ -136,9 +148,10 @@ export namespace RemoteWS {
       for (const w of list) w.reject(err)
     }
 
-    // One bounded gather. Never throws. Returns the fresh session list, or
-    // undefined to signal a degraded cycle (caller sends last known-good).
-    async function gatherOnce(): Promise<SessionInfo[] | undefined> {
+    // One bounded gather. Never throws. Returns the fresh session list (and
+    // optional instance advertisement), or undefined to signal a degraded
+    // cycle (caller sends last known-good).
+    async function gatherOnce(): Promise<{ sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] } | undefined> {
       if (outstanding >= maxOutstandingGathers) {
         degradedCount++
         options.log.warn("remote-ws heartbeat gather cap reached, degraded heartbeat", {
@@ -162,7 +175,7 @@ export namespace RemoteWS {
         .then(
           (r) => {
             release()
-            return { ok: true as const, sessions: r.sessions }
+            return { ok: true as const, sessions: r.sessions, instance: r.instance }
           },
           (err) => {
             release()
@@ -170,7 +183,7 @@ export namespace RemoteWS {
           },
         )
       const outcome = await new Promise<
-        { kind: "ok"; sessions: SessionInfo[] } | { kind: "err"; error: unknown } | { kind: "timeout" }
+        { kind: "ok"; sessions: SessionInfo[]; instance?: RemoteProtocol.Heartbeat["instance"] } | { kind: "err"; error: unknown } | { kind: "timeout" }
       >((resolve) => {
         let done = false
         const t = timers.setTimeout(() => {
@@ -182,10 +195,14 @@ export namespace RemoteWS {
           if (done) return
           done = true
           timers.clearTimeout(t)
-          resolve(res.ok ? { kind: "ok", sessions: res.sessions } : { kind: "err", error: res.error })
+          resolve(
+            res.ok
+              ? { kind: "ok", sessions: res.sessions, instance: res.instance }
+              : { kind: "err", error: res.error },
+          )
         })
       })
-      if (outcome.kind === "ok") return outcome.sessions
+      if (outcome.kind === "ok") return { sessions: outcome.sessions, instance: outcome.instance }
       degradedCount++
       if (outcome.kind === "err") {
         options.log.warn("remote-ws heartbeat gather rejected, degraded heartbeat", {
@@ -201,10 +218,11 @@ export namespace RemoteWS {
       return undefined
     }
 
-    function heartbeat(opts?: { requireSessionId?: string }): Promise<void> {
+    function heartbeat(opts?: { requireSessionId?: string; detachSessionId?: string }): Promise<void> {
       if (closed) return Promise.reject(new Error("remote-ws connection closed"))
       const { promise, waiter } = makeWaiter()
       waiter.requireSessionId = opts?.requireSessionId
+      waiter.detachSessionId = opts?.detachSessionId
       waiters.push(waiter)
       requestCycle()
       return promise
@@ -231,21 +249,39 @@ export namespace RemoteWS {
               return
             }
             if (fresh !== undefined) {
-              lastGood = fresh
+              lastGood = fresh.sessions
               const sentLive = ws?.readyState === WebSocket.OPEN
-              send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: fresh })
+              // kilocode_change - K1 W1: spread optional `instance` so the
+              // instance advertisement propagates to the wire when the
+              // gatherer provided it. The `lastGood` cache (degraded
+              // fallback) intentionally drops the instance — degraded
+              // heartbeats must not echo a stale advertisement.
+              send({
+                type: "heartbeat",
+                protocolVersion: InstallationVersion,
+                sessions: fresh.sessions,
+                ...(fresh.instance ? { instance: fresh.instance } : {}),
+              })
               if (sentLive) {
                 // A waiter requiring a specific id is satisfied only when
                 // the sent payload contains that id. Unsatisfied waiters
                 // are requeued so the periodic interval keeps evaluating
                 // them; they resolve on a future fresh send whose payload
                 // includes their required id (or reject on close).
+                //
+                // kilocode_change - K1 W1: a `detachSessionId` waiter
+                // resolves only when the sent payload DOES NOT contain
+                // that id (the negative-containment fence used by
+                // session-detach). Until the upstream side drops the id,
+                // the waiter is requeued.
                 const satisfied: Waiter[] = []
                 const unsatisfied: Waiter[] = []
                 for (const w of cycleWaiters) {
+                  const present = fresh.sessions.some((s) => s.id === w.requireSessionId)
+                  const stillPresent = fresh.sessions.some((s) => s.id === w.detachSessionId)
                   if (
-                    w.requireSessionId === undefined ||
-                    fresh.some((s) => s.id === w.requireSessionId)
+                    (w.requireSessionId === undefined || present) &&
+                    (w.detachSessionId === undefined || !stillPresent)
                   ) {
                     satisfied.push(w)
                   } else {
