@@ -592,6 +592,85 @@ describe("RemoteSender", () => {
     sender.dispose()
   })
 
+  test("blocks a new attachment generation while idle-cache deletion cleanup runs", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const first = Promise.withResolvers<void>()
+    const cleanupStarted = Promise.withResolvers<void>()
+    const cleanupRelease = Promise.withResolvers<void>()
+    const cleaned = Promise.withResolvers<void>()
+    const repeated = Promise.withResolvers<void>()
+    let runs = 0
+    let factories = 0
+    let materialized = 0
+    const seen: SessionPrompt.PromptInput["parts"][] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: bus.subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        try {
+          return await input.fn()
+        } finally {
+          runs++
+          if (runs === 1) first.resolve()
+        }
+      },
+      prompt: async (input) => {
+        seen.push(input.parts)
+        if (seen.length === 2) repeated.resolve()
+      },
+      attachments: () => {
+        factories++
+        return {
+          materialize: async () => {
+            materialized++
+            return [{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }]
+          },
+          dispose: async () => {
+            cleanupStarted.resolve()
+            await cleanupRelease.promise
+            cleaned.resolve()
+          },
+        }
+      },
+    })
+    const send = (id: string) =>
+      sender.handle({
+        type: "command",
+        id,
+        command: "send_message",
+        data: {
+          sessionID: "ses_idle_cleanup",
+          parts: [
+            { type: "file", mime: "application/octet-stream", filename: "a.bin", url: "https://example.com/a.bin" },
+          ],
+        },
+      })
+
+    send("req_idle_first")
+    await first.promise
+    bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_idle_cleanup" } })
+    await cleanupStarted.promise
+    send("req_idle_repeated")
+    await repeated.promise
+
+    expect(factories).toBe(1)
+    expect(materialized).toBe(1)
+    expect(seen[1]).toEqual([
+      { type: "text", text: "attachment a.bin could not be retrieved: attachment session is closed" },
+    ])
+    expect(JSON.stringify(seen[1])).not.toContain("example.com")
+    cleanupRelease.resolve()
+    await cleaned.promise
+    sender.dispose()
+  })
+
   test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
     const { conn } = fakeConn()
     const calls: SessionPrompt.PromptInput[] = []

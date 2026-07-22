@@ -306,19 +306,35 @@ export namespace RemoteSender {
         const sid = event?.properties?.sessionID
         if (typeof sid !== "string") return
         const id = SessionID.make(sid)
-        if (pending.has(id)) deleted.add(id)
         const result = attachmentCache.get(id)
-        if (!result) return
+        if (!result) {
+          if (pending.has(id)) deleted.add(id)
+          return
+        }
+        deleted.add(id)
         attachmentCache.delete(id)
         if (pending.has(id)) {
           retired.set(id, result)
           return
         }
-        void result.dispose()
+        void clean(id, result)
       })
     }
     function begin(id: SessionID) {
       pending.set(id, (pending.get(id) ?? 0) + 1)
+    }
+    function clean(id: SessionID, result: RemoteAttachments.Result) {
+      const existing = cleaning.get(id)
+      if (existing) return existing
+      const cleanup = result
+        .dispose()
+        .catch((error) => options.log.warn("attachment cleanup failed", { error: String(error) }))
+      cleaning.set(id, cleanup)
+      void cleanup.finally(() => {
+        if (cleaning.get(id) === cleanup) cleaning.delete(id)
+        if (!pending.has(id)) deleted.delete(id)
+      })
+      return cleanup
     }
     async function finish(id: SessionID) {
       const count = pending.get(id)
@@ -329,17 +345,9 @@ export namespace RemoteSender {
       }
       pending.delete(id)
       const result = retired.get(id)
-      const cleanup =
-        cleaning.get(id) ??
-        (result
-          ? result.dispose().catch((error) => options.log.warn("attachment cleanup failed", { error: String(error) }))
-          : undefined)
-      if (result && cleanup) {
-        retired.delete(id)
-        cleaning.set(id, cleanup)
-      }
+      const cleanup = cleaning.get(id) ?? (result ? clean(id, result) : undefined)
+      if (result) retired.delete(id)
       if (cleanup) await cleanup
-      if (cleaning.get(id) === cleanup) cleaning.delete(id)
       if (!pending.has(id)) deleted.delete(id)
     }
     function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
