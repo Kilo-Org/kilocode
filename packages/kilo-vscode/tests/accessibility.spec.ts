@@ -13,6 +13,7 @@ const STORIES = [
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
   { id: "marketplace--empty-list", name: "Marketplace / empty state" },
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
+  { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
 ]
 
 function url(id: string) {
@@ -177,5 +178,22 @@ test.describe("webview accessibility ratchet", () => {
       page.getByText("Searches the local workspace, local sessions, worktrees, and their sessions", { exact: true }),
     ).toBeVisible()
     await expect(page.getByText("⌘F", { exact: true })).toBeVisible()
+  })
+
+  test("Session tab switcher restores chat focus after keyboard and mouse selection", async ({ page }) => {
+    await open(page, "session-tabs--switcher-open")
+
+    const input = page.getByPlaceholder("Search open tabs")
+    const prompt = page.getByRole("textbox", { name: "Chat input" })
+    await expect(page.locator('[data-slot="list-item"][data-active="true"]')).toHaveCount(0)
+    await expect(page.locator('[data-slot="list-item"][data-key="current"]')).toHaveAttribute("data-selected", "true")
+    await expect(page.locator('[data-slot="list-item"][data-key="refactor"]')).toHaveAttribute("data-selected", "false")
+    await input.press("ArrowDown")
+    await input.press("Enter")
+    await expect(prompt).toBeFocused()
+
+    await page.getByRole("button", { name: "Show open tabs" }).click()
+    await page.locator('[data-slot="list-item"][data-key="current"]').click()
+    await expect(prompt).toBeFocused()
   })
 })
