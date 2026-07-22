@@ -20,7 +20,7 @@ import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
 import { DialogIndexing } from "./components/dialog-indexing.js"
 import { indexingEnabled } from "./indexing-feature"
 import { refreshBalance } from "./balance-refresh"
-import { showAboutDialog } from "@/kilocode/cli/cmd/tui/component/dialog-about"
+import { showAboutDialog } from "./cli/cmd/tui/component/dialog-about.js"
 
 // These types are OpenCode-internal and imported at runtime
 type UseSDK = any
