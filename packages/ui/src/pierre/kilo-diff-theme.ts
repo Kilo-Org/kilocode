@@ -38,6 +38,7 @@ export function ensureKiloDiffTheme(): void {
         "editor.foreground": "var(--text-base)",
         "gitDecoration.addedResourceForeground": "var(--syntax-diff-add)",
         "gitDecoration.deletedResourceForeground": "var(--syntax-diff-delete)",
+        "gitDecoration.modifiedResourceForeground": "var(--syntax-diff-unknown)",
         // "gitDecoration.conflictingResourceForeground": "#ffca00",
         // "gitDecoration.modifiedResourceForeground": "#1a76d4",
         // "gitDecoration.untrackedResourceForeground": "#00cab1",

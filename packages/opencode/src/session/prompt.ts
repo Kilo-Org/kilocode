@@ -35,7 +35,7 @@ import { SessionCompaction } from "./compaction"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
 import { Plugin } from "../plugin"
-import MAX_STEPS from "../session/prompt/max-steps.txt"
+import { MAX_STEPS_PROMPT } from "@opencode-ai/core/session/runner/max-steps"
 import { ToolRegistry } from "@/tool/registry"
 import { MCP } from "../mcp"
 import { LSP } from "@/lsp/lsp"
@@ -54,7 +54,7 @@ import { Tool } from "@/tool/tool"
 import { Permission } from "@/permission"
 import { SessionStatus } from "./status"
 import { LLM } from "./llm"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "@/tool/shell/id"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Truncate } from "@/tool/truncate"
@@ -1698,28 +1698,6 @@ export const layer = Layer.effect(
           if (step === 1)
             yield* summary.summarize({ sessionID, messageID: lastUser.id }).pipe(Effect.ignore, Effect.forkIn(scope))
 
-          if (step > 1 && lastFinished) {
-            for (const m of msgs) {
-              // kilocode_change start - compare chronology, not generated IDs
-              const finishedBeforeMessage =
-                latest.finishedMessage && KiloSessionMessageOrder.compare(latest.finishedMessage, m) < 0
-              if (m.info.role !== "user" || !finishedBeforeMessage) continue
-              // kilocode_change end
-              for (const p of m.parts) {
-                if (p.type !== "text" || p.ignored || p.synthetic) continue
-                if (!p.text.trim()) continue
-                p.text = [
-                  "<system-reminder>",
-                  "The user sent the following message:",
-                  p.text,
-                  "",
-                  "Please address this message and continue with your tasks.",
-                  "</system-reminder>",
-                ].join("\n")
-              }
-            }
-          }
-
           yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
 
           // kilocode_change start — ephemeral context injection + post-summary
@@ -1770,7 +1748,7 @@ export const layer = Layer.effect(
             sessionID,
             parentSessionID: session.parentID,
             system,
-            messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS }] : [])],
+            messages: [...modelMsgs, ...(isLastStep ? [{ role: "assistant" as const, content: MAX_STEPS_PROMPT }] : [])],
             tools,
             model,
             toolChoice: format.type === "json_schema" ? "required" : undefined,

@@ -139,6 +139,12 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
     ) => {
     // kilocode_change end
       switch (event.type) {
+        case "catalog.updated":
+          void Promise.all([
+            result.location.model.refresh(eventLocation(metadata)),
+            result.location.provider.refresh(eventLocation(metadata)),
+          ]) // kilocode_change
+          break
         case "session.next.agent.switched":
           message.update(event.properties.sessionID, (draft) => {
             message.prepend(draft, {
@@ -445,7 +451,11 @@ export const { use: useData, provider: DataProvider } = createSimpleContext({
           void result.location.reference.refresh()
           break
         case "integration.updated":
-          void result.location.integration.refresh(eventLocation(metadata)) // kilocode_change
+          void Promise.all([
+            result.location.integration.refresh(eventLocation(metadata)),
+            result.location.model.refresh(eventLocation(metadata)),
+            result.location.provider.refresh(eventLocation(metadata)),
+          ]) // kilocode_change
           break
       }
     } // kilocode_change

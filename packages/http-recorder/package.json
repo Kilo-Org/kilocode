@@ -10,8 +10,8 @@
     "url": "git+https://github.com/Kilo-Org/kilocode.git",
     "directory": "packages/http-recorder"
   },
-  "homepage": "https://github.com/Kilo-Org/kilocode/tree/main/packages/http-recorder",
-  "bugs": "https://github.com/Kilo-Org/kilocode/issues",
+  "homepage": "https://github.com/anomalyco/opencode/tree/dev/packages/http-recorder",
+  "bugs": "https://github.com/anomalyco/opencode/issues",
   "keywords": [
     "effect",
     "http",
@@ -28,10 +28,10 @@
   },
   "scripts": {
     "test": "bun test --timeout 30000 --only-failures",
-    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml",
     "typecheck": "tsgo --noEmit",
     "build": "bun ./script/build.ts",
-    "verify:package": "bun ./script/verify-package.ts"
+    "verify:package": "bun ./script/verify-package.ts",
+    "test:ci": "mkdir -p .artifacts/unit && bun test --timeout 30000 --reporter=junit --reporter-outfile=.artifacts/unit/junit.xml"
   },
   "exports": {
     ".": "./src/index.ts",

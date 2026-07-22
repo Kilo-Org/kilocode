@@ -51,7 +51,7 @@ import { SessionV2 } from "@opencode-ai/core/session"
 import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
-import { Shell } from "../../src/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
@@ -1663,7 +1663,9 @@ it.instance(
 
       const inputs = yield* llm.inputs
       expect(inputs).toHaveLength(2)
-      expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("second")
+      const messages = inputs.at(-1)?.messages
+      if (!Array.isArray(messages)) throw new Error("expected LLM messages")
+      expect(messages.at(-1)).toEqual({ role: "user", content: "second" })
     }),
   10_000, // kilocode_change - loaded CI runners can exceed 3s for two prompt turns
 )
