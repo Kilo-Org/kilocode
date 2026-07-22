@@ -417,6 +417,7 @@ describe("RemoteSender", () => {
     let materialized = 0
     let disposed = 0
     let subscriptions = 0
+    const prompts: SessionPrompt.PromptInput["parts"][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
@@ -438,7 +439,9 @@ describe("RemoteSender", () => {
           finished.resolve()
         }
       },
-      prompt: async () => {},
+      prompt: async (input) => {
+        prompts.push(input.parts)
+      },
       attachments: () => {
         factories++
         return {
@@ -473,6 +476,10 @@ describe("RemoteSender", () => {
     expect(disposed).toBe(0)
     expect(subscriptions).toBe(1)
     expect(bus.count()).toBe(1)
+    expect(prompts[0]).toEqual([
+      { type: "text", text: "attachment a.png could not be retrieved: attachment session is closed" },
+    ])
+    expect(JSON.stringify(prompts[0])).not.toContain("example.com")
 
     sender.handle({
       type: "command",
@@ -496,9 +503,14 @@ describe("RemoteSender", () => {
     const bus = fakeBus()
     const started = Promise.withResolvers<void>()
     const release = Promise.withResolvers<void>()
+    const cleanupStarted = Promise.withResolvers<void>()
+    const cleanupRelease = Promise.withResolvers<void>()
     const cleaned = Promise.withResolvers<void>()
+    const repeated = Promise.withResolvers<void>()
+    let factories = 0
+    let materialized = 0
     let disposed = 0
-    let seen: SessionPrompt.PromptInput["parts"] = []
+    const seen: SessionPrompt.PromptInput["parts"][] = []
     const sender = RemoteSender.create({
       conn,
       directory: "/tmp/test",
@@ -510,17 +522,29 @@ describe("RemoteSender", () => {
       },
       provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
       prompt: async (input) => {
-        seen = input.parts
+        seen.push(input.parts)
+        if (seen.length > 1) {
+          repeated.resolve()
+          return
+        }
         started.resolve()
         await release.promise
       },
-      attachments: () => ({
-        materialize: async () => [{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }],
-        dispose: async () => {
-          disposed++
-          cleaned.resolve()
-        },
-      }),
+      attachments: () => {
+        factories++
+        return {
+          materialize: async () => {
+            materialized++
+            return [{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }]
+          },
+          dispose: async () => {
+            disposed++
+            cleanupStarted.resolve()
+            await cleanupRelease.promise
+            cleaned.resolve()
+          },
+        }
+      },
     })
 
     sender.handle({
@@ -537,9 +561,32 @@ describe("RemoteSender", () => {
     await started.promise
     bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_prompt_attachment" } })
 
-    expect(seen).toEqual([{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }])
+    expect(seen[0]).toEqual([{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }])
     expect(disposed).toBe(0)
     release.resolve()
+    await cleanupStarted.promise
+
+    sender.handle({
+      type: "command",
+      id: "req_prompt_attachment_reused",
+      command: "send_message",
+      data: {
+        sessionID: "ses_prompt_attachment",
+        parts: [
+          { type: "file", mime: "application/octet-stream", filename: "a.bin", url: "https://example.com/a.bin" },
+        ],
+      },
+    })
+    await repeated.promise
+    expect(factories).toBe(1)
+    expect(materialized).toBe(1)
+    expect(disposed).toBe(1)
+    expect(seen[1]).toEqual([
+      { type: "text", text: "attachment a.bin could not be retrieved: attachment session is closed" },
+    ])
+    expect(JSON.stringify(seen[1])).not.toContain("example.com")
+
+    cleanupRelease.resolve()
     await cleaned.promise
     expect(disposed).toBe(1)
     sender.dispose()

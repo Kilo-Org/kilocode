@@ -295,6 +295,7 @@ export namespace RemoteSender {
     const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
     const pending = new Map<SessionID, number>()
     const retired = new Map<SessionID, RemoteAttachments.Result>()
+    const cleaning = new Map<SessionID, Promise<void>>()
     const deleted = new Set<SessionID>()
     let closed = false
     let attachmentBusUnsub: (() => void) | undefined
@@ -319,7 +320,7 @@ export namespace RemoteSender {
     function begin(id: SessionID) {
       pending.set(id, (pending.get(id) ?? 0) + 1)
     }
-    function finish(id: SessionID) {
+    async function finish(id: SessionID) {
       const count = pending.get(id)
       if (!count) return
       if (count > 1) {
@@ -327,11 +328,19 @@ export namespace RemoteSender {
         return
       }
       pending.delete(id)
-      deleted.delete(id)
       const result = retired.get(id)
-      if (!result) return
-      retired.delete(id)
-      void result.dispose()
+      const cleanup =
+        cleaning.get(id) ??
+        (result
+          ? result.dispose().catch((error) => options.log.warn("attachment cleanup failed", { error: String(error) }))
+          : undefined)
+      if (result && cleanup) {
+        retired.delete(id)
+        cleaning.set(id, cleanup)
+      }
+      if (cleanup) await cleanup
+      if (cleaning.get(id) === cleanup) cleaning.delete(id)
+      if (!pending.has(id)) deleted.delete(id)
     }
     function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
       if (closed || deleted.has(sessionID)) return undefined
@@ -500,14 +509,14 @@ export namespace RemoteSender {
       msg: RemoteProtocol.Command,
       dir: Promise<string>,
       work: () => Promise<void>,
-      settle?: () => void,
+      settle?: () => void | Promise<void>,
     ) {
       const run = options.provide ?? provide
       let settled = false
       const complete = () => {
         if (settled) return
         settled = true
-        settle?.()
+        void settle?.()
       }
       options.conn.send({ type: "response", id: msg.id, result: {} })
       void (async () => {
@@ -799,6 +808,8 @@ export namespace RemoteSender {
             const materializer = remote ? attachmentFor(promptInput.sessionID) : undefined
             if (materializer) {
               promptInput.parts = await materializer.materialize(promptInput.parts)
+            } else if (remote) {
+              promptInput.parts = RemoteAttachments.failClosed(promptInput.parts)
             }
             await prompt(promptInput)
           },

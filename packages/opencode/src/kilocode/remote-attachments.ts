@@ -254,6 +254,12 @@ export namespace RemoteAttachments {
     }
   }
 
+  export function failClosed(parts: SessionPrompt.PromptInput["parts"]): SessionPrompt.PromptInput["parts"] {
+    return parts.map((part) =>
+      part.type === "file" && isFetchable(part.url) ? failureText(part.filename, "attachment session is closed") : part,
+    )
+  }
+
   /**
    * Materialize a list of parts. Non-file parts are passed through
    * unchanged. File parts whose URL is http(s) are fetched and replaced
@@ -358,13 +364,7 @@ export namespace RemoteAttachments {
 
     const materialize = (parts: SessionPrompt.PromptInput["parts"]): Promise<SessionPrompt.PromptInput["parts"]> => {
       if (closed) {
-        return Promise.resolve(
-          parts.map((part) =>
-            part.type === "file" && isFetchable(part.url)
-              ? failureText(part.filename, "attachment session is closed")
-              : part,
-          ),
-        )
+        return Promise.resolve(failClosed(parts))
       }
       const job = run(parts)
       active.add(job)
