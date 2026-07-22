@@ -1718,10 +1718,8 @@ export const dict = {
 
   "chat.throughput.speed.label": "Genereringshastighet",
   "chat.throughput.speed.row": "Genereringshastighet {{speed}}",
-  "chat.throughput.speed.tooltip":
-    "Genereringshastighet {{speed}} (beregnet fra stegvarighet)",
-  "chat.throughput.speed.tooltip.missing":
-    "Gjennomstrømningsmålinger er ikke tilgjengelige for dette steget",
+  "chat.throughput.speed.tooltip": "Genereringshastighet {{speed}} (beregnet fra stegvarighet)",
+  "chat.throughput.speed.tooltip.missing": "Gjennomstrømningsmålinger er ikke tilgjengelige for dette steget",
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

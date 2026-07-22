@@ -244,14 +244,13 @@
   align-items: center;
   gap: 4px;
   color: var(--vscode-descriptionForeground);
-font-family: var(--font-family-sans);
+  font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-11);
   line-height: var(--line-height-normal);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.vscode-session-turn-diffs {
 .vscode-session-turn-diffs {
   width: 100%;
 }

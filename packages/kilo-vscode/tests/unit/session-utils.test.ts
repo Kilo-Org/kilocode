@@ -762,10 +762,7 @@ describe("latestMetrics", () => {
   })
 
   it("falls back to the only computed sample when no later one is present", () => {
-    const parts: Part[] = [
-      stepFinish("f1", { generation: 12, source: "computed" }),
-      stepFinish("f2"),
-    ]
+    const parts: Part[] = [stepFinish("f1", { generation: 12, source: "computed" }), stepFinish("f2")]
     expect(latestMetrics(parts)).toEqual({ generation: 12, source: "computed" })
   })
 
