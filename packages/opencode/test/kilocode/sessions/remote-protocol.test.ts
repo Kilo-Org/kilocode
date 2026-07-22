@@ -266,7 +266,6 @@ describe("RemoteProtocol", () => {
     }
   })
 
-  // kilocode_change start - capability flags advertised by the CLI
   test("heartbeat without capabilities parses", () => {
     const result = RemoteProtocol.Heartbeat.safeParse({
       type: "heartbeat",
@@ -322,5 +321,4 @@ describe("RemoteProtocol", () => {
       expect(result.data.type).toBe("heartbeat")
     }
   })
-  // kilocode_change end
 })

@@ -294,7 +294,6 @@ describe("RemoteSender", () => {
     await provideStarted
   })
 
-  // kilocode_change start - attachment materialize must not delay the send_message ACK
   test("send_message ACKs before the attachment materializer resolves", async () => {
     const { conn, sent } = fakeConn()
     let resolveMaterialize!: (parts: any[]) => void
@@ -472,7 +471,6 @@ describe("RemoteSender", () => {
     expect(bus.count()).toBe(1)
     sender.dispose()
   })
-  // kilocode_change end
 
   test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {
     const { conn } = fakeConn()

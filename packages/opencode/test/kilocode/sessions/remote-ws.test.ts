@@ -235,7 +235,6 @@ describe("RemoteWS", () => {
     expect(parsed.sessions).toEqual([{ id: "s1", status: "active", title: "Test" }])
   })
 
-  // kilocode_change start - heartbeat capability flag for file attachments
   test("heartbeat advertises capabilities.attachments = true", async () => {
     server = createServer()
     const connecting = server.waitForConnect()
@@ -255,7 +254,6 @@ describe("RemoteWS", () => {
     const parsed = JSON.parse(raw)
     expect(parsed.capabilities).toEqual({ attachments: true })
   })
-  // kilocode_change end
 
   test("serializes concurrent heartbeat snapshots", async () => {
     server = createServer()

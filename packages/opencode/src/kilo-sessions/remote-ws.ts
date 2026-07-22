@@ -236,7 +236,7 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true }, // kilocode_change - advertise remote attachment support
+                capabilities: { attachments: true },
                 sessions: fresh,
               })
               if (sentLive) {
@@ -272,7 +272,7 @@ export namespace RemoteWS {
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
-                capabilities: { attachments: true }, // kilocode_change - advertise remote attachment support
+                capabilities: { attachments: true },
                 sessions: lastGood ?? [],
               })
               waiters = cycleWaiters.concat(waiters)
