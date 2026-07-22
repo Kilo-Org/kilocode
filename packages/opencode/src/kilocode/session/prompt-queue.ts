@@ -49,8 +49,8 @@ export namespace KiloSessionPromptQueue {
   }
 
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
-  // A slot should be skipped when the queue was reset after it was enqueued
-  // (superseded turn) or its message was explicitly dropped by the user.
+  // Skip a slot when the whole session queue was cancelled after it was enqueued
+  // or when that specific queued message was dropped.
   const isCancelled = (sessionID: SessionID, slot: Slot) =>
     slot.version !== version(sessionID) || dropped.get(sessionID)?.has(slot.target)
   const settle = (promise: Promise<void>) =>
