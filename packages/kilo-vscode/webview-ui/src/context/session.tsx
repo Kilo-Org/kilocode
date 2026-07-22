@@ -2808,8 +2808,8 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
-  // Clear local optimistic/submission state, then ask the backend to remove
-  // the queued message. Confirmed messages leave via the messageRemoved event.
+  // Clear submission bookkeeping and request deletion. This does not remove the
+  // message optimistically; messageRemoved removes it after backend confirmation.
   function deleteQueuedMessage(sessionID: string, messageID: string) {
     if (!server.isConnected()) return
     pendingOptimistic.get(sessionID)?.delete(messageID)
