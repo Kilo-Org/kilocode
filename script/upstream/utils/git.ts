@@ -206,6 +206,48 @@ export async function writeTree(): Promise<string> {
   return result.trim()
 }
 
+function chunks<T>(items: T[], size = 200): T[][] {
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, idx) => items.slice(idx * size, (idx + 1) * size))
+}
+
+/**
+ * Overlay transformed upstream changes onto the previous compatibility tree.
+ * Paths unchanged upstream keep their prior Kilo content, including Kilo-only
+ * files and marker-bearing shared files.
+ */
+export async function overlayCompatTree(input: {
+  previous: string
+  upstream: string
+  target: string
+  transformed: string
+  extra?: string[]
+}): Promise<string> {
+  const diff = await $`git diff --name-only -z ${input.upstream} ${input.target}`.quiet().nothrow()
+  if (diff.exitCode !== 0) throw new Error(`Failed to list upstream changes: ${diff.stderr.toString()}`)
+
+  const paths = Array.from(
+    new Set([
+      ...diff.stdout
+        .toString()
+        .split("\0")
+        .filter((path) => path.length > 0),
+      ...(input.extra ?? []),
+    ]),
+  )
+  const keep: string[] = []
+  const remove: string[] = []
+  for (const path of paths) {
+    const result = await $`git cat-file -e ${`${input.transformed}:${path}`}`.quiet().nothrow()
+    if (result.exitCode === 0) keep.push(path)
+    else remove.push(path)
+  }
+
+  await $`git read-tree ${input.previous}`.quiet()
+  for (const batch of chunks(keep)) await $`git checkout ${input.transformed} -- ${batch}`.quiet()
+  for (const batch of chunks(remove)) await $`git update-index --force-remove -- ${batch}`.quiet()
+  return writeTree()
+}
+
 export async function createCommit(tree: string, message: string, parent: string): Promise<string> {
   const result = await $`git commit-tree ${tree} -p ${parent} -m ${message}`.text()
   return result.trim()
