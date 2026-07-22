@@ -21,6 +21,7 @@ import type { WorkspaceV2 } from "@opencode-ai/core/workspace"
 import { WorkspaceContext } from "@/control-plane/workspace-context"
 import { Event as IndexingEvent, Warning as IndexingWarningEvent } from "./indexing-event"
 import { indexingWarningKey, type IndexingWarning } from "./indexing-warning"
+import { indexingProfileLogFields } from "./indexing-profile"
 import { IndexingWorker } from "./indexing-worker-client"
 import { LanceDBRuntime } from "./lancedb" // kilocode_change
 import { indexingWithKiloDefault, resolveKiloIndexingAuth, type KiloIndexingAuth } from "./indexing-auth" // kilocode_change
@@ -374,6 +375,14 @@ export namespace KiloIndexing {
     })
     const output = Instance.bind((event: Parameters<IndexingWorker.Hooks["log"]>[0]) => {
       if (disposed) return
+      if (event.profile) {
+        try {
+          log.info(event.message, indexingProfileLogFields(dir, event.profile))
+        } catch {
+          return
+        }
+        return
+      }
       log[event.level](event.message, { source: "worker", workspacePath: dir })
     })
     const base: Entry = {

@@ -5,6 +5,7 @@ import { tmpdir } from "os"
 import { join } from "path"
 import { describe, expect, test } from "bun:test"
 import { CacheManager } from "../../../../src/indexing/cache-manager"
+import { MAX_FILE_SIZE_BYTES } from "../../../../src/indexing/constants"
 import type {
   CodeBlock,
   ICodeParser,
@@ -16,6 +17,7 @@ import type {
 } from "../../../../src/indexing/interfaces"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
 import { DirectoryScanner } from "../../../../src/indexing/processors/scanner"
+import { captureProfiles } from "../profile-capture"
 
 class Emb implements IEmbedder {
   public async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
@@ -171,7 +173,333 @@ class RetryStore extends Store {
   }
 }
 
+class ExhaustedStore extends Store {
+  public override async upsertPoints(_points: PointStruct[]): Promise<void> {
+    throw new Error("permanent upsert failure")
+  }
+}
+
+class CancellingEmb extends Emb {
+  public onCreate?: () => void
+
+  public override async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.onCreate?.()
+    return super.createEmbeddings(texts)
+  }
+}
+
+class BlockingEmb extends Emb {
+  public readonly started = Promise.withResolvers<void>()
+  private readonly gate = Promise.withResolvers<void>()
+
+  public override async createEmbeddings(texts: string[]): Promise<{ embeddings: number[][] }> {
+    this.started.resolve()
+    await this.gate.promise
+    return super.createEmbeddings(texts)
+  }
+
+  public release(): void {
+    this.gate.resolve()
+  }
+}
+
 describe("DirectoryScanner", () => {
+  test.serial("profiles aggregate scanner discovery, summary, and batches without file data", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-profile-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const supported = join(root, "supported.ts")
+    const unsupported = join(root, "unsupported.txt")
+    const unchanged = join(root, "unchanged.ts")
+    const changed = join(root, "changed.ts")
+    const oversized = join(root, "oversized.ts")
+    const deleted = join(root, "deleted.ts")
+    const unchangedContent = "export const unchanged = 1\n"
+
+    try {
+      await Bun.write(supported, "export const supported = 1\n")
+      await Bun.write(unsupported, "unsupported\n")
+      await Bun.write(unchanged, unchangedContent)
+      await Bun.write(changed, "export const changed = 1\n")
+      await Bun.write(oversized, Buffer.alloc(MAX_FILE_SIZE_BYTES + 1))
+
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      cache.seedHashes({
+        [unchanged]: createHash("sha256").update(unchangedContent).digest("hex"),
+        [changed]: "old-hash",
+        [deleted]: "deleted-hash",
+      })
+
+      const scan = new DirectoryScanner(
+        new Emb(),
+        new Store(),
+        new Parser(),
+        cache,
+        ignore(),
+        1,
+        1,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+      )
+      const records = await captureProfiles(async () => {
+        await scan.scanDirectory(root)
+      })
+      const discovery = records.filter((item) => item.event === "indexing.scan.discovery")
+      const summary = records.filter((item) => item.event === "indexing.scan.summary")
+      const batches = records.filter((item) => item.event === "indexing.scan.batch")
+
+      expect(discovery).toHaveLength(1)
+      expect(discovery[0]?.outcome).toBe("success")
+      expect(discovery[0]?.fields).toEqual({
+        mode: "full",
+        discoveredCount: 5,
+        candidateCount: 4,
+      })
+      expect(discovery[0]?.fields.discoveredCount).toBeGreaterThan(discovery[0]?.fields.candidateCount as number)
+
+      expect(summary).toHaveLength(1)
+      expect(summary[0]?.outcome).toBe("success")
+      expect(summary[0]?.fields).toEqual({
+        mode: "full",
+        discoveredCount: 5,
+        candidateCount: 4,
+        inspectedCount: 4,
+        readCount: 3,
+        bytesRead: expect.any(Number),
+        unchangedCount: 1,
+        processedCount: 2,
+        skippedCount: 2,
+        blockCount: 2,
+        batchCount: 2,
+        changedDeleteCount: 1,
+        removedDeleteCount: 1,
+      })
+      expect(summary[0]?.fields.bytesRead).toBeGreaterThan(0)
+      expect(summary[0]?.fields.unchangedCount).toBe(1)
+
+      expect(batches).toHaveLength(2)
+      for (const batch of batches) {
+        expect(batch.outcome).toBe("success")
+        expect(batch.fields).toEqual({
+          source: "scan",
+          mode: "full",
+          provider: "openai",
+          modelId: "text-embedding-3-small",
+          vectorStore: "lancedb",
+          fileCount: 1,
+          blockCount: 1,
+          attemptCount: 1,
+          deleteMs: expect.any(Number),
+          embeddingMs: expect.any(Number),
+          upsertMs: expect.any(Number),
+        })
+        expect(batch.fields.blockCount).toBe(1)
+        expect(batch.fields.attemptCount).toBe(1)
+      }
+      expect(JSON.stringify(records)).not.toContain(root)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles retry attempts as one terminal batch", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-profile-retry-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+
+    try {
+      await Bun.write(join(root, "main.ts"), "export const value = 2\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const scan = new DirectoryScanner(
+        new Emb(),
+        new RetryStore(),
+        new Parser(),
+        cache,
+        ignore(),
+        1,
+        2,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+      )
+      const records = await captureProfiles(async () => {
+        await scan.scanDirectory(root)
+      })
+      const batches = records.filter((item) => item.event === "indexing.scan.batch")
+
+      expect(batches).toHaveLength(1)
+      expect(batches[0]?.outcome).toBe("success")
+      expect(batches[0]?.fields).toEqual({
+        source: "scan",
+        mode: "full",
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        fileCount: 1,
+        blockCount: 1,
+        attemptCount: 2,
+        deleteMs: expect.any(Number),
+        embeddingMs: expect.any(Number),
+        upsertMs: expect.any(Number),
+      })
+      expect(JSON.stringify(batches)).not.toContain(root)
+      expect(JSON.stringify(batches)).not.toContain("temporary upsert failure")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles exhausted retry batches without source data", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-profile-exhausted-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+
+    try {
+      await Bun.write(join(root, "main.ts"), "export const value = 2\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const scan = new DirectoryScanner(
+        new Emb(),
+        new ExhaustedStore(),
+        new Parser(),
+        cache,
+        ignore(),
+        1,
+        2,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+      )
+      const records = await captureProfiles(async () => {
+        await scan.scanDirectory(root)
+      })
+      const batches = records.filter((item) => item.event === "indexing.scan.batch")
+
+      expect(batches).toHaveLength(1)
+      expect(batches[0]?.outcome).toBe("error")
+      expect(batches[0]?.fields).toEqual({
+        source: "scan",
+        mode: "full",
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        fileCount: 1,
+        blockCount: 1,
+        attemptCount: 2,
+        deleteMs: expect.any(Number),
+        embeddingMs: expect.any(Number),
+        upsertMs: expect.any(Number),
+      })
+      expect(JSON.stringify(batches)).not.toContain(root)
+      expect(JSON.stringify(batches)).not.toContain("permanent upsert failure")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles cooperative scanner cancellation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-profile-cancelled-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+
+    try {
+      await Bun.write(join(root, "main.ts"), "export const value = 2\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const emb = new CancellingEmb()
+      const scan = new DirectoryScanner(
+        emb,
+        new Store(),
+        new Parser(),
+        cache,
+        ignore(),
+        1,
+        1,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+      )
+      emb.onCreate = () => scan.cancel()
+
+      const records = await captureProfiles(async () => {
+        await scan.scanDirectory(root)
+        await new Promise<void>((resolve) => setImmediate(resolve))
+      })
+      const summary = records.find((item) => item.event === "indexing.scan.summary")
+      const batches = records.filter((item) => item.event === "indexing.scan.batch")
+
+      expect(summary?.outcome).toBe("cancelled")
+      expect(summary?.fields.processedCount).toBe(1)
+      expect(summary?.fields.batchCount).toBe(1)
+      expect(batches).toHaveLength(1)
+      expect(batches[0]?.outcome).toBe("cancelled")
+      expect(batches[0]?.fields.blockCount).toBe(1)
+      expect(batches[0]?.fields.attemptCount).toBe(1)
+      expect(JSON.stringify(records)).not.toContain(root)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles cancellation requested while batches settle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "scanner-profile-settling-"))
+    const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))
+    const emb = new BlockingEmb()
+
+    try {
+      await Bun.write(join(root, "main.ts"), "export const value = 2\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const scan = new DirectoryScanner(
+        emb,
+        new Store(),
+        new Parser(),
+        cache,
+        ignore(),
+        1,
+        1,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+      )
+
+      const records = await captureProfiles(async () => {
+        const task = scan.scanDirectory(root)
+        await emb.started.promise
+        // RATIONALE: Keep the batch pending until scanDirectory is waiting for active batches.
+        await new Promise<void>((resolve) => setImmediate(resolve))
+        scan.cancel()
+        emb.release()
+        await task
+      })
+      const summary = records.find((item) => item.event === "indexing.scan.summary")
+
+      expect(summary?.outcome).toBe("cancelled")
+    } finally {
+      emb.release()
+      await rm(root, { recursive: true, force: true })
+      await rm(cacheDir, { recursive: true, force: true })
+    }
+  })
+
   test("uses seeded baseline hashes to index only worktree changes", async () => {
     const root = await mkdtemp(join(tmpdir(), "scanner-test-"))
     const cacheDir = await mkdtemp(join(tmpdir(), "scanner-cache-"))

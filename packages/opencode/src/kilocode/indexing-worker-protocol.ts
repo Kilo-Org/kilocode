@@ -1,5 +1,6 @@
 import type {
   IndexingConfigInput,
+  IndexingProfileRecord,
   IndexingTelemetryEvent,
   VectorStoreSearchResult,
 } from "@kilocode/kilo-indexing/engine"
@@ -34,6 +35,7 @@ export type Result =
 export type Log = {
   level: "debug" | "info" | "warn" | "error"
   message: string
+  profile?: IndexingProfileRecord
 }
 
 export type Event =

@@ -7,6 +7,8 @@ import { v5 as uuidv5 } from "uuid"
 import { CacheManager } from "../../../../src/indexing/cache-manager"
 import { QDRANT_CODE_BLOCK_NAMESPACE } from "../../../../src/indexing/constants"
 import type {
+  CodeBlock,
+  ICodeParser,
   IEmbedder,
   IndexingTelemetryEvent,
   IVectorStore,
@@ -17,6 +19,7 @@ import { FileWatcher } from "../../../../src/indexing/processors/file-watcher"
 import { CodeParser } from "../../../../src/indexing/processors/parser"
 import { loadIgnore } from "../../../../src/indexing/shared/load-ignore"
 import { WorktreeOverlay } from "../../../../src/indexing/worktree-overlay"
+import { captureProfiles } from "../profile-capture"
 
 function createEmbedder(): IEmbedder {
   return {
@@ -30,6 +33,39 @@ function createEmbedder(): IEmbedder {
     },
     get embedderInfo() {
       return { name: "openai" as const }
+    },
+  }
+}
+
+function createWrongCountEmbedder(): IEmbedder {
+  return {
+    async createEmbeddings() {
+      return { embeddings: [] }
+    },
+    async validateConfiguration() {
+      return { valid: true }
+    },
+    get embedderInfo() {
+      return { name: "openai" as const }
+    },
+  }
+}
+
+function createParser(): ICodeParser {
+  return {
+    async parseFile(filePath, options): Promise<CodeBlock[]> {
+      return [
+        {
+          file_path: filePath,
+          identifier: null,
+          type: "definition",
+          start_line: 1,
+          end_line: 1,
+          content: "const indexed = true",
+          fileHash: options?.fileHash ?? "",
+          segmentHash: "segment",
+        },
+      ]
     },
   }
 }
@@ -77,6 +113,228 @@ class RetryStore implements IVectorStore {
 }
 
 describe("FileWatcher", () => {
+  test.serial("profiles watcher batches and per-file embeddings without source data", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-profile-"))
+    const cacheDir = path.join(root, ".cache")
+    const first = path.join(root, "first.ts")
+    const second = path.join(root, "second.ts")
+
+    try {
+      await mkdir(cacheDir, { recursive: true })
+      await writeFile(first, "const watcherSecret = 'sensitive-file-code'\n")
+      await writeFile(second, "const watcherSecret = 'sensitive-file-code'\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const watcher = new FileWatcher(
+        root,
+        cache,
+        createEmbedder(),
+        new RetryStore(1),
+        undefined,
+        1,
+        2,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+        [".ts"],
+        createParser(),
+      )
+      const data = watcher as unknown as {
+        processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+      }
+
+      const records = await captureProfiles(async () => {
+        await data.processBatch(
+          new Map([
+            [first, { path: first, type: "create" }],
+            [second, { path: second, type: "create" }],
+          ]),
+        )
+      })
+      const batches = records.filter((item) => item.event === "indexing.watcher.batch")
+      const embeddings = records.filter((item) => item.event === "indexing.watcher.embedding")
+      expect(batches).toHaveLength(1)
+      const batch = batches[0]
+
+      expect(batch?.outcome).toBe("success")
+      expect(batch?.fields).toEqual({
+        source: "watcher",
+        mode: "incremental",
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        eventCount: 2,
+        deleteCount: 0,
+        upsertFileCount: 2,
+        pointCount: 2,
+        successCount: 2,
+        skippedCount: 0,
+        errorCount: 0,
+        deleteMs: expect.any(Number),
+        prepareMs: expect.any(Number),
+        upsertMs: expect.any(Number),
+        flushMs: expect.any(Number),
+      })
+      expect(embeddings).toHaveLength(2)
+      for (const embedding of embeddings) {
+        expect(embedding.outcome).toBe("success")
+        expect(embedding.fields).toEqual({
+          provider: "openai",
+          modelId: "text-embedding-3-small",
+          textCount: 1,
+        })
+      }
+      expect(JSON.stringify(records)).not.toContain(root)
+      expect(JSON.stringify(records)).not.toContain(first)
+      expect(JSON.stringify(records)).not.toContain("sensitive-file-code")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles watcher batch errors without source data", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-profile-error-"))
+    const cacheDir = path.join(root, ".cache")
+    const file = path.join(root, "error.ts")
+
+    try {
+      await mkdir(cacheDir, { recursive: true })
+      await writeFile(file, "const watcherSecret = 'sensitive-file-code'\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const watcher = new FileWatcher(
+        root,
+        cache,
+        createEmbedder(),
+        new RetryStore(10),
+        undefined,
+        1,
+        2,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+        [".ts"],
+        createParser(),
+      )
+      const data = watcher as unknown as {
+        processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+      }
+
+      const records = await captureProfiles(async () => {
+        await data.processBatch(new Map([[file, { path: file, type: "create" }]]))
+      })
+      const batches = records.filter((item) => item.event === "indexing.watcher.batch")
+      expect(batches).toHaveLength(1)
+      const batch = batches[0]
+
+      expect(batch?.outcome).toBe("error")
+      expect(batch?.fields).toEqual({
+        source: "watcher",
+        mode: "incremental",
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        eventCount: 1,
+        deleteCount: 0,
+        upsertFileCount: 1,
+        pointCount: 1,
+        successCount: 0,
+        skippedCount: 0,
+        errorCount: 1,
+        deleteMs: expect.any(Number),
+        prepareMs: expect.any(Number),
+        upsertMs: expect.any(Number),
+        flushMs: expect.any(Number),
+      })
+      expect(JSON.stringify(records)).not.toContain(root)
+      expect(JSON.stringify(records)).not.toContain(file)
+      expect(JSON.stringify(records)).not.toContain("watcher upsert failure")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles wrong-count watcher embeddings as errors without source data", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "file-watcher-profile-embedding-error-"))
+    const cacheDir = path.join(root, ".cache")
+    const file = path.join(root, "error.ts")
+
+    try {
+      await mkdir(cacheDir, { recursive: true })
+      await writeFile(file, "const watcherSecret = 'sensitive-file-code'\n")
+      const cache = new CacheManager(cacheDir, root)
+      await cache.initialize()
+      const watcher = new FileWatcher(
+        root,
+        cache,
+        createWrongCountEmbedder(),
+        new RetryStore(0),
+        undefined,
+        1,
+        2,
+        undefined,
+        {
+          provider: "openai",
+          vectorStore: "lancedb",
+          modelId: "text-embedding-3-small",
+        },
+        [".ts"],
+        createParser(),
+      )
+      const data = watcher as unknown as {
+        processBatch(events: Map<string, { path: string; type: "create" | "change" | "delete" }>): Promise<void>
+      }
+
+      const records = await captureProfiles(async () => {
+        await data.processBatch(new Map([[file, { path: file, type: "create" }]]))
+      })
+      const batches = records.filter((item) => item.event === "indexing.watcher.batch")
+      const embeddings = records.filter((item) => item.event === "indexing.watcher.embedding")
+      expect(batches).toHaveLength(1)
+      expect(embeddings).toHaveLength(1)
+      const batch = batches[0]
+      const embedding = embeddings[0]
+
+      expect(batch?.outcome).toBe("error")
+      expect(batch?.fields).toEqual({
+        source: "watcher",
+        mode: "incremental",
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        eventCount: 1,
+        deleteCount: 0,
+        upsertFileCount: 1,
+        pointCount: 0,
+        successCount: 0,
+        skippedCount: 0,
+        errorCount: 1,
+        deleteMs: expect.any(Number),
+        prepareMs: expect.any(Number),
+        upsertMs: expect.any(Number),
+        flushMs: expect.any(Number),
+      })
+      expect(embedding?.outcome).toBe("error")
+      expect(embedding?.fields).toEqual({
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        textCount: 1,
+      })
+      expect(JSON.stringify(records)).not.toContain(root)
+      expect(JSON.stringify(records)).not.toContain(file)
+      expect(JSON.stringify(records)).not.toContain("sensitive-file-code")
+      expect(JSON.stringify(records)).not.toContain("Embedding count mismatch")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test("processFile preserves same-line segments during incremental updates", async () => {
     const root = await mkdtemp(path.join(tmpdir(), "file-watcher-test-"))
     const cacheDir = path.join(root, ".cache")

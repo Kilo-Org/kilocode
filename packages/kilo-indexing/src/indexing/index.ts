@@ -33,3 +33,4 @@ export type {
 } from "./interfaces/file-processor"
 
 export type { ICacheManager } from "./interfaces/cache"
+export type { IndexingProfileRecord } from "../util/profile"

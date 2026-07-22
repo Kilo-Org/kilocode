@@ -14,6 +14,7 @@ import { Log } from "../util/log"
 import { loadIgnore } from "./shared/load-ignore"
 import { sanitizeErrorMessage } from "./shared/validation-helpers"
 import { WorktreeOverlay } from "./worktree-overlay"
+import { IndexingProfile } from "../util/profile"
 
 const log = Log.create({ service: "indexing-manager" })
 const BASELINE_CHECK_INTERVAL = 1_000
@@ -285,6 +286,12 @@ export class CodeIndexManager {
     }
 
     const { requiresRestart } = this._configManager.loadConfiguration(input)
+    using span = IndexingProfile.start("indexing.manager.initialize")
+    span.add({
+      enabled: this.isFeatureEnabled,
+      configured: this.isFeatureConfigured,
+      requiresRestart,
+    })
     log.info("loaded indexing configuration", {
       workspacePath: this.workspacePath,
       featureEnabled: this.isFeatureEnabled,
@@ -297,12 +304,14 @@ export class CodeIndexManager {
     if (!this.isFeatureEnabled) {
       log.info("indexing disabled by configuration", { workspacePath: this.workspacePath })
       this._orchestrator?.stopWatcher()
+      span.outcome("disabled")
       return { requiresRestart }
     }
 
     if (!this.workspacePath) {
       log.info("indexing unavailable: no workspace path")
       this._stateManager.setSystemState("Standby", "No workspace folder open")
+      span.outcome("disabled")
       return { requiresRestart }
     }
 
@@ -316,6 +325,7 @@ export class CodeIndexManager {
         "Standby",
         "Code indexing is not configured. Save your settings to start indexing.",
       )
+      span.outcome("disabled")
       return { requiresRestart }
     }
 
@@ -323,7 +333,10 @@ export class CodeIndexManager {
       log.info("initializing indexing cache", { cacheDirectory: this.cacheDirectory })
       this._cacheManager = new CacheManager(this.cacheDirectory, this.workspacePath)
       await this._cacheManager.initialize()
-      if (this._disposed) return { requiresRestart }
+      if (this._disposed) {
+        span.outcome("cancelled")
+        return { requiresRestart }
+      }
       log.info("indexing cache initialized", { cacheDirectory: this.cacheDirectory })
     }
 
@@ -342,6 +355,7 @@ export class CodeIndexManager {
           this._orchestrator?.cancelIndexing()
           this._orchestrator = undefined
           this._searchService = undefined
+          span.outcome("cancelled")
           return { requiresRestart }
         }
         log.info("indexing services recreated", { workspacePath: this.workspacePath })
@@ -356,7 +370,10 @@ export class CodeIndexManager {
       }
     }
 
-    if (this.waiting()) return { requiresRestart }
+    if (this.waiting()) {
+      span.outcome("waiting")
+      return { requiresRestart }
+    }
 
     const shouldStartOrRestart =
       requiresRestart || (needsServiceRecreation && (!this._orchestrator || this._orchestrator.state !== "Indexing"))
@@ -372,6 +389,7 @@ export class CodeIndexManager {
       this._orchestrator?.startIndexing("background")
     }
 
+    span.outcome("success")
     return { requiresRestart }
   }
 
@@ -558,6 +576,15 @@ export class CodeIndexManager {
 
   private async _recreateServices(prepared?: Baseline): Promise<void> {
     log.info("starting indexing service recreation", { workspacePath: this.workspacePath })
+    const config = this._configManager!.getConfig()
+    using span = IndexingProfile.start("indexing.manager.services")
+    span.add({
+      provider: config.embedderProvider,
+      modelId: config.modelId,
+      vectorStore: config.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
+      baseline: "none",
+      validationMs: 0,
+    })
     const factory = new CodeIndexServiceFactory(
       this._configManager!,
       this.workspacePath,
@@ -566,8 +593,8 @@ export class CodeIndexManager {
       (event) => this.handleTelemetry(event),
     )
     const ignoreInstance = await loadIgnore(this.workspacePath)
-    const config = this._configManager!.getConfig()
     const baseline = prepared ?? (await this.createBaseline(factory))
+    span.add({ baseline: baseline?.store ? "ready" : baseline ? "waiting" : "none" })
     const { embedder, vectorStore, scanner, fileWatcher } = factory.createServices(this._cacheManager!, ignoreInstance)
     fileWatcher.setOverlay?.(baseline?.overlay)
     log.info("created indexing services", {
@@ -579,20 +606,25 @@ export class CodeIndexManager {
 
     const shouldValidate = embedder && embedder.embedderInfo.name === config.embedderProvider
     if (shouldValidate) {
+      const validation = performance.now()
       log.info("validating embedder configuration", {
         workspacePath: this.workspacePath,
         provider: embedder.embedderInfo.name,
       })
-      const validationResult = await factory.validateEmbedder(embedder)
-      if (!validationResult.valid) {
-        const errorMessage = validationResult.error || "Embedder configuration validation failed"
-        this._stateManager.setSystemState("Error", errorMessage)
-        throw new Error(errorMessage)
+      try {
+        const validationResult = await factory.validateEmbedder(embedder)
+        if (!validationResult.valid) {
+          const errorMessage = validationResult.error || "Embedder configuration validation failed"
+          this._stateManager.setSystemState("Error", errorMessage)
+          throw new Error(errorMessage)
+        }
+        log.info("embedder configuration validated", {
+          workspacePath: this.workspacePath,
+          provider: embedder.embedderInfo.name,
+        })
+      } finally {
+        span.add({ validationMs: Math.max(0, performance.now() - validation) })
       }
-      log.info("embedder configuration validated", {
-        workspacePath: this.workspacePath,
-        provider: embedder.embedderInfo.name,
-      })
     }
 
     const orchestrator = new CodeIndexOrchestrator(
@@ -619,6 +651,7 @@ export class CodeIndexManager {
     if (this._disposed) {
       await orchestrator.shutdown()
       await baseline?.store?.close?.()
+      span.outcome("cancelled")
       return
     }
 
@@ -632,6 +665,7 @@ export class CodeIndexManager {
     this._overlay = baseline?.overlay
     this._stateManager.setSystemState("Standby", "")
     log.info("indexing services are ready", { workspacePath: this.workspacePath })
+    span.outcome("success")
   }
 
   public async handleSettingsChange(input: IndexingConfigInput): Promise<void> {
