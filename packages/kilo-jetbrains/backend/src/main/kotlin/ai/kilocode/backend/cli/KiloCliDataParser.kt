@@ -57,6 +57,7 @@ import ai.kilocode.rpc.dto.ProviderMetadataDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.PermissionRuleDto
+import ai.kilocode.rpc.dto.PermissionRuleDecisionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.QuestionInfoDto
@@ -531,6 +532,7 @@ object KiloCliDataParser {
             skills = parseSkillsConfig(obj["skills"].obj()),
             mcp = parseMcpConfig(obj["mcp"].obj()),
             agent = parseAgentConfig(obj["agent"].obj()),
+            permission = parsePermissionConfig(obj["permission"].obj()),
         )
     }.getOrDefault(ConfigDto())
 
@@ -919,6 +921,9 @@ object KiloCliDataParser {
                 })
             }
 
+            val permission = patch.permission
+            if (permission != null) put("permission", buildPermission(permission))
+
             if (patch.agents.isNotEmpty()) {
                 put("agent", buildJsonObject {
                     for ((name, agent) in patch.agents) put(name, buildJsonObject {
@@ -1210,6 +1215,8 @@ object KiloCliDataParser {
         }?.toMap() ?: emptyMap()
         val path = metaObj.path()
         val diffs = metaObj.permissionDiffs(path)
+        val rawRules = metaObj.ruleDecisions()
+        val rules = rawRules.map { it.pattern }
         return PermissionRequestDto(
             id = id,
             sessionID = sid,
@@ -1220,7 +1227,8 @@ object KiloCliDataParser {
             tool = toolRef(obj),
             message = obj.str("message") ?: metaObj?.str("message"),
             command = metaObj?.str("command") ?: obj.str("command"),
-            rules = metaObj.rules(),
+            rules = rules,
+            ruleDecisions = rawRules.ifEmpty { always.map { PermissionRuleDecisionDto(it) } },
             filePath = path,
             fileDiffs = diffs,
         )
@@ -1638,20 +1646,43 @@ private fun JsonObject?.path(): String? {
     return str("filepath") ?: str("filePath") ?: str("file") ?: str("path")
 }
 
-private fun JsonObject?.rules(): List<String> {
+private fun JsonObject?.ruleDecisions(): List<PermissionRuleDecisionDto> {
     if (this == null) return emptyList()
     val raw = this["rules"] ?: return emptyList()
     val arr = raw.arr()
     if (arr != null) {
-        return arr.mapNotNull { it.jsonPrimitive.contentOrNull }
+        return arr.mapNotNull { elem ->
+            val obj = elem.obj()
+            if (obj != null) {
+                val pattern = obj.str("pattern") ?: obj.str("rule") ?: obj.str("text") ?: return@mapNotNull null
+                val next = obj.decision()
+                return@mapNotNull PermissionRuleDecisionDto(pattern, next, obj.defaultDecision() ?: next)
+            }
+            val pattern = runCatching { elem.jsonPrimitive.contentOrNull }.getOrNull() ?: return@mapNotNull null
+            PermissionRuleDecisionDto(pattern)
+        }
     }
     val text = runCatching { raw.jsonPrimitive.contentOrNull }.getOrNull() ?: return emptyList()
-    if (text.startsWith("[")) {
-        return runCatching {
-            KiloCliDataParser.parseRulesJson(text)
-        }.getOrElse { listOf(text) }
+    if (text.startsWith("[")) return KiloCliDataParser.parseRulesJson(text).map { PermissionRuleDecisionDto(it) }
+    return listOf(PermissionRuleDecisionDto(text))
+}
+
+private fun JsonObject.decision(): String {
+    val value = str("decision") ?: str("state") ?: str("action") ?: return "pending"
+    return permissionDecision(value)
+}
+
+private fun JsonObject.defaultDecision(): String? {
+    val value = str("defaultDecision") ?: str("default") ?: str("defaultAction") ?: str("fallback") ?: return null
+    return permissionDecision(value)
+}
+
+private fun permissionDecision(value: String): String {
+    return when (value.lowercase()) {
+        "approved", "allow" -> "approved"
+        "denied", "deny" -> "denied"
+        else -> "pending"
     }
-    return listOf(text)
 }
 
 private fun JsonObject?.permissionDiffs(path: String?): List<PermissionFileDiffDto> {
