@@ -576,12 +576,12 @@ export class CodeIndexManager {
 
   private async _recreateServices(prepared?: Baseline): Promise<void> {
     log.info("starting indexing service recreation", { workspacePath: this.workspacePath })
-    const config = this._configManager!.getConfig()
+    const profile = this._configManager!.getConfig()
     using span = IndexingProfile.start("indexing.manager.services")
     span.add({
-      provider: config.embedderProvider,
-      modelId: config.modelId,
-      vectorStore: config.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
+      provider: profile.embedderProvider,
+      modelId: profile.modelId,
+      vectorStore: profile.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
       baseline: "none",
       validationMs: 0,
     })
@@ -593,6 +593,7 @@ export class CodeIndexManager {
       (event) => this.handleTelemetry(event),
     )
     const ignoreInstance = await loadIgnore(this.workspacePath)
+    const config = this._configManager!.getConfig()
     const baseline = prepared ?? (await this.createBaseline(factory))
     span.add({ baseline: baseline?.store ? "ready" : baseline ? "waiting" : "none" })
     const { embedder, vectorStore, scanner, fileWatcher } = factory.createServices(this._cacheManager!, ignoreInstance)
