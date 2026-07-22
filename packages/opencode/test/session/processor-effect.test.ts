@@ -224,6 +224,34 @@ const providerErrorEnv = LayerNode.buildLayer(root, {
 })
 const itProviderError = testEffect(providerErrorEnv)
 
+const lateToolInputLLM = Layer.succeed(
+  LLM.Service,
+  LLM.Service.of({
+    stream: () =>
+      Stream.make(
+        LLMEvent.stepStart({ index: 0 }),
+        LLMEvent.toolInputStart({ id: "call-1", name: "read" }),
+        LLMEvent.toolInputDelta({ id: "call-1", name: "read", text: '{"filePath":"package.json"}' }),
+        LLMEvent.toolInputEnd({ id: "call-1", name: "read" }),
+        LLMEvent.toolCall({ id: "call-1", name: "read", input: { filePath: "package.json" }, providerExecuted: true }),
+        LLMEvent.toolResult({
+          id: "call-1",
+          name: "read",
+          result: { type: "text", value: "contents" },
+          providerExecuted: true,
+        }),
+        LLMEvent.toolInputDelta({ id: "call-1", name: "unknown", text: "" }),
+        LLMEvent.toolInputEnd({ id: "call-1", name: "unknown" }),
+        LLMEvent.stepFinish({ index: 0, reason: "tool-calls" }),
+        LLMEvent.finish({ reason: "tool-calls" }),
+      ),
+  }),
+)
+const lateToolInputEnv = LayerNode.buildLayer(root, {
+  replacements: [...replacements, LayerNode.replace(LLM.node, lateToolInputLLM)],
+})
+const itLateToolInput = testEffect(lateToolInputEnv)
+
 const fragmentFailureLLM = Layer.succeed(
   LLM.Service,
   LLM.Service.of({
@@ -1078,6 +1106,46 @@ itProviderError.live("session.processor effect tests fail provider-executed erro
           result: { type: "error", value: "provider boom" },
           provider: { executed: true },
         })
+      }),
+    { config: cfg },
+  ),
+)
+
+itLateToolInput.live("session.processor effect tests ignore tool input after the call settles", () =>
+  provideTmpdirInstance(
+    (dir) =>
+      Effect.gen(function* () {
+        const { processors, session, provider } = yield* boot()
+        const chat = yield* session.create({})
+        const parent = yield* user(chat.id, "read a file")
+        const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
+        const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+        const handle = yield* processors.create({ assistantMessage: msg, sessionID: chat.id, model: mdl })
+
+        yield* handle.process({
+          user: {
+            id: parent.id,
+            sessionID: chat.id,
+            role: "user",
+            time: parent.time,
+            agent: parent.agent,
+            model: { providerID: ref.providerID, modelID: ref.modelID },
+          } satisfies SessionV1.User,
+          sessionID: chat.id,
+          model: mdl,
+          agent: agent(),
+          system: [],
+          messages: [{ role: "user", content: "read a file" }],
+          tools: {},
+        })
+
+        const calls = (yield* MessageV2.parts(msg.id)).filter(
+          (part): part is SessionV1.ToolPart => part.type === "tool",
+        )
+        expect(calls).toHaveLength(1)
+        expect(calls[0]?.callID).toBe("call-1")
+        expect(calls[0]?.tool).toBe("read")
+        expect(calls[0]?.state.status).toBe("completed")
       }),
     { config: cfg },
   ),

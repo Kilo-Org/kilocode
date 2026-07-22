@@ -540,7 +540,8 @@ export const layer = Layer.effect(
 
           case "tool-input-delta":
             {
-              const toolCall = yield* ensureToolCall(value)
+              const toolCall = yield* readToolCall(value.id)
+              if (!toolCall) return
               const assistantMessageID = mirrorAssistant ? yield* requireV2AssistantMessage(toolCall.call) : undefined
               if (assistantMessageID) {
                 yield* events.publish(SessionEvent.Tool.Input.Delta, {
@@ -556,7 +557,8 @@ export const layer = Layer.effect(
             return
 
           case "tool-input-end": {
-            const toolCall = yield* ensureToolCall(value)
+            const toolCall = yield* readToolCall(value.id)
+            if (!toolCall) return
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
             if (mirrorAssistant) {
               const assistantMessageID = yield* requireV2AssistantMessage(toolCall.call)
