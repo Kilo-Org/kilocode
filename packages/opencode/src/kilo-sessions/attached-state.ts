@@ -180,12 +180,29 @@ export namespace AttachedState {
 
       async announce(id) {
         if (presence.has(id)) return
-        // kilocode_change - join an in-flight Promise (announce OR detach)
-        // for this id instead of starting a second conflicting heartbeat.
-        const existing = inflight.get(id) ?? detachInflight.get(id)
+        // kilocode_change - join a same-kind in-flight announce so concurrent
+        // callers share one heartbeat and one outcome.
+        const existing = inflight.get(id)
         if (existing) {
           await existing
           return
+        }
+        // kilocode_change - K1 W1: if a detach is in flight for this id, we
+        // must NOT join its Promise. The detach-fence resolves when the id is
+        // ABSENT from the sent payload — the opposite of what announce
+        // promises — so joining it would report a successful attach for a
+        // session that was actually detached. Wait for the detach to settle
+        // (its outcome is irrelevant to us) and then perform a real announce.
+        const inflightDetach = detachInflight.get(id)
+        if (inflightDetach) {
+          await inflightDetach.catch(() => undefined)
+          if (presence.has(id)) return
+          // A concurrent announce may have started while we awaited; join it.
+          const raced = inflight.get(id)
+          if (raced) {
+            await raced
+            return
+          }
         }
         if (pending.has(id)) {
           // A previous announce already resolved and is awaiting presence
@@ -197,6 +214,10 @@ export namespace AttachedState {
         // lastSentKey with keyOf(union()) computed from the new state.
         const myGeneration = generation
         const owned = (async () => {
+          // kilocode_change - K1 W1: an explicit announce is a deliberate
+          // (re)attach that overrides any lingering detach tombstone, so
+          // presence can adopt this id again. No-op when not suppressed.
+          suppressed.delete(id)
           pending.add(id)
           try {
             // kilocode_change - forward the announced id so the relay only
@@ -204,6 +225,13 @@ export namespace AttachedState {
             // contains this id was actually sent (id-containment fence).
             await options.heartbeat({ requireSessionId: id })
           } catch (err) {
+            // kilocode_change - K1 W1: if reset() ran while this heartbeat was
+            // in flight, this announce belongs to a dead lifecycle. reset()
+            // clears the SAME set instances, so rolling back here would delete
+            // a `pending` entry a fresh post-reset announce for this id just
+            // installed. Bail without mutating the new generation's sets (the
+            // success path guards the same way before writing lastSentKey).
+            if (myGeneration !== generation) return
             // Roll back only the entry this call added. If presence adopted
             // the id while the heartbeat was in flight, presence is the
             // authoritative owner and the attach succeeded from the
@@ -238,20 +266,37 @@ export namespace AttachedState {
 
       // kilocode_change - K1 W1: session-detach semantics.
       async detach(id) {
-        // Verify we own the id. A detach for an id this CLI does not own
-        // is a caller bug; surfacing it as a specific error means the
-        // exit_cli handler can refuse to ACK and keep the CLI running.
+        // kilocode_change - join a same-kind in-flight detach so concurrent
+        // callers share one fence and one outcome.
+        const existingDetach = detachInflight.get(id)
+        if (existingDetach) {
+          await existingDetach
+          return
+        }
+        // kilocode_change - K1 W1: if an announce is in flight for this id we
+        // must NOT join it. `announce` adds the id to `pending` synchronously
+        // before its first await, so joining the announce Promise would
+        // resolve detach() successfully while the session is still fully
+        // attached — and exit_cli treats a resolved detach as license to ACK
+        // and close the CLI. Wait for the announce to settle, then run the
+        // real detach so the negative-containment fence actually fires.
+        const inflightAnnounce = inflight.get(id)
+        if (inflightAnnounce) {
+          await inflightAnnounce.catch(() => undefined)
+          const racedDetach = detachInflight.get(id)
+          if (racedDetach) {
+            await racedDetach
+            return
+          }
+        }
+        // Verify we own the id, AFTER settling any in-flight announce so the
+        // check sees the announce's real outcome. A detach for an id this CLI
+        // does not own is a caller bug; surfacing it as a specific error means
+        // the exit_cli handler can refuse to ACK and keep the CLI running.
         const wasInPresence = presence.has(id)
         const wasInPending = pending.has(id)
         if (!wasInPresence && !wasInPending) {
           throw new Error(`detach: ${id} is not owned by this CLI`)
-        }
-        // Join an in-flight Promise for the same id (concurrent announce or
-        // detach). Whichever started first serializes the work.
-        const existing = inflight.get(id) ?? detachInflight.get(id)
-        if (existing) {
-          await existing
-          return
         }
         // Tombstone the id BEFORE removing it from the sets. While the id
         // is in `suppressed`, subsequent setPresence calls that still
@@ -270,11 +315,23 @@ export namespace AttachedState {
             // actually sent over a live socket.
             await options.heartbeat({ detachSessionId: id })
           } catch (err) {
-            // Roll back: restore the id to whichever sets it lived in.
-            // The tombstone stays in place so a roll-back-then-re-attach
-            // cycle is not papered over by an immediate re-attach.
+            // kilocode_change - K1 W1: if reset() ran while this heartbeat was
+            // in flight, this detach belongs to a dead lifecycle. reset()
+            // clears the SAME set instances, so restoring ownership / clearing
+            // the tombstone here would resurrect this id into a fresh
+            // post-reset lifecycle and could wipe a tombstone a concurrent
+            // post-reset detach legitimately set. Bail without mutating the
+            // new generation's sets (mirrors the success-path guard below).
+            if (myGeneration !== generation) return
+            // Roll back: restore the id to whichever sets it lived in AND
+            // release the tombstone. The detach failed, so the session is
+            // genuinely still attached and must stay adoptable by presence.
+            // Leaving the tombstone would make setPresence's suppression loop
+            // drop the still-present id on the very next call and never clear
+            // (presence keeps reporting it), permanently losing the session.
             if (wasInPresence) presence.add(id)
             if (wasInPending) pending.add(id)
+            suppressed.delete(id)
             throw err
           }
           if (myGeneration !== generation) return

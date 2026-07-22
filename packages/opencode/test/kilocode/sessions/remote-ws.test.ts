@@ -1874,6 +1874,70 @@ describe("RemoteWS", () => {
     })
   })
 
+  // AC6f: negative-containment fence (session-detach). A fresh heartbeat whose
+  // payload STILL CONTAINS the id must NOT resolve a detachSessionId waiter —
+  // detach is only confirmed once a fresh send OMITS the id. Symmetric to AC6d.
+  test("AC6f: heartbeat({ detachSessionId }) stays pending on a fresh send that still contains the id and resolves on the next fresh send that omits it", async () => {
+    await withFakeWebSocket(async (clock) => {
+      let mode: "with" | "without" = "with"
+      const otherSession = { id: "other", status: "active" as const, title: "Other" }
+      const targetSession = { id: "target", status: "active" as const, title: "Target" }
+      const listWith = [otherSession, targetSession] as RemoteWS.SessionInfo[]
+      const listWithout = [otherSession] as RemoteWS.SessionInfo[]
+      const getSessions = () => Promise.resolve({ sessions: mode === "with" ? listWith : listWithout })
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+      })
+
+      await flush()
+      const socket = FakeWebSocket.instances[0]
+      socket.open()
+
+      // Cycle 1: fresh gather STILL INCLUDES "target". A detachSessionId
+      // waiter must stay pending even though a fresh heartbeat was sent.
+      const detachPromise = conn.heartbeat({ detachSessionId: "target" })
+      let detachResolved = false
+      let detachRejected = false
+      void detachPromise.then(
+        () => {
+          detachResolved = true
+        },
+        () => {
+          detachRejected = true
+        },
+      )
+      await flushLong()
+      expect(socket.sent.length).toBe(1)
+      const firstPayload = JSON.parse(socket.sent[0])
+      expect(firstPayload.sessions.map((s: { id: string }) => s.id).sort()).toEqual(["other", "target"])
+      expect(detachResolved).toBe(false)
+      expect(detachRejected).toBe(false)
+
+      // Cycle 2: switch the gather to OMIT "target" and drive another cycle.
+      // The negative-containment waiter now resolves.
+      mode = "without"
+      const noIdPromise = conn.heartbeat()
+      void noIdPromise.then(
+        () => {},
+        () => {},
+      )
+      await flushLong()
+      expect(socket.sent.length).toBe(2)
+      const secondPayload = JSON.parse(socket.sent[1])
+      expect(secondPayload.sessions.map((s: { id: string }) => s.id)).toEqual(["other"])
+      expect(detachResolved).toBe(true)
+      expect(detachRejected).toBe(false)
+    })
+  })
+
   test("AC6e: pending heartbeat({ requireSessionId }) rejects when permanent close arrives during an in-flight gather cycle", async () => {
     await withFakeWebSocket(async (clock) => {
       const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})

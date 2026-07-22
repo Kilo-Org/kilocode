@@ -890,4 +890,127 @@ describe("AttachedState", () => {
     state.setPresence(["ses_a"])
     expect(state.has("ses_a")).toBe(true)
   })
+
+  // K1 W1: a detach in flight for an id must NOT cause a concurrent
+  // announce(id) to join the detach fence and report a bogus attach. The
+  // announce must wait for the detach to settle and then genuinely re-attach.
+  test("announce awaits an in-flight detach and then really re-attaches (no opposite-op join)", async () => {
+    const detachHb = Promise.withResolvers<void>()
+    const calls: Array<{ requireSessionId?: string; detachSessionId?: string }> = []
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        calls.push(opts ?? {})
+        if (opts?.detachSessionId === "ses_y") return detachHb.promise
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+    state.setPresence(["ses_y"])
+    await Promise.resolve()
+
+    const detachP = state.detach("ses_y") // holds on the detach fence, id removed
+    const announceP = state.announce("ses_y") // must await the detach, not join it
+    detachHb.resolve()
+    await detachP
+    await announceP
+
+    // The announce genuinely re-attached rather than resolving on the detach's
+    // "id absent" outcome, and it drove a real requireSessionId heartbeat.
+    expect(state.has("ses_y")).toBe(true)
+    expect(calls.some((c) => c.requireSessionId === "ses_y")).toBe(true)
+  })
+
+  // K1 W1: an announce in flight for an id must NOT cause a concurrent
+  // detach(id) to join the announce and report a bogus detach — exit_cli
+  // treats a resolved detach as license to ACK/close, so a false success is
+  // dangerous. The detach must wait for the announce, then really detach.
+  test("detach awaits an in-flight announce and then really detaches (no opposite-op join)", async () => {
+    const announceHb = Promise.withResolvers<void>()
+    const calls: Array<{ requireSessionId?: string; detachSessionId?: string }> = []
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        calls.push(opts ?? {})
+        if (opts?.requireSessionId === "ses_x") return announceHb.promise
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+
+    const announceP = state.announce("ses_x") // holds on the attach fence
+    const detachP = state.detach("ses_x") // must await the announce, not join it
+    announceHb.resolve()
+    await announceP
+    await detachP
+
+    // The detach genuinely ran the negative-containment fence rather than
+    // resolving on the announce's success; the session is actually gone.
+    expect(state.has("ses_x")).toBe(false)
+    expect(calls.some((c) => c.detachSessionId === "ses_x")).toBe(true)
+  })
+
+  // K1 W1: after a failed detach rolls ownership back, the id is genuinely
+  // still attached, so the very next presence report that still includes it
+  // must keep it — the tombstone must have been released on rollback.
+  test("failed-detach rollback keeps the id attached across the next setPresence", async () => {
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        if (opts?.detachSessionId) return Promise.reject(new Error("relay down"))
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+    state.setPresence(["ses_a"])
+    await Promise.resolve()
+
+    await expect(state.detach("ses_a")).rejects.toThrow("relay down")
+    expect(state.has("ses_a")).toBe(true)
+
+    // The realistic next presence event still reports ses_a. Without releasing
+    // the tombstone on rollback, setPresence's suppression loop would drop the
+    // still-attached id here and never clear the tombstone.
+    state.setPresence(["ses_a"])
+    expect(state.has("ses_a")).toBe(true)
+  })
+
+  // K1 W1: reset() clears the SAME set instances, so a stale in-flight
+  // announce that rejects after a reconnect must NOT roll back into the new
+  // lifecycle — doing so would delete a fresh post-reset announce's pending
+  // entry. The catch must honor the generation guard like the success path.
+  test("a stale announce rejecting after reset() does not corrupt the new lifecycle's pending set", async () => {
+    const hb1 = Promise.withResolvers<void>()
+    const hb2 = Promise.withResolvers<void>()
+    let calls = 0
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        if (opts?.requireSessionId === "id") {
+          calls += 1
+          return calls === 1 ? hb1.promise : hb2.promise
+        }
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+
+    const a1 = state.announce("id") // installs pending, awaits hb1
+    void a1.then(
+      () => {},
+      () => {},
+    )
+    await Promise.resolve()
+
+    state.reset() // bumps generation, clears the (same) sets
+    const a2 = state.announce("id") // fresh lifecycle: re-installs pending, awaits hb2
+    await Promise.resolve()
+
+    hb1.reject(new Error("stale relay drop")) // the dead-lifecycle announce fails
+    await Promise.resolve()
+    await Promise.resolve()
+
+    // The stale rollback must NOT have deleted the fresh generation's entry.
+    expect(state.has("id")).toBe(true)
+
+    hb2.resolve()
+    await a2
+    expect(state.has("id")).toBe(true)
+  })
 })
