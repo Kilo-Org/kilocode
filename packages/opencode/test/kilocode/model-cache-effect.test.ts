@@ -374,6 +374,20 @@ it.live("leaves aimlapi cost at zero when the model carries no pricing", () =>
   }),
 )
 
+it.live("hides image-generation models that ride the chat endpoint but reject tool use", () =>
+  Effect.gen(function* () {
+    const hits = yield* Ref.make<Hit[]>([])
+    // Served as type=openai/chat-completions but tool use is unsupported, so a
+    // coding agent must not surface it. The only reliable signal today is the id.
+    const item = { id: "openai/gpt-5-image", type: "openai/chat-completions", info: { name: "GPT-5 Image" } }
+    const models = yield* ModelCache.Service.use((cache) =>
+      cache.fetch("aimlapi", { baseURL: "https://aiml.test/v1" }),
+    ).pipe(Effect.provide(aimlapiLayer(hits, item)))
+
+    expect(Object.keys(models)).toEqual([])
+  }),
+)
+
 it.live("exposes the catalog description via model options", () =>
   Effect.gen(function* () {
     const hits = yield* Ref.make<Hit[]>([])

@@ -58,6 +58,15 @@ const ApertisResponse = Schema.Struct({ data: Schema.optional(Schema.Array(Apert
 type ApertisItem = Schema.Schema.Type<typeof ApertisItem>
 
 const AIMLAPI_BASE_URL = "https://api.aimlapi.com/v1"
+// TEMPORARY: some image-generation models are served over the chat protocol
+// (via OpenRouter) and reach /v1/models as type=openai/chat-completions, but
+// reject tool use — a coding agent then errors at runtime ("No endpoints found
+// that support tool use"). The catalog can't distinguish them yet (the generic
+// chat DTO over-reports the `tools` capability; text-only pricing leaves
+// output=[text]), so we exclude them by id. Remove once the backend re-tags
+// them (playground:image) or fixes their output modality — see the repo-root
+// MODELS.md § "One model, multiple endpoints" and its backlog task.
+const AIMLAPI_IMAGE_ON_CHAT_ID = /-image(-|$)/i
 const AimlapiInfo = Schema.Struct({
   name: Schema.optional(Schema.String),
   developer: Schema.optional(Schema.String),
@@ -246,7 +255,9 @@ export const layer: Layer.Layer<
       }
 
       const json = yield* HttpClientResponse.schemaBodyJson(AimlapiResponse)(response)
-      const chat = (json.data ?? []).filter((item) => item.type === "openai/chat-completions")
+      const chat = (json.data ?? []).filter(
+        (item) => item.type === "openai/chat-completions" && !AIMLAPI_IMAGE_ON_CHAT_ID.test(item.id),
+      )
       // Coding-tagged models rank first so the picker surfaces them on top.
       let recommended = 0
       return Object.fromEntries(
