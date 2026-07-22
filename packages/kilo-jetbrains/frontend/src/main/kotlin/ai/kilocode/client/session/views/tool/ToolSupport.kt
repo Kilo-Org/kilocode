@@ -732,12 +732,23 @@ private fun toolSubtitle(tool: Tool): String {
     return listOfNotNull(base).plus(args).joinToString(" ")
 }
 
-/** Absolute file path targeted by a write tool, preferring the resolvable input path. */
-internal fun editPath(tool: Tool): String =
-    tool.input["filePath"]?.takeIf { it.isNotBlank() }
-        ?: tool.input["path"]?.takeIf { it.isNotBlank() }
-        ?: tool.title?.takeIf { it.isNotBlank() }
-        ?: tool.name
+/** File path targeted by a write tool, preferring the most specific resolvable path. */
+internal fun editPath(tool: Tool): String = editPaths(tool).maxWithOrNull(
+    compareBy<String>({ OSAgnosticPathUtil.isAbsolute(it) }, { depth(it) }),
+) ?: tool.name
+
+private fun editPaths(tool: Tool): List<String> {
+    val direct = listOf(tool.input["filePath"], tool.input["path"])
+    val diff = listOfNotNull(editFile(parseJsonObject(tool.metadata["filediff"])))
+    val files = parseJsonArray(tool.metadata["files"])?.mapNotNull { editFile(it.jsonObject) } ?: emptyList()
+    return (direct + diff + files + listOf(tool.title, tool.name))
+        .mapNotNull { it?.takeIf { value -> value.isNotBlank() } }
+}
+
+private fun editFile(obj: JsonObject?): String? = listOf("filePath", "path", "file", "relativePath")
+    .firstNotNullOfOrNull { key -> obj?.get(key)?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } }
+
+private fun depth(path: String): Int = path.count { it == '/' || it == '\\' }
 
 private val DIFF_JSON = Json { ignoreUnknownKeys = true; isLenient = true }
 

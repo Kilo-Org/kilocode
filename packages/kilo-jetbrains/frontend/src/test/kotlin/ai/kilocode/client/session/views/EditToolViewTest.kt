@@ -47,6 +47,23 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertEquals(listOf("/repo/src/App.kt"), opened)
     }
 
+    fun `test edit link uses metadata path when input is only filename`() {
+        val opened = mutableListOf<String>()
+        val path = "backend/src/com/kirillk/watcher/dao/GameApi.java"
+        val view = track(EditToolView(tool().also {
+            it.title = "GameApi.java"
+            it.input = mapOf("filePath" to "GameApi.java")
+            it.metadata = mapOf("filediff" to fileDiff(1, 0, PATCH, path))
+        }, openFile = { href, _ -> opened.add(href) }))
+
+        assertEquals("GameApi.java", view.linkLabel())
+        assertEquals(path, view.linkHref())
+
+        view.openLink()
+
+        assertEquals(listOf(path), opened)
+    }
+
     fun `test changes tag shows additions and deletions`() {
         val view = track(EditToolView(tool()))
 
@@ -232,8 +249,13 @@ class EditToolViewTest : BasePlatformTestCase() {
     """.trimIndent()
 
     // Mirrors how the CLI serializes metadata.filediff (a JsonObject rendered to string).
-    private fun fileDiff(additions: Int, deletions: Int, patch: String): String = buildJsonObject {
-        put("file", "src/App.kt")
+    private fun fileDiff(
+        additions: Int,
+        deletions: Int,
+        patch: String,
+        path: String = "src/App.kt",
+    ): String = buildJsonObject {
+        put("file", path)
         put("additions", additions)
         put("deletions", deletions)
         put("patch", patch)
