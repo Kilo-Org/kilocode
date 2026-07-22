@@ -1,5 +1,21 @@
 # kilo-code
 
+## 7.4.15
+
+### Patch Changes
+
+- [#12422](https://github.com/Kilo-Org/kilocode/pull/12422) [`28d015f`](https://github.com/Kilo-Org/kilocode/commit/28d015f8fefd166348e4d4eb0b4c2ae0aa011a03) - Simplify project memory settings and activity visibility, replace direct editing with folder inspection, add nested memory slash-command completion and status views, improve empty-project handling, compact native tool-call summaries, and remove legacy memory audit logs.
+
+- [#12454](https://github.com/Kilo-Org/kilocode/pull/12454) [`2f389f9`](https://github.com/Kilo-Org/kilocode/commit/2f389f9fb13f88da9b74364f6c4c1ad7fd0bb09b) - Show a clear warning when reloading is blocked by a running session instead of a generic "Reload failed" error, and surface the server error message for other reload failures
+
+- [#11928](https://github.com/Kilo-Org/kilocode/pull/11928) [`c08302b`](https://github.com/Kilo-Org/kilocode/commit/c08302b47a4fc68e4efda8f722e87e3018601bd8) Thanks [@jhapate0704](https://github.com/jhapate0704)! - Fix scroll position not resetting when switching between diff files in the chat and virtual diff viewer
+
+- [#12414](https://github.com/Kilo-Org/kilocode/pull/12414) [`badf70d`](https://github.com/Kilo-Org/kilocode/commit/badf70dcedc9559769969c34aff9a63fcc9bdb5f) - Keep Linux sandbox setup working when a writable directory contains an unreadable subdirectory (for example a folder with mode 600); unreadable subdirectories are now protected with a read-only mount instead of failing every sandboxed tool call with an access error.
+
+- Updated dependencies [[`28d015f`](https://github.com/Kilo-Org/kilocode/commit/28d015f8fefd166348e4d4eb0b4c2ae0aa011a03)]:
+  - @kilocode/kilo-memory@7.4.14
+  - @kilocode/kilo-ui@7.4.14
+
 ## 7.4.13
 
 ### Minor Changes
