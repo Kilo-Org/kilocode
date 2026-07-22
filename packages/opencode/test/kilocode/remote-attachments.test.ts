@@ -523,7 +523,7 @@ describe("RemoteAttachments.create().materialize", () => {
     }
   })
 
-  test("materialize after dispose returns the input list unchanged", async () => {
+  test("materialize after dispose fails fetchable parts closed without exposing the URL", async () => {
     const root = await tmpRoot()
     try {
       const r = RemoteAttachments.create({ sessionID: SessionID.make("ses_d"), tmpRoot: root, log: nolog })
@@ -532,8 +532,9 @@ describe("RemoteAttachments.create().materialize", () => {
         { type: "file", mime: "image/png", filename: "x.png", url: "https://acct.r2.cloudflarestorage.com/x.png" },
       ])
       expect(out).toEqual([
-        { type: "file", mime: "image/png", filename: "x.png", url: "https://acct.r2.cloudflarestorage.com/x.png" },
+        { type: "text", text: "attachment x.png could not be retrieved: attachment session is closed" },
       ])
+      expect(JSON.stringify(out)).not.toContain("cloudflarestorage.com")
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }
@@ -573,36 +574,6 @@ describe("RemoteAttachments.create().materialize", () => {
       await materialize
       await dispose
       await expect(fs.stat(scratch(root, "ses_concurrent"))).rejects.toMatchObject({ code: "ENOENT" })
-    } finally {
-      await fs.rm(root, { recursive: true, force: true })
-    }
-  })
-})
-
-describe("RemoteAttachments.cleanupSession", () => {
-  test("removes the per-session scratch directory", async () => {
-    const root = await tmpRoot()
-    try {
-      const dir = scratch(root, "ses_cleanup")
-      await fs.mkdir(dir, { recursive: true, mode: 0o700 })
-      await fs.writeFile(path.join(dir, "x.bin"), new Uint8Array([1]))
-      await RemoteAttachments.cleanupSession(SessionID.make("ses_cleanup"), { tmpRoot: root, log: nolog })
-      const exists = await fs
-        .stat(scratch(root, "ses_cleanup"))
-        .then(() => true)
-        .catch(() => false)
-      expect(exists).toBe(false)
-    } finally {
-      await fs.rm(root, { recursive: true, force: true })
-    }
-  })
-
-  test("is a no-op when the directory does not exist", async () => {
-    const root = await tmpRoot()
-    try {
-      await expect(
-        RemoteAttachments.cleanupSession(SessionID.make("ses_missing"), { tmpRoot: root, log: nolog }),
-      ).resolves.toBeUndefined()
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }

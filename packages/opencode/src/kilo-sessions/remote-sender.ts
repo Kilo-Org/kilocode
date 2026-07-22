@@ -293,6 +293,8 @@ export namespace RemoteSender {
       options.attachments ??
       ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
     const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
+    const pending = new Map<SessionID, number>()
+    const retired = new Map<SessionID, RemoteAttachments.Result>()
     const deleted = new Set<SessionID>()
     let closed = false
     let attachmentBusUnsub: (() => void) | undefined
@@ -303,12 +305,33 @@ export namespace RemoteSender {
         const sid = event?.properties?.sessionID
         if (typeof sid !== "string") return
         const id = SessionID.make(sid)
-        deleted.add(id)
+        if (pending.has(id)) deleted.add(id)
         const result = attachmentCache.get(id)
         if (!result) return
         attachmentCache.delete(id)
+        if (pending.has(id)) {
+          retired.set(id, result)
+          return
+        }
         void result.dispose()
       })
+    }
+    function begin(id: SessionID) {
+      pending.set(id, (pending.get(id) ?? 0) + 1)
+    }
+    function finish(id: SessionID) {
+      const count = pending.get(id)
+      if (!count) return
+      if (count > 1) {
+        pending.set(id, count - 1)
+        return
+      }
+      pending.delete(id)
+      deleted.delete(id)
+      const result = retired.get(id)
+      if (!result) return
+      retired.delete(id)
+      void result.dispose()
     }
     function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
       if (closed || deleted.has(sessionID)) return undefined
@@ -473,18 +496,40 @@ export namespace RemoteSender {
       })
     }
 
-    function dispatchLongRunning(msg: RemoteProtocol.Command, dir: Promise<string>, work: () => Promise<void>) {
+    function dispatchLongRunning(
+      msg: RemoteProtocol.Command,
+      dir: Promise<string>,
+      work: () => Promise<void>,
+      settle?: () => void,
+    ) {
       const run = options.provide ?? provide
+      let settled = false
+      const complete = () => {
+        if (settled) return
+        settled = true
+        settle?.()
+      }
       options.conn.send({ type: "response", id: msg.id, result: {} })
       void (async () => {
         try {
-          await run({ directory: await dir, fn: work })
+          await run({
+            directory: await dir,
+            fn: async () => {
+              try {
+                await work()
+              } finally {
+                complete()
+              }
+            },
+          })
         } catch (e) {
           options.log.error("long-running command failed after ACK", {
             id: msg.id,
             command: msg.command,
             error: String(e),
           })
+        } finally {
+          complete()
         }
       })()
     }
@@ -739,19 +784,26 @@ export namespace RemoteSender {
           return
         }
         const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
-        if (promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))) {
+        const remote = promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))
+        if (remote) {
+          begin(promptInput.sessionID)
           ensureAttachmentListener()
         }
-        dispatchLongRunning(msg, directoryFor(promptInput.sessionID), async () => {
-          // Runs strictly after the synchronous ACK above and strictly before the
-          // existing prompt() call so the resolvePart boundary sees data: URLs
-          // and a scratch path instead of an http(s) URL it cannot fetch.
-          const materializer = attachmentFor(promptInput.sessionID)
-          if (materializer) {
-            promptInput.parts = await materializer.materialize(promptInput.parts)
-          }
-          await prompt(promptInput)
-        })
+        dispatchLongRunning(
+          msg,
+          directoryFor(promptInput.sessionID),
+          async () => {
+            // Runs strictly after the synchronous ACK above and strictly before the
+            // existing prompt() call so the resolvePart boundary sees data: URLs
+            // and a scratch path instead of an http(s) URL it cannot fetch.
+            const materializer = remote ? attachmentFor(promptInput.sessionID) : undefined
+            if (materializer) {
+              promptInput.parts = await materializer.materialize(promptInput.parts)
+            }
+            await prompt(promptInput)
+          },
+          remote ? () => finish(promptInput.sessionID) : undefined,
+        )
         return
       }
       if (msg.command === "interrupt") {
@@ -902,7 +954,11 @@ export namespace RemoteSender {
       // RemoteAttachments.dispose() is best-effort scratch cleanup.
       attachmentBusUnsub?.()
       attachmentBusUnsub = undefined
-      for (const result of attachmentCache.values()) {
+      for (const [id, result] of attachmentCache) {
+        if (pending.has(id)) {
+          retired.set(id, result)
+          continue
+        }
         void result.dispose()
       }
       attachmentCache.clear()

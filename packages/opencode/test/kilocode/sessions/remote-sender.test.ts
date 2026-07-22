@@ -411,6 +411,8 @@ describe("RemoteSender", () => {
     const entered = Promise.withResolvers<void>()
     const release = Promise.withResolvers<void>()
     const finished = Promise.withResolvers<void>()
+    const again = Promise.withResolvers<void>()
+    const cleaned = Promise.withResolvers<void>()
     let factories = 0
     let materialized = 0
     let disposed = 0
@@ -442,10 +444,12 @@ describe("RemoteSender", () => {
         return {
           materialize: async (parts) => {
             materialized++
+            again.resolve()
             return parts
           },
           dispose: async () => {
             disposed++
+            cleaned.resolve()
           },
         }
       },
@@ -469,6 +473,75 @@ describe("RemoteSender", () => {
     expect(disposed).toBe(0)
     expect(subscriptions).toBe(1)
     expect(bus.count()).toBe(1)
+
+    sender.handle({
+      type: "command",
+      id: "req_reused_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_deleted_attachment",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://example.com/a.png" }],
+      },
+    })
+    await again.promise
+    expect(factories).toBe(1)
+    expect(materialized).toBe(1)
+    sender.dispose()
+    await cleaned.promise
+    expect(disposed).toBe(1)
+  })
+
+  test("keeps materialized scratch owned until an in-flight prompt settles after deletion", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const started = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const cleaned = Promise.withResolvers<void>()
+    let disposed = 0
+    let seen: SessionPrompt.PromptInput["parts"] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: bus.subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => input.fn(),
+      prompt: async (input) => {
+        seen = input.parts
+        started.resolve()
+        await release.promise
+      },
+      attachments: () => ({
+        materialize: async () => [{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }],
+        dispose: async () => {
+          disposed++
+          cleaned.resolve()
+        },
+      }),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_prompt_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_prompt_attachment",
+        parts: [
+          { type: "file", mime: "application/octet-stream", filename: "a.bin", url: "https://example.com/a.bin" },
+        ],
+      },
+    })
+    await started.promise
+    bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_prompt_attachment" } })
+
+    expect(seen).toEqual([{ type: "text", text: "attachment saved to /tmp/scratch/file.bin" }])
+    expect(disposed).toBe(0)
+    release.resolve()
+    await cleaned.promise
+    expect(disposed).toBe(1)
     sender.dispose()
   })
 

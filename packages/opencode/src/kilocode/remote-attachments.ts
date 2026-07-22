@@ -357,7 +357,15 @@ export namespace RemoteAttachments {
     }
 
     const materialize = (parts: SessionPrompt.PromptInput["parts"]): Promise<SessionPrompt.PromptInput["parts"]> => {
-      if (closed) return Promise.resolve([...parts])
+      if (closed) {
+        return Promise.resolve(
+          parts.map((part) =>
+            part.type === "file" && isFetchable(part.url)
+              ? failureText(part.filename, "attachment session is closed")
+              : part,
+          ),
+        )
+      }
       const job = run(parts)
       active.add(job)
       void job.then(
@@ -380,32 +388,5 @@ export namespace RemoteAttachments {
   /** Build a `data:` URL from a buffer. */
   export function dataUrl(mime: string, bytes: Uint8Array): string {
     return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`
-  }
-
-  /**
-   * Best-effort removal of a session's scratch directory. The
-   * RemoteSender registers a single Session.Event.Deleted listener that
-   * dispatches here for the matching session id, so a session's scratch
-   * state is reclaimed regardless of which ingress path triggered
-   * deletion.
-   */
-  export async function cleanupSession(
-    sessionID: SessionID,
-    deps?: { tmpRoot?: string; log?: Deps["log"] },
-  ): Promise<void> {
-    const dir = path.join(
-      deps?.tmpRoot ?? Global.Path.tmp,
-      SCRATCH_DIRNAME,
-      Buffer.from(sessionID).toString("base64url"),
-    )
-    const writer = deps?.log ?? {
-      warn: (msg: string, meta?: unknown) => log.warn(msg, meta as never),
-      error: (msg: string, meta?: unknown) => log.error(msg, meta as never),
-    }
-    try {
-      await fs.rm(dir, { recursive: true, force: true })
-    } catch (err) {
-      writer.warn("scratch dir cleanup failed", { sessionID, error: String(err) })
-    }
   }
 }
