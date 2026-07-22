@@ -113,6 +113,7 @@ export const SessionTabSwitcher: Component<SessionTabSwitcherProps> = (props) =>
         modal={false}
         portal={props.portal}
         class="search-menu-popover session-tab-switcher-popover"
+        contentLabel={props.labels.open}
         triggerAs={IconButton}
         triggerProps={{
           type: "button",

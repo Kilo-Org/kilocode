@@ -73,6 +73,7 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
         modal={false}
         portal={props.portal}
         class="search-menu-popover am-sidebar-search-popover"
+        contentLabel={props.labels.search}
         triggerAs={IconButton}
         triggerProps={{
           type: "button",

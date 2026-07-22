@@ -196,4 +196,11 @@ test.describe("webview accessibility ratchet", () => {
     await page.locator('[data-slot="list-item"][data-key="current"]').click()
     await expect(prompt).toBeFocused()
   })
+
+  test("Search popovers expose accessible dialog names", async ({ page }) => {
+    for (const id of ["agentmanager--sidebar-search-open", "session-tabs--switcher-open"]) {
+      await open(page, id)
+      await expect(page.getByRole("dialog")).toHaveAccessibleName(/.+/)
+    }
+  })
 })
