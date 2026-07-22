@@ -235,6 +235,26 @@ describe("RemoteWS", () => {
     expect(parsed.sessions).toEqual([{ id: "s1", status: "active", title: "Test" }])
   })
 
+  test("heartbeat advertises capabilities.attachments = true", async () => {
+    server = createServer()
+    const connecting = server.waitForConnect()
+    const msg = server.waitForMessage()
+
+    conn = RemoteWS.connect({
+      url: server.url,
+      getToken: async () => "tok",
+      getSessions: async () => ({ sessions: [] }),
+      log: nolog(),
+      heartbeat: 100,
+    })
+
+    await connecting
+    await settled()
+    const raw = await msg
+    const parsed = JSON.parse(raw)
+    expect(parsed.capabilities).toEqual({ attachments: true })
+  })
+
   test("serializes concurrent heartbeat snapshots", async () => {
     server = createServer()
     const connecting = server.waitForConnect()

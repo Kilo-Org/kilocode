@@ -256,9 +256,12 @@ export namespace RemoteWS {
               // gatherer provided it. The `lastGood` cache (degraded
               // fallback) intentionally drops the instance — degraded
               // heartbeats must not echo a stale advertisement.
+              // capabilities.attachments is carried from #12394 (mobile file
+              // attachments) — an independent additive heartbeat field.
               send({
                 type: "heartbeat",
                 protocolVersion: InstallationVersion,
+                capabilities: { attachments: true },
                 sessions: fresh.sessions,
                 ...(fresh.instance ? { instance: fresh.instance } : {}),
               })
@@ -300,7 +303,12 @@ export namespace RemoteWS {
             } else {
               // Degraded: preserve liveness with the last known-good list (empty
               // on cold start) and keep waiters pending for a future fresh send.
-              send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: lastGood ?? [] })
+              send({
+                type: "heartbeat",
+                protocolVersion: InstallationVersion,
+                capabilities: { attachments: true },
+                sessions: lastGood ?? [],
+              })
               waiters = cycleWaiters.concat(waiters)
             }
           }
