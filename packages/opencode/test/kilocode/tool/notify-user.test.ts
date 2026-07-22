@@ -1,7 +1,8 @@
-import { describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
 import { Effect, Layer, Schema } from "effect"
 import { Agent } from "@/agent/agent"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import { NotifyUserTool } from "@/kilocode/tool/notify-user"
 import { MessageID, SessionID } from "@/session/schema"
 import * as Truncate from "@/tool/truncate"
@@ -51,6 +52,16 @@ const ctx: Tool.Context = {
   ask: () => Effect.void,
 }
 
+const status = spyOn(KiloSessions, "remoteStatus")
+
+beforeEach(() => {
+  status.mockReturnValue({ enabled: true, connected: true })
+})
+
+afterEach(() => {
+  status.mockReset()
+})
+
 function runNotifyTool(params: { readonly message: string }, sessions: KiloSessions.Interface) {
   const layer = Layer.mergeAll(
     Layer.succeed(KiloSessions.Service, KiloSessions.Service.of(sessions)),
@@ -67,6 +78,15 @@ function runNotifyTool(params: { readonly message: string }, sessions: KiloSessi
 }
 
 describe("notify_user tool", () => {
+  test("is only available while remote is enabled", () => {
+    const tool = { id: "notify_user" } as Tool.Def
+    status.mockReturnValue({ enabled: false, connected: false })
+    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(false)
+
+    status.mockReturnValue({ enabled: true, connected: false })
+    expect(KiloToolRegistry.available(tool, agentInfo)).toBe(true)
+  })
+
   test("registers with id and description", async () => {
     const layer = Layer.mergeAll(
       Layer.succeed(KiloSessions.Service, KiloSessions.Service.of({
@@ -139,6 +159,21 @@ describe("notify_user tool", () => {
 
     expect(result.metadata.ok).toBe(false)
     expect(result.output).toContain("not connected to Kilo cloud")
+  })
+
+  test("does not send when remote is disabled", async () => {
+    status.mockReturnValue({ enabled: false, connected: false })
+    const sessions = KiloSessions.Service.of({
+      init: () => Effect.void,
+      sendAgentNotification: () => Effect.succeed({ ok: true }),
+    })
+    const send = spyOn(sessions, "sendAgentNotification")
+
+    const result = await runNotifyTool({ message: "hello" }, sessions)
+
+    expect(result.metadata.reason).toBe("not_connected")
+    expect(send).not.toHaveBeenCalled()
+    send.mockRestore()
   })
 
   test("returns failure text with arbitrary reason", async () => {

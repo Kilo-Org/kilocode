@@ -35,6 +35,13 @@ export const NotifyUserTool = Tool.define<typeof Params, Meta, KiloSessions.Serv
         Effect.gen(function* () {
           const id = crypto.randomUUID()
           const message = params.message
+          if (!KiloSessions.remoteStatus().enabled) {
+            return {
+              title: title(false),
+              output: FAILURE_TEXT,
+              metadata: { notificationId: id, ok: false, reason: "not_connected" },
+            }
+          }
           const result = yield* sessions.sendAgentNotification(ctx.sessionID, { id, message })
           if (result.ok) {
             return {

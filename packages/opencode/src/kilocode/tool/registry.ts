@@ -177,6 +177,7 @@ export namespace KiloToolRegistry {
 
   /** Hide human-driven tools from agents that cannot interact with the user directly. */
   export function available(tool: Tool.Def, agent: Agent.Info) {
+    if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
     if (tool.id !== "interactive_terminal") return true
     return agent.mode === "primary"
   }
