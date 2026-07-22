@@ -3,6 +3,7 @@ import { CloudError } from "./errors"
 const COMPLETE_GRACE_PERIOD_MS = 3000
 const DEFAULT_STREAM_TIMEOUT_MS = 30_000
 const CLOSE_TIMEOUT_MS = 1000
+const DRAIN_TIMEOUT_MS = 1000
 // Measured via text.length (UTF-16 units), so queued string memory can reach
 // roughly twice this for non-Latin-1 payloads; the goal is boundedness, not precision.
 const MAX_QUEUED_BYTES = 8 * 1024 * 1024
@@ -36,6 +37,7 @@ export function streamAgentEvents(options: StreamAgentEventsOptions): Promise<vo
     let pending: Promise<void> = Promise.resolve()
     let queued = 0
     let writeError = false
+    let aborted = false
 
     function clear() {
       if (completeTimer !== undefined) {
@@ -67,11 +69,27 @@ export function streamAgentEvents(options: StreamAgentEventsOptions): Promise<vo
 
     function fail(message: string) {
       clear()
-      if (!settled) {
-        settled = true
-        socket.close()
-        reject(new CloudError(message))
-      }
+      if (settled) return
+      settled = true
+      socket.close()
+      const timeout = Math.min(options.timeoutMs ?? DRAIN_TIMEOUT_MS, DRAIN_TIMEOUT_MS)
+      const timer = setTimeout(() => {
+        aborted = true
+        reject(new CloudError(writeError ? "WebSocket stream output failed" : message))
+      }, timeout)
+      void pending.then(() => {
+        clearTimeout(timer)
+        reject(new CloudError(writeError ? "WebSocket stream output failed" : message))
+      })
+    }
+
+    function abort(message: string) {
+      aborted = true
+      clear()
+      if (settled) return
+      settled = true
+      socket.close()
+      reject(new CloudError(message))
     }
 
     function arm() {
@@ -97,15 +115,18 @@ export function streamAgentEvents(options: StreamAgentEventsOptions): Promise<vo
       if (settled) return
       const text = normalizeMessageData(event.data)
       if (queued >= MAX_QUEUED_BYTES) {
-        fail("WebSocket stream output consumer is too slow")
+        abort("WebSocket stream output consumer is too slow")
         return
       }
       queued += text.length
       pending = pending
-        .then(() => options.writeLine(text))
+        .then(() => {
+          if (aborted) return
+          return options.writeLine(text)
+        })
         .catch(() => {
           writeError = true
-          fail("WebSocket stream output failed")
+          abort("WebSocket stream output failed")
         })
         .finally(() => {
           queued -= text.length

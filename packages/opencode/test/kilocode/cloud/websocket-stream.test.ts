@@ -202,6 +202,45 @@ describe("streamAgentEvents", () => {
     expect(lines).toEqual(['{"event":"one"}', '{"event":"two"}'])
   })
 
+  test("flushes slow writes in order before rejecting a transport failure", async () => {
+    const lines: string[] = []
+    const Socket = mockWebSocket([
+      { type: "message", data: '{"event":"one"}' },
+      { type: "message", data: '{"event":"two"}' },
+      { type: "close", code: 1011 },
+    ])
+
+    await expect(
+      streamAgentEvents({
+        streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
+        origin: "https://agent.example",
+        writeLine: async (line) => {
+          await new Promise((resolve) => setTimeout(resolve, 10))
+          lines.push(line)
+        },
+        WebSocket: Socket as unknown as typeof WebSocket,
+      }),
+    ).rejects.toThrow("WebSocket stream closed unexpectedly (1011)")
+    expect(lines).toEqual(['{"event":"one"}', '{"event":"two"}'])
+  })
+
+  test("bounds transport failure draining when an output write stalls", async () => {
+    const Socket = mockWebSocket([
+      { type: "message", data: '{"event":"one"}' },
+      { type: "close", code: 1011 },
+    ])
+
+    await expect(
+      streamAgentEvents({
+        streamUrl: "/stream?cloudAgentSessionId=agent_123&ticket=tok",
+        origin: "https://agent.example",
+        writeLine: () => new Promise(() => {}),
+        WebSocket: Socket as unknown as typeof WebSocket,
+        timeoutMs: 10,
+      }),
+    ).rejects.toThrow("WebSocket stream closed unexpectedly (1011)")
+  })
+
   test("rejects when a stream output write fails", async () => {
     const lines: string[] = []
     const Socket = mockWebSocket([
