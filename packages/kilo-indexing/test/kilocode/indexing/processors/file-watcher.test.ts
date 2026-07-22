@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test"
-import { mkdtemp, mkdir, rm, writeFile } from "fs/promises"
+import { mkdtemp, mkdir, rm, stat, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { createHash } from "crypto"
@@ -506,6 +506,12 @@ describe("FileWatcher", () => {
     expect(overlay.shadows.has("file.ts")).toBe(true)
     expect(overlay.blocked.has("file.ts")).toBe(false)
     expect(cache.getHash(file)).toBe(createHash("sha256").update(changed).digest("hex"))
+    const info = await stat(file)
+    expect(cache.getMetadata(file)).toEqual({
+      size: info.size,
+      mtimeMs: info.mtimeMs,
+      ctimeMs: info.ctimeMs,
+    })
 
     await writeFile(file, baseline)
     overlay.block(file)
@@ -514,6 +520,7 @@ describe("FileWatcher", () => {
     expect(overlay.shadows.has("file.ts")).toBe(false)
     expect(overlay.blocked.has("file.ts")).toBe(false)
     expect(cache.getHash(file)).toBe(baselineHash)
+    expect(cache.getMetadata(file)).toBeUndefined()
     expect(store.points.length).toBeGreaterThan(0)
     const count = store.points.length
 
@@ -605,7 +612,10 @@ describe("FileWatcher", () => {
 
     const first = await watcher.processFile(custom)
     expect(first.status).toBe("processed_for_batching")
-    if (first.status === "processed_for_batching" && first.newHash) cache.updateHash(custom, first.newHash)
+    if (first.status === "processed_for_batching" && first.newHash) {
+      expect(first.metadata).toBeDefined()
+      cache.updateHash(custom, first.newHash, first.metadata)
+    }
     expect(await watcher.processFile(excluded)).toMatchObject({
       status: "skipped",
       reason: "File extension is not configured for indexing",

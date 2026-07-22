@@ -20,6 +20,7 @@ import {
   type IVectorStore,
   type PointStruct,
   type BatchProcessingSummary,
+  type CacheMetadata,
 } from "../interfaces"
 import type { IndexingTelemetryMeta, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import { codeParser } from "./parser"
@@ -357,11 +358,11 @@ export class FileWatcher implements IFileWatcher {
     pathsToExplicitlyDelete: string[],
   ): Promise<{
     pointsForBatchUpsert: PointStruct[]
-    successfullyProcessedForUpsert: Array<{ path: string; newHash?: string }>
+    successfullyProcessedForUpsert: Array<{ path: string; newHash?: string; metadata?: CacheMetadata }>
     processedCount: number
   }> {
     const pointsForBatchUpsert: PointStruct[] = []
-    const successfullyProcessedForUpsert: Array<{ path: string; newHash?: string }> = []
+    const successfullyProcessedForUpsert: Array<{ path: string; newHash?: string; metadata?: CacheMetadata }> = []
     const filesToProcessConcurrently = [...filesToUpsertDetails]
 
     for (let i = 0; i < filesToProcessConcurrently.length; i += this.FILE_PROCESSING_CONCURRENCY_LIMIT) {
@@ -400,7 +401,11 @@ export class FileWatcher implements IFileWatcher {
             } else if (result.status === "processed_for_batching" && result.pointsToUpsert) {
               pointsForBatchUpsert.push(...result.pointsToUpsert)
               if (result.path && result.newHash) {
-                successfullyProcessedForUpsert.push({ path: result.path, newHash: result.newHash })
+                successfullyProcessedForUpsert.push({
+                  path: result.path,
+                  newHash: result.newHash,
+                  metadata: result.metadata,
+                })
               } else if (result.path && !result.newHash) {
                 successfullyProcessedForUpsert.push({ path: result.path })
               }
@@ -452,7 +457,7 @@ export class FileWatcher implements IFileWatcher {
    */
   private async _executeBatchUpsertOperations(
     pointsForBatchUpsert: PointStruct[],
-    successfullyProcessedForUpsert: Array<{ path: string; newHash?: string }>,
+    successfullyProcessedForUpsert: Array<{ path: string; newHash?: string; metadata?: CacheMetadata }>,
     batchResults: FileProcessingResult[],
     overallBatchError?: Error,
   ): Promise<Error | undefined> {
@@ -493,7 +498,7 @@ export class FileWatcher implements IFileWatcher {
         }
 
         for (const item of successfullyProcessedForUpsert) {
-          if (item.newHash) this.cacheManager.updateHash(item.path, item.newHash)
+          if (item.newHash) this.cacheManager.updateHash(item.path, item.newHash, item.metadata)
           batchResults.push({ path: item.path, status: "success", newHash: item.newHash })
         }
       } catch (error) {
@@ -810,6 +815,11 @@ export class FileWatcher implements IFileWatcher {
         path: filePath,
         status: "processed_for_batching" as const,
         newHash,
+        metadata: {
+          size: fileStat.size,
+          mtimeMs: fileStat.mtimeMs,
+          ctimeMs: fileStat.ctimeMs,
+        },
         pointsToUpsert,
       }
     } catch (error) {
