@@ -13,7 +13,7 @@ import ai.kilocode.client.settings.base.SettingsListConfig
 import ai.kilocode.client.settings.base.SettingsListCell
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.settings.base.SettingsListSelection
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
@@ -289,7 +289,7 @@ internal class AgentsSettingsUi(
         }
         syncNames()
         syncPicker()
-        view.update(rows(), SettingsListSelection.Key(agent.name))
+        view.update(rows(), ActiveListSelection.Key(agent.name))
     }
 
     private fun undo(name: String) {
@@ -303,7 +303,7 @@ internal class AgentsSettingsUi(
         }
         syncNames()
         syncPicker()
-        view.update(rows(), SettingsListSelection.Key(name))
+        view.update(rows(), ActiveListSelection.Key(name))
     }
 
     private fun syncNames() {
@@ -349,7 +349,7 @@ internal class AgentsSettingsUi(
             }
             syncNames()
             syncPicker()
-            view.update(rows(), SettingsListSelection.Key(input.name))
+            view.update(rows(), ActiveListSelection.Key(input.name))
         }
     }
 
@@ -368,7 +368,7 @@ internal class AgentsSettingsUi(
                     this@AgentsSettingsUi.state.update { copy(imported = imported + (input.name to input.patch)) }
                     syncNames()
                     syncPicker()
-                    view.update(rows(), SettingsListSelection.Key(input.name))
+                    view.update(rows(), ActiveListSelection.Key(input.name))
                     setBusy(false)
                     clearProgress()
                 }

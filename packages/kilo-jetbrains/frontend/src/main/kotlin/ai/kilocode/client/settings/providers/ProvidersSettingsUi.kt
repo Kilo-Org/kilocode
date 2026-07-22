@@ -5,7 +5,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseContentPanel
 import ai.kilocode.client.settings.base.SettingsPanel
 import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListSelection
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.settings.base.SettingsToolbarAction
 import ai.kilocode.client.settings.base.SettingsListView
 import ai.kilocode.client.settings.auth.DeviceOAuthInfo
@@ -507,7 +507,7 @@ internal class ProvidersContent(
         ProvidersSettingsUi.LOG.info("provider settings content update: start providers=${state.providers.size} connected=${state.connected.size} disabled=${state.disabled.size} descriptions=$notes")
         this.state = state
         val rows = providerListRows(state, "", disabledRows = busy)
-        if (select != null) view.update(rows, SettingsListSelection.Key(select)) else view.update(rows)
+        if (select != null) view.update(rows, ActiveListSelection.Key(select)) else view.update(rows)
         ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${rows.size}")
     }
 

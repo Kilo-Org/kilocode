@@ -2,6 +2,7 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListSelection
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
@@ -306,7 +307,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val before = scroll.viewport.viewPosition.y
             assertTrue("expected a scrolled viewport", before > 0)
 
-            view.update(rows, SettingsListSelection.PreserveNoScroll)
+            view.update(rows, ActiveListSelection.PreserveNoScroll)
             UIUtil.dispatchAllInvocationEvents()
 
             assertEquals(before, scroll.viewport.viewPosition.y)
@@ -320,7 +321,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null)))
             view.update(
                 listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)),
-                SettingsListSelection.Key("c"),
+                ActiveListSelection.Key("c"),
             )
 
             assertEquals("c", view.selected()?.key)
@@ -332,7 +333,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val view = SettingsListView("Empty") { _, _ -> }
             view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)))
             view.list.selectedIndex = 1
-            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), SettingsListSelection.Index(1))
+            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), ActiveListSelection.Index(1))
 
             assertEquals("c", view.selected()?.key)
         }

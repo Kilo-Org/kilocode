@@ -13,7 +13,7 @@ import ai.kilocode.client.settings.base.SettingsListCell
 import ai.kilocode.client.settings.base.SettingsListConfig
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.settings.base.SettingsListSelection
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.settings.base.SettingsListView
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.ui.UiStyle
@@ -263,7 +263,7 @@ internal class SkillsSettingsUi(
         }
         if (!dialog.showAndGet()) return
         state.update { copy(edited = edited + (skill.location to dialog.content())) }
-        view.update(rows(), SettingsListSelection.Key(key(skill)))
+        view.update(rows(), ActiveListSelection.Key(key(skill)))
     }
 
     private fun open(skill: SkillDto) {

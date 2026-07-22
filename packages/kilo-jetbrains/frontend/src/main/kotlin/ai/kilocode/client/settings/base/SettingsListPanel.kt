@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.icons.AllIcons
@@ -73,7 +74,7 @@ internal abstract class SettingsListPanel(
     open fun reload() {
         checkEdt()
         pending = false
-        if (!reload(SettingsListSelection.Preserve)) return
+        if (!reload(ActiveListSelection.Preserve)) return
         showProgress(loadingText())
     }
 
@@ -91,7 +92,7 @@ internal abstract class SettingsListPanel(
 
     @RequiresEdt
     protected fun mutateAndReload(
-        selection: SettingsListSelection = SettingsListSelection.Preserve,
+        selection: SettingsListSelection = ActiveListSelection.Preserve,
         text: String = loadingText(),
         block: suspend () -> Boolean,
     ) = mutateAndReload({ selection }, text, block)
@@ -139,7 +140,7 @@ internal abstract class SettingsListPanel(
     @RequiresEdt
     protected fun selectionIndex(): SettingsListSelection {
         checkEdt()
-        return SettingsListSelection.Index(view.selectedIndex())
+        return ActiveListSelection.Index(view.selectedIndex())
     }
 
     private fun header(): JComponent {

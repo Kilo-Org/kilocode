@@ -7,7 +7,7 @@ import ai.kilocode.client.settings.base.SettingsListConfig
 import ai.kilocode.client.settings.base.SettingsListCell
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.settings.base.SettingsListSelection
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
@@ -174,7 +174,7 @@ internal class McpSettingsUi(
     }
 
     private fun mutate(name: String, block: suspend () -> Boolean) {
-        mutateAndReload(SettingsListSelection.Key(name)) {
+        mutateAndReload(ActiveListSelection.Key(name)) {
             if (!block()) throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.mcp.action.failed"))
             true
         }

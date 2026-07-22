@@ -2,6 +2,7 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListSelection
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionToolbar
@@ -79,7 +80,7 @@ internal abstract class SettingsInlineListPanel(
         setEnabled(enabled)
         syncing = true
         try {
-            view.update(items, SettingsListSelection.PreserveNoScroll)
+            view.update(items, ActiveListSelection.PreserveNoScroll)
         } finally {
             syncing = false
         }
