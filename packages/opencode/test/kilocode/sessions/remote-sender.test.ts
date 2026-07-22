@@ -341,6 +341,136 @@ describe("RemoteSender", () => {
     await Promise.resolve()
     await materializeStarted
   })
+
+  test("does not create attachments when delayed send resumes after dispose", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const finished = Promise.withResolvers<void>()
+    let factories = 0
+    let materialized = 0
+    let subscriptions = 0
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: (callback) => {
+        subscriptions++
+        return bus.subscribe(callback)
+      },
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        entered.resolve()
+        await release.promise
+        try {
+          return await input.fn()
+        } finally {
+          finished.resolve()
+        }
+      },
+      prompt: async () => {},
+      attachments: () => {
+        factories++
+        return {
+          materialize: async (parts) => {
+            materialized++
+            return parts
+          },
+          dispose: async () => {},
+        }
+      },
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_disposed_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_disposed_attachment",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://example.com/a.png" }],
+      },
+    })
+    await entered.promise
+    sender.dispose()
+    release.resolve()
+    await finished.promise
+
+    expect(factories).toBe(0)
+    expect(materialized).toBe(0)
+    expect(subscriptions).toBe(1)
+    expect(bus.count()).toBe(0)
+  })
+
+  test("does not create first attachments when delayed send resumes after session deletion", async () => {
+    const { conn } = fakeConn()
+    const bus = fakeBus()
+    const entered = Promise.withResolvers<void>()
+    const release = Promise.withResolvers<void>()
+    const finished = Promise.withResolvers<void>()
+    let factories = 0
+    let materialized = 0
+    let disposed = 0
+    let subscriptions = 0
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/tmp/test",
+      log: nolog,
+      subscribe: (callback) => {
+        subscriptions++
+        return bus.subscribe(callback)
+      },
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        entered.resolve()
+        await release.promise
+        try {
+          return await input.fn()
+        } finally {
+          finished.resolve()
+        }
+      },
+      prompt: async () => {},
+      attachments: () => {
+        factories++
+        return {
+          materialize: async (parts) => {
+            materialized++
+            return parts
+          },
+          dispose: async () => {
+            disposed++
+          },
+        }
+      },
+    })
+    sender.handle({
+      type: "command",
+      id: "req_deleted_attachment",
+      command: "send_message",
+      data: {
+        sessionID: "ses_deleted_attachment",
+        parts: [{ type: "file", mime: "image/png", filename: "a.png", url: "https://example.com/a.png" }],
+      },
+    })
+    await entered.promise
+    bus.fire({ type: Session.Event.Deleted.type, properties: { sessionID: "ses_deleted_attachment" } })
+    release.resolve()
+    await finished.promise
+
+    expect(factories).toBe(0)
+    expect(materialized).toBe(0)
+    expect(disposed).toBe(0)
+    expect(subscriptions).toBe(1)
+    expect(bus.count()).toBe(1)
+    sender.dispose()
+  })
   // kilocode_change end
 
   test("send_message keeps client toggles persistent and terminal restriction ephemeral", async () => {

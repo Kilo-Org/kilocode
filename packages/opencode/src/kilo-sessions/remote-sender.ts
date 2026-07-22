@@ -295,20 +295,25 @@ export namespace RemoteSender {
       options.attachments ??
       ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
     const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
+    const deleted = new Set<SessionID>()
+    let closed = false
     let attachmentBusUnsub: (() => void) | undefined
     const ensureAttachmentListener = () => {
-      if (attachmentBusUnsub) return
+      if (closed || attachmentBusUnsub) return
       attachmentBusUnsub = sub((event: any) => {
         if (event?.type !== Session.Event.Deleted.type) return
         const sid = event?.properties?.sessionID
         if (typeof sid !== "string") return
-        const result = attachmentCache.get(SessionID.make(sid))
+        const id = SessionID.make(sid)
+        deleted.add(id)
+        const result = attachmentCache.get(id)
         if (!result) return
-        attachmentCache.delete(SessionID.make(sid))
+        attachmentCache.delete(id)
         void result.dispose()
       })
     }
     function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
+      if (closed || deleted.has(sessionID)) return undefined
       const existing = attachmentCache.get(sessionID)
       if (existing) return existing
       const next = attachments(sessionID)
@@ -724,6 +729,10 @@ export namespace RemoteSender {
           return
         }
         const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
+        // kilocode_change - observe deletion before async directory/provide boundaries without creating scratch state
+        if (promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))) {
+          ensureAttachmentListener()
+        }
         dispatchLongRunning(msg, directoryFor(promptInput.sessionID), async () => {
           // kilocode_change start - materialize remote attachment parts before prompt().
           // Runs strictly after the synchronous ACK above and strictly before the
@@ -877,6 +886,8 @@ export namespace RemoteSender {
     }
 
     function dispose() {
+      // kilocode_change - prevent already-ACKed work from recreating attachment ownership during teardown
+      closed = true
       if (unsub) {
         unsub()
         unsub = undefined

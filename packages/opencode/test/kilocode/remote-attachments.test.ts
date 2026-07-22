@@ -3,10 +3,14 @@ import fs from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { RemoteAttachments } from "../../src/kilocode/remote-attachments"
-import { SessionID } from "../../src/session/schema"
+import { PartID, SessionID } from "../../src/session/schema"
 
 async function tmpRoot() {
   return fs.mkdtemp(path.join(os.tmpdir(), "remote-attachments-test-"))
+}
+
+function scratch(root: string, sessionID: string) {
+  return path.join(root, RemoteAttachments.SCRATCH_DIRNAME, Buffer.from(sessionID).toString("base64url"))
 }
 
 const nolog = {
@@ -82,15 +86,15 @@ describe("RemoteAttachments.classify / EXTENSION_MIME", () => {
 
 describe("RemoteAttachments.isFetchable", () => {
   test("matches http and https", () => {
-    expect(RemoteAttachments.isFetchable("https://r2.example/abc")).toBe(true)
-    expect(RemoteAttachments.isFetchable("http://r2.example/abc")).toBe(true)
-    expect(RemoteAttachments.isFetchable("HTTPS://r2.example/abc")).toBe(true)
+    expect(RemoteAttachments.isFetchable("https://acct.r2.cloudflarestorage.com/abc")).toBe(true)
+    expect(RemoteAttachments.isFetchable("http://acct.r2.cloudflarestorage.com/abc")).toBe(true)
+    expect(RemoteAttachments.isFetchable("HTTPS://acct.r2.cloudflarestorage.com/abc")).toBe(true)
   })
 
   test("rejects non-http schemes", () => {
     expect(RemoteAttachments.isFetchable("data:text/plain,hi")).toBe(false)
     expect(RemoteAttachments.isFetchable("file:///etc/passwd")).toBe(false)
-    expect(RemoteAttachments.isFetchable("ftp://r2.example/abc")).toBe(false)
+    expect(RemoteAttachments.isFetchable("ftp://acct.r2.cloudflarestorage.com/abc")).toBe(false)
   })
 })
 
@@ -121,7 +125,7 @@ describe("RemoteAttachments.fetchOne safety", () => {
     let f: any
     try {
       await expect(
-        RemoteAttachments.fetchOne("http://r2.example/abc", {
+        RemoteAttachments.fetchOne("http://acct.r2.cloudflarestorage.com/abc", {
           fetch: (f = async () => okResponse("x")),
         }),
       ).rejects.toMatchObject({ kind: "https" })
@@ -131,9 +135,33 @@ describe("RemoteAttachments.fetchOne safety", () => {
   })
 
   test("rejects malformed URL", async () => {
+    const secret = "secret-token"
+    const err = await RemoteAttachments.fetchOne(`not a url?token=${secret}`, {
+      fetch: async () => okResponse("x"),
+    }).then(
+      () => undefined,
+      (error) => error as Error,
+    )
+    expect(err).toMatchObject({ kind: "https" })
+    expect(err?.message).not.toContain(secret)
+  })
+
+  test("accepts only Cloudflare R2 hosts", async () => {
+    const f = async () => okResponse("x")
     await expect(
-      RemoteAttachments.fetchOne("not a url", { fetch: async () => okResponse("x") }),
-    ).rejects.toMatchObject({ kind: "https" })
+      RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/file", { fetch: f }),
+    ).resolves.toBeInstanceOf(Uint8Array)
+    await expect(
+      RemoteAttachments.fetchOne("https://bucket.acct.r2.cloudflarestorage.com/file", { fetch: f }),
+    ).resolves.toBeInstanceOf(Uint8Array)
+    for (const url of [
+      "https://r2.cloudflarestorage.com/file",
+      "https://r2.cloudflarestorage.com.evil.test/file",
+      "https://internal.example/file",
+      "https://user:pass@acct.r2.cloudflarestorage.com/file",
+    ]) {
+      await expect(RemoteAttachments.fetchOne(url, { fetch: f })).rejects.toBeDefined()
+    }
   })
 
   test("rejects redirects by passing redirect: error", async () => {
@@ -144,7 +172,9 @@ describe("RemoteAttachments.fetchOne safety", () => {
       const err = new TypeError("Failed to fetch: redirect not allowed")
       throw err
     }
-    await expect(RemoteAttachments.fetchOne("https://r2.example/abc", { fetch: f })).rejects.toMatchObject({
+    await expect(
+      RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/abc", { fetch: f }),
+    ).rejects.toMatchObject({
       kind: "redirect",
     })
     expect(captured?.redirect).toBe("error")
@@ -152,7 +182,9 @@ describe("RemoteAttachments.fetchOne safety", () => {
 
   test("rejects non-2xx responses", async () => {
     const f = async () => jsonResponse(404)
-    await expect(RemoteAttachments.fetchOne("https://r2.example/missing", { fetch: f })).rejects.toMatchObject({
+    await expect(
+      RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/missing", { fetch: f }),
+    ).rejects.toMatchObject({
       kind: "non-2xx",
       status: 404,
     })
@@ -169,7 +201,9 @@ describe("RemoteAttachments.fetchOne safety", () => {
       },
     })
     const f = async () => new Response(stream, { status: 200 })
-    await expect(RemoteAttachments.fetchOne("https://r2.example/big", { fetch: f })).rejects.toMatchObject({
+    await expect(
+      RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/big", { fetch: f }),
+    ).rejects.toMatchObject({
       kind: "overflow",
     })
   })
@@ -183,7 +217,15 @@ describe("RemoteAttachments.fetchOne safety", () => {
         })
       })
     await expect(
-      RemoteAttachments.fetchOne("https://r2.example/slow", { fetch: f, timeoutMs: 25 }),
+      RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/slow", { fetch: f, timeoutMs: 25 }),
+    ).rejects.toMatchObject({ kind: "timeout" })
+  })
+
+  test("keeps the timeout active while reading the body", async () => {
+    const stream = new ReadableStream({ pull: () => new Promise(() => {}) })
+    const f = async () => new Response(stream, { status: 200 })
+    await expect(
+      RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/stalled", { fetch: f, timeoutMs: 25 }),
     ).rejects.toMatchObject({ kind: "timeout" })
   })
 
@@ -193,7 +235,7 @@ describe("RemoteAttachments.fetchOne safety", () => {
       captured = init
       return okResponse("hi")
     }
-    await RemoteAttachments.fetchOne("https://r2.example/abc", { fetch: f })
+    await RemoteAttachments.fetchOne("https://acct.r2.cloudflarestorage.com/abc", { fetch: f })
     expect(captured?.credentials).toBe("omit")
   })
 })
@@ -233,16 +275,22 @@ describe("RemoteAttachments.create().materialize", () => {
         log: nolog,
       })
       const out = await r.materialize([
-        { id: "att-csv", type: "file", mime: "text/csv", filename: "report.csv", url: "https://r2.example/report.csv" },
+        {
+          id: PartID.make("prt_csv"),
+          type: "file",
+          mime: "text/csv",
+          filename: "report.csv",
+          url: "https://acct.r2.cloudflarestorage.com/report.csv",
+        },
       ])
       expect(out).toHaveLength(1)
       const file = out[0] as any
       expect(file.type).toBe("file")
-      expect(file.id).toBe("att-csv")
+      expect(file.id).toBe("prt_csv")
       expect(file.mime).toBe("text/plain")
       expect(file.filename).toBe("report.csv")
       expect(file.url).toStartWith("data:text/plain;base64,")
-      expect(file.source).toEqual({ type: "remote", url: "https://r2.example/report.csv" })
+      expect(file).not.toHaveProperty("source")
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }
@@ -260,7 +308,13 @@ describe("RemoteAttachments.create().materialize", () => {
         log: nolog,
       })
       const out = await r.materialize([
-        { id: "att-png", type: "file", mime: "image/png", filename: "photo.png", url: "https://r2.example/photo.png" },
+        {
+          id: PartID.make("prt_png"),
+          type: "file",
+          mime: "image/png",
+          filename: "photo.png",
+          url: "https://acct.r2.cloudflarestorage.com/photo.png",
+        },
       ])
       expect(out).toHaveLength(1)
       const file = out[0] as any
@@ -284,7 +338,13 @@ describe("RemoteAttachments.create().materialize", () => {
         log: nolog,
       })
       const out = await r.materialize([
-        { id: "att-pdf", type: "file", mime: "application/pdf", filename: "doc.pdf", url: "https://r2.example/doc.pdf" },
+        {
+          id: PartID.make("prt_pdf"),
+          type: "file",
+          mime: "application/pdf",
+          filename: "doc.pdf",
+          url: "https://acct.r2.cloudflarestorage.com/doc.pdf",
+        },
       ])
       expect(out).toHaveLength(1)
       const file = out[0] as any
@@ -292,7 +352,7 @@ describe("RemoteAttachments.create().materialize", () => {
       expect(file.mime).toBe("application/pdf")
       expect(file.url).toStartWith("data:application/pdf;base64,")
       // No text part was emitted — the PDF falls through to the existing resolvePart path.
-      const dir = path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_pdf")
+      const dir = scratch(root, "ses_pdf")
       const entries = await fs.readdir(dir).catch(() => [] as string[])
       expect(entries).toEqual([])
     } finally {
@@ -312,54 +372,63 @@ describe("RemoteAttachments.create().materialize", () => {
         log: nolog,
       })
       const out = await r.materialize([
-        { id: "att-bin", type: "file", mime: "application/octet-stream", filename: "blob.bin", url: "https://r2.example/blob.bin" },
+        {
+          id: PartID.make("prt_bin"),
+          type: "file",
+          mime: "application/octet-stream",
+          filename: "blob.bin",
+          url: "https://acct.r2.cloudflarestorage.com/blob.bin",
+        },
       ])
       expect(out).toHaveLength(1)
       const text = out[0] as any
       expect(text.type).toBe("text")
-      expect(text.text).toContain(path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_bin", "att-bin.bin"))
+      const dir = scratch(root, "ses_bin")
+      expect(text.text).toContain(dir)
       expect(text.text).toContain("filename: blob.bin")
       expect(text.text).toContain("mime: application/octet-stream")
       expect(text.text).toContain(`size: ${bin.byteLength} bytes`)
 
-      const dir = path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_bin")
       const entries = await fs.readdir(dir)
-      expect(entries).toEqual(["att-bin.bin"])
-      const written = await fs.readFile(path.join(dir, "att-bin.bin"))
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toMatch(/^[0-9a-f-]{36}\.bin$/)
+      const written = await fs.readFile(path.join(dir, entries[0]!))
       expect(Array.from(written)).toEqual(Array.from(bin))
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }
   })
 
-  test("basename is derived from attachmentId and validated extension, NOT from the client filename", async () => {
+  test("confines schema-valid malicious attachment and session ids", async () => {
     const root = await tmpRoot()
     try {
       const f = async () => okResponse(new Uint8Array([0]))
+      const sessionID = SessionID.make("ses_../../escaped")
       const r = RemoteAttachments.create({
-        sessionID: SessionID.make("ses_trav"),
+        sessionID,
         tmpRoot: root,
         fetch: f,
         log: nolog,
       })
-      // Filename contains a path-separator attempt and an extension that
-      // safeExtension would sanitize. The actual on-disk basename must use
-      // the part's id and the sanitized "bin" extension.
+      // Both branded IDs satisfy their schemas because only the prefix is checked.
       const out = await r.materialize([
         {
-          id: "att-trav",
+          id: PartID.make("prt_../../escaped"),
           type: "file",
           mime: "application/octet-stream",
           filename: "../../../etc/passwd",
-          url: "https://r2.example/x.bin",
+          url: "https://acct.r2.cloudflarestorage.com/x.bin",
         },
       ])
       const text = out[0] as any
-      expect(text.text).toContain("att-trav.bin")
-      // Confirm the file landed in the session scratch dir, NOT somewhere else.
-      const dir = path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_trav")
+      const base = path.join(root, RemoteAttachments.SCRATCH_DIRNAME)
+      const dir = scratch(root, sessionID)
       const entries = await fs.readdir(dir)
-      expect(entries).toEqual(["att-trav.bin"])
+      expect(path.relative(base, dir)).not.toStartWith("..")
+      expect(entries).toHaveLength(1)
+      expect(entries[0]).toMatch(/^[0-9a-f-]{36}\.bin$/)
+      expect(text.text).toContain(path.join(dir, entries[0]!))
+      expect(text.text).not.toContain("prt_../../escaped")
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }
@@ -376,10 +445,15 @@ describe("RemoteAttachments.create().materialize", () => {
         log: nolog,
       })
       const out = await r.materialize([
-        { type: "file", mime: "application/octet-stream", filename: "blob.bin", url: "https://r2.example/blob.bin" },
+        {
+          type: "file",
+          mime: "application/octet-stream",
+          filename: "blob.bin",
+          url: "https://acct.r2.cloudflarestorage.com/blob.bin",
+        },
       ])
       const text = out[0] as any
-      const dir = path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_noid")
+      const dir = scratch(root, "ses_noid")
       const entries = await fs.readdir(dir)
       expect(entries).toHaveLength(1)
       const name = entries[0]!
@@ -406,8 +480,13 @@ describe("RemoteAttachments.create().materialize", () => {
       })
       const out = await r.materialize([
         { type: "text", text: "see attached" },
-        { type: "file", mime: "image/png", filename: "good.png", url: "https://r2.example/good.png" },
-        { type: "file", mime: "image/png", filename: "bad.png", url: "https://r2.example/bad.png" },
+        {
+          type: "file",
+          mime: "image/png",
+          filename: "good.png",
+          url: "https://acct.r2.cloudflarestorage.com/good.png",
+        },
+        { type: "file", mime: "image/png", filename: "bad.png", url: "https://acct.r2.cloudflarestorage.com/bad.png" },
       ])
       expect(out).toHaveLength(3)
       expect((out[0] as any).type).toBe("text")
@@ -419,17 +498,81 @@ describe("RemoteAttachments.create().materialize", () => {
     }
   })
 
+  test("does not expose attachment URLs in errors or logs", async () => {
+    const root = await tmpRoot()
+    try {
+      const secret = "secret-token"
+      const url = `https://acct.r2.cloudflarestorage.com/file?token=${secret}`
+      const logs: unknown[] = []
+      const r = RemoteAttachments.create({
+        sessionID: SessionID.make("ses_secret"),
+        tmpRoot: root,
+        fetch: async () => {
+          throw new Error(url)
+        },
+        log: {
+          warn: (_msg, meta) => logs.push(meta),
+          error: (_msg, meta) => logs.push(meta),
+        },
+      })
+      const out = await r.materialize([{ type: "file", mime: "image/png", filename: "safe.png", url }])
+      expect(JSON.stringify({ out, logs })).not.toContain(secret)
+      expect(JSON.stringify({ out, logs })).not.toContain(url)
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
   test("materialize after dispose returns the input list unchanged", async () => {
     const root = await tmpRoot()
     try {
       const r = RemoteAttachments.create({ sessionID: SessionID.make("ses_d"), tmpRoot: root, log: nolog })
       await r.dispose()
       const out = await r.materialize([
-        { type: "file", mime: "image/png", filename: "x.png", url: "https://r2.example/x.png" },
+        { type: "file", mime: "image/png", filename: "x.png", url: "https://acct.r2.cloudflarestorage.com/x.png" },
       ])
       expect(out).toEqual([
-        { type: "file", mime: "image/png", filename: "x.png", url: "https://r2.example/x.png" },
+        { type: "file", mime: "image/png", filename: "x.png", url: "https://acct.r2.cloudflarestorage.com/x.png" },
       ])
+    } finally {
+      await fs.rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test("dispose waits for an already-started materialize before removing scratch", async () => {
+    const root = await tmpRoot()
+    try {
+      let ready!: () => void
+      const started = new Promise<void>((resolve) => {
+        ready = resolve
+      })
+      let release!: (response: Response) => void
+      const response = new Promise<Response>((resolve) => {
+        release = resolve
+      })
+      const r = RemoteAttachments.create({
+        sessionID: SessionID.make("ses_concurrent"),
+        tmpRoot: root,
+        fetch: () => {
+          ready()
+          return response
+        },
+        log: nolog,
+      })
+      const materialize = r.materialize([
+        {
+          type: "file",
+          mime: "application/octet-stream",
+          filename: "blob.bin",
+          url: "https://acct.r2.cloudflarestorage.com/blob.bin",
+        },
+      ])
+      await started
+      const dispose = r.dispose()
+      release(okResponse(new Uint8Array([1])))
+      await materialize
+      await dispose
+      await expect(fs.stat(scratch(root, "ses_concurrent"))).rejects.toMatchObject({ code: "ENOENT" })
     } finally {
       await fs.rm(root, { recursive: true, force: true })
     }
@@ -440,12 +583,12 @@ describe("RemoteAttachments.cleanupSession", () => {
   test("removes the per-session scratch directory", async () => {
     const root = await tmpRoot()
     try {
-      const dir = path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_cleanup")
+      const dir = scratch(root, "ses_cleanup")
       await fs.mkdir(dir, { recursive: true, mode: 0o700 })
       await fs.writeFile(path.join(dir, "x.bin"), new Uint8Array([1]))
       await RemoteAttachments.cleanupSession(SessionID.make("ses_cleanup"), { tmpRoot: root, log: nolog })
       const exists = await fs
-        .stat(path.join(root, RemoteAttachments.SCRATCH_DIRNAME, "ses_cleanup"))
+        .stat(scratch(root, "ses_cleanup"))
         .then(() => true)
         .catch(() => false)
       expect(exists).toBe(false)

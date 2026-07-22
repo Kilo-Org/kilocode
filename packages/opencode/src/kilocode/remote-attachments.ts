@@ -20,7 +20,8 @@ import path from "node:path"
 import fs from "node:fs/promises"
 import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
-import type { SessionID } from "@/session/schema"
+import { PartID, type SessionID } from "@/session/schema"
+import type { SessionPrompt } from "@/session/prompt"
 
 const log = Log.create({ service: "remote-attachments" })
 
@@ -90,19 +91,8 @@ export namespace RemoteAttachments {
     }
   }
 
-  export type MaterializedPart = { type: "text"; text: string } | MaterializedFilePart
-
-  export type MaterializedFilePart = {
-    id?: string
-    type: "file"
-    mime: string
-    filename?: string
-    url: string
-    source?: { type: "remote"; url: string }
-  }
-
   export type Result = {
-    materialize: (parts: readonly any[]) => Promise<any[]>
+    materialize: (parts: SessionPrompt.PromptInput["parts"]) => Promise<SessionPrompt.PromptInput["parts"]>
     dispose: () => Promise<void>
   }
 
@@ -134,14 +124,14 @@ export namespace RemoteAttachments {
     return { mime: mimeFor(ext), extension: ext }
   }
 
-  /** True when the URL points at an http(s) resource we should fetch. */
+  /** True when the URL points at an HTTP resource that needs validation. */
   export function isFetchable(url: string): boolean {
     return /^https?:\/\//i.test(url)
   }
 
   /** Reason a fetch failed. */
   export type FetchError = {
-    kind: "https" | "redirect" | "non-2xx" | "overflow" | "timeout" | "network"
+    kind: "https" | "host" | "redirect" | "non-2xx" | "overflow" | "timeout" | "network"
     message: string
     status?: number
   }
@@ -159,9 +149,12 @@ export namespace RemoteAttachments {
     const chunks: Uint8Array[] = []
     let total = 0
     const reader = body.getReader()
+    const aborted = new Promise<never>((_resolve, reject) => {
+      signal.addEventListener("abort", () => reject(makeError("timeout", "attachment fetch timed out")), { once: true })
+    })
     try {
       while (true) {
-        const { done, value } = await reader.read()
+        const { done, value } = await Promise.race([reader.read(), aborted])
         if (done) break
         if (!value) continue
         total += value.byteLength
@@ -180,8 +173,7 @@ export namespace RemoteAttachments {
       if (signal.aborted) {
         throw makeError("timeout", "attachment fetch timed out")
       }
-      const msg = err instanceof Error ? err.message : String(err)
-      throw makeError("network", `attachment fetch failed: ${msg}`)
+      throw makeError("network", "attachment fetch failed")
     } finally {
       try {
         reader.releaseLock()
@@ -208,44 +200,49 @@ export namespace RemoteAttachments {
    *   - non-2xx rejected
    */
   export async function fetchOne(url: string, deps?: { fetch?: Fetcher; timeoutMs?: number }): Promise<Uint8Array> {
-    let parsed: URL
-    try {
-      parsed = new URL(url)
-    } catch {
-      throw makeError("https", `attachment url is not a valid URL: ${url}`)
-    }
+    const parsed = (() => {
+      try {
+        return new URL(url)
+      } catch {
+        throw makeError("https", "attachment url is not valid")
+      }
+    })()
     if (parsed.protocol !== "https:") {
       throw makeError("https", `attachment url must use https (got ${parsed.protocol.replace(":", "")})`)
+    }
+    if (parsed.username || parsed.password) throw makeError("https", "attachment url must not include credentials")
+    if (!parsed.hostname.endsWith(".r2.cloudflarestorage.com")) {
+      throw makeError("host", "attachment url must use a Cloudflare R2 host")
     }
     const f = deps?.fetch ?? (globalThis.fetch as Fetcher | undefined)
     if (!f) throw makeError("network", "no fetch implementation available")
     const controller = new AbortController()
     const timeoutMs = deps?.timeoutMs ?? FETCH_TIMEOUT_MS
     const timer = setTimeout(() => controller.abort(new DOMException("timeout", "AbortError")), timeoutMs)
-    let response: Response
     try {
-      response = await f(url, {
+      const response = await f(url, {
         method: "GET",
         redirect: "error",
         credentials: "omit",
         signal: controller.signal,
       })
+      if (response.status < 200 || response.status >= 300) {
+        throw makeError("non-2xx", `attachment fetch returned ${response.status}`, response.status)
+      }
+      return await readBounded(response, controller.signal)
     } catch (err) {
+      if (err && typeof err === "object" && "kind" in err) throw err
       if (controller.signal.aborted) {
         throw makeError("timeout", `attachment fetch timed out after ${timeoutMs}ms`)
       }
       const msg = err instanceof Error ? err.message : String(err)
       if (/redirect/i.test(msg)) {
-        throw makeError("redirect", `attachment url redirected: ${msg}`)
+        throw makeError("redirect", "attachment url redirected")
       }
-      throw makeError("network", `attachment fetch failed: ${msg}`)
+      throw makeError("network", "attachment fetch failed")
     } finally {
       clearTimeout(timer)
     }
-    if (response.status < 200 || response.status >= 300) {
-      throw makeError("non-2xx", `attachment fetch returned ${response.status}`, response.status)
-    }
-    return readBounded(response, controller.signal)
   }
 
   /** Build the explanatory text part that replaces a failed attachment. */
@@ -269,13 +266,15 @@ export namespace RemoteAttachments {
   export function create(deps: Deps): Result {
     const sessionID = deps.sessionID
     const root = deps.tmpRoot ?? Global.Path.tmp
-    const scratchDir = path.join(root, SCRATCH_DIRNAME, sessionID)
+    const scratchDir = path.join(root, SCRATCH_DIRNAME, Buffer.from(sessionID).toString("base64url"))
     const writer = deps.log ?? {
       warn: (msg: string, meta?: unknown) => log.warn(msg, meta as never),
       error: (msg: string, meta?: unknown) => log.error(msg, meta as never),
     }
     const f = deps.fetch ?? (globalThis.fetch as Fetcher | undefined)
-    let disposed = false
+    let closed = false
+    let disposal: Promise<void> | undefined
+    const active = new Set<Promise<SessionPrompt.PromptInput["parts"]>>()
     const cleanup = async () => {
       try {
         await fs.rm(scratchDir, { recursive: true, force: true })
@@ -283,33 +282,22 @@ export namespace RemoteAttachments {
         writer.warn("scratch dir cleanup failed", { sessionID, error: String(err) })
       }
     }
-    // Best-effort: ensure the scratch dir exists so a concurrent first
-    // write does not race. Failures are logged but do not block the
-    // prompt — `materialize` retries on the per-part write path. The
-    // session-scoped bus listener that fires `cleanup` on
-    // Session.Event.Deleted is owned by the RemoteSender so the helper
-    // has no implicit module-level side effects.
-    void fs
-      .mkdir(scratchDir, { recursive: true, mode: 0o700 })
-      .catch((err) => writer.warn("scratch dir mkdir failed", { sessionID, error: String(err) }))
-
-    const materialize = async (parts: readonly any[]): Promise<any[]> => {
-      if (disposed) return [...parts]
-      const out: any[] = []
+    const run = async (parts: SessionPrompt.PromptInput["parts"]): Promise<SessionPrompt.PromptInput["parts"]> => {
+      const out: SessionPrompt.PromptInput["parts"] = []
       for (const part of parts) {
         if (!part || typeof part !== "object" || part.type !== "file") {
           out.push(part)
           continue
         }
-        const url = typeof part.url === "string" ? part.url : ""
+        const url = part.url
         if (!isFetchable(url)) {
           out.push(part)
           continue
         }
-        const filename = typeof part.filename === "string" ? part.filename : undefined
+        const filename = part.filename
         const { extension } = classify(filename)
-        const id = typeof part.id === "string" && part.id.length > 0 ? part.id : crypto.randomUUID()
-        const basename = `${id}.${extension}`
+        const id = part.id ?? PartID.make(`prt_${crypto.randomUUID()}`)
+        const basename = `${crypto.randomUUID()}.${extension}`
         const target = path.join(scratchDir, basename)
         try {
           const bytes = await fetchOne(url, { fetch: f })
@@ -323,7 +311,6 @@ export namespace RemoteAttachments {
               mime: "application/pdf",
               filename,
               url: dataUrl("application/pdf", bytes),
-              source: { type: "remote" as const, url },
             })
             continue
           }
@@ -333,13 +320,13 @@ export namespace RemoteAttachments {
               await fs.mkdir(scratchDir, { recursive: true, mode: 0o700 })
               await fs.writeFile(target, bytes, { mode: 0o600 })
             } catch (err) {
+              await fs
+                .rm(target, { force: true })
+                .catch((cleanupError) =>
+                  writer.warn("partial scratch file cleanup failed", { sessionID, error: String(cleanupError) }),
+                )
               writer.error("scratch write failed", { sessionID, error: String(err) })
-              out.push(
-                failureText(
-                  filename,
-                  `local write failed: ${err instanceof Error ? err.message : String(err)}`,
-                ),
-              )
+              out.push(failureText(filename, `local write failed: ${err instanceof Error ? err.message : String(err)}`))
               continue
             }
             out.push({
@@ -358,13 +345,10 @@ export namespace RemoteAttachments {
             mime,
             filename,
             url: dataUrl(mime, bytes),
-            source: { type: "remote" as const, url },
           })
         } catch (err) {
           const reason =
-            err && typeof err === "object" && "message" in err
-              ? String((err as Error).message)
-              : String(err)
+            err && typeof err === "object" && "message" in err ? String((err as Error).message) : String(err)
           writer.warn("attachment fetch failed", { sessionID, filename, error: reason })
           out.push(failureText(filename, reason))
         }
@@ -372,10 +356,22 @@ export namespace RemoteAttachments {
       return out
     }
 
+    const materialize = (parts: SessionPrompt.PromptInput["parts"]): Promise<SessionPrompt.PromptInput["parts"]> => {
+      if (closed) return Promise.resolve([...parts])
+      const job = run(parts)
+      active.add(job)
+      void job.then(
+        () => active.delete(job),
+        () => active.delete(job),
+      )
+      return job
+    }
+
     const dispose = async () => {
-      if (disposed) return
-      disposed = true
-      await cleanup()
+      if (disposal) return disposal
+      closed = true
+      disposal = Promise.allSettled([...active]).then(cleanup)
+      return disposal
     }
 
     return { materialize, dispose }
@@ -393,8 +389,15 @@ export namespace RemoteAttachments {
    * state is reclaimed regardless of which ingress path triggered
    * deletion.
    */
-  export async function cleanupSession(sessionID: SessionID, deps?: { tmpRoot?: string; log?: Deps["log"] }): Promise<void> {
-    const dir = path.join(deps?.tmpRoot ?? Global.Path.tmp, SCRATCH_DIRNAME, sessionID)
+  export async function cleanupSession(
+    sessionID: SessionID,
+    deps?: { tmpRoot?: string; log?: Deps["log"] },
+  ): Promise<void> {
+    const dir = path.join(
+      deps?.tmpRoot ?? Global.Path.tmp,
+      SCRATCH_DIRNAME,
+      Buffer.from(sessionID).toString("base64url"),
+    )
     const writer = deps?.log ?? {
       warn: (msg: string, meta?: unknown) => log.warn(msg, meta as never),
       error: (msg: string, meta?: unknown) => log.error(msg, meta as never),
