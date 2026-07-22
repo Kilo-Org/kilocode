@@ -1074,7 +1074,7 @@ describe("session prompt queue", () => {
       })
     })
 
-    test("dropping a queued prompt updates the FIFO snapshot and preserves later prompts", async () => {
+    test("enqueueing while busy appends to the FIFO snapshot and emits the event", async () => {
       await using tmp = await tmpdir({ git: true })
       await provideTestInstance({
         directory: tmp.path,
@@ -1141,15 +1141,78 @@ describe("session prompt queue", () => {
               { sessionID, queued: [m2, m3] },
             ])
 
+            firstRelease.resolve()
+            expect(await first).toBe("first")
+            expect(await second).toBe("second")
+            expect(await third).toBe("third")
+          } finally {
+            off()
+          }
+        },
+      })
+    })
+
+    test("dropping a queued prompt updates the FIFO snapshot and preserves later prompts", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.make("session_queue_drop")
+          const events: Array<{ queued: string[] }> = []
+          const off = Bus.subscribe(KiloSession.Event.QueueChanged, (event) => {
+            if (event.properties.sessionID === sessionID) {
+              events.push({ queued: [...(event.properties.queued as readonly string[])] })
+            }
+          })
+
+          const firstStarted = Promise.withResolvers<void>()
+          const firstRelease = Promise.withResolvers<void>()
+          const m1 = MessageID.make("msg_queue_drop_1")
+          const m2 = MessageID.make("msg_queue_drop_2")
+          const m3 = MessageID.make("msg_queue_drop_3")
+
+          try {
+            const first = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m1,
+                Effect.gen(function* () {
+                  firstStarted.resolve()
+                  yield* Effect.promise(() => firstRelease.promise)
+                  return "first" as const
+                }),
+                Effect.succeed("first-cancelled" as const),
+              ),
+            )
+            await firstStarted.promise
+
+            const second = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m2,
+                Effect.succeed("second" as const),
+                Effect.succeed("second-cancelled" as const),
+              ),
+            )
+            const third = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m3,
+                Effect.succeed("third" as const),
+                Effect.succeed("third-cancelled" as const),
+              ),
+            )
+
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m2, m3])
+            await Bun.sleep(10)
+            expect(events).toEqual([{ queued: [m2] }, { queued: [m2, m3] }])
+            events.length = 0
+
             expect(await Effect.runPromise(KiloSessionPromptQueue.drop(sessionID, m2))).toBe(true)
             expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m3])
             expect(KiloSessionPromptQueue.hasFollowup(sessionID)).toBe(true)
             await Bun.sleep(10)
-            expect(events).toEqual([
-              { sessionID, queued: [m2] },
-              { sessionID, queued: [m2, m3] },
-              { sessionID, queued: [m3] },
-            ])
+            expect(events).toEqual([{ queued: [m3] }])
 
             firstRelease.resolve()
             expect(await first).toBe("first")
