@@ -11,10 +11,11 @@ import { type Accessor, Component, createSignal, For, onCleanup, Show } from "so
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
-import { useSession } from "../../context/session"
 import { useConfig } from "../../context/config"
 import { useLanguage } from "../../context/language"
+import { useSession } from "../../context/session"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { thinkingRows } from "./thinking-selector-utils"
 
 // ---------------------------------------------------------------------------
 // Reusable base component
@@ -51,7 +52,7 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
   const language = useLanguage()
   let listRef: HTMLDivElement | undefined
 
-  const rows = () => (props.allowClear ? [undefined, ...props.variants] : props.variants)
+  const rows = () => thinkingRows(props.variants, props.allowClear ?? false)
   const clearLabel = () => props.clearLabel ?? "Not set"
 
   function display(value: string | undefined) {
@@ -212,6 +213,7 @@ interface ThinkingSelectorProps {
 }
 
 export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
+  const language = useLanguage()
   const session = useSession()
   const { settings } = useConfig()
   const id = () => props.sessionID?.()
@@ -222,6 +224,9 @@ export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
       value={session.currentVariant(id())}
       onSelect={(value) => session.selectVariant(value, id())}
       cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
+      onClear={() => session.selectVariant(undefined, id())}
+      allowClear
+      clearLabel={language.t("common.default")}
     />
   )
 }

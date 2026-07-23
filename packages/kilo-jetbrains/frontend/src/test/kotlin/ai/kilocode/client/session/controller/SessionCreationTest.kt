@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.controller
 
 import ai.kilocode.rpc.dto.ConfigDto
+import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.ModelDto
@@ -84,9 +85,11 @@ class SessionCreationTest : SessionControllerTestBase() {
         assertEquals("existing", rpc.prompts[0].first)
     }
 
-    fun `test prompt sends selected model agent and variant`() {
-        appRpc.models = ModelStateDto(variant = mapOf("kilo/gpt-5" to "medium"))
-        appRpc.state.value = KiloAppStateDto(KiloAppStatusDto.READY, config = ConfigDto(model = "kilo/gpt-5"))
+    fun `test prompt sends explicit default config variant`() {
+        appRpc.state.value = KiloAppStateDto(
+            KiloAppStatusDto.READY,
+            config = ConfigDto(model = "kilo/gpt-5", agent = mapOf("code" to AgentConfigDto(variant = "default"))),
+        )
         projectRpc.state.value = workspaceReady(
             providers = listOf(
                 ProviderDto(
@@ -109,6 +112,6 @@ class SessionCreationTest : SessionControllerTestBase() {
         assertEquals("kilo", prompt.providerID)
         assertEquals("gpt-5", prompt.modelID)
         assertEquals("code", prompt.agent)
-        assertEquals("medium", prompt.variant)
+        assertEquals("default", prompt.variant)
     }
 }

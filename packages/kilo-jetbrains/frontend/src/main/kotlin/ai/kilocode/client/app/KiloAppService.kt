@@ -3,6 +3,7 @@
 package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloAppRpcApi
+import ai.kilocode.rpc.dto.AgentConfigPatchDto
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.HealthDto
@@ -12,13 +13,13 @@ import ai.kilocode.rpc.dto.ModelFavoriteUpdateDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
-import ai.kilocode.rpc.dto.ModelVariantUpdateDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.components.Service
 import fleet.rpc.client.durable
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,6 +47,14 @@ class KiloAppService internal constructor(
     }
 
     private val started = AtomicBoolean(false)
+    private val variantLock = Any()
+    private val variants = mutableMapOf<String, ArrayDeque<AgentUpdate>>()
+    private val writing = mutableSetOf<String>()
+    // RATIONALE: Keep an unpinned value tied to its originating model until a matching write
+    // confirms it elsewhere.
+    private val sources = mutableMapOf<String, SourceState>()
+    private val sourceRevision = AtomicLong()
+    private val _provenance = MutableStateFlow(0L)
 
     /** Core version and platform from the backend, or null if unknown. */
     @Volatile
@@ -66,6 +75,7 @@ class KiloAppService internal constructor(
 
     internal val _state = MutableStateFlow(init)
     val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
+    val provenance: StateFlow<Long> = _provenance.asStateFlow()
     private val _models = MutableStateFlow(ModelStateDto())
     val models: StateFlow<ModelStateDto> = _models.asStateFlow()
     private val _favorites = MutableStateFlow<List<ModelSelectionDto>>(emptyList())
@@ -257,17 +267,55 @@ class KiloAppService internal constructor(
         }
     }
 
-    fun selectVariant(key: String, value: String) {
-        val prev = _models.value
-        setModelState(prev.copy(variant = prev.variant + (key to value)))
-        cs.launch {
-            try {
-                setModelState(call { updateModelVariant(ModelVariantUpdateDto(key, value)) })
-            } catch (e: Exception) {
-                LOG.warn("model variant update failed", e)
-                setModelState(prev)
-            }
+    fun updateAgentVariantAsync(agent: String, model: String, value: String, done: (KiloAppStateDto?) -> Unit) {
+        val update = AgentUpdate(model, value, done)
+        val start = synchronized(variantLock) {
+            variants.getOrPut(agent) { ArrayDeque() }.addLast(update)
+            writing.add(agent)
         }
+        if (start) writeVariant(agent)
+    }
+
+    private fun writeVariant(agent: String) {
+        cs.launch {
+            val update = synchronized(variantLock) { variants[agent]?.firstOrNull() } ?: return@launch
+            val previous = _state.value.config?.agent?.get(agent)?.variant
+            val source = if (previous == update.value) null else VariantSource(update.model, update.value)
+            val current = SourceState(source)
+            val prior = updateSource(agent, current)
+            val state = updateConfig(ConfigPatchDto(agents = mapOf(agent to AgentConfigPatchDto(variant = update.value))))
+            if (state == null) {
+                val installed = synchronized(variantLock) { sources[agent] === current }
+                if (installed) updateSource(agent, prior)
+            }
+            update.done(state)
+            val more = synchronized(variantLock) {
+                val list = variants[agent] ?: return@synchronized false
+                list.removeFirst()
+                if (list.isNotEmpty()) return@synchronized true
+                variants.remove(agent)
+                writing.remove(agent)
+                false
+            }
+            if (more) writeVariant(agent)
+        }
+    }
+
+    fun agentVariant(agent: String, model: String): String? {
+        val config = _state.value.config?.agent?.get(agent) ?: return null
+        val value = config.variant ?: return null
+        if (config.model != null) return value
+        val source = synchronized(variantLock) { sources[agent]?.source }
+        if (source?.value == value && source.model != model) return null
+        return value
+    }
+
+    private fun updateSource(agent: String, next: SourceState?): SourceState? {
+        val previous = synchronized(variantLock) {
+            if (next == null) sources.remove(agent) else sources.put(agent, next)
+        }
+        if (previous?.source != next?.source) _provenance.value = sourceRevision.incrementAndGet()
+        return previous
     }
 
     suspend fun updateConfig(patch: ConfigPatchDto): KiloAppStateDto? = try {
@@ -369,6 +417,17 @@ class KiloAppService internal constructor(
 }
 
 data class CoreInfo(val version: String, val platform: String)
+
+private data class AgentUpdate(
+    val model: String,
+    val value: String,
+    val done: (KiloAppStateDto?) -> Unit,
+)
+
+private data class VariantSource(val model: String, val value: String)
+
+// RATIONALE: Null still represents a distinct installed transition for rollback identity checks.
+private class SourceState(val source: VariantSource?)
 
 private fun summary(patch: ConfigPatchDto): String {
     val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }

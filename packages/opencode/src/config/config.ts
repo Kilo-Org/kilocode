@@ -23,6 +23,7 @@ import type { ConsoleState } from "@opencode-ai/core/v1/config/console-state"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
+import { ScopedCache } from "effect" // kilocode_change - refresh cached worktree configs after hot global updates
 import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 import { containsPath, type InstanceContext } from "../project/instance-context"
@@ -1018,7 +1019,7 @@ export const layer = Layer.effect(
       // kilocode_change start - skip dispose when caller opts out
       if (!dispose) {
         yield* invalidateGlobal
-        yield* InstanceState.invalidate(state).pipe(Effect.catchCause(() => Effect.void))
+        yield* ScopedCache.invalidateAll(state.cache).pipe(Effect.catchCause(() => Effect.void)) // kilocode_change
         yield* Effect.sync(() =>
           GlobalBus.emit("event", {
             directory: "global",

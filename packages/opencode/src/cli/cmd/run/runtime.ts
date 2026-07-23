@@ -19,7 +19,15 @@ import { createRunDemo } from "./demo"
 import { resolveModelInfo, resolveRunTuiConfig, resolveSessionInfo } from "./runtime.boot"
 import { createRuntimeLifecycle } from "./runtime.lifecycle"
 import { trace } from "./trace"
-import { cycleVariant, formatModelLabel, resolveSavedVariant, resolveVariant, saveVariant } from "./variant.shared"
+import { formatModelLabel } from "./variant.shared" // kilocode_change
+// kilocode_change start
+import {
+  createRunVariantController,
+  createRunVariantGate,
+  resolveRunAgent,
+  type RunAgentResolution,
+} from "@/kilocode/cli/cmd/run/variant-controller"
+// kilocode_change end
 import type { LocalReplayAnchor, LocalReplayRow, RunInput, RunPrompt, RunProvider, StreamCommit } from "./types"
 
 /** @internal Exported for testing */
@@ -44,9 +52,8 @@ type CreateSession = (sdk: RunInput["sdk"], input: CreateSessionInput) => Promis
 type RunRuntimeInput = {
   boot: () => Promise<BootContext>
   afterPaint?: (ctx: BootContext) => Promise<void> | void
-  resolveSession?: (
-    ctx: BootContext,
-  ) => Promise<{ sessionID: string; sessionTitle?: string; agent?: string | undefined }>
+  resolveSession?: (ctx: BootContext) => Promise<ResolvedSession> // kilocode_change
+  resolveAgent?: (ctx: BootContext) => Promise<RunAgentResolution> // kilocode_change
   createSession?: (ctx: BootContext, input: CreateSessionInput) => Promise<ResolvedSession>
   files: RunInput["files"]
   initialInput?: string
@@ -116,25 +123,21 @@ function createSessionResolver(fn?: CreateSession) {
   }
 }
 
+// kilocode_change start - direct interactive runtime state
 type RuntimeState = {
   shown: boolean
   aborting: boolean
-  model: RunInput["model"]
   providers: RunProvider[]
-  variants: string[]
-  limits: Record<string, number>
-  activeVariant: string | undefined
   sessionID: string
   history: RunPrompt[]
   localRows: LocalReplayRow[]
   sessionTitle?: string
-  agent: string | undefined
-  switching?: Promise<void>
   demo?: ReturnType<typeof createRunDemo>
   selectSubagent?: (sessionID: string | undefined) => void
   session?: Promise<void>
   stream?: Promise<StreamState>
 }
+// kilocode_change end
 
 function hasSession(input: RunRuntimeInput, state: RuntimeState) {
   return !input.resolveSession || !!state.sessionID
@@ -192,38 +195,59 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
           history: [],
           variant: undefined,
         })
-  const savedTask = resolveSavedVariant(ctx.model)
-  const [tuiConfig, session, savedVariant] = await Promise.all([tuiConfigTask, sessionTask, savedTask])
+  const [tuiConfig, session] = await Promise.all([tuiConfigTask, sessionTask]) // kilocode_change
   const state: RuntimeState = {
     shown: !session.first,
     aborting: false,
-    model: ctx.model,
     providers: [],
-    variants: [],
-    limits: {},
-    activeVariant: resolveVariant(ctx.variant, session.variant, savedVariant, []),
     sessionID: ctx.sessionID,
     history: [...session.history],
     localRows: [],
     sessionTitle: ctx.sessionTitle,
-    agent: ctx.agent,
   }
-  const ensureSession = () => {
-    if (!input.resolveSession || state.sessionID) {
-      return Promise.resolve()
-    }
+  // kilocode_change start - resolve direct-run selections through the Kilo controller
+  const agentsTask = ctx.sdk.app
+    .agents({ directory: ctx.directory })
+    .then((result) => result.data ?? [])
+    .catch(() => [])
+  const variants = createRunVariantController({
+    agent: ctx.agent,
+    model: ctx.model,
+    cli: ctx.variant,
+    session: session.variant,
+    agents: agentsTask,
+    models: modelTask.then((info) => {
+      state.providers = info.providers
+      return {
+        variants: (model) => variantsFor(info.providers, model),
+        label: (model, variant) => formatModelLabel(model, variant, info.providers),
+        limits: info.limits,
+      }
+    }),
+    update: (config) => ctx.sdk.global.config.update({ config }, { throwOnError: true }),
+  })
+  const validate = input.resolveAgent
+  const deferred = validate ? () => validate(ctx) : undefined
+  const gate = createRunVariantGate({ controller: variants, resolve: deferred })
+  const initial = variants.current()
+  // kilocode_change end
+  // kilocode_change start - defer session creation until agent validation settles
+  const ensureSession = async () => {
+    await gate.ready
+    if (!input.resolveSession || state.sessionID) return
 
     if (state.session) {
       return state.session
     }
 
-    state.session = input.resolveSession(ctx).then((next) => {
+    state.session = input.resolveSession(ctx).then(async (next) => {
       state.sessionID = next.sessionID
       state.sessionTitle = next.sessionTitle ?? state.sessionTitle
-      state.agent = next.agent
+      if (next.agent) await variants.switchAgent(next.agent)
     })
     return state.session
   }
+  // kilocode_change end
 
   const shell = await (deps.createRuntimeLifecycle ?? createRuntimeLifecycle)({
     directory: ctx.directory,
@@ -239,9 +263,11 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     getSessionID: () => state.sessionID,
     first: session.first,
     history: session.history,
-    agent: state.agent,
-    model: state.model,
-    variant: state.activeVariant,
+    // kilocode_change start
+    agent: initial.agent,
+    model: initial.model,
+    variant: initial.display,
+    // kilocode_change end
     tuiConfig,
     backgroundSubagents: input.backgroundSubagents,
     onPermissionReply: async (next) => {
@@ -283,77 +309,18 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       await ctx.sdk.interactiveTerminal.close({ terminalID })
     },
     // kilocode_change end
-    onCycleVariant: () => {
-      if (!state.model || state.variants.length === 0) {
-        return {
-          status: "no variants available",
-        }
-      }
-
-      state.activeVariant = cycleVariant(state.activeVariant, state.variants)
-      saveVariant(state.model, state.activeVariant)
-      return {
-        status: state.activeVariant ? `variant ${state.activeVariant}` : "variant default",
-        modelLabel: formatModelLabel(state.model, state.activeVariant, state.providers),
-        variant: state.activeVariant,
-      }
-    },
+    // kilocode_change start
+    onCycleVariant: () => variants.cycle(),
     onModelSelect: async (model) => {
-      if (state.model?.providerID === model.providerID && state.model.modelID === model.modelID) {
+      const previous = variants.current()
+      if (previous.model?.providerID === model.providerID && previous.model.modelID === model.modelID) {
         return
       }
 
-      state.model = model
-      state.activeVariant = undefined
-      state.variants = variantsFor(state.providers, model)
-      const switching = resolveSavedVariant(model).then((saved) => {
-        const current = state.model
-        if (!current || current.providerID !== model.providerID || current.modelID !== model.modelID) {
-          return
-        }
-
-        state.activeVariant = resolveVariant(ctx.variant, undefined, saved, state.variants)
-      })
-      state.switching = switching
-      await switching
-      if (state.switching === switching) {
-        state.switching = undefined
-      }
-
-      const current = state.model
-      if (!current || current.providerID !== model.providerID || current.modelID !== model.modelID) {
-        return
-      }
-
-      return {
-        modelLabel: formatModelLabel(model, state.activeVariant, state.providers),
-        status: `model ${model.modelID}`,
-        variant: state.activeVariant,
-        variants: state.variants,
-      }
+      return variants.switchModel(model)
     },
-    onVariantSelect: async (variant) => {
-      if (!state.model || state.variants.length === 0) {
-        return {
-          status: "no variants available",
-        }
-      }
-
-      if (variant && !state.variants.includes(variant)) {
-        return {
-          status: `variant ${variant} unavailable`,
-        }
-      }
-
-      state.activeVariant = variant
-      saveVariant(state.model, state.activeVariant)
-      return {
-        status: state.activeVariant ? `variant ${state.activeVariant}` : "variant default",
-        modelLabel: formatModelLabel(state.model, state.activeVariant, state.providers),
-        variant: state.activeVariant,
-        variants: state.variants,
-      }
-    },
+    onVariantSelect: (variant) => variants.select(variant),
+    // kilocode_change end
     onInterrupt: () => {
       if (!hasSession(input, state) || state.aborting) {
         return
@@ -391,10 +358,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     }
 
     const [agents, resources, commands] = await Promise.all([
-      ctx.sdk.app
-        .agents({ directory: ctx.directory })
-        .then((x) => x.data ?? [])
-        .catch(() => []),
+      agentsTask, // kilocode_change
       ctx.sdk.experimental.resource
         .list({ directory: ctx.directory })
         .then((x) => Object.values(x.data ?? {}))
@@ -436,7 +400,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       footer,
       sessionID: state.sessionID,
       thinking: input.thinking,
-      limits: () => state.limits,
+      limits: () => variants.current().limits, // kilocode_change
     })
   }
 
@@ -444,31 +408,25 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
     void Promise.resolve(input.afterPaint(ctx)).catch(() => {})
   }
 
-  void modelTask.then((info) => {
-    state.providers = info.providers
-    state.variants = variantsFor(state.providers, state.model)
-    state.limits = info.limits
-
-    const next = resolveVariant(ctx.variant, session.variant, savedVariant, state.variants)
-    if (next !== state.activeVariant) {
-      state.activeVariant = next
-    }
-
+  // kilocode_change start - hydrate the footer after controller and provider readiness
+  void Promise.all([gate.ready, modelTask]).then(([, info]) => {
+    const current = variants.current()
     if (footer.isClosed) {
       return
     }
 
     footer.event({ type: "models", providers: info.providers })
-    footer.event({ type: "variants", variants: state.variants, current: state.activeVariant })
-    if (!state.model) {
+    footer.event({ type: "variants", variants: current.variants, current: current.display })
+    if (!current.model) {
       return
     }
 
     footer.event({
       type: "model",
-      model: formatModelLabel(state.model, state.activeVariant, state.providers),
+      model: formatModelLabel(current.model, current.display, info.providers),
     })
   })
+  // kilocode_change end
 
   const streamTask = deps.streamTransport ?? import("./stream.transport")
   const ensureStream = () => {
@@ -496,7 +454,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
         thinking: input.thinking,
         replay: input.replay,
         replayLimit: input.replayLimit,
-        limits: () => state.limits,
+        limits: () => variants.current().limits, // kilocode_change
         providers: () => state.providers,
         footer,
         trace: log,
@@ -579,11 +537,11 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
       onNewSession: createSession
         ? async () => {
             try {
-              await state.switching?.catch(() => {})
+              const selection = await gate.prepare() // kilocode_change
               const created = await createSession(ctx, {
-                agent: state.agent,
-                model: state.model,
-                variant: state.activeVariant,
+                agent: selection.agent, // kilocode_change
+                model: selection.model, // kilocode_change
+                variant: selection.variant, // kilocode_change
               })
               await footer.idle().catch(() => {})
               await state.stream?.then((item) => item.handle.close()).catch(() => {})
@@ -593,7 +551,8 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
               state.shown = false
               state.sessionID = created.sessionID
               state.sessionTitle = created.sessionTitle
-              state.agent = created.agent ?? state.agent
+              await variants.switchAgent(created.agent) // kilocode_change
+              const current = variants.current() // kilocode_change
               state.history = []
               state.localRows = []
               includeFiles = true
@@ -602,7 +561,7 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
                     footer,
                     sessionID: state.sessionID,
                     thinking: input.thinking,
-                    limits: () => state.limits,
+                    limits: () => current.limits, // kilocode_change
                   })
                 : undefined
               log?.write("session.new", {
@@ -659,15 +618,16 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
           return
         }
 
-        await state.switching?.catch(() => {})
+        await gate.prepare() // kilocode_change
 
         let outputAnchor: LocalReplayAnchor | undefined
         try {
           const next = await ensureStream()
+          const current = variants.current() // kilocode_change
           await next.handle.runPromptTurn({
-            agent: state.agent,
-            model: state.model,
-            variant: state.activeVariant,
+            agent: current.agent, // kilocode_change
+            model: current.model, // kilocode_change
+            variant: current.prompt, // kilocode_change
             prompt,
             files: input.files,
             includeFiles,
@@ -756,6 +716,7 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
     directory: input.directory,
   })
   let session: Promise<ResolvedSession> | undefined
+  let validation: Promise<RunAgentResolution> | undefined // kilocode_change
 
   return runInteractiveRuntime({
     files: input.files,
@@ -765,12 +726,18 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
     replay: input.replay,
     replayLimit: input.replayLimit,
     demo: input.demo,
+    // kilocode_change start - validate independently from lazy session lookup
+    resolveAgent: (ctx) => {
+      if (!validation) validation = input.resolveAgent().then((agent) => resolveRunAgent(ctx.agent, agent))
+      return validation
+    },
+    // kilocode_change end
     resolveSession: () => {
       if (session) {
         return session
       }
 
-      session = Promise.all([input.resolveAgent(), input.session(sdk)]).then(([agent, next]) => {
+      session = input.session(sdk).then((next) => { // kilocode_change
         if (!next?.id) {
           throw new Error("Session not found")
         }
@@ -779,7 +746,6 @@ export async function runInteractiveLocalMode(input: RunLocalInput): Promise<voi
         return {
           sessionID: next.id,
           sessionTitle: next.title,
-          agent,
         }
       })
       return session

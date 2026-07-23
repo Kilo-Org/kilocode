@@ -107,6 +107,7 @@ class SessionController(
     private data class OrganizationTarget(val org: String?)
     private data class Followup(val dir: String, val time: Long)
     private data class Pref(val agent: String?, val model: String?, val variants: List<String>, val variant: String?, val reset: Boolean)
+    private data class VariantOp(val agent: String, val model: String, val value: String, val generation: Long)
     private data class RevertOp(val key: Long)
     private data class Dispatch(
         val kind: String,
@@ -182,6 +183,8 @@ class SessionController(
     private var prefModel: String? = null
     private var prefAgent: String? = null
     private var modelTime: Double? = null
+    private var variantGeneration = 0L
+    private var variantOp: VariantOp? = null
     private val snapshots = mutableMapOf<PartKey, String>()
 
     val ready: Boolean get() = model.isReady()
@@ -644,10 +647,24 @@ class SessionController(
     fun selectVariant(value: String) {
         assertEdt()
         val key = model.model ?: return
-        if (value !in model.variants) return
+        val agent = model.agent ?: return
+        if (model.variants.isEmpty()) return
+        if (value != DEFAULT_VARIANT && value !in model.variants) return
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=config variant=$key/$value" }
-        app.selectVariant(key, value)
+        val op = VariantOp(agent, key, value, ++variantGeneration)
+        variantOp = op
         model.variant = value
+        app.updateAgentVariantAsync(agent, key, value) {
+            edt {
+                if (disposed) return@edt
+                if (variantOp != op) return@edt
+                variantOp = null
+                if (model.agent != op.agent || model.model != op.model) return@edt
+                fire(SessionControllerEvent.WorkspaceReady) {
+                    if (model.agent == op.agent && model.model == op.model) selectResolvedModel(op.model)
+                }
+            }
+        }
         capture("Reasoning Variant Selected", sessionProps() + mapOf("model" to key, "variant" to value))
     }
 
@@ -857,6 +874,14 @@ class SessionController(
 
         cs.launch {
             app.models.drop(1).collect {
+                fire(SessionControllerEvent.WorkspaceReady) {
+                    syncModelSelection()
+                }
+            }
+        }
+
+        cs.launch {
+            app.provenance.drop(1).collect {
                 fire(SessionControllerEvent.WorkspaceReady) {
                     syncModelSelection()
                 }
@@ -1620,7 +1645,7 @@ class SessionController(
             providerID = msg.info.providerID,
             modelID = msg.info.modelID,
             agent = msg.info.agent,
-            variant = model.variant?.takeIf { it in model.variants },
+            variant = model.variant?.takeIf { it == DEFAULT_VARIANT || it in model.variants },
             noReply = false,
         )
     }
@@ -1657,7 +1682,7 @@ class SessionController(
     private fun promptDto(text: String, files: List<PromptPartDto> = emptyList()): PromptDto {
         val full = model.model
         val sel = full?.let(::parseModel)
-        val variant = model.variant?.takeIf { it in model.variants }
+        val variant = model.variant?.takeIf { it == DEFAULT_VARIANT || it in model.variants }
         val parts = buildList {
             text.takeIf { it.isNotBlank() }?.let { add(PromptPartDto(type = "text", text = it)) }
             addAll(files)
@@ -1720,8 +1745,19 @@ class SessionController(
         model.model = key
         val item = key?.let(::item)
         model.variants = item?.variants ?: emptyList()
-        val saved = key?.let { app.models.value.variant[it] }
-        model.variant = saved?.takeIf { it in model.variants } ?: model.variants.firstOrNull()
+        val agent = model.agent
+        val config = agent?.let { model.app.config?.agent?.get(it) }
+        val pending = variantOp?.takeIf { it.agent == agent && it.model == key }?.value
+        val configured = agent?.let { app.agentVariant(it, key.orEmpty()) }?.takeIf {
+            (config?.model == null || config.model == key) &&
+                (it == DEFAULT_VARIANT || it in model.variants)
+        }
+        model.variant = when {
+            model.variants.isEmpty() -> null
+            pending != null -> pending
+            configured != null -> configured
+            else -> DEFAULT_VARIANT
+        }
         model.refreshHeader()
     }
 
@@ -1885,7 +1921,7 @@ class SessionController(
                 put("modelId", sel.second)
             }
         }
-        model.variant?.takeIf { it in model.variants }?.let { put("variant", it) }
+        model.variant?.takeIf { it == DEFAULT_VARIANT || it in model.variants }?.let { put("variant", it) }
         if (files.isNotEmpty()) {
             put("attachmentCount", files.size.toString())
             put("mediaAttachmentCount", files.count { it.mime?.startsWith("image/") == true || it.mime == "application/pdf" }.toString())
@@ -2331,6 +2367,7 @@ private fun title(name: String): String = name
 
 private const val KILO_PROVIDER = "kilo"
 private const val KILO_AUTO_MODEL = "kilo-auto/free"
+private const val DEFAULT_VARIANT = "default"
 
 private fun resolveModelSelection(
     providers: ProvidersDto?,

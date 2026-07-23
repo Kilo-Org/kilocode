@@ -32849,15 +32849,9 @@
               "required": ["providerID", "modelID"],
               "additionalProperties": false
             }
-          },
-          "variant": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
           }
         },
-        "required": ["model", "recent", "favorite", "variant"],
+        "required": ["model", "recent", "favorite"],
         "additionalProperties": false
       },
       "TuiConfigGetResponse": {

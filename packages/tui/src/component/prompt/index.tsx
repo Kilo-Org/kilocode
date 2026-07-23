@@ -351,7 +351,7 @@ export function Prompt(props: PromptProps) {
       if (!args.agent) local.agent.set(msg.agent)
       if (msg.model && !primary.model && !args.agent) {
         local.model.set(msg.model)
-        local.model.variant.set(msg.model.variant)
+        local.model.variant.sync(msg.model.variant) // kilocode_change - use configured variant correctly
       }
     }
   })

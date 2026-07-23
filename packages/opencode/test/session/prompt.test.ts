@@ -2675,29 +2675,68 @@ noLLMServer.instance(
   { config: cfg },
 )
 
+// kilocode_change start - preserve explicit Default variant through handoff
 noLLMServer.instance(
-  "applies agent variant only when using agent model",
+  "preserves Default through a model-less handoff before the agent variant",
+  () =>
+    Effect.gen(function* () {
+      const prompt = yield* SessionPrompt.Service
+      const sessions = yield* Session.Service
+      const session = yield* sessions.create({
+        model: {
+          id: ref.modelID,
+          providerID: ref.providerID,
+          variant: "default",
+        },
+      })
+
+      const handoff = yield* prompt.prompt({
+        sessionID: session.id,
+        noReply: true,
+        parts: [{ type: "text", text: "fork handoff", synthetic: true }],
+      })
+      if (handoff.info.role !== "user") throw new Error("expected user message")
+
+      expect(handoff.info.model.variant).toBe("default")
+    }),
+  {
+    config: {
+      ...cfg,
+      provider: {
+        ...cfg.provider,
+        test: {
+          ...cfg.provider.test,
+          models: {
+            "test-model": {
+              ...cfg.provider.test.models["test-model"],
+              variants: { xhigh: {} },
+            },
+          },
+        },
+      },
+      agent: {
+        build: { variant: "xhigh" },
+      },
+    },
+  },
+)
+// kilocode_change end
+
+// kilocode_change start - use configured variant correctly
+noLLMServer.instance(
+  "applies configured agent variant to supported effective models",
   () =>
     Effect.gen(function* () {
       const prompt = yield* SessionPrompt.Service
       const sessions = yield* Session.Service
       const session = yield* sessions.create({})
 
-      const other = yield* prompt.prompt({
-        sessionID: session.id,
-        agent: "build",
-        model: { providerID: ProviderV2.ID.make("opencode"), modelID: ModelV2.ID.make("kimi-k2.5-free") },
-        noReply: true,
-        parts: [{ type: "text", text: "hello" }],
-      })
-      if (other.info.role !== "user") throw new Error("expected user message")
-      expect(other.info.model.variant).toBeUndefined()
-
       const match = yield* prompt.prompt({
         sessionID: session.id,
         agent: "build",
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") },
         noReply: true,
-        parts: [{ type: "text", text: "hello again" }],
+        parts: [{ type: "text", text: "hello" }],
       })
       if (match.info.role !== "user") throw new Error("expected user message")
       expect(match.info.model).toEqual({
@@ -2707,15 +2746,47 @@ noLLMServer.instance(
       })
       expect(match.info.model.variant).toBe("xhigh")
 
+      const other = yield* prompt.prompt({
+        sessionID: session.id,
+        agent: "build",
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("plain-model") },
+        noReply: true,
+        parts: [{ type: "text", text: "hello again" }],
+      })
+      if (other.info.role !== "user") throw new Error("expected user message")
+      expect(other.info.model.variant).toBeUndefined()
+
       const override = yield* prompt.prompt({
         sessionID: session.id,
         agent: "build",
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") },
         noReply: true,
         variant: "high",
         parts: [{ type: "text", text: "hello third" }],
       })
       if (override.info.role !== "user") throw new Error("expected user message")
       expect(override.info.model.variant).toBe("high")
+
+      const explicit = yield* prompt.prompt({
+        sessionID: session.id,
+        agent: "build",
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test-model") },
+        noReply: true,
+        variant: "default",
+        parts: [{ type: "text", text: "hello default" }],
+      })
+      if (explicit.info.role !== "user") throw new Error("expected user message")
+      expect(explicit.info.model.variant).toBe("default")
+
+      const pinned = yield* prompt.prompt({
+        sessionID: session.id,
+        agent: "pinned",
+        model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("plain-model") },
+        noReply: true,
+        parts: [{ type: "text", text: "hello fourth" }],
+      })
+      if (pinned.info.role !== "user") throw new Error("expected user message")
+      expect(pinned.info.model.variant).toBeUndefined()
 
       yield* sessions.remove(session.id)
     }),
@@ -2731,18 +2802,28 @@ noLLMServer.instance(
               ...cfg.provider.test.models["test-model"],
               variants: { xhigh: {}, high: {} },
             },
+            "plain-model": {
+              ...cfg.provider.test.models["test-model"],
+              id: "plain-model",
+              name: "Plain Model",
+            },
           },
         },
       },
       agent: {
         build: {
+          variant: "xhigh",
+        },
+        pinned: {
           model: "test/test-model",
           variant: "xhigh",
         },
       },
     },
   },
+  10_000,
 )
+// kilocode_change end
 
 noLLMServer.instance(
   "deprecated review alias returns static message without LLM",

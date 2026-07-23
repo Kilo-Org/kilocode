@@ -15,6 +15,7 @@ import { jsonSchema, tool as aiTool, type ModelMessage, type Tool } from "ai"
 import type { Plugin } from "@/plugin"
 import { mergeDeep } from "remeda"
 import { DEFAULT_HEADERS } from "@/kilocode/const" // kilocode_change
+import { resolveRuntimeVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
 // kilocode_change start
 import { getKiloProjectId } from "@/kilocode/project-id"
 import {
@@ -92,10 +93,10 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
     system.push(header, rest.join("\n"))
   }
 
-  const variant =
-    !input.small && input.model.variants && input.user.model.variant
-      ? input.model.variants[input.user.model.variant]
-      : {}
+  // kilocode_change start - default sentinel means base provider options
+  const selected = resolveRuntimeVariant(input.user.model.variant)
+  const variant = !input.small && input.model.variants && selected ? input.model.variants[selected] : {}
+  // kilocode_change end
   const base = input.small
     ? ProviderTransform.smallOptions(input.model)
     : ProviderTransform.options({

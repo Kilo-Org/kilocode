@@ -41,7 +41,6 @@ const state = (input: Partial<CloudDefaults.ModelStateInfo> = {}): CloudDefaults
   model: {},
   recent: [],
   favorite: [],
-  variant: {},
   ...input,
 })
 

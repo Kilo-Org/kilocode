@@ -42,7 +42,7 @@ describe("config model state routes", () => {
       }),
     )
 
-    const body = await json<{ favorite: Array<{ providerID: string; modelID: string }> }>(
+    const body = await json<{ favorite: Array<{ providerID: string; modelID: string }>; variant?: unknown }>(
       await req("/config/model-state"),
     )
 
@@ -50,9 +50,10 @@ describe("config model state routes", () => {
       { providerID: "kilo", modelID: "gpt-5.5" },
       { providerID: "kilo", modelID: "qwen/qwen3-8b" },
     ])
+    expect(body.variant).toBeUndefined()
   })
 
-  test("updates favorites while preserving recents", async () => {
+  test("updates favorites while preserving legacy variants", async () => {
     await using tmp = await tmpdir()
     Global.Path.state = tmp.path
     await Bun.write(
@@ -61,11 +62,11 @@ describe("config model state routes", () => {
         recent: [{ providerID: "kilo", modelID: "recent" }],
         favorite: [],
         model: {},
-        variant: {},
+        variant: { "openai/gpt-5": "low" },
       }),
     )
 
-    const body = await json<{ recent: unknown[]; favorite: unknown[] }>(
+    const body = await json<{ recent: unknown[]; favorite: unknown[]; variant?: unknown }>(
       await req("/config/model-state", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -75,5 +76,46 @@ describe("config model state routes", () => {
 
     expect(body.recent).toEqual([{ providerID: "kilo", modelID: "recent" }])
     expect(body.favorite).toEqual([{ providerID: "kilo", modelID: "gpt-5.5" }])
+    expect(body.variant).toBeUndefined()
+
+    const saved = await Bun.file(path.join(tmp.path, "model.json")).text()
+    expect(saved).toContain('"openai/gpt-5": "low"')
+    expect((JSON.parse(saved) as { variant?: unknown }).variant).toEqual({ "openai/gpt-5": "low" })
+  })
+
+  test("does_not_replace_malformed_model_state", async () => {
+    await using tmp = await tmpdir()
+    Global.Path.state = tmp.path
+    const state = "{ malformed"
+    const file = path.join(tmp.path, "model.json")
+    await Bun.write(file, state)
+
+    const response = await req("/config/model-state", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ favorite: [{ providerID: "kilo", modelID: "gpt-5.5" }] }),
+    })
+
+    expect(response.status).toBe(500)
+    expect(await Bun.file(file).text()).toBe(state)
+  })
+
+  test("does_not_replace_parsed_non_record_model_state", async () => {
+    await using tmp = await tmpdir()
+    Global.Path.state = tmp.path
+    const file = path.join(tmp.path, "model.json")
+
+    for (const state of ["[]", "null", '"text"', "42", "true"]) {
+      await Bun.write(file, state)
+
+      const response = await req("/config/model-state", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ favorite: [{ providerID: "kilo", modelID: "gpt-5.5" }] }),
+      })
+
+      expect(response.status).toBe(500)
+      expect(await Bun.file(file).text()).toBe(state)
+    }
   })
 })

@@ -20,6 +20,7 @@ import { makeRuntime } from "@/effect/run-service"
 import { Effect, Schema } from "effect"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { resolveAgentVariant } from "@/kilocode/cli/cmd/tui/model-variant"
 import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
@@ -170,12 +171,6 @@ export namespace PlanFollowup {
     return true
   }
 
-  function resolveVariant(value: string | undefined, model: Provider.Model | undefined) {
-    if (!value) return undefined
-    if (!model?.variants?.[value]) return undefined
-    return value
-  }
-
   const ModelState = z
     .object({
       model: z
@@ -187,11 +182,11 @@ export namespace PlanFollowup {
           }),
         )
         .optional(),
-      variant: z.record(z.string(), z.string().optional()).optional(),
     })
     .passthrough()
 
   async function resolveCodeModel(input: Pick<MessageV2.User, "model">) {
+    const entry = await PlanFollowupRuntime.agent("code")
     const state =
       Flag.KILO_CLIENT === "cli"
         ? await Bun.file(path.join(Global.Path.state, "model.json"))
@@ -204,19 +199,50 @@ export namespace PlanFollowup {
     if (saved) {
       const full = await PlanFollowupRuntime.model(saved.providerID, saved.modelID).catch(() => undefined)
       if (full) {
-        const key = `${saved.providerID}/${saved.modelID}`
         return {
-          model: { ...saved, variant: resolveVariant(state?.variant?.[key], full) },
+          model: {
+            ...saved,
+            variant: resolveAgentVariant({
+              current: saved,
+              config: entry?.model,
+              variant: entry?.variant,
+              variants: full.variants,
+            }),
+          },
         }
       }
     }
 
-    const entry = await PlanFollowupRuntime.agent("code")
     if (entry?.model) {
       const full = await PlanFollowupRuntime.model(entry.model.providerID, entry.model.modelID).catch(() => undefined)
       if (full) {
         return {
-          model: { ...entry.model, variant: resolveVariant(entry.variant, full) },
+          model: {
+            ...entry.model,
+            variant: resolveAgentVariant({
+              current: entry.model,
+              config: entry.model,
+              variant: entry.variant,
+              variants: full.variants,
+            }),
+          },
+        }
+      }
+    }
+
+    if (entry?.variant) {
+      const full = await PlanFollowupRuntime.model(input.model.providerID, input.model.modelID).catch(() => undefined)
+      if (full) {
+        return {
+          model: {
+            ...input.model,
+            variant: resolveAgentVariant({
+              current: input.model,
+              config: entry.model,
+              variant: entry.variant,
+              variants: full.variants,
+            }),
+          },
         }
       }
     }

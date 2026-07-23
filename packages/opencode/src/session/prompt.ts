@@ -19,6 +19,7 @@ import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
 import { Question } from "@/question" // kilocode_change
 import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kilocode_change
+import { resolvePromptVariant, resolveRuntimeVariant } from "@/kilocode/cli/cmd/tui/model-variant" // kilocode_change
 import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
@@ -772,19 +773,25 @@ export const layer = Layer.effect(
         .get()
         .pipe(Effect.orDie)
       const model = input.model ?? ag.model ?? (yield* currentModel(input.sessionID))
-      // kilocode_change start - retain the source session variant across Agent Manager's model-less fork handoff
-      const stored = !input.model && !ag.model ? model : undefined
-      const same = ag.model && model.providerID === ag.model.providerID && model.modelID === ag.model.modelID
+      // kilocode_change start
+      const stored =
+        !input.model && !ag.model
+          ? current?.model?.variant ?? ("variant" in model && typeof model.variant === "string" ? model.variant : undefined)
+          : undefined
+      const override = input.variant ?? stored
       const full =
-        !input.variant && ag.variant && same
+        !override && ag.variant
           ? yield* provider
               .getModel(model.providerID, model.modelID)
               .pipe(Effect.catchIf(Provider.ModelNotFoundError.isInstance, () => Effect.succeed(undefined)))
           : undefined
-      const variant =
-        input.variant ??
-        (stored && "variant" in stored && typeof stored.variant === "string" ? stored.variant : undefined) ??
-        (ag.variant && full?.variants?.[ag.variant] ? ag.variant : undefined)
+      const variant = resolvePromptVariant({
+        override,
+        current: model,
+        config: ag.model,
+        variant: ag.variant,
+        variants: full?.variants,
+      })
       // kilocode_change end
 
       const info: SessionV1.User = {
@@ -803,6 +810,10 @@ export const layer = Layer.effect(
         format: input.format,
         editorContext: input.editorContext, // kilocode_change
       }
+      // kilocode_change start - default sentinel means base provider behavior
+      const currentVariant = resolveRuntimeVariant(current?.model?.variant)
+      const nextVariant = resolveRuntimeVariant(info.model.variant)
+      // kilocode_change end
 
       if (current?.agent !== info.agent) {
         yield* events.publish(SessionEvent.AgentSwitched, {
@@ -815,7 +826,7 @@ export const layer = Layer.effect(
       if (
         current?.model?.providerID !== info.model.providerID ||
         current.model.id !== info.model.modelID ||
-        (current.model.variant === "default" ? undefined : current.model.variant) !== info.model.variant
+        currentVariant !== nextVariant // kilocode_change
       ) {
         yield* events.publish(SessionEvent.ModelSwitched, {
           sessionID: input.sessionID,

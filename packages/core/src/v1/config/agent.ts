@@ -70,7 +70,7 @@ const AgentSchema = Schema.StructWithRest(
     model: Schema.optional(Schema.NullOr(Schema.String)), // kilocode_change - nullable for delete sentinel
     // kilocode_change start - nullable for delete sentinel
     variant: Schema.optional(Schema.NullOr(Schema.String)).annotate({
-      description: "Default model variant for this agent (applies only when using the agent's configured model).",
+      description: "Default model variant for this agent when its effective model supports the variant.",
     }),
     // kilocode_change end
     temperature: Schema.optional(Schema.NullOr(Schema.Finite)), // kilocode_change - nullable for delete sentinel

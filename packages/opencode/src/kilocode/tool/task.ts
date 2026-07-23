@@ -7,10 +7,11 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { resolveAgentVariant, resolveConfiguredVariant } from "../cli/cmd/tui/model-variant"
 import type { Session } from "../../session/session"
 import type { Agent } from "../../agent/agent"
 import type { Config } from "../../config/config"
-import { Provider } from "../../provider/provider"
+import type { Provider } from "../../provider/provider"
 import z from "zod"
 
 const log = Log.create({ service: "kilocode-task-model" })
@@ -27,7 +28,7 @@ const ModelState = z
         }),
       )
       .optional(),
-    variant: z.record(z.string(), z.string().optional()).optional(),
+    variant: z.record(z.string(), z.unknown()).optional(),
   })
   .passthrough()
 
@@ -98,8 +99,7 @@ export namespace KiloTask {
   }
 
   type Model = { providerID: ProviderV2.ID; modelID: ModelV2.ID }
-  type Saved = Model & { variant?: string }
-  type Choice = { model: Model; variant?: string; sticky?: boolean; direct?: boolean }
+  type Saved = { model: Model; variant?: string }
 
   function key(model: Model) {
     return `${model.providerID}/${model.modelID}`
@@ -128,11 +128,50 @@ export namespace KiloTask {
     })
     const model = state?.model?.[name]
     if (!model) return undefined
-    return {
-      ...model,
-      variant: state?.variant?.[`${model.providerID}/${model.modelID}`],
-    }
+    const variant = state.variant?.[key(model)]
+    if (typeof variant === "string") return { model, variant }
+    return { model }
   })
+
+  const lookup = Effect.fn("KiloTask.lookupModel")(function* (provider: Provider.Interface, model: Model) {
+    return yield* provider.getModel(model.providerID, model.modelID).pipe(
+      Effect.catchTag("ProviderModelNotFoundError", (err) =>
+        Effect.sync(() => {
+          log.debug("skipping unavailable task subagent model", {
+            providerID: model.providerID,
+            modelID: model.modelID,
+            err,
+          })
+          return undefined
+        }),
+      ),
+    )
+  })
+
+  function variant(input: {
+    current: Model
+    agent: Pick<Agent.Info, "model" | "variant">
+    config: Model | undefined
+    configVariant: string | undefined
+    variants?: Record<string, unknown>
+  }) {
+    return (
+      resolveAgentVariant({
+        current: input.current,
+        config: input.agent.model,
+        variant: input.agent.variant,
+        variants: input.variants,
+      }) ??
+      (input.config
+        ? resolveAgentVariant({
+            current: input.current,
+            config: input.config,
+            variant: input.configVariant,
+            variants: input.variants,
+          })
+        : undefined)
+    )
+  }
 
   /** Resolve the task subagent model while discarding stale unavailable overrides. */
   export const resolveModel = Effect.fn("KiloTask.resolveModel")(function* (input: {
@@ -145,56 +184,60 @@ export namespace KiloTask {
   }) {
     const state = yield* saved(input.name)
     const cfg = parse(input.config.subagent_model)
-    const override = (model: Model) => input.config.subagent_variant_overrides?.[key(model)] ?? undefined
-    const choices: Array<Choice | undefined> = [
-      state
-        ? {
-            model: { providerID: state.providerID, modelID: state.modelID },
-            variant: state.variant,
-            sticky: true,
-          }
-        : undefined,
-      input.agent.model ? { model: input.agent.model, variant: input.agent.variant, direct: true } : undefined,
-      cfg ? { model: cfg, variant: input.config.subagent_variant ?? undefined } : undefined,
-    ]
-
-    for (const choice of choices) {
-      if (!choice) continue
-      if (choice.direct) {
-        const value = override(choice.model)
-        if (!value) return { model: choice.model, variant: choice.variant }
-        const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID)
-        const variant = full.variants?.[value] ? value : choice.variant
-        return { model: choice.model, variant }
-      }
-      const full = yield* input.provider.getModel(choice.model.providerID, choice.model.modelID).pipe(
-        Effect.catchTag("ProviderModelNotFoundError", (err) =>
-          Effect.sync(() => {
-            log.debug("skipping unavailable task subagent model", {
-              providerID: choice.model.providerID,
-              modelID: choice.model.modelID,
-              err,
-            })
-            return undefined
-          }),
-        ),
+    const configVariant = input.config.subagent_variant ?? undefined
+    const choose = (
+      model: Model,
+      variants: Record<string, unknown> | undefined,
+      fallback?: string,
+      legacy?: string,
+    ) => {
+      const value = input.config.subagent_variant_overrides?.[key(model)] ?? undefined
+      return (
+        (value && variants?.[value] ? value : undefined) ??
+        resolveConfiguredVariant({ variant: legacy, variants }) ??
+        variant({
+          current: model,
+          agent: input.agent,
+          config: cfg,
+          configVariant,
+          variants,
+        }) ??
+        fallback
       )
-      if (!full) continue
-      const fallback = choice.variant && full.variants?.[choice.variant] ? choice.variant : undefined
-      const value = override(choice.model)
-      const variant = value && full.variants?.[value] ? value : fallback
-      return {
-        model: choice.sticky && variant ? { ...choice.model, variant } : choice.model,
-        variant,
+    }
+
+    if (state) {
+      const full = yield* lookup(input.provider, state.model)
+      if (full) {
+        return {
+          model: state.model,
+          variant: choose(state.model, full.variants, undefined, state.variant),
+        }
       }
     }
 
-    const value = override(input.parent)
-    if (!value) return { model: input.parent, variant: input.variant }
-    const full = yield* input.provider
-      .getModel(input.parent.providerID, input.parent.modelID)
-      .pipe(Effect.catchTag("ProviderModelNotFoundError", () => Effect.succeed(undefined)))
-    const variant = full?.variants?.[value] ? value : input.variant
-    return { model: input.parent, variant }
+    if (input.agent.model) {
+      const full = yield* lookup(input.provider, input.agent.model)
+      return {
+        model: input.agent.model,
+        variant: choose(input.agent.model, full?.variants),
+      }
+    }
+
+    if (cfg) {
+      const full = yield* lookup(input.provider, cfg)
+      if (full) {
+        return {
+          model: cfg,
+          variant: choose(cfg, full.variants),
+        }
+      }
+    }
+
+    const full = yield* lookup(input.provider, input.parent)
+    return {
+      model: input.parent,
+      variant: choose(input.parent, full?.variants, input.variant),
+    }
   })
 }

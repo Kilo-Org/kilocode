@@ -1,4 +1,5 @@
 import { Config } from "@/config/config"
+import { KilocodeConfigHotUpdate } from "@/kilocode/config/hot-update" // kilocode_change
 import { GlobalBus, type GlobalEvent as GlobalBusEvent } from "@/bus/global"
 import { EffectBridge } from "@/effect/bridge"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -93,9 +94,10 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
     })
 
     const configUpdate = Effect.fn("GlobalHttpApi.configUpdate")(function* (ctx) {
-      const result = yield* config.updateGlobal(ctx.payload)
       // kilocode_change start
-      if (result.changed) {
+      const hot = KilocodeConfigHotUpdate.hot(ctx.payload)
+      const result = yield* config.updateGlobal(ctx.payload, hot ? { dispose: false } : undefined)
+      if (result.changed && !hot) {
         yield* bridge.run(
           disposeAllInstancesAndEmitGlobalDisposed({ swallowErrors: true }).pipe(Effect.catchCause(() => Effect.void)),
         )

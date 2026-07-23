@@ -30,7 +30,8 @@ import { it } from "./effect"
 
 const opencodeRoot = path.resolve(import.meta.dir, "../../")
 const cliEntry = path.join(opencodeRoot, "src/index.ts")
-const cliArgs = ["run", "--conditions=browser", "--preload=@opentui/solid/preload", cliEntry] // kilocode_change
+const tuiPreload = import.meta.resolve("@opentui/solid/preload") // kilocode_change - resolve before test children change CWD
+const cliArgs = ["run", "--conditions=browser", `--preload=${tuiPreload}`, cliEntry] // kilocode_change
 
 export const testModelID = "test/test-model"
 

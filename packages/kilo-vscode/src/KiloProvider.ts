@@ -90,6 +90,7 @@ import {
 } from "./services/autocomplete/settings"
 import { routeEarlyMessage } from "./kilo-provider/early-message"
 import * as ModelState from "./kilo-provider/model-state"
+import { VariantMigration } from "./kilo-provider/variant-migration"
 import { handleForkSession } from "./kilo-provider/fork-session"
 import { openConfig } from "./kilo-provider/open-config"
 import {
@@ -1403,17 +1404,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "telemetry":
           TelemetryProxy.capture(message.event, message.properties)
           break
-        case "persistVariant": {
-          const stored = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
-          stored[message.key] = message.value
-          await this.extensionContext?.globalState.update("variantSelections", stored)
-          break
-        }
-        case "requestVariants": {
-          const variants = this.extensionContext?.globalState.get<Record<string, string>>("variantSelections") ?? {}
-          this.postMessage({ type: "variantsLoaded", variants })
-          break
-        }
         case "persistRecents":
           await this.extensionContext?.globalState.update("recentModels", validateRecents(message.recents))
           break
@@ -1577,6 +1567,11 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
       // Connect the shared service (no-op if already connected)
       await this.connectionService.connect(workspaceDir)
+      try {
+        await VariantMigration.run(this.extensionContext?.globalState, this.client, workspaceDir)
+      } catch (error) {
+        console.error("[Kilo New] KiloProvider: Failed to migrate saved variant selections:", error)
+      }
       this.flushPendingKiloModel()
 
       // Subscribe to SSE events for this webview (filtered by tracked sessions)
@@ -3774,8 +3769,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     // Clear globalState items that are not part of the configuration
-    await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("recentModels", undefined)
+    await this.extensionContext?.globalState.update("variantSelections", undefined)
     await this.extensionContext?.globalState.update("kilo.dismissedNotificationIds", undefined)
     await this.extensionContext?.globalState.update("kilo.agentMigrationBannerDismissed", undefined)
     await this.extensionContext?.globalState.update("kilo.marketplace.dismissedSuggestions", undefined)
@@ -3791,7 +3786,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
     // Re-send globalState items to the webview
-    this.postMessage({ type: "variantsLoaded", variants: {} })
     this.postMessage({ type: "recentsLoaded", recents: [] })
 
     // Re-fetch notifications to reflect cleared dismissed IDs
