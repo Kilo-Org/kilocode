@@ -4,6 +4,7 @@ import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
+import { RemoteAttachments } from "@/kilocode/remote-attachments"
 import { Session } from "@/session/session"
 import type { MessageV2 } from "@/session/message-v2"
 import { SessionPrompt } from "@/session/prompt"
@@ -149,6 +150,12 @@ export namespace RemoteSender {
     remoteExit?: {
       get: () => RemoteExit.Callback | undefined
     }
+    // Production wires this to RemoteAttachments.create so the scratch dir
+    // and Session.Event.Deleted cleanup are scoped to the session whose
+    // parts we are about to materialize. Tests pass a stub that simply
+    // returns the input so the existing remote-sender suite continues to
+    // exercise schema/ordering paths without touching the network.
+    attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
   }
 
   export type Sender = {
@@ -272,6 +279,87 @@ export namespace RemoteSender {
           GlobalBus.off("event", handler)
         }
       })
+
+    // The factory is resolved lazily so tests that never send http(s) file
+    // parts never trigger scratch-dir setup. The cache and its bus
+    // listener are owned by this RemoteSender instance and released by
+    // dispose(), so they survive relay subscribe/unsubscribe churn
+    // independent of the relay's view of the session set. The bus
+    // listener is also installed lazily on first use to keep the global
+    // bus listener count from inflating for senders that never handle
+    // attachments (the count would otherwise show up in unrelated tests
+    // that assert it stays at 0).
+    const attachments =
+      options.attachments ??
+      ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
+    const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
+    const pending = new Map<SessionID, number>()
+    const retired = new Map<SessionID, RemoteAttachments.Result>()
+    const cleaning = new Map<SessionID, Promise<void>>()
+    const deleted = new Set<SessionID>()
+    let closed = false
+    let attachmentBusUnsub: (() => void) | undefined
+    const ensureAttachmentListener = () => {
+      if (closed || attachmentBusUnsub) return
+      attachmentBusUnsub = sub((event: any) => {
+        if (event?.type !== Session.Event.Deleted.type) return
+        const sid = event?.properties?.sessionID
+        if (typeof sid !== "string") return
+        const id = SessionID.make(sid)
+        const result = attachmentCache.get(id)
+        if (!result) {
+          if (pending.has(id)) deleted.add(id)
+          return
+        }
+        deleted.add(id)
+        attachmentCache.delete(id)
+        if (pending.has(id)) {
+          retired.set(id, result)
+          return
+        }
+        void clean(id, result)
+      })
+    }
+    function begin(id: SessionID) {
+      pending.set(id, (pending.get(id) ?? 0) + 1)
+    }
+    function clean(id: SessionID, result: RemoteAttachments.Result) {
+      const existing = cleaning.get(id)
+      if (existing) return existing
+      const cleanup = result
+        .dispose()
+        .catch((error) => options.log.warn("attachment cleanup failed", { error: String(error) }))
+      cleaning.set(id, cleanup)
+      void cleanup.finally(() => {
+        if (cleaning.get(id) === cleanup) cleaning.delete(id)
+        if (!pending.has(id)) deleted.delete(id)
+      })
+      return cleanup
+    }
+    async function finish(id: SessionID) {
+      const count = pending.get(id)
+      if (!count) return
+      if (count > 1) {
+        pending.set(id, count - 1)
+        return
+      }
+      pending.delete(id)
+      const result = retired.get(id)
+      const cleanup = cleaning.get(id) ?? (result ? clean(id, result) : undefined)
+      if (result) retired.delete(id)
+      if (cleanup) await cleanup
+      if (!pending.has(id)) deleted.delete(id)
+    }
+    function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
+      if (closed || deleted.has(sessionID)) return undefined
+      const existing = attachmentCache.get(sessionID)
+      if (existing) return existing
+      const next = attachments(sessionID)
+      if (!next) return undefined
+      ensureAttachmentListener()
+      attachmentCache.set(sessionID, next)
+      return next
+    }
 
     async function directoryFor(sid: string): Promise<string> {
       const info = await session.get(SessionID.make(sid)).catch(() => undefined)
@@ -425,18 +513,40 @@ export namespace RemoteSender {
       })
     }
 
-    function dispatchLongRunning(msg: RemoteProtocol.Command, dir: Promise<string>, work: () => Promise<void>) {
+    function dispatchLongRunning(
+      msg: RemoteProtocol.Command,
+      dir: Promise<string>,
+      work: () => Promise<void>,
+      settle?: () => void | Promise<void>,
+    ) {
       const run = options.provide ?? provide
+      let settled = false
+      const complete = () => {
+        if (settled) return
+        settled = true
+        void settle?.()
+      }
       options.conn.send({ type: "response", id: msg.id, result: {} })
       void (async () => {
         try {
-          await run({ directory: await dir, fn: work })
+          await run({
+            directory: await dir,
+            fn: async () => {
+              try {
+                await work()
+              } finally {
+                complete()
+              }
+            },
+          })
         } catch (e) {
           options.log.error("long-running command failed after ACK", {
             id: msg.id,
             command: msg.command,
             error: String(e),
           })
+        } finally {
+          complete()
         }
       })()
     }
@@ -691,9 +801,28 @@ export namespace RemoteSender {
           return
         }
         const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
-        dispatchLongRunning(msg, directoryFor(promptInput.sessionID), async () => {
-          await prompt(promptInput)
-        })
+        const remote = promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))
+        if (remote) {
+          begin(promptInput.sessionID)
+          ensureAttachmentListener()
+        }
+        dispatchLongRunning(
+          msg,
+          directoryFor(promptInput.sessionID),
+          async () => {
+            // Runs strictly after the synchronous ACK above and strictly before the
+            // existing prompt() call so the resolvePart boundary sees data: URLs
+            // and a scratch path instead of an http(s) URL it cannot fetch.
+            const materializer = remote ? attachmentFor(promptInput.sessionID) : undefined
+            if (materializer) {
+              promptInput.parts = await materializer.materialize(promptInput.parts)
+            } else if (remote) {
+              promptInput.parts = RemoteAttachments.failClosed(promptInput.parts)
+            }
+            await prompt(promptInput)
+          },
+          remote ? () => finish(promptInput.sessionID) : undefined,
+        )
         return
       }
       if (msg.command === "interrupt") {
@@ -835,10 +964,23 @@ export namespace RemoteSender {
     }
 
     function dispose() {
+      closed = true
       if (unsub) {
         unsub()
         unsub = undefined
       }
+      // per-session materializers. Fire-and-forget the async dispose because
+      // RemoteAttachments.dispose() is best-effort scratch cleanup.
+      attachmentBusUnsub?.()
+      attachmentBusUnsub = undefined
+      for (const [id, result] of attachmentCache) {
+        if (pending.has(id)) {
+          retired.set(id, result)
+          continue
+        }
+        void result.dispose()
+      }
+      attachmentCache.clear()
       sessions.clear()
       children.clear()
     }
