@@ -35,14 +35,13 @@ function fromSchedule(events: Array<[number, FullStreamPart]>, end: number): Str
 }
 
 // kilocode_change: raw AsyncIterable version of `fromSchedule` for tests that
-// exercise `watchdogAsyncIterable` directly (matching the production call
-// site in `session/llm.ts`, which wraps the AI SDK's native `fullStream`
-// AsyncIterable — not a Stream). Going through `Stream.toAsyncIterable` from
-// the `watchdogStream` entry point blocks the Node event loop on long stalls
-// (Effect's Stream round-trip drives the underlying generator synchronously
-// on the consumer's `next()` call), which prevents the watchdog's setTimeout
-// from firing. The production path does not go through that round-trip, so
-// the raw AsyncIterable is the accurate test target.
+// exercise `watchdogAsyncIterable` directly. The production consumer in
+// `src/session/llm.ts` wraps the AI SDK's native `fullStream` AsyncIterable
+// and uses `watchdogAsyncIterable`, not `watchdogStream`, so the direct-unit
+// AC1/AC3 tests target that same entry point. A hand-rolled AsyncIterable is
+// also used because its `return()` settles promptly on cleanup (the
+// async-generator `return()`-mid-await semantics are described in the AC3
+// test comment).
 function iterableFromSchedule(
   events: Array<[number, FullStreamPart]>,
   end: number,

@@ -70,16 +70,16 @@ it.live("chunkTimeout does NOT abort a slow first content chunk (bounded by time
             messages: [{ role: "user", content: "hello" }],
           })
 
-          const error = yield* Effect.promise(async () => {
+          const { error, text } = yield* Effect.promise(async () => {
             try {
-              for await (const part of result.fullStream) {
-                if (part.type === "error") return part.error
-              }
+              const text = await result.text
+              return { error: undefined, text }
             } catch (error) {
-              return error
+              return { error, text: "" }
             }
           })
           expect(error).toBeUndefined()
+          expect(text).toBe("late")
         }),
       { config: providerConfig(server.url, { chunkTimeout: 50 }) },
     )

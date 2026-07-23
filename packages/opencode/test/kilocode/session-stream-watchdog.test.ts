@@ -245,10 +245,11 @@ function providerCfg(url: string) {
   }
 }
 
-// Model-level chunkTimeout arms the session-stream watchdog for AC1. The
-// provider-level option is intentionally left unset so baseline's resolveIdleMs
-// reads the model option (chunkTimeout: 1_000) and does not fall back to the
-// provider false that disables wrapSSE.
+// Model-level `chunkTimeout: 1_000` (from the base `cfg`'s `test-model`
+// options) is what arms the session watchdog because `resolveIdleMs` reads model
+// options first. The provider-level option is intentionally left unset so this
+// test exercises only the session-layer `watchIterator` path (not `wrapSSE`,
+// which arms only on a positive provider-level `chunkTimeout`).
 function enabledWatchdogCfg(url: string) {
   return {
     ...cfg,

@@ -60,6 +60,21 @@ const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
 // models while still bounding a genuine never-first-content hang.
 const SSE_FIRST_TOKEN_MS = 300_000
 
+// Scope note: `wrapSSE` is installed for every provider SDK built by `resolveSDK`,
+// but the first-content detector (`looksLikeContentEvent`) only recognizes the
+// OpenAI chat-completions SSE shape (`choices[0].delta` with `content`,
+// `reasoning_content`, or `tool_calls`). For other provider-native shapes
+// (Anthropic `content_block_delta`, OpenAI Responses `response.output_text.delta`,
+// Google `candidates`, etc.) `seenContent` never flips, so pre-content reads
+// remain bounded by `firstTokenMs` (the request `timeout` budget) rather than
+// by `chunkTimeout` once content starts. This is intentional:
+//   (a) the stream is still bounded (no hang);
+//   (b) the provider-agnostic session-layer `watchIterator` guards the main
+//       session path for all providers using normalized AI SDK parts;
+//   (c) treating the first arbitrary `data:` event as content would arm on
+//       OpenAI's immediate role-delta and reintroduce the #12467 false-positive;
+//   (d) `wrapSSE` only arms when a positive provider-level `chunkTimeout` is
+//       configured (no built-in default).
 function wrapSSE(res: Response, chunkTimeout: number, ctl: AbortController, firstTokenMs: number) {
   if (typeof chunkTimeout !== "number" || chunkTimeout <= 0) return res
   if (!res.body) return res
