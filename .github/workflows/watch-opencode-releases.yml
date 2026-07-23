@@ -16,56 +16,34 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - id: fetch
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          data=$(gh release view --repo anomalyco/opencode --json tagName,name,url 2>/dev/null || echo '{}')
-          tag=$(echo "$data" | jq -r '.tagName // empty')
-          [ -z "$tag" ] && { echo "tag=" >> "$GITHUB_OUTPUT"; exit 0; }
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          echo "name=$(echo "$data" | jq -r '.name // .tagName')" >> "$GITHUB_OUTPUT"
-          echo "url=$(echo "$data" | jq -r '.url')" >> "$GITHUB_OUTPUT"
-
-      - if: steps.fetch.outputs.tag != ''
-        id: cache
-        uses: actions/cache/restore@v4
-        with:
-          path: .cache/last-seen
-          key: last-seen-${{ steps.fetch.outputs.tag }}
-          restore-keys: last-seen-
-
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
-        name: Trigger opencode sync
+      - name: Sync dashboard and resolve announcement
+        id: sync
         env:
           URL: ${{ secrets.OPENCODE_WATCH_SYNC_URL }}
           SECRET: ${{ secrets.OPENCODE_WATCH_SYNC_SECRET }}
           VERCEL: ${{ secrets.OPENCODE_WATCH_VERCEL_SECRET }}
         run: |
-          if [ -n "$URL" ] && [ -n "$SECRET" ]; then
-            headers=(-H "x-sync-secret: $SECRET" -H "Content-Type: application/json")
-            [ -n "$VERCEL" ] && headers+=(-H "x-vercel-protection-bypass: $VERCEL")
-            curl -sf -X POST "$URL" "${headers[@]}" -d '{}' || true
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "Sync URL/secret not configured; skipping." >&2
+            exit 0
           fi
+          headers=(-H "x-sync-secret: $SECRET" -H "Content-Type: application/json")
+          [ -n "$VERCEL" ] && headers+=(-H "x-vercel-protection-bypass: $VERCEL")
+          resp=$(curl -sf -X POST "$URL" "${headers[@]}" -d '{}') || {
+            echo "Sync request failed; skipping notification." >&2
+            exit 0
+          }
+          echo "name=$(echo "$resp" | jq -r '.notify.name // empty')" >> "$GITHUB_OUTPUT"
+          echo "tag=$(echo "$resp" | jq -r '.notify.tag // empty')" >> "$GITHUB_OUTPUT"
+          echo "url=$(echo "$resp" | jq -r '.notify.url // empty')" >> "$GITHUB_OUTPUT"
 
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
+      - if: steps.sync.outputs.tag != ''
         name: Notify Slack
         uses: slackapi/slack-github-action@v2.0.0
         with:
           webhook: ${{ secrets.OPENCODE_WATCH_SLACK_WEBHOOK }}
           webhook-type: incoming-webhook
           payload: |
-            name: "${{ steps.fetch.outputs.name }}"
-            tag: "${{ steps.fetch.outputs.tag }}"
-            url: "${{ steps.fetch.outputs.url }}"
-
-      - if: steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
-        name: Mark tag as seen
-        run: mkdir -p .cache/last-seen && echo "${{ steps.fetch.outputs.tag }}" > .cache/last-seen/tag.txt
-
-      - if: success() && steps.fetch.outputs.tag != '' && steps.cache.outputs.cache-hit != 'true'
-        name: Save seen-tag cache
-        uses: actions/cache/save@v4
-        with:
-          path: .cache/last-seen
-          key: last-seen-${{ steps.fetch.outputs.tag }}
+            name: "${{ steps.sync.outputs.name }}"
+            tag: "${{ steps.sync.outputs.tag }}"
+            url: "${{ steps.sync.outputs.url }}"
