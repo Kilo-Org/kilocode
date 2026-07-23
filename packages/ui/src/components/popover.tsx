@@ -20,6 +20,7 @@ export interface PopoverProps<T extends ValidComponent = "div">
   trigger?: JSXElement
   triggerAs?: T
   triggerProps?: ComponentProps<T>
+  contentLabel?: string // kilocode_change
   title?: JSXElement
   description?: JSXElement
   class?: ComponentProps<"div">["class"]
@@ -34,6 +35,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     "trigger",
     "triggerAs",
     "triggerProps",
+    "contentLabel", // kilocode_change
     "title",
     "description",
     "class",
@@ -136,6 +138,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
     <Kobalte.Content
       ref={(el: HTMLElement | undefined) => setState("contentRef", el)}
       data-component="popover-content"
+      aria-label={local.contentLabel /* kilocode_change */}
       classList={{
         ...local.classList,
         [local.class ?? ""]: !!local.class,
