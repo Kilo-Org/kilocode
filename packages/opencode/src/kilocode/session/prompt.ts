@@ -16,6 +16,7 @@ import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
+import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
@@ -229,6 +230,7 @@ export namespace KiloSessionPrompt {
     permission: Pick<Permission.Interface, "ask">
     agents: Pick<Agent.Interface, "get">
     sessions: Pick<Session.Interface, "get">
+    origins?: PermissionProvenance.Origins
     agent: Agent.Info
     session: Session.Info
     request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
@@ -237,11 +239,20 @@ export namespace KiloSessionPrompt {
     const session = yield* input.sessions
       .get(input.session.id)
       .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
-    yield* input.permission.ask({
+
+    // kilocode_change start - tag agent rules with provenance so the winning rule reports its source
+    const tagged: PermissionProvenance.SourcedRule[] = agent.permission.map((rule) => ({
+      ...rule,
+      source: PermissionProvenance.configSource(rule.permission, input.origins),
+    }))
+    const outcome = yield* input.permission.ask({
       ...input.request,
-      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
+      ruleset: Permission.merge(tagged, guardPermissions({ agent, session })),
       hardRuleset: hardPermissions({ agent }),
     })
+    if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
+    return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
+    // kilocode_change end
   })
 
   /**

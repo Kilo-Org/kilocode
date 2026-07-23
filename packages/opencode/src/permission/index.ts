@@ -73,8 +73,17 @@ export const AllowEverythingInput = z.object({
 })
 // kilocode_change end
 
+// kilocode_change start - describe why a call was allowed so clients can explain auto-approval
+export interface AskOutcome {
+  /** true when the user was prompted and replied; false when a rule auto-approved. */
+  manual: boolean
+  /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
+  rule?: Rule
+}
+// kilocode_change end
+
 export interface Interface {
-  readonly ask: (input: AskInput) => Effect.Effect<void, Error>
+  readonly ask: (input: AskInput) => Effect.Effect<AskOutcome, Error> // kilocode_change - was Effect<void>; returns the decision
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   // kilocode_change start
@@ -191,6 +200,7 @@ export const layer = Layer.effect(
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
       let needsAsk = false
+      let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
       const isProtected = ConfigProtection.isRequest(request)
@@ -225,12 +235,15 @@ export const layer = Layer.effect(
           })
         }
         // kilocode_change start - override "allow" to "ask" for protected config paths
-        if (rule.action === "allow" && (!isProtected || trusted)) continue
+        if (rule.action === "allow" && (!isProtected || trusted)) {
+          approvedRule = rule // remember the winning rule so callers can explain the auto-approval
+          continue
+        }
         // kilocode_change end
         needsAsk = true
       }
 
-      if (!needsAsk) return
+      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
@@ -261,12 +274,15 @@ export const layer = Layer.effect(
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
-      return yield* Effect.ensuring(
+      // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
+      yield* Effect.ensuring(
         Deferred.await(deferred),
         Effect.sync(() => {
           pending.delete(id)
         }),
       )
+      return { manual: true } // the user was prompted and replied
+      // kilocode_change end
     })
 
     const reply = Effect.fn("Permission.reply")(function* (input: PermissionV1.ReplyInput) {
