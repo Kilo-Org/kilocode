@@ -823,7 +823,7 @@ export const layer = Layer.effect(
               sessionID: ctx.sessionID,
               snapshot: ctx.snapshot,
               type: "step-start",
-              time: { start: ctx.stepStartDate },
+              time: { start: ctx.stepStartDate }, // kilocode_change
             })
             return
 
