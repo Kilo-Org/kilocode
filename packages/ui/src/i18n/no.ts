@@ -160,7 +160,7 @@ export const dict: Record<Keys, string> = {
   "ui.message.collapse": "Skjul melding",
   "ui.message.copy": "Kopier",
   "ui.message.copyMessage": "Kopier melding",
-  "ui.message.deleteQueued": "Slett melding i kø",
+  "ui.message.deleteQueued": "Slett melding i kø", // kilocode_change
   "ui.message.forkMessage": "Forgren til ny sesjon",
   "ui.message.revertMessage": "Tilbakestill til dette punktet",
   "ui.message.copyResponse": "Kopier svar",

@@ -170,7 +170,7 @@ export const dict: Record<string, string> = {
   "ui.message.collapse": "Comprimi messaggio",
   "ui.message.copy": "Copia",
   "ui.message.copyMessage": "Copia messaggio",
-  "ui.message.deleteQueued": "Elimina il messaggio in coda",
+  "ui.message.deleteQueued": "Elimina il messaggio in coda", // kilocode_change
   "ui.message.copyResponse": "Copia risposta",
   "ui.message.copied": "Copiato",
   "ui.message.forkMessage": "Forka in una nuova sessione",

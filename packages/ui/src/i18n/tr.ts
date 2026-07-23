@@ -163,7 +163,7 @@ export const dict = {
   "ui.message.collapse": "Mesajı daralt",
   "ui.message.copy": "Kopyala",
   "ui.message.copyMessage": "Mesajı kopyala",
-  "ui.message.deleteQueued": "Kuyruktaki mesajı sil",
+  "ui.message.deleteQueued": "Kuyruktaki mesajı sil", // kilocode_change
   "ui.message.forkMessage": "Yeni oturuma dallandır",
   "ui.message.revertMessage": "Bu noktaya sıfırla",
   "ui.message.revert": "Revert to here",
