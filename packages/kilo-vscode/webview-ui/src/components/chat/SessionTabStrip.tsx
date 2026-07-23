@@ -12,6 +12,7 @@ import { useVSCode } from "../../context/vscode"
 import { useConfig } from "../../context/config"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
+import { SessionTabSwitcher } from "./SessionTabSwitcher"
 import { ConstrainDragYAxis, SortableTabContainer } from "./TabDnd"
 
 export const SessionTabStrip: Component = () => {
@@ -59,6 +60,15 @@ export const SessionTabStrip: Component = () => {
   }
   const scroll = useTabScroll(tabs.ids, tabs.active, () => config().experimental?.smooth_scrolling !== false)
   const root = () => document.querySelector("[data-component=session-tabs] .am-tab-list")
+  const rows = createMemo(() =>
+    tabs.ids().map((id) => ({
+      id,
+      title: title(id),
+      active: tabs.active() === id,
+      busy: working(id),
+      pending: isPendingTab(id),
+    })),
+  )
   const freeze = () => setTabWidths(true, document)
   const release = () => setTabWidths(false, document)
   const close = (id: string, restore = true) => {
@@ -154,6 +164,22 @@ export const SessionTabStrip: Component = () => {
             </div>
           </div>
           <div class={`am-tab-fade am-tab-fade-right ${scroll.showRight() ? "am-tab-fade-visible" : ""}`} />
+        </div>
+        <div class="session-tab-switcher-wrap">
+          <SessionTabSwitcher
+            items={rows}
+            labels={{
+              open: language.t("session.tabs.switcher.open"),
+              search: language.t("session.tabs.switcher.search"),
+              close: language.t("common.closeTab"),
+              current: language.t("session.tabs.switcher.current"),
+              pending: language.t("session.tabs.switcher.pending"),
+              busy: language.t("session.tabs.switcher.busy"),
+            }}
+            onSelect={tabs.select}
+            onRestore={focusPrompt}
+            onClose={(id) => close(id, false)}
+          />
         </div>
       </div>
       <div class="sr-only" aria-live="polite">

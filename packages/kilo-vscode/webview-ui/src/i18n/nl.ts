@@ -1117,6 +1117,11 @@ export const dict = {
   "session.showHistory": "Geschiedenis weergeven",
   "session.search.placeholder": "Zoek sessies...",
   "session.empty": "Nog geen sessies. Klik op + om een nieuw gesprek te starten.",
+  "session.tabs.switcher.open": "Open tabbladen tonen",
+  "session.tabs.switcher.search": "Open tabbladen zoeken...",
+  "session.tabs.switcher.current": "Huidig",
+  "session.tabs.switcher.pending": "Nieuw",
+  "session.tabs.switcher.busy": "Bezig",
   "session.tab.local": "Lokaal",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Alleen deze repository",
@@ -1693,6 +1698,14 @@ export const dict = {
     "Kies of blokken met codebewerkingen en verschillen standaard uitgeklapt of ingeklapt zijn.",
   "settings.display.codeEdit.expanded": "Uitgeklapt",
   "settings.display.codeEdit.collapsed": "Ingeklapt",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
 
   "settings.providers.defaultModel.title": "Standaard Model",
   "settings.providers.defaultModel.description": "Primair model voor gesprekken",

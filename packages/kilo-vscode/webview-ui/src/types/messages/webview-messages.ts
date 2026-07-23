@@ -54,6 +54,12 @@ export interface UnrevertSessionRequest {
   sessionID: string
 }
 
+export interface DeleteMessageRequest {
+  type: "deleteMessage"
+  sessionID: string
+  messageID: string
+}
+
 export interface PermissionResponseRequest {
   type: "permissionResponse"
   permissionId: string
@@ -431,6 +437,10 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface RequestThroughputSettingMessage {
+  type: "requestThroughputSetting"
 }
 
 export interface RequestWorkStyleMessage {
@@ -1216,6 +1226,7 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | DeleteMessageRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -1277,6 +1288,7 @@ export type WebviewMessage =
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestThroughputSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage

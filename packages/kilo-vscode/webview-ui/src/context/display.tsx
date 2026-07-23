@@ -4,6 +4,7 @@ import {
   createMemo,
   createSignal,
   onCleanup,
+  onMount,
   useContext,
   type Accessor,
   type ParentComponent,
@@ -18,6 +19,10 @@ interface DisplayContextValue {
   setReasoningAutoCollapse: (collapse: boolean) => void
   fontSize: Accessor<number>
   setFontSize: (size: number) => void
+  // Shared throughput toggle — the same signal backs the per-message badge in
+  // every AssistantMessage and the aggregated row in TaskHeader, so flipping
+  // the setting once updates both surfaces without round-trips.
+  throughputVisible: Accessor<boolean>
 }
 
 export const DisplayContext = createContext<DisplayContextValue>()
@@ -27,10 +32,16 @@ export const DisplayProvider: ParentComponent = (props) => {
   const vscode = useVSCode()
   const reasoningAutoCollapse = createMemo(() => config().auto_collapse_reasoning ?? false)
   const [fontSize, setFontSizeSignal] = createSignal(readFontSize())
+  const [throughputVisible, setThroughputVisible] = createSignal(false)
+
+  // Request the throughput toggle once on mount; the extension posts back
+  // (and onDidChangeConfiguration forwards subsequent edits).
+  onMount(() => vscode.postMessage({ type: "requestThroughputSetting" }))
 
   const unsubscribe = vscode.onMessage((message: ExtensionMessage) => {
     if (message.type === "ready" && message.fontSize !== undefined) setFontSizeSignal(clampFontSize(message.fontSize))
     if (message.type === "fontSizeChanged") setFontSizeSignal(clampFontSize(message.fontSize))
+    if (message.type === "throughputSettingLoaded") setThroughputVisible(Boolean(message.visible))
   })
 
   createEffect(() => {
@@ -50,6 +61,7 @@ export const DisplayProvider: ParentComponent = (props) => {
           setFontSizeSignal(next)
           vscode.postMessage({ type: "updateSetting", key: "fontSize", value: next })
         },
+        throughputVisible,
       }}
     >
       {props.children}

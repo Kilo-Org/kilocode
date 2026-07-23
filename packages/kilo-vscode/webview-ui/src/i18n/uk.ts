@@ -1114,6 +1114,11 @@ export const dict = {
   "session.showHistory": "Показати історію",
   "session.search.placeholder": "Пошук сесій...",
   "session.empty": "Сесій поки немає. Натисніть +, щоб почати новий чат.",
+  "session.tabs.switcher.open": "Показати відкриті вкладки",
+  "session.tabs.switcher.search": "Пошук відкритих вкладок...",
+  "session.tabs.switcher.current": "Поточна",
+  "session.tabs.switcher.pending": "Нова",
+  "session.tabs.switcher.busy": "Працює",
   "session.tab.local": "Локальний",
   "session.tab.cloud": "Хмарний",
   "session.cloud.repoOnly": "Лише цей репозиторій",
@@ -1677,6 +1682,14 @@ export const dict = {
     "Виберіть, чи будуть блоки редагування коду та відмінностей спочатку розгорнутими чи згорнутими.",
   "settings.display.codeEdit.expanded": "Розгорнуті",
   "settings.display.codeEdit.collapsed": "Згорнуті",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
 
   "settings.providers.defaultModel.title": "Модель за замовчуванням",
   "settings.providers.defaultModel.description": "Основна модель для чатів",

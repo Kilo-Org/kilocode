@@ -1102,6 +1102,11 @@ export const dict = {
   "session.showHistory": "عرض السجل",
   "session.search.placeholder": "البحث في الجلسات...",
   "session.empty": "لا توجد جلسات بعد. انقر + لبدء محادثة جديدة.",
+  "session.tabs.switcher.open": "إظهار التبويبات المفتوحة",
+  "session.tabs.switcher.search": "البحث في التبويبات المفتوحة...",
+  "session.tabs.switcher.current": "الحالي",
+  "session.tabs.switcher.pending": "جديد",
+  "session.tabs.switcher.busy": "جارٍ العمل",
   "session.tab.local": "محلي",
   "session.tab.cloud": "السحابة",
   "session.cloud.repoOnly": "هذا المستودع فقط",
@@ -1682,6 +1687,15 @@ export const dict = {
     "اختر ما إذا كانت الكتل التي تعرض تعديلات التعليمات البرمجية والفروقات تبدأ موسّعة أم مطوية.",
   "settings.display.codeEdit.expanded": "موسّعة",
   "settings.display.codeEdit.collapsed": "مطوية",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "النموذج الافتراضي",
   "settings.providers.defaultModel.description": "النموذج الأساسي للمحادثات",
   "settings.providers.smallModel.title": "نموذج صغير",

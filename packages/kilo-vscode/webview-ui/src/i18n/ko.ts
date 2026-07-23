@@ -1111,6 +1111,11 @@ export const dict = {
   "session.showHistory": "기록 보기",
   "session.search.placeholder": "세션 검색...",
   "session.empty": "아직 세션이 없습니다. +를 클릭하여 새 대화를 시작하세요.",
+  "session.tabs.switcher.open": "열린 탭 표시",
+  "session.tabs.switcher.search": "열린 탭 검색...",
+  "session.tabs.switcher.current": "현재",
+  "session.tabs.switcher.pending": "새 항목",
+  "session.tabs.switcher.busy": "작업 중",
   "session.tab.local": "로컬",
   "session.tab.cloud": "클라우드",
   "session.cloud.repoOnly": "이 저장소만",
@@ -1693,6 +1698,15 @@ export const dict = {
   "settings.display.codeEdit.description": "코드 편집 블록과 차이점 블록을 처음부터 펼칠지 접을지 선택합니다.",
   "settings.display.codeEdit.expanded": "펼침",
   "settings.display.codeEdit.collapsed": "접힘",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "기본 모델",
   "settings.providers.defaultModel.description": "대화의 기본 모델",
   "settings.providers.smallModel.title": "소형 모델",

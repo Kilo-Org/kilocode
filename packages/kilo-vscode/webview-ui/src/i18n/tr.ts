@@ -1113,6 +1113,11 @@ export const dict = {
   "session.showHistory": "Geçmişi Göster",
   "session.search.placeholder": "Oturum ara...",
   "session.empty": "Henüz oturum yok. Yeni bir sohbet başlatmak için + tıklayın.",
+  "session.tabs.switcher.open": "Açık sekmeleri göster",
+  "session.tabs.switcher.search": "Açık sekmelerde ara...",
+  "session.tabs.switcher.current": "Geçerli",
+  "session.tabs.switcher.pending": "Yeni",
+  "session.tabs.switcher.busy": "Çalışıyor",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Yalnızca bu depo",
@@ -1680,6 +1685,14 @@ export const dict = {
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",

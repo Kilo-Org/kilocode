@@ -97,8 +97,9 @@ export async function fetchKiloModels(options?: {
   const models: Record<string, any> = {}
 
   for (const model of raw.data) {
-    // Skip models that don't support tools — Kilo requires tool calling
-    if (!model.supported_parameters?.includes("tools")) {
+    // Skip models that explicitly don't support tools — Kilo requires tool calling
+    // Optimistically assume models with a missing supported_parameters array support tools
+    if (model.supported_parameters && !model.supported_parameters.includes("tools")) {
       continue
     }
 
@@ -222,7 +223,7 @@ function transformToModelDevFormat(model: OpenRouterModel): any {
 
   // Determine capabilities
   const supportsImages = inputModalities.includes("image")
-  const supportsTools = supportedParameters.includes("tools")
+  const supportsTools = !model.supported_parameters || supportedParameters.includes("tools")
   const supportsReasoning = supportedParameters.includes("reasoning")
   const supportsTemperature = supportedParameters.includes("temperature")
 

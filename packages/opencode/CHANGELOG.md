@@ -1,5 +1,20 @@
 # @kilocode/cli
 
+## 7.4.15
+
+### Patch Changes
+
+- [#12249](https://github.com/Kilo-Org/kilocode/pull/12249) [`cd205d8`](https://github.com/Kilo-Org/kilocode/commit/cd205d857a00d0bf1630cac530c739f31bff5dfb) - Prevent agent and subagent sessions from stalling indefinitely with a 60-second model-stream idle watchdog that pauses while local tools run. Set `chunkTimeout: false` to disable it.
+
+- [#12427](https://github.com/Kilo-Org/kilocode/pull/12427) [`2dc1a52`](https://github.com/Kilo-Org/kilocode/commit/2dc1a520cc58bb587c8ffb8ba8476fa0a6e37e04) - Improve xAI prompt cache hit rate by sending promptCacheKey by default for xAI models
+
+- [#12422](https://github.com/Kilo-Org/kilocode/pull/12422) [`28d015f`](https://github.com/Kilo-Org/kilocode/commit/28d015f8fefd166348e4d4eb0b4c2ae0aa011a03) - Simplify project memory settings and activity visibility, replace direct editing with folder inspection, add nested memory slash-command completion and status views, improve empty-project handling, compact native tool-call summaries, and remove legacy memory audit logs.
+
+- [#12414](https://github.com/Kilo-Org/kilocode/pull/12414) [`badf70d`](https://github.com/Kilo-Org/kilocode/commit/badf70dcedc9559769969c34aff9a63fcc9bdb5f) - Keep Linux sandbox setup working when a writable directory contains an unreadable subdirectory (for example a folder with mode 600); unreadable subdirectories are now protected with a read-only mount instead of failing every sandboxed tool call with an access error.
+
+- Updated dependencies [[`28d015f`](https://github.com/Kilo-Org/kilocode/commit/28d015f8fefd166348e4d4eb0b4c2ae0aa011a03)]:
+  - @kilocode/kilo-memory@7.4.14
+
 ## 7.4.13
 
 ### Minor Changes

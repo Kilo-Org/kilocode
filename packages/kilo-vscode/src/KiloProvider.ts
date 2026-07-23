@@ -172,6 +172,7 @@ import {
   watchIndexingConfig,
 } from "./kilo-provider/indexing-settings"
 import { buildChatSettingsMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 
 let maxCost = 0
 
@@ -393,6 +394,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autocompleteConfigDisposable: vscode.Disposable | null = null
   private indexingConfigDisposable: vscode.Disposable | null = null
   private chatConfigDisposable: vscode.Disposable | null = null
+  private throughputConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -917,6 +919,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.indexingConfigDisposable = watchIndexingConfig((msg) => this.postMessage(msg))
     this.chatConfigDisposable?.dispose()
     this.chatConfigDisposable = watchChatConfig((msg) => this.postMessage(msg))
+    this.throughputConfigDisposable?.dispose()
+    this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1030,6 +1034,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "unrevertSession":
           this.checkpoint(message.sessionID, () => this.handleUnrevertSession(message.sessionID))
+          break
+        case "deleteMessage":
+          await this.handleDeleteMessage(message.sessionID, message.messageID)
           break
         case "permissionResponse":
           await handlePermissionResponse(
@@ -1350,6 +1357,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
+          break
+        case "requestThroughputSetting":
+          this.postMessage(buildThroughputSettingMessage())
           break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
@@ -1734,6 +1744,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.postMessage(buildThroughputSettingMessage())
       this.postMessage({ type: "extensionDataReady" })
 
       if (this.cachedGitRepo) this.startStatsPolling()
@@ -2129,6 +2140,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to delete session",
+      })
+    }
+  }
+
+  private async handleDeleteMessage(sessionID: string, messageID: string): Promise<void> {
+    if (!this.client) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend", sessionID })
+      return
+    }
+
+    try {
+      await this.client.session.deleteMessage(
+        { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to delete message:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to delete message",
+        sessionID,
       })
     }
   }
@@ -3724,6 +3756,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    this.postMessage(buildThroughputSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -3787,18 +3820,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     try {
       await this.client.instance.reload({ directory: dir }, { throwOnError: true })
     } catch (err) {
+      // wrapClientError exposes the HTTP status via `cause`, not `response`.
+      const cause = err instanceof Error ? err.cause : undefined
       const status =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { status?: number } }).response?.status
-          : undefined
+        cause && typeof cause === "object" && "status" in cause ? (cause as { status?: number }).status : undefined
       if (status === 409) {
         vscode.window.showWarningMessage(
           "Cannot reload while a session is running. Wait for it to finish or abort it first.",
         )
-      } else {
-        console.error("[Kilo New] handleReload: reload endpoint failed:", err)
-        vscode.window.showErrorMessage("Reload failed. See extension logs for details.")
+        return
       }
+      console.error("[Kilo New] handleReload: reload endpoint failed:", err)
+      const detail = err instanceof Error && err.message ? err.message : "See extension logs for details."
+      vscode.window.showErrorMessage(`Reload failed. ${detail}`)
       return
     }
     this.clearCommandsCache()
@@ -4517,6 +4551,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autocompleteConfigDisposable?.dispose()
     this.indexingConfigDisposable?.dispose()
     this.chatConfigDisposable?.dispose()
+    this.throughputConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
