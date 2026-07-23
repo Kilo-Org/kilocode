@@ -38,7 +38,7 @@ internal class ActiveListRenderer(
     private val header = Stack.horizontal(UiStyle.Gap.xs()).next(title).next(badges)
     private val desc = JBLabel()
     private val text = Stack.vertical().next(header).next(desc)
-    private val textPane = text.align(HAlign.TRACK, VAlign.TOP)
+    private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {

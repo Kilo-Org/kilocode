@@ -198,7 +198,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             assertTrue(components(renderer).filterIsInstance<JBLabel>().none { it.text == "Description" && it.isVisible })
             assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
-            assertTrue(topY(renderer, title) < topY(renderer, action))
+            assertTrue(kotlin.math.abs(centerY(renderer, title) - centerY(renderer, action)) <= 1)
             assertTrue(kotlin.math.abs(centerY(renderer, action) - renderer.height / 2) <= 1)
         }
     }
