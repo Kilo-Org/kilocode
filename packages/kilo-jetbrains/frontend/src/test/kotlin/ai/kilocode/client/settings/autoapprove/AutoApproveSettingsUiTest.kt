@@ -2,11 +2,11 @@ package ai.kilocode.client.settings.autoapprove
 
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -15,11 +15,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.awt.Container
 import java.awt.Point
 import java.awt.event.InputEvent
@@ -28,6 +23,11 @@ import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.text.JTextComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 // Matches AutoApproveContent's fixed granular section order.
 private val LEVEL_SELECT_ORDER = listOf("external_directory", "bash", "read", "edit")
@@ -244,7 +244,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         flushUntil { rpc.configPatches.isNotEmpty() }
         edt {
             val jList = jbList(list)
-            assertEquals("git log *", (jList.selectedValue as SettingsListItem).key)
+            assertEquals("git log *", (jList.selectedValue as ActiveListItem).key)
             assertEquals(height, jList.fixedCellHeight)
         }
     }
@@ -265,7 +265,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
             pick = { choices -> choices.first { it is LevelChoice.Level && it.level == "deny" } }
             clickLevel(list, "*.env")
             val jList = jbList(list)
-            assertEquals("*.env", (jList.selectedValue as SettingsListItem).key)
+            assertEquals("*.env", (jList.selectedValue as ActiveListItem).key)
             assertEquals(height, jList.fixedCellHeight)
         }
     }
@@ -294,7 +294,7 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
         val rule = rpc.configPatches.last().permission?.get("bash")
         assertEquals(PermissionRuleDto.Patterns(mapOf("*" to "ask", "git status" to "allow", "git *" to null)), rule)
         edt {
-            assertEquals("git status", (jbList(list).selectedValue as SettingsListItem).key)
+            assertEquals("git status", (jbList(list).selectedValue as ActiveListItem).key)
         }
     }
 
@@ -332,18 +332,18 @@ class AutoApproveSettingsUiTest : BasePlatformTestCase() {
     private fun clickLevel(list: SettingsInlineList, key: String) {
         val jList = jbList(list)
         val model = jList.model
-        val idx = (0 until model.size).first { (model.getElementAt(it) as SettingsListItem).key == key }
+        val idx = (0 until model.size).first { (model.getElementAt(it) as ActiveListItem).key == key }
         jList.selectedIndex = idx
         jList.setSize(600, jList.preferredSize.height.coerceAtLeast(80))
         jList.doLayout()
-        val bounds = settingsListCellBounds(jList, idx, true)["level"] ?: error("missing level cell for $key")
+        val bounds = activeListCellBounds(jList, idx, true)["level"] ?: error("missing level cell for $key")
         click(jList, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
     }
 
     private fun jbList(list: SettingsInlineList): JBList<*> = components(list).filterIsInstance<JBList<*>>().single()
 
     private fun indexOf(list: JBList<*>, key: String): Int = (0 until list.model.size)
-        .first { (list.model.getElementAt(it) as SettingsListItem).key == key }
+        .first { (list.model.getElementAt(it) as ActiveListItem).key == key }
 
     private fun button(list: SettingsInlineList, index: Int): JComponent = components(list)
         .filterIsInstance<JComponent>()

@@ -1,15 +1,26 @@
 package ai.kilocode.client.settings.base
 
-import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.list.ActiveListActionCell
+import ai.kilocode.client.ui.list.ActiveListActive
+import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListRenderer
+import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListView
+import ai.kilocode.client.ui.list.activeListCellAt
+import ai.kilocode.client.ui.list.activeListCellBounds
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import java.awt.Dimension
@@ -24,7 +35,7 @@ import javax.swing.SwingUtilities
 class SettingsListViewTest : BasePlatformTestCase() {
     fun `test list shows description tooltip over row body`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
+            val view = ActiveListView("Empty") { _, _ -> }
             val row = item("with", "Alpha", "Use <safe> text\nAcross lines")
             view.update(listOf(row, item("without", "Beta", null)))
             view.list.size = Dimension(320, 120)
@@ -40,14 +51,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test tooltip config suppresses description tooltip but keeps action tooltip`() {
         edt {
-            val cfg = SettingsListConfig.Equal.copy(tooltip = false)
-            val view = SettingsListView("Empty", cfg) { _, _ -> }
-            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit", alwaysVisible = true))
+            val cfg = ActiveListConfig.Equal.copy(tooltip = false)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
+            val row = item("with", "Alpha", "Description", ActiveListCell("edit", "Edit", alwaysVisible = true))
             view.update(listOf(row))
             layout(view)
 
             val bounds = view.list.getCellBounds(0, 0)
-            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
 
             assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
             assertEquals("Edit", view.list.getToolTipText(event(view.list, center(area))))
@@ -56,7 +67,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test rows use equal height from tallest rendered row`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
+            val view = ActiveListView("Empty") { _, _ -> }
             view.update(listOf(
                 item("with", "Alpha", "Description makes this row taller"),
                 item("without", "Beta", null),
@@ -72,7 +83,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test filtering recalculates equal row height for visible rows`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
+            val view = ActiveListView("Empty") { _, _ -> }
             view.update(listOf(
                 item("shown-desc", "Shown described", "Description makes this row taller"),
                 item("hidden", "Hidden", "Filtered row has a description"),
@@ -91,7 +102,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test preferred row height uses each rendered row height`() {
         edt {
-            val view = SettingsListView("Empty", SettingsListConfig.Preferred) { _, _ -> }
+            val view = ActiveListView("Empty", ActiveListConfig.Preferred) { _, _ -> }
             view.update(listOf(
                 item("with", "Alpha", "Description makes this row taller"),
                 item("without", "Beta", null),
@@ -108,7 +119,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test filtering keeps preferred row heights for visible rows`() {
         edt {
-            val view = SettingsListView("Empty", SettingsListConfig.Preferred) { _, _ -> }
+            val view = ActiveListView("Empty", ActiveListConfig.Preferred) { _, _ -> }
             view.update(listOf(
                 item("shown-desc", "Shown described", "Description makes this row taller"),
                 item("hidden", "Hidden", "Filtered row has a description"),
@@ -129,9 +140,9 @@ class SettingsListViewTest : BasePlatformTestCase() {
     fun `test renderer keeps title flush and indents description only`() {
         edt {
             val row = item("with", "Alpha", "Description")
-            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
             val list = JBList(model)
-            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, true)
             renderer.setSize(320, renderer.preferredSize.height)
@@ -145,14 +156,36 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test renderer centers leading icon vertically in the row`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val description = "Description"
+                override val icon = AllIcons.Nodes.Plugin
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            renderer.setSize(320, renderer.preferredSize.height)
+            layout(renderer)
+
+            val icon = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
+
+            assertTrue(kotlin.math.abs(centerY(renderer, icon) - renderer.height / 2) <= 1)
+        }
+    }
+
     fun `test title only config suppresses descriptions and tooltips`() {
         edt {
-            val cfg = SettingsListConfig.Equal.copy(description = false)
-            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit"))
-            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val cfg = ActiveListConfig.Equal.copy(description = false)
+            val row = item("with", "Alpha", "Description", ActiveListCell("edit", "Edit"))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
             val list = JBList(model)
-            val renderer = SettingsListRenderer(model, cfg)
-            val view = SettingsListView("Empty", cfg) { _, _ -> }
+            val renderer = ActiveListRenderer(model, cfg)
+            val view = ActiveListView("Empty", cfg) { _, _ -> }
 
             renderer.getListCellRendererComponent(list, row, 0, true, true)
             renderer.setSize(320, renderer.preferredSize.height + UiStyle.Gap.xl())
@@ -166,20 +199,21 @@ class SettingsListViewTest : BasePlatformTestCase() {
             assertTrue(components(renderer).filterIsInstance<JBLabel>().none { it.text == "Description" && it.isVisible })
             assertNull(view.list.getToolTipText(event(view.list, Point(bounds.x + 4, bounds.y + 4))))
             assertTrue(kotlin.math.abs(centerY(renderer, title) - centerY(renderer, action)) <= 1)
+            assertTrue(kotlin.math.abs(centerY(renderer, action) - renderer.height / 2) <= 1)
         }
     }
 
     fun `test action click invokes from full rendered area`() {
         edt {
             val calls = mutableListOf<String>()
-            val view = SettingsListView("Empty") { key, id -> calls += "$key:$id" }
-            val row = item("with", "Alpha", null, SettingsListCell("edit", "Edit"))
+            val view = ActiveListView("Empty") { key, id -> calls += "$key:$id" }
+            val row = item("with", "Alpha", null, ActiveListCell("edit", "Edit"))
             view.update(listOf(row))
             view.list.size = Dimension(320, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
-            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
             val point = Point(area.x + area.width - 1, area.y + area.height - 1)
 
             click(view, point)
@@ -190,25 +224,25 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test action hit test ignores stale indexes`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
-            view.update(listOf(item("with", "Alpha", null, SettingsListCell("edit", "Edit"))))
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(item("with", "Alpha", null, ActiveListCell("edit", "Edit"))))
             layout(view)
 
-            assertNull(settingsListCellAt(view.list, -1, Point(0, 0), selected = true))
-            assertNull(settingsListCellAt(view.list, view.list.model.size, Point(0, 0), selected = true))
+            assertNull(activeListCellAt(view.list, -1, Point(0, 0), selected = true))
+            assertNull(activeListCellAt(view.list, view.list.model.size, Point(0, 0), selected = true))
         }
     }
 
     fun `test double click invokes primary cell instead of first visual cell`() {
         edt {
             val calls = mutableListOf<String>()
-            val view = SettingsListView("Empty") { key, id -> calls += "$key:$id" }
+            val view = ActiveListView("Empty") { key, id -> calls += "$key:$id" }
             val row = item(
                 "with",
                 "Alpha",
                 null,
-                SettingsListCell("connect", "Connect"),
-                SettingsListCell("edit", "Edit", primary = true),
+                ActiveListCell("connect", "Connect"),
+                ActiveListCell("edit", "Edit", primary = true),
             )
             view.update(listOf(row))
             layout(view)
@@ -224,14 +258,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
     fun `test disabled action click does not invoke`() {
         edt {
             val calls = mutableListOf<String>()
-            val view = SettingsListView("Empty") { key, id -> calls += "$key:$id" }
-            val row = item("with", "Alpha", null, SettingsListCell("edit", "Edit", enabled = false))
+            val view = ActiveListView("Empty") { key, id -> calls += "$key:$id" }
+            val row = item("with", "Alpha", null, ActiveListCell("edit", "Edit", enabled = false))
             view.update(listOf(row))
             view.list.size = Dimension(320, 80)
             view.list.doLayout()
             UIUtil.dispatchAllInvocationEvents()
 
-            val area = settingsListCellBounds(view.list, 0, selected = true).getValue("edit")
+            val area = activeListCellBounds(view.list, 0, selected = true).getValue("edit")
 
             click(view, center(area))
 
@@ -242,9 +276,9 @@ class SettingsListViewTest : BasePlatformTestCase() {
     fun `test unfocused selected row is not painted as active`() {
         edt {
             val row = item("with", "Alpha", "Description")
-            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
             val list = JBList(model)
-            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
@@ -255,10 +289,10 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test in-place action cells are hidden on unfocused selected row`() {
         edt {
-            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit"))
-            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val row = item("with", "Alpha", "Description", ActiveListCell("edit", "Edit"))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
             val list = JBList(model)
-            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
             assertTrue(actionCells(renderer).none { it.isVisible })
@@ -270,10 +304,10 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test always visible action cells stay on unfocused row`() {
         edt {
-            val row = item("with", "Alpha", "Description", SettingsListCell("level", "Allow", alwaysVisible = true))
-            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val row = item("with", "Alpha", "Description", ActiveListCell("level", "Allow", alwaysVisible = true))
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
             val list = JBList(model)
-            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
@@ -284,11 +318,11 @@ class SettingsListViewTest : BasePlatformTestCase() {
     fun `test active popup paints selected row as active without focus`() {
         edt {
             val row = item("with", "Alpha", "Description")
-            val model = CollectionListModel<SettingsListItem>(listOf(row))
-            val list = object : JBList<SettingsListItem>(model), SettingsListActive {
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = object : JBList<ActiveListItem>(model), ActiveListActive {
                 override fun active(): Boolean = true
             }
-            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
 
             renderer.getListCellRendererComponent(list, row, 0, true, false)
 
@@ -300,16 +334,16 @@ class SettingsListViewTest : BasePlatformTestCase() {
     fun `test action click invokes on second selected row in multi selection list`() {
         edt {
             val calls = mutableListOf<String>()
-            val cfg = SettingsListConfig.Equal.copy(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
-            val view = SettingsListView("Empty", cfg) { key, id -> calls += "$key:$id" }
+            val cfg = ActiveListConfig.Equal.copy(selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION)
+            val view = ActiveListView("Empty", cfg) { key, id -> calls += "$key:$id" }
             view.update(listOf(
-                item("a", "Alpha", null, SettingsListCell("edit", "Edit", alwaysVisible = false)),
-                item("b", "Beta", null, SettingsListCell("edit", "Edit", alwaysVisible = false)),
+                item("a", "Alpha", null, ActiveListCell("edit", "Edit", alwaysVisible = false)),
+                item("b", "Beta", null, ActiveListCell("edit", "Edit", alwaysVisible = false)),
             ))
             layout(view)
             view.list.selectedIndices = intArrayOf(0, 1)
 
-            val area = settingsListCellBounds(view.list, 1, selected = true).getValue("edit")
+            val area = activeListCellBounds(view.list, 1, selected = true).getValue("edit")
             click(view, center(area))
 
             assertEquals(listOf("b:edit"), calls)
@@ -318,8 +352,8 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test preserve no scroll keeps scroll position after row change`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
-            val rows = (0 until 30).map { item("row$it", "Row $it", null, SettingsListCell("level", "Allow", alwaysVisible = true)) }
+            val view = ActiveListView("Empty") { _, _ -> }
+            val rows = (0 until 30).map { item("row$it", "Row $it", null, ActiveListCell("level", "Allow", alwaysVisible = true)) }
             view.update(rows)
             val scroll = JBScrollPane(view.list)
             scroll.size = Dimension(320, 80)
@@ -334,7 +368,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val before = scroll.viewport.viewPosition.y
             assertTrue("expected a scrolled viewport", before > 0)
 
-            view.update(rows, SettingsListSelection.PreserveNoScroll)
+            view.update(rows, ActiveListSelection.PreserveNoScroll)
             UIUtil.dispatchAllInvocationEvents()
 
             assertEquals(before, scroll.viewport.viewPosition.y)
@@ -344,11 +378,11 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test update selects preferred key`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
+            val view = ActiveListView("Empty") { _, _ -> }
             view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null)))
             view.update(
                 listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)),
-                SettingsListSelection.Key("c"),
+                ActiveListSelection.Key("c"),
             )
 
             assertEquals("c", view.selected()?.key)
@@ -357,10 +391,10 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test update selects preferred index`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
+            val view = ActiveListView("Empty") { _, _ -> }
             view.update(listOf(item("a", "Alpha", null), item("b", "Beta", null), item("c", "Gamma", null)))
             view.list.selectedIndex = 1
-            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), SettingsListSelection.Index(1))
+            view.update(listOf(item("a", "Alpha", null), item("c", "Gamma", null)), ActiveListSelection.Index(1))
 
             assertEquals("c", view.selected()?.key)
         }
@@ -368,7 +402,7 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
     fun `test list view tracks viewport width`() {
         edt {
-            val view = SettingsListView("Empty") { _, _ -> }
+            val view = ActiveListView("Empty") { _, _ -> }
             view.update(listOf(item("long", "Alpha", "A very long description that should wrap instead of scrolling")))
 
             assertTrue((view as Scrollable).getScrollableTracksViewportWidth())
@@ -377,14 +411,14 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
-    private fun item(id: String, name: String, note: String?, vararg cells: SettingsListCell) = object : SettingsListItem {
+    private fun item(id: String, name: String, note: String?, vararg cells: ActiveListCell) = object : ActiveListItem {
         override val key = id
         override val title = name
         override val description = note
         override val cells = cells.toList()
     }
 
-    private fun layout(view: SettingsListView) {
+    private fun layout(view: ActiveListView) {
         view.list.size = Dimension(320, 160)
         view.list.doLayout()
         UIUtil.dispatchAllInvocationEvents()
@@ -396,8 +430,8 @@ class SettingsListViewTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun actionCells(root: java.awt.Component): List<SettingsListActionCell> =
-        components(root).filterIsInstance<SettingsListActionCell>()
+    private fun actionCells(root: java.awt.Component): List<ActiveListActionCell> =
+        components(root).filterIsInstance<ActiveListActionCell>()
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
@@ -414,14 +448,17 @@ class SettingsListViewTest : BasePlatformTestCase() {
         return point.y + child.height / 2
     }
 
+    private fun topY(root: java.awt.Component, child: java.awt.Component): Int =
+        SwingUtilities.convertPoint(child.parent, child.location, root).y
+
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(view: SettingsListView, point: Point) {
+    private fun click(view: ActiveListView, point: Point) {
         fire(view.list, mouse(view, MouseEvent.MOUSE_PRESSED, point))
         fire(view.list, mouse(view, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(view: SettingsListView, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(view: ActiveListView, id: Int, point: Point, count: Int = 1) = MouseEvent(
         view.list,
         id,
         System.currentTimeMillis(),

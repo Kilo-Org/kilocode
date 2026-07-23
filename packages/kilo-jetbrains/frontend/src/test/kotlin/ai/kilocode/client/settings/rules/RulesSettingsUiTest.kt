@@ -3,14 +3,14 @@ package ai.kilocode.client.settings.rules
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
-import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsToggle
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -303,18 +303,18 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         app._state.value = state
     }
 
-    private fun click(list: JBList<SettingsListItem>, panel: RulesSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveListItem>, panel: RulesSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == key }
             list.selectedIndex = idx
-            val area = settingsListCellBounds(list, idx, selected = true).getValue(id)
+            val area = activeListCellBounds(list, idx, selected = true).getValue(id)
             click(list, center(area))
         }
     }
 
-    private fun doubleClick(list: JBList<SettingsListItem>, panel: RulesSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveListItem>, panel: RulesSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -325,28 +325,28 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: RulesSettingsUi): List<SettingsListItem> {
+    private fun rows(panel: RulesSettingsUi): List<ActiveListItem> {
         val list = rulesList(panel)
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().single()
+    private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
 
     private fun toggle(panel: RulesSettingsUi): SettingsToggle = components(panel).filterIsInstance<SettingsToggle>().single()
 
-    private fun scrollFor(panel: RulesSettingsUi, list: JBList<SettingsListItem>) = components(panel)
+    private fun scrollFor(panel: RulesSettingsUi, list: JBList<ActiveListItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<SettingsListItem>, point: Point) {
+    private fun click(list: JBList<ActiveListItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<SettingsListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

@@ -4,6 +4,10 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import com.intellij.icons.AllIcons
@@ -25,16 +29,6 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.withTimeoutOrNull
-import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import java.awt.event.KeyEvent
 import javax.swing.Icon
@@ -42,15 +36,25 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.KeyStroke
 import javax.swing.event.DocumentEvent
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
 internal abstract class SettingsListPanel(
     private val cs: CoroutineScope,
-    cfg: SettingsListConfig = SettingsListConfig.Equal,
+    cfg: ActiveListConfig = ActiveListConfig.Equal,
 ) : SettingsPanel(), Disposable {
     private val search = SearchTextField(false)
-    protected val view = SettingsListView(KiloBundle.message("settings.agentBehavior.empty"), cfg) { key, id ->
+    protected val view = ActiveListView(KiloBundle.message("settings.agentBehavior.empty"), cfg) { key, id ->
         onCell(key, id)
     }
     private var job: Job? = null
@@ -73,7 +77,7 @@ internal abstract class SettingsListPanel(
     open fun reload() {
         checkEdt()
         pending = false
-        if (!reload(SettingsListSelection.Preserve)) return
+        if (!reload(ActiveListSelection.Preserve)) return
         showProgress(loadingText())
     }
 
@@ -91,14 +95,14 @@ internal abstract class SettingsListPanel(
 
     @RequiresEdt
     protected fun mutateAndReload(
-        selection: SettingsListSelection = SettingsListSelection.Preserve,
+        selection: ActiveListSelection = ActiveListSelection.Preserve,
         text: String = loadingText(),
         block: suspend () -> Boolean,
     ) = mutateAndReload({ selection }, text, block)
 
     @RequiresEdt
     protected fun mutateAndReload(
-        selection: suspend () -> SettingsListSelection,
+        selection: suspend () -> ActiveListSelection,
         text: String = loadingText(),
         block: suspend () -> Boolean,
     ) {
@@ -116,7 +120,7 @@ internal abstract class SettingsListPanel(
         showProgress(text)
     }
 
-    protected abstract suspend fun fetch(): List<SettingsListItem>
+    protected abstract suspend fun fetch(): List<ActiveListItem>
 
     protected abstract fun onCell(key: String, cellId: String)
 
@@ -137,9 +141,9 @@ internal abstract class SettingsListPanel(
     protected open fun afterApply() = Unit
 
     @RequiresEdt
-    protected fun selectionIndex(): SettingsListSelection {
+    protected fun selectionIndex(): ActiveListSelection {
         checkEdt()
-        return SettingsListSelection.Index(view.selectedIndex())
+        return ActiveListSelection.Index(view.selectedIndex())
     }
 
     private fun header(): JComponent {
@@ -235,7 +239,7 @@ internal abstract class SettingsListPanel(
     }
 
     @RequiresEdt
-    private fun reload(selection: SettingsListSelection): Boolean {
+    private fun reload(selection: ActiveListSelection): Boolean {
         checkEdt()
         return launch("reload") { id ->
             val items = fetch()
@@ -243,7 +247,7 @@ internal abstract class SettingsListPanel(
         }
     }
 
-    private suspend fun apply(id: Int, items: List<SettingsListItem>, selection: SettingsListSelection) {
+    private suspend fun apply(id: Int, items: List<ActiveListItem>, selection: ActiveListSelection) {
         withContext(edt) {
             if (!active(id)) return@withContext
             setBusy(false)

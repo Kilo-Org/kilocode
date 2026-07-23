@@ -1,16 +1,16 @@
 package ai.kilocode.client.settings.agents
 
-import ai.kilocode.client.testing.fire
 import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.AgentConfigDto
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.AgentDetailDto
@@ -25,18 +25,12 @@ import ai.kilocode.rpc.dto.ProvidersDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
-import com.intellij.testFramework.replaceService
-import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.LightVirtualFile
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Point
@@ -45,6 +39,12 @@ import java.awt.event.MouseEvent
 import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JTextField
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class AgentsSettingsUiTest : BasePlatformTestCase() {
     private var scope: CoroutineScope? = null
@@ -286,7 +286,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == "hidden" }
             list.selectedIndex = idx
-            val area = settingsListCellBounds(list, idx, selected = true).getValue(DELETE_CELL)
+            val area = activeListCellBounds(list, idx, selected = true).getValue(DELETE_CELL)
             click(list, center(area))
             true
         }
@@ -434,12 +434,12 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         defaults = emptyMap(),
     )
 
-    private fun rows(panel: AgentsSettingsUi): List<SettingsListItem> {
+    private fun rows(panel: AgentsSettingsUi): List<ActiveListItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().single()
+    private fun list(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
 
     private fun picker(panel: AgentsSettingsUi) = components(panel).filterIsInstance<JComboBox<String>>().single()
 
@@ -470,7 +470,7 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<SettingsListItem>, point: Point) {
+    private fun click(list: JBList<ActiveListItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
@@ -481,12 +481,12 @@ class AgentsSettingsUiTest : BasePlatformTestCase() {
         list.doLayout()
         val idx = rows(panel).indexOfFirst { it.key == key }
         list.selectedIndex = idx
-        val area = settingsListCellBounds(list, idx, selected = true).getValue(cell)
+        val area = activeListCellBounds(list, idx, selected = true).getValue(cell)
         click(list, center(area))
     }
 
     private fun file(name: String, text: String) = LightVirtualFile(name, text)
-    private fun mouse(list: JBList<SettingsListItem>, id: Int, point: Point) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

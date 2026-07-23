@@ -8,17 +8,17 @@ import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.model.ModelPicker
 import ai.kilocode.client.session.ui.model.ModelText
-import ai.kilocode.client.settings.base.SettingsBadge
-import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListCell
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.settings.base.SettingsListSelection
-import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
+import ai.kilocode.client.settings.base.SettingsListPanel
+import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.rpc.dto.ProvidersDto
 import com.intellij.icons.AllIcons
@@ -36,12 +36,12 @@ import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.components.JBLabel
+import java.nio.charset.StandardCharsets
+import javax.swing.JComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.nio.charset.StandardCharsets
-import javax.swing.JComponent
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -62,7 +62,7 @@ internal class AgentsSettingsUi(
     private var dir: String,
     private val create: (Collection<String>) -> AgentCreateDialogHandle = ::AgentCreateDialog,
     private val choose: (JComponent) -> VirtualFile? = ::chooseImportFile,
-) : SettingsListPanel(cs, SettingsListConfig.Equal), SettingsDraftPage {
+) : SettingsListPanel(cs, ActiveListConfig.Equal), SettingsDraftPage {
     private val app get() = service<KiloAppService>()
     private val state = SettingsDraftState(agentsDraft(app.state.value.config, emptyList()), ::savedMatches)
     private var draft: AgentsDraft
@@ -87,7 +87,7 @@ internal class AgentsSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<SettingsListItem> {
+    override suspend fun fetch(): List<ActiveListItem> {
         val agents = service<KiloAgentBehaviorService>().agents(dir)
         models = items(service<KiloWorkspaceService>().models(dir).providers)
         val next = agentsDraft(service<KiloAppService>().state.value.config, agents)
@@ -230,32 +230,32 @@ internal class AgentsSettingsUi(
         view.update(rows())
     }
 
-    private fun rows(): List<SettingsListItem> = displayRows(base, draft).map { row ->
+    private fun rows(): List<ActiveListItem> = displayRows(base, draft).map { row ->
         val item = row.agent
-        object : SettingsListItem {
+        object : ActiveListItem {
             override val key = item.name
             override val title = item.displayName ?: item.name
             override val description = item.description
             override val badges = listOfNotNull(
-                SettingsBadge(
+                ActiveListBadge(
                     KiloBundle.message("settings.agentBehavior.badge.notApplied"),
                     UiStyle.Badge.Secondary,
                 ).takeIf { row.intent == AgentIntent.Modified || row.intent == AgentIntent.New },
-                SettingsBadge(
+                ActiveListBadge(
                     KiloBundle.message("settings.agentBehavior.badge.willRemove"),
                     UiStyle.Badge.Alert,
                 ).takeIf { row.intent == AgentIntent.PendingDelete },
-                SettingsBadge(
+                ActiveListBadge(
                     KiloBundle.message("settings.agentBehavior.badge.subagent"),
                     UiStyle.Badge.Highlight,
                 ).takeIf { KiloCliParser.isSubagent(item.mode) },
-                SettingsBadge(
+                ActiveListBadge(
                     KiloBundle.message("settings.agentBehavior.badge.custom"),
                     UiStyle.Badge.Primary,
                 ).takeIf { canDelete(item) },
-                SettingsBadge(KiloBundle.message("settings.agentBehavior.badge.hidden")).takeIf { item.hidden },
-                SettingsBadge(KiloBundle.message("settings.agentBehavior.badge.disabled")).takeIf { item.disable },
-                SettingsBadge(
+                ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.hidden")).takeIf { item.hidden },
+                ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.disabled")).takeIf { item.disable },
+                ActiveListBadge(
                     KiloBundle.message("settings.agentBehavior.badge.deprecated"),
                     UiStyle.Badge.Alert,
                 ).takeIf { item.deprecated },
@@ -263,12 +263,12 @@ internal class AgentsSettingsUi(
             override val cells = when (row.intent) {
                 AgentIntent.New,
                 AgentIntent.PendingDelete,
-                -> listOf(SettingsListCell(UNDO_CELL, KiloBundle.message("settings.agentBehavior.undo"), primary = true))
+                -> listOf(ActiveListCell(UNDO_CELL, KiloBundle.message("settings.agentBehavior.undo"), primary = true))
                 AgentIntent.Unchanged,
                 AgentIntent.Modified,
                 -> listOfNotNull(
-                    SettingsListCell(EDIT_CELL, KiloBundle.message("settings.agentBehavior.edit")),
-                    SettingsListCell(
+                    ActiveListCell(EDIT_CELL, KiloBundle.message("settings.agentBehavior.edit")),
+                    ActiveListCell(
                     DELETE_CELL,
                     KiloBundle.message("common.delete"),
                     icon = AllIcons.Actions.GC,
@@ -289,7 +289,7 @@ internal class AgentsSettingsUi(
         }
         syncNames()
         syncPicker()
-        view.update(rows(), SettingsListSelection.Key(agent.name))
+        view.update(rows(), ActiveListSelection.Key(agent.name))
     }
 
     private fun undo(name: String) {
@@ -303,7 +303,7 @@ internal class AgentsSettingsUi(
         }
         syncNames()
         syncPicker()
-        view.update(rows(), SettingsListSelection.Key(name))
+        view.update(rows(), ActiveListSelection.Key(name))
     }
 
     private fun syncNames() {
@@ -349,7 +349,7 @@ internal class AgentsSettingsUi(
             }
             syncNames()
             syncPicker()
-            view.update(rows(), SettingsListSelection.Key(input.name))
+            view.update(rows(), ActiveListSelection.Key(input.name))
         }
     }
 
@@ -368,7 +368,7 @@ internal class AgentsSettingsUi(
                     this@AgentsSettingsUi.state.update { copy(imported = imported + (input.name to input.patch)) }
                     syncNames()
                     syncPicker()
-                    view.update(rows(), SettingsListSelection.Key(input.name))
+                    view.update(rows(), ActiveListSelection.Key(input.name))
                     setBusy(false)
                     clearProgress()
                 }

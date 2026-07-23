@@ -2,16 +2,16 @@ package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.SettingsListRenderer
-import ai.kilocode.client.settings.base.SettingsListActionCell
-import ai.kilocode.client.settings.base.settingsListCellAt
-import ai.kilocode.client.settings.base.settingsListCellBounds
-import ai.kilocode.client.settings.base.settingsListSectionTitle
-import ai.kilocode.client.settings.base.settingsListVisibleCells
 import ai.kilocode.client.testing.FakeProviderRpcApi
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.list.ActiveListActionCell
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListRenderer
+import ai.kilocode.client.ui.list.activeListCellAt
+import ai.kilocode.client.ui.list.activeListCellBounds
+import ai.kilocode.client.ui.list.activeListSectionTitle
+import ai.kilocode.client.ui.list.activeListVisibleCells
 import ai.kilocode.rpc.dto.CustomModelFetchResultDto
 import ai.kilocode.rpc.dto.CustomProviderConfigDto
 import ai.kilocode.rpc.dto.ModelDto
@@ -25,24 +25,15 @@ import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.ValidationInfo
-import com.intellij.testFramework.replaceService
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.testFramework.replaceService
 import com.intellij.ui.CollectionListModel
-import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.SearchTextField
-import com.intellij.ui.components.JBList
+import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBList
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
@@ -53,11 +44,20 @@ import java.awt.event.KeyEvent
 import java.awt.image.BufferedImage
 import javax.swing.JButton
 import javax.swing.JComponent
-import javax.swing.JScrollPane
-import javax.swing.KeyStroke
 import javax.swing.JList
+import javax.swing.JScrollPane
 import javax.swing.JTextField
+import javax.swing.KeyStroke
 import javax.swing.UIManager
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 @Suppress("UNCHECKED_CAST")
 class ProvidersSettingsUiTest : BasePlatformTestCase() {
@@ -474,7 +474,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("kilo", "anthropic", "deepseek", "openai", "google", "openrouter", "vercel"), rows.map { it.key })
-        assertEquals("Popular providers", settingsListSectionTitle(rows, 0))
+        assertEquals("Popular providers", activeListSectionTitle(rows, 0))
     }
 
     fun `test popular rows use fallback order without metadata`() {
@@ -490,8 +490,8 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("anthropic", "openai", "unknown"), rows.map { it.key })
-        assertEquals("Popular providers", settingsListSectionTitle(rows, 0))
-        assertEquals("All providers", settingsListSectionTitle(rows, 2))
+        assertEquals("Popular providers", activeListSectionTitle(rows, 0))
+        assertEquals("All providers", activeListSectionTitle(rows, 2))
     }
 
     fun `test connected providers appear first and are not duplicated in popular section`() {
@@ -504,8 +504,8 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("anthropic", "openai"), rows.map { it.key })
-        assertEquals("Connected providers", settingsListSectionTitle(rows, 0))
-        assertEquals("Popular providers", settingsListSectionTitle(rows, 1))
+        assertEquals("Connected providers", activeListSectionTitle(rows, 0))
+        assertEquals("Popular providers", activeListSectionTitle(rows, 1))
         assertEquals(listOf(ProviderListAction.DISCONNECT), rows[0].actions)
     }
 
@@ -523,9 +523,9 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("local-openai", "anthropic", "available-custom"), rows.map { it.key })
-        assertEquals("Connected providers", settingsListSectionTitle(rows, 0))
-        assertEquals("Popular providers", settingsListSectionTitle(rows, 1))
-        assertEquals("All providers", settingsListSectionTitle(rows, 2))
+        assertEquals("Connected providers", activeListSectionTitle(rows, 0))
+        assertEquals("Popular providers", activeListSectionTitle(rows, 1))
+        assertEquals("All providers", activeListSectionTitle(rows, 2))
         assertEquals(listOf(ProviderListAction.EDIT, ProviderListAction.DELETE), rows[0].actions)
     }
 
@@ -589,7 +589,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("kilo"), rows.map { it.key })
-        assertEquals("Connected providers", settingsListSectionTitle(rows, 0))
+        assertEquals("Connected providers", activeListSectionTitle(rows, 0))
         assertTrue(rows.single().actions.isEmpty())
     }
 
@@ -603,7 +603,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("openai", "anthropic"), rows.map { it.key })
-        assertEquals("All providers", settingsListSectionTitle(rows, 1))
+        assertEquals("All providers", activeListSectionTitle(rows, 1))
         assertEquals(listOf(ProviderListAction.ENABLE), rows[1].actions)
     }
 
@@ -620,7 +620,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
         )
 
         assertEquals(listOf("openai", "alpha", "zeta"), rows.map { it.key })
-        assertEquals("All providers", settingsListSectionTitle(rows, 1))
+        assertEquals("All providers", activeListSectionTitle(rows, 1))
     }
 
     fun `test filtering by provider name updates rows and sections`() {
@@ -640,7 +640,7 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
             val rows = rows(content)
             assertEquals(listOf("openai"), rows.map { it.key })
-            assertEquals("Popular providers", settingsListSectionTitle(rows, 0))
+            assertEquals("Popular providers", activeListSectionTitle(rows, 0))
         }
     }
 
@@ -1211,35 +1211,35 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun renderer(row: ProviderListRow) = SettingsListRenderer(CollectionListModel<SettingsListItem>(listOf(row)))
+    private fun renderer(row: ProviderListRow) = ActiveListRenderer(CollectionListModel<ActiveListItem>(listOf(row)))
 
-    private fun render(renderer: SettingsListRenderer, list: JBList<ProviderListRow>, row: ProviderListRow, selected: Boolean) {
+    private fun render(renderer: ActiveListRenderer, list: JBList<ProviderListRow>, row: ProviderListRow, selected: Boolean) {
         @Suppress("UNCHECKED_CAST")
         // A selected row exposes its in-place actions only when the selection is visible (focused).
-        renderer.getListCellRendererComponent(list as JList<out SettingsListItem>, row, 0, selected, selected)
+        renderer.getListCellRendererComponent(list as JList<out ActiveListItem>, row, 0, selected, selected)
     }
 
-    private fun actionTexts(renderer: SettingsListRenderer): List<String> = components(renderer)
-        .filterIsInstance<SettingsListActionCell>()
+    private fun actionTexts(renderer: ActiveListRenderer): List<String> = components(renderer)
+        .filterIsInstance<ActiveListActionCell>()
         .filter { it.isVisible }
         .mapNotNull { it.text.takeIf(String::isNotBlank) }
 
-    private fun descriptions(renderer: SettingsListRenderer): List<String> = components(renderer)
+    private fun descriptions(renderer: ActiveListRenderer): List<String> = components(renderer)
         .filterIsInstance<JBLabel>()
-        .filter { it.isVisible && it !is SettingsListActionCell }
+        .filter { it.isVisible && it !is ActiveListActionCell }
         .mapNotNull { it.text.takeIf(String::isNotBlank) }
 
-    private fun iconSizes(renderer: SettingsListRenderer): List<Dimension> = components(renderer)
+    private fun iconSizes(renderer: ActiveListRenderer): List<Dimension> = components(renderer)
         .filterIsInstance<JBLabel>()
         .mapNotNull { it.icon }
         .filter { it.iconWidth == JBUI.scale(20) && it.iconHeight == JBUI.scale(20) }
         .map { Dimension(it.iconWidth, it.iconHeight) }
 
-    /** Builds a list wired with the real [SettingsListRenderer] and laid out, so hit-testing matches what is drawn. */
+    /** Builds a list wired with the real [ActiveListRenderer] and laid out, so hit-testing matches what is drawn. */
     private fun hitList(row: ProviderListRow): JBList<ProviderListRow> {
         val model = CollectionListModel<ProviderListRow>(listOf(row))
         val list = JBList(model)
-        list.cellRenderer = SettingsListRenderer(model as CollectionListModel<SettingsListItem>, SettingsListConfig.Preferred)
+        list.cellRenderer = ActiveListRenderer(model as CollectionListModel<ActiveListItem>, ActiveListConfig.Preferred)
         list.size = Dimension(320, 200)
         list.doLayout()
         UIUtil.dispatchAllInvocationEvents()
@@ -1247,17 +1247,17 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun actionAt(list: JBList<ProviderListRow>, point: Point, selected: Boolean): ProviderListAction? {
-        val id = settingsListCellAt(list, 0, point, selected) ?: return null
+        val id = activeListCellAt(list, 0, point, selected) ?: return null
         return ProviderListAction.entries.firstOrNull { it.name == id }
     }
 
     private fun actionBounds(list: JBList<ProviderListRow>, selected: Boolean): Map<ProviderListAction, Rectangle> {
-        val cells = settingsListCellBounds(list, 0, selected)
+        val cells = activeListCellBounds(list, 0, selected)
         return cells.mapNotNull { (id, rect) -> ProviderListAction.entries.firstOrNull { it.name == id }?.let { it to rect } }.toMap()
     }
 
     private fun visibleActions(row: ProviderListRow, selected: Boolean): List<ProviderListAction> {
-        return settingsListVisibleCells(row, selected).mapNotNull { cell -> ProviderListAction.entries.firstOrNull { it.name == cell.id } }
+        return activeListVisibleCells(row, selected).mapNotNull { cell -> ProviderListAction.entries.firstOrNull { it.name == cell.id } }
     }
 
     private fun triggerPrimary(component: JComponent) {

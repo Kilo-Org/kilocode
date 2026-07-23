@@ -3,11 +3,11 @@ package ai.kilocode.client.settings.agents
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -25,11 +25,6 @@ import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Point
@@ -39,6 +34,11 @@ import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JTextField
 import javax.swing.SwingUtilities
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class McpSettingsUiTest : BasePlatformTestCase() {
     private var scope: CoroutineScope? = null
@@ -350,7 +350,7 @@ class McpSettingsUiTest : BasePlatformTestCase() {
             list.doLayout()
             val idx = rows(panel).indexOfFirst { it.key == key }
             list.selectedIndex = idx
-            val area = settingsListCellBounds(list, idx, selected = true).getValue(id)
+            val area = activeListCellBounds(list, idx, selected = true).getValue(id)
             click(list, center(area))
             true
         }
@@ -370,12 +370,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: McpSettingsUi): List<SettingsListItem> {
+    private fun rows(panel: McpSettingsUi): List<ActiveListItem> {
         val model = list(panel).model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().single()
+    private fun list(panel: McpSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().single()
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()
@@ -413,12 +413,12 @@ class McpSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<SettingsListItem>, point: Point) {
+    private fun click(list: JBList<ActiveListItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<SettingsListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

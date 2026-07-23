@@ -3,13 +3,13 @@ package ai.kilocode.client.settings.agents
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
-import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsPathDialogHandle
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import ai.kilocode.rpc.dto.ConfigDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -25,17 +25,12 @@ import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.testFramework.replaceService
-import com.intellij.ui.TitledSeparator
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
@@ -43,9 +38,14 @@ import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
+import javax.swing.JTextField
 import javax.swing.ScrollPaneConstants
 import javax.swing.Scrollable
-import javax.swing.JTextField
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 class SkillsSettingsUiTest : BasePlatformTestCase() {
     private var scope: CoroutineScope? = null
@@ -498,20 +498,20 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         ApplicationManager.getApplication().replaceService(KiloWorkspaceService::class.java, KiloWorkspaceService(cs, workspaceRpc), testRootDisposable)
     }
 
-    private fun click(list: JBList<SettingsListItem>, panel: SkillsSettingsUi, key: String, id: String) {
+    private fun click(list: JBList<ActiveListItem>, panel: SkillsSettingsUi, key: String, id: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
             val rows = if (list === skillsList(panel)) rows(panel) else sourceRows(panel)
             val idx = rows.indexOfFirst { it.key == key }
             list.selectedIndex = idx
-            val area = settingsListCellBounds(list, idx, selected = true).getValue(id)
+            val area = activeListCellBounds(list, idx, selected = true).getValue(id)
             click(list, center(area))
             true
         }
     }
 
-    private fun doubleClick(list: JBList<SettingsListItem>, panel: SkillsSettingsUi, key: String) {
+    private fun doubleClick(list: JBList<ActiveListItem>, panel: SkillsSettingsUi, key: String) {
         edt {
             list.size = Dimension(520, 320)
             list.doLayout()
@@ -523,20 +523,20 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    private fun rows(panel: SkillsSettingsUi): List<SettingsListItem> = items(skillsList(panel))
+    private fun rows(panel: SkillsSettingsUi): List<ActiveListItem> = items(skillsList(panel))
 
-    private fun sourceRows(panel: SkillsSettingsUi): List<SettingsListItem> = items(sourceList(panel))
+    private fun sourceRows(panel: SkillsSettingsUi): List<ActiveListItem> = items(sourceList(panel))
 
-    private fun items(list: JBList<SettingsListItem>): List<SettingsListItem> {
+    private fun items(list: JBList<ActiveListItem>): List<ActiveListItem> {
         val model = list.model
         return (0 until model.size).map { model.getElementAt(it) }
     }
 
-    private fun skillsList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().first()
+    private fun skillsList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().first()
 
-    private fun sourceList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().last()
+    private fun sourceList(panel: SkillsSettingsUi) = components(panel).filterIsInstance<JBList<ActiveListItem>>().last()
 
-    private fun scrollFor(panel: SkillsSettingsUi, list: JBList<SettingsListItem>) = components(panel)
+    private fun scrollFor(panel: SkillsSettingsUi, list: JBList<ActiveListItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()
         .single { pane -> pane.viewport.view === list.parent }
 
@@ -566,12 +566,12 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     private fun center(rect: java.awt.Rectangle) = Point(rect.x + rect.width / 2, rect.y + rect.height / 2)
 
-    private fun click(list: JBList<SettingsListItem>, point: Point) {
+    private fun click(list: JBList<ActiveListItem>, point: Point) {
         fire(list, mouse(list, MouseEvent.MOUSE_PRESSED, point))
         fire(list, mouse(list, MouseEvent.MOUSE_RELEASED, point))
     }
 
-    private fun mouse(list: JBList<SettingsListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
+    private fun mouse(list: JBList<ActiveListItem>, id: Int, point: Point, count: Int = 1) = MouseEvent(
         list,
         id,
         System.currentTimeMillis(),

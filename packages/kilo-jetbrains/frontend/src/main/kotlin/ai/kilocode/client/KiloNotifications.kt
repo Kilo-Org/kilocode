@@ -1,6 +1,7 @@
 package ai.kilocode.client
 
 import com.intellij.notification.Notification
+import com.intellij.notification.NotificationAction
 import com.intellij.notification.NotificationGroupManager
 import com.intellij.notification.NotificationType
 import com.intellij.openapi.project.Project
@@ -19,6 +20,16 @@ object KiloNotifications {
             .getNotificationGroup(GROUP)
             ?.createNotification(title, content ?: "", NotificationType.ERROR)
             ?: Notification(GROUP, title, content ?: "", NotificationType.ERROR)
+        notification.notify(project)
+    }
+
+    /** Error notification with a single expiring action (e.g. a retry). */
+    fun error(project: Project?, title: String, content: String?, actionLabel: String, action: () -> Unit) {
+        val notification = NotificationGroupManager.getInstance()
+            .getNotificationGroup(GROUP)
+            ?.createNotification(title, content ?: "", NotificationType.ERROR)
+            ?: Notification(GROUP, title, content ?: "", NotificationType.ERROR)
+        notification.addAction(NotificationAction.createSimpleExpiring(actionLabel) { action() })
         notification.notify(project)
     }
 

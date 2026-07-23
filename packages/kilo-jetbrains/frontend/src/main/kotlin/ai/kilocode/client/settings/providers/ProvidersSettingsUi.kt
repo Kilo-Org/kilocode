@@ -2,17 +2,17 @@ package ai.kilocode.client.settings.providers
 
 import ai.kilocode.client.app.KiloProviderService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.BaseContentPanel
-import ai.kilocode.client.settings.base.SettingsPanel
-import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListSelection
-import ai.kilocode.client.settings.base.SettingsToolbarAction
-import ai.kilocode.client.settings.base.SettingsListView
 import ai.kilocode.client.settings.auth.DeviceOAuthInfo
 import ai.kilocode.client.settings.auth.DeviceOAuthPanel
 import ai.kilocode.client.settings.auth.DeviceOAuthText
+import ai.kilocode.client.settings.base.BaseContentPanel
+import ai.kilocode.client.settings.base.SettingsPanel
+import ai.kilocode.client.settings.base.SettingsToolbarAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.picker.PickerListRenderer
 import ai.kilocode.client.ui.picker.PickerPopup
 import ai.kilocode.log.KiloLog
@@ -32,6 +32,7 @@ import ai.kilocode.rpc.dto.ProviderSettingsDto
 import ai.kilocode.rpc.dto.ProviderSettingsProviderDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.CommonShortcuts
@@ -40,21 +41,33 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
-import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.ui.ComboBox
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.ValidationInfo
+import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBPasswordField
 import com.intellij.ui.components.JBTextField
-import com.intellij.ui.components.ActionLink
-import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.awt.BorderLayout
+import java.awt.Component
+import java.awt.event.KeyEvent
+import javax.swing.DefaultListCellRenderer
+import javax.swing.JButton
+import javax.swing.JComponent
+import javax.swing.JList
+import javax.swing.JPanel
+import javax.swing.JSeparator
+import javax.swing.KeyStroke
+import javax.swing.SwingConstants
+import javax.swing.Timer
+import javax.swing.event.DocumentEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,19 +75,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.awt.BorderLayout
-import java.awt.Component
-import java.awt.event.KeyEvent
-import javax.swing.JButton
-import javax.swing.JComponent
-import javax.swing.DefaultListCellRenderer
-import javax.swing.JList
-import javax.swing.JPanel
-import javax.swing.JSeparator
-import javax.swing.KeyStroke
-import javax.swing.SwingConstants
-import javax.swing.event.DocumentEvent
-import javax.swing.Timer
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -490,7 +490,7 @@ internal class ProvidersContent(
     private val enable: (ProviderSettingsProviderDto) -> Unit,
     private val edit: (ProviderSettingsProviderDto) -> Unit,
 ) : BaseContentPanel() {
-    private val view = SettingsListView(KiloBundle.message("settings.providers.noMatches"), SettingsListConfig.Preferred) { key, id ->
+    private val view = ActiveListView(KiloBundle.message("settings.providers.noMatches"), ActiveListConfig.Preferred) { key, id ->
         activate(key, id)
     }
     private var state = ProviderSettingsDto()
@@ -507,7 +507,7 @@ internal class ProvidersContent(
         ProvidersSettingsUi.LOG.info("provider settings content update: start providers=${state.providers.size} connected=${state.connected.size} disabled=${state.disabled.size} descriptions=$notes")
         this.state = state
         val rows = providerListRows(state, "", disabledRows = busy)
-        if (select != null) view.update(rows, SettingsListSelection.Key(select)) else view.update(rows)
+        if (select != null) view.update(rows, ActiveListSelection.Key(select)) else view.update(rows)
         ProvidersSettingsUi.LOG.info("provider settings content update: completed rows=${rows.size}")
     }
 

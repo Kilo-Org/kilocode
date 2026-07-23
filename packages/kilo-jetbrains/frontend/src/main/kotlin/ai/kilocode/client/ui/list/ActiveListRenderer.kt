@@ -1,4 +1,4 @@
-package ai.kilocode.client.settings.base
+package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
@@ -20,24 +20,26 @@ import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.SwingConstants
 
-internal class SettingsListRenderer(
-    private val model: CollectionListModel<SettingsListItem>,
-    private val cfg: SettingsListConfig = SettingsListConfig.Equal,
-) : JPanel(BorderLayout()), ListCellRenderer<SettingsListItem> {
+internal class ActiveListRenderer(
+    private val model: CollectionListModel<ActiveListItem>,
+    private val cfg: ActiveListConfig = ActiveListConfig.Equal,
+) : JPanel(BorderLayout()), ListCellRenderer<ActiveListItem> {
     private val sep = GroupHeaderSeparator(JBUI.CurrentTheme.Popup.separatorLabelInsets())
     private val top = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty()
         add(sep, BorderLayout.NORTH)
     }
-    private val icon = JBLabel()
-    private val mark = icon.align(HAlign.CENTER, VAlign.TOP)
+    // Pin the glyph to the top of the label so a stretched icon column keeps the icon on the
+    // first text line instead of centering it across a multi-line row.
+    private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
+    private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
     private val title = SimpleColoredComponent()
     private val badges = Stack.horizontal()
-    private val head = Stack.horizontal(UiStyle.Gap.xs()).next(title).next(badges)
+    private val header = Stack.horizontal(UiStyle.Gap.xs()).next(title).next(badges)
     private val desc = JBLabel()
-    private val text = Stack.vertical().next(head).next(desc)
-    private val textPane = text.align(HAlign.TRACK, if (cfg.description) VAlign.FIT else VAlign.CENTER)
-    private val cells = Stack.horizontal(settingsListCellGap())
+    private val text = Stack.vertical().next(header).next(desc)
+    private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
+    private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
@@ -49,7 +51,7 @@ internal class SettingsListRenderer(
     init {
         isOpaque = true
         top.isOpaque = true
-        UiStyle.Components.transparent(row, mark, icon, title, badges, head, text, textPane, desc, cells, cellPane)
+        UiStyle.Components.transparent(row, mark, icon, title, badges, header, text, textPane, desc, cells, cellPane)
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
             0,
@@ -62,17 +64,17 @@ internal class SettingsListRenderer(
     }
 
     override fun getListCellRendererComponent(
-        list: JList<out SettingsListItem>,
-        value: SettingsListItem,
+        list: JList<out ActiveListItem>,
+        value: ActiveListItem,
         index: Int,
         selected: Boolean,
         focused: Boolean,
     ): JPanel {
-        val active = selected && (focused || list.hasFocus() || (list as? SettingsListActive)?.active() == true)
+        val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = if (active) fg else UiStyle.Colors.weak()
         val current = model.items.getOrNull(index)
-        val section = if (current === value) settingsListSectionTitle(model.items, index) else null
+        val section = if (current === value) activeListSectionTitle(model.items, index) else null
 
         background = list.background
         top.background = list.background
@@ -102,11 +104,12 @@ internal class SettingsListRenderer(
         // In-place action buttons follow the selection highlight: only when the selection is
         // visible (list focused, or an owned popup is active). An unfocused list hides them.
         syncCells(value, active && list.isEnabled, list.isEnabled)
+        cellPane.isVisible = cells.isVisible
         top.invalidate()
         return this
     }
 
-    private fun syncBadges(item: SettingsListItem) {
+    private fun syncBadges(item: ActiveListItem) {
         val items = item.badges
         while (badges.componentCount > items.size) badges.remove(badges.componentCount - 1)
         while (badges.componentCount < items.size) {
@@ -125,27 +128,26 @@ internal class SettingsListRenderer(
         }
     }
 
-    private fun syncCells(item: SettingsListItem, selected: Boolean, enabled: Boolean) {
-        val visible = if (enabled) settingsListVisibleCells(item, selected) else emptyList()
+    private fun syncCells(item: ActiveListItem, selected: Boolean, enabled: Boolean) {
+        val visible = if (enabled) activeListVisibleCells(item, selected) else emptyList()
         while (cells.componentCount > visible.size) cells.remove(cells.componentCount - 1)
-        while (cells.componentCount < visible.size) cells.add(SettingsListActionCell())
+        while (cells.componentCount < visible.size) cells.add(ActiveListActionCell())
         cells.isVisible = visible.isNotEmpty()
-        cellPane.isVisible = visible.isNotEmpty()
         for (i in visible.indices) {
-            (cells.getComponent(i) as SettingsListActionCell).update(visible[i])
+            (cells.getComponent(i) as ActiveListActionCell).update(visible[i])
         }
     }
 }
 
-internal interface SettingsListActive {
+internal interface ActiveListActive {
     fun active(): Boolean
 }
 
-internal class SettingsListActionCell : JBLabel() {
+internal class ActiveListActionCell : JBLabel() {
     var cellId: String = ""
         private set
 
-    fun update(cell: SettingsListCell) {
+    fun update(cell: ActiveListCell) {
         cellId = cell.id
         text = if (cell.iconOnly) "" else cell.label
         icon = cell.icon

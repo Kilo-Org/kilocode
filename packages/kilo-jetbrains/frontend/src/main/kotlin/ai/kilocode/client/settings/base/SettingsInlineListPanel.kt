@@ -2,6 +2,10 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListView
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionToolbar
@@ -30,21 +34,21 @@ import javax.swing.event.DocumentEvent
  */
 internal abstract class SettingsInlineListPanel(
     emptyText: String,
-    cfg: SettingsListConfig = SettingsListConfig.Equal,
+    cfg: ActiveListConfig = ActiveListConfig.Equal,
     private val selectionMode: Int = ListSelectionModel.SINGLE_SELECTION,
     private val showSearch: Boolean = true,
 ) : BaseContentPanel() {
     private val search = SearchTextField(false)
-    protected val view = SettingsListView(emptyText, cfg) { key, cellId -> onCell(key, cellId) }
+    protected val view = ActiveListView(emptyText, cfg) { key, cellId -> onCell(key, cellId) }
     private var toolbar: ActionToolbar? = null
     private var syncing = false
 
     @RequiresEdt
     protected fun start() {
         checkEdt()
-        view.list.selectionMode = selectionMode
+        view.setSelectionMode(selectionMode)
         view.minimumSize = JBUI.size(0, minListHeight())
-        view.list.minimumSize = JBUI.size(0, minListHeight())
+        view.setListMinimumSize(JBUI.size(0, minListHeight()))
         view.onSelect = {
             toolbar?.updateActionsImmediately()
             if (!syncing) onSelectionChanged(selectedKeys())
@@ -74,12 +78,12 @@ internal abstract class SettingsInlineListPanel(
     }
 
     @RequiresEdt
-    fun setItems(items: List<SettingsListItem>, enabled: Boolean) {
+    fun setItems(items: List<ActiveListItem>, enabled: Boolean) {
         checkEdt()
         setEnabled(enabled)
         syncing = true
         try {
-            view.update(items, SettingsListSelection.PreserveNoScroll)
+            view.update(items, ActiveListSelection.PreserveNoScroll)
         } finally {
             syncing = false
         }
@@ -89,7 +93,7 @@ internal abstract class SettingsInlineListPanel(
     @RequiresEdt
     protected fun selectedKeys(): List<String> {
         checkEdt()
-        return view.list.selectedValuesList.map { it.key }
+        return view.selectedKeys()
     }
 
     @RequiresEdt
