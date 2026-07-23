@@ -27,7 +27,7 @@ While the specifics change constantly, some principles stay consistent:
 - Use the **model selector** in the chat prompt area to pick a model for the current session. You can also type `/models` to open the model picker.
 - When the selected model supports variants, type `/variant` to open the reasoning effort selector.
 - Set per-agent defaults and a global default in the **Settings** panel (Models tab), or directly in the `kilo.jsonc` config file.
-- **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → [Auto Free](/docs/code-with-ai/agents/auto-model#tiers) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
+- **Model precedence:** Session override → Last picked per agent → Per-agent config → Global config → [Auto Free](/docs/code-with-ai/agents/auto-model#auto-free) (note: Auto Free may route to providers that log prompts — see the Auto Model page for details).
 - The model selector remembers the last model you picked for each agent — switching agents restores your previous choice. A manual pick always beats config settings; use the **reset button** (visible when your active model differs from config) to go back to the config default.
 
 {% /tab %}
@@ -53,7 +53,7 @@ While the specifics change constantly, some principles stay consistent:
 
 ## Free and Budget Model Picks
 
-You don't need a paid API key to use Kilo Code productively. For the lowest cost on paid work, [Auto Efficient](/docs/code-with-ai/agents/auto-model#tiers) (`kilo-auto/efficient`) routes each request to the cheapest model proven accurate enough for that task. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
+You don't need a paid API key to use Kilo Code productively. For the lowest cost on paid work, [Auto Efficient](/docs/code-with-ai/agents/auto-model#auto-efficient) (`kilo-auto/efficient`) routes each request to the cheapest model proven accurate enough for that task. The fastest way to start for free is [Auto Model Free](/docs/code-with-ai/agents/auto-model) (`kilo-auto/free`), which routes to the best available free models automatically. See [Using Kilo for Free](/docs/getting-started/using-kilo-for-free) for the full zero-cost setup.
 
 If you prefer to pick models yourself, type `free` in the model picker to filter by free models, or browse the full list at [kilo.ai/models](https://kilo.ai/models).
 
