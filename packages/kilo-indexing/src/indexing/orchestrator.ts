@@ -18,6 +18,7 @@ import { Log } from "../util/log"
 import { sanitizeErrorMessage } from "./shared/validation-helpers"
 import { DEFAULT_VECTOR_STORE } from "./constants"
 import type { WorktreeOverlay } from "./worktree-overlay"
+import { IndexingProfile } from "../util/profile"
 
 const log = Log.create({ service: "indexing-orchestrator" })
 
@@ -175,6 +176,18 @@ export class CodeIndexOrchestrator {
       return
     }
 
+    const cfg = this.configManager.getConfig()
+    using span = IndexingProfile.start("indexing.index.run", {
+      trigger,
+      provider: cfg.embedderProvider,
+      modelId: cfg.modelId,
+      vectorStore: cfg.vectorStoreProvider ?? DEFAULT_VECTOR_STORE,
+      watcherInitMs: 0,
+      storeInitMs: 0,
+      prepareMs: 0,
+      scanMs: 0,
+      finalizeMs: 0,
+    })
     this._cancelRequested = false
     this._isProcessing = true
     this.stateManager.setSystemState("Indexing", "Initializing services...")
@@ -184,74 +197,105 @@ export class CodeIndexOrchestrator {
     let mode: IndexingTelemetryMode | undefined
 
     try {
+      const overlayAt = performance.now()
       this.overlay?.prepare()
-      await this._startWatcher()
+      const overlayMs = Math.max(0, performance.now() - overlayAt)
+      span.add({ prepareMs: overlayMs })
+      const watcher = performance.now()
+      await this._startWatcher().finally(() => {
+        span.add({ watcherInitMs: Math.max(0, performance.now() - watcher) })
+      })
 
       if (this._cancelRequested) {
         this.stateManager.setSystemState("Standby", "Indexing cancelled.")
+        span.outcome("cancelled")
         return
       }
 
       source = "scan"
-      const collectionCreated = await this.vectorStore.initialize()
+      const store = performance.now()
+      const collectionCreated = await this.vectorStore.initialize().finally(() => {
+        span.add({ storeInitMs: Math.max(0, performance.now() - store) })
+      })
       log.info("vector store initialized", { workspacePath: this.workspacePath, collectionCreated })
       started = true
 
       if (this._cancelRequested) {
         this.stateManager.setSystemState("Standby", "Indexing cancelled.")
+        span.outcome("cancelled")
         return
       }
 
-      if (this.overlay) {
-        if (!collectionCreated) await this.vectorStore.clearCollection()
-        await this.cacheManager.clearCacheFile()
-        this.cacheManager.seedHashes(this.overlay.seed())
-        await this.cacheManager.flush?.()
-        log.info("seeded worktree index from shared baseline", {
-          workspacePath: this.workspacePath,
-          baselinePath: this.overlay.baselinePath,
-          files: this.overlay.baseline.size,
-        })
-      }
+      const prepare = performance.now()
+      const hasExistingData = await (async () => {
+        try {
+          if (this.overlay) {
+            if (!collectionCreated) await this.vectorStore.clearCollection()
+            await this.cacheManager.clearCacheFile()
+            this.cacheManager.seedHashes(this.overlay.seed())
+            await this.cacheManager.flush?.()
+            log.info("seeded worktree index from shared baseline", {
+              workspacePath: this.workspacePath,
+              baselinePath: this.overlay.baselinePath,
+              files: this.overlay.baseline.size,
+            })
+          }
 
-      const hasExistingData = this.overlay ? false : await this.vectorStore.hasIndexedData()
-      if (!this.overlay && !hasExistingData) {
-        if (!collectionCreated) await this.vectorStore.clearCollection()
-        await this.cacheManager.clearCacheFile()
-        log.info("cleared indexing cache before full scan", {
-          workspacePath: this.workspacePath,
-          collectionCreated,
-        })
-      }
-      log.info("checked vector store indexed data", {
-        workspacePath: this.workspacePath,
-        hasExistingData,
-        collectionCreated,
-      })
+          const existing = this.overlay ? false : await this.vectorStore.hasIndexedData()
+          if (!this.overlay && !existing) {
+            if (!collectionCreated) await this.vectorStore.clearCollection()
+            await this.cacheManager.clearCacheFile()
+            log.info("cleared indexing cache before full scan", {
+              workspacePath: this.workspacePath,
+              collectionCreated,
+            })
+          }
+          log.info("checked vector store indexed data", {
+            workspacePath: this.workspacePath,
+            hasExistingData: existing,
+            collectionCreated,
+          })
+          return existing
+        } finally {
+          span.add({ prepareMs: overlayMs + Math.max(0, performance.now() - prepare) })
+        }
+      })()
 
       if (this._cancelRequested) {
         this.stateManager.setSystemState("Standby", "Indexing cancelled.")
+        span.outcome("cancelled")
         return
       }
 
       mode = hasExistingData && !collectionCreated ? "incremental" : "full"
+      span.add({ mode })
 
-      if (mode === "incremental") {
-        log.info("collection has existing data, running incremental scan")
+      const timing =
+        mode === "incremental"
+          ? await (async () => {
+              log.info("collection has existing data, running incremental scan")
+              this.stateManager.setSystemState("Indexing", "Checking for new or modified files...")
+              await this.vectorStore.markIndexingIncomplete()
+              return this._runScan(mode, trigger)
+            })()
+          : await (async () => {
+              log.info("running full scan", {
+                workspacePath: this.workspacePath,
+                hasExistingData,
+                collectionCreated,
+              })
+              this.stateManager.setSystemState("Indexing", "Services ready. Starting workspace scan...")
+              await this.vectorStore.markIndexingIncomplete()
+              return this._runScan(mode, trigger)
+            })()
+      span.add(timing)
 
-        this.stateManager.setSystemState("Indexing", "Checking for new or modified files...")
-        await this.vectorStore.markIndexingIncomplete()
-        await this._runScan(mode, trigger)
-      } else {
-        log.info("running full scan", {
-          workspacePath: this.workspacePath,
-          hasExistingData,
-          collectionCreated,
-        })
-        this.stateManager.setSystemState("Indexing", "Services ready. Starting workspace scan...")
-        await this.vectorStore.markIndexingIncomplete()
-        await this._runScan(mode, trigger)
+      if (this._cancelRequested || this.scanner.isCancelled) {
+        span.outcome("cancelled")
+        return
       }
+
+      span.outcome("success")
     } catch (err) {
       log.error("error during indexing", { err })
       this.emitError("orchestrator:startIndexing", err, source, trigger, mode)
@@ -274,12 +318,16 @@ export class CodeIndexOrchestrator {
     }
   }
 
-  private async _runScan(mode: IndexingTelemetryMode, trigger: IndexingTelemetryTrigger): Promise<void> {
+  private async _runScan(
+    mode: IndexingTelemetryMode,
+    trigger: IndexingTelemetryTrigger,
+  ): Promise<{ scanMs: number; finalizeMs: number }> {
     if (this._cancelRequested) {
+      const finalize = performance.now()
       if (mode === "incremental") await this.vectorStore.markIndexingComplete()
       this.stateManager.setSystemState("Standby", "Indexing cancelled.")
       log.info("scan skipped: cancellation was requested", { workspacePath: this.workspacePath, mode })
-      return
+      return { scanMs: 0, finalizeMs: Math.max(0, performance.now() - finalize) }
     }
 
     log.info("starting workspace scan", { workspacePath: this.workspacePath, mode })
@@ -297,6 +345,7 @@ export class CodeIndexOrchestrator {
       this.stateManager.reportFileProgress(cumulativeFilesIndexed, cumulativeFilesFound)
     }
 
+    const scan = performance.now()
     const result = await this.scanner.scanDirectory(
       this.workspacePath,
       (batchError: Error) => {
@@ -307,6 +356,7 @@ export class CodeIndexOrchestrator {
       handleFileParsed,
       mode,
     )
+    const scanMs = Math.max(0, performance.now() - scan)
 
     log.info("workspace scan completed", {
       workspacePath: this.workspacePath,
@@ -320,6 +370,7 @@ export class CodeIndexOrchestrator {
     })
 
     if (this._cancelRequested || this.scanner.isCancelled) {
+      const finalize = performance.now()
       if (mode === "incremental" && result.stats.processed === 0 && batchErrors.length === 0) {
         await this.vectorStore.markIndexingComplete()
         log.info("preserved unchanged index after cancelled scan", { workspacePath: this.workspacePath })
@@ -329,7 +380,7 @@ export class CodeIndexOrchestrator {
         this.stateManager.setSystemState("Standby", "Indexing cancelled.")
       }
       log.info("workspace scan cancelled", { workspacePath: this.workspacePath, mode })
-      return
+      return { scanMs, finalizeMs: Math.max(0, performance.now() - finalize) }
     }
 
     if (this.overlay && batchErrors.length > 0) {
@@ -356,12 +407,14 @@ export class CodeIndexOrchestrator {
       }
     }
 
+    const finalize = performance.now()
     this.overlay?.reconcile(this.cacheManager.getAllHashes())
     await this.cacheManager.flush?.()
     await this.vectorStore.markIndexingComplete()
     await this.vectorStore.close?.()
     this.fileWatcher.setCollecting(true)
     this.stateManager.setSystemState("Indexed", "File watcher started. Index up-to-date.")
+    const finalizeMs = Math.max(0, performance.now() - finalize)
     log.info("workspace scan finalized", {
       workspacePath: this.workspacePath,
       mode,
@@ -380,6 +433,7 @@ export class CodeIndexOrchestrator {
       totalBlocks: result.totalBlockCount,
       batchErrors: batchErrors.length,
     })
+    return { scanMs, finalizeMs }
   }
 
   public async shutdown(): Promise<void> {

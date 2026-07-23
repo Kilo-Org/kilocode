@@ -2,6 +2,7 @@ import type { CodeIndexManager } from "@kilocode/kilo-indexing/engine"
 import { AsyncLocalStorage } from "node:async_hooks"
 import { format } from "node:util"
 import type { Request, Result, Event, Log } from "./indexing-worker-protocol"
+import { parseIndexingProfile } from "./indexing-profile"
 import { parseQdrantWarning } from "./indexing-warning"
 
 type Entry = {
@@ -20,6 +21,11 @@ function send(message: Result | Event) {
 
 function write(level: Log["level"], args: unknown[]) {
   const key = context.getStore()
+  const profile = parseIndexingProfile(args)
+  if (profile) {
+    send({ type: "event", key, event: "log", data: { level: "info", message: "indexing profile", profile } })
+    return
+  }
   const message = format(...args)
   send({ type: "event", key, event: "log", data: { level, message } })
   if (level !== "warn") return

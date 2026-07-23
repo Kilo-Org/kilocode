@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { createHash } from "crypto"
-import { mkdir, mkdtemp, writeFile } from "fs/promises"
+import { mkdir, mkdtemp, rm, writeFile } from "fs/promises"
 import { tmpdir } from "os"
 import path from "path"
 import { CodeIndexConfigManager } from "../../../src/indexing/config-manager"
@@ -8,6 +8,7 @@ import type { IEmbedder, IVectorStore, VectorStoreSearchResult } from "../../../
 import { CodeIndexSearchService } from "../../../src/indexing/search-service"
 import { CodeIndexStateManager } from "../../../src/indexing/state-manager"
 import { WorktreeOverlay } from "../../../src/indexing/worktree-overlay"
+import { captureProfiles } from "./profile-capture"
 
 const result = (filePath: string, score: number, codeChunk = filePath, fileHash?: string): VectorStoreSearchResult => ({
   id: `${filePath}:${score}`,
@@ -47,6 +48,191 @@ const config = (fileExtensions?: string[]) =>
   })
 
 describe("CodeIndexSearchService worktree search", () => {
+  test.serial("profiles local searches without query or prefix data", async () => {
+    const calls: string[][] = []
+    const state = new CodeIndexStateManager()
+    state.setSystemState("Indexed")
+    const service = new CodeIndexSearchService(
+      new CodeIndexConfigManager({
+        enabled: true,
+        embedderProvider: "openai",
+        openAiKey: "test",
+        vectorStoreProvider: "lancedb",
+        modelId: "text-embedding-3-small",
+        searchMaxResults: 2,
+      }),
+      state,
+      embedder(calls),
+      store([result("src/first.ts", 0.9), result("src/second.ts", 0.8)], []),
+    )
+
+    const records = await captureProfiles(async () => {
+      await service.searchIndex("sensitive-query", "sensitive-prefix")
+    })
+    const requests = records.filter((item) => item.event === "indexing.search.request")
+    expect(requests).toHaveLength(1)
+    const record = requests[0]
+
+    expect(record?.outcome).toBe("success")
+    expect(record?.fields).toEqual({
+      provider: "openai",
+      modelId: "text-embedding-3-small",
+      vectorStore: "lancedb",
+      scope: "local",
+      embeddingMs: expect.any(Number),
+      currentSearchMs: expect.any(Number),
+      baselineSearchMs: 0,
+      deltaCallCount: 1,
+      baselineCallCount: 0,
+      candidateCount: 2,
+      resultCount: 2,
+    })
+    expect(JSON.stringify(record)).not.toContain("sensitive-query")
+    expect(JSON.stringify(record)).not.toContain("sensitive-prefix")
+  })
+
+  test.serial("profiles worktree search calls without source data", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "search-profile-worktree-"))
+    const main = await mkdtemp(path.join(tmpdir(), "search-profile-main-"))
+    const hash = (content: string) => createHash("sha256").update(content).digest("hex")
+
+    try {
+      await mkdir(path.join(root, "src"), { recursive: true })
+      await mkdir(path.join(main, "src"), { recursive: true })
+      await Promise.all(
+        ["c", "d"].flatMap((name) => [
+          writeFile(path.join(root, `src/${name}.ts`), `src/${name}.ts`),
+          writeFile(path.join(main, `src/${name}.ts`), `src/${name}.ts`),
+        ]),
+      )
+      const overlay = new WorktreeOverlay(
+        root,
+        main,
+        new Map([
+          ["src/a.ts", "a"],
+          ["src/b.ts", "b"],
+          ["src/c.ts", hash("src/c.ts")],
+          ["src/d.ts", hash("src/d.ts")],
+        ]),
+      )
+      overlay.reconcile({
+        [path.join(root, "src/a.ts")]: "changed-a",
+        [path.join(root, "src/b.ts")]: "changed-b",
+        [path.join(root, "src/c.ts")]: hash("src/c.ts"),
+        [path.join(root, "src/d.ts")]: hash("src/d.ts"),
+      })
+      const state = new CodeIndexStateManager()
+      state.setSystemState("Indexed")
+      const service = new CodeIndexSearchService(
+        new CodeIndexConfigManager({
+          enabled: true,
+          embedderProvider: "openai",
+          openAiKey: "test",
+          vectorStoreProvider: "lancedb",
+          modelId: "text-embedding-3-small",
+          searchMaxResults: 2,
+        }),
+        state,
+        embedder([]),
+        store([], []),
+        {
+          store: store(
+            [
+              result("src/a.ts", 0.99),
+              result("src/b.ts", 0.98),
+              result("src/c.ts", 0.8, "sensitive-code", hash("src/c.ts")),
+              result("src/d.ts", 0.7, "sensitive-code", hash("src/d.ts")),
+            ],
+            [],
+          ),
+          overlay,
+        },
+      )
+
+      const records = await captureProfiles(async () => {
+        await service.searchIndex("sensitive-query", "sensitive-prefix")
+      })
+      const requests = records.filter((item) => item.event === "indexing.search.request")
+      expect(requests).toHaveLength(1)
+      const record = requests[0]
+
+      expect(record?.outcome).toBe("success")
+      expect(record?.fields).toEqual({
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        scope: "worktree",
+        embeddingMs: expect.any(Number),
+        currentSearchMs: expect.any(Number),
+        baselineSearchMs: expect.any(Number),
+        deltaCallCount: 1,
+        baselineCallCount: 2,
+        candidateCount: 2,
+        resultCount: 2,
+      })
+      expect(JSON.stringify(record)).not.toContain(root)
+      expect(JSON.stringify(record)).not.toContain(main)
+      expect(JSON.stringify(record)).not.toContain("sensitive-query")
+      expect(JSON.stringify(record)).not.toContain("sensitive-prefix")
+      expect(JSON.stringify(record)).not.toContain("sensitive-code")
+    } finally {
+      await rm(root, { recursive: true, force: true })
+      await rm(main, { recursive: true, force: true })
+    }
+  })
+
+  test.serial("profiles search errors without source data", async () => {
+    const state = new CodeIndexStateManager()
+    state.setSystemState("Indexed")
+    const service = new CodeIndexSearchService(
+      new CodeIndexConfigManager({
+        enabled: true,
+        embedderProvider: "openai",
+        openAiKey: "test",
+        vectorStoreProvider: "lancedb",
+        modelId: "text-embedding-3-small",
+      }),
+      state,
+      {
+        async createEmbeddings() {
+          throw new Error("search error sensitive-query sensitive-prefix")
+        },
+        async validateConfiguration() {
+          return { valid: true }
+        },
+        get embedderInfo() {
+          return { name: "openai" as const }
+        },
+      },
+      store([], []),
+    )
+
+    const records = await captureProfiles(async () => {
+      await expect(service.searchIndex("sensitive-query", "sensitive-prefix")).rejects.toThrow("search error")
+    })
+    const requests = records.filter((item) => item.event === "indexing.search.request")
+    expect(requests).toHaveLength(1)
+    const record = requests[0]
+
+    expect(record?.outcome).toBe("error")
+    expect(record?.fields).toEqual({
+      provider: "openai",
+      modelId: "text-embedding-3-small",
+      vectorStore: "lancedb",
+      scope: "local",
+      embeddingMs: expect.any(Number),
+      currentSearchMs: 0,
+      baselineSearchMs: 0,
+      deltaCallCount: 0,
+      baselineCallCount: 0,
+      candidateCount: 0,
+      resultCount: 0,
+    })
+    expect(JSON.stringify(record)).not.toContain("sensitive-query")
+    expect(JSON.stringify(record)).not.toContain("sensitive-prefix")
+    expect(JSON.stringify(record)).not.toContain("search error")
+  })
+
   test("filters stale results using one vector query", async () => {
     const limits: number[] = []
     const state = new CodeIndexStateManager()

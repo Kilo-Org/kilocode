@@ -35,6 +35,7 @@ import type { WorktreeOverlay } from "../worktree-overlay"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
+import { IndexingProfile } from "../../util/profile"
 
 const log = Log.create({ service: "file-watcher" })
 
@@ -527,6 +528,24 @@ export class FileWatcher implements IFileWatcher {
   private async processBatch(
     eventsToProcess: Map<string, { path: string; type: "create" | "change" | "delete" }>,
   ): Promise<void> {
+    using profile = IndexingProfile.start("indexing.watcher.batch", {
+      source: "watcher",
+      mode: "incremental",
+      provider: this.telemetryMeta?.provider ?? this.embedder?.embedderInfo.name,
+      modelId: this.telemetryMeta?.modelId,
+      vectorStore: this.telemetryMeta?.vectorStore,
+      eventCount: eventsToProcess.size,
+      deleteCount: 0,
+      upsertFileCount: 0,
+      pointCount: 0,
+      successCount: 0,
+      skippedCount: 0,
+      errorCount: 0,
+      deleteMs: 0,
+      prepareMs: 0,
+      upsertMs: 0,
+      flushMs: 0,
+    })
     const batchResults: FileProcessingResult[] = []
     let processedCountInBatch = 0
     const totalFilesInBatch = eventsToProcess.size
@@ -577,15 +596,20 @@ export class FileWatcher implements IFileWatcher {
       deletes: pathsToExplicitlyDelete.length,
       upserts: filesToUpsertDetails.length,
     })
+    profile.add({
+      deleteCount: pathsToExplicitlyDelete.length,
+      upsertFileCount: filesToUpsertDetails.length,
+    })
 
     // Phase 1: Handle deletions
+    const deleteAt = performance.now()
     const { overallBatchError: deletionError, processedCount: deletionCount } = await this._handleBatchDeletions(
       batchResults,
       processedCountInBatch,
       totalFilesInBatch,
       pathsToExplicitlyDelete,
       filesToUpsertDetails,
-    )
+    ).finally(() => profile.add({ deleteMs: Math.max(0, performance.now() - deleteAt) }))
     overallBatchError = deletionError
     processedCountInBatch = deletionCount
     if (!deletionError) {
@@ -593,6 +617,7 @@ export class FileWatcher implements IFileWatcher {
     }
 
     // Phase 2: Process files and prepare upserts
+    const prepareAt = performance.now()
     const {
       pointsForBatchUpsert,
       successfullyProcessedForUpsert,
@@ -603,20 +628,23 @@ export class FileWatcher implements IFileWatcher {
       processedCountInBatch,
       totalFilesInBatch,
       pathsToExplicitlyDelete,
-    )
+    ).finally(() => profile.add({ prepareMs: Math.max(0, performance.now() - prepareAt) }))
     processedCountInBatch = upsertCount
+    profile.add({ pointCount: pointsForBatchUpsert.length })
 
     // Phase 3: Execute batch upsert
+    const upsertAt = performance.now()
     overallBatchError = await this._executeBatchUpsertOperations(
       pointsForBatchUpsert,
       successfullyProcessedForUpsert,
       batchResults,
       overallBatchError,
-    )
+    ).finally(() => profile.add({ upsertMs: Math.max(0, performance.now() - upsertAt) }))
 
     const resultError = batchResults.find((item) => item.status === "error" || item.status === "local_error")?.error
     overallBatchError ??= resultError
-    await this.cacheManager.flush()
+    const flushAt = performance.now()
+    await this.cacheManager.flush().finally(() => profile.add({ flushMs: Math.max(0, performance.now() - flushAt) }))
 
     for (const event of eventsToProcess.values()) {
       const result = batchResults.findLast((item) => item.path === event.path)
@@ -633,6 +661,8 @@ export class FileWatcher implements IFileWatcher {
     const successCount = batchResults.filter((item) => item.status === "success").length
     const skippedCount = batchResults.filter((item) => item.status === "skipped").length
     const errorCount = batchResults.filter((item) => item.status === "error" || item.status === "local_error").length
+    profile.add({ successCount, skippedCount, errorCount })
+    profile.outcome(overallBatchError ? "error" : "success")
 
     log.info("completed file watcher batch", {
       workspacePath: this.workspacePath,
@@ -739,6 +769,11 @@ export class FileWatcher implements IFileWatcher {
       let pointsToUpsert: PointStruct[] = []
       if (this.embedder && blocks.length > 0) {
         const texts = blocks.map((block) => block.content)
+        using profile = IndexingProfile.start("indexing.watcher.embedding", {
+          provider: this.telemetryMeta?.provider ?? this.embedder.embedderInfo.name,
+          modelId: this.telemetryMeta?.modelId,
+          textCount: texts.length,
+        })
         const { embeddings } = await this.embedder.createEmbeddings(texts)
         if (embeddings.length !== blocks.length) {
           return {
@@ -749,6 +784,7 @@ export class FileWatcher implements IFileWatcher {
             ),
           }
         }
+        profile.outcome("success")
 
         pointsToUpsert = blocks.map((block, index) => {
           const vector = embeddings[index]!

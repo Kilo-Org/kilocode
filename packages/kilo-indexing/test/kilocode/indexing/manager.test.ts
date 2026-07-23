@@ -6,6 +6,9 @@ import { CacheManager } from "../../../src/indexing/cache-manager"
 import { CodeIndexManager } from "../../../src/indexing/manager"
 import type { IndexingConfigInput } from "../../../src/indexing/config-manager"
 import type { IndexingTelemetryEvent, IndexingTelemetryTrigger } from "../../../src/indexing/interfaces/telemetry"
+import { CodeIndexOrchestrator } from "../../../src/indexing/orchestrator"
+import { CodeIndexServiceFactory } from "../../../src/indexing/service-factory"
+import { captureProfiles } from "./profile-capture"
 
 function createInput(input: Partial<IndexingConfigInput> = {}): IndexingConfigInput {
   return {
@@ -77,6 +80,169 @@ function createStartError(location = "orchestrator:startIndexing"): IndexingTele
 }
 
 describe("CodeIndexManager", () => {
+  test.serial("profiles disabled initialization without workspace details", async () => {
+    const root = "/tmp/kilo-indexing-profile-disabled"
+    const mgr = new CodeIndexManager(root, `${root}/cache`)
+
+    try {
+      const records = await captureProfiles(async () => {
+        await mgr.initialize(createInput({ enabled: false }))
+      })
+
+      expect(records.find((item) => item.event === "indexing.manager.initialize")?.outcome).toBe("disabled")
+      expect(records.every((item) => JSON.stringify(item).includes(root) === false)).toBe(true)
+    } finally {
+      await mgr.dispose()
+    }
+  })
+
+  test.serial("profiles missing workspace initialization as disabled", async () => {
+    const mgr = new CodeIndexManager("", "/tmp/kilo-indexing-profile-no-workspace")
+
+    try {
+      const records = await captureProfiles(async () => {
+        await mgr.initialize(createInput({ openAiKey: "sk-test" }))
+      })
+
+      expect(records.find((item) => item.event === "indexing.manager.initialize")?.outcome).toBe("disabled")
+    } finally {
+      await mgr.dispose()
+    }
+  })
+
+  test.serial("profiles unconfigured initialization as disabled", async () => {
+    const mgr = new CodeIndexManager("/tmp/kilo-indexing-profile-unconfigured", "/tmp/kilo-indexing-profile-cache")
+
+    try {
+      const records = await captureProfiles(async () => {
+        await mgr.initialize(createInput({ openAiKey: undefined }))
+      })
+
+      expect(records.find((item) => item.event === "indexing.manager.initialize")?.outcome).toBe("disabled")
+    } finally {
+      await mgr.dispose()
+    }
+  })
+
+  test.serial("profiles disposal during initialization as cancelled", async () => {
+    const mgr = new CodeIndexManager("/tmp/kilo-indexing-profile-disposed", "/tmp/kilo-indexing-profile-cache")
+    const data = mgr as unknown as { _cacheManager: CacheManager }
+    const gate = Promise.withResolvers<void>()
+    const started = Promise.withResolvers<void>()
+    data._cacheManager = {} as CacheManager
+    const validate = spyOn(CodeIndexServiceFactory.prototype, "validateEmbedder").mockImplementation(async () => {
+      started.resolve()
+      await gate.promise
+      return { valid: true }
+    })
+
+    try {
+      const records = await captureProfiles(async () => {
+        const task = mgr.initialize(createInput({ openAiKey: "sk-test" }))
+        await started.promise
+        await mgr.dispose()
+        gate.resolve()
+        await task
+      })
+
+      expect(records.find((item) => item.event === "indexing.manager.initialize")?.outcome).toBe("cancelled")
+      expect(records.find((item) => item.event === "indexing.manager.services")?.outcome).toBe("cancelled")
+    } finally {
+      gate.resolve()
+      validate.mockRestore()
+      await mgr.dispose()
+    }
+  })
+
+  test.serial("profiles configured manager initialization and service recreation", async () => {
+    const root = "/tmp/kilo-indexing-profile-configured"
+    const mgr = new CodeIndexManager(root, `${root}/cache`)
+    const data = mgr as unknown as { _cacheManager: CacheManager }
+    data._cacheManager = {} as CacheManager
+    const validate = spyOn(CodeIndexServiceFactory.prototype, "validateEmbedder").mockResolvedValue({ valid: true })
+    const start = spyOn(CodeIndexOrchestrator.prototype, "startIndexing").mockResolvedValue()
+
+    try {
+      const records = await captureProfiles(async () => {
+        await mgr.initialize(createInput({ openAiKey: "sk-test", modelId: "text-embedding-3-small" }))
+      })
+      const services = records.find((item) => item.event === "indexing.manager.services")
+
+      expect(records.find((item) => item.event === "indexing.manager.initialize")?.outcome).toBe("success")
+      expect(services?.outcome).toBe("success")
+      expect(services?.fields).toEqual({
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        baseline: "none",
+        validationMs: expect.any(Number),
+      })
+      expect(services?.fields.validationMs).toBeGreaterThanOrEqual(0)
+      expect(records.every((item) => JSON.stringify(item).includes(root) === false)).toBe(true)
+    } finally {
+      start.mockRestore()
+      validate.mockRestore()
+      await mgr.dispose()
+    }
+  })
+
+  test.serial("profiles waiting initialization when the baseline is unavailable", async () => {
+    const mgr = new CodeIndexManager(
+      "/tmp/kilo-indexing-profile-waiting",
+      "/tmp/kilo-indexing-profile-waiting/cache",
+      "/tmp/kilo-indexing-profile-waiting/baseline",
+    )
+    const data = mgr as unknown as {
+      _cacheManager: CacheManager
+      _recreateServices(): Promise<void>
+    }
+    data._cacheManager = {} as CacheManager
+    data._recreateServices = async () => {}
+
+    try {
+      const records = await captureProfiles(async () => {
+        await mgr.initialize(createInput({ openAiKey: "sk-test" }))
+      })
+
+      expect(records.find((item) => item.event === "indexing.manager.initialize")?.outcome).toBe("waiting")
+    } finally {
+      await mgr.dispose()
+    }
+  })
+
+  test.serial("profiles embedder validation failures without error details", async () => {
+    const root = "/tmp/kilo-indexing-profile-validation-failure"
+    const mgr = new CodeIndexManager(root, `${root}/cache`)
+    const data = mgr as unknown as { _cacheManager: CacheManager }
+    data._cacheManager = {} as CacheManager
+    const validate = spyOn(CodeIndexServiceFactory.prototype, "validateEmbedder").mockResolvedValue({
+      valid: false,
+      error: `validation failed at ${root}`,
+    })
+
+    try {
+      const records = await captureProfiles(async () => {
+        await expect(mgr.initialize(createInput({ openAiKey: "sk-test", modelId: "text-embedding-3-small" }))).rejects.toThrow(
+          "validation failed",
+        )
+      })
+      const services = records.find((item) => item.event === "indexing.manager.services")
+
+      expect(services?.outcome).toBe("error")
+      expect(services?.fields).toEqual({
+        provider: "openai",
+        modelId: "text-embedding-3-small",
+        vectorStore: "lancedb",
+        baseline: "none",
+        validationMs: expect.any(Number),
+      })
+      expect(records.every((item) => JSON.stringify(item).includes(root) === false)).toBe(true)
+    } finally {
+      validate.mockRestore()
+      await mgr.dispose()
+    }
+  })
+
   test("falls back when the shared baseline is not ready", async () => {
     const mgr = new CodeIndexManager("/tmp/worktree", "/tmp/cache", "/tmp/main")
     let closed = 0

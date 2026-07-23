@@ -304,6 +304,20 @@ These advanced settings live under the `indexing` key and are exposed in the CLI
 
 ## Troubleshooting
 
+### Collect local indexing performance logs
+
+Start the kilo CLI with profiling and terminal logs enabled:
+
+```bash
+KILO_INDEXING_PROFILE=1 KILO_PRINT_LOGS=1 kilo
+```
+
+If you omit `KILO_PRINT_LOGS=1`, Kilo writes the records to rotating local log files in the normal Kilo data directory's `log/` folder. For the VS Code extension, JetBrains plugin, or another backend process, make sure the process inherits `KILO_INDEXING_PROFILE=1` and restart it.
+
+Profile records are INFO records with `message="indexing profile"`. They include an opaque `workspaceID`, event name, duration, outcome, and numeric counts. The workspace identity is a hash, not a workspace path. Records stay local and exclude file paths, query text, and code.
+
+Timings can overlap, scan batches can finish out of order, and batch-level profiling can be verbose for large repositories. Use the records to diagnose local indexing behavior rather than to compare elapsed times as a benchmark.
+
 ### Embeddings fail or indexing stalls (llama.cpp / Ollama)
 
 If your local embedding server is based on llama.cpp (including Ollama), indexing can fail with errors about `n_ubatch` or `GGML_ASSERT`. Ensure both batch size (`-b`) and micro-batch size (`-ub`) are set to the same value for embedding models, then restart the server. For Ollama, configure `num_batch` in your Modelfile or request options to match the same effective value.
