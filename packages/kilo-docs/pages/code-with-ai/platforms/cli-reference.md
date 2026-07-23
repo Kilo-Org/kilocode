@@ -968,6 +968,76 @@ Options:
   --json     print daemon details as JSON  [boolean]
 ```
 
+## kilo cloud
+
+```
+run Cloud Agent tasks
+
+Commands:
+  kilo cloud start   start a Cloud Agent task
+  kilo cloud send    send a follow-up prompt to a Cloud Agent task
+  kilo cloud status  show Cloud Agent task status
+  kilo cloud result  show a Cloud Agent task result
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo cloud start
+
+```
+start a Cloud Agent task
+
+Options:
+  --help       Show help  [boolean]
+  --version    Show version number  [boolean]
+  --prompt     prompt for the Cloud Agent  [string] [required]
+  --repo       repository shorthand or URL  [string]
+  --repo-type  repository provider type  [string] [choices: "github", "gitlab", "git"]
+  --branch     repository branch  [string]
+  --model      Cloud Agent model  [string]
+  --mode       Cloud Agent mode  [string]
+  --org-id     Kilo organization ID  [string]
+  --stream     connect to the WebSocket stream and print events as JSONL  [boolean]
+```
+
+### kilo cloud send
+
+```
+send a follow-up prompt to a Cloud Agent task
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --prompt      follow-up prompt for the Cloud Agent  [string] [required]
+```
+
+### kilo cloud status
+
+```
+show Cloud Agent task status
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --message-id  Cloud Agent message ID  [string] [required]
+```
+
+### kilo cloud result
+
+```
+show a Cloud Agent task result
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --message-id  Cloud Agent message ID  [string] [required]
+```
+
 ## kilo db
 
 ```

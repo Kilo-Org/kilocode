@@ -574,10 +574,20 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertSame(type("js"), editors().single().fileType)
     }
 
-    fun `test shell code fence resolves shell file type`() {
-        view.set("```shell\necho hi\n```")
+    fun `test bash code fence renders terminal semantic highlighters`() {
+        view.set("```bash\ngit log -30 --oneline --decorate\n```")
+        val field = editors().single()
+        val editor = field.getEditor(true)!!
+        val spans = editor.markupModel.allHighlighters.map {
+            field.text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
+        }
 
-        assertSame(type("sh"), editors().single().fileType)
+        assertSame(PlainTextFileType.INSTANCE, field.fileType)
+        assertEquals("git log -30 --oneline --decorate", field.text)
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains("-30" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains("--oneline" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains("--decorate" to DefaultLanguageHighlighterColors.KEYWORD))
     }
 
     fun `test shell command code fence renders terminal semantic highlighters`() {
@@ -590,7 +600,7 @@ class MdViewHybridTest : BasePlatformTestCase() {
 
         assertSame(PlainTextFileType.INSTANCE, field.fileType)
         assertEquals("git log -30 --oneline --decorate", field.text)
-        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.FUNCTION_CALL))
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("-30" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--oneline" to DefaultLanguageHighlighterColors.KEYWORD))
         assertTrue(spans.contains("--decorate" to DefaultLanguageHighlighterColors.KEYWORD))
@@ -611,15 +621,11 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertEquals("git status --short", field.text)
         assertTrue(editor.markupModel.allHighlighters.map {
             field.text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
-        }.contains("git" to DefaultLanguageHighlighterColors.FUNCTION_CALL))
+        }.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
     }
 
-    fun `test shell script aliases resolve shell file type`() {
+    fun `test shell script metadata resolves shell file type`() {
         view.set("```shell script\necho hi\n```")
-
-        assertSame(type("sh"), editors().single().fileType)
-
-        view.set("```zsh\necho hi\n```")
 
         assertSame(type("sh"), editors().single().fileType)
     }

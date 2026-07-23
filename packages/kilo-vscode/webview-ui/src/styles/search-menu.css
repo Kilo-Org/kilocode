@@ -1,0 +1,92 @@
+/* Shared searchable popovers */
+
+.search-menu-trigger[data-component="icon-button"][data-expanded] {
+  background: var(--surface-base-hover);
+}
+
+.search-menu-popover[data-component="popover-content"] {
+  width: min(320px, calc(100vw - 24px));
+}
+
+.search-menu [data-component="list"] {
+  gap: 0;
+  padding: 8px 0 0;
+}
+
+.search-menu [data-slot="list-search-wrapper"] {
+  margin: 0 0 4px;
+  padding: 0 8px;
+}
+
+.search-menu [data-slot="list-search"] {
+  background: var(--surface-inset-base);
+}
+
+.search-menu [data-slot="list-scroll"] {
+  gap: 2px;
+}
+
+.search-menu [data-slot="list-item"][data-active="true"],
+.search-menu [data-slot="list-item"][data-selected="true"] {
+  background: color-mix(in srgb, var(--text-base) 10%, transparent);
+}
+
+.search-menu-row {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-menu-icon {
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-weak);
+}
+
+.search-menu-spinner {
+  width: 14px;
+  height: 14px;
+}
+
+.search-menu-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  text-align: start;
+}
+
+.search-menu-title,
+.search-menu-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-menu-title {
+  color: var(--text-base);
+  font-size: var(--kilo-font-size-12);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.search-menu-meta {
+  font-size: var(--kilo-font-size-10);
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.search-menu-status {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: var(--text-base);
+  font-size: var(--kilo-font-size-10);
+  font-weight: 400;
+}

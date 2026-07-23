@@ -275,6 +275,7 @@ class BaseQuestionViewTest : BasePlatformTestCase() {
             val icon = west as JBLabel
             assertEquals("icon should be horizontally centered", JBLabel.CENTER, icon.horizontalAlignment)
             assertEquals("icon should be vertically centered", JBLabel.CENTER, icon.verticalAlignment)
+            assertEquals("icon gap should use the next standard spacing step", UiStyle.Gap.md(), layout.hgap)
             assertTrue("center should contain header and description text", findAll<JBTextArea>(center).size >= 2)
         }
     }

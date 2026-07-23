@@ -15,6 +15,7 @@ import { importCloudSession, localSessionID, reportCloudImportError, validateClo
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
+import { preload } from "@/kilocode/cli/cmd/tui" // kilocode_change
 import { win32InstallCtrlCGuard } from "@opencode-ai/tui/terminal-win32"
 import { validateSession } from "../tui/validate-session"
 // kilocode_change start - correlate the TUI worker with its parent process
@@ -203,6 +204,12 @@ export const TuiThreadCommand = cmd({
       // chdir so the thread and worker share the same directory key.
       const next = resolveThreadDirectory(args.project)
       const file = await target()
+      // kilocode_change start
+      const preloads = preload(
+        typeof KILO_WORKER_PATH !== "undefined",
+        () => import.meta.resolve("@opentui/solid/preload"),
+      )
+      // kilocode_change end
       try {
         process.chdir(next)
       } catch {
@@ -223,7 +230,7 @@ export const TuiThreadCommand = cmd({
       })
       // kilocode_change end
       const worker = new Worker(file, {
-        preload: ["@opentui/solid/preload"], // kilocode_change - Bun workers do not inherit the parent preload
+        preload: preloads, // kilocode_change
         env, // kilocode_change
       })
       worker.onerror = (e) => {

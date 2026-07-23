@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { Effect, PlatformError, Result } from "effect"
@@ -32,6 +32,17 @@ const launch: Launch = {
     HTTPS_PROXY: "http://127.0.0.1:9000",
     no_proxy: "*",
   },
+}
+
+// chmod-based permission tests only work when the test user is not root,
+// since root bypasses filesystem permission checks entirely.
+function readable(dir: string) {
+  try {
+    readdirSync(dir)
+    return true
+  } catch {
+    return false
+  }
 }
 
 describe("sandbox launch preparation", () => {
@@ -122,6 +133,60 @@ describe("sandbox launch preparation", () => {
       expect(result.args.indexOf("--unshare-net")).toBeGreaterThan(result.args.indexOf("--unshare-pid"))
       expect(result.args.slice(-3)).toEqual(["--", "/bin/echo", "hello"])
     } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("re-binds unreadable directories read-only instead of failing Linux setup", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-unreadable-"))
+    const git = path.join(root, ".git")
+    const secrets = path.join(root, "secrets")
+    mkdirSync(git)
+    mkdirSync(secrets)
+    chmodSync(secrets, 0o000)
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      filesystem: {
+        allowWrite: [{ path: root, kind: "subtree" }],
+        denyWrite: [],
+        denyNames: [".git"],
+      },
+    }
+
+    try {
+      if (readable(secrets)) return
+      const result = generateBubblewrap(profile, { ...launch, cwd: root }, "/opt/kilo/bwrap")
+      const writable = result.args.indexOf("--bind")
+      expect(result.args.slice(writable, writable + 3)).toEqual(["--bind", root, root])
+      const first = result.args.indexOf("--ro-bind", writable + 3)
+      expect(result.args.slice(first, first + 3)).toEqual(["--ro-bind", git, git])
+      const second = result.args.indexOf("--ro-bind", first + 3)
+      expect(result.args.slice(second, second + 3)).toEqual(["--ro-bind", secrets, secrets])
+    } finally {
+      chmodSync(secrets, 0o700)
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  test("rejects an unreadable writable root", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "kilo-bubblewrap-root-"))
+    chmodSync(root, 0o000)
+    const profile: Profile = {
+      ...makeProfile("allow"),
+      filesystem: {
+        allowWrite: [{ path: root, kind: "subtree" }],
+        denyWrite: [],
+        denyNames: [".git"],
+      },
+    }
+
+    try {
+      if (readable(root)) return
+      expect(() => generateBubblewrap(profile, { ...launch, cwd: root }, "/opt/kilo/bwrap")).toThrow(
+        `Writable root is not readable: ${root}`,
+      )
+    } finally {
+      chmodSync(root, 0o700)
       rmSync(root, { recursive: true, force: true })
     }
   })
