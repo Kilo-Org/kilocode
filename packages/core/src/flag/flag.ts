@@ -156,5 +156,8 @@ export const Flag = {
   get KILO_SESSION_RETRY_LIMIT() {
     return number("KILO_SESSION_RETRY_LIMIT")
   },
+  get KILO_MAIN_SESSION_RESTART_LIMIT() {
+    return number("KILO_MAIN_SESSION_RESTART_LIMIT")
+  },
   // kilocode_change end
 }
