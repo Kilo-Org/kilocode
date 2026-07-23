@@ -1716,6 +1716,15 @@ export const dict = {
     "Velg om blokker for kodeendringer og forskjeller skal være utvidet eller skjult fra start.",
   "settings.display.codeEdit.expanded": "Utvidet",
   "settings.display.codeEdit.collapsed": "Skjult",
+
+  "settings.display.tokenThroughput.title": "Vis genereringshastighet",
+  "settings.display.tokenThroughput.description":
+    "Vis tekstgenereringshastighet (tokens/sek) på den siste assistentmeldingen og i oppgaveoverskriften. Skjult som standard for å holde chatten ryddig.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Standardmodell",
   "settings.providers.defaultModel.description": "Primær modell for samtaler",
   "settings.providers.smallModel.title": "Liten modell",

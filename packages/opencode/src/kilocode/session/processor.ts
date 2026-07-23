@@ -13,6 +13,7 @@ import { EffectBridge } from "@/effect/bridge"
 import type { LLMEvent, Usage } from "@opencode-ai/llm"
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionRetry } from "@/session/retry"
+import { computeMetrics as computeMetricsHelper, type TokenRates } from "@/kilocode/session/metrics"
 
 export type ReviewTelemetry = {
   mode: "review"
@@ -130,6 +131,11 @@ export namespace KiloSessionProcessor {
       })
     }
   }
+
+  /** Pure throughput helper re-exported for namespace symmetry. */
+  export const computeMetrics: typeof computeMetricsHelper = computeMetricsHelper
+  /** Returned shape for downstream consumers that prefer the namespace. */
+  export type Metrics = TokenRates
 
   /**
    * Effect-based offline handler for the retry schedule.
