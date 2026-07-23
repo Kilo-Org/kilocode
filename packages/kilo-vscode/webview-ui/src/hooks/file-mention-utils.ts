@@ -84,6 +84,20 @@ export function sessionMentionText(title: string) {
   return title.replace(/\s+/g, " ").trim()
 }
 
+/** Return a stable visible token, adding a suffix only when titles collide. */
+export function sessionMentionToken(session: SessionSearchItem, known: Map<string, SessionSearchItem>) {
+  const existing = [...known].find(([, item]) => item.id === session.id)
+  if (existing) return existing[0]
+
+  const title = sessionMentionText(session.title)
+  if (!known.has(title)) return title
+
+  for (let index = 2; ; index++) {
+    const token = `${title} (${index})`
+    if (!known.has(token)) return token
+  }
+}
+
 export function sessionMentionFilename(title: string, id: string) {
   const slug = sessionMentionText(title)
     .replace(/[^\w\s-]/g, "")

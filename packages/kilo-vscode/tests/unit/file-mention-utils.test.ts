@@ -13,6 +13,7 @@ import {
   findMentionRange,
   sessionMentionFilename,
   sessionMentionText,
+  sessionMentionToken,
   syncMentionedSessions,
   FILE_PICKER_RESULT,
   PAST_CHATS_RESULT,
@@ -596,6 +597,16 @@ describe("session mentions", () => {
     it("falls back to the session id when the slug is empty", () => {
       expect(sessionMentionFilename("???", "ses_a")).toBe("ses_a.md")
     })
+
+    it("disambiguates sessions with the same title", () => {
+      const known = new Map([["Fix auth bug", sessions[0]!]])
+      expect(sessionMentionToken({ ...sessions[1]!, title: "Fix auth bug" }, known)).toBe("Fix auth bug (2)")
+    })
+
+    it("reuses the token already assigned to a session", () => {
+      const known = new Map([["Fix auth bug (2)", sessions[1]!]])
+      expect(sessionMentionToken(sessions[1]!, known)).toBe("Fix auth bug (2)")
+    })
   })
 
   describe("buildMentionResults", () => {
@@ -644,6 +655,16 @@ describe("session mentions", () => {
     it("skips sessions whose token is not present in the text", () => {
       const mentioned = new Map([["Fix auth bug", sessions[0]!]])
       expect(buildSessionAttachments("nothing here", mentioned)).toEqual([])
+    })
+
+    it("attaches distinct sessions whose titles collide", () => {
+      const mentioned = new Map([
+        ["Fix auth bug", sessions[0]!],
+        ["Fix auth bug (2)", { ...sessions[1]!, title: "Fix auth bug" }],
+      ])
+      const attachments = buildSessionAttachments("compare @Fix auth bug with @Fix auth bug (2)", mentioned)
+      expect(attachments.map((item) => item.url)).toEqual(["session:ses_a", "session:ses_b"])
+      expect(attachments.map((item) => item.source?.text.value)).toEqual(["@Fix auth bug", "@Fix auth bug (2)"])
     })
   })
 })

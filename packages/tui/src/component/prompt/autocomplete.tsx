@@ -370,6 +370,7 @@ export function Autocomplete(props: {
       hide()
       dialog.replace(() => (
         <DialogSessionMention
+          exclude={props.sessionID}
           onPick={(session) => {
             const { part } = createSessionPart(session)
             insertPart(sessionMentionText(session.title), part)

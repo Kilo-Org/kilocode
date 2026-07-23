@@ -12,6 +12,7 @@ import {
   getMentionRemovalRange,
   findMentionRange,
   sessionMentionText,
+  sessionMentionToken,
   syncMentionedSessions as _syncMentionedSessions,
   FILE_PICKER_RESULT,
   type MentionResult,
@@ -114,7 +115,8 @@ export function useFileMention(
   // Accumulates every path ever mentioned so syncMentionedPaths can
   // rediscover them after a native undo restores the text.
   const knownPaths = new Set<string>()
-  // Same accumulation for past-chat mentions, keyed by their title token.
+  // Same accumulation for past-chat mentions, keyed by their exact visible
+  // token. Duplicate titles receive a numeric suffix so they cannot overwrite.
   const knownSessions = new Map<string, SessionSearchItem>()
 
   let fileSearchTimer: ReturnType<typeof setTimeout> | undefined
@@ -276,7 +278,13 @@ export function useFileMention(
     textarea: HTMLTextAreaElement,
     setText: (text: string) => void,
     onSelect?: () => void,
-  ) => selectMention({ type: "session", value: session.title, session }, textarea, setText, onSelect)
+  ) =>
+    selectMention(
+      { type: "session", value: sessionMentionToken(session, knownSessions), session },
+      textarea,
+      setText,
+      onSelect,
+    )
 
   // When true, onInput skips dropdown logic (used during execCommand changes)
   let suppress = false

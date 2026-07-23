@@ -13,7 +13,7 @@ import { fetchSessionMentions, type SessionMention } from "./session-mentions"
  * other session searches use — but inserts the picked session into the prompt
  * as a mention instead of navigating to it.
  */
-export function DialogSessionMention(props: { onPick: (session: SessionMention) => void }) {
+export function DialogSessionMention(props: { exclude?: string; onPick: (session: SessionMention) => void }) {
   const dialog = useDialog()
   const sdk = useSDK()
   const project = useProject()
@@ -27,11 +27,13 @@ export function DialogSessionMention(props: { onPick: (session: SessionMention) 
   })
 
   const options = () =>
-    sessions().map((item) => ({
-      title: item.title,
-      value: item.id,
-      description: Locale.todayTimeOrDateTime(item.updated),
-    }))
+    sessions()
+      .filter((item) => item.id !== props.exclude)
+      .map((item) => ({
+        title: item.title,
+        value: item.id,
+        description: Locale.todayTimeOrDateTime(item.updated),
+      }))
 
   return (
     <DialogSelect
