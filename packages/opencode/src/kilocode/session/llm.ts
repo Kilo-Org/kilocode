@@ -9,6 +9,14 @@ import { KiloSessionOverflow } from "./overflow"
 const SAFETY = 2048
 const MIN_OUTPUT = 1024
 const DEFAULT_CHUNK_IDLE_MS = 60_000
+// Kilo default for the pre-content (time-to-first-content / prompt-processing)
+// bound. The provider's own request `timeout` signal is cleared once response
+// headers arrive (see `buildTimeoutSignal` in src/kilocode/provider/provider.ts),
+// so the watchdog is the only thing that bounds the pre-content phase, and it
+// uses the configured `timeout` value (or this default) as its budget. 5 min is
+// generous for slow prompt processing on large-context / local models while
+// still bounding a genuine never-first-content hang.
+const DEFAULT_FIRST_TOKEN_MS = 300_000
 
 type FullStreamPart = LanguageModelV2StreamPart
 
@@ -50,6 +58,44 @@ export namespace KiloLLM {
     return DEFAULT_CHUNK_IDLE_MS
   }
 
+  /**
+   * Resolves the pre-content (time-to-first-content / prompt-processing) budget
+   * in milliseconds. Unlike `resolveIdleMs`, this value is NEVER `undefined`:
+   * the pre-content phase is disabled only when the whole watchdog is disabled
+   * (`chunkTimeout: false` → `idleMs === undefined` → `watchdogStream` returns
+   * the stream unchanged), which is decided at the watchdog entry point, not
+   * here.
+   *
+   * Rationale: the provider's own request `timeout` signal is cleared once HTTP
+   * response headers arrive (`buildTimeoutSignal`,
+   * `src/kilocode/provider/provider.ts:254-272`), so it does NOT bound the
+   * pre-content phase (which is post-header). The watchdog is therefore the
+   * only enforcement mechanism for time-to-first-content, and using the
+   * configured `timeout` VALUE as its budget is the only way to give a
+   * never-first-content hang a finite bound. Mapping `timeout: false`/`0`/
+   * invalid/unset to "disabled" would leave such a hang with no bound at all
+   * (idleMs only arms AFTER the first content part).
+   *
+   * Precedence:
+   *  1. prepared `options.timeout` (positive finite number)
+   *  2. provider `fallback.timeout` (positive finite number)
+   *  3. DEFAULT_FIRST_TOKEN_MS (5 min)
+   */
+  export function resolveFirstTokenMs(input: {
+    options: Record<string, unknown>
+    fallback?: Record<string, unknown>
+  }): number {
+    const prepared = input.options["timeout"]
+    if (isPositiveFiniteMs(prepared)) return prepared
+    const fallback = input.fallback?.["timeout"]
+    if (isPositiveFiniteMs(fallback)) return fallback
+    return DEFAULT_FIRST_TOKEN_MS
+  }
+
+  function isPositiveFiniteMs(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value) && value > 0
+  }
+
   // Tri-state: `disabled` means "explicitly off"; `value` is a usable ms count.
   // `null`/`undefined`/invalid numeric values are treated as not-configured.
   function resolve(value: unknown): { value: number | undefined; disabled: boolean } {
@@ -65,8 +111,23 @@ export namespace KiloLLM {
    * Wraps an AI SDK `fullStream` with a Kilo-owned per-event idle watchdog.
    *
    * Behavior:
-   *  - `idleMs === undefined` returns the stream unchanged (disabled).
-   *  - every raw AI SDK event resets the idle timer.
+   *  - `idleMs === undefined` returns the stream unchanged (disabled). In that
+   *    case `firstTokenMs` is also unused; the whole watchdog is off.
+   *  - The watchdog arms in two phases, keyed off the first content-bearing
+   *    part (the AI SDK emits a synthetic `start` immediately on stream open,
+   *    well before any provider byte, so arming on the first raw event would
+   *    race the time-to-first-content / prompt-processing phase — see issue
+   *    #12467):
+   *      * Pre-content: every pull before the first content/tool part is
+   *        raced against `firstTokenMs` (the request-timeout budget, see
+   *        `resolveFirstTokenMs`).
+   *      * Post-content: every pull after the first content/tool part is raced
+   *        against `idleMs` (the per-event inter-chunk idle).
+   *  - Content-bearing part types (verified against
+   *    `src/session/llm/ai-sdk.ts:140-223`): `text-delta`, `reasoning-delta`,
+   *    `tool-call`, `tool-input-start`, `tool-input-delta`. Structural parts
+   *    (`start`, `start-step`, `text-start`, `reasoning-start`, `stream-start`)
+   *    do NOT arm the post-content phase.
    *  - non-provider-executed `tool-call` adds an active tool id; matching
    *    `tool-result` / `tool-error` removes it. While any local tool id is
    *    active, the watchdog is suspended (long-running tool work is not a
@@ -78,6 +139,10 @@ export namespace KiloLLM {
    *  - the wrapper fails the stream with `ProviderError.ResponseStreamError`
    *    on stall. Existing `MessageV2` retry mapping handles that error.
    *
+   * `firstTokenMs` defaults to `idleMs` so legacy callers (and the many
+   * direct-unit tests that omit it) keep their exact current behavior
+   * (pre- and post-content budgets both equal to `idleMs`).
+   *
    * The wrapper is implemented against `AsyncIterable` so it composes with
    * any stream the AI SDK exposes, including its native `fullStream`. The
    * outer `Stream` is rebuilt from the wrapped iterable, which keeps the
@@ -87,10 +152,11 @@ export namespace KiloLLM {
     stream: Stream.Stream<FullStreamPart, unknown>,
     idleMs: number | undefined,
     abort?: AbortController,
+    firstTokenMs: number = idleMs as number,
   ): Stream.Stream<FullStreamPart, unknown> {
     if (idleMs === undefined) return stream
     const source = Stream.toAsyncIterable(stream)
-    return Stream.fromAsyncIterable(watchdogAsyncIterable(source, idleMs, abort), (e) =>
+    return Stream.fromAsyncIterable(watchdogAsyncIterable(source, idleMs, abort, firstTokenMs), (e) =>
       e instanceof Error ? e : new Error(String(e)),
     )
   }
@@ -99,15 +165,18 @@ export namespace KiloLLM {
    * Wraps an `AsyncIterable` of raw AI SDK `fullStream` parts with the same
    * Kilo-owned per-event idle watchdog. Use this when the upstream is already
    * an `AsyncIterable` (e.g. the AI SDK's `fullStream`) so we avoid a
-   * Stream → AsyncIterable → Stream round-trip.
+   * Stream → AsyncIterable → Stream round-trip. See `watchdogStream` for the
+   * pre-content / post-content phase semantics; `firstTokenMs` defaults to
+   * `idleMs` at this boundary for legacy callers.
    */
   export function watchdogAsyncIterable(
     source: AsyncIterable<FullStreamPart>,
     idleMs: number | undefined,
     abort?: AbortController,
+    firstTokenMs: number = idleMs as number,
   ): AsyncIterable<FullStreamPart> {
     if (idleMs === undefined) return source
-    return { [Symbol.asyncIterator]: () => watchIterator(source, idleMs, abort) }
+    return { [Symbol.asyncIterator]: () => watchIterator(source, idleMs, abort, firstTokenMs) }
   }
 
   /**
@@ -128,11 +197,21 @@ export namespace KiloLLM {
     source: AsyncIterable<FullStreamPart>,
     idleMs: number,
     abort?: AbortController,
+    firstTokenMs: number = idleMs,
   ): AsyncIterator<FullStreamPart> {
     const local = new Set<string>()
     const iter = source[Symbol.asyncIterator]()
     let suspended = false
     let closed = false
+    // The AI SDK emits a synthetic `start` part at t+2ms, well before any
+    // provider byte. Arming the per-event idle timer on the first pull would
+    // therefore race the time-to-first-content / prompt-processing phase and
+    // falsely abort healthy slow streams (issue #12467). Instead, we arm the
+    // post-content budget (`idleMs`) only after the first content-bearing
+    // part (text-delta / reasoning-delta / tool-call / tool-input-*) has
+    // been observed. The pre-content wait is bounded by `firstTokenMs` (the
+    // request-timeout budget, see `resolveFirstTokenMs`).
+    let seenContent = false
     return {
       async next(): Promise<IteratorResult<FullStreamPart>> {
         if (closed) return { done: true, value: undefined }
@@ -140,8 +219,11 @@ export namespace KiloLLM {
           // Decide BEFORE pulling whether the next event is allowed to take as
           // long as upstream needs. Local tool work in flight must not be timed
           // out — the AI SDK only emits a tool-result / tool-error once the
-          // client-side tool has actually finished.
-          const pull = suspended ? iter.next() : raceWithTimeout(iter.next(), idleMs, abort)
+          // client-side tool has actually finished. The pre-content phase uses
+          // the larger firstTokenMs budget; the post-content phase uses
+          // idleMs.
+          const budget = suspended ? undefined : seenContent ? idleMs : firstTokenMs
+          const pull = budget === undefined ? iter.next() : raceWithTimeout(iter.next(), budget, abort)
           const value = await pull
           suspended = false
           if (value.done) {
@@ -150,7 +232,8 @@ export namespace KiloLLM {
             return value
           }
           const part = value.value
-          trackPart(local, part)
+          const isContent = trackPart(local, part)
+          if (isContent) seenContent = true
           suspended = local.size > 0
           return { done: false, value: part }
         } catch (e) {
@@ -169,24 +252,58 @@ export namespace KiloLLM {
     }
   }
 
-  function trackPart(local: Set<string>, part: FullStreamPart) {
-    if (!part || typeof part !== "object") return
+  /**
+   * Inspects a raw AI SDK `fullStream` part and updates the local-tool
+   * suspension set. Returns `true` iff the part is content-bearing (i.e.
+   * arms the post-content `seenContent` gate in `watchIterator`), so the
+   * pre-content `firstTokenMs` budget only applies until the first
+   * content/tool part is observed.
+   *
+   * Content-bearing part types (verified against
+   * `src/session/llm/ai-sdk.ts:140-223`): `text-delta`, `reasoning-delta`,
+   * `tool-call`, `tool-input-start`, `tool-input-delta`. Structural parts
+   * (`start`, `start-step`, `text-start`, `reasoning-start`, `stream-start`)
+   * do NOT arm the post-content phase.
+   *
+   * Suspension logic (unchanged): non-provider-executed `tool-call` adds
+   * the id to the local set; matching `tool-result` / `tool-error` removes
+   * it. Provider-executed `tool-call` is content-bearing but does NOT add
+   * to the local set (those calls are settled server-side, so a missing
+   * result is a real stall).
+   */
+  function trackPart(local: Set<string>, part: FullStreamPart): boolean {
+    if (!part || typeof part !== "object") return false
     const t = (part as { type?: unknown }).type
     if (t === "tool-call") {
       const call = part as unknown as {
         toolCallId?: unknown
         providerExecuted?: unknown
       }
-      if (call.providerExecuted === true) return
-      if (typeof call.toolCallId !== "string") return
+      if (call.providerExecuted === true) {
+        // Provider-executed tool-call: content-bearing (carries the call
+        // payload) but does NOT suspend the watchdog — a missing server-side
+        // result is a genuine stall.
+        return true
+      }
+      if (typeof call.toolCallId !== "string") return false
       local.add(call.toolCallId)
-      return
+      return true
     }
     if (t === "tool-result" || t === "tool-error") {
       const call = part as unknown as { toolCallId?: unknown }
-      if (typeof call.toolCallId !== "string") return
+      if (typeof call.toolCallId !== "string") return false
       local.delete(call.toolCallId)
+      return false
     }
+    if (
+      t === "text-delta" ||
+      t === "reasoning-delta" ||
+      t === "tool-input-start" ||
+      t === "tool-input-delta"
+    ) {
+      return true
+    }
+    return false
   }
 
   function raceWithTimeout<T>(promise: Promise<T>, ms: number, abort?: AbortController): Promise<T> {

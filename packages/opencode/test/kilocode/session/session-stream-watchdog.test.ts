@@ -34,6 +34,30 @@ function fromSchedule(events: Array<[number, FullStreamPart]>, end: number): Str
   )
 }
 
+// kilocode_change: raw AsyncIterable version of `fromSchedule` for tests that
+// exercise `watchdogAsyncIterable` directly (matching the production call
+// site in `session/llm.ts`, which wraps the AI SDK's native `fullStream`
+// AsyncIterable — not a Stream). Going through `Stream.toAsyncIterable` from
+// the `watchdogStream` entry point blocks the Node event loop on long stalls
+// (Effect's Stream round-trip drives the underlying generator synchronously
+// on the consumer's `next()` call), which prevents the watchdog's setTimeout
+// from firing. The production path does not go through that round-trip, so
+// the raw AsyncIterable is the accurate test target.
+function iterableFromSchedule(
+  events: Array<[number, FullStreamPart]>,
+  end: number,
+): AsyncIterable<FullStreamPart> {
+  return (async function* () {
+    const start = Date.now()
+    for (const [at, value] of events) {
+      const wait = at - (Date.now() - start)
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait))
+      yield value
+    }
+    await new Promise((r) => setTimeout(r, end))
+  })()
+}
+
 describe("kilocode.session.llm.resolveIdleMs", () => {
   test("returns prepared positive finite value as-is", () => {
     const out = KiloLLM.resolveIdleMs({ options: { chunkTimeout: 15_000 }, fallback: { chunkTimeout: 30_000 } })
@@ -95,6 +119,87 @@ describe("kilocode.session.llm.resolveIdleMs", () => {
         fallback: { chunkTimeout: -5 },
       }),
     ).toBe(60_000)
+  })
+})
+
+// kilocode_change: resolveFirstTokenMs is the new S2 helper for the
+// pre-content (time-to-first-content) budget. Unlike resolveIdleMs it
+// NEVER returns undefined: the pre-content bound is disabled only when
+// the whole watchdog is disabled (idleMs === undefined at the entry
+// point). unset / false / 0 / invalid / non-finite / negative MUST map
+// to DEFAULT_FIRST_TOKEN_MS — leaving a never-first-content hang
+// unbounded when `timeout` is configured as "off" would re-introduce a
+// worse version of #12467 (silent infinite hang instead of a 60s false
+// positive).
+describe("kilocode.session.llm.resolveFirstTokenMs", () => {
+  test("returns prepared positive finite value as-is", () => {
+    const out = KiloLLM.resolveFirstTokenMs({
+      options: { timeout: 90_000 },
+      fallback: { timeout: 30_000 },
+    })
+    expect(out).toBe(90_000)
+  })
+
+  test("falls back to provider value when prepared is missing", () => {
+    const out = KiloLLM.resolveFirstTokenMs({ options: {}, fallback: { timeout: 30_000 } })
+    expect(out).toBe(30_000)
+  })
+
+  test("falls back to provider value when prepared is a non-number string", () => {
+    const out = KiloLLM.resolveFirstTokenMs({
+      options: { timeout: "90_000" },
+      fallback: { timeout: 30_000 },
+    })
+    expect(out).toBe(30_000)
+  })
+
+  test("falls back to provider value when prepared is negative", () => {
+    const out = KiloLLM.resolveFirstTokenMs({
+      options: { timeout: -1 },
+      fallback: { timeout: 30_000 },
+    })
+    expect(out).toBe(30_000)
+  })
+
+  test("falls back to provider value when prepared is non-finite (Infinity, NaN)", () => {
+    expect(
+      KiloLLM.resolveFirstTokenMs({
+        options: { timeout: Number.POSITIVE_INFINITY },
+        fallback: { timeout: 5_000 },
+      }),
+    ).toBe(5_000)
+    expect(
+      KiloLLM.resolveFirstTokenMs({ options: { timeout: Number.NaN }, fallback: { timeout: 5_000 } }),
+    ).toBe(5_000)
+  })
+
+  // Crucial divergence from resolveIdleMs: boolean false must NOT disable
+  // the pre-content bound — it falls back / uses the Kilo default instead.
+  test("treats boolean false as not-configured (falls back, does NOT disable)", () => {
+    expect(
+      KiloLLM.resolveFirstTokenMs({ options: { timeout: false }, fallback: { timeout: 30_000 } }),
+    ).toBe(30_000)
+    expect(KiloLLM.resolveFirstTokenMs({ options: { timeout: false } })).toBe(300_000)
+  })
+
+  test("treats internal 0 as not-configured (falls back, does NOT disable)", () => {
+    expect(
+      KiloLLM.resolveFirstTokenMs({ options: { timeout: 0 }, fallback: { timeout: 30_000 } }),
+    ).toBe(30_000)
+    expect(KiloLLM.resolveFirstTokenMs({ options: { timeout: 0 } })).toBe(300_000)
+  })
+
+  test("uses 300_000 default when nothing valid is configured", () => {
+    expect(KiloLLM.resolveFirstTokenMs({ options: {} })).toBe(300_000)
+  })
+
+  test("uses 300_000 default when both prepared and fallback are invalid", () => {
+    expect(
+      KiloLLM.resolveFirstTokenMs({
+        options: { timeout: "x" },
+        fallback: { timeout: -5 },
+      }),
+    ).toBe(300_000)
   })
 })
 
@@ -285,5 +390,109 @@ describe("kilocode.session.llm.watchdogStream", () => {
     expect(sourceReturnCalled).toBe(true)
     // The abandoned pull is left unresolved; only return() is asserted here.
     void pending
+  })
+
+  // kilocode_change: AC1 (parameterised) — slow time-to-first-content is
+  // bounded by `firstTokenMs`, not `idleMs`. The first content part
+  // (`text-delta`) is delayed 300ms, which is past the 100ms `idleMs` but
+  // within the 1000ms `firstTokenMs` (the request-timeout budget). Without
+  // the fix the per-event idle would fire at t≈100ms and abort a healthy
+  // slow stream (issue #12467). With the fix the pre-content phase is
+  // bounded by the larger `firstTokenMs` and the stream completes.
+  //
+  // Uses `watchdogAsyncIterable` directly (with a raw AsyncIterable) to match
+  // the production call site (`session/llm.ts`), which wraps the AI SDK's
+  // native `fullStream` AsyncIterable. `watchdogStream` would round-trip
+  // through `Stream.toAsyncIterable`, which blocks the event loop on long
+  // stalls and prevents the watchdog's setTimeout from firing.
+  test("AC1 (parameterised): slow time-to-first-content completes when firstTokenMs > idleMs", async () => {
+    // Synthetic structural parts arrive instantly (mirroring the AI SDK's
+    // t+2ms synthetic `start`); the first content part is gated 300ms.
+    const source = iterableFromSchedule(
+      [
+        [0, part("stream-start", { warnings: [] as LanguageModelV2CallWarning[] })],
+        [0, part("start-step", { request: {}, warnings: [] as LanguageModelV2CallWarning[] })],
+        [0, part("text-start", { id: "t1", providerMetadata: undefined })],
+        [300, part("text-delta", { id: "t1", delta: "hi", providerMetadata: undefined })],
+        [310, part("text-delta", { id: "t1", delta: "!", providerMetadata: undefined })],
+        [320, part("finish-step", { finishReason: "stop", usage: undefined, providerMetadata: undefined })],
+        [330, part("finish", { finishReason: "stop", usage: undefined, providerMetadata: undefined })],
+      ],
+      10,
+    )
+    const wrapped = KiloLLM.watchdogAsyncIterable(source, 100, undefined, 1_000)
+    const out = await run(
+      Stream.runCollect(Stream.fromAsyncIterable(wrapped, (e) => (e instanceof Error ? e : new Error(String(e))))),
+    )
+    // 7 raw events must be collected end-to-end — the 300ms wait for the
+    // first content part exceeds idleMs=100 but is well under
+    // firstTokenMs=1000, so the watchdog must NOT abort.
+    expect(out.length).toBe(7)
+  })
+
+  // kilocode_change: AC3 — a never-first-content hang is bounded by
+  // `firstTokenMs` (the request-timeout budget), not by the post-content
+  // `idleMs`. The schedule emits ONLY structural parts and then hangs; the
+  // watchdog must fire at ~firstTokenMs (500ms), not at the much-larger
+  // `idleMs` (5000ms) and not at the Kilo default (300s). This is the
+  // primary direct-unit guard that a `timeout: false` / unset config
+  // still gets a finite bound on time-to-first-content, since the
+  // provider's own request `timeout` signal is cleared once response
+  // headers arrive.
+  //
+  // Uses a hand-rolled `AsyncIterable` rather than an async generator
+  // because the watchdog's catch path calls `safeClose(source.return())`
+  // to clean up the source. On a hand-rolled generator that's suspended
+  // mid-`setTimeout`, `return()` blocks until the pending `next()`
+  // settles (per the async-generator spec), so the timeout would not
+  // appear to fire until the source's setTimeout elapsed. A custom
+  // `AsyncIterable` whose `return()` resolves immediately matches the
+  // behavior of the AI SDK's native `fullStream` consumer in production
+  // and is the same pattern used in the existing "aborts the underlying
+  // source" test in this file.
+  test("AC3: never-first-content hang is bounded by firstTokenMs, not idleMs", async () => {
+    // Yield 3 structural parts instantly, then hang.
+    const parts: FullStreamPart[] = [
+      part("stream-start", { warnings: [] as LanguageModelV2CallWarning[] }),
+      part("start-step", { request: {}, warnings: [] as LanguageModelV2CallWarning[] }),
+      part("text-start", { id: "t1", providerMetadata: undefined }),
+    ]
+    let index = 0
+    let resolveHanging: ((v: IteratorResult<FullStreamPart>) => void) | undefined
+    const source: AsyncIterable<FullStreamPart> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next() {
+            if (index < parts.length) {
+              return Promise.resolve({ done: false, value: parts[index++]! })
+            }
+            return new Promise<IteratorResult<FullStreamPart>>((resolve) => {
+              resolveHanging = resolve
+            })
+          },
+          return() {
+            if (resolveHanging) resolveHanging({ done: true, value: undefined })
+            return Promise.resolve({ done: true, value: undefined })
+          },
+        }
+      },
+    }
+
+    const start = Date.now()
+    const wrapped = KiloLLM.watchdogAsyncIterable(source, 5_000, undefined, 500)
+    const err = await run(
+      Effect.flip(
+        Stream.runCollect(
+          Stream.fromAsyncIterable(wrapped, (e) => (e instanceof Error ? e : new Error(String(e)))),
+        ),
+      ),
+    )
+    const elapsed = Date.now() - start
+    expect(err).toBeInstanceOf(ProviderError.ResponseStreamError)
+    // Must abort at ~firstTokenMs (500ms), not at ~idleMs (5000ms). The
+    // lower bound allows for setTimeout drift; the upper bound is well
+    // below any reasonable post-content idle window.
+    expect(elapsed).toBeGreaterThanOrEqual(400)
+    expect(elapsed).toBeLessThan(2_000)
   })
 })
