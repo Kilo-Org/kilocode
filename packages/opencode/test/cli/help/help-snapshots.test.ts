@@ -90,6 +90,7 @@ const SUBCOMMANDS = [
   ["providers", "list"],
   ["providers", "login"],
   ["providers", "logout"],
+  ["providers", "token"], // kilocode_change - kilo auth token subcommand
   ["agent", "create"],
   ["agent", "list"],
   ["session", "list"],
