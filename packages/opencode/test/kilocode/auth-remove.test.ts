@@ -1,7 +1,7 @@
 import { expect } from "bun:test"
 import { Auth } from "@/auth"
 import { remove } from "@/kilocode/auth/remove"
-import { ConnectorSchema } from "@opencode-ai/core/connector/schema"
+import { IntegrationSchema } from "@opencode-ai/core/integration/schema"
 import { Credential } from "@opencode-ai/core/credential"
 import { Database } from "@opencode-ai/core/database/database"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -24,24 +24,21 @@ it.effect("legacy provider logout removes every Core credential", () =>
   Effect.gen(function* () {
     state.removed = false
     const service = yield* Credential.Service
-    const connectorID = ConnectorSchema.ID.make("anthropic")
+    const integrationID = IntegrationSchema.ID.make("anthropic")
     yield* service.create({
-      connectorID,
-      methodID: ConnectorSchema.MethodID.make("api-key"),
+      integrationID,
       label: "first",
       value: new Credential.Key({ type: "key", key: "first" }),
     })
     yield* service.create({
-      connectorID,
-      methodID: ConnectorSchema.MethodID.make("api-key"),
+      integrationID,
       label: "second",
       value: new Credential.Key({ type: "key", key: "second" }),
     })
 
     yield* remove("anthropic")
 
-    expect(yield* service.forConnector(connectorID)).toEqual([])
-    expect(yield* service.active(connectorID)).toBeUndefined()
+    expect(yield* service.list(integrationID)).toEqual([])
     expect(state.removed).toBe(true)
   }),
 )

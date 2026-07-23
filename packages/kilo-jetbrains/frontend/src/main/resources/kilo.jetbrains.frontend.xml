@@ -65,10 +65,18 @@
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings"
                 id="ai.kilocode.jetbrains.settings.context"
-                groupWeight="0"
+                groupWeight="-1"
                 instance="ai.kilocode.client.settings.context.ContextConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.context.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings"
+                id="ai.kilocode.jetbrains.settings.autoApprove"
+                groupWeight="0"
+                instance="ai.kilocode.client.settings.autoapprove.AutoApproveConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.autoApprove.displayName"/>
 
         <applicationConfigurable
                 parentId="ai.kilocode.jetbrains.settings.agentBehavior"
@@ -90,6 +98,13 @@
                 instance="ai.kilocode.client.settings.agents.SkillsConfigurable"
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.skills.displayName"/>
+
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.rules"
+                instance="ai.kilocode.client.settings.rules.RulesConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.rules.displayName"/>
 
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
