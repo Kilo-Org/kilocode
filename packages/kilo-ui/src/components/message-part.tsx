@@ -976,9 +976,23 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
 
   const data = useData()
 
+  const session = (segment: HighlightSegment) => {
+    const ref = props.references.find((ref) => ref.source?.text?.value === segment.text)
+    const url = (ref as { url?: unknown } | undefined)?.url
+    if (typeof url !== "string" || !url.startsWith("session:")) return
+    return url.slice("session:".length)
+  }
+
   const click = (segment: HighlightSegment, e: MouseEvent) => {
-    if (segment.type !== "file" || !data.openFile) return
+    if (segment.type !== "file") return
     e.preventDefault()
+    // Past-chat mentions carry a session: URL — open that session instead of a file.
+    const id = session(segment)
+    if (id) {
+      data.navigateToSession?.(id)
+      return
+    }
+    if (!data.openFile) return
     const path = segment.text.replace(/^@/, "")
     if (path) data.openFile(path)
   }
@@ -988,7 +1002,9 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
       {(segment) => (
         <span
           data-highlight={segment.type}
-          data-clickable={segment.type === "file" && data.openFile ? "" : undefined}
+          data-clickable={
+            segment.type === "file" && (session(segment) ? data.navigateToSession : data.openFile) ? "" : undefined
+          }
           onClick={[click, segment]}
         >
           {segment.text}

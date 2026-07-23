@@ -1,4 +1,4 @@
-import type { FileAttachment, FileSearchItem } from "../types/messages"
+import type { FileAttachment, FileSearchItem, SessionSearchItem } from "../types/messages"
 import { GIT_CHANGES_MENTION } from "./git-changes-context-utils"
 import { TERMINAL_MENTION } from "./terminal-context-utils"
 
@@ -7,10 +7,15 @@ export const AT_PATTERN = /(?:^|\s)@(\S*)$/
 export type MentionResult =
   | { type: "terminal"; value: typeof TERMINAL_MENTION; label: string; description: string }
   | { type: "git-changes"; value: typeof GIT_CHANGES_MENTION; label: string; description: string }
+  | { type: "past-chats"; value: typeof PAST_CHATS_MENTION; label: string; description: string }
   | { type: "file"; value: string }
   | { type: "opened-file"; value: string }
   | { type: "folder"; value: string }
   | { type: "file-picker"; value: "file-picker"; label: string; description: string }
+  | { type: "session"; value: string; session: SessionSearchItem }
+
+export const PAST_CHATS_MENTION = "past-chats"
+const PAST_CHATS_ALIASES = ["past", "chats", "sessions", "session", "history"]
 
 export const TERMINAL_RESULT: MentionResult = {
   type: "terminal",
@@ -33,6 +38,13 @@ export const FILE_PICKER_RESULT: MentionResult = {
   description: "Select a file outside the workspace",
 }
 
+export const PAST_CHATS_RESULT: MentionResult = {
+  type: "past-chats",
+  value: PAST_CHATS_MENTION,
+  label: "Past chats",
+  description: "Search previous sessions",
+}
+
 export function getTerminalMentionResult(query: string): MentionResult[] {
   const normalized = query.toLowerCase()
   if (!TERMINAL_MENTION.startsWith(normalized)) return []
@@ -45,6 +57,12 @@ export function getGitChangesMentionResult(query: string): MentionResult[] {
   return [GIT_CHANGES_RESULT]
 }
 
+export function getPastChatsMentionResult(query: string): MentionResult[] {
+  const normalized = query.toLowerCase()
+  if (normalized && !PAST_CHATS_ALIASES.some((alias) => alias.startsWith(normalized))) return []
+  return [PAST_CHATS_RESULT]
+}
+
 export function buildMentionResults(query: string, items: Array<FileSearchItem | string>, git = true): MentionResult[] {
   const results: MentionResult[] = items.map((item) => {
     if (typeof item === "string") return { type: "file", value: item }
@@ -55,9 +73,38 @@ export function buildMentionResults(query: string, items: Array<FileSearchItem |
   return [
     ...getTerminalMentionResult(query),
     ...(git ? getGitChangesMentionResult(query) : []),
+    ...getPastChatsMentionResult(query),
     ...results,
     FILE_PICKER_RESULT,
   ]
+}
+
+/** Single-line, safe display/filename forms for a session mention. */
+export function sessionMentionText(title: string) {
+  return title.replace(/\s+/g, " ").trim()
+}
+
+/** Return a stable visible token, adding a suffix only when titles collide. */
+export function sessionMentionToken(session: SessionSearchItem, known: Map<string, SessionSearchItem>) {
+  const existing = [...known].find(([, item]) => item.id === session.id)
+  if (existing) return existing[0]
+
+  const title = sessionMentionText(session.title)
+  if (!known.has(title)) return title
+
+  for (let index = 2; ; index++) {
+    const token = `${title} (${index})`
+    if (!known.has(token)) return token
+  }
+}
+
+export function sessionMentionFilename(title: string, id: string) {
+  const slug = sessionMentionText(title)
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 50)
+  return `${slug || id}.md`
 }
 
 export function filterMentionResults(query: string, items: MentionResult[]): MentionResult[] {
@@ -66,6 +113,7 @@ export function filterMentionResults(query: string, items: MentionResult[]): Men
   return items.filter((item) => {
     if (item.type === "terminal") return TERMINAL_MENTION.startsWith(value)
     if (item.type === "git-changes") return GIT_CHANGES_MENTION.startsWith(value) || "git".startsWith(value)
+    if (item.type === "past-chats") return PAST_CHATS_ALIASES.some((alias) => alias.startsWith(value))
     if (item.type === "file-picker") return true
     return item.value.toLowerCase().includes(value)
   })
@@ -285,6 +333,47 @@ export function buildFileAttachments(
         },
       })
     }
+  }
+  return result
+}
+
+/**
+ * Sync mentioned sessions against the current text: drop entries whose
+ * `@title` token is no longer present. Uses the same boundary-aware matching
+ * as path mentions (titles may contain spaces).
+ */
+export function syncMentionedSessions(
+  prev: Map<string, SessionSearchItem>,
+  text: string,
+): Map<string, SessionSearchItem> {
+  const kept = syncMentionedPaths(new Set(prev.keys()), text)
+  return new Map([...prev].filter(([token]) => kept.has(token)))
+}
+
+/**
+ * Build FileAttachment objects for mentioned past chats. The `session:` URL
+ * is resolved server-side at prompt time into the session's transcript, so
+ * the attached content is always current. The source carries the mention span
+ * for transcript highlighting, and the title-keyed filename gives the model a
+ * readable attachment name.
+ */
+export function buildSessionAttachments(text: string, mentioned: Map<string, SessionSearchItem>): FileAttachment[] {
+  const result: FileAttachment[] = []
+  for (const [token, session] of mentioned) {
+    const mention = `@${token}`
+    const idx = text.indexOf(mention)
+    if (idx === -1) continue
+    const url = `session:${session.id}`
+    result.push({
+      mime: "text/plain",
+      url,
+      filename: sessionMentionFilename(token, session.id),
+      source: {
+        type: "file",
+        path: url,
+        text: { value: mention, start: idx, end: idx + mention.length },
+      },
+    })
   }
   return result
 }
