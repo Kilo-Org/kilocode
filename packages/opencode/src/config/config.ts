@@ -153,6 +153,10 @@ export type Info = ConfigV1.Info & {
   // kilocode_change start - derived provenance for markdown paths selected by config
   instruction_origins?: Record<string, KilocodeMarkdown.Source>
   skill_path_origins?: Record<string, KilocodeMarkdown.Source>
+  // derived provenance for permission keys
+  // which config scope (global XDG vs local project) last set each top-level permission key.
+  // lets the runtime explain why a tool call was auto-approved.
+  permission_origins?: Record<string, "global" | "local">
   // kilocode_change end
 }
 
@@ -241,6 +245,7 @@ function writable(info: Info) {
     plugin_origins: _plugin_origins,
     instruction_origins: _instruction_origins,
     skill_path_origins: _skill_path_origins,
+    permission_origins: _permission_origins,
     ...next
   } = info
   // kilocode_change end
@@ -535,6 +540,13 @@ export const layer = Layer.effect(
           }
           if (next.skills?.paths?.length) {
             result.skill_path_origins = origins(result.skill_path_origins, next.skills.paths, trusted, source)
+          }
+          // record which scope last set each top-level permission key
+          // later merges win, matching the "last matching rule wins" precedence in Permission.evaluate.
+          if (scoped.permission && typeof scoped.permission === "object") {
+            const map = { ...result.permission_origins }
+            for (const key of Object.keys(scoped.permission)) map[key] = scope
+            result.permission_origins = map
           }
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
         })
