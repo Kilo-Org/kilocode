@@ -36,9 +36,7 @@ export const TurnOutcome: Component = () => {
         >
           <Card variant={value().tone === "critical" ? "error" : "warning"}>
             <div>{label(value())}</div>
-            <Show when={value().kind === "unknown" && value().vercelID}>
-              {(id) => <code>Request ID: {id()}</code>}
-            </Show>
+            <Show when={value().kind === "unknown" && value().vercelID}>{(id) => <code>Request ID: {id()}</code>}</Show>
           </Card>
         </div>
       )}
