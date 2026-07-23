@@ -9,7 +9,7 @@
 
 import { Component, For, Show, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
+import { Part, PART_MAPPING, ToolRegistry, ToolApprovalProvider, toolApprovalFrom } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
 import type {
   AssistantMessage as SDKAssistantMessage,
@@ -120,19 +120,21 @@ function TodoToolCard(props: { part: ToolPart; forceOpen?: boolean }) {
   return (
     <Show when={render}>
       {(renderFn) => (
-        <Dynamic
-          component={renderFn()}
-          input={state()?.input ?? {}}
-          metadata={state()?.metadata ?? {}}
-          tool={props.part.tool}
-          partID={props.part.id}
-          callID={props.part.callID}
-          output={state()?.output}
-          status={state()?.status}
-          defaultOpen
-          forceOpen={props.forceOpen}
-          reveal={false}
-        />
+        <ToolApprovalProvider value={() => toolApprovalFrom(state()?.metadata)}>
+          <Dynamic
+            component={renderFn()}
+            input={state()?.input ?? {}}
+            metadata={state()?.metadata ?? {}}
+            tool={props.part.tool}
+            partID={props.part.id}
+            callID={props.part.callID}
+            output={state()?.output}
+            status={state()?.status}
+            defaultOpen
+            forceOpen={props.forceOpen}
+            reveal={false}
+          />
+        </ToolApprovalProvider>
       )}
     </Show>
   )
@@ -144,21 +146,23 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
   return (
     <Show when={render}>
       {(card) => (
-        <Dynamic
-          component={card() as unknown as Component<Record<string, unknown>>}
-          input={state()?.input ?? {}}
-          metadata={state()?.metadata ?? {}}
-          partMetadata={props.part.metadata ?? {}}
-          tool={props.part.tool}
-          partID={props.part.id}
-          callID={props.part.callID}
-          output={state()?.output}
-          status={state()?.status}
-          defaultOpen={props.defaultOpen}
-          forceOpen={props.forceOpen}
-          animate
-          reveal={state()?.status === "pending" || state()?.status === "running"}
-        />
+        <ToolApprovalProvider value={() => toolApprovalFrom(state()?.metadata)}>
+          <Dynamic
+            component={card() as unknown as Component<Record<string, unknown>>}
+            input={state()?.input ?? {}}
+            metadata={state()?.metadata ?? {}}
+            partMetadata={props.part.metadata ?? {}}
+            tool={props.part.tool}
+            partID={props.part.id}
+            callID={props.part.callID}
+            output={state()?.output}
+            status={state()?.status}
+            defaultOpen={props.defaultOpen}
+            forceOpen={props.forceOpen}
+            animate
+            reveal={state()?.status === "pending" || state()?.status === "running"}
+          />
+        </ToolApprovalProvider>
       )}
     </Show>
   )
