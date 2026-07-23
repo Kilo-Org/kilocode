@@ -245,6 +245,26 @@ function providerCfg(url: string) {
   }
 }
 
+// Model-level chunkTimeout arms the session-stream watchdog for AC1. The
+// provider-level option is intentionally left unset so baseline's resolveIdleMs
+// reads the model option (chunkTimeout: 1_000) and does not fall back to the
+// provider false that disables wrapSSE.
+function enabledWatchdogCfg(url: string) {
+  return {
+    ...cfg,
+    provider: {
+      ...cfg.provider,
+      test: {
+        ...cfg.provider.test,
+        options: {
+          ...cfg.provider.test.options,
+          baseURL: url,
+        },
+      },
+    },
+  }
+}
+
 const worktreeFile = (dir: string, name: string) => path.join(dir, name)
 
 const exists = (file: string) =>
@@ -550,6 +570,55 @@ describe("session stream watchdog integration", () => {
             },
           }),
         },
+      ),
+    { timeout: 30_000 },
+  )
+
+  it.live(
+    "AC1: slow time-to-first-content is not aborted or retried",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const chat = yield* sessions.create({ title: "AC1 slow first content" })
+          const gate = Promise.withResolvers<void>()
+
+          yield* llm.hold("done", gate.promise)
+
+          yield* prompt.prompt({
+            sessionID: chat.id,
+            agent: "build",
+            noReply: true,
+            parts: [{ type: "text", text: "say something after a long think" }],
+          })
+
+          const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+
+          yield* llm.wait(1)
+          yield* Effect.sleep("2500 millis")
+          gate.resolve(undefined)
+
+          const exit = yield* awaitWithTimeout(
+            Fiber.await(fiber),
+            "AC1 loop did not finish",
+            "15 seconds",
+          )
+          expect(Exit.isSuccess(exit)).toBe(true)
+
+          const calls = yield* llm.calls
+          expect(calls).toBe(1)
+
+          const messages = yield* sessions.messages({ sessionID: chat.id })
+          const assistantText = messages
+            .filter((msg) => msg.info.role === "assistant")
+            .flatMap((msg) => msg.parts)
+            .filter((part) => part.type === "text")
+            .map((part) => part.text)
+            .join("")
+          expect(assistantText).toContain("done")
+        }),
+        { git: true, config: (url) => enabledWatchdogCfg(url) },
       ),
     { timeout: 30_000 },
   )

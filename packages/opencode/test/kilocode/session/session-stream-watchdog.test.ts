@@ -140,6 +140,13 @@ describe("kilocode.session.llm.watchdogStream", () => {
     expect(out.length).toBe(2)
   })
 
+  test("AC2: mid-response stall after first content is still aborted", async () => {
+    // A content part at t=0, then a long quiet gap that exceeds the idle window.
+    const stream = fromSchedule([[0, part("text-delta", { id: "t1", delta: "hi" })]], 400)
+    const err = await run(Effect.flip(Stream.runCollect(KiloLLM.watchdogStream(stream, 200))))
+    expect(err).toBeInstanceOf(ProviderError.ResponseStreamError)
+  })
+
   test("pending local tool calls suspend the idle timeout until they settle", async () => {
     // tool-call at t=0 (local). 250ms quiet gap then tool-result. A healthy AI
     // SDK run also emits finish-step + finish right after the tool-result, so
