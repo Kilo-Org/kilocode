@@ -56,8 +56,13 @@ private class HeaderPopupPanel(
             val view = item.viewport?.view?.let(::contentWidth) ?: 0
             view + horiz(item.insets) + horiz(item.viewportBorder?.getBorderInsets(item))
         }
-        is Container -> (item.components.maxOfOrNull(::contentWidth) ?: 0) + horiz((item as? JComponent)?.insets)
-        is JComponent -> item.preferredSize.width
+        // JComponent is a Container, so leaf components (labels, buttons, icons) reach here with no
+        // children — fall back to their own preferred width instead of measuring an empty child set.
+        is Container -> {
+            val kids = item.components
+            if (kids.isEmpty()) (item as? JComponent)?.preferredSize?.width ?: 0
+            else (kids.maxOfOrNull(::contentWidth) ?: 0) + horiz((item as? JComponent)?.insets)
+        }
         else -> 0
     }
 

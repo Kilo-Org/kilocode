@@ -178,7 +178,8 @@ class EditToolView(
         val count = editFiles(item).size
         val titleText = if (count > 1) KiloBundle.message("session.part.tool.patch") else title(item)
         changed = setText(parts.title, titleText) || changed
-        changed = (if (count > 1) setFileTarget(parts, null, "") else setFileTarget(parts, editPath(item), tail(editPath(item)))) || changed
+        val path = if (count > 1) null else editPath(item)
+        changed = setFileTarget(parts, path, if (path == null) "" else tail(path)) || changed
         changed = setForeground(parts.title, titleColor(item)) || changed
         changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
         changed = setText(parts.state, stateText(item)) || changed

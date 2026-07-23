@@ -123,8 +123,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
         assertTrue(fileLinks.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
 
-        // The per-file header renders one changes badge per file (plus the header badge).
-        assertTrue(badges(view).size >= 2)
+        // The per-file header renders one changes badge per file (plus the aggregate header badge).
+        assertEquals(3, badges(view).size)
 
         click(fileLinks.first { it.text!!.contains("A.kt") }, 1)
         assertEquals(listOf("src/A.kt"), opened)

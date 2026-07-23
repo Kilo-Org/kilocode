@@ -60,12 +60,18 @@ internal object MdDiffHighlight {
     }
 
     private fun classify(line: String): Span? = when {
-        line.startsWith("+++") || line.startsWith("---") || meta(line) -> comment
+        fileHeader(line) || meta(line) -> comment
         line.startsWith("@@") -> hunk
         line.startsWith("+") -> inserted
         line.startsWith("-") -> deleted
         else -> null
     }
+
+    // Unified-diff file headers are the marker followed by a space (or the bare marker), e.g. "+++ b/f".
+    // Guarding on that shape keeps content lines like "++x;" (an inserted "+x;") from being dimmed.
+    private fun fileHeader(line: String): Boolean =
+        (line.startsWith("+++") || line.startsWith("---")) &&
+            (line.length == 3 || line[3] == ' ' || line[3] == '\t')
 
     private fun meta(line: String): Boolean = line.startsWith("diff ") ||
         line.startsWith("index ") ||

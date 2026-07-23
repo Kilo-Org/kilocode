@@ -92,8 +92,8 @@ class PatchBody(
     @RequiresEdt
     override fun applyStyle(style: SessionEditorStyle): Boolean {
         this.style = style
-        views.forEach(::applyMd)
         var changed = false
+        views.forEach { changed = applyMd(it) || changed }
         links.forEach { if (it.font != style.transcriptFont) { it.font = style.transcriptFont; changed = true } }
         return changed
     }
@@ -168,7 +168,8 @@ class PatchBody(
         }
     }
 
-    private fun applyMd(md: MdView) {
+    private fun applyMd(md: MdView): Boolean {
+        val before = md.font
         md.applyStyle(style)
         md.font = style.editorFont
         md.foreground = style.editorForeground
@@ -176,6 +177,7 @@ class PatchBody(
         md.preBg = style.editorBackground
         md.codeFont = style.editorFamily
         md.component.border = JBUI.Borders.empty()
+        return before != md.font
     }
 
     private companion object {
