@@ -1,4 +1,5 @@
 import type { PointStruct } from "./vector-store"
+import type { CacheMetadata } from "./cache"
 import type { Disposable, Emitter } from "../runtime"
 import type { IndexingTelemetryMode } from "./telemetry"
 import type { WorktreeOverlay } from "../worktree-overlay"
@@ -62,6 +63,7 @@ export interface FileProcessingResult {
   error?: Error
   reason?: string
   newHash?: string
+  metadata?: CacheMetadata
   pointsToUpsert?: PointStruct[]
 }
 

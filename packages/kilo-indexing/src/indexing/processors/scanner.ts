@@ -29,6 +29,7 @@ import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
 import type { IgnoreMatcher } from "../shared/load-ignore"
 import { isBinary } from "../shared/is-binary"
+import { IndexingProfile } from "../../util/profile"
 
 const log = Log.create({ service: "indexing-scanner" })
 
@@ -139,6 +140,21 @@ export class DirectoryScanner implements IDirectoryScanner {
     onFileParsed?: () => void,
     mode: IndexingTelemetryMode = "full",
   ): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+    using summary = IndexingProfile.start("indexing.scan.summary", {
+      mode,
+      discoveredCount: 0,
+      candidateCount: 0,
+      inspectedCount: 0,
+      readCount: 0,
+      bytesRead: 0,
+      unchangedCount: 0,
+      processedCount: 0,
+      skippedCount: 0,
+      blockCount: 0,
+      batchCount: 0,
+      changedDeleteCount: 0,
+      removedDeleteCount: 0,
+    })
     // reset cooperative cancel flag on new full scan
     this._cancelled = false
 
@@ -147,31 +163,52 @@ export class DirectoryScanner implements IDirectoryScanner {
     const scanWorkspace = directoryPath
     log.info("starting directory scan", { workspacePath: scanWorkspace })
 
-    // Get all files recursively, filtering out ignored directories via glob
-    const allPaths = await glob("**/*", {
-      cwd: directoryPath,
-      absolute: true,
-      nodir: true,
-      dot: false,
-      ignore: FileIgnore.PATTERNS,
-      maxDepth: Infinity,
-    })
+    const found = await (async () => {
+      using discovery = IndexingProfile.start("indexing.scan.discovery", {
+        mode,
+        discoveredCount: 0,
+        candidateCount: 0,
+      })
+      // RATIONALE: Fold only extension letters so built-in ignores remain case-sensitive.
+      const patterns = [...this.extensions].map(
+        (ext) => `**/*${ext.replace(/[A-Za-z]/g, (char) => `[${char.toLowerCase()}${char.toUpperCase()}]`)}`,
+      )
+      const allPaths = patterns.length
+        ? await glob(patterns, {
+            cwd: directoryPath,
+            absolute: true,
+            nodir: true,
+            dot: false,
+            ignore: FileIgnore.PATTERNS,
+            nocase: false,
+            maxDepth: Infinity,
+          })
+        : []
 
-    // Filter by supported extensions, ignore patterns, and excluded directories
-    const supportedPaths = allPaths.filter((filePath) => {
-      const ext = path.extname(filePath).toLowerCase()
-      const relativeFilePath = generateRelativeIgnorePath(filePath, scanWorkspace)
-      if (!relativeFilePath) {
-        return false
-      }
+      // Filter by supported extensions, ignore patterns, and excluded directories
+      const supportedPaths = allPaths.filter((filePath) => {
+        const ext = path.extname(filePath).toLowerCase()
+        const relativeFilePath = generateRelativeIgnorePath(filePath, scanWorkspace)
+        if (!relativeFilePath) {
+          return false
+        }
 
-      // Check if file is in an ignored directory using FileIgnore
-      if (FileIgnore.match(relativeFilePath)) {
-        return false
-      }
+        // Check if file is in an ignored directory using FileIgnore
+        if (FileIgnore.match(relativeFilePath)) {
+          return false
+        }
 
-      return this.extensions.has(ext) && !this.ignoreInstance.ignores(relativeFilePath)
-    })
+        return this.extensions.has(ext) && !this.ignoreInstance.ignores(relativeFilePath)
+      })
+      discovery.add({
+        discoveredCount: allPaths.length,
+        candidateCount: supportedPaths.length,
+      })
+      discovery.outcome("success")
+      return { allPaths, supportedPaths }
+    })()
+    const allPaths = found.allPaths
+    const supportedPaths = found.supportedPaths
     log.info("discovered candidate files for indexing", {
       workspacePath: scanWorkspace,
       discoveredFiles: allPaths.length,
@@ -183,6 +220,13 @@ export class DirectoryScanner implements IDirectoryScanner {
     const processedFiles = new Set<string>()
     let processedCount = 0
     let skippedCount = 0
+    let inspected = 0
+    let reads = 0
+    let bytesRead = 0
+    let unchanged = 0
+    let batches = 0
+    let changed = 0
+    let removed = 0
 
     // Initialize parallel processing tools
     const parseLimiter = pLimit(PARSING_CONCURRENCY) // Concurrency for file parsing
@@ -193,13 +237,28 @@ export class DirectoryScanner implements IDirectoryScanner {
     let currentBatchBlocks: CodeBlock[] = []
     let currentBatchTexts: string[] = []
     let currentBatchFileInfos: { filePath: string; fileHash: string; isNew: boolean }[] = []
-    const batched = new Map<string, string>()
+    const batched = new Map<string, { hash: string; metadata: { size: number; mtimeMs: number; ctimeMs: number } }>()
     let failed = false
     const activeBatchPromises = new Set<Promise<void>>()
     let pendingBatchCount = 0
 
     // Initialize block counter
     let totalBlockCount = 0
+
+    const fields = () => ({
+      discoveredCount: allPaths.length,
+      candidateCount: supportedPaths.length,
+      inspectedCount: inspected,
+      readCount: reads,
+      bytesRead,
+      unchangedCount: unchanged,
+      processedCount,
+      skippedCount,
+      blockCount: totalBlockCount,
+      batchCount: batches,
+      changedDeleteCount: changed,
+      removedDeleteCount: removed,
+    })
 
     const queueBatch = async (
       batchBlocks: CodeBlock[],
@@ -214,8 +273,9 @@ export class DirectoryScanner implements IDirectoryScanner {
           if (pendingBatchCount < MAX_PENDING_BATCHES) {
             pendingBatchCount++
 
-            const batchPromise = batchLimiter(() =>
-              this.processBatch(
+            const batchPromise = batchLimiter(() => {
+              if (!this._cancelled && batchBlocks.length > 0) batches++
+              return this.processBatch(
                 batchBlocks,
                 batchTexts,
                 batchFileInfos,
@@ -226,8 +286,8 @@ export class DirectoryScanner implements IDirectoryScanner {
                 () => {
                   failed = true
                 },
-              ),
-            )
+              )
+            })
             activeBatchPromises.add(batchPromise)
 
             // Clean up completed promises to prevent memory accumulation
@@ -258,6 +318,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
         try {
           // Check file size
+          inspected++
           const stats = await stat(filePath)
           if (this._cancelled) {
             return
@@ -268,8 +329,32 @@ export class DirectoryScanner implements IDirectoryScanner {
             return
           }
 
+          const metadata = {
+            size: stats.size,
+            mtimeMs: stats.mtimeMs,
+            ctimeMs: stats.ctimeMs,
+          }
+          const hash = this.cacheManager.getHash(filePath)
+          const cached = this.cacheManager.getMetadata(filePath)
+          const unchangedMetadata =
+            mode === "incremental" &&
+            hash !== undefined &&
+            cached !== undefined &&
+            cached.size === metadata.size &&
+            cached.mtimeMs === metadata.mtimeMs &&
+            cached.ctimeMs === metadata.ctimeMs
+
+          if (unchangedMetadata) {
+            processedFiles.add(filePath)
+            unchanged++
+            skippedCount++
+            return
+          }
+
           // Read file content using fs/promises
           const bytes = await readFile(filePath)
+          reads++
+          bytesRead += bytes.length
           if (isBinary(bytes)) {
             skippedCount++
             return
@@ -285,10 +370,12 @@ export class DirectoryScanner implements IDirectoryScanner {
           processedFiles.add(filePath)
 
           // Check against cache
-          const cachedFileHash = this.cacheManager.getHash(filePath)
+          const cachedFileHash = hash
           const isNewFile = !cachedFileHash
           if (cachedFileHash === currentFileHash) {
             // File is unchanged
+            this.cacheManager.updateHash(filePath, currentFileHash, metadata)
+            unchanged++
             skippedCount++
             return
           }
@@ -306,6 +393,7 @@ export class DirectoryScanner implements IDirectoryScanner {
 
           if (!isNewFile && this.vectorStore) {
             await this.vectorStore.deletePointsByMultipleFilePaths([filePath])
+            changed++
           }
 
           // Process embeddings if configured
@@ -373,7 +461,7 @@ export class DirectoryScanner implements IDirectoryScanner {
               const release = await mutex.acquire()
               try {
                 totalBlockCount += fileBlockCount
-                batched.set(filePath, currentFileHash)
+                batched.set(filePath, { hash: currentFileHash, metadata })
                 if (!queued) {
                   currentBatchFileInfos.push(info)
                   queued = true
@@ -381,10 +469,12 @@ export class DirectoryScanner implements IDirectoryScanner {
               } finally {
                 release()
               }
+            } else {
+              this.cacheManager.updateHash(filePath, currentFileHash, metadata)
             }
           } else {
             // Only update hash if not being processed in a batch
-            this.cacheManager.updateHash(filePath, currentFileHash)
+            this.cacheManager.updateHash(filePath, currentFileHash, metadata)
           }
         } catch (error) {
           log.error(`Error processing file ${filePath} in workspace ${scanWorkspace}`, {
@@ -443,7 +533,9 @@ export class DirectoryScanner implements IDirectoryScanner {
       await queueBatch(finalBatch.batchBlocks, finalBatch.batchTexts, finalBatch.batchFileInfos)
     }
 
-    // Short-circuit if cancelled before handling deletions
+    await Promise.all(activeBatchPromises)
+
+    // Short-circuit if cancellation was requested while batches were settling.
     if (this._cancelled) {
       log.info("directory scan cancelled", {
         workspacePath: scanWorkspace,
@@ -451,6 +543,8 @@ export class DirectoryScanner implements IDirectoryScanner {
         skippedCount,
         totalBlockCount,
       })
+      summary.add(fields())
+      summary.outcome("cancelled")
       return {
         stats: {
           processed: processedCount,
@@ -458,13 +552,11 @@ export class DirectoryScanner implements IDirectoryScanner {
         },
         totalBlockCount,
       }
-    } else {
-      await Promise.all(activeBatchPromises)
     }
 
     if (!failed) {
-      for (const [filePath, fileHash] of batched.entries()) {
-        this.cacheManager.updateHash(filePath, fileHash)
+      for (const [filePath, entry] of batched.entries()) {
+        this.cacheManager.updateHash(filePath, entry.hash, entry.metadata)
       }
     }
 
@@ -484,6 +576,7 @@ export class DirectoryScanner implements IDirectoryScanner {
           try {
             await this.vectorStore.deletePointsByFilePath(cachedFilePath)
             this.cacheManager.deleteHash(cachedFilePath)
+            removed++
           } catch (error: any) {
             const errorStatus = error?.status || error?.response?.status || error?.statusCode
             const errorMessage = error instanceof Error ? error.message : String(error)
@@ -514,6 +607,8 @@ export class DirectoryScanner implements IDirectoryScanner {
       skippedCount,
       totalBlockCount,
     })
+    summary.add(fields())
+    summary.outcome(this._cancelled ? "cancelled" : "success")
 
     return {
       stats: {
@@ -537,6 +632,20 @@ export class DirectoryScanner implements IDirectoryScanner {
     // Respect cooperative cancellation
     if (this._cancelled || batchBlocks.length === 0) return
 
+    using span = IndexingProfile.start("indexing.scan.batch", {
+      source: "scan",
+      mode,
+      provider: this.telemetryMeta?.provider,
+      modelId: this.telemetryMeta?.modelId,
+      vectorStore: this.telemetryMeta?.vectorStore,
+      fileCount: new Set(batchFileInfos.map((item) => item.filePath)).size,
+      blockCount: batchBlocks.length,
+      attemptCount: 0,
+      deleteMs: 0,
+      embeddingMs: 0,
+      upsertMs: 0,
+    })
+
     if (batchBlocks.length === 0) {
       log.debug("Skipping empty batch processing")
       return
@@ -547,60 +656,80 @@ export class DirectoryScanner implements IDirectoryScanner {
     let attempts = 0
     let success = false
     let lastError: Error | null = null
+    let deleted = 0
+    let embedded = 0
+    let upsert = 0
 
     while (attempts < this.maxBatchRetries && !success) {
       attempts++
+      span.add({ attemptCount: attempts })
 
-      if (this._cancelled) return
+      if (this._cancelled) {
+        span.outcome("cancelled")
+        return
+      }
 
       log.debug(`Processing batch attempt ${attempts}/${this.maxBatchRetries} for ${batchBlocks.length} blocks`)
 
       try {
         // --- Deletion Step ---
         log.debug("Starting deletion step for modified files")
-        const uniqueFilePaths = [
-          ...new Set(
-            batchFileInfos
-              .filter((info) => !info.isNew) // Only modified files (not new)
-              .map((info) => info.filePath),
-          ),
-        ]
-        log.debug(`Identified ${uniqueFilePaths.length} modified files to delete points for`)
+        const start = performance.now()
+        try {
+          const uniqueFilePaths = [
+            ...new Set(
+              batchFileInfos
+                .filter((info) => !info.isNew) // Only modified files (not new)
+                .map((info) => info.filePath),
+            ),
+          ]
+          log.debug(`Identified ${uniqueFilePaths.length} modified files to delete points for`)
 
-        if (uniqueFilePaths.length > 0) {
-          try {
-            await this.vectorStore.deletePointsByMultipleFilePaths(uniqueFilePaths)
-            log.debug(`Successfully deleted points for ${uniqueFilePaths.length} files`)
-          } catch (deleteError: any) {
-            const errorStatus = deleteError?.status || deleteError?.response?.status || deleteError?.statusCode
-            const errorMessage = deleteError instanceof Error ? deleteError.message : String(deleteError)
+          if (uniqueFilePaths.length > 0) {
+            try {
+              await this.vectorStore.deletePointsByMultipleFilePaths(uniqueFilePaths)
+              log.debug(`Successfully deleted points for ${uniqueFilePaths.length} files`)
+            } catch (deleteError: any) {
+              const errorStatus = deleteError?.status || deleteError?.response?.status || deleteError?.statusCode
+              const errorMessage = deleteError instanceof Error ? deleteError.message : String(deleteError)
 
-            log.error(
-              `Failed to delete points for ${uniqueFilePaths.length} files before upsert in workspace ${scanWorkspace}`,
-              {
-                error: sanitizeErrorMessage(errorMessage),
-                stack: deleteError instanceof Error ? sanitizeErrorMessage(deleteError.stack || "") : undefined,
-                location: "processBatch:deletePointsByMultipleFilePaths",
-                fileCount: uniqueFilePaths.length,
-                errorStatus,
-              },
-            )
+              log.error(
+                `Failed to delete points for ${uniqueFilePaths.length} files before upsert in workspace ${scanWorkspace}`,
+                {
+                  error: sanitizeErrorMessage(errorMessage),
+                  stack: deleteError instanceof Error ? sanitizeErrorMessage(deleteError.stack || "") : undefined,
+                  location: "processBatch:deletePointsByMultipleFilePaths",
+                  fileCount: uniqueFilePaths.length,
+                  errorStatus,
+                },
+              )
 
-            // Re-throw with workspace context
-            throw new Error(
-              `Failed to delete points for ${uniqueFilePaths.length} files. Workspace: ${scanWorkspace}. ${errorMessage}`,
-              { cause: deleteError },
-            )
+              // Re-throw with workspace context
+              throw new Error(
+                `Failed to delete points for ${uniqueFilePaths.length} files. Workspace: ${scanWorkspace}. ${errorMessage}`,
+                { cause: deleteError },
+              )
+            }
           }
+        } finally {
+          deleted += Math.max(0, performance.now() - start)
+          span.add({ deleteMs: deleted })
         }
         // --- End Deletion Step ---
 
         // Create embeddings for batch
-        if (this._cancelled) return
+        if (this._cancelled) {
+          span.outcome("cancelled")
+          return
+        }
 
         log.debug(`Creating embeddings for ${batchTexts.length} texts`)
 
-        const { embeddings } = await this.embedder.createEmbeddings(batchTexts)
+        const startEmbedding = performance.now()
+        const { embeddings } = await this.embedder.createEmbeddings(batchTexts).finally(() => {
+          embedded += Math.max(0, performance.now() - startEmbedding)
+          span.add({ embeddingMs: embedded })
+        })
         log.debug(`Successfully created ${embeddings.length} embeddings`)
 
         // Prepare points for Qdrant
@@ -632,15 +761,23 @@ export class DirectoryScanner implements IDirectoryScanner {
         log.debug(`Prepared ${points.length} points for Qdrant`)
 
         // Upsert points to Qdrant
-        if (this._cancelled) return
+        if (this._cancelled) {
+          span.outcome("cancelled")
+          return
+        }
 
         log.debug("Starting Qdrant upsert")
 
-        await this.vectorStore.upsertPoints(points)
+        const startUpsert = performance.now()
+        await this.vectorStore.upsertPoints(points).finally(() => {
+          upsert += Math.max(0, performance.now() - startUpsert)
+          span.add({ upsertMs: upsert })
+        })
         log.debug("Completed Qdrant upsert")
         onFilesIndexed?.(batchFileInfos.length)
 
         success = true
+        span.outcome("success")
         log.debug(`Successfully processed batch of ${batchBlocks.length} blocks after ${attempts} attempt(s)`)
       } catch (error) {
         lastError = error as Error

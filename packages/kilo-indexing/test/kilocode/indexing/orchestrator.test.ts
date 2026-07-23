@@ -14,6 +14,7 @@ import type {
   VectorStoreSearchResult,
 } from "../../../src/indexing/interfaces"
 import { Emitter } from "../../../src/indexing/runtime"
+import { captureProfiles } from "./profile-capture"
 
 class Store {
   public clearCount = 0
@@ -149,14 +150,23 @@ class BlockingScanner {
 }
 
 class FailScanner {
-  public readonly isCancelled = false
+  public isCancelled = false
+
+  constructor(private readonly cancelled = false) {}
 
   async scanDirectory(): Promise<{ stats: { processed: number; skipped: number }; totalBlockCount: number }> {
+    this.isCancelled = this.cancelled
     throw new Error("scan failed")
   }
 
   cancel(): void {}
   updateBatchSegmentThreshold(_newThreshold: number): void {}
+}
+
+class FailWatcher extends Watcher {
+  async initialize(): Promise<void> {
+    throw new Error("watcher failed")
+  }
 }
 
 function createConfig(): CodeIndexConfigManager {
@@ -170,6 +180,138 @@ function createConfig(): CodeIndexConfigManager {
 }
 
 describe("CodeIndexOrchestrator telemetry", () => {
+  test.serial("profiles a full indexing lifecycle without workspace details", async () => {
+    const root = "/tmp/kilo-indexing-profile-full"
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      root,
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(3, 3, 6) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+    const records = await captureProfiles(async () => {
+      await orchestrator.startIndexing("manual")
+    })
+    const run = records.find((item) => item.event === "indexing.index.run")
+
+    expect(run?.outcome).toBe("success")
+    expect(run?.fields).toEqual({
+      trigger: "manual",
+      mode: "full",
+      provider: "openai",
+      modelId: "text-embedding-3-small",
+      vectorStore: "lancedb",
+      watcherInitMs: expect.any(Number),
+      storeInitMs: expect.any(Number),
+      storePrepareMs: expect.any(Number),
+      scanMs: expect.any(Number),
+      finalizeMs: expect.any(Number),
+    })
+    expect(run?.fields.scanMs).toBeGreaterThanOrEqual(0)
+    expect(records.every((item) => JSON.stringify(item).includes(root) === false)).toBe(true)
+  })
+
+  test.serial("profiles incremental indexing mode", async () => {
+    const records = await captureProfiles(async () => {
+      const orchestrator = new CodeIndexOrchestrator(
+        createConfig(),
+        new CodeIndexStateManager(),
+        "/tmp/kilo-indexing-profile-incremental",
+        { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+        new Store(true) as unknown as IVectorStore,
+        new Scanner(2, 1, 2) as unknown as DirectoryScanner,
+        new Watcher() as unknown as IFileWatcher,
+      )
+
+      await orchestrator.startIndexing("manual")
+    })
+
+    expect(records.find((item) => item.event === "indexing.index.run")?.fields.mode).toBe("incremental")
+  })
+
+  test.serial("profiles cancelled indexing lifecycle", async () => {
+    const scanner = new BlockingScanner()
+    const records = await captureProfiles(async () => {
+      const orchestrator = new CodeIndexOrchestrator(
+        createConfig(),
+        new CodeIndexStateManager(),
+        "/tmp/kilo-indexing-profile-cancelled",
+        { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+        new Store(false) as unknown as IVectorStore,
+        scanner as unknown as DirectoryScanner,
+        new Watcher() as unknown as IFileWatcher,
+      )
+      const active = orchestrator.startIndexing("background")
+
+      await scanner.started.promise
+      await orchestrator.shutdown()
+      await active
+    })
+
+    expect(records.find((item) => item.event === "indexing.index.run")?.outcome).toBe("cancelled")
+  })
+
+  test.serial("profiles early cancellation as full mode", async () => {
+    const orchestrator = new CodeIndexOrchestrator(
+      createConfig(),
+      new CodeIndexStateManager(),
+      "/tmp/kilo-indexing-profile-early-cancelled",
+      { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+      new Store(false) as unknown as IVectorStore,
+      new Scanner(0, 0, 0) as unknown as DirectoryScanner,
+      new Watcher() as unknown as IFileWatcher,
+    )
+    const records = await captureProfiles(async () => {
+      const active = orchestrator.startIndexing("background")
+      orchestrator.cancelIndexing()
+      await active
+    })
+    const run = records.find((item) => item.event === "indexing.index.run")
+
+    expect(run?.outcome).toBe("cancelled")
+    expect(run?.fields.mode).toBe("full")
+  })
+
+  test.serial("profiles early watcher failures as full mode", async () => {
+    const records = await captureProfiles(async () => {
+      const orchestrator = new CodeIndexOrchestrator(
+        createConfig(),
+        new CodeIndexStateManager(),
+        "/tmp/kilo-indexing-profile-watcher-failure",
+        { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+        new Store(false) as unknown as IVectorStore,
+        new Scanner(0, 0, 0) as unknown as DirectoryScanner,
+        new FailWatcher() as unknown as IFileWatcher,
+      )
+
+      await orchestrator.startIndexing("background")
+    })
+    const run = records.find((item) => item.event === "indexing.index.run")
+
+    expect(run?.outcome).toBe("error")
+    expect(run?.fields.mode).toBe("full")
+  })
+
+  test.serial("profiles failures after cancellation as errors", async () => {
+    const records = await captureProfiles(async () => {
+      const orchestrator = new CodeIndexOrchestrator(
+        createConfig(),
+        new CodeIndexStateManager(),
+        "/tmp/kilo-indexing-profile-cancelled-failure",
+        { async clearCacheFile() {}, async flush() {} } as unknown as CacheManager,
+        new Store(false) as unknown as IVectorStore,
+        new FailScanner(true) as unknown as DirectoryScanner,
+        new Watcher() as unknown as IFileWatcher,
+      )
+
+      await orchestrator.startIndexing("background")
+    })
+
+    expect(records.find((item) => item.event === "indexing.index.run")?.outcome).toBe("error")
+  })
+
   test("emits full completion telemetry", async () => {
     const events: IndexingTelemetryEvent[] = []
     const orchestrator = new CodeIndexOrchestrator(
