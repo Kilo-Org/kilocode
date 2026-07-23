@@ -1,5 +1,6 @@
 import * as fs from "fs/promises"
 import * as path from "path"
+import os from "os"
 import { Config } from "../config/config"
 import { ConfigMCPV1 as ConfigMCP } from "@opencode-ai/core/v1/config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
@@ -8,6 +9,7 @@ import { KilocodePaths } from "./paths"
 
 export namespace McpMigrator {
   const log = Log.create({ service: "kilocode.mcp-migrator" })
+  const home = () => process.env.KILO_TEST_HOME || process.env.HOME || process.env.USERPROFILE || os.homedir()
 
   // Remote transport types used by the Kilocode extension
   const REMOTE_TYPES = new Set(["streamable-http", "sse"])
@@ -51,6 +53,37 @@ export namespace McpMigrator {
     }
   }
 
+  export async function readMcpDirectory(
+    mcpDir: string,
+  ): Promise<Array<{ name: string; server: KilocodeMcpServer }>> {
+    if (!(await Filesystem.isDir(mcpDir))) return []
+
+    const servers: Array<{ name: string; server: KilocodeMcpServer }> = []
+    try {
+      const entries = await fs.readdir(mcpDir)
+      for (const entry of entries) {
+        if (!entry.endsWith(".json")) continue
+        const name = entry.slice(0, -5)
+        const filepath = path.join(mcpDir, entry)
+        try {
+          const content = await fs.readFile(filepath, "utf-8")
+          const parsed = JSON.parse(content)
+          if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+            log.warn("MCP server entry must be a JSON object, skipping", { filepath })
+            continue
+          }
+          const server = parsed as KilocodeMcpServer
+          servers.push({ name, server })
+        } catch (err) {
+          log.warn("failed to parse MCP server file, skipping", { filepath, error: err })
+        }
+      }
+    } catch (err) {
+      log.warn("failed to read MCP directory", { dir: mcpDir, error: err })
+    }
+    return servers
+  }
+
   export function convertServer(name: string, server: KilocodeMcpServer): ConfigMCP.Info | null {
     if (isRemote(server)) {
       if (!server.url) {
@@ -85,6 +118,19 @@ export namespace McpMigrator {
     return config
   }
 
+  async function loadMcpFromDir(dirPath: string, allServers: Array<{ name: string; server: KilocodeMcpServer }>) {
+    const filepath = path.join(dirPath, "mcp.json")
+    const settings = await readMcpSettings(filepath)
+    if (settings?.mcpServers) {
+      for (const [name, server] of Object.entries(settings.mcpServers)) {
+        allServers.push({ name, server })
+      }
+    }
+    const mcpDir = path.join(dirPath, "mcp")
+    const dirServers = await readMcpDirectory(mcpDir)
+    allServers.push(...dirServers)
+  }
+
   export async function migrate(options?: {
     projectDir?: string
     skipGlobalPaths?: boolean
@@ -106,19 +152,19 @@ export namespace McpMigrator {
       }
     }
 
-    // 2. Project-level MCP settings (if projectDir provided)
-    // Check .kilo/mcp.json and .kilocode/mcp.json for project-level settings
-    // (not "mcp_settings.json" which is only used for global settings)
-    // .kilocode is loaded first (lower precedence), .kilo second (higher precedence)
+    // 2. Global home-level configs (~/.kilocode and ~/.kilo)
+    // File loaded first, then directory (directory overrides file)
+    // .kilocode first (lower precedence), .kilo second (higher precedence)
+    for (const dir of [".kilocode", ".kilo"]) {
+      await loadMcpFromDir(path.join(home(), dir), allServers)
+    }
+
+    // 3. Project-level MCP settings (if projectDir provided)
+    // .kilocode first (lower precedence), .kilo second (higher precedence)
+    // Directory overrides file
     if (options?.projectDir) {
       for (const dir of [".kilocode", ".kilo"]) {
-        const projectSettingsPath = path.join(options.projectDir, dir, "mcp.json")
-        const projectSettings = await readMcpSettings(projectSettingsPath)
-        if (projectSettings?.mcpServers) {
-          for (const [name, server] of Object.entries(projectSettings.mcpServers)) {
-            allServers.push({ name, server }) // Later entries win in deduplication
-          }
-        }
+        await loadMcpFromDir(path.join(options.projectDir, dir), allServers)
       }
     }
 
@@ -128,18 +174,23 @@ export namespace McpMigrator {
       serversByName.set(name, server)
     }
 
-    // Convert each server
+    // Convert each server. Errors for individual servers are caught so that
+    // one malformed entry does not discard all otherwise valid MCP servers.
     for (const [name, server] of serversByName) {
-      // Warn about alwaysAllow permissions that cannot be migrated
-      if (server.alwaysAllow && server.alwaysAllow.length > 0) {
-        warnings.push(
-          `MCP server '${name}' has alwaysAllow permissions that cannot be migrated: ${server.alwaysAllow.join(", ")}`,
-        )
-      }
+      try {
+        if (server.alwaysAllow && server.alwaysAllow.length > 0) {
+          warnings.push(
+            `MCP server '${name}' has alwaysAllow permissions that cannot be migrated: ${server.alwaysAllow.join(", ")}`,
+          )
+        }
 
-      const converted = convertServer(name, server)
-      if (converted) {
-        mcp[name] = converted
+        const converted = convertServer(name, server)
+        if (converted) {
+          mcp[name] = converted
+        }
+      } catch (err) {
+        log.warn("failed to migrate MCP server, skipping", { name, error: err })
+        skipped.push({ name, reason: `conversion error: ${err}` })
       }
     }
 

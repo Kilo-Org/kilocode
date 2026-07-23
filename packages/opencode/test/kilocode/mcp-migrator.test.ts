@@ -1,9 +1,27 @@
-import { test, expect, describe } from "bun:test"
+import { test, expect, describe, afterEach, beforeAll, afterAll } from "bun:test"
 import { McpMigrator } from "../../src/kilocode/mcp-migrator"
 import { tmpdir } from "../fixture/fixture"
 import path from "path"
+import fs from "fs/promises"
 
 describe("McpMigrator", () => {
+  const ORIGINAL_TEST_HOME = process.env.KILO_TEST_HOME
+  let cleanHome: string
+
+  beforeAll(async () => {
+    const tmp = await tmpdir()
+    cleanHome = tmp.path
+    process.env.KILO_TEST_HOME = cleanHome
+  })
+
+  afterAll(async () => {
+    if (ORIGINAL_TEST_HOME === undefined) {
+      delete process.env.KILO_TEST_HOME
+    } else {
+      process.env.KILO_TEST_HOME = ORIGINAL_TEST_HOME
+    }
+    await fs.rm(cleanHome, { recursive: true, force: true })
+  })
   describe("convertServer", () => {
     test("converts local server with command and args", () => {
       const server: McpMigrator.KilocodeMcpServer = {
@@ -730,6 +748,504 @@ describe("McpMigrator", () => {
           url: "http://localhost:4322/mcp",
           enabled: false,
         })
+      })
+    })
+  })
+
+  describe("readMcpDirectory", () => {
+    test("returns empty array for non-existent directory", async () => {
+      const result = await McpMigrator.readMcpDirectory("/non/existent/path/mcp")
+      expect(result).toEqual([])
+    })
+
+    test("returns empty array for path that is a file, not a directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.writeFile(path.join(dir, "mcp"), "not a dir")
+        },
+      })
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+      expect(result).toEqual([])
+    })
+
+    test("reads single server from directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "github.json"),
+            JSON.stringify({
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-github"],
+              env: { GITHUB_TOKEN: "token123" },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("github")
+      expect(result[0].server.command).toBe("npx")
+      expect(result[0].server.args).toEqual(["-y", "@modelcontextprotocol/server-github"])
+    })
+
+    test("reads multiple servers from directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "github.json"),
+            JSON.stringify({ command: "npx", args: ["-y", "server-github"] }),
+          )
+          await fs.writeFile(
+            path.join(mcpDir, "postgres.json"),
+            JSON.stringify({ command: "docker", args: ["run", "mcp/postgres"] }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(2)
+      const names = result.map((r) => r.name).sort()
+      expect(names).toEqual(["github", "postgres"])
+    })
+
+    test("skips non-JSON files in directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "github.json"), JSON.stringify({ command: "npx" }))
+          await fs.writeFile(path.join(mcpDir, "notes.txt"), "this is not json")
+          await fs.writeFile(path.join(mcpDir, "readme.md"), "# readme")
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("github")
+    })
+
+    test("skips malformed JSON files with log and continues", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
+          await fs.writeFile(path.join(mcpDir, "bad.json"), "{ invalid json !!!")
+          await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(2)
+      const names = result.map((r) => r.name).sort()
+      expect(names).toEqual(["also-good", "good"])
+    })
+
+    test("skips valid JSON that is not an object (null)", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
+          await fs.writeFile(path.join(mcpDir, "null.json"), "null")
+          await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(2)
+      const names = result.map((r) => r.name).sort()
+      expect(names).toEqual(["also-good", "good"])
+    })
+
+    test("skips valid JSON that is not an object (array)", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
+          await fs.writeFile(path.join(mcpDir, "array.json"), JSON.stringify([1, 2, 3]))
+          await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(2)
+      const names = result.map((r) => r.name).sort()
+      expect(names).toEqual(["also-good", "good"])
+    })
+
+    test("uses filename without .json as server name", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "my-custom-server.json"),
+            JSON.stringify({ command: "custom-cmd" }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.readMcpDirectory(path.join(tmp.path, "mcp"))
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe("my-custom-server")
+    })
+  })
+
+  describe("directory-based MCP loading (migrate)", () => {
+    test("loads servers from .kilocode/mcp/ directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, ".kilocode", "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "github.json"),
+            JSON.stringify({
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-github"],
+              env: { GITHUB_TOKEN: "token123" },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("github")
+      expect(result.mcp.github).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@modelcontextprotocol/server-github"],
+        environment: { GITHUB_TOKEN: "token123" },
+      })
+    })
+
+    test("loads servers from .kilo/mcp/ directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, ".kilo", "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "database.json"),
+            JSON.stringify({
+              command: "docker",
+              args: ["run", "-i", "--rm", "mcp/postgres"],
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("database")
+      expect(result.mcp.database).toEqual({
+        type: "local",
+        command: ["docker", "run", "-i", "--rm", "mcp/postgres"],
+      })
+    })
+
+    test("directory file overrides .kilocode/mcp.json for same server name", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode", "mcp"), { recursive: true })
+          await fs.writeFile(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                github: {
+                  command: "npx",
+                  args: ["-y", "@modelcontextprotocol/server-github"],
+                  env: { GITHUB_TOKEN: "old-token" },
+                },
+              },
+            }),
+          )
+          await fs.writeFile(
+            path.join(dir, ".kilocode", "mcp", "github.json"),
+            JSON.stringify({
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-github"],
+              env: { GITHUB_TOKEN: "new-token" },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp.github).toEqual({
+        type: "local",
+        command: ["npx", "-y", "@modelcontextprotocol/server-github"],
+        environment: { GITHUB_TOKEN: "new-token" },
+      })
+    })
+
+    test(".kilo/mcp/ directory overrides .kilocode/mcp/ directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode", "mcp"), { recursive: true })
+          await fs.mkdir(path.join(dir, ".kilo", "mcp"), { recursive: true })
+          await fs.writeFile(
+            path.join(dir, ".kilocode", "mcp", "myserver.json"),
+            JSON.stringify({ command: "old-cmd", args: ["old"] }),
+          )
+          await fs.writeFile(
+            path.join(dir, ".kilo", "mcp", "myserver.json"),
+            JSON.stringify({ command: "new-cmd", args: ["new"] }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp.myserver).toEqual({
+        type: "local",
+        command: ["new-cmd", "new"],
+      })
+    })
+
+    test("malformed JSON in directory file is skipped, others still load", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, ".kilocode", "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(path.join(mcpDir, "good.json"), JSON.stringify({ command: "valid-cmd" }))
+          await fs.writeFile(path.join(mcpDir, "bad.json"), "{ corrupt }")
+          await fs.writeFile(path.join(mcpDir, "also-good.json"), JSON.stringify({ command: "another-cmd" }))
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("good")
+      expect(result.mcp).toHaveProperty("also-good")
+      expect(Object.keys(result.mcp)).toHaveLength(2)
+    })
+
+    test("loads servers from directory only (no mcp.json file)", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, ".kilocode", "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "filesystem.json"),
+            JSON.stringify({
+              command: "npx",
+              args: ["-y", "@modelcontextprotocol/server-filesystem", "/home"],
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("filesystem")
+      expect(Object.keys(result.mcp)).toHaveLength(1)
+    })
+
+    test("loads multiple servers from directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, ".kilocode", "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "github.json"),
+            JSON.stringify({ command: "npx", args: ["-y", "server-github"] }),
+          )
+          await fs.writeFile(
+            path.join(mcpDir, "postgres.json"),
+            JSON.stringify({ command: "docker", args: ["run", "mcp/postgres"] }),
+          )
+          await fs.writeFile(
+            path.join(mcpDir, "filesystem.json"),
+            JSON.stringify({ command: "npx", args: ["-y", "server-filesystem"] }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(Object.keys(result.mcp)).toHaveLength(3)
+    })
+
+    test("empty mcp/ directory does not affect loading", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode", "mcp"), { recursive: true })
+          await fs.writeFile(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                server1: { command: "cmd1" },
+              },
+            }),
+          )
+        },
+      })
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.path,
+        skipGlobalPaths: true,
+      })
+
+      expect(result.mcp).toHaveProperty("server1")
+      expect(Object.keys(result.mcp)).toHaveLength(1)
+    })
+  })
+
+  describe("home-level global MCP config", () => {
+    const ORIGINAL_HOME = process.env.KILO_TEST_HOME
+
+    afterEach(() => {
+      if (ORIGINAL_HOME === undefined) {
+        delete process.env.KILO_TEST_HOME
+      } else {
+        process.env.KILO_TEST_HOME = ORIGINAL_HOME
+      }
+    })
+
+    test("loads servers from ~/.kilocode/mcp/ directory", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const mcpDir = path.join(dir, ".kilocode", "mcp")
+          await fs.mkdir(mcpDir, { recursive: true })
+          await fs.writeFile(
+            path.join(mcpDir, "global-server.json"),
+            JSON.stringify({ command: "global-cmd" }),
+          )
+        },
+      })
+      process.env.KILO_TEST_HOME = tmp.path
+
+      const result = await McpMigrator.migrate({
+        projectDir: undefined,
+        skipGlobalPaths: false,
+      })
+
+      expect(result.mcp).toHaveProperty("global-server")
+      expect(result.mcp["global-server"]).toEqual({
+        type: "local",
+        command: ["global-cmd"],
+      })
+    })
+
+    test("loads servers from ~/.kilocode/mcp.json global file", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode"), { recursive: true })
+          await fs.writeFile(
+            path.join(dir, ".kilocode", "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                "global-file-server": { command: "global-file-cmd" },
+              },
+            }),
+          )
+        },
+      })
+      process.env.KILO_TEST_HOME = tmp.path
+
+      const result = await McpMigrator.migrate({
+        projectDir: undefined,
+        skipGlobalPaths: false,
+      })
+
+      expect(result.mcp).toHaveProperty("global-file-server")
+    })
+
+    test("global directory overrides global file for same server", async () => {
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          const kiloDir = path.join(dir, ".kilocode")
+          await fs.mkdir(path.join(kiloDir, "mcp"), { recursive: true })
+          await fs.writeFile(
+            path.join(kiloDir, "mcp.json"),
+            JSON.stringify({
+              mcpServers: {
+                myserver: { command: "file-cmd" },
+              },
+            }),
+          )
+          await fs.writeFile(
+            path.join(kiloDir, "mcp", "myserver.json"),
+            JSON.stringify({ command: "dir-cmd" }),
+          )
+        },
+      })
+      process.env.KILO_TEST_HOME = tmp.path
+
+      const result = await McpMigrator.migrate({
+        projectDir: undefined,
+        skipGlobalPaths: false,
+      })
+
+      expect(result.mcp.myserver).toEqual({
+        type: "local",
+        command: ["dir-cmd"],
+      })
+    })
+
+    test("project config overrides global config", async () => {
+      const projectDirName = "project"
+      await using tmp = await tmpdir({
+        init: async (dir) => {
+          await fs.mkdir(path.join(dir, ".kilocode", "mcp"), { recursive: true })
+          await fs.writeFile(
+            path.join(dir, ".kilocode", "mcp", "server.json"),
+            JSON.stringify({ command: "global-cmd" }),
+          )
+          const pDir = path.join(dir, projectDirName)
+          await fs.mkdir(path.join(pDir, ".kilocode", "mcp"), { recursive: true })
+          await fs.writeFile(
+            path.join(pDir, ".kilocode", "mcp", "server.json"),
+            JSON.stringify({ command: "project-cmd" }),
+          )
+          return pDir
+        },
+      })
+      process.env.KILO_TEST_HOME = tmp.path
+
+      const result = await McpMigrator.migrate({
+        projectDir: tmp.extra,
+        skipGlobalPaths: false,
+      })
+
+      expect(result.mcp.server).toEqual({
+        type: "local",
+        command: ["project-cmd"],
       })
     })
   })
