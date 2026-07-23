@@ -339,6 +339,7 @@ describe("kilocode tool registry indexing", () => {
       save: def("kilo_memory_save"),
       manager: def("agent_manager"),
       process: def("background_process"),
+      chart: def("chart"),
       image: def("generate_image"),
       terminal: def("interactive_terminal"),
       notebookRead: def("notebook_read"),
@@ -353,6 +354,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
         "background_process",
         "interactive_terminal",
       ])
@@ -363,6 +365,7 @@ describe("kilocode tool registry indexing", () => {
           "kilo_memory_recall",
           "kilo_memory_save",
           "recall",
+          "chart",
           "background_process",
           "interactive_terminal",
         ],
@@ -378,6 +381,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
         "background_process",
         "interactive_terminal",
       ])
@@ -390,6 +394,7 @@ describe("kilocode tool registry indexing", () => {
           "kilo_memory_recall",
           "kilo_memory_save",
           "recall",
+          "chart",
           "background_process",
           "agent_manager_models",
           "agent_manager",
@@ -405,6 +410,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
         "background_process",
         "agent_manager_models",
         "agent_manager",
@@ -416,6 +422,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
         "background_process",
         "agent_manager_models",
         "agent_manager",
@@ -427,6 +434,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
       ])
 
       process.env["KILO_CLIENT"] = "run"
@@ -435,6 +443,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
       ])
 
       process.env["KILO_CLIENT"] = "acp"
@@ -443,6 +452,7 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
+        "chart",
       ])
     } finally {
       if (prev === undefined) delete process.env["KILO_CLIENT"]
