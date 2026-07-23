@@ -391,6 +391,8 @@ import type {
   SessionUpdateResponses,
   SessionViewedErrors,
   SessionViewedResponses,
+  StatsStatsErrors,
+  StatsStatsResponses,
   SubtaskPartInput,
   SuggestionAcceptErrors,
   SuggestionAcceptResponses,
@@ -8461,6 +8463,38 @@ export class Sandbox extends HeyApiClient {
   }
 }
 
+export class Stats extends HeyApiClient {
+  /**
+   * Get session usage statistics
+   *
+   * Aggregate token usage, cost, model usage, and tool usage across sessions, scoped to the current project.
+   */
+  public stats<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<StatsStatsResponses, StatsStatsErrors, ThrowOnError>({
+      url: "/stats/stats",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class Suggestion extends HeyApiClient {
   /**
    * List pending suggestions
@@ -10624,6 +10658,11 @@ export class KiloClient extends HeyApiClient {
   private _sandbox?: Sandbox
   get sandbox(): Sandbox {
     return (this._sandbox ??= new Sandbox({ client: this.client }))
+  }
+
+  private _stats?: Stats
+  get stats(): Stats {
+    return (this._stats ??= new Stats({ client: this.client }))
   }
 
   private _suggestion?: Suggestion

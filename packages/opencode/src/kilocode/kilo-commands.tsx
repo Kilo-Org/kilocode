@@ -18,6 +18,7 @@ import { DialogKiloProfile } from "./components/dialog-kilo-profile.js"
 import { DialogClawSetup } from "./components/dialog-claw-setup.js"
 import { DialogClawUpgrade } from "./components/dialog-claw-upgrade.js"
 import { DialogIndexing } from "./components/dialog-indexing.js"
+import { DialogStats } from "./components/dialog-stats.js"
 import { indexingEnabled } from "./indexing-feature"
 import { refreshBalance } from "./balance-refresh"
 
@@ -175,6 +176,32 @@ export function registerKiloCommands(useSDK: () => UseSDK) {
             },
           ]
         : []),
+
+      // /stats command — show token usage and cost statistics for the current project.
+      // Always available (reads the local session DB), no Kilo Gateway connection required.
+      {
+        name: "kilo.stats",
+        title: "Stats",
+        desc: "Show token usage and cost statistics for this project",
+        category: "Kilo",
+        slashName: "stats",
+        run: async () => {
+          try {
+            const response = await sdk.client.stats.stats()
+
+            if (response.error || !response.data) {
+              dialog.replace(() => (
+                <DialogAlert title="Error" message="Failed to fetch session statistics." />
+              ))
+              return
+            }
+
+            dialog.replace(() => <DialogStats stats={response.data} />)
+          } catch (error) {
+            dialog.replace(() => <DialogAlert title="Error" message={`Failed to fetch stats: ${error}`} />)
+          }
+        },
+      },
 
       // /teams command
       {

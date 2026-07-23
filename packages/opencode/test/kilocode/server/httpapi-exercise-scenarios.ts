@@ -461,6 +461,10 @@ export const kiloScenarios: Scenario[] = [
       object(body)
       check(body.enabled === false && body.connected === false, "disabled ingest should keep remote disconnected")
     }),
+  http.protected.get("/stats/stats", "stats.stats").json(200, (body) => {
+    object(body)
+    check(typeof body.totalSessions === "number", "stats should report totalSessions as a number")
+  }),
   http.protected.get("/suggestion", "suggestion.list").json(200, array),
   http.protected
     .post("/suggestion/{requestID}/accept", "suggestion.accept")
