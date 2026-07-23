@@ -384,6 +384,12 @@ describe("session main restart limit", () => {
           expect(yield* llm.calls).toBe(6)
           expect(result.info.role).toBe("assistant")
           expect(errorOf(result)).toBeDefined()
+
+          const msgs = yield* sessions.messages({ sessionID: chat.id })
+          const lastAssistant = msgs.filter((m) => m.info.role === "assistant").at(-1)
+          expect(lastAssistant?.info.id).toBe(result.info.id)
+          expect(result.parts).toEqual(lastAssistant?.parts ?? [])
+
           // coalesced: exactly one TurnClose, reason error
           expect(closes).toEqual(["error"])
         }),
@@ -419,6 +425,11 @@ describe("session main restart limit", () => {
           expect(yield* llm.calls).toBe(1) // no restart
           expect(result.info.role).toBe("assistant")
           expect(errorOf(result)).toBeDefined()
+
+          const msgs = yield* sessions.messages({ sessionID: chat.id })
+          const lastAssistant = msgs.filter((m) => m.info.role === "assistant").at(-1)
+          expect(lastAssistant?.info.id).toBe(result.info.id)
+          expect(result.parts).toEqual(lastAssistant?.parts ?? [])
         }),
         { git: true, config: providerCfg },
       ),

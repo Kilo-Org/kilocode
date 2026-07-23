@@ -548,7 +548,6 @@ export namespace KiloSessionPrompt {
     sessionID: string
     status: Pick<SessionStatus.Interface, "get">
     sessions: Pick<Session.Interface, "messages" | "removeMessage">
-    closeReasons: Map<string, KiloSession.CloseReason>
     message?: MessageV2.Assistant
   }): Effect.Effect<boolean, NotFoundError> {
     return Effect.gen(function* () {

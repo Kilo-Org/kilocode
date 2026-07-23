@@ -1913,6 +1913,15 @@ export const layer = Layer.effect(
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* KiloSession.publishTurnOpen({ sessionID: input.sessionID })
 
+      const terminalAssistant = (errored: MessageV2.Assistant, result: MessageV2.WithParts): MessageV2.WithParts => {
+        if (result.info.role === "assistant" && result.info.id === errored.id) {
+          result.info.error = errored.error
+          result.info.finish = errored.finish
+          return result
+        }
+        return { info: errored, parts: [] }
+      }
+
       const result = yield* Effect.onExit(
         Effect.gen(function* () {
           while (true) {
@@ -1933,7 +1942,7 @@ export const layer = Layer.effect(
 
             // If the session has a parent (subagent), never auto-restart — parent-driven behavior only.
             if (session.parentID !== undefined) {
-              if (errored) return { info: errored, parts: [] }
+              if (errored) return terminalAssistant(errored, result)
               return yield* lastAssistant(input.sessionID)
             }
 
@@ -1944,7 +1953,7 @@ export const layer = Layer.effect(
 
             const retryable = SessionRetry.retryable(errored.error)
             if (retryable === undefined) {
-              return { info: errored, parts: [] }
+              return terminalAssistant(errored, result)
             }
 
             // Check restart limit
@@ -1956,7 +1965,7 @@ export const layer = Layer.effect(
               message: errored,
             })
             if (guard.exhausted) {
-              return { info: errored, parts: [] }
+              return terminalAssistant(errored, result)
             }
 
             // Remove the terminal-errored assistant tail before re-driving
@@ -1964,7 +1973,6 @@ export const layer = Layer.effect(
               sessionID: input.sessionID,
               status,
               sessions,
-              closeReasons,
               message: errored,
             })
 
