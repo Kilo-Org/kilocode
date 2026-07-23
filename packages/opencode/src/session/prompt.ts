@@ -49,6 +49,7 @@ import { Config } from "@/config/config"
 import { ConfigMarkdown } from "@/config/markdown"
 import { SessionSummary } from "./summary"
 import { NamedError } from "@opencode-ai/core/util/error"
+import { SessionRetry } from "./retry" // kilocode_change - bounded main-session restart backoff/retryable classification
 import { SessionProcessor } from "./processor"
 import { Tool } from "@/tool/tool"
 import { Permission } from "@/permission"
@@ -1447,6 +1448,9 @@ export const layer = Layer.effect(
 
     // kilocode_change — mutable close-reason per session, set by runLoop and read by loop
     const closeReasons = new Map<string, KiloSession.CloseReason>()
+    // kilocode_change — mutable terminal-error message per session, captured by runLoop so
+    // the restart decision never depends on a post-turn DB re-read of `.error`.
+    const terminalErrors = new Map<string, MessageV2.Assistant>()
 
     // kilocode_change start - retain request-scoped snapshot initialization policy
     const runLoop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
@@ -1458,6 +1462,7 @@ export const layer = Layer.effect(
       const envCache: KiloSessionPrompt.EnvCache = {}
       const memoryCache = KiloSessionPrompt.memoryCache() // kilocode_change
       closeReasons.delete(sessionID) // kilocode_change
+      terminalErrors.delete(sessionID) // kilocode_change
       let compactionAttempts = 0 // kilocode_change - cap compaction attempts per turn to avoid infinite loops
       const ctx = yield* InstanceState.context
       let structured: unknown
@@ -1829,7 +1834,10 @@ export const layer = Layer.effect(
 
           // kilocode_change start
           if (result === "stop") {
-            if (handle.message.error) closeReasons.set(sessionID, "error")
+            if (handle.message.error) {
+              closeReasons.set(sessionID, "error")
+              terminalErrors.set(sessionID, handle.message)
+            }
             return "break" as const
           }
           // kilocode_change end
@@ -1897,17 +1905,77 @@ export const layer = Layer.effect(
     const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.loop",
     )(function* (input: LoopInput) {
-      // kilocode_change start
+      // kilocode_change start - bounded automatic restart for stuck main sessions
       const session = yield* sessions.get(input.sessionID)
+      let restartAttempts = 0
+
       yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
       yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
       yield* KiloSession.publishTurnOpen({ sessionID: input.sessionID })
-      return yield* Effect.onExit(
-        state.ensureRunning(
-          input.sessionID,
-          lastAssistant(input.sessionID).pipe(Effect.orDie),
-          runLoop(input).pipe(Effect.orDie),
-        ), // kilocode_change
+
+      const result = yield* Effect.onExit(
+        Effect.gen(function* () {
+          while (true) {
+            yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
+            yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
+
+            const result = yield* state.ensureRunning(
+              input.sessionID,
+              lastAssistant(input.sessionID).pipe(Effect.orDie),
+              runLoop(input).pipe(Effect.orDie),
+            ) // kilocode_change
+
+            // Capture any terminal error from the just-finished turn using the
+            // in-memory message set by runLoop. Never re-read .error from the DB:
+            // the persisted error is not reliably visible to the immediate post-turn
+            // read, which makes the restart decision flaky.
+            const errored = terminalErrors.get(input.sessionID)
+
+            // If the session has a parent (subagent), never auto-restart — parent-driven behavior only.
+            if (session.parentID !== undefined) {
+              if (errored) return { info: errored, parts: [] }
+              return yield* lastAssistant(input.sessionID)
+            }
+
+            // Only root sessions restart, and only on a retryable terminal error.
+            if (!errored || !errored.error) {
+              return result
+            }
+
+            const retryable = SessionRetry.retryable(errored.error)
+            if (retryable === undefined) {
+              return { info: errored, parts: [] }
+            }
+
+            // Check restart limit
+            restartAttempts++
+            const guard = KiloSessionPrompt.guardMainSessionRestart({
+              sessionID: input.sessionID,
+              attempts: restartAttempts,
+              closeReasons,
+              message: errored,
+            })
+            if (guard.exhausted) {
+              return { info: errored, parts: [] }
+            }
+
+            // Remove the terminal-errored assistant tail before re-driving
+            yield* KiloSessionPrompt.recoverTerminalErrorTail({
+              sessionID: input.sessionID,
+              status,
+              sessions,
+              closeReasons,
+              message: errored,
+            })
+
+            // Back off before restart
+            const backoff = SessionRetry.delay(restartAttempts)
+            yield* Effect.sleep(`${backoff} millis`)
+
+            // Continue to next restart iteration
+            continue
+          }
+        }),
         Effect.fnUntraced(function* (exit) {
           yield* KiloSession.publishTurnClose({
             sessionID: input.sessionID,
@@ -1920,6 +1988,8 @@ export const layer = Layer.effect(
           })
         }),
       )
+
+      return result
       // kilocode_change end
     })
 

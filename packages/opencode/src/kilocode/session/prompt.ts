@@ -28,6 +28,9 @@ import { KilocodeSystemPrompt } from "@/kilocode/system-prompt"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import CODE_SWITCH from "@/session/prompt/code-switch.txt"
 
+import type { NotFoundError } from "@/storage/storage"
+import { MessageID } from "@/session/schema"
+
 export namespace KiloSessionPrompt {
   const modes = ["ask", "plan", "architect"]
   type Intake = { cancelled: boolean; fiber?: Fiber.Fiber<unknown, unknown> }
@@ -499,6 +502,75 @@ export namespace KiloSessionPrompt {
       input.message.finish ??= "error"
     }
     return { exhausted: true as const, error }
+  }
+
+  /**
+   * Maximum number of automatic restarts allowed for a stuck main session.
+   * Matches the `KILO_MAIN_SESSION_RESTART_LIMIT` flag.
+   */
+  export const MAX_MAIN_SESSION_RESTARTS = 3
+
+  /**
+   * Determines whether a stuck main session should be automatically restarted.
+   * Returns `{ exhausted: true }` when the restart limit has been reached,
+   * otherwise `{ exhausted: false }`.
+   */
+  export function guardMainSessionRestart(input: {
+    sessionID: string
+    attempts: number
+    closeReasons: Map<string, KiloSession.CloseReason>
+    message?: MessageV2.Assistant
+  }) {
+    const limit = Flag.KILO_MAIN_SESSION_RESTART_LIMIT ?? MAX_MAIN_SESSION_RESTARTS
+    if (input.attempts <= limit) return { exhausted: false as const }
+    input.closeReasons.set(input.sessionID, "error")
+    if (input.message) {
+      input.message.error ??= new MessageV2.APIError({
+        message: `Main session restart limit (${limit}) exhausted`,
+        isRetryable: false,
+      }).toObject()
+      input.message.finish ??= "error"
+    }
+    return { exhausted: true as const }
+  }
+
+  /**
+   * Removes the terminal-errored assistant tail before a restart.
+   * The caller passes the in-memory errored assistant captured by runLoop;
+   * removal is by the known message id rather than by re-reading .error from
+   * the DB (that re-read is racy and caused the restart decision to be
+   * non-deterministic). The DB is only consulted to verify the id is still the
+   * answering tail for the current user turn.
+   *
+   * Returns true if a tail was removed.
+   */
+  export function recoverTerminalErrorTail(input: {
+    sessionID: string
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "messages" | "removeMessage">
+    closeReasons: Map<string, KiloSession.CloseReason>
+    message?: MessageV2.Assistant
+  }): Effect.Effect<boolean, NotFoundError> {
+    return Effect.gen(function* () {
+      const state = yield* input.status.get(SessionID.make(input.sessionID))
+      if (state.type !== "idle") return false
+
+      if (!input.message) return false
+
+      const msgs = yield* input.sessions.messages({ sessionID: SessionID.make(input.sessionID), limit: 2 })
+      const tail = msgs.at(-1)
+      if (!tail || tail.info.role !== "assistant" || tail.info.id !== input.message.id) return false
+
+      const prev = msgs.at(-2)
+      if (!prev || prev.info.role !== "user") return false
+      if (tail.info.parentID !== prev.info.id) return false
+
+      yield* input.sessions.removeMessage({
+        sessionID: SessionID.make(input.sessionID),
+        messageID: MessageID.make(input.message.id),
+      })
+      return true
+    })
   }
 
   /**
