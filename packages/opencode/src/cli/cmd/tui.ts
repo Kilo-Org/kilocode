@@ -11,7 +11,7 @@ import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network
 import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "@opencode-ai/tui/context/sdk"
-import { importCloudSession, localSessionID, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, localSessionID, reportCloudImportError, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
 import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
@@ -357,14 +357,15 @@ export const TuiThreadCommand = cmd({
             headers: transport.headers, // kilocode_change
             directory: cwd,
           })
-          const id = await importCloudSession(sdk, args.session).catch(() => undefined)
-          if (!id) {
-            UI.error("Failed to import session from cloud")
+          try {
+            const id = await importCloudSession(sdk, args.session)
+            args.session = id
+            args.cloudFork = false
+          } catch (err) {
+            reportCloudImportError(err)
             shutdownAndExit({ reason: "cloud-fork-failed", code: 1 })
             return
           }
-          args.session = id
-          args.cloudFork = false
         }
         // kilocode_change end
 
