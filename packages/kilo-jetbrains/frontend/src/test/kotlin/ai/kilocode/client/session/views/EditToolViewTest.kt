@@ -45,6 +45,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(view.linkVisible())
         assertEquals("App.kt", view.linkLabel())
         assertEquals("/repo/src/App.kt", view.linkHref())
+        assertEquals("/repo/src/App.kt", view.linkTooltip())
         assertTrue(view.labelText().contains("App.kt"))
 
         view.openLink()
@@ -119,6 +120,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         val fileLinks = labels(view).filter { it.text?.contains("<u>") == true }
         assertTrue(fileLinks.any { it.text!!.contains("A.kt") && !it.text!!.contains("src/") })
         assertTrue(fileLinks.any { it.text!!.contains("B.kt") && !it.text!!.contains("pkg/") })
+        assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
+        assertTrue(fileLinks.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
 
         // The per-file header renders one changes badge per file (plus the header badge).
         assertTrue(badges(view).size >= 2)
@@ -173,12 +176,14 @@ class EditToolViewTest : BasePlatformTestCase() {
         """.trimIndent()
         val view = track(EditToolView(tool().also { it.metadata = mapOf("filediff" to fileDiff(1, 1, patch)) }))
 
-        assertTrue(view.markdown().contains("@@ -1,2 +1,2 @@"))
+        assertFalse(view.markdown().contains("@@ -1,2 +1,2 @@"))
         assertTrue(view.markdown().contains("-old"))
         assertTrue(view.markdown().contains("+new"))
         assertFalse(view.markdown().contains("Index:"))
         assertFalse(view.markdown().contains("--- /repo"))
         assertFalse(view.markdown().contains("+++ /repo"))
+        assertFalse(view.markdown().contains("--- src"))
+        assertFalse(view.markdown().contains("+++ src"))
         assertFalse(view.markdown().contains("===="))
 
         view.toggle()
@@ -265,6 +270,29 @@ class EditToolViewTest : BasePlatformTestCase() {
 
         try {
             assertTrue(body.component.preferredSize.width < JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test multi file patch popup reuses patch body links`() {
+        val opened = mutableListOf<String>()
+        val view = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 2, 0, ADD_HUNK),
+                FileChange("pkg/B.kt", 1, 1, UPDATE_HUNK),
+            ))
+        }, openFile = { href, _ -> opened.add(href) }))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            val fileLinks = labels(body.component).filter { it.text?.contains("<u>") == true }
+            assertTrue(fileLinks.any { it.text!!.contains("A.kt") && it.toolTipText == "src/A.kt" })
+            assertTrue(fileLinks.any { it.text!!.contains("B.kt") && it.toolTipText == "pkg/B.kt" })
+
+            click(fileLinks.first { it.text!!.contains("A.kt") }, 1)
+            assertEquals(listOf("src/A.kt"), opened)
         } finally {
             Disposer.dispose(body.disposable)
         }

@@ -66,18 +66,17 @@ class ToolParts(
     val glyph: JBLabel,
     val title: JBLabel,
     val sub: JBLabel,
-    val link: JBLabel,
+    val link: FileLinkLabel,
     val slot: JPanel,
     val state: JBLabel,
     val center: JPanel,
     val controls: JComponent,
-    private val open: SessionFileOpener? = null,
     val extra: JBLabel? = null,
     val targets: List<JBLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
 ) {
-    var href: String? = null
-    var label: String = ""
+    val href: String? get() = link.href
+    val label: String get() = link.label
     private var body: ToolBody? = null
 
     val text: JBTextArea?
@@ -100,8 +99,7 @@ class ToolParts(
 
     @RequiresEdt
     fun openLink(anchor: RelativePoint? = null) {
-        val value = href ?: return
-        open?.invoke(value, anchor)
+        link.openLink(anchor)
     }
 
     @RequiresEdt
@@ -113,6 +111,52 @@ class ToolParts(
             ToolBodyMode.TEXT -> ToolBody.text(tool)
         }
         return body.also { this.body = it }
+    }
+}
+
+class FileLinkLabel(
+    private val open: SessionFileOpener? = null,
+) : JBLabel() {
+    var href: String? = null
+        private set
+    var label: String = ""
+        private set
+
+    init {
+        isVisible = false
+        isFocusable = false
+        foreground = UiStyle.Colors.fg()
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        setRequestFocusEnabled(false)
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent) {
+                openLink(RelativePoint(this@FileLinkLabel, Point(width / 2, height)))
+            }
+        })
+    }
+
+    @RequiresEdt
+    fun setTarget(path: String?, text: String): Boolean {
+        val next = single(text.ifBlank { path.orEmpty() })
+        val value = if (next.isBlank()) "" else XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(next)}</u></nobr>")
+        var changed = false
+        if (href != path) {
+            href = path
+            toolTipText = path
+            changed = true
+        }
+        if (label != next || this.text != value) {
+            label = next
+            this.text = value
+            changed = true
+        }
+        return changed
+    }
+
+    @RequiresEdt
+    fun openLink(anchor: RelativePoint? = null) {
+        val value = href ?: return
+        open?.invoke(value, anchor)
     }
 }
 
@@ -358,22 +402,10 @@ internal fun toolParts(
     openFile: SessionFileOpener? = null,
     mode: ToolBodyMode = ToolBodyMode.TEXT,
 ): ToolParts {
-    lateinit var parts: ToolParts
     val glyph = JBLabel()
     val title = clip(JBLabel())
     val sub = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
-    val link = clip(JBLabel()).apply {
-        isVisible = false
-        isFocusable = false
-        foreground = UiStyle.Colors.fg()
-        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-        setRequestFocusEnabled(false)
-        addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent) {
-                parts.openLink(RelativePoint(this@apply, Point(width / 2, 0)))
-            }
-        })
-    }
+    val link = clip(FileLinkLabel(openFile))
     val slot = Stack.fitHorizontal().apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
@@ -393,7 +425,7 @@ internal fun toolParts(
         add(center, BorderLayout.CENTER)
         add(controls, BorderLayout.EAST)
     }
-    parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, openFile, mode = mode)
+    val parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, mode = mode)
     return parts.also {
         controls.add(it.state)
     }
@@ -409,7 +441,7 @@ internal fun searchParts(count: Int): ToolParts {
             foreground = UiStyle.Colors.fg()
         }
     }
-    val link = clip(JBLabel()).apply { isVisible = false }
+    val link = clip(FileLinkLabel())
     val slot = Stack.fitHorizontal().apply {
         minimumSize = Dimension(0, minimumSize.height)
         next(sub)
@@ -482,12 +514,7 @@ internal fun setTargetText(label: JBLabel, text: String): Boolean {
 
 @RequiresEdt
 internal fun setLinkText(parts: ToolParts, text: String): Boolean {
-    val label = single(text)
-    val value = if (label.isBlank()) "" else XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(label)}</u></nobr>")
-    if (parts.label == label && parts.link.text == value) return false
-    parts.label = label
-    parts.link.text = value
-    return true
+    return parts.link.setTarget(parts.href, text)
 }
 
 /**
@@ -497,24 +524,11 @@ internal fun setLinkText(parts: ToolParts, text: String): Boolean {
  */
 @RequiresEdt
 internal fun setFileTarget(parts: ToolParts, path: String?, label: String): Boolean {
-    if (path == null) {
-        var changed = false
-        if (parts.href != null) {
-            parts.href = null
-            changed = true
-        }
-        return show(parts, false) || changed
-    }
-    var changed = false
-    if (parts.href != path) {
-        parts.href = path
-        changed = true
-    }
-    changed = setLinkText(parts, label.ifBlank { path }) || changed
-    return show(parts, true) || changed
+    val changed = parts.link.setTarget(path, label)
+    return show(parts, path != null) || changed
 }
 
-private fun clip(label: JBLabel): JBLabel = label.apply {
+private fun <T : JBLabel> clip(label: T): T = label.apply {
     minimumSize = Dimension(0, minimumSize.height)
 }
 
@@ -855,6 +869,7 @@ internal fun pureDiff(diff: String): String = diff.lineSequence()
 private fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
     line.startsWith("====") ||
     line.startsWith("diff --git ") ||
+    line.startsWith("@@") ||
     line.startsWith("index ") ||
     line.startsWith("--- ") ||
     line.startsWith("+++ ") ||
@@ -871,7 +886,7 @@ private fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
 
 /** Wraps a unified patch in a fenced `patch` block so the markdown code editor highlights it. */
 internal fun patchMarkdown(diff: String): String = buildString {
-    val body = pureDiff(diff).ifBlank { diff.trim('\n') }
+    val body = pureDiff(diff)
     val fence = fence(body)
     append(fence).append("patch-pure\n")
     append(body)

@@ -93,4 +93,10 @@ class ToolMarkdownBody(
 
     @RequiresEdt
     override fun codeEditors(): List<EditorTextField> = scrolls().mapNotNull { it.viewport.view as? EditorTextField }
+
+    @RequiresEdt
+    override fun disposeBody() {
+        view?.let(Disposer::dispose)
+        view = null
+    }
 }

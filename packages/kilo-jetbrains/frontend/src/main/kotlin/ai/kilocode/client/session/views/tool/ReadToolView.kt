@@ -96,6 +96,8 @@ class ReadToolView(
     @RequiresEdt
     internal fun linkHref() = parts.href
     @RequiresEdt
+    internal fun linkTooltip() = parts.link.toolTipText
+    @RequiresEdt
     internal fun openLink() = parts.openLink()
 
     @RequiresEdt

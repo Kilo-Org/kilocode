@@ -16,17 +16,10 @@ import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
-import com.intellij.ui.awt.RelativePoint
-import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import com.intellij.xml.util.XmlStringUtil
 import java.awt.Component
-import java.awt.Cursor
-import java.awt.Point
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
@@ -47,6 +40,7 @@ interface EditBody {
     @RequiresEdt fun applyStyle(style: SessionEditorStyle): Boolean
     @RequiresEdt fun markdown(): String?
     @RequiresEdt fun codeEditors(): List<EditorTextField>
+    @RequiresEdt fun disposeBody()
 }
 
 /**
@@ -58,13 +52,14 @@ interface EditBody {
 class PatchBody(
     private val selection: SessionSelection?,
     private val openFile: SessionFileOpener,
+    private val opts: MdCodeBlockOptions = DIFF_OPTS,
 ) : EditBody {
     override var parent: Disposable? = null
 
     private var root: Stack? = null
     private var owner: Disposable? = null
     private val views = mutableListOf<MdView>()
-    private val links = mutableListOf<JBLabel>()
+    private val links = mutableListOf<FileLinkLabel>()
     private var style = SessionEditorStyle.current()
     private var signature = ""
 
@@ -118,13 +113,21 @@ class PatchBody(
     }
 
     @RequiresEdt
+    override fun disposeBody() {
+        val panel = root
+        owner?.let(Disposer::dispose)
+        owner = null
+        views.clear()
+        links.clear()
+        panel?.removeAll()
+        signature = ""
+    }
+
+    @RequiresEdt
     private fun rebuild(tool: Tool) {
         val panel = root ?: return
         val parent = parent ?: error("Patch body has no parent")
-        owner?.let(Disposer::dispose)
-        views.clear()
-        links.clear()
-        panel.removeAll()
+        disposeBody()
         val disposable = Disposer.newDisposable("Patch body")
         Disposer.register(parent, disposable)
         owner = disposable
@@ -132,7 +135,7 @@ class PatchBody(
             if (index > 0) panel.gap(JBUI.scale(SessionUiStyle.View.Code.BLOCK_GAP))
             panel.next(header(file))
             panel.gap(UiStyle.Gap.sm())
-            val md = MdViewFactory.create(style, selection, MdCodeBlockFactory.default(DIFF_OPTS))
+            val md = MdViewFactory.create(style, selection, MdCodeBlockFactory.default(opts))
             Disposer.register(disposable, md)
             applyMd(md)
             md.set(patchMarkdown(file.patch))
@@ -149,16 +152,11 @@ class PatchBody(
 
     @RequiresEdt
     private fun header(file: EditFileChange): JComponent {
-        val link = JBLabel().apply {
+        val link = FileLinkLabel(openFile).apply {
             foreground = UiStyle.Colors.fg()
             font = style.transcriptFont
-            cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            text = XmlStringUtil.wrapInHtml("<nobr><u>${XmlStringUtil.escapeString(tail(file.path))}</u></nobr>")
-            addMouseListener(object : MouseAdapter() {
-                override fun mouseClicked(e: MouseEvent) {
-                    openFile(file.path, RelativePoint(this@apply, Point(width / 2, height)))
-                }
-            })
+            setTarget(file.path, tail(file.path))
+            isVisible = true
         }
         links.add(link)
         val row = Stack.horizontal(UiStyle.Gap.sm())

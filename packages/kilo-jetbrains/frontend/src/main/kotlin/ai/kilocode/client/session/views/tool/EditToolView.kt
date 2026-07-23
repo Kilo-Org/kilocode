@@ -15,11 +15,10 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
-import ai.kilocode.client.ui.md.MdCodeBlockFactory
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
-import ai.kilocode.client.ui.md.MdViewFactory
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.util.Disposer
 import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -103,6 +102,7 @@ class EditToolView(
         multi = next
         val expanded = isExpanded()
         discardBody()
+        body.disposeBody()
         body = editBody(item, selection, openFile).also { it.parent = this }
         if (expanded) expand()
         return true
@@ -132,6 +132,8 @@ class EditToolView(
     @RequiresEdt
     internal fun linkHref() = parts.href
     @RequiresEdt
+    internal fun linkTooltip() = parts.link.toolTipText
+    @RequiresEdt
     internal fun openLink() = parts.openLink()
     @RequiresEdt
     internal fun bodyCreated() = body.created()
@@ -146,7 +148,7 @@ class EditToolView(
     override fun headerPopup(): HeaderPopupRequest? {
         if (isExpanded()) return null
         if (editDiff(item).isBlank()) return null
-        return HeaderPopupRequest(row, build = { buildPopupBody(diffMarkdown(item)) }) {
+        return HeaderPopupRequest(row, build = { buildPopupBody() }) {
             Telemetry.send("Header Popup Shown", mapOf("surface" to "session", "tool" to "edit"))
         }
     }
@@ -204,27 +206,13 @@ class EditToolView(
     private fun syncBody(): Boolean = body.update(item)
 
     @RequiresEdt
-    private fun buildPopupBody(markdown: String): HeaderPopupBody {
-        val md = MdViewFactory.create(
-            style,
-            null,
-            MdCodeBlockFactory.default(
-                MdCodeBlockOptions(
-                    border = MdCodeBlockBorder.None,
-                    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
-                    editorOnly = true,
-                ),
-            ),
-        )
-        md.applyStyle(style)
-        md.font = style.editorFont
-        md.foreground = style.editorForeground
-        md.background = style.editorBackground
-        md.preBg = style.editorBackground
-        md.codeFont = style.editorFamily
-        md.component.border = JBUI.Borders.empty()
-        md.set(markdown)
-        return HeaderPopupBody(md.component, md, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
+    private fun buildPopupBody(): HeaderPopupBody {
+        val owner = Disposer.newDisposable("Edit popup body")
+        val popup = popupBody(item, selection, openFile).also { it.parent = owner }
+        val panel = popup.mount(item)
+        popup.update(item)
+        popup.applyStyle(style)
+        return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
 
     override fun dumpLabel() = "EditToolView#$contentId(${labelText()})"
@@ -238,6 +226,9 @@ class EditToolView(
 private fun editBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
     if (editFiles(tool).size > 1) PatchBody(selection, openFile) else diffBody(selection)
 
+private fun popupBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
+    if (editFiles(tool).size > 1) PatchBody(selection, openFile, POPUP_OPTS) else popupDiffBody(selection)
+
 private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     MdCodeBlockOptions(
         border = MdCodeBlockBorder.Bottom,
@@ -247,6 +238,18 @@ private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     ),
     selection,
     render = ::diffMarkdown,
+)
+
+private fun popupDiffBody(selection: SessionSelection?) = ToolMarkdownBody(
+    POPUP_OPTS,
+    selection,
+    render = ::diffMarkdown,
+)
+
+private val POPUP_OPTS = MdCodeBlockOptions(
+    border = MdCodeBlockBorder.None,
+    verticalPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED,
+    editorOnly = true,
 )
 
 /**
