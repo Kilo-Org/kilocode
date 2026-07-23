@@ -325,6 +325,23 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(320, child.width)
     }
 
+    fun `test forget re-measures a valid child`() {
+        val p = panel(width = 300)
+        val child = probe(height = 20)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        val count = child.count
+
+        // A settled turn is its own validate root, so it can be re-validated independently and its
+        // isValid flag flips back to true even after its content (and height) changed. forget()
+        // drops the stale cached height so the next layout pass re-measures the child.
+        (p.layout as SessionLayout).forget(child)
+        p.doLayout()
+
+        assertEquals(count + 1, child.count)
+    }
+
     // ---- helpers ------
 
     /** A fixed-height JLabel. The width is reported as 0 until layout sets it. */

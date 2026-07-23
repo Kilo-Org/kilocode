@@ -77,6 +77,20 @@ class SessionLayout(
         }
     }
 
+    /**
+     * Drop the cached measurement for [comp] so the next layout pass re-measures it.
+     *
+     * [measure] trusts `comp.isValid` as a freshness signal, which is safe only while `comp` is
+     * invalidated through this container. A child that is its own validate root (see
+     * [ai.kilocode.client.session.views.TurnView.isValidateRoot]) can be re-validated independently
+     * by `RepaintManager` — its `isValid` flips back to `true` before this layout re-measures it,
+     * so a content change that grows/shrinks its height would otherwise return a stale cached value.
+     * Callers that mutate such a child's content must forget it here so the cache stays honest.
+     */
+    fun forget(comp: Component) {
+        cache.remove(comp)
+    }
+
     private fun measure(comp: Component, width: Int): Int {
         val hit = cache[comp]
         if (comp.isValid && hit?.width == width) return hit.height

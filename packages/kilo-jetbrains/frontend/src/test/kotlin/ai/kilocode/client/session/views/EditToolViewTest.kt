@@ -164,11 +164,13 @@ class EditToolViewTest : BasePlatformTestCase() {
     }
 
     fun `test edit body strips patch metadata headers`() {
+        // Relative-path headers so the `--- `/`+++ ` file-header assertions below actually exercise
+        // stripping: the header text (`--- src/App.kt`) shares its prefix with nothing in the body.
         val patch = """
-            Index: /repo/src/App.kt
+            Index: src/App.kt
             ===================================================================
-            --- /repo/src/App.kt
-            +++ /repo/src/App.kt
+            --- src/App.kt
+            +++ src/App.kt
             @@ -1,2 +1,2 @@
              keep
             -old
@@ -180,10 +182,8 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertTrue(view.markdown().contains("-old"))
         assertTrue(view.markdown().contains("+new"))
         assertFalse(view.markdown().contains("Index:"))
-        assertFalse(view.markdown().contains("--- /repo"))
-        assertFalse(view.markdown().contains("+++ /repo"))
-        assertFalse(view.markdown().contains("--- src"))
-        assertFalse(view.markdown().contains("+++ src"))
+        assertFalse(view.markdown().contains("--- src/App.kt"))
+        assertFalse(view.markdown().contains("+++ src/App.kt"))
         assertFalse(view.markdown().contains("===="))
 
         view.toggle()
@@ -222,6 +222,21 @@ class EditToolViewTest : BasePlatformTestCase() {
         click(link, 0)
 
         assertEquals(listOf("/repo/src/App.kt"), opened)
+    }
+
+    fun `test metadata only patch falls back to raw text`() {
+        // A pure rename (no +/-/context lines) is entirely metadata: stripping it leaves nothing, so
+        // the raw patch must survive rather than render an empty fenced block.
+        val patch = """
+            diff --git a/src/Old.kt b/src/New.kt
+            similarity index 100%
+            rename from src/Old.kt
+            rename to src/New.kt
+        """.trimIndent()
+        val view = track(EditToolView(tool().also { it.metadata = mapOf("filediff" to fileDiff(0, 0, patch)) }))
+
+        assertTrue(view.markdown().contains("rename from src/Old.kt"))
+        assertTrue(view.markdown().contains("rename to src/New.kt"))
     }
 
     fun `test collapsed hover popup shows diff and none when expanded`() {

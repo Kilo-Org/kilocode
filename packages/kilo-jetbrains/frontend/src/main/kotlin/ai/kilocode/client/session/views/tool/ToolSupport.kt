@@ -512,11 +512,6 @@ internal fun setTargetText(label: JBLabel, text: String): Boolean {
     return true
 }
 
-@RequiresEdt
-internal fun setLinkText(parts: ToolParts, text: String): Boolean {
-    return parts.link.setTarget(parts.href, text)
-}
-
 /**
  * Shows [path] as a clickable file link in the header slot, or clears the link when [path] is null.
  * Shared by [ai.kilocode.client.session.views.tool.ReadToolView] and
@@ -886,7 +881,9 @@ private fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
 
 /** Wraps a unified patch in a fenced `patch` block so the markdown code editor highlights it. */
 internal fun patchMarkdown(diff: String): String = buildString {
-    val body = pureDiff(diff)
+    // Fall back to the raw patch when stripping metadata leaves nothing (e.g. a pure rename or
+    // mode-only change with no +/-/context lines) so we never render an empty fenced block.
+    val body = pureDiff(diff).ifBlank { diff.trim('\n') }
     val fence = fence(body)
     append(fence).append("patch-pure\n")
     append(body)

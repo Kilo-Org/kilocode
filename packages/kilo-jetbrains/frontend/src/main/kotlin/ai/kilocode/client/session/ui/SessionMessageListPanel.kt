@@ -97,22 +97,19 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.ContentAdded -> {
                     if (msgToView[event.messageId]?.upsertPartChanged(event.content) == true) {
-                        msgToTurn[event.messageId]?.syncCopyToolbars()
-                        refresh()
+                        onContentChanged(event.messageId)
                     }
                 }
 
                 is SessionModelEvent.ContentUpdated -> {
                     if (msgToView[event.messageId]?.upsertPartChanged(event.content) == true) {
-                        msgToTurn[event.messageId]?.syncCopyToolbars()
-                        refresh()
+                        onContentChanged(event.messageId)
                     }
                 }
 
                 is SessionModelEvent.ContentRemoved -> {
                     if (msgToView[event.messageId]?.removePartChanged(event.contentId) == true) {
-                        msgToTurn[event.messageId]?.syncCopyToolbars()
-                        refresh()
+                        onContentChanged(event.messageId)
                     }
                 }
 
@@ -122,13 +119,13 @@ class SessionMessageListPanel(
                     val handled = msgToView[event.messageId]?.appendDelta(event.contentId, event.delta) == true
                     if (handled) {
                         msgToTurn[event.messageId]?.syncCopyToolbars()
+                        forgetTurn(event.messageId)
                         return@addListener
                     }
                     val content = model.content(event.messageId, event.contentId)
                     if (content != null) {
                         if (msgToView[event.messageId]?.upsertPartChanged(content) == true) {
-                            msgToTurn[event.messageId]?.syncCopyToolbars()
-                            refresh()
+                            onContentChanged(event.messageId)
                         }
                     }
                 }
@@ -427,6 +424,25 @@ class SessionMessageListPanel(
     private fun refresh() {
         revalidate()
         repaint()
+    }
+
+    /**
+     * Handle a content mutation that changed an already-rendered message: sync the turn's copy
+     * toolbars, forget its cached height, then relayout. [forgetTurn] is essential when the update
+     * lands on a settled turn — a settled [TurnView] is its own validate root, so `RepaintManager`
+     * re-validates it independently and its `isValid` flag no longer signals the height change to
+     * [SessionLayout]'s measurement cache.
+     */
+    private fun onContentChanged(messageId: String) {
+        msgToTurn[messageId]?.syncCopyToolbars()
+        forgetTurn(messageId)
+        refresh()
+    }
+
+    /** Drop [SessionLayout]'s cached height for the turn holding [messageId] after its content changes. */
+    private fun forgetTurn(messageId: String) {
+        val tv = msgToTurn[messageId] ?: return
+        (layout as? SessionLayout)?.forget(tv)
     }
 
     private fun hover(view: PartView, value: Boolean) {

@@ -210,8 +210,9 @@ class EditToolView(
     private fun buildPopupBody(): HeaderPopupBody {
         val owner = Disposer.newDisposable("Edit popup body")
         val popup = popupBody(item, selection, openFile).also { it.parent = owner }
+        // mount() already renders the current item (ToolMarkdownBody.mount calls update; PatchBody.mount
+        // calls rebuild and sets its signature), so a follow-up update() here would be a no-op.
         val panel = popup.mount(item)
-        popup.update(item)
         popup.applyStyle(style)
         return HeaderPopupBody(panel, owner, style.editorBackground, SessionUiStyle.View.Popup.WIDE_MAX_WIDTH)
     }
