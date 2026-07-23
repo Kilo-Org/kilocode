@@ -93,16 +93,18 @@ describe("TUI config routes", () => {
         "content-type": "application/json",
         "x-kilo-directory": tmp.path,
       },
-      body: JSON.stringify({ theme: "nord", title_icon: "emojis" }),
+      body: JSON.stringify({ theme: "nord", title_icon: "emojis", vim: true }),
     })
 
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { theme?: string; title_icon?: string }
-    expect(body.theme).toBe("nord")
-    expect(body.title_icon).toBe("emojis")
+    expect(await response.json()).toMatchObject({
+      theme: "nord",
+      title_icon: "emojis",
+      vim: true,
+    })
 
     const saved = await Bun.file(path.join(tmp.path, ".kilo", "tui.json")).json()
-    expect(saved).toEqual({ theme: "nord", title_icon: "emojis" })
+    expect(saved).toEqual({ theme: "nord", title_icon: "emojis", vim: true })
   })
 
   test("patches attention config without dropping advanced notification settings", async () => {

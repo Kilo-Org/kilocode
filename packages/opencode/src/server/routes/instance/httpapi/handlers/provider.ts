@@ -74,6 +74,11 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         providers,
         (item, id) => Object.keys(item.models).length > 0 || id in connected || failedSet.has(id),
       )
+      // kilocode_change start - include disabled providers so the settings UI can re-enable them
+      const disabledProviders = Object.entries(all)
+        .filter(([id]) => disabled.has(id))
+        .map(([, item]) => Provider.fromModelsDevProvider(item))
+      // kilocode_change end
       return {
         all: Object.values(validProviders).map((item) => ({
           ...Provider.toPublicInfo(item),
@@ -82,6 +87,12 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
         default: Provider.defaultModelIDs(pickBy(validProviders, (item) => Object.keys(item.models).length > 0)),
         connected: Object.keys(connected),
         failed,
+        // kilocode_change start - include disabled providers so the settings UI can re-enable them
+        disabled: disabledProviders.map((item) => ({
+          ...Provider.toPublicInfo(item),
+          metadata: providerMetadata(item.id),
+        })),
+        // kilocode_change end
       }
       // kilocode_change end
     })

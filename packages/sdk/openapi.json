@@ -5519,9 +5519,15 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "disabled": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Provider"
+                      }
                     }
                   },
-                  "required": ["all", "default", "connected", "failed"],
+                  "required": ["all", "default", "connected", "failed", "disabled"],
                   "additionalProperties": false,
                   "description": "List of providers"
                 }
@@ -12138,6 +12144,9 @@
                     "enum": ["auto", "stacked"]
                   },
                   "mouse": {
+                    "type": "boolean"
+                  },
+                  "vim": {
                     "type": "boolean"
                   },
                   "attention": {
@@ -32901,6 +32910,9 @@
             "enum": ["auto", "stacked"]
           },
           "mouse": {
+            "type": "boolean"
+          },
+          "vim": {
             "type": "boolean"
           },
           "attention": {

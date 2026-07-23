@@ -3064,6 +3064,7 @@ export type TuiConfigGetResponse = {
   }
   diff_style?: "auto" | "stacked"
   mouse?: boolean
+  vim?: boolean
   attention?: {
     enabled?: boolean
     notifications?: boolean
@@ -8815,6 +8816,7 @@ export type ProviderListResponses = {
     }
     connected: Array<string>
     failed: Array<string>
+    disabled: Array<Provider>
   }
 }
 
@@ -11436,6 +11438,7 @@ export type TuiConfigUpdateData = {
     }
     diff_style?: "auto" | "stacked"
     mouse?: boolean
+    vim?: boolean
     attention?: {
       enabled?: boolean
       notifications?: boolean
