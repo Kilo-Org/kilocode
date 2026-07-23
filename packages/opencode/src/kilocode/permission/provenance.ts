@@ -35,6 +35,21 @@ export namespace PermissionProvenance {
     return "agent"
   }
 
+  /**
+   * Preserve an existing `approval` marker when a tool part's metadata is replaced.
+   *
+   * The approval is written once during `ask()`, but tools freely overwrite `state.metadata`
+   * during execution and on completion. Carry the prior `approval` onto the replacement unless
+   * the replacement sets its own.
+   */
+  export function carryApproval(
+    prev: Record<string, unknown> | undefined,
+    next: Record<string, unknown> | undefined,
+  ) {
+    if (!next || !prev?.approval || "approval" in next) return next
+    return { ...next, approval: prev.approval }
+  }
+
   /** Classify the winning rule of an auto-approval into an Approval payload. */
   export function classify(input: { rule?: Permission.Rule; agent: string; origins: Origins }): Approval {
     const rule = input.rule

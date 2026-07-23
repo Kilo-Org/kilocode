@@ -56,6 +56,32 @@ describe("PermissionProvenance", () => {
   })
 })
 
+describe("PermissionProvenance.carryApproval", () => {
+  const approval = { source: "agent" as const, agent: "build" }
+
+  test("carries a prior approval onto a replacement that omits it", () => {
+    // The tool overwrites metadata during execution; the approval written during ask() must survive.
+    expect(PermissionProvenance.carryApproval({ approval }, { command: "echo hi" })).toEqual({
+      command: "echo hi",
+      approval,
+    })
+  })
+
+  test("does not override an approval the replacement sets itself", () => {
+    const next = { approval: { source: "yolo" as const } }
+    expect(PermissionProvenance.carryApproval({ approval }, next)).toBe(next)
+  })
+
+  test("leaves the replacement untouched when there is no prior approval", () => {
+    const next = { command: "echo hi" }
+    expect(PermissionProvenance.carryApproval({ command: "old" }, next)).toBe(next)
+  })
+
+  test("returns the replacement as-is when it is undefined", () => {
+    expect(PermissionProvenance.carryApproval({ approval }, undefined)).toBeUndefined()
+  })
+})
+
 describe("askPermission returns provenance", () => {
   const sessionID = SessionID.make("ses_prov")
   const agent: Agent.Info = {
