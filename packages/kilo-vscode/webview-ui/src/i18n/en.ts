@@ -963,6 +963,7 @@ export const dict = {
   "provider.custom.models.variants.outputEffort.max": "max",
   "provider.custom.models.remove": "Remove model",
   "provider.custom.models.add": "Add model",
+  "provider.custom.models.discoverVariants": "Pull reasoning variants",
   "provider.custom.models.fetch": "Fetch models",
   "provider.custom.models.fetching": "Fetching\u2026",
   "provider.custom.models.fetch.error": "Failed to fetch models: {{error}}",

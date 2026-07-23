@@ -21,6 +21,7 @@ import { instanceReloadHandlers } from "./handlers/instance-reload"
 import { interactiveTerminalHandlers } from "./handlers/interactive-terminal"
 import { kiloGatewayHandlers } from "./handlers/kilo-gateway"
 import { kilocodeHandlers } from "./handlers/kilocode"
+import { providerHandlers } from "./handlers/provider"
 import { memoryHandlers } from "./handlers/memory"
 import { networkHandlers } from "./handlers/network"
 import { remoteHandlers } from "./handlers/remote"
@@ -42,6 +43,7 @@ export const provide = Layer.provide([
   interactiveTerminalHandlers,
   kiloGatewayHandlers,
   kilocodeHandlers,
+  providerHandlers,
   memoryHandlers,
   networkHandlers,
   remoteHandlers,

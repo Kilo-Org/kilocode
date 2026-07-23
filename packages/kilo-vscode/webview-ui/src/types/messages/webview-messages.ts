@@ -1108,6 +1108,19 @@ export interface FetchCustomProviderModelsMessage {
   headers?: Record<string, string>
 }
 
+export interface DiscoverVariantsMessage {
+  type: "discoverVariants"
+  requestId: string
+  baseURL: string
+  npm: string
+  models: Array<{
+    id: string
+    name?: string
+    ownedBy?: string
+    variants?: Record<string, Record<string, unknown>>
+  }>
+}
+
 export interface PersistRecentsRequest {
   type: "persistRecents"
   recents: ModelSelection[]
@@ -1415,6 +1428,7 @@ export type WebviewMessage =
   | AnacondaDesktopWebviewMessage
   | SaveCustomProviderMessage
   | FetchCustomProviderModelsMessage
+  | DiscoverVariantsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
   | PersistModelSelectorExpandedRequest

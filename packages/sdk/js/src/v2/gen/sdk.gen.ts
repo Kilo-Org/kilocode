@@ -299,6 +299,8 @@ import type {
   Prompt,
   ProviderAuthErrors,
   ProviderAuthResponses,
+  ProviderDiscoverVariantsErrors,
+  ProviderDiscoverVariantsResponses,
   ProviderListErrors,
   ProviderListResponses,
   ProviderOauthAuthorizeErrors,
@@ -4010,6 +4012,60 @@ export class Provider extends HeyApiClient {
       url: "/provider/auth",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Discover reasoning variants for custom-provider models
+   *
+   * Match custom-provider models against the models.dev catalog to find configurable reasoning effort values. Returns a summary with per-model match status, candidate catalog entries, and discovered variant configurations.
+   */
+  public discoverVariants<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      baseURL?: string
+      npm?: string
+      models?: Array<{
+        id: string
+        name?: string
+        ownedBy?: string
+        variants?: {
+          [key: string]: {
+            [key: string]: unknown
+          }
+        }
+      }>
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "baseURL" },
+            { in: "body", key: "npm" },
+            { in: "body", key: "models" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      ProviderDiscoverVariantsResponses,
+      ProviderDiscoverVariantsErrors,
+      ThrowOnError
+    >({
+      url: "/provider/discover-variants",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

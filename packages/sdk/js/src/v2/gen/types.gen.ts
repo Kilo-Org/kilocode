@@ -12932,6 +12932,107 @@ export type AnacondaDesktopSyncResponses = {
 
 export type AnacondaDesktopSyncResponse = AnacondaDesktopSyncResponses[keyof AnacondaDesktopSyncResponses]
 
+export type ProviderDiscoverVariantsData = {
+  body?: {
+    baseURL: string
+    npm: string
+    models: Array<{
+      id: string
+      name?: string
+      ownedBy?: string
+      variants?: {
+        [key: string]: {
+          [key: string]: unknown
+        }
+      }
+    }>
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/provider/discover-variants"
+}
+
+export type ProviderDiscoverVariantsErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type ProviderDiscoverVariantsError = ProviderDiscoverVariantsErrors[keyof ProviderDiscoverVariantsErrors]
+
+export type ProviderDiscoverVariantsResponses = {
+  /**
+   * Variant discovery summary
+   */
+  200: {
+    total: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    matched: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    review: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    unmatched: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    unsupported: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    totalVariants: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    results: Array<{
+      modelID: string
+      status: "matched" | "review" | "unmatched" | "unsupported"
+      selected?: {
+        providerID: string
+        modelID: string
+        modelName: string
+        reasoningOptions: Array<
+          | {
+              type: "effort"
+              values: Array<string>
+            }
+          | {
+              type: "toggle"
+            }
+          | {
+              type: "budget_tokens"
+              min?: number
+              max?: number
+            }
+        >
+        confidence: "high" | "medium" | "low"
+        reason: string
+      }
+      candidates: Array<{
+        providerID: string
+        modelID: string
+        modelName: string
+        reasoningOptions: Array<
+          | {
+              type: "effort"
+              values: Array<string>
+            }
+          | {
+              type: "toggle"
+            }
+          | {
+              type: "budget_tokens"
+              min?: number
+              max?: number
+            }
+        >
+        confidence: "high" | "medium" | "low"
+        reason: string
+      }>
+      variants: {
+        [key: string]: {
+          [key: string]: unknown
+        }
+      }
+      conflicts?: Array<string>
+    }>
+  }
+}
+
+export type ProviderDiscoverVariantsResponse =
+  ProviderDiscoverVariantsResponses[keyof ProviderDiscoverVariantsResponses]
+
 export type NetworkListData = {
   body?: never
   path?: never
