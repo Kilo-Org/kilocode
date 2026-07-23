@@ -24,6 +24,7 @@ import { Question } from "@/question"
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
@@ -103,6 +104,7 @@ interface ProcessorContext extends Input {
   reasoningMap: Record<string, SessionV1.ReasoningPart>
   // kilocode_change start
   stepStart: number
+  stepStartDate: number | undefined
   step: { reasoning: boolean; text: boolean; tool: boolean }
   // kilocode_change end
   v2AssistantMessageID: SessionMessage.ID | undefined
@@ -158,6 +160,7 @@ export const layer = Layer.effect(
         // kilocode_change start
         telemetry: input.telemetry,
         stepStart: 0,
+        stepStartDate: undefined,
         step: { reasoning: false, text: false, tool: false },
         // kilocode_change end
         v2AssistantMessageID: undefined,
@@ -806,6 +809,7 @@ export const layer = Layer.effect(
           case "step-start":
             // kilocode_change start
             ctx.stepStart = performance.now()
+            ctx.stepStartDate = Date.now()
             ctx.step = { reasoning: false, text: false, tool: false }
             if (!ctx.snapshot)
               ctx.snapshot = yield* snapshot.track({
@@ -826,6 +830,7 @@ export const layer = Layer.effect(
               sessionID: ctx.sessionID,
               snapshot: ctx.snapshot,
               type: "step-start",
+              time: { start: ctx.stepStartDate }, // kilocode_change
             })
             return
 
@@ -841,7 +846,9 @@ export const layer = Layer.effect(
                 usage: attempt.usage,
               })
             )
-              return yield* Effect.fail(new KiloSessionProcessor.IncompleteResponseError())
+              return yield* Effect.fail(
+                new KiloSessionProcessor.IncompleteResponseError(KiloResponseMetadata.read(value.providerMetadata)),
+              )
             // kilocode_change end
             // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
@@ -866,12 +873,22 @@ export const layer = Layer.effect(
             // kilocode_change start - guard against finish-step without start-step:
             // ctx.stepStart is 0 until `start-step` fires, which would feed a
             // huge bogus `elapsed` into telemetry. Fall back to now().
+            const endDate = Date.now()
+            const elapsedMs = Math.round(
+              performance.now() - (ctx.stepStart || performance.now()),
+            )
+            const startDate = ctx.stepStartDate ?? (Number.isFinite(elapsedMs) ? endDate - elapsedMs : endDate)
+            const metrics = KiloSessionProcessor.computeMetrics({
+              providerMetadata: value.providerMetadata,
+              tokens: usage.tokens,
+              elapsedMs,
+            })
             KiloSessionProcessor.trackStep({
               sessionID: ctx.sessionID,
               model: ctx.model,
               tokens: usage.tokens,
               cost: usage.cost,
-              elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
+              elapsed: elapsedMs,
               telemetry: ctx.telemetry,
             })
             // kilocode_change end
@@ -903,7 +920,9 @@ export const layer = Layer.effect(
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
+              time: { start: startDate, end: endDate, elapsed: elapsedMs }, // kilocode_change
               ...(model ? { model } : {}), // kilocode_change
+              ...(metrics ? { metrics } : {}), // kilocode_change
               tokens: usage.tokens,
               cost: usage.cost,
             })

@@ -202,6 +202,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenUrl={openUrl}
       onOpenContent={openContent}
       onValidateFiles={validateFiles}
+      onNavigateToSession={(id) => session.selectSession(id)}
     >
       {props.children}
     </DataProvider>

@@ -766,6 +766,9 @@ export type StepStartPart = {
   messageID: string
   type: "step-start"
   snapshot?: string
+  time?: {
+    start: number
+  }
 }
 
 export type StepFinishPart = {
@@ -778,6 +781,16 @@ export type StepFinishPart = {
   model?: {
     providerID: string
     modelID: string
+  }
+  metrics?: {
+    prompt?: number
+    generation?: number
+    source: "provider" | "computed"
+  }
+  time?: {
+    start: number
+    end: number
+    elapsed: number
   }
   cost: number
   tokens: {

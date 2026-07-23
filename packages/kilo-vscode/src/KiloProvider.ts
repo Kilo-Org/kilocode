@@ -63,6 +63,7 @@ import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch } from "./kilo-provider/file-search"
+import { handleSessionSearch } from "./kilo-provider/session-search"
 import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { getTerminalContents } from "./services/terminal/context"
@@ -172,6 +173,7 @@ import {
   watchIndexingConfig,
 } from "./kilo-provider/indexing-settings"
 import { buildChatSettingsMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 
 let maxCost = 0
 
@@ -289,6 +291,12 @@ export function unwrapSyncEvent(event: SSEPayload | RawSyncPayload): ProviderEve
   }
 }
 
+type ContextRequestMessage =
+  | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string }
+  | { type: "requestSessionSearch"; requestId: string; sessionID?: string }
+  | { type: "requestFilePicker"; requestId: string }
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string }
+
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
   private readonly instanceId = crypto.randomUUID()
@@ -393,6 +401,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autocompleteConfigDisposable: vscode.Disposable | null = null
   private indexingConfigDisposable: vscode.Disposable | null = null
   private chatConfigDisposable: vscode.Disposable | null = null
+  private throughputConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -917,6 +926,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.indexingConfigDisposable = watchIndexingConfig((msg) => this.postMessage(msg))
     this.chatConfigDisposable?.dispose()
     this.chatConfigDisposable = watchChatConfig((msg) => this.postMessage(msg))
+    this.throughputConfigDisposable?.dispose()
+    this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1030,6 +1041,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "unrevertSession":
           this.checkpoint(message.sessionID, () => this.handleUnrevertSession(message.sessionID))
+          break
+        case "deleteMessage":
+          await this.handleDeleteMessage(message.sessionID, message.messageID)
           break
         case "permissionResponse":
           await handlePermissionResponse(
@@ -1298,21 +1312,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "requestFileSearch":
-          await handleFileSearch({
-            client: this.client,
-            message,
-            current: this.currentSession?.id,
-            context: this.contextSessionID,
-            dir: (id) => this.getWorkspaceDirectory(id),
-            open: (dir) => this.getOpenTabPaths(dir),
-            post: (msg) => this.postMessage(msg),
-          })
-          break
+        case "requestSessionSearch":
         case "requestFilePicker":
-          await handleFilePicker({ requestId: message.requestId, post: (msg) => this.postMessage(msg) })
-          break
         case "requestTerminalContext":
-          void this.handleTerminalContext(message.requestId)
+          await this.handleContextRequest(message)
           break
         case "chatCompletionAccepted":
           this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
@@ -1350,6 +1353,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestTimelineSetting":
           this.sendTimelineSetting()
+          break
+        case "requestThroughputSetting":
+          this.postMessage(buildThroughputSettingMessage())
           break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
@@ -1734,6 +1740,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.postMessage(buildThroughputSettingMessage())
       this.postMessage({ type: "extensionDataReady" })
 
       if (this.cachedGitRepo) this.startStatsPolling()
@@ -2041,6 +2048,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
   }
 
+  private async handleContextRequest(message: ContextRequestMessage): Promise<void> {
+    if (message.type === "requestFileSearch") {
+      await handleFileSearch({
+        client: this.client,
+        message,
+        current: this.currentSession?.id,
+        context: this.contextSessionID,
+        dir: (id) => this.getWorkspaceDirectory(id),
+        open: (dir) => this.getOpenTabPaths(dir),
+        post: (msg) => this.postMessage(msg),
+      })
+      return
+    }
+    if (message.type === "requestSessionSearch") {
+      await handleSessionSearch({
+        client: this.client,
+        message,
+        current: this.currentSession?.id,
+        context: this.contextSessionID,
+        dir: (id) => this.getWorkspaceDirectory(id),
+        exclude: this.currentSession?.id,
+        post: (msg) => this.postMessage(msg),
+      })
+      return
+    }
+    if (message.type === "requestFilePicker") {
+      await handleFilePicker({ requestId: message.requestId, post: (msg) => this.postMessage(msg) })
+      return
+    }
+    if (message.type === "requestTerminalContext") {
+      void this.handleTerminalContext(message.requestId)
+    }
+  }
+
   private async handleTerminalContext(requestId: string): Promise<void> {
     try {
       const output = await getTerminalContents(-1)
@@ -2129,6 +2170,27 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({
         type: "error",
         message: getErrorMessage(error) || "Failed to delete session",
+      })
+    }
+  }
+
+  private async handleDeleteMessage(sessionID: string, messageID: string): Promise<void> {
+    if (!this.client) {
+      this.postMessage({ type: "error", message: "Not connected to CLI backend", sessionID })
+      return
+    }
+
+    try {
+      await this.client.session.deleteMessage(
+        { sessionID, messageID, directory: this.getWorkspaceDirectory(sessionID) },
+        { throwOnError: true },
+      )
+    } catch (error) {
+      console.error("[Kilo New] KiloProvider: Failed to delete message:", error)
+      this.postMessage({
+        type: "error",
+        message: getErrorMessage(error) || "Failed to delete message",
+        sessionID,
       })
     }
   }
@@ -3724,6 +3786,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    this.postMessage(buildThroughputSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -4518,6 +4581,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autocompleteConfigDisposable?.dispose()
     this.indexingConfigDisposable?.dispose()
     this.chatConfigDisposable?.dispose()
+    this.throughputConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()
