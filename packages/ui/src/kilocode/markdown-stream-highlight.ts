@@ -89,7 +89,7 @@ export function preserveStreamingHighlight(from: Element, to: Element, streaming
   const before = from.querySelector("code")?.textContent ?? ""
   const after = to.querySelector("code")?.textContent ?? ""
   const lang = to.querySelector("code")?.getAttribute("data-lang") || "text"
-  if (!after || lang === "mermaid" || !continues(before, after)) return false
+  if (!after || lang === "mermaid" || lang === "chart" || !continues(before, after)) return false
   queue(from, after, lang)
   return true
 }

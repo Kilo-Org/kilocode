@@ -193,7 +193,9 @@ export async function deferredHighlight(
   signal?: { aborted: boolean },
 ): Promise<void> {
   const blocks = Array.from(
-    container.querySelectorAll('pre > code[data-lang]:not([data-highlighted]):not([data-lang="mermaid"])'),
+    container.querySelectorAll(
+      'pre > code[data-lang]:not([data-highlighted]):not([data-lang="mermaid"]):not([data-lang="chart"])',
+    ), // kilocode_change
   )
   if (blocks.length === 0) {
     onComplete?.()
