@@ -24,6 +24,7 @@ import { Question } from "@/question"
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
@@ -845,7 +846,9 @@ export const layer = Layer.effect(
                 usage: attempt.usage,
               })
             )
-              return yield* Effect.fail(new KiloSessionProcessor.IncompleteResponseError())
+              return yield* Effect.fail(
+                new KiloSessionProcessor.IncompleteResponseError(KiloResponseMetadata.read(value.providerMetadata)),
+              )
             // kilocode_change end
             // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
