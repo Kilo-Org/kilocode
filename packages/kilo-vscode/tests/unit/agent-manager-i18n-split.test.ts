@@ -39,6 +39,7 @@ import { dict as amTr } from "../../webview-ui/agent-manager/i18n/tr"
 import { dict as amNl } from "../../webview-ui/agent-manager/i18n/nl"
 import { dict as amUk } from "../../webview-ui/agent-manager/i18n/uk"
 import { dict as amIt } from "../../webview-ui/agent-manager/i18n/it"
+import { dict as amFa } from "../../webview-ui/agent-manager/i18n/fa"
 
 const PREFIX = "agentManager."
 
@@ -63,6 +64,7 @@ const locales = {
   nl: amNl,
   uk: amUk,
   it: amIt,
+  fa: amFa,
 }
 
 const appLocales = {

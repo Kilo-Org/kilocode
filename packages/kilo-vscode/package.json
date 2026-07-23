@@ -868,7 +868,8 @@
             "tr",
             "nl",
             "uk",
-            "it"
+            "it",
+            "fa"
           ],
           "enumDescriptions": [
             "Auto (VS Code language)",
@@ -891,7 +892,8 @@
             "Türkçe",
             "Nederlands",
             "Українська",
-            "Italiano"
+            "Italiano",
+            "فارسی"
           ]
         },
         "kilo-code.new.languageCommitMessage": {
@@ -919,7 +921,8 @@
             "tr",
             "nl",
             "uk",
-            "it"
+            "it",
+            "fa"
           ],
           "enumDescriptions": [
             "跟随界面语言 (Sync with UI language)",
@@ -942,7 +945,8 @@
             "Türkçe",
             "Nederlands",
             "Українська",
-            "Italiano"
+            "Italiano",
+            "فارسی"
           ]
         },
         "kilo-code.new.model.providerID": {
