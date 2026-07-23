@@ -157,6 +157,7 @@ export interface MessagePartProps {
   animate?: boolean
   working?: boolean
   feedback?: MessageFeedbackControls
+  throughput?: JSX.Element
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -991,6 +992,7 @@ export function Part(props: MessagePartProps) {
         animate={props.animate}
         working={props.working}
         feedback={props.feedback}
+        throughput={props.throughput}
       />
     </Show>
   )
@@ -1447,6 +1449,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                   aria-label={i18n.t("ui.message.feedback.notHelpful")}
                 />
               </Tooltip>
+            </Show>
+            <Show when={props.throughput}>
+              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
             </Show>
           </div>
         </Show>

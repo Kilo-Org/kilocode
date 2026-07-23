@@ -261,9 +261,7 @@ export function messageMetrics(parts: readonly Part[]): { generation?: number; s
  * generated tokens are skipped — tool-only steps, idempotent cache hits,
  * and tool re-execution should not skew the figure.
  */
-export function messageThroughput(
-  parts: readonly Part[],
-): { generation?: number; source: "computed" } | undefined {
+export function messageThroughput(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
   let generated = 0
   let elapsedMs = 0
   for (const part of parts) {
@@ -288,9 +286,7 @@ export function messageThroughput(
  * message in a session. Same weighted semantics as `messageThroughput` —
  * useful when a caller has already flattened parts across messages.
  */
-export function sessionThroughput(
-  parts: readonly Part[],
-): { generation?: number; source: "computed" } | undefined {
+export function sessionThroughput(parts: readonly Part[]): { generation?: number; source: "computed" } | undefined {
   return messageThroughput(parts)
 }
 

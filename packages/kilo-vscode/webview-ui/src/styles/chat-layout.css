@@ -229,13 +229,10 @@
 }
 
 [data-component="assistant-throughput"] {
-  /* Plain-text generation-speed footer beneath an assistant message.
-   * Matches the muted description-foreground tone used elsewhere for session
-   * metadata and reads as a single line of tertiary info — no icon, no
-   * border, no background, so it never competes with the upstream action
-   * row (copy / feedback) for visual weight. */
-  display: block;
-  margin-top: 4px;
+  /* Plain-text generation-speed value shown beside the copy/feedback buttons
+   * on an assistant message. Renders as muted metadata — no icon, no
+   * background, no border — so it reads as tertiary info that never
+   * competes with the action row for visual weight. */
   color: var(--vscode-descriptionForeground);
   font-family: var(--font-family-sans);
   font-size: var(--kilo-font-size-11);

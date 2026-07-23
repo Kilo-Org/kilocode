@@ -735,7 +735,12 @@ type StepFinishOverrides = {
 function stepFinish(id: string, metricsOrOverrides?: NonNullable<Part["metrics"]> | StepFinishOverrides): Part {
   // Older call sites pass only metrics directly. Keep that signature so
   // the existing latestMetrics / messageMetrics tests stay readable.
-  if (metricsOrOverrides && "metrics" in metricsOrOverrides === false && "tokens" in metricsOrOverrides === false && "time" in metricsOrOverrides === false) {
+  if (
+    metricsOrOverrides &&
+    "metrics" in metricsOrOverrides === false &&
+    "tokens" in metricsOrOverrides === false &&
+    "time" in metricsOrOverrides === false
+  ) {
     return {
       type: "step-finish",
       id,

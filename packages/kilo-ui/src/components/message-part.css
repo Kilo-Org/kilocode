@@ -37,6 +37,14 @@
     [data-component="icon-button"][data-icon="thumbs-down"]:hover [data-slot="icon-svg"] path {
       fill: currentColor;
     }
+
+    /* Throughput badge sits to the right of the copy/feedback buttons,
+       beside them rather than beneath the message. */
+    [data-slot="assistant-throughput-inline"] {
+      margin-left: 6px;
+      display: flex;
+      align-items: center;
+    }
   }
 }
 

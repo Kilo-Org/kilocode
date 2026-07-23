@@ -7,7 +7,7 @@
  * Active questions render inline via QuestionDock; permissions are in the bottom dock.
  */
 
-import { Component, For, Show, createMemo } from "solid-js"
+import { Component, For, Show, createMemo, type JSX } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { Part, PART_MAPPING, ToolRegistry } from "@kilocode/kilo-ui/message-part"
 import type { MessageFeedbackControls } from "@kilocode/kilo-ui/message-part"
@@ -166,10 +166,11 @@ function BashToolCard(props: { part: ToolPart; defaultOpen: boolean; forceOpen?:
   )
 }
 
-/** Plain-text generation-speed value shown beneath an assistant message.
+/** Plain-text generation-speed value shown beside the copy/feedback buttons
+ * on an assistant message.
  *
  * Renders as muted metadata — no icon, no background, no border — so it
- * reads as a one-line footer rather than an interactive control. The
+ * reads as tertiary info rather than an interactive control. The
  * description on hover explains that the value is a weighted generation
  * rate across the turn's model-generation steps (output + reasoning
  * tokens over active generation time).
@@ -267,6 +268,18 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
             return h?.msgId === props.message.id && h?.partId === part.id
           })
 
+          // Throughput badge renders inside the copy/feedback action row of the
+          // text part that carries the copy button (the last text part of the
+          // message), pushed to the right of the buttons rather than below the
+          // message. Only built for that part so non-text parts skip the work.
+          const throughputEl = createMemo<JSX.Element | undefined>(() => {
+            if (!throughputVisible()) return undefined
+            const metrics = throughput()
+            if (!metrics) return undefined
+            if (part.id !== props.showAssistantCopyPartID) return undefined
+            return <ThroughputBadge metrics={metrics} />
+          })
+
           return (
             <Show
               when={
@@ -311,6 +324,7 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
                                       forceOpenFile={forceOpen() ? props.forceOpenFile : undefined}
                                       reasoningAutoCollapse={display.reasoningAutoCollapse()}
                                       feedback={props.feedback}
+                                      throughput={throughputEl()}
                                       animate={
                                         part.type === "tool" &&
                                         ((part as unknown as ToolPart).state?.status === "pending" ||
@@ -348,7 +362,6 @@ export const AssistantMessage: Component<AssistantMessageProps> = (props) => {
           )
         }}
       </For>
-      <Show when={throughputVisible() && throughput()}>{(metrics) => <ThroughputBadge metrics={metrics()} />}</Show>
     </>
   )
 }
