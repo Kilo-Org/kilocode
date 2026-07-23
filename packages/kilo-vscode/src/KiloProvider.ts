@@ -172,6 +172,7 @@ import {
   watchIndexingConfig,
 } from "./kilo-provider/indexing-settings"
 import { buildChatSettingsMessage, validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
+import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 
 let maxCost = 0
 
@@ -393,6 +394,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private autocompleteConfigDisposable: vscode.Disposable | null = null
   private indexingConfigDisposable: vscode.Disposable | null = null
   private chatConfigDisposable: vscode.Disposable | null = null
+  private throughputConfigDisposable: vscode.Disposable | null = null
   private telemetryStateDisposable: vscode.Disposable | null = null
   private viewStateDisposable: vscode.Disposable | null = null
   private visibilityDisposable: vscode.Disposable | null = null
@@ -917,6 +919,8 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.indexingConfigDisposable = watchIndexingConfig((msg) => this.postMessage(msg))
     this.chatConfigDisposable?.dispose()
     this.chatConfigDisposable = watchChatConfig((msg) => this.postMessage(msg))
+    this.throughputConfigDisposable?.dispose()
+    this.throughputConfigDisposable = watchThroughputConfig((msg) => this.postMessage(msg))
     this.telemetryStateDisposable?.dispose()
     this.telemetryStateDisposable = watchTelemetryState((msg) => this.postMessage(msg))
     this.webviewMessageDisposable = webview.onDidReceiveMessage(async (message) => {
@@ -1351,6 +1355,9 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
         case "requestTimelineSetting":
           this.sendTimelineSetting()
           break
+        case "requestThroughputSetting":
+          this.postMessage(buildThroughputSettingMessage())
+          break
         case "requestNotifications":
           this.fetchAndSendNotifications().catch((e) =>
             console.error("[Kilo New] fetchAndSendNotifications failed:", e),
@@ -1734,6 +1741,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.postMessage({ type: "gitStatus", repo: this.cachedGitRepo })
       this.sendNotificationSettings()
       this.sendTimelineSetting()
+      this.postMessage(buildThroughputSettingMessage())
       this.postMessage({ type: "extensionDataReady" })
 
       if (this.cachedGitRepo) this.startStatsPolling()
@@ -3724,6 +3732,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.sendBrowserSettings()
     this.sendNotificationSettings()
     this.sendTimelineSetting()
+    this.postMessage(buildThroughputSettingMessage())
     this.sendWorkStyle()
     await ModelState.reset(this.client, (msg) => this.postMessage(msg))
 
@@ -4518,6 +4527,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.autocompleteConfigDisposable?.dispose()
     this.indexingConfigDisposable?.dispose()
     this.chatConfigDisposable?.dispose()
+    this.throughputConfigDisposable?.dispose()
     this.telemetryStateDisposable?.dispose()
     this.autoApproveBridge?.dispose()
     this.visibleTaskStreams.clear()

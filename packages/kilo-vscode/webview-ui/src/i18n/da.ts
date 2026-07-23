@@ -1718,6 +1718,15 @@ export const dict = {
     "Vælg, om blokke, der viser koderedigeringer og forskelle, starter foldet ud eller sammen.",
   "settings.display.codeEdit.expanded": "Foldet ud",
   "settings.display.codeEdit.collapsed": "Foldet sammen",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Standardmodel",
   "settings.providers.defaultModel.description": "Primær model til samtaler",
   "settings.providers.smallModel.title": "Lille model",
