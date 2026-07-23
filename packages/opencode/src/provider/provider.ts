@@ -48,6 +48,7 @@ import { ProviderError } from "./error"
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
 
+// kilocode_change start
 // Pre-content (time-to-first-content / prompt-processing) bound. Mirrors the
 // S2 default in `KiloLLM.DEFAULT_FIRST_TOKEN_MS` in
 // `src/kilocode/session/llm.ts:19` — keep these in sync if either ever changes.
@@ -168,6 +169,7 @@ function wrapSSE(res: Response, chunkTimeout: number, ctl: AbortController, firs
     statusText: res.statusText,
   })
 }
+// kilocode_change end
 
 function timeoutController(ms: number) {
   const ctl = new AbortController()
@@ -1828,6 +1830,7 @@ export const layer = Layer.effect(
         const customFetch = options["fetch"]
         const chunkTimeout = options["chunkTimeout"]
         const headerTimeout = options["headerTimeout"]
+        // kilocode_change start
         // Pre-content (time-to-first-content) budget for `wrapSSE`. Mirrors
         // `KiloLLM.resolveFirstTokenMs` semantics from S2: a positive finite
         // `options["timeout"]` wins; `false`/`0`/unset/invalid fall back to
@@ -1836,6 +1839,7 @@ export const layer = Layer.effect(
           typeof options["timeout"] === "number" && Number.isFinite(options["timeout"]) && options["timeout"] > 0
             ? options["timeout"]
             : SSE_FIRST_TOKEN_MS
+        // kilocode_change end
         delete options["chunkTimeout"]
         delete options["headerTimeout"]
 

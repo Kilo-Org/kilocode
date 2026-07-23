@@ -478,7 +478,7 @@ const live: Layer.Layer<
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
-            // kilocode_change: wrap the raw AI SDK fullStream with the Kilo
+            // kilocode_change start: wrap the raw AI SDK fullStream with the Kilo
             // idle watchdog before normalization. Per-subscription timers
             // (post-content `idleMs` and pre-content `firstTokenMs`) were
             // resolved inside `run` and travel with the result. Pass the
@@ -490,6 +490,7 @@ const live: Layer.Layer<
               ctrl,
               result.firstTokenMs,
             )
+            // kilocode_change end
             return Stream.fromAsyncIterable(watched, (e) => (e instanceof Error ? e : new Error(String(e)))).pipe(
               // kilocode_change: the watchdog consumes raw LanguageModelV2 parts;
               // cast back to the TextStreamPart shape LLMAISDK.toLLMEvents expects.

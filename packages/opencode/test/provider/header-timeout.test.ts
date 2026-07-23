@@ -45,7 +45,7 @@ it.live("headerTimeout does not abort delayed SSE body after headers arrive", ()
   }),
 )
 
-// kilocode_change - S2b: under the first-content-aware fix, a slow FIRST
+// kilocode_change start - S2b: under the first-content-aware fix, a slow FIRST
 // content chunk is no longer raced against `chunkTimeout`; it is bounded by
 // the request `timeout` (or the Kilo default of 5 min) instead. With no
 // `timeout` configured here, a 250ms first-content delay is comfortably
@@ -124,6 +124,7 @@ it.live("chunkTimeout still aborts a mid-content stall after the first content c
     )
   }),
 )
+// kilocode_change end
 
 it.live("headerTimeout aborts when response headers do not arrive", () =>
   Effect.gen(function* () {
