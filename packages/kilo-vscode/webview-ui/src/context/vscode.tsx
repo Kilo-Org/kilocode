@@ -5,6 +5,7 @@
 
 import { createContext, useContext, onCleanup, ParentComponent, createSignal } from "solid-js"
 import type { VSCodeAPI, WebviewMessage, ExtensionMessage } from "../types/messages"
+import { ClipboardProvider } from "@kilocode/kilo-ui/context/clipboard"
 
 // Get the VS Code API (only available in webview context)
 let vscodeApi: VSCodeAPI | undefined
@@ -42,6 +43,7 @@ const VSCodeContext = createContext<VSCodeContextValue>()
 export const VSCodeProvider: ParentComponent = (props) => {
   const api = getVSCodeAPI()
   const handlers = new Set<(message: ExtensionMessage) => void>()
+  const copies = new Map<string, { resolve: () => void; reject: (err: Error) => void }>()
 
   // Model-selector expand/collapse preference. Stored in extension globalState
   // so it is shared across webviews (sidebar + agent-manager panel); a local
@@ -51,6 +53,17 @@ export const VSCodeProvider: ParentComponent = (props) => {
   // Listen for messages from the extension
   const messageListener = (event: MessageEvent) => {
     const message = event.data as ExtensionMessage
+    if (message.type === "clipboardWriteResult") {
+      const copy = copies.get(message.id)
+      if (!copy) return
+      copies.delete(message.id)
+      if (message.ok) {
+        copy.resolve()
+        return
+      }
+      copy.reject(new Error(message.error ?? "Failed to write to clipboard"))
+      return
+    }
     handlers.forEach((handler) => handler(message))
   }
 
@@ -63,6 +76,7 @@ export const VSCodeProvider: ParentComponent = (props) => {
   onCleanup(() => {
     window.removeEventListener("message", messageListener)
     handlers.clear()
+    copies.clear()
   })
 
   const value: VSCodeContextValue = {
@@ -82,7 +96,25 @@ export const VSCodeProvider: ParentComponent = (props) => {
     },
   }
 
-  return <VSCodeContext.Provider value={value}>{props.children}</VSCodeContext.Provider>
+  return (
+    <VSCodeContext.Provider value={value}>
+      <ClipboardProvider
+        write={(text) =>
+          new Promise((resolve, reject) => {
+            const id = crypto.randomUUID()
+            copies.set(id, { resolve, reject })
+            api.postMessage({ type: "copyToClipboard", id, text })
+            setTimeout(() => {
+              if (!copies.delete(id)) return
+              reject(new Error("Clipboard write timed out"))
+            }, 5000)
+          })
+        }
+      >
+        {props.children}
+      </ClipboardProvider>
+    </VSCodeContext.Provider>
+  )
 }
 
 export function useVSCode(): VSCodeContextValue {

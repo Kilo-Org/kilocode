@@ -30,6 +30,7 @@ import {
 import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
+import { useClipboard } from "../context/clipboard"
 import { type UiI18n, useI18n } from "../context/i18n"
 import { GenericTool, BasicTool } from "./basic-tool"
 import { Accordion } from "./accordion"
@@ -749,6 +750,7 @@ export function UserMessageDisplay(props: {
   const data = useData()
   const dialog = useDialog()
   const i18n = useI18n()
+  const clipboard = useClipboard()
   const [copied, setCopied] = createSignal(false)
 
   const textPart = createMemo(
@@ -811,7 +813,7 @@ export function UserMessageDisplay(props: {
   const handleCopy = async () => {
     const content = props.copyText ?? text()
     if (!content) return
-    await navigator.clipboard.writeText(content)
+    await clipboard.write(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -1309,6 +1311,7 @@ PART_MAPPING["compaction"] = function CompactionPartDisplay() {
 PART_MAPPING["text"] = function TextPartDisplay(props) {
   const data = useData()
   const i18n = useI18n()
+  const clipboard = useClipboard()
   const part = () => props.part as TextPart
 
   const displayText = () => (part().text ?? "").trim()
@@ -1347,7 +1350,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
   const handleCopy = async () => {
     const content = displayText()
     if (!content) return
-    await navigator.clipboard.writeText(content)
+    await clipboard.write(content)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
