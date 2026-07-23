@@ -6,6 +6,9 @@ export type ClientOptions = {
 
 export type Event =
   | EventServerInstanceDisposed
+  | EventSessionTurnOpen
+  | EventSessionTurnClose
+  | EventSessionQueueChanged
   | EventSessionNetworkAsked
   | EventSessionNetworkReplied
   | EventSessionNetworkRejected
@@ -15,8 +18,6 @@ export type Event =
   | EventInteractiveTerminalUpdated
   | EventInteractiveTerminalData
   | EventInteractiveTerminalDeleted
-  | EventSessionTurnOpen
-  | EventSessionTurnClose
   | EventSandboxStatusChanged
   | EventSuggestionShown
   | EventSuggestionAccepted
@@ -26,8 +27,8 @@ export type Event =
   | EventKilocodeAgentManagerCancelled
   | EventKilocodeNotebookRequested
   | EventKilocodeNotebookCancelled
-  | EventLspClientDiagnostics
   | EventKiloSessionsRemoteStatusChanged
+  | EventLspClientDiagnostics
   | EventMemoryStatus1
   | EventMemoryUpdated1
   | EventMemoryError1
@@ -113,8 +114,8 @@ export type Event =
   | EventSessionCompacted
   | EventCommandExecuted
   | EventProjectUpdated
-  | EventLspUpdated
   | EventVcsBranchUpdated
+  | EventLspUpdated
   | EventWorkspaceReady
   | EventWorkspaceFailed
   | EventWorkspaceStatus
@@ -1042,6 +1043,9 @@ export type GlobalEvent = {
   workspace?: string
   payload:
     | EventServerInstanceDisposed
+    | EventSessionTurnOpen
+    | EventSessionTurnClose
+    | EventSessionQueueChanged
     | EventSessionNetworkAsked
     | EventSessionNetworkReplied
     | EventSessionNetworkRejected
@@ -1051,8 +1055,6 @@ export type GlobalEvent = {
     | EventInteractiveTerminalUpdated
     | EventInteractiveTerminalData
     | EventInteractiveTerminalDeleted
-    | EventSessionTurnOpen
-    | EventSessionTurnClose
     | EventSandboxStatusChanged
     | EventSuggestionShown
     | EventSuggestionAccepted
@@ -1062,8 +1064,8 @@ export type GlobalEvent = {
     | EventKilocodeAgentManagerCancelled
     | EventKilocodeNotebookRequested
     | EventKilocodeNotebookCancelled
-    | EventLspClientDiagnostics
     | EventKiloSessionsRemoteStatusChanged
+    | EventLspClientDiagnostics
     | EventMemoryStatus
     | EventMemoryUpdated
     | EventMemoryError
@@ -1149,8 +1151,8 @@ export type GlobalEvent = {
     | EventSessionCompacted
     | EventCommandExecuted
     | EventProjectUpdated
-    | EventLspUpdated
     | EventVcsBranchUpdated
+    | EventLspUpdated
     | EventWorkspaceReady
     | EventWorkspaceFailed
     | EventWorkspaceStatus
@@ -3524,6 +3526,33 @@ export type EventServerInstanceDisposed = {
   }
 }
 
+export type EventSessionTurnOpen = {
+  id: string
+  type: "session.turn.open"
+  properties: {
+    sessionID: string
+  }
+}
+
+export type EventSessionTurnClose = {
+  id: string
+  type: "session.turn.close"
+  properties: {
+    sessionID: string
+    parentID?: string
+    reason: "completed" | "error" | "interrupted"
+  }
+}
+
+export type EventSessionQueueChanged = {
+  id: string
+  type: "session.queue.changed"
+  properties: {
+    sessionID: string
+    queued: Array<string>
+  }
+}
+
 export type EventSessionNetworkAsked = {
   id: string
   type: "session.network.asked"
@@ -3602,24 +3631,6 @@ export type EventInteractiveTerminalDeleted = {
   properties: {
     terminalID: string
     sessionID: string
-  }
-}
-
-export type EventSessionTurnOpen = {
-  id: string
-  type: "session.turn.open"
-  properties: {
-    sessionID: string
-  }
-}
-
-export type EventSessionTurnClose = {
-  id: string
-  type: "session.turn.close"
-  properties: {
-    sessionID: string
-    parentID?: string
-    reason: "completed" | "error" | "interrupted"
   }
 }
 
@@ -3726,21 +3737,21 @@ export type EventKilocodeNotebookCancelled = {
   }
 }
 
-export type EventLspClientDiagnostics = {
-  id: string
-  type: "lsp.client.diagnostics"
-  properties: {
-    serverID: string
-    path: string
-  }
-}
-
 export type EventKiloSessionsRemoteStatusChanged = {
   id: string
   type: "kilo-sessions.remote-status-changed"
   properties: {
     enabled: boolean
     connected: boolean
+  }
+}
+
+export type EventLspClientDiagnostics = {
+  id: string
+  type: "lsp.client.diagnostics"
+  properties: {
+    serverID: string
+    path: string
   }
 }
 
@@ -4940,19 +4951,19 @@ export type EventProjectUpdated = {
   }
 }
 
-export type EventLspUpdated = {
-  id: string
-  type: "lsp.updated"
-  properties: {
-    [key: string]: unknown
-  }
-}
-
 export type EventVcsBranchUpdated = {
   id: string
   type: "vcs.branch.updated"
   properties: {
     branch?: string
+  }
+}
+
+export type EventLspUpdated = {
+  id: string
+  type: "lsp.updated"
+  properties: {
+    [key: string]: unknown
   }
 }
 
