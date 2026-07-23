@@ -22,6 +22,7 @@ import { Env } from "../../src/env"
 import { Format } from "../../src/format"
 import { Git } from "../../src/git"
 import { Image } from "../../src/image/image"
+import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
@@ -143,6 +144,7 @@ function makeHttp() {
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
   const registry = ToolRegistry.layer.pipe(
+    Layer.provide(KiloSessions.testLayer),
     Layer.provide(Skill.defaultLayer),
     Layer.provide(FetchHttpClient.layer),
     Layer.provide(CrossSpawnSpawner.defaultLayer),

@@ -744,4 +744,29 @@ describe("AttachedState", () => {
     await replacement
     expect([...state.union()].sort()).toEqual(["ses_x"])
   })
+
+  // AC6d: announce(id) must forward { requireSessionId: id } to the
+  // heartbeat callback so the relay only resolves the attach once a fresh
+  // heartbeat whose payload contains that id was actually sent. Presence
+  // fire-and-forget heartbeats (from setPresence) continue to call
+  // without an id and resolve on any fresh send.
+  test("announce(id) forwards { requireSessionId: id } to the heartbeat callback", async () => {
+    const calls: Array<{ requireSessionId?: string }> = []
+    const state = AttachedState.create({
+      heartbeat: (opts) => {
+        calls.push(opts ? { ...opts } : {})
+        return Promise.resolve()
+      },
+      log: nolog,
+    })
+
+    // setPresence fires a fire-and-forget heartbeat with NO id.
+    state.setPresence(["ses_a"])
+    await Promise.resolve()
+
+    // announce(id) forwards the id to the awaited heartbeat.
+    await state.announce("ses_b")
+
+    expect(calls).toEqual([{}, { requireSessionId: "ses_b" }])
+  })
 })

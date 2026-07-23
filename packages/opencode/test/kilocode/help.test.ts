@@ -1,5 +1,6 @@
 import { describe, test, expect } from "bun:test"
 import path from "path"
+import yargs from "yargs"
 import { generateHelp, generateCommandTable } from "../../src/kilocode/help"
 import { AcpCommand } from "../../src/cli/cmd/acp"
 import { McpCommand } from "../../src/cli/cmd/mcp"
@@ -26,6 +27,7 @@ import { HelpCommand } from "../../src/kilocode/help-command"
 import { ProfileCommand } from "../../src/kilocode/cli/cmd/profile"
 import { DaemonCommand } from "../../src/kilocode/cli/cmd/daemon"
 import { KiloConsoleCommand } from "../../src/kilocode/cli/cmd/console"
+import { CloudCommand } from "../../src/kilocode/cli/cmd/cloud"
 
 // Stand-in for TuiThreadCommand — the real one imports @opentui/solid which
 // doesn't resolve in the test environment. Only command/describe matter here.
@@ -76,6 +78,7 @@ const commands = [
   ProfileCommand,
   DaemonCommand,
   KiloConsoleCommand,
+  CloudCommand,
   HelpCommand,
   CompletionStub,
 ] as any[]
@@ -137,6 +140,29 @@ describe("kilo help <command>", () => {
     expect(output).toContain("kilo daemon start")
     expect(output).toContain("--foreground")
     expect(output).toContain("-f")
+  })
+})
+
+describe("kilo cloud help", () => {
+  async function parser() {
+    const cli = yargs([])
+      .scriptName("kilo cloud")
+      .exitProcess(false)
+      .help()
+      .fail((msg, err) => {
+        throw err ?? new Error(msg)
+      })
+    if (typeof CloudCommand.builder !== "function") throw new Error("cloud command builder is missing")
+    return await CloudCommand.builder(cli)
+  }
+
+  test("requires a subcommand and exposes only the public Cloud Agent operations", async () => {
+    const bare = await parser()
+    await expect(Promise.resolve().then(() => bare.parseAsync([]))).rejects.toThrow()
+
+    const help = await (await parser()).getHelp()
+    const names = [...help.matchAll(/^\s*kilo cloud ([a-z][a-z-]*)\b/gm)].map((match) => match[1])
+    expect([...new Set(names)].sort()).toEqual(["result", "send", "start", "status"])
   })
 })
 

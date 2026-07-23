@@ -30,8 +30,13 @@ export namespace AttachedState {
   export type Options = {
     /** Fires the relay heartbeat. May be fire-and-forget or awaited. Must
      *  reject (not resolve) when no relay connection is available so that
-     *  `announce` cannot silently mark a session as attached. */
-    heartbeat: () => Promise<void>
+     *  `announce` cannot silently mark a session as attached.
+     *
+     *  `opts.requireSessionId` is forwarded by `announce(id)` so the relay
+     *  only resolves the attach promise when a fresh heartbeat whose
+     *  payload contains that id was actually sent. Presence fire-and-
+     *  forget heartbeats call without an id and resolve on any fresh send. */
+    heartbeat: (opts?: { requireSessionId?: string }) => Promise<void>
     log?: { warn: (msg: string, meta?: unknown) => void }
   }
 
@@ -141,7 +146,10 @@ export namespace AttachedState {
         const owned = (async () => {
           pending.add(id)
           try {
-            await options.heartbeat()
+            // kilocode_change - forward the announced id so the relay only
+            // resolves the attach once a fresh heartbeat whose payload
+            // contains this id was actually sent (id-containment fence).
+            await options.heartbeat({ requireSessionId: id })
           } catch (err) {
             // Roll back only the entry this call added. If presence adopted
             // the id while the heartbeat was in flight, presence is the

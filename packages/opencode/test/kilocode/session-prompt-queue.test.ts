@@ -8,6 +8,7 @@ import { AppRuntime } from "../../src/effect/app-runtime"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
+import { KiloSession } from "@/kilocode/session"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
@@ -852,6 +853,299 @@ describe("session prompt queue", () => {
         expect(await first).toBe("first")
         expect(await second).toBe("second")
       },
+    })
+  })
+
+  // session.queue.changed event surface + snapshot accessor
+  describe("session.queue.changed", () => {
+    test("snapshot() returns an empty list for an unknown session", () => {
+      expect(KiloSessionPromptQueue.snapshot(SessionID.make("session_unknown"))).toEqual([])
+    })
+
+    test("enqueueing on an idle session does not transiently publish a non-empty snapshot", async () => {
+      // A prompt enqueued into an idle session starts almost immediately, so
+      // it must never appear in the waiting list (and must not emit any
+      // session.queue.changed event whose queued list is non-empty).
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.make("session_queue_idle")
+          const events: Array<{ type: string; queued: string[] }> = []
+          const off = Bus.subscribe(KiloSession.Event.QueueChanged, (event) => {
+            events.push({ type: event.type, queued: [...(event.properties.queued as readonly string[])] })
+          })
+          try {
+            await Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                MessageID.make("msg_idle_1"),
+                Effect.succeed("done"),
+                Effect.succeed("cancelled"),
+              ),
+            )
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([])
+            expect(events).toEqual([])
+          } finally {
+            off()
+          }
+        },
+      })
+    })
+
+    test("enqueueing while busy appends to the FIFO snapshot and emits the event", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.make("session_queue_busy")
+          const events: Array<{ sessionID: string; queued: string[] }> = []
+          const off = Bus.subscribe(KiloSession.Event.QueueChanged, (event) => {
+            if (event.properties.sessionID === sessionID) {
+              events.push({
+                sessionID: event.properties.sessionID as string,
+                queued: [...(event.properties.queued as readonly string[])],
+              })
+            }
+          })
+
+          const firstStarted = Promise.withResolvers<void>()
+          const firstRelease = Promise.withResolvers<void>()
+          const m1 = MessageID.make("msg_busy_1")
+          const m2 = MessageID.make("msg_busy_2")
+          const m3 = MessageID.make("msg_busy_3")
+
+          try {
+            const first = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m1,
+                Effect.gen(function* () {
+                  firstStarted.resolve()
+                  yield* Effect.promise(() => firstRelease.promise)
+                  return "first" as const
+                }),
+                Effect.succeed("first-cancelled" as const),
+              ),
+            )
+            await firstStarted.promise
+
+            // Idle-start for slot 1 must not have emitted anything.
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([])
+            expect(events).toEqual([])
+
+            const second = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m2,
+                Effect.succeed("second" as const),
+                Effect.succeed("second-cancelled" as const),
+              ),
+            )
+            const third = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m3,
+                Effect.succeed("third" as const),
+                Effect.succeed("third-cancelled" as const),
+              ),
+            )
+
+            // FIFO order is preserved: msg_busy_2 then msg_busy_3.
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m2, m3])
+            // Publishes are fire-and-forget microtasks; let them flush.
+            await Bun.sleep(10)
+            expect(events).toEqual([
+              { sessionID, queued: [m2] },
+              { sessionID, queued: [m2, m3] },
+            ])
+
+            firstRelease.resolve()
+            expect(await first).toBe("first")
+            expect(await second).toBe("second")
+            expect(await third).toBe("third")
+          } finally {
+            off()
+          }
+        },
+      })
+    })
+
+    test("a waiting slot starting running shrinks the snapshot and emits the event", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.make("session_queue_start")
+          const events: Array<{ queued: string[] }> = []
+          const off = Bus.subscribe(KiloSession.Event.QueueChanged, (event) => {
+            if (event.properties.sessionID === sessionID) {
+              events.push({ queued: [...(event.properties.queued as readonly string[])] })
+            }
+          })
+
+          const firstStarted = Promise.withResolvers<void>()
+          const firstRelease = Promise.withResolvers<void>()
+          const secondStarted = Promise.withResolvers<void>()
+          const secondRelease = Promise.withResolvers<void>()
+          const m1 = MessageID.make("msg_start_1")
+          const m2 = MessageID.make("msg_start_2")
+
+          try {
+            const first = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m1,
+                Effect.gen(function* () {
+                  firstStarted.resolve()
+                  yield* Effect.promise(() => firstRelease.promise)
+                  return "first" as const
+                }),
+                Effect.succeed("first-cancelled" as const),
+              ),
+            )
+            await firstStarted.promise
+
+            const second = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m2,
+                Effect.gen(function* () {
+                  secondStarted.resolve()
+                  yield* Effect.promise(() => secondRelease.promise)
+                  return "second" as const
+                }),
+                Effect.succeed("second-cancelled" as const),
+              ),
+            )
+
+            // msg2 is waiting behind msg1.
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m2])
+            await Bun.sleep(10)
+            expect(events.map((e) => e.queued)).toEqual([[m2]])
+
+            // Release msg1; msg2 takes over and the waiting list drops to empty.
+            firstRelease.resolve()
+            await secondStarted.promise
+
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([])
+            await Bun.sleep(10)
+            expect(events.map((e) => e.queued)).toEqual([[m2], []])
+
+            secondRelease.resolve()
+            expect(await first).toBe("first")
+            expect(await second).toBe("second")
+          } finally {
+            off()
+          }
+        },
+      })
+    })
+
+    test("cancel empties the snapshot and emits an empty list", async () => {
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.make("session_queue_cancel")
+          const events: Array<{ queued: string[] }> = []
+          const off = Bus.subscribe(KiloSession.Event.QueueChanged, (event) => {
+            if (event.properties.sessionID === sessionID) {
+              events.push({ queued: [...(event.properties.queued as readonly string[])] })
+            }
+          })
+
+          const firstStarted = Promise.withResolvers<void>()
+          const firstRelease = Promise.withResolvers<void>()
+          const m1 = MessageID.make("msg_cancel_1")
+          const m2 = MessageID.make("msg_cancel_2")
+          const m3 = MessageID.make("msg_cancel_3")
+
+          try {
+            const first = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m1,
+                Effect.gen(function* () {
+                  firstStarted.resolve()
+                  yield* Effect.promise(() => firstRelease.promise)
+                  return "first" as const
+                }),
+                Effect.succeed("first-cancelled" as const),
+              ),
+            )
+            await firstStarted.promise
+
+            const second = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m2,
+                Effect.succeed("second" as const),
+                Effect.succeed("second-cancelled" as const),
+              ),
+            )
+            const third = Effect.runPromise(
+              KiloSessionPromptQueue.enqueue(
+                sessionID,
+                m3,
+                Effect.succeed("third" as const),
+                Effect.succeed("third-cancelled" as const),
+              ),
+            )
+
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([m2, m3])
+            await Bun.sleep(10)
+            const beforeCancel = events.length
+            expect(beforeCancel).toBeGreaterThan(0)
+
+            await Effect.runPromise(KiloSessionPromptQueue.cancel(sessionID))
+
+            // The most recent emission must be the empty list, and the snapshot
+            // must be empty for downstream replay callers.
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([])
+            await Bun.sleep(10)
+            expect(events.length).toBeGreaterThan(beforeCancel)
+            expect(events.at(-1)?.queued).toEqual([])
+            expect(events.slice(beforeCancel).every((e) => e.queued.length === 0)).toBe(true)
+
+            firstRelease.resolve()
+            expect(await first).toBe("first")
+            // Cancel bumped the version, so the queued slots return their
+            // cancelled effect instead of running their work.
+            expect(await second).toBe("second-cancelled")
+            expect(await third).toBe("third-cancelled")
+          } finally {
+            off()
+          }
+        },
+      })
+    })
+
+    test("cancel on an idle session suppresses the empty→empty emission", async () => {
+      // Steady-state no-op empty→empty emissions are intentionally suppressed
+      // by the queue to keep the bus quiet. Replay uses snapshot() directly
+      // and is therefore never affected by this suppression.
+      await using tmp = await tmpdir({ git: true })
+      await provideTestInstance({
+        directory: tmp.path,
+        fn: async () => {
+          const sessionID = SessionID.make("session_queue_cancel_idle")
+          const events: Array<{ queued: string[] }> = []
+          const off = Bus.subscribe(KiloSession.Event.QueueChanged, (event) => {
+            if (event.properties.sessionID === sessionID) {
+              events.push({ queued: [...(event.properties.queued as readonly string[])] })
+            }
+          })
+
+          try {
+            await Effect.runPromise(KiloSessionPromptQueue.cancel(sessionID))
+            expect(KiloSessionPromptQueue.snapshot(sessionID)).toEqual([])
+            expect(events).toEqual([])
+          } finally {
+            off()
+          }
+        },
+      })
     })
   })
 })
