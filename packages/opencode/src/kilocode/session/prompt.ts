@@ -514,6 +514,13 @@ export namespace KiloSessionPrompt {
    * Determines whether a stuck main session should be automatically restarted.
    * Returns `{ exhausted: true }` when the restart limit has been reached,
    * otherwise `{ exhausted: false }`.
+   *
+   * On exhaustion, the assistant's `error` and `finish` are UNCONDITIONALLY
+   * overwritten with the exhaustion signal. The caller always passes an
+   * already-errored assistant (guarded by `if (!errored || !errored.error)
+   * return` upstream), so the previous `??=` was dead code that left the
+   * underlying retryable error (e.g. "internal server error") surfaced
+   * instead of the clear "restart limit exhausted" message.
    */
   export function guardMainSessionRestart(input: {
     sessionID: string
@@ -525,11 +532,11 @@ export namespace KiloSessionPrompt {
     if (input.attempts <= limit) return { exhausted: false as const }
     input.closeReasons.set(input.sessionID, "error")
     if (input.message) {
-      input.message.error ??= new MessageV2.APIError({
+      input.message.error = new MessageV2.APIError({
         message: `Main session restart limit (${limit}) exhausted`,
         isRetryable: false,
       }).toObject()
-      input.message.finish ??= "error"
+      input.message.finish = "error"
     }
     return { exhausted: true as const }
   }

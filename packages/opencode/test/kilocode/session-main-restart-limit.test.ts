@@ -383,7 +383,14 @@ describe("session main restart limit", () => {
 
           expect(yield* llm.calls).toBe(6)
           expect(result.info.role).toBe("assistant")
-          expect(errorOf(result)).toBeDefined()
+          const surfaced = errorOf(result)
+          expect(surfaced).toBeDefined()
+          // The exhaustion signal must be clearly surfaced (Finding #1: a clear,
+          // non-retryable "restart limit exhausted" message), not the underlying
+          // retryable error from the last failed attempt.
+          const message = (surfaced as { data?: { message?: string } } | undefined)?.data?.message
+          expect(typeof message).toBe("string")
+          expect(message).toMatch(/restart limit .*exhausted/i)
 
           const msgs = yield* sessions.messages({ sessionID: chat.id })
           const lastAssistant = msgs.filter((m) => m.info.role === "assistant").at(-1)
