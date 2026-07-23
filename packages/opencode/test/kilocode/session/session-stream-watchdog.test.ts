@@ -109,17 +109,17 @@ describe("kilocode.session.llm.resolveIdleMs", () => {
     expect(KiloLLM.resolveIdleMs({ options: {}, fallback: { chunkTimeout: false } })).toBeUndefined()
   })
 
-  test("uses 60_000 default when nothing valid is configured", () => {
-    expect(KiloLLM.resolveIdleMs({ options: {} })).toBe(60_000)
+  test("uses 300_000 default when nothing valid is configured", () => {
+    expect(KiloLLM.resolveIdleMs({ options: {} })).toBe(300_000)
   })
 
-  test("uses 60_000 default when both prepared and fallback are invalid", () => {
+  test("uses 300_000 default when both prepared and fallback are invalid", () => {
     expect(
       KiloLLM.resolveIdleMs({
         options: { chunkTimeout: "x" },
         fallback: { chunkTimeout: -5 },
       }),
-    ).toBe(60_000)
+    ).toBe(300_000)
   })
 })
 

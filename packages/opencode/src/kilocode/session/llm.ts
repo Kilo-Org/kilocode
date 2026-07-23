@@ -8,7 +8,7 @@ import { KiloSessionOverflow } from "./overflow"
 
 const SAFETY = 2048
 const MIN_OUTPUT = 1024
-const DEFAULT_CHUNK_IDLE_MS = 60_000
+const DEFAULT_CHUNK_IDLE_MS = 300_000
 // Kilo default for the pre-content (time-to-first-content / prompt-processing)
 // bound. The provider's own request `timeout` signal is cleared once response
 // headers arrive (see `buildTimeoutSignal` in src/kilocode/provider/provider.ts),
