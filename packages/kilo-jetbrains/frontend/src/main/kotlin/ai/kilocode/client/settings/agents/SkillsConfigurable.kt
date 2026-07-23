@@ -1,20 +1,14 @@
 package ai.kilocode.client.settings.agents
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
-import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsBadge
+import ai.kilocode.client.settings.base.SettingsContentField
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
-import ai.kilocode.client.settings.base.SettingsListCell
-import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.ui.list.ActiveListSelection
-import ai.kilocode.client.settings.base.SettingsListView
-import ai.kilocode.client.settings.base.SettingsContentField
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.settings.base.SettingsPathDialog
 import ai.kilocode.client.settings.base.SettingsPathDialogHandle
@@ -23,11 +17,17 @@ import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.ConfigPatchDto
+import ai.kilocode.rpc.dto.SkillDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.SkillsPatchDto
-import ai.kilocode.rpc.dto.SkillDto
 import com.intellij.CommonBundle
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.actionSystem.ActionManager
@@ -49,16 +49,16 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import javax.swing.JComponent
+import javax.swing.JPanel
+import javax.swing.ListSelectionModel
+import javax.swing.ScrollPaneConstants
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
-import java.awt.BorderLayout
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.ScrollPaneConstants
-import javax.swing.ListSelectionModel
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -82,7 +82,7 @@ internal class SkillsSettingsUi(
         SettingsPathDialog(sourceDialogTitle(adding, path), value, if (path) choose else null)
     },
     private val edit: (SkillDto, Boolean) -> SkillEditDialogHandle = ::SkillEditDialog,
-) : SettingsListPanel(scope, SettingsListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private val cs = scope
     private var dir = dir
     private var skills = emptyMap<String, SkillDto>()
@@ -107,7 +107,7 @@ internal class SkillsSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<SettingsListItem> {
+    override suspend fun fetch(): List<ActiveListItem> {
         val items = withTimeoutOrNull(SKILL_LOAD_TIMEOUT_MS) {
             service<KiloAgentBehaviorService>().loadSkills(dir)
         } ?: throw SettingsMessageException(KiloBundle.message("settings.agentBehavior.skills.load.timeout"))
@@ -212,7 +212,7 @@ internal class SkillsSettingsUi(
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(items: List<SkillDto> = skills.values.toList()): List<SettingsListItem> = items.mapNotNull { skill ->
+    private fun rows(items: List<SkillDto> = skills.values.toList()): List<ActiveListItem> = items.mapNotNull { skill ->
         if (skill.location in draft.deleted) return@mapNotNull null
         item(skill)
     }
@@ -222,27 +222,27 @@ internal class SkillsSettingsUi(
         target.edited[skill.location]?.let { skill.copy(content = it) } ?: skill
     }
 
-    private fun item(skill: SkillDto) = object : SettingsListItem {
+    private fun item(skill: SkillDto) = object : ActiveListItem {
         override val key = key(skill)
         override val title = skill.name
         override val note = skill.location.takeUnless { builtin(it) }
         override val description = skill.description
         override val doubleClick = EDIT_CELL
         override val badges = listOf(
-            SettingsBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
+            ActiveListBadge(KiloBundle.message("settings.agentBehavior.badge.builtin"), UiStyle.Badge.Secondary),
         ).takeIf { builtin(skill.location) } ?: emptyList()
         override val cells = listOfNotNull(
-            SettingsListCell(
+            ActiveListCell(
                 OPEN_CELL,
                 KiloBundle.message("settings.agentBehavior.skills.openInEditor"),
                 primary = true,
             ).takeIf { skill.editable },
-            SettingsListCell(
+            ActiveListCell(
                 EDIT_CELL,
                 KiloBundle.message(if (skill.editable) "settings.agentBehavior.edit" else "common.open"),
                 primary = !skill.editable,
             ),
-            SettingsListCell(
+            ActiveListCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,
@@ -350,15 +350,13 @@ internal class SkillSourcesView(
     private val parent: SkillsSettingsUi,
     private val source: (Boolean, Boolean, String) -> SettingsPathDialogHandle,
 ) : Stack(ai.kilocode.client.ui.layout.StackAxis.VERTICAL, UiStyle.Gap.sm()) {
-    private val view = SettingsListView(
+    private val view = ActiveListView(
         KiloBundle.message("settings.agentBehavior.skills.sources.empty"),
-        SettingsListConfig.Preferred.copy(description = false, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
+        ActiveListConfig.Preferred.copy(description = false, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
     ) { key, id ->
         if (id == EDIT_CELL) edit(key)
     }
     private var cfg = SkillsConfigDto()
-
-    internal fun sourceList() = view.list
 
     init {
         border = JBUI.Borders.empty(UiStyle.Gap.pad(), 0, 0, 0)
@@ -406,13 +404,13 @@ internal class SkillSourcesView(
         parent.updateSources(cfg.paths, cfg.urls + url)
     }
 
-    private fun rows(config: SkillsConfigDto): List<SettingsListItem> {
+    private fun rows(config: SkillsConfigDto): List<ActiveListItem> {
         val paths = config.paths.map { source(PATH_PREFIX, it) }
         val urls = config.urls.map { source(URL_PREFIX, it) }
         return paths + urls
     }
 
-    private fun source(prefix: String, value: String) = object : SettingsListItem {
+    private fun source(prefix: String, value: String) = object : ActiveListItem {
         override val key = prefix + value
         override val title = value
         override val doubleClick = EDIT_CELL

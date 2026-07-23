@@ -1,9 +1,9 @@
 package ai.kilocode.client.settings.autoapprove
 
-import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListCellBounds
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -127,9 +127,9 @@ class SettingsInlineListTest : BasePlatformTestCase() {
             jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
             jList.doLayout()
 
-            assertFalse(settingsListCellBounds(jList, 0, false).containsKey("edit"))
+            assertFalse(activeListCellBounds(jList, 0, false).containsKey("edit"))
             jList.selectedIndex = 0
-            assertTrue(settingsListCellBounds(jList, 0, true).containsKey("edit"))
+            assertTrue(activeListCellBounds(jList, 0, true).containsKey("edit"))
 
             doubleClickRow(jList, 0)
 
@@ -249,11 +249,11 @@ class SettingsInlineListTest : BasePlatformTestCase() {
     private fun clickLevel(list: SettingsInlineList, key: String) {
         val jList = jbList(list)
         val model = jList.model
-        val idx = (0 until model.size).first { (model.getElementAt(it) as SettingsListItem).key == key }
+        val idx = (0 until model.size).first { (model.getElementAt(it) as ActiveListItem).key == key }
         jList.selectedIndex = idx
         jList.setSize(400, jList.preferredSize.height.coerceAtLeast(50))
         jList.doLayout()
-        val bounds = settingsListCellBounds(jList, idx, true)["level"] ?: error("missing level cell for $key")
+        val bounds = activeListCellBounds(jList, idx, true)["level"] ?: error("missing level cell for $key")
         click(jList, Point(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2))
     }
 

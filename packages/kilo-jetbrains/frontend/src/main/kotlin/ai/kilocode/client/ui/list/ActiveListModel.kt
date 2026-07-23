@@ -35,6 +35,7 @@ internal data class ActiveListCell(
     val id: String,
     val label: String,
     val enabled: Boolean = true,
+    /** Show this button even when the row is not the active focused selection. */
     val alwaysVisible: Boolean = false,
     val icon: Icon? = null,
     val iconOnly: Boolean = false,
@@ -44,8 +45,8 @@ internal data class ActiveListCell(
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
  * list, and the session history stack: a leading icon, a bold title with an inline [note], a
- * secondary [description] line, inline [badges], trailing right-aligned [meta] text, and
- * selection-revealed action [cells].
+ * secondary [description] line, inline [badges], and action [cells]. Action cells are shown only
+ * for the active focused selection unless [ActiveListCell.alwaysVisible] is true.
  */
 internal interface ActiveListItem {
     val key: String
@@ -54,8 +55,6 @@ internal interface ActiveListItem {
     val description: String? get() = null
     /** Hover tooltip text; defaults to [description] when not overridden. */
     val tooltip: String? get() = description
-    /** Right-aligned secondary text shown before the action cells (e.g. a relative timestamp). */
-    val meta: String? get() = null
     val doubleClick: String? get() = null
     val icon: Icon? get() = null
     val section: String? get() = null
@@ -72,9 +71,9 @@ internal fun activeListSectionTitle(items: List<ActiveListItem>, index: Int): St
     return if (prev?.section != item.section) item.section else null
 }
 
-internal fun activeListVisibleCells(item: ActiveListItem, selected: Boolean): List<ActiveListCell> {
+internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List<ActiveListCell> {
     if (item.disabled) return emptyList()
-    return item.cells.filter { selected || it.alwaysVisible }
+    return item.cells.filter { active || it.alwaysVisible }
 }
 
 internal fun activeListCellGap() = JBUI.scale(CELL_GAP)

@@ -29,18 +29,18 @@ internal class ActiveListRenderer(
         border = JBUI.Borders.empty()
         add(sep, BorderLayout.NORTH)
     }
-    private val icon = JBLabel()
-    private val mark = icon.align(HAlign.CENTER, VAlign.TOP)
+    // Pin the glyph to the top of the label so a stretched icon column keeps the icon on the
+    // first text line instead of centering it across a multi-line row.
+    private val icon = JBLabel().apply { verticalAlignment = SwingConstants.TOP }
+    private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
     private val title = SimpleColoredComponent()
     private val badges = Stack.horizontal()
-    private val head = Stack.horizontal(UiStyle.Gap.xs()).next(title).next(badges)
+    private val header = Stack.horizontal(UiStyle.Gap.xs()).next(title).next(badges)
     private val desc = JBLabel()
-    private val text = Stack.vertical().next(head).next(desc)
-    private val textPane = text.align(HAlign.TRACK, if (cfg.description) VAlign.FIT else VAlign.CENTER)
-    private val meta = JBLabel()
+    private val text = Stack.vertical().next(header).next(desc)
+    private val textPane = text.align(HAlign.TRACK, VAlign.TOP)
     private val cells = Stack.horizontal(activeListCellGap())
-    private val trail = Stack.horizontal(UiStyle.Gap.md()).next(meta).next(cells)
-    private val cellPane = trail.align(HAlign.RIGHT, VAlign.CENTER)
+    private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
@@ -51,7 +51,7 @@ internal class ActiveListRenderer(
     init {
         isOpaque = true
         top.isOpaque = true
-        UiStyle.Components.transparent(row, mark, icon, title, badges, head, text, textPane, desc, meta, trail, cells, cellPane)
+        UiStyle.Components.transparent(row, mark, icon, title, badges, header, text, textPane, desc, cells, cellPane)
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
             0,
@@ -101,15 +101,10 @@ internal class ActiveListRenderer(
         }
         desc.foreground = weak
 
-        val noteRight = value.meta.orEmpty()
-        meta.text = noteRight
-        meta.isVisible = noteRight.isNotBlank()
-        meta.foreground = weak
-
         // In-place action buttons follow the selection highlight: only when the selection is
         // visible (list focused, or an owned popup is active). An unfocused list hides them.
         syncCells(value, active && list.isEnabled, list.isEnabled)
-        cellPane.isVisible = meta.isVisible || cells.isVisible
+        cellPane.isVisible = cells.isVisible
         top.invalidate()
         return this
     }

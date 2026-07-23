@@ -2,15 +2,15 @@ package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.settings.base.SettingsBadge
-import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListCell
-import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.settings.base.SettingsMessageException
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
@@ -23,10 +23,10 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.ui.Messages
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
+import javax.swing.JComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.swing.JComponent
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -46,7 +46,7 @@ internal class McpSettingsUi(
     cs: CoroutineScope,
     dir: String,
     private val create: (String, McpConfigDto) -> McpEditDialogHandle = ::McpEditDialog,
-) : SettingsListPanel(cs, SettingsListConfig.Equal.copy(description = false)) {
+) : SettingsListPanel(cs, ActiveListConfig.Equal.copy(description = false)) {
     private var dir = dir
 
     private var servers: Map<String, McpServerConfigDto> = emptyMap()
@@ -61,7 +61,7 @@ internal class McpSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<SettingsListItem> {
+    override suspend fun fetch(): List<ActiveListItem> {
         val behavior = service<KiloAgentBehaviorService>()
         val cfg = behavior.mcpConfig(dir)
         withContext(edt) { servers = cfg }
@@ -96,7 +96,7 @@ internal class McpSettingsUi(
             foreground = UIUtil.getContextHelpForeground()
         })
 
-    private fun item(name: String, cfg: McpConfigDto?, status: McpStatusDto?) = object : SettingsListItem {
+    private fun item(name: String, cfg: McpConfigDto?, status: McpStatusDto?) = object : ActiveListItem {
         override val key = name
         override val title = name
         override val description = description(cfg, status)
@@ -113,22 +113,22 @@ internal class McpSettingsUi(
         return parts.joinToString(" - ").takeIf { it.isNotBlank() }
     }
 
-    private fun badges(cfg: McpConfigDto?, status: McpStatusDto?): List<SettingsBadge> = listOfNotNull(
-        SettingsBadge(statusLabel(status), statusStyle(status)).takeIf { status != null },
-        SettingsBadge(cfg?.type ?: KiloBundle.message("settings.agentBehavior.mcp.configured")).takeIf { cfg != null },
+    private fun badges(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveListBadge> = listOfNotNull(
+        ActiveListBadge(statusLabel(status), statusStyle(status)).takeIf { status != null },
+        ActiveListBadge(cfg?.type ?: KiloBundle.message("settings.agentBehavior.mcp.configured")).takeIf { cfg != null },
     )
 
-    private fun cells(cfg: McpConfigDto?, status: McpStatusDto?): List<SettingsListCell> = listOfNotNull(
+    private fun cells(cfg: McpConfigDto?, status: McpStatusDto?): List<ActiveListCell> = listOfNotNull(
         connect(status?.status == CONNECTED),
-        SettingsListCell(AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.signIn")).takeIf {
+        ActiveListCell(AUTH_CELL, KiloBundle.message("settings.agentBehavior.mcp.signIn")).takeIf {
             status?.status == NEEDS_AUTH
         },
-        SettingsListCell(
+        ActiveListCell(
             EDIT_CELL,
             KiloBundle.message("settings.agentBehavior.edit"),
             primary = true,
         ).takeIf { cfg != null },
-        SettingsListCell(
+        ActiveListCell(
             REMOVE_CELL,
             KiloBundle.message("common.delete"),
             icon = AllIcons.Actions.GC,
@@ -136,7 +136,7 @@ internal class McpSettingsUi(
         ).takeIf { cfg != null },
     )
 
-    private fun connect(connected: Boolean) = SettingsListCell(
+    private fun connect(connected: Boolean) = ActiveListCell(
         if (connected) DISCONNECT_CELL else CONNECT_CELL,
         if (connected) KiloBundle.message("settings.agentBehavior.mcp.disconnect")
         else KiloBundle.message("settings.agentBehavior.mcp.connect"),

@@ -1,8 +1,10 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -22,8 +24,8 @@ internal class ActiveList(
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     onActivate: ((ActiveListItem) -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    val view = ActiveListView(emptyText, cfg, matcher, onActivate, onCell)
-    val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
+    private val view = ActiveListView(emptyText, cfg, matcher, onActivate, onCell)
+    private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
 
     init {
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
@@ -49,6 +51,27 @@ internal class ActiveList(
     fun filter(query: String) {
         view.filter(query)
     }
+
+    @RequiresEdt
+    fun select(key: String): Boolean = view.select(key)
+
+    @RequiresEdt
+    fun selectIndex(index: Int) = view.selectIndex(index)
+
+    @RequiresEdt
+    fun selectedIndex(): Int = view.selectedIndex()
+
+    @RequiresEdt
+    fun selected(): ActiveListItem? = view.selected()
+
+    @RequiresEdt
+    fun point(key: String, cell: String? = null): RelativePoint = view.point(key, cell)
+
+    @RequiresEdt
+    fun focusList() = view.focusList()
+
+    @RequiresEdt
+    fun trackBalloon(balloon: Balloon) = view.trackBalloon(balloon)
 
     @RequiresEdt
     fun setBusy(value: Boolean) {

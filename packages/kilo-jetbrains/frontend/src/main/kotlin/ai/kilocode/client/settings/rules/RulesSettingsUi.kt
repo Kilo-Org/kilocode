@@ -8,21 +8,20 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.SettingsContentField
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
-import ai.kilocode.client.settings.base.SettingsListCell
-import ai.kilocode.client.settings.base.SettingsListConfig
-import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
-import ai.kilocode.client.settings.base.SettingsListSelection
+import ai.kilocode.client.settings.base.SettingsPathDialog
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.settings.base.SettingsToolbarAction
-import ai.kilocode.client.settings.base.SettingsPathDialog
 import ai.kilocode.client.settings.base.settingsChoosePath
 import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -43,16 +42,16 @@ import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import java.nio.charset.StandardCharsets
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import javax.swing.JComponent
 import javax.swing.ScrollPaneConstants
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private val edt = Dispatchers.EDT + ModalityState.any().asContextElement()
 
@@ -67,7 +66,7 @@ internal class RulesSettingsUi(
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
     private val agent: KiloAgentBehaviorService = service(),
-) : SettingsListPanel(scope, SettingsListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
+) : SettingsListPanel(scope, ActiveListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private val cs = scope
     private val state = SettingsDraftState(rulesDraft(app.state.value.config, false), ::savedMatches)
     private val draft get() = state.draft
@@ -81,7 +80,7 @@ internal class RulesSettingsUi(
         reload()
     }
 
-    override suspend fun fetch(): List<SettingsListItem> {
+    override suspend fun fetch(): List<ActiveListItem> {
         val compat = agent.claudeCodeCompat()
         return withContext(edt) {
             state.accept(rulesDraft(app.state.value.config, compat))
@@ -230,23 +229,23 @@ internal class RulesSettingsUi(
         verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
     }
 
-    private fun rows(): List<SettingsListItem> = draft.instructions.map { item(it) }
+    private fun rows(): List<ActiveListItem> = draft.instructions.map { item(it) }
 
-    private fun item(value: String) = object : SettingsListItem {
+    private fun item(value: String) = object : ActiveListItem {
         override val key = value
         override val title = value
         override val doubleClick = EDIT_CELL
         override val cells = listOf(
-            SettingsListCell(
+            ActiveListCell(
                 OPEN_CELL,
                 KiloBundle.message("settings.rules.files.openInEditor"),
                 primary = true,
             ),
-            SettingsListCell(
+            ActiveListCell(
                 EDIT_CELL,
                 KiloBundle.message("settings.agentBehavior.edit"),
             ),
-            SettingsListCell(
+            ActiveListCell(
                 DELETE_CELL,
                 KiloBundle.message("common.delete"),
                 icon = AllIcons.Actions.GC,

@@ -137,6 +137,12 @@ internal class ActiveListView(
     }
 
     @RequiresEdt
+    fun selectedKeys(): List<String> {
+        checkEdt()
+        return selectedItems().map { it.key }
+    }
+
+    @RequiresEdt
     fun selectedIndex(): Int {
         checkEdt()
         return list.selectedIndex
@@ -155,6 +161,24 @@ internal class ActiveListView(
     fun selectIndex(index: Int) {
         checkEdt()
         choose(index)
+    }
+
+    @RequiresEdt
+    fun setSelectionMode(mode: Int) {
+        checkEdt()
+        list.selectionMode = mode
+    }
+
+    @RequiresEdt
+    fun setListMinimumSize(size: Dimension) {
+        checkEdt()
+        list.minimumSize = size
+    }
+
+    @RequiresEdt
+    fun item(key: String): ActiveListItem? {
+        checkEdt()
+        return model.items.firstOrNull { it.key == key }
     }
 
     @RequiresEdt

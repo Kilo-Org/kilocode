@@ -2,21 +2,21 @@ package ai.kilocode.client.settings.agents
 
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.settings.base.BaseContentPanel
-import ai.kilocode.client.settings.base.SettingsListActionCell
-import ai.kilocode.client.settings.base.SettingsListCell
 import ai.kilocode.client.settings.base.SettingsRow
 import ai.kilocode.client.settings.base.SettingsRows
 import ai.kilocode.client.settings.base.SettingsStackedRow
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
+import ai.kilocode.client.ui.list.ActiveListActionCell
+import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.rpc.dto.McpConfigDto
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.ui.CollectionListModel
 import com.intellij.ui.ScrollingUtil
-import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.intellij.ui.components.JBTextField
@@ -34,8 +34,8 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
-import javax.swing.Scrollable
 import javax.swing.ScrollPaneConstants
+import javax.swing.Scrollable
 import javax.swing.SwingConstants
 
 internal interface McpEditDialogHandle {
@@ -287,8 +287,8 @@ internal class McpEditDialog(
         companion object {
             fun actionSize(): Dimension = action().preferredSize
 
-            private fun action() = SettingsListActionCell().apply {
-                update(SettingsListCell(
+            private fun action() = ActiveListActionCell().apply {
+                update(ActiveListCell(
                     "delete",
                     KiloBundle.message("common.delete"),
                     icon = AllIcons.Actions.GC,

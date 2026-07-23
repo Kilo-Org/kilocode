@@ -62,7 +62,7 @@ class AgentManagerPanel(
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the muted, inactive highlight it would get while focus stays on the toolbar.
-            if (list.view.select(key)) list.view.focusList()
+            if (list.select(key)) list.focusList()
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
     }
@@ -88,8 +88,8 @@ class AgentManagerPanel(
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
-        val idx = list.view.selectedIndex().takeIf { it >= 0 } ?: controller.model.getElementIndex(item)
-        val balloon = showWorktreeDeletePopup(list.view.point(item.id, cell), item) { force ->
+        val idx = list.selectedIndex().takeIf { it >= 0 } ?: controller.model.getElementIndex(item)
+        val balloon = showWorktreeDeletePopup(list.point(item.id, cell), item) { force ->
             controller.remove(
                 item,
                 force,
@@ -97,7 +97,7 @@ class AgentManagerPanel(
                 onFailure = { result -> notifyFailed(item, result, force) },
             )
         }
-        list.view.trackBalloon(balloon)
+        list.trackBalloon(balloon)
     }
 
     /**
@@ -107,8 +107,8 @@ class AgentManagerPanel(
      */
     private fun restoreFocus(index: Int) {
         val size = controller.model.size
-        if (size > 0) list.view.selectIndex(index.coerceIn(0, size - 1))
-        list.view.focusList()
+        if (size > 0) list.selectIndex(index.coerceIn(0, size - 1))
+        list.focusList()
     }
 
     private fun notifyCreateFailed(err: String?) {
@@ -173,7 +173,7 @@ class AgentManagerPanel(
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider
     }
 
-    private fun selectedRow(): WorktreeRow? = list.view.selected() as? WorktreeRow
+    private fun selectedRow(): WorktreeRow? = list.selected() as? WorktreeRow
 
     private inner class WorktreeDeleteProvider : DeleteProvider {
         override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
