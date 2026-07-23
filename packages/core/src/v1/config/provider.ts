@@ -119,7 +119,7 @@ export const Info = Schema.Struct({
         // watchdog. PositiveInt already excludes 0, so a public zero stays invalid.
         chunkTimeout: Schema.optional(Schema.Union([PositiveInt, Schema.Literal(false)])).annotate({
           description:
-            "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted. Set to false to disable the idle watchdog.",
+            "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted. Set to false to disable the idle watchdog. The pre-content bound is only shape-aware for OpenAI-compatible SSE and otherwise uses the request `timeout` budget.",
         }),
       }),
       [Schema.Record(Schema.String, Schema.Any)],
