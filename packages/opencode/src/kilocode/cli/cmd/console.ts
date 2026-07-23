@@ -9,8 +9,8 @@ import { warnPort } from "@/kilocode/cli/port-warning"
 import { hasDisplay } from "@/kilocode/cli/cmd/tui/util/display"
 import { StopCommand } from "@/kilocode/cli/cmd/daemon"
 
-function browserUrl(state: Daemon.State) {
-  const url = new URL("/console", state.url)
+function withCredentials(base: string, state: Daemon.State) {
+  const url = new URL("/console", base)
   url.username = state.username
   url.password = state.password
   return url.toString()
@@ -56,11 +56,11 @@ const OpenCommand = cmd({
       if (daemon.restarted) console.warn("Restarted the Kilo daemon to apply the requested network options")
 
       const urls = state.urls ?? serverUrls(state.hostname, state.port)
-      const consoleLocal = `${urls.local}/console`
-      const consoleNetwork = urls.network ? `${urls.network}/console` : undefined
+      const consoleLocal = withCredentials(urls.local, state)
+      const consoleNetwork = urls.network ? withCredentials(urls.network, state) : undefined
 
       if (hasDisplay()) {
-        await launch(browserUrl(state)).catch((err) => {
+        await launch(consoleLocal).catch((err) => {
           console.warn(`Could not open browser automatically: ${err instanceof Error ? err.message : String(err)}`)
         })
       } else {
