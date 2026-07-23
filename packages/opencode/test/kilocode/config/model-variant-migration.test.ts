@@ -110,7 +110,7 @@ describe("KilocodeModelVariantMigration.plan", () => {
 })
 
 describe("KilocodeModelVariantMigration.run", () => {
-  test("leaves_malformed_json_without_a_completion_marker", async () => {
+  test("leaves_malformed_json_unchanged_without_updating_config", async () => {
     const updates: Array<{ config: Config.Info; options: { dispose?: boolean } | undefined }> = []
     const state = "{ malformed"
     await writeFile(file("model.json"), state)
@@ -121,17 +121,14 @@ describe("KilocodeModelVariantMigration.run", () => {
 
     expect(updates).toEqual([])
     expect(await Bun.file(file("model.json")).text()).toBe(state)
-    expect(await Bun.file(file("kilocode-migrations.json")).exists()).toBe(false)
   })
 
-  test("migrates_despite_a_stale_completion_marker", async () => {
+  test("migrates_matching_legacy_variant_and_cleans_source", async () => {
     const updates: Array<{ config: Config.Info; options: { dispose?: boolean } | undefined }> = []
     await writeState({
       model: { code: { providerID: "anthropic", modelID: "claude-sonnet" } },
       variant: { "anthropic/claude-sonnet": "high" },
     })
-    await writeFile(file("kilocode-migrations.json"), JSON.stringify({ agentVariantConfigV1: "0.0.0-old" }, null, 2))
-
     await Effect.runPromise(
       KilocodeModelVariantMigration.run({ config: { agent: {} } as Config.Info, update: update(updates) }),
     )
