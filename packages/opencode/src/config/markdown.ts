@@ -67,30 +67,76 @@ export function fallbackSanitization(content: string): string {
   return content.replace(frontmatter, () => processed)
 }
 
-// kilocode_change start - accept source trust and confine untrusted markdown source reads
+// kilocode_change start - extract clean details from gray-matter YAML errors when possible
+function yamlError(err: unknown) {
+  if (!(err instanceof Error)) return { reason: String(err) }
+  const reason = "reason" in err && typeof err.reason === "string" ? err.reason : err.message.split("\n", 1)[0]
+  if ("mark" in err && err.mark && typeof err.mark === "object") {
+    const mark = err.mark as { line?: number; column?: number }
+    return {
+      reason,
+      line: mark.line === undefined ? undefined : mark.line + 1,
+      column: mark.column === undefined ? undefined : mark.column + 1,
+    }
+  }
+  if ("line" in err && typeof err.line === "number") {
+    const column = "column" in err && typeof err.column === "number" ? err.column : undefined
+    return { reason, line: err.line, column }
+  }
+  return { reason }
+}
+
+function formatFrontmatterError(filePath: string, err: unknown): string {
+  const detail = yamlError(err)
+  const loc =
+    detail.line !== undefined
+      ? ` at line ${detail.line}${detail.column !== undefined ? `, column ${detail.column}` : ""}`
+      : ""
+  return `${filePath}: Failed to parse YAML frontmatter${loc}: ${detail.reason}`
+}
+
+function isDuplicateKeyError(err: unknown): boolean {
+  if (!(err instanceof Error) || err.name !== "YAMLException") return false
+  const reason = "reason" in err && typeof err.reason === "string" ? err.reason : err.message
+  return /duplicate/i.test(reason) && /key/i.test(reason)
+}
+// kilocode_change end
+
+// kilocode_change start - expose structured errors while substituting content and retrying invalid frontmatter
+// kilocode_change - accept source trust and confine untrusted markdown source reads
 export async function parse(filePath: string, options: KilocodeMarkdown.Options) {
   const template = options.trusted
     ? await Filesystem.readText(filePath)
     : await KilocodeMarkdown.read(filePath, options)
-  // kilocode_change end
 
-  // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization
+  // substitute content and retry invalid frontmatter with permissive sanitization
   try {
     const md = matter(template)
     md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
     return md
-  } catch {
-    try {
-      const md = matter(fallbackSanitization(template))
-      md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
-      return md
-    } catch (err) {
+  } catch (err) {
+    // Duplicate keys are a real configuration error; do not paper over them with the permissive fallback.
+    if (isDuplicateKeyError(err)) {
       throw new FrontmatterError(
         {
           path: filePath,
-          message: `${filePath}: Failed to parse YAML frontmatter: ${err instanceof Error ? err.message : String(err)}`,
+          message: formatFrontmatterError(filePath, err),
         },
         { cause: err },
+      )
+    }
+    try {
+      // Passing options bypasses gray-matter's cache, which retains the partial file from the failed first parse.
+      const md = matter(fallbackSanitization(template), {})
+      md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
+      return md
+    } catch (fallbackErr) {
+      throw new FrontmatterError(
+        {
+          path: filePath,
+          message: formatFrontmatterError(filePath, fallbackErr),
+        },
+        { cause: fallbackErr },
       )
     }
   }

@@ -22,6 +22,7 @@ import { BUILTIN_COMMANDS } from "@/kilocode/session/builtin-commands" // kiloco
 import { legacyReviewMessage } from "@/kilocode/review/command" // kilocode_change
 import { zod } from "@opencode-ai/core/effect-zod" // kilocode_change
 import { withStatics } from "@opencode-ai/core/schema" // kilocode_change
+import { configEntryNameFromPath } from "@/config/entry-name" // kilocode_change
 import { SessionID, MessageID, PartID } from "./schema"
 import type { NotFoundError } from "@/storage/storage"
 import { MessageV2 } from "./message-v2"
@@ -160,6 +161,24 @@ export const layer = Layer.effect(
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
+
+    // kilocode_change start - helper to enrich "Agent not found" with frontmatter parse warnings
+    const prefixes = ["agent/", "agents/", "mode/", "modes/"]
+    const entry = (file: string) => {
+      const normalized = file.replaceAll("\\", "/")
+      const relative = normalized.match(/(?:^|\/)((?:agents?|modes?)\/.+)$/)?.[1]
+      return relative ? configEntryNameFromPath(relative, prefixes) : undefined
+    }
+    const agentNotFoundMessage = Effect.fn("SessionPrompt.agentNotFoundMessage")(function* (name: string) {
+      const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
+      const hint = available.length ? ` Available agents: ${available.join(", ")}.` : ""
+      const list = yield* config.warnings()
+      const reason = list.find((warning) => entry(warning.path) === name)
+      if (reason)
+        return `Agent "${name}" could not be loaded because its config file has invalid frontmatter: ${reason.message}${hint}`
+      return `Agent not found: "${name}".${hint}`
+    })
+    // kilocode_change end
     const events = yield* EventV2Bridge.Service
     const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
@@ -381,9 +400,8 @@ export const layer = Layer.effect(
 
       const taskAgent = yield* agents.get(task.agent)
       if (!taskAgent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${task.agent}".${hint}` })
+        const message = yield* agentNotFoundMessage(task.agent) // kilocode_change
+        const error = new NamedError.Unknown({ message }) // kilocode_change
         yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
         throw error
       }
@@ -554,9 +572,8 @@ export const layer = Layer.effect(
             }
             const agent = yield* agents.get(input.agent)
             if (!agent) {
-              const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-              const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-              const error = new NamedError.Unknown({ message: `Agent not found: "${input.agent}".${hint}` })
+              const message = yield* agentNotFoundMessage(input.agent) // kilocode_change
+              const error = new NamedError.Unknown({ message }) // kilocode_change
               yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
               throw error
             }
@@ -757,11 +774,10 @@ export const layer = Layer.effect(
       const agentName = input.agent
       const ag = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!ag) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const message = yield* agentNotFoundMessage(agentName ?? "(none)") // kilocode_change
+        const error = new NamedError.Unknown({ message }) // kilocode_change
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
       yield* agents.guardRequirements(ag) // kilocode_change - enforce requirements before creating a turn
 
@@ -1617,9 +1633,8 @@ export const layer = Layer.effect(
 
         const agent = yield* agents.get(lastUser.agent)
         if (!agent) {
-          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-          const error = new NamedError.Unknown({ message: `Agent not found: "${lastUser.agent}".${hint}` })
+          const message = yield* agentNotFoundMessage(lastUser.agent) // kilocode_change
+          const error = new NamedError.Unknown({ message }) // kilocode_change
           yield* events.publish(Session.Event.Error, { sessionID, error: error.toObject() })
           throw error
         }
@@ -1966,9 +1981,8 @@ export const layer = Layer.effect(
       if (legacy) {
         const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo()
         if (!agent) {
-          const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-          const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-          const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
+          const message = yield* agentNotFoundMessage(agentName ?? "(none)")
+          const error = new NamedError.Unknown({ message })
           yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
           throw error
         }
@@ -2082,11 +2096,10 @@ export const layer = Layer.effect(
 
       const agent = agentName ? yield* agents.get(agentName) : yield* agents.defaultInfo() // kilocode_change
       if (!agent) {
-        const available = (yield* agents.list()).filter((a) => !a.hidden).map((a) => a.name)
-        const hint = available.length ? ` Available agents: ${available.join(", ")}` : ""
-        const error = new NamedError.Unknown({ message: `Agent not found: "${agentName}".${hint}` })
-        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() })
-        throw error
+        const message = yield* agentNotFoundMessage(agentName ?? "(none)") // kilocode_change
+        const error = new NamedError.Unknown({ message }) // kilocode_change
+        yield* events.publish(Session.Event.Error, { sessionID: input.sessionID, error: error.toObject() }) // kilocode_change
+        throw error // kilocode_change
       }
       yield* agents.guardRequirements(agent) // kilocode_change - command agent overrides must satisfy requirements
 

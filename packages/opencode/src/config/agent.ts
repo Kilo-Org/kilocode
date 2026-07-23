@@ -1,5 +1,7 @@
 export * as ConfigAgent from "./agent"
 
+export type { Warning } from "./config" // kilocode_change
+
 import path from "path"
 import * as Log from "@opencode-ai/core/util/log"
 import { Exit, Schema } from "effect"
@@ -41,7 +43,8 @@ export async function load(
         ? err.data.message
         : `Failed to parse agent ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const detail = FrontmatterError.isInstance(err) ? err.data.message : undefined
+      if (warnings) warnings.push({ path: item, message, detail })
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
@@ -50,7 +53,7 @@ export async function load(
         log.warn("could not publish session error", { message, err: error })
       }
       // kilocode_change end
-      log.error("failed to load agent", { agent: item, err })
+      log.error("failed to load agent", { agent: item, err: message }) // kilocode_change
       return undefined
     })
     if (!md) continue
@@ -122,7 +125,8 @@ export async function loadMode(
         ? err.data.message
         : `Failed to parse mode ${item}`
       // kilocode_change start
-      if (warnings) warnings.push({ path: item, message })
+      const detail = FrontmatterError.isInstance(err) ? err.data.message : undefined
+      if (warnings) warnings.push({ path: item, message, detail })
       try {
         const { capture } = await import("@/kilocode/instance")
         const ctx = capture()
@@ -131,7 +135,7 @@ export async function loadMode(
         log.warn("could not publish session error", { message, err: error })
       }
       // kilocode_change end
-      log.error("failed to load mode", { mode: item, err })
+      log.error("failed to load mode", { mode: item, err: message }) // kilocode_change
       return undefined
     })
     if (!md) continue
