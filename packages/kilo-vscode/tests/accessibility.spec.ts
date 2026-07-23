@@ -195,6 +195,12 @@ test.describe("webview accessibility ratchet", () => {
     await page.getByRole("button", { name: "Show open tabs" }).click()
     await page.locator('[data-slot="list-item"][data-key="current"]').click()
     await expect(prompt).toBeFocused()
+
+    // Enter without prior ArrowDown selects the first filtered result (noInitialSelection)
+    await page.getByRole("button", { name: "Show open tabs" }).click()
+    await input.fill("Review")
+    await input.press("Enter")
+    await expect(prompt).toBeFocused()
   })
 
   test("Search popovers expose accessible dialog names", async ({ page }) => {

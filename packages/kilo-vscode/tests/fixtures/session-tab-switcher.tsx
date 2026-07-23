@@ -132,6 +132,27 @@ async function selectFiltered() {
   assert.equal(document.activeElement, target, "Popover close stole focus from the prompt")
 }
 
+async function enterSelectsFirst() {
+  setItems(rows)
+  selected.length = 0
+  restored.length = 0
+  await settle()
+
+  await open()
+
+  const input = query<HTMLInputElement>('[data-slot="list-search"] input', "Switcher search did not render")
+  input.value = "ga"
+  input.dispatchEvent(new InputEvent("input", { bubbles: true, data: "ga", inputType: "insertText" }))
+  await settle()
+
+  input.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }))
+  await settle()
+
+  assert.deepEqual(selected, ["gamma"], "Enter did not select the first filtered result")
+  assert.deepEqual(restored, [true], "Prompt focus was not restored after Enter")
+  assert.equal(document.activeElement, target, "Popover close stole focus from the prompt")
+}
+
 async function deleteReopened() {
   await open()
 
@@ -166,6 +187,7 @@ async function closeToOne() {
 
 await closeFiltered()
 await selectFiltered()
+await enterSelectsFirst()
 await deleteReopened()
 await closeToOne()
 
