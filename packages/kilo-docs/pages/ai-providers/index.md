@@ -44,6 +44,7 @@ Run models on your own hardware for privacy and offline use:
 Route requests through unified APIs with additional features:
 
 - **[OpenRouter](/docs/ai-providers/openrouter)** - Access multiple providers through one API
+- **[TrustedRouter](/docs/ai-providers/trustedrouter)** - OpenAI-compatible access to attested routing, ZDR routing, and E2E encrypted model routes
 - **[Requesty](/docs/ai-providers/requesty)** - Smart routing and fallbacks
 - **[Cloudflare AI Gateway](/docs/ai-providers/cloudflare)** - Route providers through your Cloudflare account
 
