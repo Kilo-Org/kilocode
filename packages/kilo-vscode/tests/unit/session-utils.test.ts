@@ -3,6 +3,7 @@ import {
   computeStatus,
   calcTotalCost,
   calcContextUsage,
+  latestContextUsage,
   calcTokenUsage,
   aggregateMetrics,
   latestMetrics,
@@ -182,6 +183,31 @@ describe("calcContextUsage", () => {
     const result = calcContextUsage({ input: 100, output: 0 }, 1000)
     expect(result.tokens).toBe(100)
     expect(result.percentage).toBe(10)
+  })
+})
+describe("latestContextUsage", () => {
+  it("uses the active model limit instead of assistant message metadata", () => {
+    const result = latestContextUsage(
+      [
+        {
+          role: "assistant",
+          providerID: "old-provider",
+          modelID: "old-large-context-model",
+          tokens: { input: 64_000, output: 0 },
+        },
+      ],
+      { limit: { context: 32_000 } },
+    )
+
+    expect(result).toEqual({ tokens: 64_000, percentage: 200 })
+  })
+
+  it("uses contextLength when provider metadata has no limit shape", () => {
+    const result = latestContextUsage([{ role: "assistant", tokens: { input: 12_000, output: 0 } }], {
+      contextLength: 24_000,
+    })
+
+    expect(result).toEqual({ tokens: 12_000, percentage: 50 })
   })
 })
 
