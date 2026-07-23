@@ -21,7 +21,7 @@
     "dist"
   ],
   "devDependencies": {
-    "@hey-api/openapi-ts": "0.90.10",
+    "@hey-api/openapi-ts": "0.97.3",
     "@tsconfig/node22": "catalog:",
     "@types/cross-spawn": "catalog:",
     "@types/node": "catalog:",
