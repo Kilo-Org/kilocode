@@ -1,5 +1,5 @@
 ---
-"@kilocode/kilo": minor
+"@kilocode/cli": minor
 "@kilocode/sdk": minor
 ---
 
