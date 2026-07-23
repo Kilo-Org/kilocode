@@ -1,27 +1,57 @@
 import path from "path"
 import { describe, expect } from "bun:test"
-import { Effect, Fiber, Layer, Stream } from "effect"
+import { Effect, Layer } from "effect"
 import { Credential } from "@opencode-ai/core/credential"
-import { Connector } from "@opencode-ai/core/connector"
 import { Database } from "@opencode-ai/core/database/database"
-import { EventV2 } from "@opencode-ai/core/event"
+import { Integration } from "@opencode-ai/core/integration"
+// kilocode_change start
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Global } from "@opencode-ai/core/global"
-import { PluginV2 } from "@opencode-ai/core/plugin"
+// kilocode_change end
 import { tmpdir } from "./fixture/tmpdir"
-import { testEffect } from "./lib/effect"
+import { it } from "./lib/effect"
 
-const it = testEffect(PluginV2.locationLayer.pipe(Layer.provide(EventV2.defaultLayer)))
-
-function testLayer(directory: string) {
+function layer(directory: string) {
   return Credential.layer.pipe(
-    Layer.fresh,
+    Layer.fresh, // kilocode_change - rebuild so process-local credentials are re-read
     Layer.provide(Database.layerFromPath(path.join(directory, "credential.db")).pipe(Layer.fresh)),
-    Layer.provideMerge(EventV2.defaultLayer),
   )
 }
 
 describe("Credential", () => {
+  it.live("stores, updates, lists, and removes credentials", () =>
+    Effect.acquireRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ).pipe(
+      Effect.flatMap((tmp) =>
+        Effect.gen(function* () {
+          const credentials = yield* Credential.Service
+          const integrationID = Integration.ID.make("openai")
+          const created = yield* credentials.create({
+            integrationID,
+            label: "Work",
+            value: new Credential.Key({ type: "key", key: "secret" }),
+          })
+
+          expect(yield* credentials.list(integrationID)).toEqual([created])
+          yield* credentials.update(created.id, { label: "Personal" })
+          expect((yield* credentials.list(integrationID))[0]?.label).toBe("Personal")
+
+          const replacement = yield* credentials.create({
+            integrationID,
+            label: "Replacement",
+            value: new Credential.Key({ type: "key", key: "replacement" }),
+          })
+          expect(yield* credentials.list(integrationID)).toEqual([replacement])
+
+          yield* credentials.remove(replacement.id)
+          expect(yield* credentials.list(integrationID)).toEqual([])
+        }).pipe(Effect.provide(layer(tmp.path))),
+      ),
+    ),
+  )
+
   // kilocode_change start - process-provided credentials remain isolated from durable storage
   it.live("keeps valid KILO_AUTH_CONTENT credentials and isolated mutations process-local", () =>
     Effect.acquireUseRelease(
@@ -51,10 +81,11 @@ describe("Credential", () => {
               const service = yield* Credential.Service
               const all = yield* service.all()
               expect(all).toHaveLength(2)
-              const initial = yield* service.active(Connector.ID.make("kilocode"))
-              expect(initial).toMatchObject({
-                connectorID: Connector.ID.make("kilocode"),
-                methodID: Connector.MethodID.make("oauth"),
+              const kilocode = Integration.ID.make("kilocode")
+              const listed = yield* service.list(kilocode)
+              expect(listed).toHaveLength(1)
+              expect(listed[0]).toMatchObject({
+                integrationID: kilocode,
                 label: "Environment",
                 value: {
                   type: "oauth",
@@ -64,28 +95,24 @@ describe("Credential", () => {
                   metadata: { accountID: "organization" },
                 },
               })
-              expect(initial).toBeDefined()
-              if (!initial) return
 
               const created = yield* service.create({
-                connectorID: Connector.ID.make("kilocode"),
-                methodID: Connector.MethodID.make("api-key"),
+                integrationID: kilocode,
                 label: "Temporary",
                 value: new Credential.Key({ type: "key", key: "temporary" }),
               })
+              expect(yield* service.list(kilocode)).toEqual([created])
               yield* service.update(created.id, { label: "Updated" })
-              expect((yield* service.active(Connector.ID.make("kilocode")))?.label).toBe("Updated")
-              yield* service.activate(initial.id)
-              expect((yield* service.active(Connector.ID.make("kilocode")))?.id).toBe(initial.id)
-              yield* service.remove(initial.id)
-              expect((yield* service.active(Connector.ID.make("kilocode")))?.id).toBe(created.id)
+              expect((yield* service.list(kilocode))[0]?.label).toBe("Updated")
+              yield* service.remove(created.id)
+              expect(yield* service.list(kilocode)).toEqual([])
 
               delete process.env.KILO_AUTH_CONTENT
               const stored = yield* Effect.gen(function* () {
                 return yield* (yield* Credential.Service).all()
-              }).pipe(Effect.provide(testLayer(tmp.path)), Effect.scoped)
+              }).pipe(Effect.provide(layer(tmp.path)), Effect.scoped)
               expect(stored).toEqual([])
-            }).pipe(Effect.provide(testLayer(tmp.path))),
+            }).pipe(Effect.provide(layer(tmp.path))),
           ),
         ),
       (previous) =>
@@ -97,7 +124,6 @@ describe("Credential", () => {
   )
 
   it.live("reconciles supported legacy auth.json credentials on startup", () =>
-  // kilocode_change end
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -127,11 +153,7 @@ describe("Credential", () => {
             Layer.provide(FSUtil.defaultLayer),
             Layer.provide(global),
           )
-          const credentials = Credential.layer.pipe(
-            Layer.provide(database),
-            Layer.provide(EventV2.defaultLayer),
-            Layer.provideMerge(importer),
-          )
+          const credentials = Credential.layer.pipe(Layer.provide(database), Layer.provideMerge(importer))
           const result = yield* Effect.gen(function* () {
             const service = yield* Credential.Service
             return yield* service.all()
@@ -140,11 +162,11 @@ describe("Credential", () => {
           expect(result).toHaveLength(2)
           expect(result).toContainEqual(
             expect.objectContaining({
-              connectorID: Connector.ID.make("openai"),
-              methodID: Connector.MethodID.make("chatgpt-browser"),
+              integrationID: Integration.ID.make("openai"),
               label: "Imported",
               value: expect.objectContaining({
                 type: "oauth",
+                methodID: Integration.MethodID.make("chatgpt-browser"),
                 refresh: "refresh",
                 access: "access",
                 expires: 123,
@@ -154,22 +176,12 @@ describe("Credential", () => {
           )
           expect(result).toContainEqual(
             expect.objectContaining({
-              connectorID: Connector.ID.make("azure"),
-              methodID: Connector.MethodID.make("api-key"),
+              integrationID: Integration.ID.make("azure"),
               value: expect.objectContaining({ type: "key", key: "key", metadata: { resourceName: "resource" } }),
             }),
           )
 
-          // kilocode_change start - update the selected row when a released client changes auth.json.
-          const selected = yield* Effect.gen(function* () {
-            return yield* (yield* Credential.Service).create({
-              connectorID: Connector.ID.make("azure"),
-              methodID: Connector.MethodID.make("api-key"),
-              label: "Selected",
-              value: new Credential.Key({ type: "key", key: "selected" }),
-            })
-          }).pipe(Effect.provide(credentials), Effect.scoped)
-
+          // a released client can update auth.json after the import; the next startup reconciles the stored value
           yield* Effect.promise(() =>
             Bun.write(
               path.join(tmp.path, "auth.json"),
@@ -181,25 +193,18 @@ describe("Credential", () => {
             const service = yield* Credential.Service
             return {
               all: yield* service.all(),
-              active: yield* service.active(Connector.ID.make("azure")),
+              azure: yield* service.list(Integration.ID.make("azure")),
             }
           }).pipe(Effect.provide(credentials), Effect.scoped)
-          expect(after.all).toHaveLength(3)
-          expect(after.active).toMatchObject({
-            id: selected.id,
-            value: { type: "key", key: "updated" },
-          })
-          expect(
-            after.all.find((item) => item.connectorID === Connector.ID.make("azure") && item.id !== selected.id)?.value,
-          ).toMatchObject({ type: "key", key: "key" })
-          // kilocode_change end
+          expect(after.all).toHaveLength(2)
+          expect(after.azure).toHaveLength(1)
+          expect(after.azure[0]?.value).toMatchObject({ type: "key", key: "updated" })
         }),
       ),
     ),
   )
 
-  // kilocode_change start - retain downgrade-readable credential state
-  it.live("dual-writes active credentials for released auth.json readers", () =>
+  it.live("dual-writes stored credentials for released auth.json readers", () =>
     Effect.acquireRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
@@ -209,42 +214,34 @@ describe("Credential", () => {
         const global = Global.layerWith({ data: tmp.path })
         const credentials = Credential.layer.pipe(
           Layer.provide(database),
-          Layer.provide(EventV2.defaultLayer),
           Layer.provide(FSUtil.defaultLayer),
           Layer.provide(global),
         )
         return Effect.gen(function* () {
           const service = yield* Credential.Service
-          const connectorID = Connector.ID.make("legacy-reader")
-          const created = yield* service.create({
-            connectorID,
-            methodID: Connector.MethodID.make("api-key"),
+          const integrationID = Integration.ID.make("legacy-reader")
+          yield* service.create({
+            integrationID,
             value: new Credential.Key({ type: "key", key: "first" }),
           })
           expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
             "legacy-reader": { type: "api", key: "first" },
           })
 
-          const other = yield* service.create({
-            connectorID,
-            methodID: Connector.MethodID.make("api-key"),
+          const replacement = yield* service.create({
+            integrationID,
             value: new Credential.Key({ type: "key", key: "other" }),
           })
           expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
             "legacy-reader": { type: "api", key: "other" },
           })
-          yield* service.activate(created.id)
-          expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
-            "legacy-reader": { type: "api", key: "first" },
-          })
-          yield* service.remove(other.id)
 
-          yield* service.update(created.id, { value: new Credential.Key({ type: "key", key: "second" }) })
+          yield* service.update(replacement.id, { value: new Credential.Key({ type: "key", key: "second" }) })
           expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).toMatchObject({
             "legacy-reader": { type: "api", key: "second" },
           })
 
-          yield* service.remove(created.id)
+          yield* service.remove(replacement.id)
           expect(yield* Effect.promise(() => Bun.file(path.join(tmp.path, "auth.json")).json())).not.toHaveProperty(
             "legacy-reader",
           )
@@ -252,8 +249,7 @@ describe("Credential", () => {
           const file = path.join(tmp.path, "auth.json")
           yield* Effect.promise(() => Bun.write(file, "{"))
           yield* service.create({
-            connectorID: Connector.ID.make("malformed-reader"),
-            methodID: Connector.MethodID.make("api-key"),
+            integrationID: Integration.ID.make("malformed-reader"),
             value: new Credential.Key({ type: "key", key: "safe" }),
           })
           expect(yield* Effect.promise(() => Bun.file(file).text())).toBe("{")
@@ -262,8 +258,7 @@ describe("Credential", () => {
           yield* Effect.all(
             ["first-reader", "second-reader"].map((name) =>
               service.create({
-                connectorID: Connector.ID.make(name),
-                methodID: Connector.MethodID.make("api-key"),
+                integrationID: Integration.ID.make(name),
                 value: new Credential.Key({ type: "key", key: name }),
               }),
             ),
@@ -278,113 +273,4 @@ describe("Credential", () => {
     ),
   )
   // kilocode_change end
-
-  it.live("emits credential lifecycle events", () =>
-    Effect.acquireRelease(
-      Effect.promise(() => tmpdir()),
-      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
-    ).pipe(
-      Effect.flatMap((tmp) =>
-        Effect.gen(function* () {
-          const credentials = yield* Credential.Service
-          const eventSvc = yield* EventV2.Service
-          const addedFiber = yield* eventSvc
-            .subscribe(Credential.Event.Added)
-            .pipe(Stream.take(2), Stream.runCollect, Effect.forkScoped)
-          const switchedFiber = yield* eventSvc
-            .subscribe(Credential.Event.Switched)
-            .pipe(Stream.take(3), Stream.runCollect, Effect.forkScoped)
-          const removedFiber = yield* eventSvc
-            .subscribe(Credential.Event.Removed)
-            .pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped)
-
-          yield* Effect.yieldNow
-
-          const first = yield* credentials.create({
-            connectorID: Connector.ID.make("lifecycle"),
-            methodID: Connector.MethodID.make("key"),
-            value: new Credential.Key({ type: "key", key: "raw-key" }),
-          })
-          expect(first).toBeDefined()
-          if (!first) return
-          expect(first.label).toBe("default")
-          expect(first.value.type).toBe("key")
-          if (first.value.type === "key") expect(first.value.key).toBe("raw-key")
-
-          yield* credentials.update(first.id, { label: "keep" })
-          const updated = yield* credentials.get(first.id)
-          expect(updated?.label).toBe("keep")
-          expect(updated?.value.type).toBe("key")
-          if (updated?.value.type === "key") expect(updated.value.key).toBe("raw-key")
-
-          const second = yield* credentials.create({
-            connectorID: Connector.ID.make("lifecycle"),
-            methodID: Connector.MethodID.make("key"),
-            value: new Credential.Key({ type: "key", key: "second-key" }),
-          })
-          expect(second).toBeDefined()
-          if (!second) return
-
-          yield* credentials.remove(second.id)
-          const added = Array.from(yield* Fiber.join(addedFiber))
-          const switched = Array.from(yield* Fiber.join(switchedFiber))
-          const removed = Array.from(yield* Fiber.join(removedFiber))
-          expect(added.map((event) => event.data.credential.id)).toEqual([first.id, second.id])
-          expect(switched.map((event) => event.data)).toEqual([
-            { connectorID: Connector.ID.make("lifecycle"), from: undefined, to: first.id },
-            { connectorID: Connector.ID.make("lifecycle"), from: first.id, to: second.id },
-            { connectorID: Connector.ID.make("lifecycle"), from: second.id, to: first.id },
-          ])
-          expect(removed[0]?.data.credential.id).toBe(second.id)
-        }).pipe(Effect.provide(testLayer(tmp.path))),
-      ),
-    ),
-  )
-
-  it.live("always switches to newly created credentials", () =>
-    Effect.acquireRelease(
-      Effect.promise(() => tmpdir()),
-      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
-    ).pipe(
-      Effect.flatMap((tmp) =>
-        Effect.gen(function* () {
-          const credentials = yield* Credential.Service
-          const eventSvc = yield* EventV2.Service
-          const switchedFiber = yield* eventSvc
-            .subscribe(Credential.Event.Switched)
-            .pipe(Stream.take(3), Stream.runCollect, Effect.forkScoped)
-
-          yield* Effect.yieldNow
-
-          const first = yield* credentials.create({
-            connectorID: Connector.ID.make("switch"),
-            methodID: Connector.MethodID.make("key"),
-            value: new Credential.Key({ type: "key", key: "first-key" }),
-          })
-          const second = yield* credentials.create({
-            connectorID: Connector.ID.make("switch"),
-            methodID: Connector.MethodID.make("key"),
-            value: new Credential.Key({ type: "key", key: "second-key" }),
-          })
-          const third = yield* credentials.create({
-            connectorID: Connector.ID.make("switch"),
-            methodID: Connector.MethodID.make("key"),
-            value: new Credential.Key({ type: "key", key: "third-key" }),
-          })
-
-          expect(first).toBeDefined()
-          expect(second).toBeDefined()
-          expect(third).toBeDefined()
-          if (!first || !second || !third) return
-
-          expect((yield* credentials.active(Connector.ID.make("switch")))?.id).toBe(third.id)
-          expect(Array.from(yield* Fiber.join(switchedFiber)).map((event) => event.data)).toEqual([
-            { connectorID: Connector.ID.make("switch"), from: undefined, to: first.id },
-            { connectorID: Connector.ID.make("switch"), from: first.id, to: second.id },
-            { connectorID: Connector.ID.make("switch"), from: second.id, to: third.id },
-          ])
-        }).pipe(Effect.provide(testLayer(tmp.path))),
-      ),
-    ),
-  )
 })

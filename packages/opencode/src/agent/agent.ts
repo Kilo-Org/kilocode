@@ -380,6 +380,7 @@ export const layer = Layer.effect(
           item.permission = Permission.merge(item.permission, Permission.fromConfig(value.permission ?? {}))
           // kilocode_change start
           KiloAgent.processConfigItem(item)
+          KiloAgent.hardenPlan(key, item, ctx.worktree, user, Permission.fromConfig(value.permission ?? {}))
         }
 
         function referencePrompt(reference: KiloReference.Resolved) {

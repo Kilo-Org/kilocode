@@ -37,6 +37,14 @@
     [data-component="icon-button"][data-icon="thumbs-down"]:hover [data-slot="icon-svg"] path {
       fill: currentColor;
     }
+
+    /* Throughput badge sits to the right of the copy/feedback buttons,
+       beside them rather than beneath the message. */
+    [data-slot="assistant-throughput-inline"] {
+      margin-left: 6px;
+      display: flex;
+      align-items: center;
+    }
   }
 }
 
@@ -403,6 +411,9 @@ html[data-theme="kilo-vscode"] [data-component="bash-output"] {
   }
 
   [data-slot="user-message-queued-indicator"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     margin-top: 6px;
     margin-right: 2px;
     font-size: var(--font-size-small);

@@ -1,5 +1,19 @@
 # Changelog
 
+## 7.5.0
+
+### Minor Changes
+
+- [#12437](https://github.com/Kilo-Org/kilocode/pull/12437) [`af33ede`](https://github.com/Kilo-Org/kilocode/commit/af33eded9e4ac1988d218e911b5ff0d4e1b9d8b1) - Add Rules settings for instruction files and Claude Code compatibility. Fix cloud session history import failing with an HTTP 400 error.
+
+- [#12416](https://github.com/Kilo-Org/kilocode/pull/12416) [`a9a9b78`](https://github.com/Kilo-Org/kilocode/commit/a9a9b78b97290e855cda3dd7118a429503802396) - Support viewing, opening, editing, deleting, and configuring JetBrains skill sources.
+
+### Patch Changes
+
+- [#12291](https://github.com/Kilo-Org/kilocode/pull/12291) [`0672375`](https://github.com/Kilo-Org/kilocode/commit/067237564a170e84bc60f42b50bcba99ba9fe0c3) - Improve the JetBrains permission dialog with clearer auto-approve rule actions, hints, and command styling.
+
+- [#12291](https://github.com/Kilo-Org/kilocode/pull/12291) [`e9d0af5`](https://github.com/Kilo-Org/kilocode/commit/e9d0af577359e27728d4b47442d861ac2e5c6e1e) - Honor saved JetBrains bash permission rules when running with isolated dev storage.
+
 ## 7.4.12
 
 ### Patch Changes
@@ -69,6 +83,20 @@
 - [#12059](https://github.com/Kilo-Org/kilocode/pull/12059) [`8ea3f10`](https://github.com/Kilo-Org/kilocode/commit/8ea3f10495e28c8a131b805d51f8f7524895148b) - Increase spacing before non-initial user prompts in the JetBrains session transcript.
 
 ## [Unreleased]
+
+## [7.0.9] - 2026-07-21
+
+### Added
+
+- Add a Rules settings page under Agent Behavior for managing instruction files and Claude Code compatibility.
+
+### Fixed
+
+- Restore importing cloud-only session history by updating the JetBrains CLI pin to Kilo Core 7.4.13.
+
+### Changed
+
+- Improve xAI prompt cache usage in Kilo Core for better cache hit rates.
 
 ## [7.0.8] - 2026-07-21
 

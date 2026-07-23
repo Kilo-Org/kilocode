@@ -52,6 +52,10 @@ export namespace IngestQueue {
         type: "session_status"
         data: { status: "idle" | "busy" | "question" | "permission" | "retry" }
       }
+    | {
+        type: "agent_notification"
+        data: { id: string; message: string }
+      }
 
   type Share = {
     ingestPath: string
@@ -137,6 +141,10 @@ export namespace IngestQueue {
       if (item.type === "part") {
         const value = id(item.data)
         return value ? `part:${value}` : ulid()
+      }
+
+      if (item.type === "agent_notification") {
+        return `agent_notification:${item.data.id}`
       }
 
       const models = item.data

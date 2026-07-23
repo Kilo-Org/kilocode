@@ -1170,6 +1170,11 @@ export const dict = {
   "session.showHistory": "Prikaži historiju",
   "session.search.placeholder": "Pretraži sesije...",
   "session.empty": "Još nema sesija. Kliknite + za početak novog razgovora.",
+  "session.tabs.switcher.open": "Prikaži otvorene kartice",
+  "session.tabs.switcher.search": "Pretraži otvorene kartice...",
+  "session.tabs.switcher.current": "Trenutno",
+  "session.tabs.switcher.pending": "Novo",
+  "session.tabs.switcher.busy": "Radi",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
   "session.cloud.repoOnly": "Samo ovaj repozitorij",
@@ -1722,6 +1727,15 @@ export const dict = {
     "Odaberite da li će blokovi koji prikazuju izmjene koda i razlike u početku biti prošireni ili sažeti.",
   "settings.display.codeEdit.expanded": "Prošireni",
   "settings.display.codeEdit.collapsed": "Sažeti",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Zadani model",
   "settings.providers.defaultModel.description": "Primarni model za razgovore",
   "settings.providers.smallModel.title": "Mali model",

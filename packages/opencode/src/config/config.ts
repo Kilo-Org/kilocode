@@ -324,9 +324,15 @@ export const layer = Layer.effect(
       if (!data.$schema) {
         // kilocode_change start
         data.$schema = "https://app.kilo.ai/config.json"
-        const updated = text.replace(/^\s*\{/, '{\n  "$schema": "https://app.kilo.ai/config.json",')
+        const edits = modify(text, ["$schema"], "https://app.kilo.ai/config.json", {
+          formattingOptions: { insertSpaces: true, tabSize: 2 },
+          getInsertionIndex: () => 0,
+        })
+        const updated = applyEdits(text, edits)
+        if (updated !== text) {
+          yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
+        }
         // kilocode_change end
-        yield* fs.writeFileString(options.path, updated).pipe(Effect.catch(() => Effect.void))
       }
       return data
     })

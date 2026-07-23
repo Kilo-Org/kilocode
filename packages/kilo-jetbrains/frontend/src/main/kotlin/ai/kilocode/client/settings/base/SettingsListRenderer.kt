@@ -68,7 +68,7 @@ internal class SettingsListRenderer(
         selected: Boolean,
         focused: Boolean,
     ): JPanel {
-        val active = selected && (list.hasFocus() || (list as? SettingsListActive)?.active() == true)
+        val active = selected && (focused || list.hasFocus() || (list as? SettingsListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = if (active) fg else UiStyle.Colors.weak()
         val current = model.items.getOrNull(index)
@@ -99,7 +99,9 @@ internal class SettingsListRenderer(
         }
         desc.foreground = weak
 
-        syncCells(value, selected && list.isEnabled, list.isEnabled)
+        // In-place action buttons follow the selection highlight: only when the selection is
+        // visible (list focused, or an owned popup is active). An unfocused list hides them.
+        syncCells(value, active && list.isEnabled, list.isEnabled)
         top.invalidate()
         return this
     }

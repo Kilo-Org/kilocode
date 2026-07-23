@@ -1,0 +1,14 @@
+Send a push notification to the user's phone (Kilo mobile app).
+
+Use this tool ONLY for:
+- Notifications the user explicitly asked for ("ping me when the build finishes")
+- A significant milestone or anomaly during a long-running task that the user
+  would want to know about before the task finishes
+
+Do NOT use this tool:
+- To ask a question or request permission — the platform already notifies the user
+- To announce that the task is finished — the platform already sends a completion notification
+- For routine progress updates
+
+The message must be one short, concrete sentence. The notification automatically
+shows the session title; do not repeat it in the message.

@@ -228,6 +228,18 @@
   width: 100%;
 }
 
+[data-component="assistant-throughput"] {
+  /* Plain-text generation-speed value shown beside the copy/feedback buttons
+   * on an assistant message. Renders as muted metadata — no icon, no
+   * background, no border — so it reads as tertiary info that never
+   * competes with the action row for visual weight. */
+  color: var(--vscode-descriptionForeground);
+  font-family: var(--font-family-sans);
+  font-size: var(--kilo-font-size-11);
+  line-height: var(--line-height-normal);
+  font-variant-numeric: tabular-nums;
+}
+
 .vscode-session-turn-diffs {
   width: 100%;
 }

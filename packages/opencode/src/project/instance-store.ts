@@ -73,12 +73,20 @@ export const layer: Layer.Layer<Service, never, Project.Service | InstanceBootst
         return true
       })
 
+    // kilocode_change start - complete the deferred and drop failed entries on any exit,
+    // including interruption of the boot fiber when an enclosing scope closes. Otherwise a
+    // boot killed mid-flight leaves a never-resolving deferred in the cache and every later
+    // load or reload of that directory hangs forever.
     const completeLoad = (directory: string, input: LoadInput, entry: Entry) =>
-      Effect.gen(function* () {
-        const exit = yield* Effect.exit(boot({ ...input, directory }))
-        if (Exit.isFailure(exit)) yield* removeEntry(directory, entry)
-        yield* Deferred.done(entry.deferred, exit).pipe(Effect.asVoid)
-      })
+      Effect.suspend(() => boot({ ...input, directory })).pipe(
+        Effect.onExit((exit) =>
+          Effect.gen(function* () {
+            if (Exit.isFailure(exit)) yield* removeEntry(directory, entry)
+            yield* Deferred.done(entry.deferred, exit)
+          }),
+        ),
+      )
+    // kilocode_change end
 
     const emitDisposed = (input: { directory: string; project?: string }) =>
       Effect.sync(() =>

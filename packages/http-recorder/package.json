@@ -1,11 +1,10 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.4.13",
+  "version": "7.4.15",
   "name": "@opencode-ai/http-recorder",
   "description": "Record and replay Effect HTTP client traffic with deterministic cassettes",
   "type": "module",
   "license": "MIT",
-  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Kilo-Org/kilocode.git",
@@ -23,6 +22,9 @@
   ],
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "bun test --timeout 30000 --only-failures",
