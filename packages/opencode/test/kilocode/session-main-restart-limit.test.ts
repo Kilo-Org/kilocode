@@ -526,4 +526,63 @@ describe("session main restart limit", () => {
       ),
     30000,
   )
+
+  it.live(
+    "keeps assertNotBusy busy across the restart backoff window (Finding #2 concurrency)",
+    () =>
+      provideTmpdirServer(
+        Effect.fnUntraced(function* ({ llm }) {
+          process.env.KILO_SESSION_RETRY_LIMIT = "1"
+          process.env.KILO_MAIN_SESSION_RESTART_LIMIT = "3"
+          const prompt = yield* SessionPrompt.Service
+          const sessions = yield* Session.Service
+          const state = yield* SessionRunState.Service
+
+          // Use a real (non-zero) backoff so the backoff window is observable,
+          // and a Deferred to deterministically signal "we are now inside the
+          // backoff". The Kilo restart-loop busy hold is acquired BEFORE
+          // SessionRetry.delay is called, so when the spy fires the latch the
+          // hold is already active and assertNotBusy must report busy.
+          const inBackoff = yield* Deferred.make<void>()
+          delaySpy = spyOn(SessionRetry, "delay").mockImplementation((_attempt: number) => {
+            Effect.runFork(Deferred.succeed(inBackoff, undefined))
+            return 400
+          })
+
+          const chat = yield* sessions.create({
+            title: "Backoff concurrency",
+            permission: [{ permission: "*", pattern: "*", action: "allow" }],
+          })
+
+          // 1 initial turn + 3 restarts = 4 turns × 2 calls (initial + 1 layer-A retry) = 8, then exhausted.
+          for (let i = 0; i < 8; i++) yield* llm.error(500, serverError)
+
+          const promptFiber = yield* prompt
+            .prompt({ sessionID: chat.id, agent: "code", parts: [{ type: "text", text: "x" }] })
+            .pipe(Effect.forkChild)
+
+          // Wait until we are deterministically inside the first backoff window
+          yield* Deferred.await(inBackoff)
+          yield* Effect.yieldNow
+
+          // While the Kilo restart-loop busy hold is active, assertNotBusy must
+          // reject concurrent callers with a Session.BusyError — a concurrent
+          // revert or HTTP prompt must NOT be able to interleave during the gap
+          // between per-attempt ensureRunning calls.
+          const busy = yield* state.assertNotBusy(chat.id).pipe(Effect.flip)
+          expect(busy._tag).toBe("SessionBusyError")
+
+          // Let the prompt run to completion (exhaustion + onExit releases the hold).
+          const result = yield* Fiber.join(promptFiber)
+          expect(yield* llm.calls).toBe(8)
+          expect(errorOf(result)).toBeDefined()
+
+          // Sanity: after the prompt completes, the hold is released, so a fresh
+          // assertNotBusy for the same session now succeeds.
+          yield* state.assertNotBusy(chat.id)
+        }),
+        { git: true, config: providerCfg },
+      ),
+    30000,
+  )
 })

@@ -1905,99 +1905,17 @@ export const layer = Layer.effect(
     const loop: (input: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError> = Effect.fn(
       "SessionPrompt.loop",
     )(function* (input: LoopInput) {
-      // kilocode_change start - bounded automatic restart for stuck main sessions
-      const session = yield* sessions.get(input.sessionID)
-      let restartAttempts = 0
-
-      yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
-      yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
-      yield* KiloSession.publishTurnOpen({ sessionID: input.sessionID })
-
-      const terminalAssistant = (errored: MessageV2.Assistant, result: MessageV2.WithParts): MessageV2.WithParts => {
-        if (result.info.role === "assistant" && result.info.id === errored.id) {
-          result.info.error = errored.error
-          result.info.finish = errored.finish
-          return result
-        }
-        return { info: errored, parts: [] }
-      }
-
-      const result = yield* Effect.onExit(
-        Effect.gen(function* () {
-          while (true) {
-            yield* KiloSessionPrompt.recoverDanglingAssistant({ sessionID: input.sessionID, status, sessions })
-            yield* KiloSessionPrompt.recoverProviderFinishError({ sessionID: input.sessionID, status, sessions })
-
-            const result = yield* state.ensureRunning(
-              input.sessionID,
-              lastAssistant(input.sessionID).pipe(Effect.orDie),
-              runLoop(input).pipe(Effect.orDie),
-            ) // kilocode_change
-
-            // Capture any terminal error from the just-finished turn using the
-            // in-memory message set by runLoop. Never re-read .error from the DB:
-            // the persisted error is not reliably visible to the immediate post-turn
-            // read, which makes the restart decision flaky.
-            const errored = terminalErrors.get(input.sessionID)
-
-            // If the session has a parent (subagent), never auto-restart — parent-driven behavior only.
-            if (session.parentID !== undefined) {
-              if (errored) return terminalAssistant(errored, result)
-              return yield* lastAssistant(input.sessionID)
-            }
-
-            // Only root sessions restart, and only on a retryable terminal error.
-            if (!errored || !errored.error) {
-              return result
-            }
-
-            const retryable = SessionRetry.retryable(errored.error)
-            if (retryable === undefined) {
-              return terminalAssistant(errored, result)
-            }
-
-            // Check restart limit
-            restartAttempts++
-            const guard = KiloSessionPrompt.guardMainSessionRestart({
-              sessionID: input.sessionID,
-              attempts: restartAttempts,
-              closeReasons,
-              message: errored,
-            })
-            if (guard.exhausted) {
-              return terminalAssistant(errored, result)
-            }
-
-            // Remove the terminal-errored assistant tail before re-driving
-            yield* KiloSessionPrompt.recoverTerminalErrorTail({
-              sessionID: input.sessionID,
-              status,
-              sessions,
-              message: errored,
-            })
-
-            // Back off before restart
-            const backoff = SessionRetry.delay(restartAttempts)
-            yield* Effect.sleep(`${backoff} millis`)
-
-            // Continue to next restart iteration
-            continue
-          }
-        }),
-        Effect.fnUntraced(function* (exit) {
-          yield* KiloSession.publishTurnClose({
-            sessionID: input.sessionID,
-            parentID: session.parentID,
-            reason: KiloSessionPrompt.resolveCloseReason({
-              sessionID: input.sessionID,
-              closeReasons,
-              exit,
-            }),
-          })
-        }),
-      )
-
-      return result
+      // kilocode_change start - bounded automatic restart for stuck main sessions is delegated to KiloSessionPrompt
+      return yield* KiloSessionPrompt.driveMainSessionRestart({
+        loopInput: input,
+        state,
+        status,
+        sessions,
+        runLoop,
+        lastAssistant,
+        terminalErrors,
+        closeReasons,
+      })
       // kilocode_change end
     })
 

@@ -9,6 +9,9 @@ import { Session } from "@/session/session"
 import { Agent } from "@/agent/agent"
 import { Instance } from "@/kilocode/instance"
 import type { SessionStatus } from "@/session/status"
+import { SessionRunState } from "@/session/run-state"
+import { SessionRetry } from "@/session/retry"
+import type { LoopInput } from "@/session/prompt"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { PlanFollowup } from "@/kilocode/plan-followup"
 import { PlanFile } from "@/kilocode/plan-file"
@@ -578,6 +581,152 @@ export namespace KiloSessionPrompt {
       return true
     })
   }
+
+  /**
+   * Drives a user turn for a (root) main session, including the bounded
+   * automatic-restart loop for stuck turns. Extracted from the shared
+   * `SessionPrompt.loop` so the upstream file stays thin and the Kilo
+   * restart policy (and its concurrency hold, Finding #2) lives in one place.
+   *
+   * Concurrency: between restart attempts, the per-attempt `state.ensureRunning`
+   * call's runner is removed by its `onIdle` (which also flips SessionStatus
+   * to idle so the idle-gated `recoverTerminalErrorTail` can run). Without a
+   * hold, a concurrent `revert` or HTTP session handler would see `assertNotBusy`
+   * pass during the backoff window and race the re-drive. We acquire a
+   * reference-counted busy hold on `SessionRunState` for the entire loop and
+   * release it only AFTER `publishTurnClose` (so the TurnClose event is
+   * observed before any new turn can start). The hold is purely additive:
+   * `assertNotBusy` reports busy when EITHER the runner is busy OR the hold
+   * count is > 0; non-restart callers never acquire the hold, so their
+   * behavior is unchanged. The hold does not interact with the inner
+   * `ensureRunning` lifecycle, so it cannot deadlock the runner.
+   */
+  export const driveMainSessionRestart = Effect.fn("KiloSessionPrompt.driveMainSessionRestart")(function* (input: {
+    loopInput: LoopInput
+    state: SessionRunState.Interface
+    status: Pick<SessionStatus.Interface, "get">
+    sessions: Pick<Session.Interface, "get" | "messages" | "removeMessage">
+    runLoop: (li: LoopInput) => Effect.Effect<MessageV2.WithParts, NotFoundError>
+    lastAssistant: (sessionID: SessionID) => Effect.Effect<MessageV2.WithParts, NotFoundError>
+    terminalErrors: Map<string, MessageV2.Assistant>
+    closeReasons: Map<string, KiloSession.CloseReason>
+  }) {
+    const session = yield* input.sessions.get(input.loopInput.sessionID)
+    let restartAttempts = 0
+
+    yield* KiloSessionPrompt.recoverDanglingAssistant({
+      sessionID: input.loopInput.sessionID,
+      status: input.status,
+      sessions: input.sessions,
+    })
+    yield* KiloSessionPrompt.recoverProviderFinishError({
+      sessionID: input.loopInput.sessionID,
+      status: input.status,
+      sessions: input.sessions,
+    })
+    yield* KiloSession.publishTurnOpen({ sessionID: input.loopInput.sessionID })
+
+    // Acquire the busy hold BEFORE the first ensureRunning so that the
+    // assertNotBusy gate reports busy for the entire logically in-flight
+    // turn, including every backoff window between restart attempts.
+    const release = yield* input.state.acquireBusyHold(input.loopInput.sessionID)
+
+    const terminalAssistant = (errored: MessageV2.Assistant, result: MessageV2.WithParts): MessageV2.WithParts => {
+      if (result.info.role === "assistant" && result.info.id === errored.id) {
+        result.info.error = errored.error
+        result.info.finish = errored.finish
+        return result
+      }
+      return { info: errored, parts: [] }
+    }
+
+    return yield* Effect.onExit(
+      Effect.gen(function* () {
+        while (true) {
+          yield* KiloSessionPrompt.recoverDanglingAssistant({
+            sessionID: input.loopInput.sessionID,
+            status: input.status,
+            sessions: input.sessions,
+          })
+          yield* KiloSessionPrompt.recoverProviderFinishError({
+            sessionID: input.loopInput.sessionID,
+            status: input.status,
+            sessions: input.sessions,
+          })
+
+          const result = yield* input.state.ensureRunning(
+            input.loopInput.sessionID,
+            input.lastAssistant(input.loopInput.sessionID).pipe(Effect.orDie),
+            input.runLoop(input.loopInput).pipe(Effect.orDie),
+          )
+
+          // Capture any terminal error from the just-finished turn using the
+          // in-memory message set by runLoop. Never re-read .error from the DB:
+          // the persisted error is not reliably visible to the immediate post-turn
+          // read, which makes the restart decision flaky.
+          const errored = input.terminalErrors.get(input.loopInput.sessionID)
+
+          // If the session has a parent (subagent), never auto-restart — parent-driven behavior only.
+          if (session.parentID !== undefined) {
+            if (errored) return terminalAssistant(errored, result)
+            return yield* input.lastAssistant(input.loopInput.sessionID)
+          }
+
+          // Only root sessions restart, and only on a retryable terminal error.
+          if (!errored || !errored.error) {
+            return result
+          }
+
+          const retryable = SessionRetry.retryable(errored.error)
+          if (retryable === undefined) {
+            return terminalAssistant(errored, result)
+          }
+
+          // Check restart limit
+          restartAttempts++
+          const guard = KiloSessionPrompt.guardMainSessionRestart({
+            sessionID: input.loopInput.sessionID,
+            attempts: restartAttempts,
+            closeReasons: input.closeReasons,
+            message: errored,
+          })
+          if (guard.exhausted) {
+            return terminalAssistant(errored, result)
+          }
+
+          // Remove the terminal-errored assistant tail before re-driving
+          yield* KiloSessionPrompt.recoverTerminalErrorTail({
+            sessionID: input.loopInput.sessionID,
+            status: input.status,
+            sessions: input.sessions,
+            message: errored,
+          })
+
+          // Back off before restart (hold keeps assertNotBusy busy across this gap)
+          const backoff = SessionRetry.delay(restartAttempts)
+          yield* Effect.sleep(`${backoff} millis`)
+
+          // Continue to next restart iteration
+          continue
+        }
+      }),
+      Effect.fnUntraced(function* (exit) {
+        // Publish TurnClose BEFORE releasing the hold so the close event is
+        // observed while the session is still busy to assertNotBusy, preventing
+        // a concurrent prompt from interleaving its TurnOpen between them.
+        yield* KiloSession.publishTurnClose({
+          sessionID: input.loopInput.sessionID,
+          parentID: session.parentID,
+          reason: KiloSessionPrompt.resolveCloseReason({
+            sessionID: input.loopInput.sessionID,
+            closeReasons: input.closeReasons,
+            exit,
+          }),
+        })
+        yield* release
+      }),
+    )
+  })
 
   /**
    * Returns true when `msgs` contains at least one completed, error-free summary

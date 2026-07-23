@@ -22,6 +22,9 @@ export interface Interface {
     work: Effect.Effect<SessionV1.WithParts>,
     ready?: Latch.Latch,
   ) => Effect.Effect<SessionV1.WithParts, Session.BusyError>
+  // kilocode_change start - busy hold bridges the per-attempt ensureRunning gap during bounded main-session restarts
+  readonly acquireBusyHold: (sessionID: SessionID) => Effect.Effect<Effect.Effect<void>>
+  // kilocode_change end
 }
 
 export class Service extends Context.Service<Service, Interface>()("@opencode/SessionRunState") {}
@@ -36,6 +39,11 @@ export const layer = Layer.effect(
       Effect.fn("SessionRunState.state")(function* () {
         const scope = yield* Scope.Scope
         const runners = new Map<SessionID, Runner.Runner<SessionV1.WithParts>>()
+        // kilocode_change start - busy-hold counter so the bounded main-session restart loop can keep assertNotBusy
+        // reporting busy across the gap between per-attempt ensureRunning calls (where the runner is removed by
+        // onIdle and SessionStatus goes idle for the idle-gated recovery helpers).
+        const busyHolds = new Map<SessionID, number>()
+        // kilocode_change end
         yield* Effect.addFinalizer(
           Effect.fnUntraced(function* () {
             yield* Effect.forEach(runners.values(), (runner) => runner.cancel, {
@@ -45,7 +53,7 @@ export const layer = Layer.effect(
             runners.clear()
           }),
         )
-        return { runners, scope }
+        return { runners, scope, busyHolds } // kilocode_change - expose busy-hold counter to assertNotBusy/acquireBusyHold
       }),
     )
 
@@ -71,7 +79,10 @@ export const layer = Layer.effect(
     const assertNotBusy = Effect.fn("SessionRunState.assertNotBusy")(function* (sessionID: SessionID) {
       const data = yield* InstanceState.get(state)
       const existing = data.runners.get(sessionID)
-      if (existing?.busy) yield* busyError(sessionID)
+      // kilocode_change start - a Kilo restart-loop busy hold also marks the session busy to concurrent callers
+      const held = (data.busyHolds.get(sessionID) ?? 0) > 0
+      if (existing?.busy || held) yield* busyError(sessionID)
+      // kilocode_change end
     })
 
     const cancel = Effect.fn("SessionRunState.cancel")(function* (sessionID: SessionID) {
@@ -104,7 +115,27 @@ export const layer = Layer.effect(
         .pipe(Effect.catchTag("RunnerBusy", () => Effect.fail(busyError(sessionID))))
     })
 
-    return Service.of({ assertNotBusy, cancel, ensureRunning, startShell })
+    // kilocode_change start - acquireBusyHold: bumps a per-session busy hold so assertNotBusy reports busy
+    // across the Kilo restart-loop gap (recoverTerminalErrorTail + backoff sleep) where the per-attempt
+    // runner is gone and SessionStatus is idle. The returned release MUST be invoked (use Effect.ensuring);
+    // holds are reference-counted so overlapping acquisitions are safe. Ref-counting is a plain Map
+    // because all access happens on the Effect runtime's single thread per scheduler, so a synchronous
+    // get/set is race-free with assertNotBusy reads.
+    const acquireBusyHold = Effect.fn("SessionRunState.acquireBusyHold")(function* (sessionID: SessionID) {
+      const data = yield* InstanceState.get(state)
+      data.busyHolds.set(sessionID, (data.busyHolds.get(sessionID) ?? 0) + 1)
+      let released = false
+      return Effect.sync(() => {
+        if (released) return
+        released = true
+        const next = (data.busyHolds.get(sessionID) ?? 1) - 1
+        if (next <= 0) data.busyHolds.delete(sessionID)
+        else data.busyHolds.set(sessionID, next)
+      })
+    })
+    // kilocode_change end
+
+    return Service.of({ assertNotBusy, cancel, ensureRunning, startShell, acquireBusyHold }) // kilocode_change - acquireBusyHold
   }),
 )
 
