@@ -8,12 +8,12 @@ The review classified only infrastructure-related changes: CI/workflows, package
 
 ## Findings
 
-1. **Severity: Medium | Confidence: High**. The published `@opencode-ai/http-recorder` package now points users to OpenCode instead of Kilo for its homepage and issue tracker.
+1. **Severity: Medium | Confidence: High**. The reviewed PR made the published `@opencode-ai/http-recorder` package point users to OpenCode instead of Kilo for its homepage and issue tracker. This review branch resolves the finding and extends merge automation to preserve the Kilo values.
 
-   - `packages/http-recorder/package.json:13` changes `homepage` from the Kilo repository to `https://github.com/anomalyco/opencode/tree/dev/packages/http-recorder`.
-   - `packages/http-recorder/package.json:14` changes `bugs` from Kilo Issues to `https://github.com/anomalyco/opencode/issues`.
+   - At the reviewed head, `packages/http-recorder/package.json:13` changed `homepage` from the Kilo repository to the upstream package path.
+   - At the reviewed head, `packages/http-recorder/package.json:14` changed `bugs` from Kilo Issues to the upstream issue tracker.
    - This is an accidental upstream adoption: the same file retains the Kilo `repository.url` at `packages/http-recorder/package.json:8-12`, producing internally inconsistent npm metadata. `origin/main` had Kilo URLs for all three fields; `v1.17.9` has the adopted OpenCode `homepage` and `bugs` values.
-   - The merge transform documents preservation of Kilo repository metadata in `script/upstream/transforms/transform-package-json.ts:552-559`, but preserves only `repository`, not the related `homepage` and `bugs` fields. Update the package metadata and extend the transform's Kilo-provenance preservation to cover these fields, so subsequent upstream integrations do not reintroduce the issue.
+   - The review follow-up restores the package metadata and extends `script/upstream/transforms/transform-package-json.ts` to preserve `repository`, `homepage`, and `bugs`, with focused regression coverage.
 
 ## Expected Or Generated Infrastructure Changes
 

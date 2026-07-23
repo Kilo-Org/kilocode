@@ -6,20 +6,20 @@ Reviewed PR #12460 at `51d8031c9997bd5478bcde715562169f732d04d4` over `origin/ma
 
 **Findings**
 
-1. **Medium severity, high confidence: Published `@opencode-ai/http-recorder` metadata now routes users to OpenCode.**
+1. **Medium severity, high confidence: The reviewed PR routed published `@opencode-ai/http-recorder` metadata users to OpenCode. This review branch resolves the finding.**
 
    References: `packages/http-recorder/package.json:13-14`.
 
-   User-facing values introduced by this merge:
+   At the reviewed head, the user-facing values pointed to the upstream package path and issue tracker. The review follow-up restores the Kilo values:
 
    ```json
-   "homepage": "https://github.com/anomalyco/opencode/tree/dev/packages/http-recorder",
-   "bugs": "https://github.com/anomalyco/opencode/issues"
+   "homepage": "https://github.com/Kilo-Org/kilocode/tree/main/packages/http-recorder",
+   "bugs": "https://github.com/Kilo-Org/kilocode/issues"
    ```
 
-   These fields are exposed by package registries and package tooling, so users seeking documentation or support for the Kilo-published package are sent to OpenCode. The package still declares `git+https://github.com/Kilo-Org/kilocode.git` as its repository, and `origin/main` used the matching Kilo homepage and issue tracker. The values match upstream `v1.17.9`, indicating an upstream metadata import rather than intentional Kilo attribution.
+   These fields are exposed by package registries and package tooling, so the reviewed head sent users seeking documentation or support for the Kilo-published package to OpenCode. The package still declared `git+https://github.com/Kilo-Org/kilocode.git` as its repository, and `origin/main` used the matching Kilo homepage and issue tracker. The reviewed values match upstream `v1.17.9`, indicating an upstream metadata import rather than intentional Kilo attribution.
 
-   Recommendation: restore the Kilo URLs:
+   Resolved values:
 
    ```json
    "homepage": "https://github.com/Kilo-Org/kilocode/tree/main/packages/http-recorder",
@@ -32,7 +32,7 @@ Reviewed PR #12460 at `51d8031c9997bd5478bcde715562169f732d04d4` over `origin/ma
 
 - The merge expands `packages/core/src/plugin/skill/customize-opencode.md` with OpenCode command paths and retains an `https://opencode.ai/config.json` example. This is upstream content, but production boot does not register `SkillPlugin.Plugin`: `packages/core/src/plugin/boot.ts:100-112` registers `ConfigSkillPlugin.Plugin` and deliberately omits the legacy skill. Kilo's registered built-in configuration skill is `kilo-config` (`packages/opencode/src/kilocode/skills/builtin.ts:14-20`), and the Kilo system prompt directs agents to `.kilo/` and `kilo.json` (`packages/opencode/src/kilocode/system-prompt.ts:25`). No current user-facing skill/prompt regression was found. Human verification is warranted only if another shipping client directly registers `SkillPlugin.Plugin` outside the normal boot path.
 
-- Added `https://github.com/anomalyco/opencode/issues/...` references are source-code comments in `packages/opencode/src/mcp/index.ts` and the generated `packages/kilo-docs/source-links.md` manifest. They are upstream issue provenance, not rendered product documentation or runtime output. They are intentionally technical, although they currently cause the repository branding guard to report them.
+- Added upstream issue references are source-code comments in `packages/opencode/src/mcp/index.ts` and the generated `packages/kilo-docs/source-links.md` manifest. They are issue provenance, not rendered product documentation or runtime output. The review follow-up retains the issue numbers without forbidden repository URLs.
 
 - Added `@opencode-ai/*` imports, the `opencode` provider ID, legacy `opencode.json` compatibility paths, `.opencode-version`, and upstream merge metadata are technical identifiers or compatibility data. No evidence shows them rendered in the changed UI, CLI/TUI, errors, provider headers, generated SDK, or product help text.
 
@@ -58,7 +58,7 @@ $ git show HEAD:packages/sdk/openapi.json | rg -ni 'OpenCode|opencode|anomalyco/
 no matches
 
 $ bun run script/check-forbidden-strings.ts
-exit 1; reports the two package-metadata URLs above and four upstream issue-comment URLs in packages/opencode/src/mcp/index.ts.
+passes after the review follow-up restores Kilo package links and sanitizes upstream issue provenance comments.
 ```
 
 **Limitations**
@@ -68,4 +68,4 @@ exit 1; reports the two package-metadata URLs above and four upstream issue-comm
 
 **Result**
 
-One medium-severity, high-confidence user-facing branding regression found. Report: `OPENCODE_MENTIONS.md`.
+One medium-severity, high-confidence user-facing branding regression found and resolved on the review branch. Report: `OPENCODE_MENTIONS.md`.
