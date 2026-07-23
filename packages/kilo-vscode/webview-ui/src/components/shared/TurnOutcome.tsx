@@ -34,7 +34,12 @@ export const TurnOutcome: Component = () => {
           role="status"
           title={value().finish ? language.t("session.outcome.finish", { reason: value().finish! }) : undefined}
         >
-          <Card variant={value().tone === "critical" ? "error" : "warning"}>{label(value())}</Card>
+          <Card variant={value().tone === "critical" ? "error" : "warning"}>
+            <div>{label(value())}</div>
+            <Show when={value().kind === "unknown" && value().vercelID}>
+              {(id) => <code>x-vercel-id: {id()}</code>}
+            </Show>
+          </Card>
         </div>
       )}
     </Show>
