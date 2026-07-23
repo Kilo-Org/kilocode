@@ -35,6 +35,7 @@
 @import "../components/logo.css" layer(components);
 @import "../components/markdown.css" layer(components);
 @import "../kilocode/markdown-mermaid.css" layer(components); /* kilocode_change */
+@import "../kilocode/markdown-chart.css" layer(components); /* kilocode_change */
 @import "../components/message-part.css" layer(components);
 @import "../components/message-nav.css" layer(components);
 @import "../components/popover.css" layer(components);

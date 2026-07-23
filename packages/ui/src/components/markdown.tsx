@@ -9,6 +9,7 @@ import { isServer } from "solid-js/web"
 import { stream } from "./markdown-stream"
 import { tryFastRender } from "../kilocode/markdown-fast-path" // kilocode_change
 import { hasMermaid, preserveMermaid, renderMermaid, type MermaidLabels } from "../kilocode/markdown-mermaid" // kilocode_change
+import { hasChart, preserveChart, renderChart } from "../kilocode/markdown-chart" // kilocode_change
 import { preserveStreamingHighlight } from "../kilocode/markdown-stream-highlight" // kilocode_change
 import { createIncrementalMarkdown, type MarkdownBlock } from "../kilocode/markdown-incremental-dom" // kilocode_change
 
@@ -331,6 +332,7 @@ export function Markdown(
     ready: (container, labels, mermaid) => {
       copyCleanup ??= setupCodeCopy(container, () => labels)
       kickMermaid(container, true, mermaid)
+      kickChart(container, true)
       kickHighlight(container, labels)
     },
   })
@@ -398,6 +400,7 @@ export function Markdown(
       incremental.reset() // kilocode_change
       copyCleanup = fast.copyCleanup
       kickMermaid(container, local.streaming ?? false, mermaid)
+      kickChart(container, local.streaming ?? false)
       kickHighlight(container, labels)
       return
     }
@@ -445,6 +448,7 @@ export function Markdown(
           // normal markdown morphdom refreshes so they do not flicker back to
           // their source code while being re-rendered.
           if (preserveMermaid(fromEl, toEl)) return false
+          if (preserveChart(fromEl, toEl)) return false // kilocode_change
           // kilocode_change end
           // Preserve Shiki-highlighted blocks — don't let morphdom revert them
           // to plain <pre><code> during streaming re-renders.
@@ -476,6 +480,7 @@ export function Markdown(
       // kilocode_change end
 
       kickMermaid(container, local.streaming ?? false, mermaid) // kilocode_change
+      kickChart(container, local.streaming ?? false) // kilocode_change
       kickHighlight(container, nextLabels)
     })
     // kilocode_change end
@@ -501,6 +506,13 @@ export function Markdown(
       },
       signal,
     )
+  }
+  // kilocode_change end
+
+  // kilocode_change start: inline chart prototype
+  function kickChart(container: HTMLDivElement, streaming: boolean) {
+    if (streaming || !hasChart(container)) return
+    void renderChart(container).catch((err) => console.warn("Chart render failed", err))
   }
   // kilocode_change end
 

@@ -1,0 +1,18 @@
+[data-component="markdown"] {
+  [data-component="markdown-code"][data-kind="chart"] {
+    border: 0.5px solid var(--border-weak-base);
+    border-radius: 6px;
+    background: var(--surface-base);
+    overflow: hidden;
+  }
+
+  [data-component="markdown-chart"] {
+    height: 280px;
+    padding: 12px;
+  }
+
+  [data-component="markdown-chart"][data-state="error"] {
+    height: auto;
+    color: var(--text-danger, var(--text-strong));
+  }
+}

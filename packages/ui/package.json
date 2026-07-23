@@ -58,6 +58,7 @@
     "@solid-primitives/resize-observer": "2.1.3",
     "@solidjs/meta": "catalog:",
     "@solidjs/router": "catalog:",
+    "chart.js": "4.5.1",
     "diff": "catalog:",
     "dompurify": "3.4.2",
     "fuzzysort": "catalog:",
