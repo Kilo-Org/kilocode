@@ -63,6 +63,7 @@ import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
 import { parseMessageFiles, type MessageFile } from "./kilo-provider/message-files"
 import { renameSession } from "./kilo-provider/rename-session"
 import { handleFileSearch } from "./kilo-provider/file-search"
+import { handleSessionSearch } from "./kilo-provider/session-search"
 import { handleFilePicker } from "./kilo-provider/file-picker"
 import { watchFontSizeConfig } from "./kilo-provider/font-size"
 import { getTerminalContents } from "./services/terminal/context"
@@ -289,6 +290,12 @@ export function unwrapSyncEvent(event: SSEPayload | RawSyncPayload): ProviderEve
       return undefined
   }
 }
+
+type ContextRequestMessage =
+  | { type: "requestFileSearch"; query: string; requestId: string; sessionID?: string }
+  | { type: "requestSessionSearch"; requestId: string; sessionID?: string }
+  | { type: "requestFilePicker"; requestId: string }
+  | { type: "requestTerminalContext"; requestId: string; sessionID?: string }
 
 export class KiloProvider implements vscode.WebviewViewProvider, TelemetryPropertiesProvider {
   public static readonly viewType = "kilo-code.SidebarProvider"
@@ -1305,21 +1312,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         }
         case "requestFileSearch":
-          await handleFileSearch({
-            client: this.client,
-            message,
-            current: this.currentSession?.id,
-            context: this.contextSessionID,
-            dir: (id) => this.getWorkspaceDirectory(id),
-            open: (dir) => this.getOpenTabPaths(dir),
-            post: (msg) => this.postMessage(msg),
-          })
-          break
+        case "requestSessionSearch":
         case "requestFilePicker":
-          await handleFilePicker({ requestId: message.requestId, post: (msg) => this.postMessage(msg) })
-          break
         case "requestTerminalContext":
-          void this.handleTerminalContext(message.requestId)
+          await this.handleContextRequest(message)
           break
         case "chatCompletionAccepted":
           this.chatAutocomplete?.telemetry.captureAcceptSuggestion(message.suggestionLength)
@@ -2050,6 +2046,40 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       })
     }
     this.pendingSessionRefresh = ctx.pendingSessionRefresh
+  }
+
+  private async handleContextRequest(message: ContextRequestMessage): Promise<void> {
+    if (message.type === "requestFileSearch") {
+      await handleFileSearch({
+        client: this.client,
+        message,
+        current: this.currentSession?.id,
+        context: this.contextSessionID,
+        dir: (id) => this.getWorkspaceDirectory(id),
+        open: (dir) => this.getOpenTabPaths(dir),
+        post: (msg) => this.postMessage(msg),
+      })
+      return
+    }
+    if (message.type === "requestSessionSearch") {
+      await handleSessionSearch({
+        client: this.client,
+        message,
+        current: this.currentSession?.id,
+        context: this.contextSessionID,
+        dir: (id) => this.getWorkspaceDirectory(id),
+        exclude: this.currentSession?.id,
+        post: (msg) => this.postMessage(msg),
+      })
+      return
+    }
+    if (message.type === "requestFilePicker") {
+      await handleFilePicker({ requestId: message.requestId, post: (msg) => this.postMessage(msg) })
+      return
+    }
+    if (message.type === "requestTerminalContext") {
+      void this.handleTerminalContext(message.requestId)
+    }
   }
 
   private async handleTerminalContext(requestId: string): Promise<void> {

@@ -5,11 +5,18 @@ import {
   buildTextAfterMentionSelect,
   buildFileAttachments,
   buildMentionResults,
+  buildSessionAttachments,
   filterMentionResults,
   getMentionRemovalRange,
+  getPastChatsMentionResult,
   isCursorAtMentionEnd,
   findMentionRange,
+  sessionMentionFilename,
+  sessionMentionText,
+  sessionMentionToken,
+  syncMentionedSessions,
   FILE_PICKER_RESULT,
+  PAST_CHATS_RESULT,
   TERMINAL_RESULT,
   GIT_CHANGES_RESULT,
 } from "../../webview-ui/src/hooks/file-mention-utils"
@@ -89,6 +96,7 @@ describe("buildMentionResults", () => {
     expect(result).toEqual([
       TERMINAL_RESULT,
       GIT_CHANGES_RESULT,
+      PAST_CHATS_RESULT,
       { type: "file", value: "src/index.ts" },
       FILE_PICKER_RESULT,
     ])
@@ -550,5 +558,113 @@ describe("findMentionRange", () => {
     expect(findMentionRange(text, 1, paths)).toEqual({ start: 0, end: 3 })
     // Position 4 is inside the second
     expect(findMentionRange(text, 4, paths)).toEqual({ start: 3, end: 6 })
+  })
+})
+
+describe("session mentions", () => {
+  const now = Date.now()
+  const sessions = [
+    { id: "ses_a", title: "Fix auth bug", updated: now },
+    { id: "ses_b", title: "Rotate signing keys", updated: now - 1000 },
+    { id: "ses_c", title: "Refactor cache layer", updated: now - 2000 },
+  ]
+
+  describe("getPastChatsMentionResult", () => {
+    it("offers the past-chats picker for an empty query", () => {
+      expect(getPastChatsMentionResult("")).toEqual([PAST_CHATS_RESULT])
+    })
+
+    it("offers the picker for alias prefixes", () => {
+      expect(getPastChatsMentionResult("pas")).toEqual([PAST_CHATS_RESULT])
+      expect(getPastChatsMentionResult("sess")).toEqual([PAST_CHATS_RESULT])
+      expect(getPastChatsMentionResult("hist")).toEqual([PAST_CHATS_RESULT])
+    })
+
+    it("hides the picker for unrelated queries", () => {
+      expect(getPastChatsMentionResult("index")).toEqual([])
+    })
+  })
+
+  describe("sessionMentionText / filename", () => {
+    it("collapses whitespace in titles", () => {
+      expect(sessionMentionText("Fix\nauth   bug")).toBe("Fix auth bug")
+    })
+
+    it("slugifies titles for the attachment filename", () => {
+      expect(sessionMentionFilename("Fix auth bug", "ses_a")).toBe("Fix-auth-bug.md")
+    })
+
+    it("falls back to the session id when the slug is empty", () => {
+      expect(sessionMentionFilename("???", "ses_a")).toBe("ses_a.md")
+    })
+
+    it("disambiguates sessions with the same title", () => {
+      const known = new Map([["Fix auth bug", sessions[0]!]])
+      expect(sessionMentionToken({ ...sessions[1]!, title: "Fix auth bug" }, known)).toBe("Fix auth bug (2)")
+    })
+
+    it("reuses the token already assigned to a session", () => {
+      const known = new Map([["Fix auth bug (2)", sessions[1]!]])
+      expect(sessionMentionToken(sessions[1]!, known)).toBe("Fix auth bug (2)")
+    })
+  })
+
+  describe("buildMentionResults", () => {
+    it("offers the past-chats picker alongside the other special mentions", () => {
+      const result = buildMentionResults("", [])
+      expect(result[0]).toEqual(TERMINAL_RESULT)
+      expect(result).toContainEqual(PAST_CHATS_RESULT)
+      expect(result[result.length - 1]).toEqual(FILE_PICKER_RESULT)
+    })
+  })
+
+  describe("filterMentionResults", () => {
+    it("keeps the past-chats picker for alias queries", () => {
+      const filtered = filterMentionResults("sess", buildMentionResults("", []))
+      expect(filtered).toContainEqual(PAST_CHATS_RESULT)
+    })
+  })
+
+  describe("syncMentionedSessions", () => {
+    it("drops sessions whose token is no longer present in the text", () => {
+      const prev = new Map([
+        ["Fix auth bug", sessions[0]!],
+        ["Rotate signing keys", sessions[1]!],
+      ])
+      const kept = syncMentionedSessions(prev, "see @Fix auth bug here")
+      expect(kept.has("Fix auth bug")).toBe(true)
+      expect(kept.has("Rotate signing keys")).toBe(false)
+    })
+  })
+
+  describe("buildSessionAttachments", () => {
+    it("builds a session: attachment with span offsets and a readable filename", () => {
+      const mentioned = new Map([["Fix auth bug", sessions[0]!]])
+      const attachments = buildSessionAttachments("check @Fix auth bug out", mentioned)
+      expect(attachments).toHaveLength(1)
+      const att = attachments[0]!
+      expect(att.mime).toBe("text/plain")
+      expect(att.url).toBe("session:ses_a")
+      expect(att.filename).toBe("Fix-auth-bug.md")
+      expect(att.source?.type).toBe("file")
+      expect(att.source?.text.value).toBe("@Fix auth bug")
+      expect(att.source?.text.start).toBe(6)
+      expect(att.source?.text.end).toBe(19)
+    })
+
+    it("skips sessions whose token is not present in the text", () => {
+      const mentioned = new Map([["Fix auth bug", sessions[0]!]])
+      expect(buildSessionAttachments("nothing here", mentioned)).toEqual([])
+    })
+
+    it("attaches distinct sessions whose titles collide", () => {
+      const mentioned = new Map([
+        ["Fix auth bug", sessions[0]!],
+        ["Fix auth bug (2)", { ...sessions[1]!, title: "Fix auth bug" }],
+      ])
+      const attachments = buildSessionAttachments("compare @Fix auth bug with @Fix auth bug (2)", mentioned)
+      expect(attachments.map((item) => item.url)).toEqual(["session:ses_a", "session:ses_b"])
+      expect(attachments.map((item) => item.source?.text.value)).toEqual(["@Fix auth bug", "@Fix auth bug (2)"])
+    })
   })
 })
