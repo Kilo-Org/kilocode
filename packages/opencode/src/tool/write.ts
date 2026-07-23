@@ -16,6 +16,7 @@ import { assertExternalDirectoryEffect } from "./external-directory"
 import { filterDiagnostics } from "./diagnostics" // kilocode_change
 import { ConfigValidation } from "../kilocode/config-validation" // kilocode_change
 import * as EncodedIO from "../kilocode/tool/encoded-io" // kilocode_change
+import { KiloFileGuard } from "@/kilocode/tool/file-guard" // kilocode_change
 import * as Bom from "@/util/bom"
 
 const MAX_PROJECT_DIAGNOSTICS_FILES = 5
@@ -46,10 +47,14 @@ export const WriteTool = Tool.define(
             : path.join(instance.directory, params.filePath)
           yield* assertExternalDirectoryEffect(ctx, filepath)
 
-          const exists = yield* fs.existsSafe(filepath)
+          // kilocode_change start - bind policy and target identity before reading content for the diff
+          const plan = yield* KiloFileGuard.plan({ ctx: instance, requested: filepath }).pipe(Effect.orDie)
+          const exists = plan.exists
           // kilocode_change start - encoding-aware read; Encoding.read strips UTF-8 BOMs so
           // derive the BOM flag from the detected encoding label instead of the decoded text.
-          const pre = exists ? yield* EncodedIO.read(fs, filepath) : { text: "", encoding: "utf-8" }
+          const pre = exists
+            ? KiloFileGuard.decode(yield* KiloFileGuard.read({ ctx: instance, requested: filepath }))
+            : { text: "", encoding: "utf-8" }
           const source = { bom: pre.encoding === "utf-8-bom", text: pre.text, encoding: pre.encoding }
           // kilocode_change end
           const next = Bom.split(params.content)
@@ -61,18 +66,20 @@ export const WriteTool = Tool.define(
           const filediff = buildFileDiff(filepath, contentOld, contentNew) // kilocode_change
           yield* ctx.ask({
             permission: "edit",
-            patterns: [path.relative(instance.worktree, filepath)],
+            patterns: [...new Set([plan.requested, plan.target].map((item) => path.relative(instance.worktree, item)))],
             always: ["*"],
             metadata: {
-              filepath,
+              filepath: plan.target,
               diff,
               filediff, // kilocode_change
             },
           })
 
-          yield* EncodedIO.write(fs, filepath, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces fs.writeWithDirs
-          if (yield* format.file(filepath)) {
-            yield* EncodedIO.sync(fs, filepath, desiredBom, source.encoding)
+          const target = yield* KiloFileGuard.revalidate({ ctx: instance, plan }).pipe(Effect.orDie)
+          yield* EncodedIO.write(fs, target.target, Bom.join(contentNew, desiredBom), source.encoding) // kilocode_change - encoding-aware write (mkdirs) replaces fs.writeWithDirs
+          if (yield* format.file(target.target)) {
+            yield* KiloFileGuard.plan({ ctx: instance, requested: target.target }).pipe(Effect.orDie)
+            yield* EncodedIO.sync(fs, target.target, desiredBom, source.encoding)
           }
           yield* events.publish(FileSystem.Event.Edited, { file: filepath })
           yield* events.publish(Watcher.Event.Updated, {

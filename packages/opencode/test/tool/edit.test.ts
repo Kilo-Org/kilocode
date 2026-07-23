@@ -95,6 +95,32 @@ const onceBus = Effect.fn("EditToolTest.onceBus")(function* (def: typeof Watcher
 
 describe("tool.edit", () => {
   describe("creating new files", () => {
+    // kilocode_change start
+    it.instance("does not read or edit ignored files", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "secret.txt")
+        const calls: unknown[] = []
+        yield* Effect.promise(() =>
+          Promise.all([
+            fs.writeFile(filepath, "KILO_11637_SECRET", "utf-8"),
+            fs.writeFile(path.join(test.directory, ".kilocodeignore"), "secret.txt\n", "utf-8"),
+          ]),
+        )
+
+        const next = { ...ctx, ask: () => Effect.sync(() => calls.push(true)) }
+        const exit = yield* run(
+          { filePath: filepath, oldString: "KILO_11637_SECRET", newString: "changed" },
+          next,
+        ).pipe(Effect.exit)
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(calls).toEqual([])
+        expect(yield* load(filepath)).toBe("KILO_11637_SECRET")
+      }),
+    )
+    // kilocode_change end
+
     it.instance("creates new file when oldString is empty", () =>
       Effect.gen(function* () {
         const test = yield* TestInstance

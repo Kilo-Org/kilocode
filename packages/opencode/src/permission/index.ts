@@ -19,6 +19,7 @@ import { drainCovered } from "@/kilocode/permission/drain"
 import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
+import { IgnorePermission } from "@/kilocode/permission/ignore"
 // kilocode_change end
 
 export const Event = {
@@ -185,6 +186,10 @@ export const layer = Layer.effect(
 
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
+      // kilocode_change start - .kilocodeignore is a hard policy, not an ordinary last-match permission rule
+      const ctx = yield* InstanceState.context
+      yield* IgnorePermission.assert({ ctx, permission: input.permission, patterns: input.patterns })
+      // kilocode_change end
       // kilocode_change start
       const { ruleset, hardRuleset, ...request } = input
       const s = yield* InstanceState.get(state)
@@ -193,7 +198,7 @@ export const layer = Layer.effect(
       let needsAsk = false
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
-      const isProtected = ConfigProtection.isRequest(request)
+      const isProtected = ConfigProtection.isRequest(request, ctx)
       const skill = ConfigProtection.globalSkillPattern(request)
       const trusted = skill
         ? (() => {
@@ -261,12 +266,16 @@ export const layer = Layer.effect(
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
+      // kilocode_change start - policies may change while a permission prompt is pending
       return yield* Effect.ensuring(
-        Deferred.await(deferred),
+        Deferred.await(deferred).pipe(
+          Effect.andThen(IgnorePermission.assert({ ctx, permission: input.permission, patterns: input.patterns })),
+        ),
         Effect.sync(() => {
           pending.delete(id)
         }),
       )
+      // kilocode_change end
     })
 
     const reply = Effect.fn("Permission.reply")(function* (input: PermissionV1.ReplyInput) {

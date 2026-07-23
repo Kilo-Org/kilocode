@@ -3,6 +3,7 @@ import path from "path"
 import fs from "fs/promises"
 import { describe, expect, test } from "bun:test"
 import { ConfigProtection } from "../../../src/kilocode/permission/config-paths"
+import type { InstanceContext } from "../../../src/project/instance-context"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "../../../src/kilocode/paths"
 import { tmpdir } from "../../fixture/fixture"
@@ -158,7 +159,7 @@ describe("ConfigProtection.isRequest", () => {
   })
 
   test("returns true for edit targeting root config files", () => {
-    for (const file of ["kilo.json", "kilo.jsonc", "AGENTS.md"]) {
+    for (const file of ["kilo.json", "kilo.jsonc", "AGENTS.md", ".kilocodeignore"]) {
       const result = ConfigProtection.isRequest({
         permission: "edit",
         patterns: [file],
@@ -190,6 +191,25 @@ describe("ConfigProtection.isRequest", () => {
           filepath: "src/app/layout.tsx, .kilo/package-lock.json, .kilocode/package-lock.json",
         },
       }),
+    ).toBe(true)
+  })
+})
+
+describe("ConfigProtection workspace aliases", () => {
+  test("protects a symlink alias to workspace .kilocodeignore", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const alias = path.join(tmp.path, "policy-link")
+    await Bun.write(path.join(tmp.path, ".kilocodeignore"), "secret.txt\n")
+    await fs.symlink(path.join(tmp.path, ".kilocodeignore"), alias)
+
+    const directory = path.join(tmp.path, "nested")
+    await fs.mkdir(directory)
+    const ctx = { directory, worktree: tmp.path } as InstanceContext
+    expect(
+      ConfigProtection.isRequest(
+        { permission: "edit", patterns: [path.basename(alias)], metadata: { filepath: path.basename(alias) } },
+        ctx,
+      ),
     ).toBe(true)
   })
 })

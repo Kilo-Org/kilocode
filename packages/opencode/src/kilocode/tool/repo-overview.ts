@@ -7,6 +7,8 @@ import DESCRIPTION from "./repo-overview.txt"
 import * as Tool from "@/tool/tool"
 import { parseRepositoryReference, repositoryCachePath } from "@/util/repository"
 import { InstanceState } from "@/effect/instance-state"
+import { IgnorePermission } from "@/kilocode/permission/ignore"
+import { KiloFileGuard } from "@/kilocode/tool/file-guard"
 
 export const Parameters = Schema.Struct({
   repository: Schema.optional(Schema.String).annotate({
@@ -179,10 +181,16 @@ export const RepoOverviewTool = Tool.define<typeof Parameters, Metadata, FSUtil.
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
           const target = yield* resolveTarget(params)
+          const instance = yield* InstanceState.context
           const depth =
             !params.depth || !Number.isInteger(params.depth) || params.depth < 1 || params.depth > 6 ? 3 : params.depth
 
           yield* assertExternalDirectoryEffect(ctx, target.path, { kind: "directory" })
+          yield* IgnorePermission.assert({
+            ctx: instance,
+            access: "read",
+            candidates: [{ requested: target.path, directory: true }],
+          }).pipe(Effect.orDie)
           yield* ctx.ask({
             permission: "repo_overview",
             patterns: [target.repository ?? target.path],
@@ -206,9 +214,15 @@ export const RepoOverviewTool = Tool.define<typeof Parameters, Metadata, FSUtil.
           const topLevel = new Set(entries.map((entry) => entry.name))
           const dependencyFiles = DEPENDENCY_FILES.filter((file) => topLevel.has(file))
           const packageJson = topLevel.has("package.json")
-            ? ((yield* fs
-                .readJson(path.join(target.path, "package.json"))
-                .pipe(Effect.orElseSucceed(() => ({})))) as Record<string, unknown>)
+            ? ((yield* KiloFileGuard.read({ ctx: instance, requested: path.join(target.path, "package.json") }).pipe(
+                Effect.flatMap((data) =>
+                  Effect.try({
+                    try: () => JSON.parse(data.toString()) as Record<string, unknown>,
+                    catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+                  }),
+                ),
+                Effect.orElseSucceed(() => ({})),
+              )) as Record<string, unknown>)
             : {}
 
           const entrypoints = [

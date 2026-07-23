@@ -14,18 +14,22 @@ export namespace KilocodeMarkdown {
     trusted: boolean
     fileScope?: ConfigVariable.FileScope
     sourceScope?: ConfigVariable.FileScope
+    authorize?: ConfigVariableGuard.Authorize
   }
 
   export function read(item: string, options: Options) {
-    if (options.trusted) return Filesystem.readText(item)
     const scope = options.sourceScope ?? options.fileScope
-    if (!scope) {
+    if (options.trusted && !options.authorize) return Filesystem.readText(item)
+    if (!options.trusted && !scope) {
       throw new InvalidError({
         path: item,
         message: "project markdown cannot be read without a project scope",
       })
     }
-    return ConfigVariableGuard.read(item, { ...scope, token: `markdown source "${item}"` })
+    const input = scope
+      ? { ...scope, token: `markdown source "${item}"`, authorize: options.authorize }
+      : { token: `markdown source "${item}"`, authorize: options.authorize }
+    return ConfigVariableGuard.read(item, input)
   }
 
   export function substitute(text: string, item: string, options: Options) {
@@ -37,6 +41,7 @@ export namespace KilocodeMarkdown {
       escapeJson: false,
       trusted: options.trusted,
       fileScope: options.fileScope,
+      authorize: options.authorize,
     })
   }
 }

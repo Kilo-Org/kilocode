@@ -7,16 +7,18 @@ description: "Control which files Kilo Code can access"
 
 ## Overview
 
-`.kilocodeignore` is a root-level file that tells Kilo Code which files and folders it should not access. It uses standard `.gitignore` pattern syntax, but it only affects Kilo Code's file access, not Git.
+`.kilocodeignore` is a root-level file that blocks Kilo Code's built-in file access for matching files and folders. It uses standard `.gitignore` pattern syntax, but it does not affect Git.
 
-If no `.kilocodeignore` file exists, Kilo Code can access all files in the workspace.
+If no applicable `.kilocodeignore` file exists, normal permission rules determine workspace access.
 
 ## Quick Start
 
 {% tabs %}
 {% tab label="VSCode" %}
 
-The primary mechanism for controlling file access is the **permission system** in `kilo.jsonc`. You define tool-level permissions with glob patterns:
+Use `.kilocodeignore` when a file must never be exposed through Kilo's built-in file tools or changed by them. Kilo applies a final ignored match as a hard deny, even when a permission rule, saved approval, or auto-approval would otherwise allow the operation.
+
+Use the **permission system** in `kilo.jsonc` for the remaining tool access rules:
 
 ```json
 {
@@ -26,8 +28,6 @@ The primary mechanism for controlling file access is the **permission system** i
   }
 }
 ```
-
-If you have an existing `.kilocodeignore` file, it is still supported. The **IgnoreMigrator** automatically converts `.kilocodeignore` patterns into permission `deny` rules on `read` and `edit` tools, so your existing rules continue to work without manual changes.
 
 You can also exclude paths from the file watcher separately using `watcher.ignore`:
 
@@ -42,7 +42,9 @@ You can also exclude paths from the file watcher separately using `watcher.ignor
 {% /tab %}
 {% tab label="CLI" %}
 
-The primary mechanism for controlling file access is the **permission system** in `kilo.jsonc`. You define tool-level permissions with glob patterns:
+Use `.kilocodeignore` when a file must never be exposed through Kilo's built-in file tools or changed by them. Kilo applies a final ignored match as a hard deny, even when a permission rule, saved approval, or auto-approval would otherwise allow the operation.
+
+Use the **permission system** in `kilo.jsonc` for the remaining tool access rules:
 
 ```json
 {
@@ -52,8 +54,6 @@ The primary mechanism for controlling file access is the **permission system** i
   }
 }
 ```
-
-If you have an existing `.kilocodeignore` file, it is still supported. The **IgnoreMigrator** automatically converts `.kilocodeignore` patterns into permission `deny` rules on `read` and `edit` tools, so your existing rules continue to work without manual changes.
 
 You can also exclude paths from the file watcher separately using `watcher.ignore`:
 
@@ -79,33 +79,23 @@ You can also exclude paths from the file watcher separately using `watcher.ignor
 
 Patterns are evaluated relative to the workspace root.
 
+Kilo loads policies in this order: `~/.kilocode/.kilocodeignore` (legacy), `~/.kilo/.kilocodeignore`, then the workspace-root `.kilocodeignore`. Later Git-ignore rules take precedence, so a workspace rule can re-include a user-level ignored path. Kilo does not search parent directories or nested folders for additional `.kilocodeignore` files.
+
 ## What It Affects
 
 {% tabs %}
 {% tab label="VSCode" %}
 
-File access is controlled through **permission-based access control**. Each tool (`read`, `edit`, `glob`, `grep`, `write`, `bash`, etc.) has its own permission rules evaluated against glob patterns.
+`.kilocodeignore` hard-denies matching paths for built-in `read`, `write`, `edit`, `apply_patch`, image generation, notebook, repository-overview, instruction, skill, and plan-file paths. A matching path is blocked before Kilo returns its content, sends it to a provider, or changes it.
 
-In addition to your explicit permission rules:
-
-- **Hardcoded directory ignores** — 27 directories are always skipped (e.g. `node_modules`, `.git`, `dist`, `build`, `.cache`, `__pycache__`, `vendor`, and others).
-- **Hardcoded file pattern ignores** — 11 file patterns are always skipped (e.g. lock files, binary artifacts).
-- **`.gitignore` and `.ignore` files** are also respected when listing and searching files.
-
-If a file is denied by a permission rule, the tool will report that access was blocked.
+This is not a filesystem sandbox. Shell commands, MCP servers, plugins, language servers, and search/indexing tools can have separate access paths. Use an operating-system sandbox when those tools must not access sensitive data.
 
 {% /tab %}
 {% tab label="CLI" %}
 
-File access is controlled through **permission-based access control**. Each tool (`read`, `edit`, `glob`, `grep`, `write`, `bash`, etc.) has its own permission rules evaluated against glob patterns.
+`.kilocodeignore` hard-denies matching paths for built-in `read`, `write`, `edit`, `apply_patch`, image generation, notebook, repository-overview, instruction, skill, and plan-file paths. A matching path is blocked before Kilo returns its content, sends it to a provider, or changes it.
 
-In addition to your explicit permission rules:
-
-- **Hardcoded directory ignores** — 27 directories are always skipped (e.g. `node_modules`, `.git`, `dist`, `build`, `.cache`, `__pycache__`, `vendor`, and others).
-- **Hardcoded file pattern ignores** — 11 file patterns are always skipped (e.g. lock files, binary artifacts).
-- **`.gitignore` and `.ignore` files** are also respected when listing and searching files.
-
-If a file is denied by a permission rule, the tool will report that access was blocked.
+This is not a filesystem sandbox. Shell commands, MCP servers, plugins, language servers, and search/indexing tools can have separate access paths. Use an operating-system sandbox when those tools must not access sensitive data.
 
 {% /tab %}
 {% /tabs %}
@@ -136,9 +126,11 @@ Permission rules are defined per-tool in `kilo.jsonc`. Patterns are evaluated in
 }
 ```
 
-### Migrating from .kilocodeignore
+### .kilocodeignore precedence
 
-If you already have a `.kilocodeignore` file, you don't need to do anything — the IgnoreMigrator reads your existing patterns and applies them as `deny` rules on `read` and `edit` tools automatically. You can optionally move your rules into `kilo.jsonc` for more granular control (e.g. denying edits but allowing reads).
+`.kilocodeignore` is evaluated separately from permission rules. A final ignored match denies built-in `read` and edit operations. A negated pattern removes only this hard deny; Kilo then evaluates the ordinary permission rules, which can still ask or deny.
+
+Kilo checks both the requested path and its resolved target. A symlink cannot be used to bypass a rule for either path. Kilo reloads policy files for every protected operation, so changing a policy takes effect without a restart.
 
 ### File Watcher Exclusions
 
@@ -176,9 +168,11 @@ Permission rules are defined per-tool in `kilo.jsonc`. Patterns are evaluated in
 }
 ```
 
-### Migrating from .kilocodeignore
+### .kilocodeignore precedence
 
-If you already have a `.kilocodeignore` file, you don't need to do anything — the IgnoreMigrator reads your existing patterns and applies them as `deny` rules on `read` and `edit` tools automatically. You can optionally move your rules into `kilo.jsonc` for more granular control (e.g. denying edits but allowing reads).
+`.kilocodeignore` is evaluated separately from permission rules. A final ignored match denies built-in `read` and edit operations. A negated pattern removes only this hard deny; Kilo then evaluates the ordinary permission rules, which can still ask or deny.
+
+Kilo checks both the requested path and its resolved target. A symlink cannot be used to bypass a rule for either path. Kilo reloads policy files for every protected operation, so changing a policy takes effect without a restart.
 
 ### File Watcher Exclusions
 
@@ -201,6 +195,7 @@ Checkpoint tracking is separate from file access rules. Files blocked by `.kiloc
 
 ## Troubleshooting
 
-- **Kilo can't access a file you want:** Remove or narrow the matching rule in `.kilocodeignore` (legacy) or adjust the permission rules in `kilo.jsonc` (VSCode extension & CLI).
+- **Kilo can't access a file you want:** Remove or narrow the matching rule in `.kilocodeignore`, or adjust the permission rules in `kilo.jsonc` after checking that the file is not ignored.
 - **A file still appears in lists:** In the legacy extension, check the setting that shows ignored files in lists and searches. In the extension & CLI, verify your permission and watcher ignore configuration.
-- **`.kilocodeignore` patterns not working in the new platform:** Ensure the file is at the workspace root. The IgnoreMigrator reads it automatically — check that your patterns use valid `.gitignore` syntax.
+- **`.kilocodeignore` patterns not working:** Ensure the file is at the workspace root and uses valid `.gitignore` syntax. Changes apply to the next built-in read or edit operation without restarting Kilo.
+- **Kilo denies all protected files:** A policy file must be a regular UTF-8 file no larger than 1 MiB. Kilo fails closed when it cannot safely read one.
