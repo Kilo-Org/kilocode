@@ -129,6 +129,10 @@ export const Info = Schema.Struct({
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),
+  privacy_mode: Schema.optional(Schema.Boolean).annotate({
+    description:
+      "Blur personally identifiable information (account email, balance, team name, etc.) in the TUI and require confirmation before showing profile details",
+  }),
   sandbox: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(
