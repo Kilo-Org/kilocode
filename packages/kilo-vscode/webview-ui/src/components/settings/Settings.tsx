@@ -177,9 +177,9 @@ const Settings: Component<SettingsProps> = (props) => {
             <Icon name="checklist" />
             <span class="label">{language.t("settings.autoApprove.title")}</span>
           </Tabs.Trigger>
-          <Tabs.Trigger value="browser" aria-label={language.t("settings.browser.title")}>
+          <Tabs.Trigger value="browser" aria-label={language.t("settings.webTools.title")}>
             <Icon name="window-cursor" />
-            <span class="label">{language.t("settings.browser.title")}</span>
+            <span class="label">{language.t("settings.webTools.title")}</span>
           </Tabs.Trigger>
           <Tabs.Trigger value="checkpoints" aria-label={language.t("settings.checkpoints.title")}>
             <Icon name="branch" />
@@ -249,7 +249,7 @@ const Settings: Component<SettingsProps> = (props) => {
           <AutoApproveTab />
         </Tabs.Content>
         <Tabs.Content value="browser">
-          <h3>{language.t("settings.browser.title")}</h3>
+          <h3>{language.t("settings.webTools.title")}</h3>
           <BrowserTab />
         </Tabs.Content>
         <Tabs.Content value="checkpoints">

@@ -27493,8 +27493,7 @@
             "items": {
               "type": "string",
               "pattern": "^\\s*\\.?[A-Za-z0-9][A-Za-z0-9_+-]*\\s*$"
-            },
-            "minItems": 1
+            }
           }
         },
         "additionalProperties": false
@@ -28680,6 +28679,9 @@
                 "type": "boolean"
               },
               "codebase_search": {
+                "type": "boolean"
+              },
+              "websearch": {
                 "type": "boolean"
               },
               "image_generation": {

@@ -1190,6 +1190,7 @@ export const dict = {
   "settings.agentBehaviour.title": "Agent Behaviour",
   "settings.autoApprove.title": "Auto-Approve",
   "settings.browser.title": "Browser",
+  "settings.webTools.title": "Web Tools",
   "settings.checkpoints.title": "Checkpoints",
   "settings.display.title": "Display",
   "settings.autocomplete.title": "Autocomplete",
@@ -1362,6 +1363,10 @@ export const dict = {
 
   "settings.browser.description":
     "When enabled, the AI agent can interact with web pages — navigating, clicking, typing, and taking screenshots. A Chrome window will open so you can watch the agent work.",
+  "settings.webTools.description":
+    "Configure web search and browser automation. Search requests connect directly to Exa or Parallel.",
+  "settings.webTools.websearchEnable": "Enable for All Providers",
+  "settings.webTools.browserAutomation": "Browser Automation",
   "settings.browser.enable.title": "Enable Browser Automation",
   "settings.browser.enable.description": "Register the Playwright MCP server with the CLI backend.",
   "settings.browser.systemChrome.title": "Use System Chrome",
@@ -1422,6 +1427,9 @@ export const dict = {
   "settings.experimental.lsp.description": "Enable language server protocol integration",
   "settings.experimental.batch.title": "Batch Tool",
   "settings.experimental.batch.description": "Enable batching of multiple tool calls",
+  "settings.experimental.websearch.title": "Web Search",
+  "settings.experimental.websearch.description":
+    "Make web search available to models from all providers. Searches connect directly to Exa or Parallel.",
   "settings.experimental.codebaseSearch.title": "Codebase Search",
   "settings.experimental.codebaseSearch.description": "Enable AI-powered natural language search across your codebase",
   "settings.experimental.imageGeneration.title": "Image Generation",

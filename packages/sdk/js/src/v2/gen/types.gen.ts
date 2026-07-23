@@ -1709,6 +1709,7 @@ export type Config = {
     disable_paste_summary?: boolean
     batch_tool?: boolean
     codebase_search?: boolean
+    websearch?: boolean
     image_generation?: boolean
     image_generation_model?: string
     agent_requirements?: boolean
