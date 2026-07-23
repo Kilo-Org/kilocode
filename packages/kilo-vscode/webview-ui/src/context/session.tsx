@@ -259,6 +259,7 @@ interface SessionContextValue {
   // Actions
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
+  deleteQueuedMessage: (sessionID: string, messageID: string) => void
   sendMessage: (
     text: string,
     providerID?: string,
@@ -2807,6 +2808,15 @@ export const SessionProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
   }
 
+  // Clear local send bookkeeping and request deletion. The message stays visible
+  // until messageRemoved confirms deletion; a false response leaves it in place.
+  function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
+    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
+  }
+
   function syncSession(sessionID: string) {
     vscode.postMessage({ type: "syncSession", sessionID, parentSessionID: currentSessionID() })
   }
@@ -2999,6 +3009,7 @@ export const SessionProvider: ParentComponent = (props) => {
     worktreeStats,
     revertSession,
     unrevertSession,
+    deleteQueuedMessage,
     sendMessage,
     sendCommand,
     abort,

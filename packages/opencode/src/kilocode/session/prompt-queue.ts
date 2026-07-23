@@ -6,6 +6,7 @@ import { KiloSession } from "@/kilocode/session"
 type Slot = {
   readonly seq: number
   readonly version: number
+  readonly target: MessageID
   readonly previous: Promise<void>
   readonly done: PromiseWithResolvers<void>
   readonly tail: Promise<void>
@@ -20,6 +21,8 @@ export namespace KiloSessionPromptQueue {
   const tails = new Map<SessionID, Promise<void>>()
   const versions = new Map<SessionID, number>()
   const targets = new Map<SessionID, Target>()
+  // Message IDs whose queued slot was cancelled via drop().
+  const dropped = new Map<SessionID, Set<MessageID>>()
   // Monotonic arrival counter per session. latest holds the seq of the most
   // recently enqueued slot; activeSince snapshots latest at the moment the
   // currently running slot actually started. hasFollowup returns true only when
@@ -38,6 +41,7 @@ export namespace KiloSessionPromptQueue {
     return (
       versions.has(sessionID) ||
       targets.has(sessionID) ||
+      dropped.has(sessionID) ||
       latest.has(sessionID) ||
       activeSince.has(sessionID) ||
       waiting.has(sessionID)
@@ -45,6 +49,10 @@ export namespace KiloSessionPromptQueue {
   }
 
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
+  // Skip a slot when the whole session queue was cancelled after it was enqueued
+  // or when that specific queued message was dropped.
+  const isCancelled = (sessionID: SessionID, slot: Slot) =>
+    slot.version !== version(sessionID) || dropped.get(sessionID)?.has(slot.target)
   const settle = (promise: Promise<void>) =>
     promise.then(
       () => undefined,
@@ -75,6 +83,7 @@ export namespace KiloSessionPromptQueue {
       if (!tails.has(sessionID)) {
         versions.delete(sessionID)
         targets.delete(sessionID)
+        dropped.delete(sessionID)
         latest.delete(sessionID)
         activeSince.delete(sessionID)
         // Cancel on an idle session still drops any
@@ -86,6 +95,20 @@ export namespace KiloSessionPromptQueue {
       // queued slots, then drop the waiting list and publish empty.
       publishIfChanged(sessionID, [])
       versions.set(sessionID, version(sessionID) + 1)
+      dropped.delete(sessionID)
+    })
+  }
+
+  export function drop(sessionID: SessionID, messageID: MessageID) {
+    return Effect.sync(() => {
+      const list = waiting.get(sessionID) ?? []
+      const index = list.indexOf(messageID)
+      if (index === -1) return false
+      publishIfChanged(sessionID, [...list.slice(0, index), ...list.slice(index + 1)])
+      const cancelled = dropped.get(sessionID) ?? new Set<MessageID>()
+      cancelled.add(messageID)
+      dropped.set(sessionID, cancelled)
+      return true
     })
   }
 
@@ -115,7 +138,7 @@ export namespace KiloSessionPromptQueue {
   export function hasFollowup(sessionID: SessionID): boolean {
     const l = latest.get(sessionID) ?? 0
     const a = activeSince.get(sessionID) ?? 0
-    return l > a
+    return l > a && (waiting.get(sessionID)?.length ?? 0) > 0
   }
 
   export function scope(sessionID: SessionID, messages: MessageV2.WithParts[]) {
@@ -179,12 +202,12 @@ export namespace KiloSessionPromptQueue {
           const list = waiting.get(sessionID) ?? []
           publishIfChanged(sessionID, [...list, target])
         }
-        return { seq: mine, version: version(sessionID), previous, done, tail } satisfies Slot
+        return { seq: mine, version: version(sessionID), target, previous, done, tail } satisfies Slot
       }),
       (slot) =>
         Effect.promise(() => settle(slot.previous)).pipe(
           Effect.flatMap(() => {
-            if (slot.version !== version(sessionID)) return cancelled
+            if (isCancelled(sessionID, slot)) return cancelled
             // Snapshot the latest seq at the moment this slot actually starts
             // running. hasFollowup compares against this value so the slot only
             // breaks when something newer than itself arrives.
@@ -219,6 +242,7 @@ export namespace KiloSessionPromptQueue {
           tails.delete(sessionID)
           versions.delete(sessionID)
           targets.delete(sessionID)
+          dropped.delete(sessionID)
           latest.delete(sessionID)
           activeSince.delete(sessionID)
           // Last slot of the session finished cleanly;
