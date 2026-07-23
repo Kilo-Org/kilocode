@@ -33,13 +33,13 @@ class ToolMarkdownBody(
     private val render: (Tool) -> String,
     private val font: (SessionEditorStyle) -> Font = SessionEditorStyle::editorFont,
     private val chrome: (MdView) -> Unit = {},
-) {
-    var parent: Disposable? = null
+) : EditBody {
+    override var parent: Disposable? = null
     private var view: MdView? = null
 
     /** Builds the body on first call, wiring it into [parent]'s disposable tree, then returns it. */
     @RequiresEdt
-    fun mount(tool: Tool): JComponent {
+    override fun mount(tool: Tool): JComponent {
         view?.let { return it.component }
         val owner = parent ?: error("Tool markdown body has no parent")
         val md = MdViewFactory.create(SessionEditorStyle.current(), selection, MdCodeBlockFactory.default(opts))
@@ -51,16 +51,16 @@ class ToolMarkdownBody(
     }
 
     @RequiresEdt
-    fun created(): Boolean = view != null
+    override fun created(): Boolean = view != null
 
     @RequiresEdt
-    fun panel(): JComponent? = view?.component
+    override fun panel(): JComponent? = view?.component
 
     @RequiresEdt
-    fun attached(host: Component): Boolean = view?.component?.parent === host
+    override fun attached(host: Component): Boolean = view?.component?.parent === host
 
     @RequiresEdt
-    fun update(tool: Tool): Boolean {
+    override fun update(tool: Tool): Boolean {
         val md = view ?: return false
         val value = render(tool)
         if (md.markdown() == value) return false
@@ -70,7 +70,7 @@ class ToolMarkdownBody(
     }
 
     @RequiresEdt
-    fun applyStyle(style: SessionEditorStyle): Boolean {
+    override fun applyStyle(style: SessionEditorStyle): Boolean {
         val md = view ?: return false
         val before = md.font
         md.applyStyle(style)
@@ -85,12 +85,12 @@ class ToolMarkdownBody(
     }
 
     @RequiresEdt
-    fun markdown(): String? = view?.markdown()
+    override fun markdown(): String? = view?.markdown()
 
     @RequiresEdt
     fun scrolls(): List<JBScrollPane> =
         (view?.component as? JPanel)?.components?.filterIsInstance<JBScrollPane>() ?: emptyList()
 
     @RequiresEdt
-    fun codeEditors(): List<EditorTextField> = scrolls().mapNotNull { it.viewport.view as? EditorTextField }
+    override fun codeEditors(): List<EditorTextField> = scrolls().mapNotNull { it.viewport.view as? EditorTextField }
 }

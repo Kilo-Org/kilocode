@@ -8,6 +8,7 @@ import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
+import ai.kilocode.client.ui.DiffStatBadge
 import com.intellij.openapi.diff.DiffColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
@@ -15,6 +16,8 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
+import kotlinx.serialization.json.addJsonObject
+import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.awt.Component
@@ -78,6 +81,64 @@ class EditToolViewTest : BasePlatformTestCase() {
 
         assertFalse(view.badgeVisible())
         assertEquals(0 to 0, view.diffStat())
+    }
+
+    fun `test multi file apply_patch shows file count tag and aggregated changes`() {
+        val view = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 2, 0, ADD_HUNK),
+                FileChange("src/B.kt", 1, 1, UPDATE_HUNK),
+            ))
+        }))
+
+        assertTrue(view.labelText().contains("Patch"))
+        assertFalse(view.labelText().contains("Edit"))
+        assertTrue(view.filesTagVisible())
+        assertTrue(view.filesTagText()!!.contains("2 files"))
+        assertFalse(view.linkVisible())
+        assertTrue(view.badgeVisible())
+        assertEquals(3 to 1, view.diffStat())
+    }
+
+    fun `test multi file patch body renders a link and diff per file`() {
+        val opened = mutableListOf<String>()
+        val view = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 2, 0, ADD_HUNK),
+                FileChange("pkg/B.kt", 1, 1, UPDATE_HUNK),
+            ))
+        }, openFile = { href, _ -> opened.add(href) }))
+
+        view.toggle()
+
+        assertTrue(view.isExpanded())
+        assertEquals(2, view.codeEditors().size)
+
+        val fileLinks = labels(view).filter { it.text?.contains("<u>") == true }
+        assertTrue(fileLinks.any { it.text!!.contains("A.kt") && !it.text!!.contains("src/") })
+        assertTrue(fileLinks.any { it.text!!.contains("B.kt") && !it.text!!.contains("pkg/") })
+
+        // The per-file header renders one changes badge per file (plus the header badge).
+        assertTrue(badges(view).size >= 2)
+
+        click(fileLinks.first { it.text!!.contains("A.kt") }, 1)
+        assertEquals(listOf("src/A.kt"), opened)
+    }
+
+    fun `test single file apply_patch keeps link and hides count tag`() {
+        val view = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.title = "src/Only.kt"
+            it.metadata = mapOf("files" to filesMeta(FileChange("src/Only.kt", 1, 1, UPDATE_HUNK)))
+        }))
+
+        assertFalse(view.filesTagVisible())
+        assertTrue(view.linkVisible())
+        assertEquals(1 to 1, view.diffStat())
+        assertFalse(view.markdown().contains("src/Only.kt"))
+        assertEquals(1, Regex("```patch-pure").findAll(view.markdown()).count())
     }
 
     fun `test edit body renders unified diff and expands`() {
@@ -251,6 +312,26 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
+    fun `test multi file patch editors are disposed after churn`() {
+        val base = EditorFactory.getInstance().allEditors.size
+
+        repeat(20) { i ->
+            val view = EditToolView(tool().also {
+                it.input = emptyMap()
+                it.metadata = mapOf("files" to filesMeta(
+                    FileChange("src/A$i.kt", 2, 0, ADD_HUNK),
+                    FileChange("src/B$i.kt", 1, 1, UPDATE_HUNK),
+                ))
+            })
+            view.toggle()
+            view.codeEditors().forEach { it.getEditor(true) }
+            Disposer.dispose(view)
+        }
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
     private fun track(view: EditToolView): EditToolView {
         views.add(view)
         return view
@@ -266,6 +347,11 @@ class EditToolViewTest : BasePlatformTestCase() {
     private fun labels(root: Container): List<JBLabel> = root.components.flatMap { child ->
         val nested = if (child is Container) labels(child) else emptyList()
         if (child is JBLabel) nested + child else nested
+    }
+
+    private fun badges(root: Container): List<DiffStatBadge> = root.components.flatMap { child ->
+        val nested = if (child is Container) badges(child) else emptyList()
+        if (child is DiffStatBadge) nested + child else nested
     }
 
     private fun tool() = Tool("p1", "edit", toolKind("edit")).also {
@@ -291,6 +377,21 @@ class EditToolViewTest : BasePlatformTestCase() {
         +new$i
     """.trimIndent()
 
+    private data class FileChange(val path: String, val additions: Int, val deletions: Int, val patch: String)
+
+    // Mirrors how the CLI serializes metadata.files (a JsonArray of per-file changes rendered to string).
+    private fun filesMeta(vararg files: FileChange): String = buildJsonArray {
+        files.forEach { file ->
+            addJsonObject {
+                put("relativePath", file.path)
+                put("type", "update")
+                put("additions", file.additions)
+                put("deletions", file.deletions)
+                put("patch", file.patch)
+            }
+        }
+    }.toString()
+
     // Mirrors how the CLI serializes metadata.filediff (a JsonObject rendered to string).
     private fun fileDiff(
         additions: Int,
@@ -314,6 +415,19 @@ class EditToolViewTest : BasePlatformTestCase() {
             +new1
             +new2
              line3
+        """.trimIndent()
+
+        private val ADD_HUNK = """
+            @@ -0,0 +1,2 @@
+            +alpha
+            +beta
+        """.trimIndent()
+
+        private val UPDATE_HUNK = """
+            @@ -1,2 +1,2 @@
+             keep
+            -old
+            +new
         """.trimIndent()
     }
 }

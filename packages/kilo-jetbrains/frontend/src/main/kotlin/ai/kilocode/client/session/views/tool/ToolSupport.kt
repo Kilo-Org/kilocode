@@ -776,6 +776,45 @@ internal fun editDiff(tool: Tool): String {
     return ""
 }
 
+/** One file touched by an apply_patch call, parsed from the tool's `files[]` metadata. */
+internal data class EditFileChange(
+    val path: String,
+    val type: String,
+    val additions: Int,
+    val deletions: Int,
+    val patch: String,
+)
+
+/** Per-file changes from an apply_patch tool; empty for single-file edit/write tools (`filediff`). */
+internal fun editFiles(tool: Tool): List<EditFileChange> =
+    parseJsonArray(tool.metadata["files"])?.mapNotNull { element ->
+        val obj = element.jsonObject
+        val path = editFile(obj) ?: return@mapNotNull null
+        EditFileChange(
+            path = path,
+            type = obj["type"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            additions = obj["additions"]?.jsonPrimitive?.intOrNull ?: 0,
+            deletions = obj["deletions"]?.jsonPrimitive?.intOrNull ?: 0,
+            patch = patchOf(obj).orEmpty(),
+        )
+    } ?: emptyList()
+
+/**
+ * Sectioned markdown for a multi-file patch: each file gets a labeled header line (path plus its own
+ * add/remove counts) followed by its own fenced diff, so the joined apply_patch diff no longer runs
+ * together into one indistinguishable block. The path is wrapped in inline code so characters like
+ * underscores are not parsed as markdown emphasis.
+ */
+internal fun multiFileDiffMarkdown(files: List<EditFileChange>): String =
+    files.filter { it.patch.isNotBlank() }.joinToString("\n\n") { file ->
+        buildString {
+            append('`').append(tail(file.path)).append('`')
+            append(" +").append(file.additions).append(" -").append(file.deletions)
+            append("\n\n")
+            append(patchMarkdown(file.patch))
+        }
+    }
+
 /** Added/removed line counts, preferring the counts computed by the CLI, else counting patch lines. */
 internal fun diffStat(tool: Tool): Pair<Int, Int> {
     parseJsonObject(tool.metadata["filediff"])?.let { fd ->
