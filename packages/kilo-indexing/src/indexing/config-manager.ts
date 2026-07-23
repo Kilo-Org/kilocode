@@ -13,12 +13,15 @@ import { resolveFileExtensions } from "./shared/supported-extensions"
 export interface IndexingConfigInput {
   enabled: boolean
   embedderProvider: EmbedderProvider
-  vectorStoreProvider?: "lancedb" | "qdrant"
+  vectorStoreProvider?: "lancedb" | "qdrant" | "milvus"
   lancedbVectorStoreDirectory?: string
   modelId?: string
   modelDimension?: number
   qdrantUrl?: string
   qdrantApiKey?: string
+  milvusAddress?: string
+  milvusToken?: string
+  milvusDatabase?: string
   searchMinScore?: number
   searchMaxResults?: number
   embeddingBatchSize?: number
@@ -52,7 +55,7 @@ export interface IndexingConfigInput {
 export class CodeIndexConfigManager {
   private enabled = false
   private embedderProvider: EmbedderProvider = "openai"
-  private vectorStoreProvider: "lancedb" | "qdrant" = DEFAULT_VECTOR_STORE
+  private vectorStoreProvider: "lancedb" | "qdrant" | "milvus" = DEFAULT_VECTOR_STORE
   private lancedbVectorStoreDirectory?: string
   private modelId?: string
   private modelDimension?: number
@@ -68,6 +71,9 @@ export class CodeIndexConfigManager {
   private voyageOptions?: { apiKey: string }
   private qdrantUrl?: string = "http://localhost:6333"
   private qdrantApiKey?: string
+  private milvusAddress?: string = "localhost:19530"
+  private milvusToken?: string
+  private milvusDatabase?: string
   private searchMinScore?: number
   private searchMaxResults?: number
   private embeddingBatchSize?: number
@@ -95,6 +101,9 @@ export class CodeIndexConfigManager {
     this.lancedbVectorStoreDirectory = input.lancedbVectorStoreDirectory
     this.qdrantUrl = input.qdrantUrl ?? "http://localhost:6333"
     this.qdrantApiKey = input.qdrantApiKey
+    this.milvusAddress = input.milvusAddress ?? "localhost:19530"
+    this.milvusToken = input.milvusToken
+    this.milvusDatabase = input.milvusDatabase
     this.searchMinScore = input.searchMinScore
     this.searchMaxResults = input.searchMaxResults
     this.embeddingBatchSize = input.embeddingBatchSize
@@ -157,16 +166,19 @@ export class CodeIndexConfigManager {
       voyageApiKey: this.voyageOptions?.apiKey ?? "",
       qdrantUrl: this.qdrantUrl ?? "",
       qdrantApiKey: this.qdrantApiKey ?? "",
+      milvusAddress: this.milvusAddress ?? "",
+      milvusToken: this.milvusToken ?? "",
+      milvusDatabase: this.milvusDatabase ?? "",
       fileExtensions: [...this.fileExtensions],
     }
   }
 
   public isConfigured(): boolean {
     const provider = this.embedderProvider
-    const qdrant = this.qdrantUrl
-    const isLancedb = this.vectorStoreProvider === "lancedb"
-    // LanceDB doesn't need a qdrant URL; qdrant does
-    const hasStore = isLancedb || !!qdrant
+    const hasStore =
+      this.vectorStoreProvider === "lancedb" ||
+      (this.vectorStoreProvider === "qdrant" && !!this.qdrantUrl) ||
+      (this.vectorStoreProvider === "milvus" && !!this.milvusAddress)
 
     if (provider === "kilo")
       return !!(this.kiloOptions?.apiKey && this.modelId && this.currentModelDimension && hasStore)
@@ -235,6 +247,14 @@ export class CodeIndexConfigManager {
     if ((prev.qdrantUrl ?? "") !== (this.qdrantUrl ?? "") || (prev.qdrantApiKey ?? "") !== (this.qdrantApiKey ?? ""))
       return true
 
+    // Milvus connection changes
+    if (
+      (prev.milvusAddress ?? "") !== (this.milvusAddress ?? "") ||
+      (prev.milvusToken ?? "") !== (this.milvusToken ?? "") ||
+      (prev.milvusDatabase ?? "") !== (this.milvusDatabase ?? "")
+    )
+      return true
+
     if (prev.fileExtensions.join("\0") !== this.fileExtensions.join("\0")) return true
 
     if (this.hasEmbeddingProfileChanged(prevProvider, prev.modelId, prev.modelDimension)) return true
@@ -279,6 +299,9 @@ export class CodeIndexConfigManager {
       voyageOptions: this.voyageOptions,
       qdrantUrl: this.qdrantUrl,
       qdrantApiKey: this.qdrantApiKey,
+      milvusAddress: this.milvusAddress,
+      milvusToken: this.milvusToken,
+      milvusDatabase: this.milvusDatabase,
       searchMinScore: this.currentSearchMinScore,
       searchMaxResults: this.currentSearchMaxResults,
       embeddingBatchSize: this.currentEmbeddingBatchSize,
@@ -301,6 +324,10 @@ export class CodeIndexConfigManager {
 
   public get qdrantConfig(): { url?: string; apiKey?: string } {
     return { url: this.qdrantUrl, apiKey: this.qdrantApiKey }
+  }
+
+  public get milvusConfig(): { address?: string; token?: string; database?: string } {
+    return { address: this.milvusAddress, token: this.milvusToken, database: this.milvusDatabase }
   }
 
   public get currentModelId(): string | undefined {

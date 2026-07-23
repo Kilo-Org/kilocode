@@ -46,6 +46,7 @@ const allProviders: { value: ProviderId; label: string }[] = [
 const stores: Option[] = [
   { value: "lancedb", label: "LanceDB (default)" },
   { value: "qdrant", label: "Qdrant" },
+  { value: "milvus", label: "Milvus" },
 ]
 
 const tuning: Array<{ key: TuningKey; label: string; placeholder: string }> = [
@@ -193,7 +194,7 @@ const IndexingTab: Component = () => {
     return value ?? ""
   }
 
-  const storeValue = (group: "qdrant" | "lancedb", key: string) => {
+  const storeValue = (group: "qdrant" | "lancedb" | "milvus", key: string) => {
     const draftKey = `${scope()}.${group}.${key}`
     const draft = storeDrafts()[draftKey]
     if (draft !== undefined) return draft
@@ -208,7 +209,7 @@ const IndexingTab: Component = () => {
     setProviderDrafts((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== draftKey)))
   }
 
-  const saveStoreField = (group: "qdrant" | "lancedb", key: string, value: string) => {
+  const saveStoreField = (group: "qdrant" | "lancedb" | "milvus", key: string, value: string) => {
     const current = (raw()[group] as Record<string, string | undefined> | undefined) ?? {}
     updateIndexing({ [group]: { ...current, [key]: value.trim() || undefined } })
     const draftKey = `${scope()}.${group}.${key}`
@@ -465,38 +466,38 @@ const IndexingTab: Component = () => {
             current={stores.find((item) => item.value === vectorStore())}
             value={(item) => item.value}
             label={(item) => item.label}
-            onSelect={(item) => updateIndexing({ vectorStore: item?.value as "lancedb" | "qdrant" | undefined })}
+            onSelect={(item) =>
+              updateIndexing({ vectorStore: item?.value as "lancedb" | "qdrant" | "milvus" | undefined })
+            }
             variant="secondary"
             size="small"
             triggerVariant="settings"
           />
         </SettingsRow>
-        <Show
-          when={vectorStore() === "qdrant"}
-          fallback={
-            <SettingsRow
-              title={language.t("settings.indexing.lancedbDirectory.title")}
-              description={description(language.t("settings.indexing.lancedbDirectory.description"), [
-                ["lancedb", "directory"],
-              ])}
-              tag={() => tag(scope(), [["lancedb", "directory"]])}
-              last
-            >
-              <TextField
-                value={storeValue("lancedb", "directory")}
-                placeholder={language.t("settings.indexing.lancedbDirectory.placeholder")}
-                onInput={(e: InputEvent) => {
-                  const target = e.currentTarget as HTMLInputElement
-                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.lancedb.directory`]: target.value }))
-                }}
-                onBlur={(e: FocusEvent) => {
-                  const target = e.currentTarget as HTMLInputElement
-                  saveStoreField("lancedb", "directory", target.value)
-                }}
-              />
-            </SettingsRow>
-          }
-        >
+        <Show when={vectorStore() === "lancedb"}>
+          <SettingsRow
+            title={language.t("settings.indexing.lancedbDirectory.title")}
+            description={description(language.t("settings.indexing.lancedbDirectory.description"), [
+              ["lancedb", "directory"],
+            ])}
+            tag={() => tag(scope(), [["lancedb", "directory"]])}
+            last
+          >
+            <TextField
+              value={storeValue("lancedb", "directory")}
+              placeholder={language.t("settings.indexing.lancedbDirectory.placeholder")}
+              onInput={(e: InputEvent) => {
+                const target = e.currentTarget as HTMLInputElement
+                setStoreDrafts((prev) => ({ ...prev, [`${scope()}.lancedb.directory`]: target.value }))
+              }}
+              onBlur={(e: FocusEvent) => {
+                const target = e.currentTarget as HTMLInputElement
+                saveStoreField("lancedb", "directory", target.value)
+              }}
+            />
+          </SettingsRow>
+        </Show>
+        <Show when={vectorStore() === "qdrant"}>
           <>
             <SettingsRow
               title={language.t("settings.indexing.qdrantUrl.title")}
@@ -535,6 +536,70 @@ const IndexingTab: Component = () => {
                 onBlur={(e: FocusEvent) => {
                   const target = e.currentTarget as HTMLInputElement
                   saveStoreField("qdrant", "apiKey", target.value)
+                }}
+              />
+            </SettingsRow>
+          </>
+        </Show>
+        <Show when={vectorStore() === "milvus"}>
+          <>
+            <SettingsRow
+              title={language.t("settings.indexing.milvusAddress.title")}
+              description={description(language.t("settings.indexing.milvusAddress.description"), [
+                ["milvus", "address"],
+              ])}
+              tag={() => tag(scope(), [["milvus", "address"]])}
+            >
+              <TextField
+                value={storeValue("milvus", "address")}
+                placeholder={language.t("settings.indexing.milvusAddress.placeholder")}
+                onInput={(e: InputEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.milvus.address`]: target.value }))
+                }}
+                onBlur={(e: FocusEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  saveStoreField("milvus", "address", target.value)
+                }}
+              />
+            </SettingsRow>
+            <SettingsRow
+              title={language.t("settings.indexing.milvusToken.title")}
+              description={description(language.t("settings.indexing.milvusToken.description"), [["milvus", "token"]])}
+              tag={() => tag(scope(), [["milvus", "token"]])}
+            >
+              <TextField
+                type="password"
+                value={storeValue("milvus", "token")}
+                placeholder={language.t("settings.indexing.milvusToken.placeholder")}
+                onInput={(e: InputEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.milvus.token`]: target.value }))
+                }}
+                onBlur={(e: FocusEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  saveStoreField("milvus", "token", target.value)
+                }}
+              />
+            </SettingsRow>
+            <SettingsRow
+              title={language.t("settings.indexing.milvusDatabase.title")}
+              description={description(language.t("settings.indexing.milvusDatabase.description"), [
+                ["milvus", "database"],
+              ])}
+              tag={() => tag(scope(), [["milvus", "database"]])}
+              last
+            >
+              <TextField
+                value={storeValue("milvus", "database")}
+                placeholder={language.t("settings.indexing.milvusDatabase.placeholder")}
+                onInput={(e: InputEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  setStoreDrafts((prev) => ({ ...prev, [`${scope()}.milvus.database`]: target.value }))
+                }}
+                onBlur={(e: FocusEvent) => {
+                  const target = e.currentTarget as HTMLInputElement
+                  saveStoreField("milvus", "database", target.value)
                 }}
               />
             </SettingsRow>

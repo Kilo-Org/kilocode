@@ -40,6 +40,7 @@
     "@kilocode/plugin": "workspace:*",
     "@lancedb/lancedb": "0.26.2",
     "@qdrant/js-client-rest": "1.17.0",
+    "@zilliz/milvus2-sdk-node": "3.0.3",
     "async-mutex": "0.5.0",
     "chokidar": "4.0.3",
     "effect": "catalog:",
