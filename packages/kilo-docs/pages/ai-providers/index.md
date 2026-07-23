@@ -37,6 +37,7 @@ Run models on your own hardware for privacy and offline use:
 - **[Anaconda Desktop](/docs/ai-providers/anaconda-desktop)** - Discover and connect to a local text-generation model server
 - **[Ollama](/docs/ai-providers/ollama)** - Easy local model management
 - **[LM Studio](/docs/ai-providers/lmstudio)** - Desktop app for local models
+- **[Lynkr](/docs/ai-providers/lynkr)** - Self-hosted gateway routing requests by complexity across local and cloud models
 - **[OpenAI Compatible](/docs/ai-providers/openai-compatible)** - Any OpenAI-compatible endpoint
 
 ### AI Gateways
