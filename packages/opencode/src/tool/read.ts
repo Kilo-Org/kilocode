@@ -331,7 +331,10 @@ export const ReadTool = Tool.define<
             const msg = isPdfAttachment(mime) ? "PDF read successfully" : "Image read successfully"
             return {
               title,
-              output: msg,
+              output:
+                loaded.length > 0
+                  ? `${msg}\n\n<system-reminder>\n${loaded.map((item) => item.content).join("\n\n")}\n</system-reminder>`
+                  : msg, // kilocode_change
               metadata: { preview: msg, truncated: false, loaded: loaded.map((item) => item.filepath) },
               attachments: [{ type: "file" as const, mime, url: `data:${mime};base64,${bytes.toString("base64")}` }],
             }

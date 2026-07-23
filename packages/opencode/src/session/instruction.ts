@@ -16,6 +16,13 @@ import type { KilocodeMarkdown } from "@/kilocode/config/markdown" // kilocode_c
 import type { MessageV2 } from "./message-v2"
 import type { MessageID } from "./schema"
 
+// kilocode_change start
+type Classified = {
+  startup: Map<string, KilocodeMarkdown.Source>
+  scoped: { item: string; content: string; paths: string[] }[]
+}
+// kilocode_change end
+
 function extract(messages: SessionV1.WithParts[]) {
   const paths = new Set<string>()
   for (const msg of messages) {
@@ -77,6 +84,7 @@ export const layer: Layer.Layer<
         Effect.succeed({
           // Track which instruction files have already been attached for a given assistant message.
           claims: new Map<MessageID, Set<string>>(),
+          sources: undefined as Classified | undefined, // kilocode_change
         }),
       ),
     )
@@ -108,6 +116,13 @@ export const layer: Layer.Layer<
       const opts = yield* options(filepath, origin)
       return yield* Effect.promise(() => KilocodeInstruction.read(filepath, opts).catch(() => ""))
     })
+
+    const parse = Effect.fnUntraced(function* (filepath: string, origin: KilocodeMarkdown.Source) {
+      const opts = yield* options(filepath, origin)
+      return yield* Effect.promise(() =>
+        KilocodeInstruction.parse(filepath, opts).catch(() => ({ content: "", paths: undefined })),
+      )
+    })
     // kilocode_change end
 
     const fetch = Effect.fnUntraced(function* (url: string) {
@@ -123,6 +138,7 @@ export const layer: Layer.Layer<
     const clear = Effect.fn("Instruction.clear")(function* (messageID: MessageID) {
       const s = yield* InstanceState.get(state)
       s.claims.delete(messageID)
+      s.sources = undefined // kilocode_change
     })
 
     // kilocode_change start - retain declaration provenance through instruction path expansion
@@ -131,6 +147,7 @@ export const layer: Layer.Layer<
       const ctx = yield* InstanceState.context
       const root = ctx.worktree === "/" ? ctx.directory : ctx.worktree
       const paths = new Map<string, KilocodeMarkdown.Source>()
+      const rules = new Set<string>()
       const add = (item: string, origin: KilocodeMarkdown.Source) => {
         const filepath = path.resolve(item)
         if (paths.get(filepath)?.trusted) return
@@ -157,6 +174,31 @@ export const layer: Layer.Layer<
         }
       }
 
+      if (!flags.disableClaudeCodePrompt) {
+        const globalRules = yield* fs
+          .glob("rules/**/*.md", {
+            cwd: path.join(global.home, ".claude"),
+            absolute: true,
+            include: "file",
+            dot: true,
+            symlink: true,
+          })
+          .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+        globalRules.forEach((item) => {
+          add(item, { trusted: true, source: item })
+          rules.add(path.resolve(item))
+        })
+        if (!Flag.KILO_DISABLE_PROJECT_CONFIG) {
+          const projectRules = yield* fs
+            .globUp(".claude/rules/**/*.md", ctx.directory, ctx.worktree)
+            .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+          projectRules.forEach((item) => {
+            add(item, { trusted: false, source: item, root })
+            rules.add(path.resolve(item))
+          })
+        }
+      }
+
       if (config.instructions) {
         for (const raw of config.instructions) {
           if (raw.startsWith("https://") || raw.startsWith("http://")) continue
@@ -173,21 +215,63 @@ export const layer: Layer.Layer<
           const declared = config.instruction_origins?.[raw] ?? { trusted: false, source: raw, root }
           const trusted = declared.trusted && (path.isAbsolute(instruction) || Flag.KILO_DISABLE_PROJECT_CONFIG)
           const origin = { ...declared, trusted, root: trusted ? undefined : (declared.root ?? root) }
-          matches.forEach((item) => add(item, origin))
+          matches.forEach((item) => {
+            add(item, origin)
+            if (path.extname(item).toLowerCase() === ".md" && !instructionFiles.includes(path.basename(item))) {
+              rules.add(path.resolve(item))
+            }
+          })
         }
       }
 
-      return paths
+      return { sources: paths, rules }
+    })
+
+    const classify = Effect.fn("Instruction.classifySources")(function* (input: {
+      sources: Map<string, KilocodeMarkdown.Source>
+      rules: Set<string>
+    }) {
+      const entries = yield* Effect.forEach(
+        Array.from(input.sources.entries()),
+        (item) =>
+          Effect.gen(function* () {
+            if (!input.rules.has(item[0])) return { item, parsed: undefined }
+            return { item, parsed: yield* parse(item[0], item[1]) }
+          }),
+        { concurrency: 8 },
+      )
+      const startup = new Map<string, KilocodeMarkdown.Source>()
+      const scoped: { item: string; content: string; paths: string[] }[] = []
+      for (const entry of entries) {
+        if (!entry.parsed?.paths) {
+          startup.set(entry.item[0], entry.item[1])
+          continue
+        }
+        scoped.push({ item: entry.item[0], content: entry.parsed.content, paths: entry.parsed.paths })
+      }
+      return { startup, scoped }
+    })
+
+    const classified = Effect.fn("Instruction.classified")(function* () {
+      const s = yield* InstanceState.get(state)
+      if (s.sources) return s.sources
+      const sources = yield* classify(yield* systemSources())
+      s.sources = sources
+      return sources
+    })
+
+    const startupSources = Effect.fn("Instruction.startupSources")(function* () {
+      return (yield* classified()).startup
     })
 
     const systemPaths = Effect.fn("Instruction.systemPaths")(function* () {
-      return new Set((yield* systemSources()).keys())
+      return new Set((yield* startupSources()).keys())
     })
     // kilocode_change end
 
     const system = Effect.fn("Instruction.system")(function* () {
       const config = yield* cfg.get()
-      const sources = yield* systemSources() // kilocode_change
+      const sources = yield* startupSources() // kilocode_change
       const paths = Array.from(sources.keys()) // kilocode_change
       const urls = (config.instructions ?? []).filter(
         (item) => item.startsWith("https://") || item.startsWith("http://"),
@@ -219,7 +303,8 @@ export const layer: Layer.Layer<
       filepath: string,
       messageID: MessageID,
     ) {
-      const sys = yield* systemPaths()
+      const sources = yield* classified() // kilocode_change
+      const sys = new Set(sources.startup.keys()) // kilocode_change
       const already = extract(messages)
       const results: { filepath: string; content: string }[] = []
       const s = yield* InstanceState.get(state)
@@ -254,6 +339,27 @@ export const layer: Layer.Layer<
 
         current = path.dirname(current)
       }
+
+      // kilocode_change start - attach configured path-scoped rules after existing nearby instructions
+      const ctx = yield* InstanceState.context
+      const worktree = path.resolve(ctx.worktree === "/" ? ctx.directory : ctx.worktree)
+      for (const item of sources.scoped) {
+        if (item.item === target || already.has(item.item)) continue
+        if (!KilocodeInstruction.match(item.paths, target, worktree)) continue
+
+        let set = s.claims.get(messageID)
+        if (!set) {
+          set = new Set()
+          s.claims.set(messageID, set)
+        }
+        if (set.has(item.item)) continue
+
+        set.add(item.item)
+        if (item.content) {
+          results.push({ filepath: item.item, content: `Instructions from: ${item.item}\n${item.content}` })
+        }
+      }
+      // kilocode_change end
 
       return results
     })
