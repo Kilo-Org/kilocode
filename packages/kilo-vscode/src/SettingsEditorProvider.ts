@@ -64,7 +64,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
         const provider = this.providers.get(view)
         provider?.postMessage({ type: "navigate", view, tab })
       }
-      existing.reveal(vscode.ViewColumn.One)
+      existing.reveal(vscode.ViewColumn.Active)
       this.providers.get(view)?.postMessage({ type: "navigate", view, ...(tab ? { tab } : {}) })
       return
     }
@@ -72,7 +72,7 @@ export class SettingsEditorProvider implements vscode.Disposable {
     const panel = vscode.window.createWebviewPanel(
       `kilo-code.new.${view}Panel`,
       PANEL_TITLES[view],
-      vscode.ViewColumn.One,
+      vscode.ViewColumn.Active,
       {
         enableScripts: true,
         retainContextWhenHidden: true,

@@ -16,6 +16,7 @@ const PKG_JSON_FILE = path.join(ROOT, "package.json")
 const SRC_DIR = path.join(ROOT, "src")
 const EXTENSION_FILE = path.join(ROOT, "src/extension.ts")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
+const SETTINGS_PROVIDER_FILE = path.join(ROOT, "src/SettingsEditorProvider.ts")
 const VSCODE_HOST_FILE = path.join(ROOT, "src/agent-manager/vscode-host.ts")
 
 function sliceBlock(source: string, start: number): string {
@@ -199,6 +200,32 @@ describe("Extension — KiloProvider handler wiring", () => {
     expect(handler, "setContinueInWorktreeHandler must be called in deserializer").toBeGreaterThan(-1)
     expect(resolve, "resolveWebviewPanel must be called in deserializer").toBeGreaterThan(-1)
     expect(handler, "handler must be wired before resolving the panel").toBeLessThan(resolve)
+  })
+})
+
+describe("Extension — editor panel placement", () => {
+  const ext = fs.readFileSync(EXTENSION_FILE, "utf-8")
+  const settings = fs.readFileSync(SETTINGS_PROVIDER_FILE, "utf-8")
+
+  it("opens Kilo as a tab in the active editor group", () => {
+    const fn = ext.indexOf("function openKiloInNewTab")
+    expect(fn, "openKiloInNewTab must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(ext, fn)
+
+    expect(body).toContain("vscode.ViewColumn.Active")
+    expect(body).not.toContain("visibleTextEditors")
+    expect(body).not.toContain("workbench.action.newGroupRight")
+    expect(body).not.toContain("workbench.action.lockEditorGroup")
+  })
+
+  it("opens and reveals Settings in the active editor group", () => {
+    const fn = settings.indexOf("openPanel(view")
+    expect(fn, "SettingsEditorProvider.openPanel must exist").toBeGreaterThan(-1)
+    const body = sliceBlock(settings, fn)
+
+    expect(body).toContain("existing.reveal(vscode.ViewColumn.Active)")
+    expect(body.match(/vscode\.ViewColumn\.Active/g)).toHaveLength(2)
+    expect(body).not.toContain("vscode.ViewColumn.One")
   })
 })
 
