@@ -15,10 +15,19 @@ export namespace RemoteProtocol {
 
   // --- CLI → DO (Outbound) ---
 
+  // Capability flags advertised in the heartbeat so the relay can stop
+  // probing commands to discover what the CLI supports. Field name and
+  // nesting are an exact contract with the mobile ingest service.
+  export const Capabilities = z
+    .object({
+      attachments: z.boolean().optional(),
+    })
+    .optional()
   export const Heartbeat = z.object({
     type: z.literal("heartbeat"),
     sessions: z.array(SessionInfo),
     protocolVersion: z.string().optional(), // lets relay detect CLI capabilities without probing commands
+    capabilities: Capabilities,
   })
   export type Heartbeat = z.infer<typeof Heartbeat>
 

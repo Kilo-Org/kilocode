@@ -233,7 +233,12 @@ export namespace RemoteWS {
             if (fresh !== undefined) {
               lastGood = fresh
               const sentLive = ws?.readyState === WebSocket.OPEN
-              send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: fresh })
+              send({
+                type: "heartbeat",
+                protocolVersion: InstallationVersion,
+                capabilities: { attachments: true },
+                sessions: fresh,
+              })
               if (sentLive) {
                 // A waiter requiring a specific id is satisfied only when
                 // the sent payload contains that id. Unsatisfied waiters
@@ -264,7 +269,12 @@ export namespace RemoteWS {
             } else {
               // Degraded: preserve liveness with the last known-good list (empty
               // on cold start) and keep waiters pending for a future fresh send.
-              send({ type: "heartbeat", protocolVersion: InstallationVersion, sessions: lastGood ?? [] })
+              send({
+                type: "heartbeat",
+                protocolVersion: InstallationVersion,
+                capabilities: { attachments: true },
+                sessions: lastGood ?? [],
+              })
               waiters = cycleWaiters.concat(waiters)
             }
           }
