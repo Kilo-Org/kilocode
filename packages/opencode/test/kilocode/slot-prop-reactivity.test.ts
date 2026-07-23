@@ -13,22 +13,25 @@ import fs from "node:fs"
 import path from "node:path"
 import { children, createEffect, createRoot, createSignal, mergeProps } from "solid-js"
 
-const SLOTS_FILE = path.resolve(import.meta.dir, "../../src/cli/cmd/tui/plugin/slots.tsx")
+const SLOTS_FILE = path.resolve(import.meta.dir, "../../../tui/src/plugin/slots.tsx")
+
+function wrapper() {
+  const content = fs.readFileSync(SLOTS_FILE, "utf-8")
+  return content.match(/const Slot: SlotView[\s\S]*?^  }/m)?.[0] ?? ""
+}
 
 describe("Slot wrapper preserves prop reactivity", () => {
   test("slots.tsx does not use `{...props}` spread to forward props", () => {
     // Spread on a plain object in Solid evaluates every prop once and freezes
     // it. mergeProps (or a getter per prop) is required to keep reactivity.
-    const content = fs.readFileSync(SLOTS_FILE, "utf-8")
-    const wrapper = content.match(/export const Slot[\s\S]*?^}/m)?.[0] ?? ""
-    expect(wrapper).not.toBe("")
-    expect(wrapper).not.toMatch(/\.\.\.props/)
+    const content = wrapper()
+    expect(content).not.toBe("")
+    expect(content).not.toMatch(/\.\.\.props/)
   })
 
   test("slots.tsx forwards props through mergeProps (or per-prop getters)", () => {
-    const content = fs.readFileSync(SLOTS_FILE, "utf-8")
-    const wrapper = content.match(/export const Slot[\s\S]*?^}/m)?.[0] ?? ""
-    const usesMergeProps = /mergeProps\s*\(/.test(wrapper)
+    const content = wrapper()
+    const usesMergeProps = /mergeProps\s*\(/.test(content)
     expect(usesMergeProps).toBe(true)
   })
 

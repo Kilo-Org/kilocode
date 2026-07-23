@@ -142,6 +142,14 @@ export interface MessagePartProps {
   message: MessageType
   hideDetails?: boolean
   defaultOpen?: boolean
+  /** True when this part contains the transcript search's current match —
+   * forces a collapsed tool/reasoning block open so the user can see the
+   * highlighted match without manually expanding it first. */
+  forceOpen?: boolean
+  /** For a multi-file apply_patch part, the specific file path (matching
+   * that file's `filePath`) whose accordion contains the current match —
+   * lets that one nested item open instead of every file in the patch. */
+  forceOpenFile?: string
   reasoningAutoCollapse?: boolean
   showAssistantCopyPartID?: string | null
   showTurnDiffSummary?: boolean
@@ -149,6 +157,7 @@ export interface MessagePartProps {
   animate?: boolean
   working?: boolean
   feedback?: MessageFeedbackControls
+  throughput?: JSX.Element
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -735,6 +744,7 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
 }) {
@@ -808,6 +818,23 @@ export function UserMessageDisplay(props: {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const Delete = () => (
+    <Show when={props.onDelete}>
+      <IconButton
+        data-slot="user-message-delete"
+        icon="close-small"
+        size="normal"
+        variant="ghost"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={(event) => {
+          event.stopPropagation()
+          props.onDelete?.()
+        }}
+        aria-label={i18n.t("ui.message.deleteQueued")}
+      />
+    </Show>
+  )
+
   return (
     <GrowBox animate={!!props.animate} fade class="w-full min-w-0 self-stretch max-w-full">
       <div data-component="user-message" data-interrupted={props.interrupted ? "" : undefined}>
@@ -844,18 +871,25 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
+        <Show when={!text() && !props.header && props.queued}>
+          <div data-slot="user-message-queued-indicator">
+            <TextShimmer text={i18n.t("ui.message.queued")} />
+            <Delete />
+          </div>
+        </Show>
         <Show when={text() || props.header}>
           <>
             <div data-slot="user-message-body">
               {props.header}
               <Show when={text()}>
-                <div data-slot="user-message-text" data-queued={props.queued ? "" : undefined}>
+                <div data-slot="user-message-text" dir="auto" data-queued={props.queued ? "" : undefined}>
                   <HighlightedText text={text()} references={inlineFiles()} agents={agents()} />
                 </div>
               </Show>
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Delete />
                 </div>
               </GrowBox>
             </div>
@@ -942,9 +976,23 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
 
   const data = useData()
 
+  const session = (segment: HighlightSegment) => {
+    const ref = props.references.find((ref) => ref.source?.text?.value === segment.text)
+    const url = (ref as { url?: unknown } | undefined)?.url
+    if (typeof url !== "string" || !url.startsWith("session:")) return
+    return url.slice("session:".length)
+  }
+
   const click = (segment: HighlightSegment, e: MouseEvent) => {
-    if (segment.type !== "file" || !data.openFile) return
+    if (segment.type !== "file") return
     e.preventDefault()
+    // Past-chat mentions carry a session: URL — open that session instead of a file.
+    const id = session(segment)
+    if (id) {
+      data.navigateToSession?.(id)
+      return
+    }
+    if (!data.openFile) return
     const path = segment.text.replace(/^@/, "")
     if (path) data.openFile(path)
   }
@@ -954,7 +1002,9 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
       {(segment) => (
         <span
           data-highlight={segment.type}
-          data-clickable={segment.type === "file" && data.openFile ? "" : undefined}
+          data-clickable={
+            segment.type === "file" && (session(segment) ? data.navigateToSession : data.openFile) ? "" : undefined
+          }
           onClick={[click, segment]}
         >
           {segment.text}
@@ -974,6 +1024,8 @@ export function Part(props: MessagePartProps) {
         message={props.message}
         hideDetails={props.hideDetails}
         defaultOpen={props.defaultOpen}
+        forceOpen={props.forceOpen}
+        forceOpenFile={props.forceOpenFile}
         reasoningAutoCollapse={props.reasoningAutoCollapse}
         showAssistantCopyPartID={props.showAssistantCopyPartID}
         showTurnDiffSummary={props.showTurnDiffSummary}
@@ -981,6 +1033,7 @@ export function Part(props: MessagePartProps) {
         animate={props.animate}
         working={props.working}
         feedback={props.feedback}
+        throughput={props.throughput}
       />
     </Show>
   )
@@ -999,6 +1052,9 @@ export interface ToolProps {
   hideDetails?: boolean
   defaultOpen?: boolean
   forceOpen?: boolean
+  /** For a multi-file apply_patch part, the specific file path whose
+   * accordion contains the current transcript search match. */
+  forceOpenFile?: string
   locked?: boolean
   animate?: boolean
   reveal?: boolean
@@ -1086,7 +1142,7 @@ function McpTool(props: ToolProps) {
         if (typeof value === "boolean") return [`${key}=${value}`]
         return []
       })
-      .slice(0, 3)
+      .slice(0, 1)
   }
 
   const formatted = createMemo(() => {
@@ -1198,6 +1254,7 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
                     status={part.state.status}
                     hideDetails={props.hideDetails}
                     defaultOpen={props.defaultOpen}
+                    forceOpen={props.forceOpen}
                     animate
                     reveal={props.animate}
                   />
@@ -1265,6 +1322,8 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
               attachments={part.state.attachments}
               hideDetails={props.hideDetails}
               defaultOpen={props.defaultOpen}
+              forceOpen={props.forceOpen}
+              forceOpenFile={props.forceOpenFile}
               animate
               reveal={props.animate}
             />
@@ -1432,6 +1491,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 />
               </Tooltip>
             </Show>
+            <Show when={props.throughput}>
+              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
+            </Show>
           </div>
         </Show>
         <Show when={summary()}>
@@ -1518,6 +1580,18 @@ PART_MAPPING["reasoning"] = function ReasoningPartDisplay(props: MessagePartProp
     else rememberReasoningState(userCollapsed, id)
     setOpen(value)
   }
+
+  // Reasoning has no built-in "force open" hook (unlike BasicTool's forceOpen
+  // ratchet) — mirror that one-way-open behavior here so jumping a chat
+  // search match to a collapsed reasoning block reveals it, the same as it
+  // does for tool calls. Recorded into userOpened/userCollapsed the same way
+  // a manual open would be, so it stays open across remounts/re-renders.
+  createEffect(() => {
+    if (!props.forceOpen || open()) return
+    if (props.reasoningAutoCollapse) rememberReasoningState(userOpened, id)
+    else userCollapsed.delete(id)
+    setOpen(true)
+  })
 
   createEffect(() => {
     if (!props.reasoningAutoCollapse) return
@@ -2238,8 +2312,15 @@ ToolRegistry.register({
     const [open, setOpen] = createSignal(readToolOpen(key(), props.defaultOpen ?? true) ?? true)
     const [mounted, setMounted] = createSignal(open())
 
+    // BasicTool's `initialOpen()` forces its own open state to true whenever
+    // forceOpen is set, but that's an initial value, not a transition — if
+    // it's already mounted open (e.g. after a virtualized remount), there's
+    // no open/close change for `onOpenChange={setOpen}` below to fire, so
+    // this local `open`/`mounted` pair (seeded independently from
+    // readToolOpen) can stay stale and out of sync, leaving the accordion
+    // visibly expanded with no output mounted inside it.
     createEffect(() => {
-      if (open() || pending()) setMounted(true)
+      if (open() || pending() || props.forceOpen) setMounted(true)
     })
 
     // also apply processCarriageReturns for Windows CLI tools
@@ -2276,7 +2357,12 @@ ToolRegistry.register({
           }
         >
           <Show when={mounted()}>
-            <BashHighlightedOutput cmd={cmd()} output={out()} outputPath={props.metadata.outputPath} active={open()} />
+            <BashHighlightedOutput
+              cmd={cmd()}
+              output={out()}
+              outputPath={props.metadata.outputPath}
+              active={open() || !!props.forceOpen}
+            />
           </Show>
         </BasicTool>
         <Show when={pruned()}>
@@ -2588,6 +2674,31 @@ ToolRegistry.register({
       seeded = true
       setExpanded(list.filter((f) => f.type !== "delete").map((f) => f.filePath))
     })
+    // Deleted files start collapsed above; a chat search match could be
+    // inside one. `forceOpenFile` (from MessageList's per-chunk file
+    // attribution) names exactly which file's accordion to open. This is
+    // tracked separately from the user's own manual toggles: replacing it
+    // on every navigation (rather than appending to `expanded`, which never
+    // shrinks) closes the previously force-opened file again, so its Pierre
+    // diff instance unmounts instead of accumulating one per visited match.
+    const [searchOpenFile, setSearchOpenFile] = createSignal<string | undefined>()
+    createEffect(() => {
+      if (props.forceOpenFile) {
+        setSearchOpenFile(props.forceOpenFile)
+        return
+      }
+      // Defensive fallback for forceOpen without a known file (MessageList
+      // always attributes apply_patch matches to a specific file today):
+      // expand everything rather than nothing.
+      setSearchOpenFile(undefined)
+      if (!props.forceOpen) return
+      setExpanded(files().map((f) => f.filePath))
+    })
+    const allExpanded = createMemo(() => {
+      const search = searchOpenFile()
+      if (!search) return expanded()
+      return expanded().includes(search) ? expanded() : [...expanded(), search]
+    })
     const subtitle = createMemo(() => {
       const count = files().length
       if (count === 0) return ""
@@ -2640,8 +2751,15 @@ ToolRegistry.register({
                   multiple
                   data-scope="apply-patch"
                   style={{ "--sticky-accordion-offset": "37px" }}
-                  value={expanded()}
-                  onChange={(value) => setExpanded(Array.isArray(value) ? value : value ? [value] : [])}
+                  value={allExpanded()}
+                  onChange={(value) => {
+                    const next = Array.isArray(value) ? value : value ? [value] : []
+                    // The user explicitly closed the search-forced file —
+                    // stop treating it as force-open so it doesn't reopen
+                    // itself out of `allExpanded()` on the next render.
+                    if (searchOpenFile() && !next.includes(searchOpenFile()!)) setSearchOpenFile(undefined)
+                    setExpanded(next.filter((path) => path !== searchOpenFile()))
+                  }}
                 >
                   <For each={files()}>
                     {(file) => {

@@ -1,12 +1,16 @@
+import { RemoteCommand } from "@/kilo-sessions/remote-command"
+import { RemoteExit } from "@/kilo-sessions/remote-exit"
 import { RemoteModelCatalog } from "@/kilo-sessions/remote-model-catalog"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { GlobalBus } from "@/bus/global"
+import { RemoteAttachments } from "@/kilocode/remote-attachments"
 import { Session } from "@/session/session"
 import type { MessageV2 } from "@/session/message-v2"
 import { SessionPrompt } from "@/session/prompt"
 import { Question } from "@/question"
 import { Suggestion } from "@/kilocode/suggestion" // kilocode_change
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { SessionID } from "@/session/schema"
@@ -41,7 +45,23 @@ const SuggestionData = z.object({
   index: z.number().int().nonnegative(),
 })
 
+// kilocode_change start - create_session: strict v1 request, no other fields accepted
+const CreateSessionRequest = z
+  .object({
+    protocolVersion: z.literal(1),
+  })
+  .strict()
+// kilocode_change end
+
 const decodeSessionID = Schema.decodeUnknownOption(SessionID)
+
+// kilocode_change start - redact anything but the error class so messages/credentials
+// never end up in logs
+function errorName(error: unknown): string {
+  if (error instanceof Error && error.name) return error.name
+  return typeof error
+}
+// kilocode_change end
 
 // kilocode_change start — lazy init to avoid circular dependency
 // (Server → RemoteRoutes → RemoteSender → SessionPrompt at module load time)
@@ -102,13 +122,40 @@ export namespace RemoteSender {
     session?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly children: (sessionID: SessionID) => Promise<Session.Info[]>
+      // kilocode_change start - injectable create hook for create_session.
+      // create_session only ever calls `create({})` for a root session, so the
+      // test hook is typed as the loose `() => Promise<Session.Info>` shape.
+      // Production falls back to Session.Service.create with `{}`.
+      readonly create?: (input?: Record<string, never>) => Promise<Session.Info>
+      // kilocode_change - injectable remove hook used to roll back an orphan
+      // root session when attachSession fails after creation. The default
+      // delegates to Session.Service.remove and only swallows its own errors
+      // so the original attach failure is what reaches the caller.
+      readonly remove?: (sessionID: SessionID) => Promise<void>
+      // kilocode_change end
     }
+    // kilocode_change start - duplicate-safe attach hook used by create_session.
+    // Production wires this to KiloSessions.attachRemoteSession so the attached
+    // set is mutated exactly once and the relay heartbeat fires only when the
+    // set actually changes.
+    attachSession?: (sessionID: SessionID) => Promise<void>
+    // kilocode_change end
     catalog?: {
       readonly get: (sessionID: SessionID) => Promise<Session.Info>
       readonly messages: (sessionID: SessionID) => Promise<MessageV2.WithParts[]>
       readonly providers: () => Promise<Record<ProviderV2.ID, Provider.Info>>
       readonly default: () => Promise<RemoteModelCatalog.ModelRef | undefined>
     }
+    commands?: RemoteCommand.Interface
+    remoteExit?: {
+      get: () => RemoteExit.Callback | undefined
+    }
+    // Production wires this to RemoteAttachments.create so the scratch dir
+    // and Session.Event.Deleted cleanup are scoped to the session whose
+    // parts we are about to materialize. Tests pass a stub that simply
+    // returns the input so the existing remote-sender suite continues to
+    // exercise schema/ordering paths without touching the network.
+    attachments?: (sessionID: SessionID) => RemoteAttachments.Result | undefined
   }
 
   export type Sender = {
@@ -190,6 +237,38 @@ export namespace RemoteSender {
         return AppRuntime.runPromise(Session.Service.use((svc) => svc.children(sessionID)))
       },
     }
+    // kilocode_change start - orphan rollback for create_session: when
+    // sessionCreate succeeds but attachSession fails, the newly-created root
+    // session would otherwise stay in the DB with no relay awareness. The
+    // default remove() delegates to Session.Service.remove and swallows its
+    // own errors so the caller still observes the original attach failure.
+    const sessionRemove =
+      session.remove ??
+      (async (id: SessionID) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(Session.Service.use((svc) => svc.remove(id)))
+      })
+    // kilocode_change end
+    // kilocode_change start - session create + duplicate-safe attach used by create_session
+    const sessionCreate =
+      session.create ??
+      (async (input?: Record<string, never>) => {
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        return AppRuntime.runPromise(
+          Session.Service.use((svc) => svc.create(input as Parameters<typeof svc.create>[0])),
+        )
+      })
+    const attachSession =
+      options.attachSession ??
+      (async (id: SessionID) => {
+        const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+        await KiloSessions.attachRemoteSession(id)
+      })
+    // kilocode_change end
+    // kilocode_change start - injectable slash command discovery + execution
+    const commands = options.commands ?? RemoteCommand.live()
+    const remoteExit = options.remoteExit ?? RemoteExit
+    // kilocode_change end
 
     const sub =
       options.subscribe ??
@@ -200,6 +279,87 @@ export namespace RemoteSender {
           GlobalBus.off("event", handler)
         }
       })
+
+    // The factory is resolved lazily so tests that never send http(s) file
+    // parts never trigger scratch-dir setup. The cache and its bus
+    // listener are owned by this RemoteSender instance and released by
+    // dispose(), so they survive relay subscribe/unsubscribe churn
+    // independent of the relay's view of the session set. The bus
+    // listener is also installed lazily on first use to keep the global
+    // bus listener count from inflating for senders that never handle
+    // attachments (the count would otherwise show up in unrelated tests
+    // that assert it stays at 0).
+    const attachments =
+      options.attachments ??
+      ((sessionID: SessionID) => RemoteAttachments.create({ sessionID }))
+    const attachmentCache = new Map<SessionID, RemoteAttachments.Result>()
+    const pending = new Map<SessionID, number>()
+    const retired = new Map<SessionID, RemoteAttachments.Result>()
+    const cleaning = new Map<SessionID, Promise<void>>()
+    const deleted = new Set<SessionID>()
+    let closed = false
+    let attachmentBusUnsub: (() => void) | undefined
+    const ensureAttachmentListener = () => {
+      if (closed || attachmentBusUnsub) return
+      attachmentBusUnsub = sub((event: any) => {
+        if (event?.type !== Session.Event.Deleted.type) return
+        const sid = event?.properties?.sessionID
+        if (typeof sid !== "string") return
+        const id = SessionID.make(sid)
+        const result = attachmentCache.get(id)
+        if (!result) {
+          if (pending.has(id)) deleted.add(id)
+          return
+        }
+        deleted.add(id)
+        attachmentCache.delete(id)
+        if (pending.has(id)) {
+          retired.set(id, result)
+          return
+        }
+        void clean(id, result)
+      })
+    }
+    function begin(id: SessionID) {
+      pending.set(id, (pending.get(id) ?? 0) + 1)
+    }
+    function clean(id: SessionID, result: RemoteAttachments.Result) {
+      const existing = cleaning.get(id)
+      if (existing) return existing
+      const cleanup = result
+        .dispose()
+        .catch((error) => options.log.warn("attachment cleanup failed", { error: String(error) }))
+      cleaning.set(id, cleanup)
+      void cleanup.finally(() => {
+        if (cleaning.get(id) === cleanup) cleaning.delete(id)
+        if (!pending.has(id)) deleted.delete(id)
+      })
+      return cleanup
+    }
+    async function finish(id: SessionID) {
+      const count = pending.get(id)
+      if (!count) return
+      if (count > 1) {
+        pending.set(id, count - 1)
+        return
+      }
+      pending.delete(id)
+      const result = retired.get(id)
+      const cleanup = cleaning.get(id) ?? (result ? clean(id, result) : undefined)
+      if (result) retired.delete(id)
+      if (cleanup) await cleanup
+      if (!pending.has(id)) deleted.delete(id)
+    }
+    function attachmentFor(sessionID: SessionID): RemoteAttachments.Result | undefined {
+      if (closed || deleted.has(sessionID)) return undefined
+      const existing = attachmentCache.get(sessionID)
+      if (existing) return existing
+      const next = attachments(sessionID)
+      if (!next) return undefined
+      ensureAttachmentListener()
+      attachmentCache.set(sessionID, next)
+      return next
+    }
 
     async function directoryFor(sid: string): Promise<string> {
       const info = await session.get(SessionID.make(sid)).catch(() => undefined)
@@ -273,6 +433,19 @@ export namespace RemoteSender {
           data: p,
         })
       }
+      // Always send the current queue snapshot, including
+      // empty, so a resubscribing client can reconcile stale "Queued" badges.
+      // Uses send() directly (not publishQueueChanged) to avoid re-broadcasting
+      // to every other subscriber. The forwarder already routes live
+      // session.queue.changed events to subscribed clients via extractSessionId.
+      const queued = KiloSessionPromptQueue.snapshot(SessionID.make(sessionId))
+      options.conn.send({
+        type: "event",
+        sessionId,
+        ...(root ? { parentSessionId: root } : {}),
+        event: "session.queue.changed",
+        data: { sessionID: sessionId, queued },
+      })
     }
 
     async function backfillPendingState(sessionId: string) {
@@ -340,18 +513,40 @@ export namespace RemoteSender {
       })
     }
 
-    function dispatchLongRunning(msg: RemoteProtocol.Command, dir: Promise<string>, work: () => Promise<void>) {
+    function dispatchLongRunning(
+      msg: RemoteProtocol.Command,
+      dir: Promise<string>,
+      work: () => Promise<void>,
+      settle?: () => void | Promise<void>,
+    ) {
       const run = options.provide ?? provide
+      let settled = false
+      const complete = () => {
+        if (settled) return
+        settled = true
+        void settle?.()
+      }
       options.conn.send({ type: "response", id: msg.id, result: {} })
       void (async () => {
         try {
-          await run({ directory: await dir, fn: work })
+          await run({
+            directory: await dir,
+            fn: async () => {
+              try {
+                await work()
+              } finally {
+                complete()
+              }
+            },
+          })
         } catch (e) {
           options.log.error("long-running command failed after ACK", {
             id: msg.id,
             command: msg.command,
             error: String(e),
           })
+        } finally {
+          complete()
         }
       })()
     }
@@ -369,6 +564,180 @@ export namespace RemoteSender {
     }
 
     function dispatch(msg: RemoteProtocol.Command) {
+      // kilocode_change start - slash command discovery and execution
+      if (msg.command === "list_commands") {
+        const parsed = RemoteCommand.ListRequest.safeParse(msg.data)
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid list_commands request",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        void (async () => {
+          try {
+            const info = await catalog.get(session.value)
+            const result = await run({ directory: info.directory, fn: () => commands.list() })
+            options.conn.send({ type: "response", id: msg.id, result })
+          } catch (error) {
+            options.log.error("list commands failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to list commands" })
+          }
+        })()
+        return
+      }
+      if (msg.command === "send_command") {
+        const parsed = RemoteCommand.SendRequest.safeParse(msg.data)
+        const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(session)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid send_command request",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        const state = { acked: false }
+        void (async () => {
+          try {
+            const info = await catalog.get(session.value)
+            await run({
+              directory: info.directory,
+              fn: async () => {
+                // Reject stale catalog entries (command deleted or renamed since the
+                // client listed) before the ACK — after it, failures are only logged.
+                const available = await commands.list()
+                if (
+                  !RemoteCommand.executable(parsed.data.command) ||
+                  !available.commands.some((item) => item.name === parsed.data.command)
+                ) {
+                  options.conn.send({ type: "response", id: msg.id, error: "unknown slash command" })
+                  return
+                }
+                state.acked = true
+                options.conn.send({ type: "response", id: msg.id, result: {} })
+                try {
+                  await commands.execute({ ...parsed.data, sessionID: session.value, catalog: available })
+                } catch (error) {
+                  options.log.error("send command failed after ACK", {
+                    id: msg.id,
+                    operation: "send_command",
+                    error: errorName(error),
+                  })
+                }
+              },
+            })
+          } catch (error) {
+            if (state.acked) {
+              options.log.error("send command context failed after ACK", {
+                id: msg.id,
+                operation: "send_command",
+                error: errorName(error),
+              })
+              return
+            }
+            options.log.error("send command preflight failed", {
+              id: msg.id,
+              operation: "send_command",
+              error: errorName(error),
+            })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to send command" })
+          }
+        })()
+        return
+      }
+      if (msg.command === "exit_cli") {
+        const parsed = RemoteCommand.ExitRequest.safeParse(msg.data)
+        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(current)) {
+          options.conn.send({ type: "response", id: msg.id, error: "invalid exit_cli command" })
+          return
+        }
+        void (async () => {
+          try {
+            await session.get(current.value)
+            const exit = remoteExit.get()
+            if (!exit) {
+              options.conn.send({ type: "response", id: msg.id, error: "graceful exit unavailable" })
+              return
+            }
+            options.conn.send({ type: "response", id: msg.id, result: {} })
+            queueMicrotask(() => {
+              void exit().catch((error) => {
+                options.log.error("exit CLI failed after ACK", {
+                  id: msg.id,
+                  operation: "exit_cli",
+                  error: errorName(error),
+                })
+              })
+            })
+          } catch (error) {
+            options.log.error("exit CLI preflight failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to exit CLI" })
+          }
+        })()
+        return
+      }
+      if (msg.command === "create_session") {
+        // kilocode_change start - remote /new creation: root session, attached + heartbeat before response
+        const parsed = CreateSessionRequest.safeParse(msg.data)
+        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
+        if (!parsed.success || Option.isNone(current)) {
+          options.conn.send({
+            type: "response",
+            id: msg.id,
+            error: "invalid create_session command",
+          })
+          return
+        }
+        const run = options.provide ?? provide
+        void (async () => {
+          try {
+            const result = await run({
+              directory: (await session.get(current.value)).directory,
+              fn: async () => {
+                const created = await sessionCreate({})
+                // attachSession is the duplicate-safe seam: it mutates the
+                // attached set exactly once and fires conn.heartbeat() only
+                // when the set actually changes, so the relay learns about
+                // the new session before we respond.
+                try {
+                  await attachSession(created.id)
+                } catch (attachError) {
+                  // Roll back the newly-created root session so the DB does
+                  // not keep an orphan the relay never learned about. Swallow
+                  // the cleanup error here — the original attach failure is
+                  // what the caller must see, so we re-throw it below.
+                  try {
+                    await sessionRemove(created.id)
+                  } catch (cleanupError) {
+                    options.log.error("create session cleanup failed", {
+                      id: msg.id,
+                      error: errorName(cleanupError),
+                    })
+                  }
+                  throw attachError
+                }
+                return created
+              },
+            })
+            options.conn.send({
+              type: "response",
+              id: msg.id,
+              result: { protocolVersion: 1, sessionID: result.id },
+            })
+          } catch (error) {
+            options.log.error("create session failed", { id: msg.id, error: errorName(error) })
+            options.conn.send({ type: "response", id: msg.id, error: "failed to create session" })
+          }
+        })()
+        return
+      }
+      // kilocode_change end
       if (msg.command === "list_models") {
         const parsed = RemoteModelCatalog.Request.safeParse(msg.data)
         const session = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
@@ -432,9 +801,28 @@ export namespace RemoteSender {
           return
         }
         const promptInput = { ...input.data, ephemeralTools: normalized.ephemeralTools } as SessionPrompt.PromptInput
-        dispatchLongRunning(msg, directoryFor(promptInput.sessionID), async () => {
-          await prompt(promptInput)
-        })
+        const remote = promptInput.parts.some((part) => part.type === "file" && RemoteAttachments.isFetchable(part.url))
+        if (remote) {
+          begin(promptInput.sessionID)
+          ensureAttachmentListener()
+        }
+        dispatchLongRunning(
+          msg,
+          directoryFor(promptInput.sessionID),
+          async () => {
+            // Runs strictly after the synchronous ACK above and strictly before the
+            // existing prompt() call so the resolvePart boundary sees data: URLs
+            // and a scratch path instead of an http(s) URL it cannot fetch.
+            const materializer = remote ? attachmentFor(promptInput.sessionID) : undefined
+            if (materializer) {
+              promptInput.parts = await materializer.materialize(promptInput.parts)
+            } else if (remote) {
+              promptInput.parts = RemoteAttachments.failClosed(promptInput.parts)
+            }
+            await prompt(promptInput)
+          },
+          remote ? () => finish(promptInput.sessionID) : undefined,
+        )
         return
       }
       if (msg.command === "interrupt") {
@@ -576,10 +964,23 @@ export namespace RemoteSender {
     }
 
     function dispose() {
+      closed = true
       if (unsub) {
         unsub()
         unsub = undefined
       }
+      // per-session materializers. Fire-and-forget the async dispose because
+      // RemoteAttachments.dispose() is best-effort scratch cleanup.
+      attachmentBusUnsub?.()
+      attachmentBusUnsub = undefined
+      for (const [id, result] of attachmentCache) {
+        if (pending.has(id)) {
+          retired.set(id, result)
+          continue
+        }
+        void result.dispose()
+      }
+      attachmentCache.clear()
       sessions.clear()
       children.clear()
     }

@@ -24,11 +24,21 @@ const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
 const KILO_MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.tsx")
 const KILO_MESSAGE_HIGHLIGHT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-highlight.ts")
+const KILO_BASIC_TOOL_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/basic-tool.css")
 const KILO_MESSAGE_PART_CSS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/message-part.css")
 const SHELL_ROLLING_FILE = path.join(MONOREPO_ROOT, "packages/kilo-ui/src/components/shell-rolling-results.tsx")
 const ASSISTANT_MESSAGE_FILE = path.join(
   MONOREPO_ROOT,
   "packages/kilo-vscode/webview-ui/src/components/chat/AssistantMessage.tsx",
+)
+const TASK_HEADER_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/components/chat/TaskHeader.tsx")
+const CONTEXT_TAB_FILE = path.join(
+  MONOREPO_ROOT,
+  "packages/kilo-vscode/webview-ui/src/components/settings/ContextTab.tsx",
+)
+const PROMPT_INPUT_FILE = path.join(
+  MONOREPO_ROOT,
+  "packages/kilo-vscode/webview-ui/src/components/chat/PromptInput.tsx",
 )
 const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/utils/transcript-parts.ts")
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
@@ -225,7 +235,10 @@ describe("Bash tool static terminal preview (source)", () => {
 
   it("BashHighlightedOutput highlights only while expanded", () => {
     expect(src).toContain("if (!props.active) return")
-    expect(block).toContain("active={open()}")
+    // Also active when forceOpen fires from a virtualized remount that
+    // starts already open — `open()` alone only reflects the toggle
+    // transition, not that initial-mount case.
+    expect(block).toContain("active={open() || !!props.forceOpen}")
   })
 
   it("BashHighlightedOutput keeps command and output in separate terminal containers", () => {
@@ -328,6 +341,55 @@ describe("AssistantMessage visible row contract (source)", () => {
   it("uses the plan exit card only when plan metadata is renderable", () => {
     expect(src).toContain("if (!planExitInfo(part)) return")
   })
+
+  it("uses the native recall tool without a separate memory badge", () => {
+    const tools = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+    expect(src).not.toContain("assistant-memory-badge")
+    expect(tools).toContain("ToolRegistry.render(part.tool) ?? McpTool")
+  })
+})
+
+describe("Native tool summary contract (source)", () => {
+  const tools = fs.readFileSync(KILO_MESSAGE_PART_FILE, "utf-8")
+  const css = fs.readFileSync(KILO_BASIC_TOOL_CSS_FILE, "utf-8")
+
+  it("shows one secondary argument while preserving complete expanded input", () => {
+    const start = tools.indexOf("const inputArgs")
+    const end = tools.indexOf("const formatted", start)
+    expect(tools.slice(start, end)).toContain(".slice(0, 1)")
+    expect(tools).toContain("JSON.stringify(props.input, null, 2)")
+  })
+
+  it("gives the primary label remaining width and bounds secondary arguments", () => {
+    expect(css).toMatch(/\[data-slot="basic-tool-tool-info"\][\s\S]*?flex: 1 1 auto;/)
+    expect(css).toMatch(/\[data-slot="basic-tool-tool-subtitle"\][\s\S]*?flex: 1 1 auto;/)
+    expect(css).toMatch(/\[data-slot="basic-tool-tool-arg"\][\s\S]*?max-width: 24ch;/)
+  })
+})
+
+describe("Memory control placement contract (source)", () => {
+  const header = fs.readFileSync(TASK_HEADER_FILE, "utf-8")
+  const settings = fs.readFileSync(CONTEXT_TAB_FILE, "utf-8")
+  const prompt = fs.readFileSync(PROMPT_INPUT_FILE, "utf-8")
+
+  it("keeps memory controls out of the task header", () => {
+    expect(header).not.toContain("useMemory")
+    expect(header).not.toContain('name="memory"')
+  })
+
+  it("shows storage inspection in settings without a manual rebuild action", () => {
+    expect(settings).toContain("settings.context.memory.storage.title")
+    expect(settings).toContain("settings.context.memory.status.enabledTokens")
+    expect(settings).toContain("memory.inspect()")
+    expect(settings).not.toContain("memory.rebuild()")
+    expect(settings).not.toContain("lastOperationCount")
+    expect(settings).not.toContain("sessionTokens")
+  })
+
+  it("expands bare memory commands into inline completion", () => {
+    expect(prompt).toContain('const value = "/memory "')
+    expect(prompt).toContain("slash.onInput(value, value.length)")
+  })
 })
 
 describe("Assistant transcript spacing contract (source)", () => {
@@ -388,7 +450,7 @@ describe("Collapsed deferred tool details contract (source)", () => {
     const block =
       message.match(/ToolRegistry\.register\(\{\s*name:\s*"bash"[\s\S]*?(?=ToolRegistry\.register\(|$)/)?.[0] ?? ""
     expect(block).toContain("const [mounted, setMounted] = createSignal(open())")
-    expect(block).toMatch(/if \(open\(\) \|\| pending\(\)\) setMounted\(true\)/)
+    expect(block).toMatch(/if \(open\(\) \|\| pending\(\) \|\| props\.forceOpen\) setMounted\(true\)/)
     expect(block).toContain("hasDetails")
     expect(block).toMatch(/<Show when=\{mounted\(\)\}>[\s\S]*?<BashHighlightedOutput/)
   })

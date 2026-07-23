@@ -293,6 +293,7 @@ class SessionUi(
 
         migrationOverlay = MigrationOverlayPanel().apply {
             onSkip = { migration.skip() }
+            onLater = { migration.later() }
             onDone = { migration.finish() }
             onContinueFromError = { migration.finish() }
             onStart = { sel -> migration.start(sel) }
@@ -342,7 +343,7 @@ class SessionUi(
             focus = focus,
         )
         permission = PermissionView(
-            reply = { id, dto -> controller.replyPermission(id, dto) },
+            reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
             selection = selection,
             focus = focus,
         )

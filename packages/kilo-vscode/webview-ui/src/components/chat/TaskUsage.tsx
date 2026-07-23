@@ -50,16 +50,16 @@ export const TaskUsage: Component<TaskUsageProps> = (props) => {
           {number(props.tokens.input)}
         </span>
       </Show>
+      <Show when={props.tokens.cached > 0}>
+        <span class="task-header-tokens-value">
+          <Icon name="arrow-up" size="small" />
+          cache {number(props.tokens.cached)}
+        </span>
+      </Show>
       <Show when={props.tokens.output > 0}>
         <span class="task-header-tokens-value">
           <Icon name="arrow-down-to-line" size="small" />
           {number(props.tokens.output)}
-        </span>
-      </Show>
-      <Show when={props.tokens.cached > 0}>
-        <span class="task-header-tokens-value">
-          <Icon name="arrow-down-to-line" size="small" />
-          cache {number(props.tokens.cached)}
         </span>
       </Show>
     </>

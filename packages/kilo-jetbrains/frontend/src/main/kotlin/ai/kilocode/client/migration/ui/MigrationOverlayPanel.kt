@@ -25,6 +25,10 @@ class MigrationOverlayPanel : JBPanel<MigrationOverlayPanel>(BorderLayout()) {
         get() = wizard.onSkip
         set(v) { wizard.onSkip = v }
 
+    var onLater: (() -> Unit)?
+        get() = wizard.onLater
+        set(v) { wizard.onLater = v }
+
     var onStart: ((MigrationUiSelections) -> Unit)?
         get() = wizard.onStart
         set(v) { wizard.onStart = v }

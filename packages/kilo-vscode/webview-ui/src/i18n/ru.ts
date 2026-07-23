@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Повторить",
   "revert.banner.redo.all": "Повторить всё",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Разговор был отменён. Изменения файлов не были восстановлены, так как снимки отключены.",
+  "revert.banner.workspace.unavailable":
+    "Разговор был отменён. Контрольная точка файлов была недоступна, поэтому изменения в рабочей области не были восстановлены.",
+  "revert.banner.workspace.legacy":
+    "Диалог отменён. Статус восстановления рабочей области недоступен для этого более раннего отката.",
+  "revert.banner.workspace.enableSnapshots": "Включить снимки",
   "revert.disabled.agentBusy": "Дождитесь завершения агента",
   "command.session.compact": "Сжать сессию",
   "command.session.compact.description": "Сократить сессию для уменьшения размера контекста",
@@ -349,6 +356,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Включить активный файл",
   "prompt.context.removeActiveFile": "Удалить активный файл из контекста",
   "prompt.context.removeFile": "Удалить файл из контекста",
+  "prompt.thinking.tooltip": "Усилие рассуждения",
   "prompt.action.attachFile": "Прикрепить файл",
   "prompt.attachment.remove": "Удалить вложение",
   "prompt.action.send": "Отправить",
@@ -924,6 +932,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "API-ключ Qdrant",
   "settings.indexing.qdrantApiKey.description": "Необязательный API-ключ для экземпляра Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Необязательный API-ключ",
+  "settings.indexing.fileExtensions.title": "Расширения файлов",
+  "settings.indexing.fileExtensions.description":
+    "Список разрешённых значений, разделённых запятыми. Оставьте пустым, чтобы использовать встроенные значения по умолчанию.",
+  "settings.indexing.fileExtensions.invalid": "Недопустимое расширение: {{extension}}",
   "settings.indexing.providerField.description": "Настройка подключения, специфичная для провайдера.",
   "settings.indexing.tuning.description": "Параметры расширенного поиска и пакетной обработки.",
 
@@ -1155,6 +1167,11 @@ export const dict = {
   "session.showHistory": "Показать историю",
   "session.search.placeholder": "Поиск сессий...",
   "session.empty": "Сессий пока нет. Нажмите + чтобы начать новый разговор.",
+  "session.tabs.switcher.open": "Показать открытые вкладки",
+  "session.tabs.switcher.search": "Поиск открытых вкладок...",
+  "session.tabs.switcher.current": "Текущая",
+  "session.tabs.switcher.pending": "Новая",
+  "session.tabs.switcher.busy": "В работе",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.cloud.repoOnly": "Только этот репозиторий",
@@ -1488,11 +1505,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Пользовательский промпт",
   "settings.agentBehaviour.prompt.description": "Дополнительный системный промпт для этого агента",
   "settings.agentBehaviour.temperature.title": "Температура",
-  "settings.agentBehaviour.temperature.description": "Температура сэмплирования (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Управляет степенью случайности ответов ИИ (0–2). Низкие значения (например, 0.2) дают более сфокусированный и последовательный результат. Высокие значения (например, 1.0) дают более разнообразные и творческие ответы. Оставьте поле пустым, чтобы использовать значение модели по умолчанию.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Параметр nucleus-сэмплирования (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Порог nucleus-сэмплирования (0–1). Ограничивает выбор токенов минимальным набором, совокупная вероятность которого достигает P. Низкие значения делают результат более сфокусированным, а высокие допускают больше разнообразия. Оставьте поле пустым, чтобы использовать значение модели по умолчанию.",
   "settings.agentBehaviour.maxSteps.title": "Макс. шагов",
-  "settings.agentBehaviour.maxSteps.description": "Максимальное число итераций агента",
+  "settings.agentBehaviour.maxSteps.description":
+    "Максимальное количество шагов агента. При достижении лимита агенту даётся указание прекратить использовать инструменты и дать окончательный ответ. Увеличьте для сложных многоэтапных задач; уменьшите, чтобы ответы были короче и предсказуемее.",
   "settings.agentBehaviour.hidden.title": "Скрытый",
   "settings.agentBehaviour.hidden.description": "Скрыть этого агента из переключателя режимов в поле ввода чата",
   "settings.agentBehaviour.disable.title": "Отключён",
@@ -1658,36 +1678,18 @@ export const dict = {
   "settings.context.memory.autoSave.title": "Автосохранение памяти проекта",
   "settings.context.memory.autoSave.description":
     "Автоматически сохраняет устойчивые факты проекта из завершённых ходов, когда память включена.",
-  "settings.context.memory.index.title": "Индекс памяти",
+  "settings.context.memory.storage.title": "Storage",
   "settings.context.memory.status.notLoaded": "Не загружена",
   "settings.context.memory.status.disabled": "Отключена",
-  "settings.context.memory.status.enabledTokensOps":
-    "Включена - ~{{session}} токенов начального контекста в этой сессии - ~{{tokens}} токенов в сохранённом индексе - последняя операция {{ops}}",
-  "settings.context.memory.index.path": "{{path}}/index.kmem",
-  "settings.context.memory.index.enable": "Включите память, чтобы создать файлы памяти проекта.",
+  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.storage.path": "{{path}}",
+  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
   "settings.context.memory.inspect": "Проверить",
-  "settings.context.memory.rebuild": "Перестроить индекс памяти",
-  "chat.memory.on": "Память включена",
-  "chat.memory.label": "Память · {{tokens}} токенов",
-  "chat.memory.status.loading": "Загрузка состояния памяти",
-  "chat.memory.session.tokens": "Начальный контекст этой сессии: {{tokens}} токенов",
-  "chat.memory.total.tokens": "Сохранённый индекс: {{tokens}} токенов",
-  "chat.memory.project.enabled": "Память проекта включена",
   "chat.memory.project.disabled": "Память проекта отключена",
+  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
   "chat.memory.command.failed": "Команда памяти не выполнена",
-  "chat.memory.savedOperations": "Последняя операция памяти: {{count}} операций",
-  "chat.memory.inspect": "Проверить память",
-  "chat.memory.remember": "Запомнить",
-  "chat.memory.forget": "Забыть",
-  "chat.memory.rebuild": "Перестроить индекс",
-  "chat.memory.disable": "Отключить память",
-  "chat.memory.badge.injected": "Память внедрена",
-  "chat.memory.badge.recalled": "Память извлечена",
-  "chat.memory.badge.startupCtx": "начальный ctx",
-  "chat.memory.badge.items": "{{count}} элементов",
-  "chat.memory.badge.tokens": "{{tokens}} токенов",
-  "chat.memory.badge.recalledDetail": "Память извлечена: {{count}} элементов - {{tokens}} токенов",
-  "chat.memory.badge.files": "Файлы памяти: {{files}}",
+  "chat.memory.updated": "Memory updated",
+  "chat.memory.rebuild": "Memory index rebuilt",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Использовать пользовательский prompt",
@@ -1710,6 +1712,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Автоматически сворачивать рассуждение",
   "settings.display.reasoningAutoCollapse.description":
     "Сворачивает блоки рассуждения после того, как агент закончит их писать. Оставьте выключенным, чтобы рассуждение оставалось раскрытым, пока вы не свернете его вручную.",
+  "settings.display.shiftTabCycle.title": "Переключать усилие рассуждения с помощью Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Нажмите Shift+Tab в поле ввода запроса, чтобы перейти к следующему уровню усилий рассуждения. Отключите эту настройку, чтобы сохранить Shift+Tab для навигации по фокусу с помощью клавиатуры.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1719,6 +1724,15 @@ export const dict = {
     "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
   "settings.display.codeEdit.expanded": "Развёрнуты",
   "settings.display.codeEdit.collapsed": "Свёрнуты",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",

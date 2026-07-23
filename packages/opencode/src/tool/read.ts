@@ -8,13 +8,14 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { LSP } from "@/lsp/lsp"
 import DESCRIPTION from "./read.txt"
 import { InstanceState } from "@/effect/instance-state"
+import { Config } from "@/config/config" // kilocode_change - optional configured reference authorization
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { Instruction } from "../session/instruction"
 import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
-import { Reference } from "@/reference/reference"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
 import { KiloReference } from "@/kilocode/reference/contains"
+import * as KiloConfiguredReference from "@/kilocode/reference"
 import { KiloReadObject } from "@/kilocode/tool/read-object"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
@@ -74,14 +75,13 @@ type Metadata = {
 export const ReadTool = Tool.define<
   typeof Parameters,
   Metadata,
-  FSUtil.Service | Instruction.Service | LSP.Service | Reference.Service | Scope.Scope
+  FSUtil.Service | Instruction.Service | LSP.Service | Scope.Scope
 >(
   "read",
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const instruction = yield* Instruction.Service
     const lsp = yield* LSP.Service
-    const reference = yield* Reference.Service
     const scope = yield* Scope.Scope
 
     // kilocode_change start - authorize missing paths without enumerating sibling names
@@ -208,8 +208,18 @@ export const ReadTool = Tool.define<
         filepath = FSUtil.normalizePath(filepath)
       }
       const requested = filepath
-      yield* reference.ensure(requested)
       const title = path.relative(instance.worktree, requested)
+      // kilocode_change start - resolve V1 configured references without introducing a Core location-layer dependency
+      const config = yield* Effect.serviceOption(Config.Service)
+      const references =
+        config._tag === "Some"
+          ? KiloConfiguredReference.resolveAll({
+              references: (yield* config.value.get()).reference ?? {},
+              directory: instance.directory,
+              worktree: instance.worktree,
+            })
+          : []
+      // kilocode_change end
       // kilocode_change start - fail before read authorization when the target is missing
       const info = yield* fs.stat(requested).pipe(
         Effect.catchIf(
@@ -231,8 +241,7 @@ export const ReadTool = Tool.define<
           (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], target))
         const referenced =
           explicit ||
-          ((yield* reference.contains(requested)) &&
-            (yield* KiloReference.contains({ fs, references: reference, target })))
+          (yield* KiloReference.contains({ fs, references, target }))
         yield* assertExternalDirectoryEffect(ctx, target, { bypass: referenced, kind: "directory" })
         yield* ctx.ask({
           permission: "read",
@@ -240,9 +249,18 @@ export const ReadTool = Tool.define<
           always: ["*"],
           metadata: {},
         })
+        // kilocode_change start - reject any canonical path change after permission approval
         if (ctx.extra?.["denyDirectory"] === true) {
-          return yield* Effect.fail(new Error(`Directory attachments cannot be expanded: ${requested}`))
+          // Re-resolve after permission approval to detect TOCTOU symlink swaps.
+          // If the canonical target changed, the approved permission no longer
+          // applies to the resolved path, so deny before listing.
+          const resolved2 = yield* fs.realPath(requested)
+          const target2 = process.platform === "win32" ? FSUtil.normalizePath(resolved2) : resolved2
+          if (target2 !== target) {
+            return yield* Effect.fail(new Error(`Directory attachments cannot be expanded: ${requested}`))
+          }
         }
+        // kilocode_change end
         const items = yield* list(target)
         const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT) // kilocode_change - prevent zero-limit loops
         const offset = params.offset || 1
@@ -268,7 +286,7 @@ export const ReadTool = Tool.define<
             loaded: [],
             display: {
               type: "directory" as const,
-              path: filepath,
+              path: target,
               entries: sliced,
               offset,
               totalEntries: items.length,
@@ -284,8 +302,7 @@ export const ReadTool = Tool.define<
         (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target))
       const referenced =
         explicit ||
-        ((yield* reference.contains(requested)) &&
-          (yield* KiloReference.contains({ fs, references: reference, target: file.target })))
+        (yield* KiloReference.contains({ fs, references, target: file.target }))
       yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: referenced, kind: "file" })
       yield* ctx.ask({
         permission: "read",

@@ -1,14 +1,16 @@
 export * as SessionProjector from "./projector"
 
-import { and, desc, eq, sql } from "drizzle-orm"
+import { and, desc, eq, isNotNull, sql } from "drizzle-orm" // kilocode_change
 import { DateTime, Effect, Layer, Schema } from "effect"
 import { Database } from "../database/database"
 import { EventV2 } from "../event"
+import { LayerNode } from "../effect/layer-node"
 import { SessionEvent } from "./event"
 import { SessionV1 } from "../v1/session"
 import { WorkspaceTable } from "../control-plane/workspace.sql"
 import { SessionMessage } from "./message"
 import { SessionMessageUpdater } from "./message-updater"
+import * as StoredMessage from "../kilocode/session-message" // kilocode_change
 import { SessionInput } from "./input"
 import { WorkspaceV2 } from "../workspace"
 import { SessionContextEpoch } from "./context-epoch"
@@ -18,7 +20,10 @@ import type { DeepMutable } from "../schema"
 type DatabaseService = Database.Interface["db"]
 
 const decodeMessage = Schema.decodeUnknownSync(SessionMessage.Message)
-const encodeMessage = Schema.encodeSync(SessionMessage.Message)
+// kilocode_change start
+const encodeMessage = (message: SessionMessage.Message) =>
+  StoredMessage.encode(Schema.encodeSync(SessionMessage.Message)(message)) as (typeof SessionMessage.Message)["Encoded"]
+// kilocode_change end
 
 class PromptAlreadyProjected extends Error {}
 export class SessionAlreadyProjected extends Error {}
@@ -112,7 +117,7 @@ function applyUsage(
 function run(db: DatabaseService, event: SessionEvent.Event) {
   return Effect.gen(function* () {
     const decodeRow = (row: typeof SessionMessageTable.$inferSelect) =>
-      decodeMessage({ ...row.data, id: row.id, type: row.type })
+      decodeMessage(StoredMessage.normalize({ ...row.data, id: row.id, type: row.type })) // kilocode_change
     const updateMessage = (message: SessionMessage.Message) => {
       if (event.seq === undefined) return Effect.die("Synchronized Session event is missing aggregate sequence")
       const encoded = encodeMessage(message)
@@ -138,7 +143,13 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
             .select()
             .from(SessionMessageTable)
             .where(
-              and(eq(SessionMessageTable.session_id, event.data.sessionID), eq(SessionMessageTable.type, "assistant")),
+              // kilocode_change start
+              and(
+                eq(SessionMessageTable.session_id, event.data.sessionID),
+                eq(SessionMessageTable.type, "assistant"),
+                isNotNull(SessionMessageTable.seq),
+              ),
+              // kilocode_change end
             )
             .orderBy(desc(SessionMessageTable.seq))
             .limit(1)
@@ -159,6 +170,7 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
                 eq(SessionMessageTable.id, messageID),
                 eq(SessionMessageTable.session_id, event.data.sessionID),
                 eq(SessionMessageTable.type, "assistant"),
+                isNotNull(SessionMessageTable.seq), // kilocode_change
               ),
             )
             .get()
@@ -168,29 +180,20 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
           return message.type === "assistant" ? message : undefined
         })
       },
-      getCurrentCompaction() {
-        return Effect.gen(function* () {
-          const row = yield* db
-            .select()
-            .from(SessionMessageTable)
-            .where(
-              and(eq(SessionMessageTable.session_id, event.data.sessionID), eq(SessionMessageTable.type, "compaction")),
-            )
-            .orderBy(desc(SessionMessageTable.seq))
-            .limit(1)
-            .get()
-            .pipe(Effect.orDie)
-          if (!row) return
-          const message = decodeRow(row)
-          return message.type === "compaction" ? message : undefined
-        })
-      },
       getCurrentShell(callID) {
         return Effect.gen(function* () {
           const rows = yield* db
             .select()
             .from(SessionMessageTable)
-            .where(and(eq(SessionMessageTable.session_id, event.data.sessionID), eq(SessionMessageTable.type, "shell")))
+            // kilocode_change start
+            .where(
+              and(
+                eq(SessionMessageTable.session_id, event.data.sessionID),
+                eq(SessionMessageTable.type, "shell"),
+                isNotNull(SessionMessageTable.seq),
+              ),
+            )
+            // kilocode_change end
             .orderBy(desc(SessionMessageTable.seq))
             .all()
             .pipe(Effect.orDie)
@@ -200,7 +203,6 @@ function run(db: DatabaseService, event: SessionEvent.Event) {
         })
       },
       updateAssistant: updateMessage,
-      updateCompaction: updateMessage,
       updateShell: updateMessage,
       appendMessage,
     }
@@ -428,6 +430,7 @@ export const layer = Layer.effectDiscard(
         )
       }),
     )
+    yield* events.project(SessionEvent.InterruptRequested, () => Effect.void)
     yield* events.project(SessionEvent.ContextUpdated, (event) => {
       if (!event.replay || event.seq === undefined) return run(db, event)
       return run(db, event).pipe(
@@ -451,15 +454,17 @@ export const layer = Layer.effectDiscard(
     yield* events.project(SessionEvent.Reasoning.Started, (event) => run(db, event))
     yield* events.project(SessionEvent.Reasoning.Ended, (event) => run(db, event))
     // yield* events.project(SessionEvent.Retried, (event) => run(db, event))
-    yield* events.project(SessionEvent.Compaction.Started, (event) => run(db, event))
-    yield* events.project(SessionEvent.Compaction.Delta, (event) => run(db, event))
     yield* events.project(SessionEvent.Compaction.Ended, (event) => {
-      if (event.seq === undefined) return Effect.die("Synchronized Session event is missing aggregate sequence")
-      return run(db, event).pipe(
-        Effect.andThen(SessionContextEpoch.requestReplacement(db, event.data.sessionID, event.seq)),
-      )
+      if (event.data.messageID === undefined || event.data.reason === undefined) return Effect.void // kilocode_change
+      const seq = event.seq
+      if (seq === undefined) return Effect.die("Synchronized Session event is missing aggregate sequence")
+      return Effect.gen(function* () {
+        yield* run(db, event)
+        yield* SessionContextEpoch.requestReplacement(db, event.data.sessionID, seq)
+      })
     })
   }),
 )
 
 export const defaultLayer = layer.pipe(Layer.provide(EventV2.defaultLayer), Layer.provide(Database.defaultLayer))
+export const node = LayerNode.make(layer, [EventV2.node, Database.node])

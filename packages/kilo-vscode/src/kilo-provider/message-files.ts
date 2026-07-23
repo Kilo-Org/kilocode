@@ -12,7 +12,8 @@ const source = z.object({
 
 const file = z.object({
   mime: z.string(),
-  url: z.string().refine((url) => url.startsWith("file://") || url.startsWith("data:")),
+  // session: URLs reference a past chat; the backend resolves them into transcript context
+  url: z.string().refine((url) => url.startsWith("file://") || url.startsWith("data:") || url.startsWith("session:")),
   filename: z.string().optional(),
   source: source.optional(),
 })

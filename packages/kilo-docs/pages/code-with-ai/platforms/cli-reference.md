@@ -29,7 +29,7 @@ Options:
 manage MCP (Model Context Protocol) servers
 
 Commands:
-  kilo mcp add            add an MCP server
+  kilo mcp add [name]     add an MCP server
   kilo mcp list           list MCP servers and their status  [aliases: ls]
   kilo mcp auth [name]    authenticate with an OAuth-enabled MCP server
   kilo mcp logout [name]  remove OAuth credentials for an MCP server
@@ -45,9 +45,15 @@ Options:
 ```
 add an MCP server
 
+Positionals:
+  name  name of the MCP server  [string]
+
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
+  --url      URL for a remote MCP server  [string]
+  --env      environment variable for a local MCP server (KEY=VALUE)  [array]
+  --header   HTTP header for a remote MCP server (KEY=VALUE)  [array]
 ```
 
 ### kilo mcp list
@@ -289,24 +295,12 @@ Options:
 ripgrep debugging utilities
 
 Commands:
-  kilo debug rg tree              show file tree using ripgrep
   kilo debug rg files             list files using ripgrep
   kilo debug rg search <pattern>  search file contents using ripgrep
 
 Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
-```
-
-### kilo debug rg tree
-
-```
-show file tree using ripgrep
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-  --limit  [number]
 ```
 
 ### kilo debug rg files
@@ -346,7 +340,6 @@ Commands:
   kilo debug file read <path>     read file contents as JSON
   kilo debug file list <path>     list files in a directory
   kilo debug file search <query>  search files by query
-  kilo debug file tree [dir]      show directory tree
 
 Options:
   --help     Show help  [boolean]
@@ -386,19 +379,6 @@ search files by query
 
 Positionals:
   query  Search query  [string]
-
-Options:
-  --help     Show help  [boolean]
-  --version  Show version number  [boolean]
-```
-
-### kilo debug file tree
-
-```
-show directory tree
-
-Positionals:
-  dir  Directory to tree  [string] [default: "."]
 
 Options:
   --help     Show help  [boolean]
@@ -547,9 +527,9 @@ Options:
 manage AI providers and credentials
 
 Commands:
-  kilo auth list         list providers and credentials  [aliases: ls]
-  kilo auth login [url]  log in to a provider
-  kilo auth logout       log out from a configured provider
+  kilo auth list               list providers and credentials  [aliases: ls]
+  kilo auth login [url]        log in to a provider
+  kilo auth logout [provider]  log out from a configured provider
 
 Options:
   --help     Show help  [boolean]
@@ -585,6 +565,9 @@ Options:
 
 ```
 log out from a configured provider
+
+Positionals:
+  provider  provider id or name to log out from  [string]
 
 Options:
   --help     Show help  [boolean]
@@ -983,6 +966,76 @@ Options:
   --help     Show help  [boolean]
   --version  Show version number  [boolean]
   --json     print daemon details as JSON  [boolean]
+```
+
+## kilo cloud
+
+```
+run Cloud Agent tasks
+
+Commands:
+  kilo cloud start   start a Cloud Agent task
+  kilo cloud send    send a follow-up prompt to a Cloud Agent task
+  kilo cloud status  show Cloud Agent task status
+  kilo cloud result  show a Cloud Agent task result
+
+Options:
+  --help     Show help  [boolean]
+  --version  Show version number  [boolean]
+```
+
+### kilo cloud start
+
+```
+start a Cloud Agent task
+
+Options:
+  --help       Show help  [boolean]
+  --version    Show version number  [boolean]
+  --prompt     prompt for the Cloud Agent  [string] [required]
+  --repo       repository shorthand or URL  [string]
+  --repo-type  repository provider type  [string] [choices: "github", "gitlab", "git"]
+  --branch     repository branch  [string]
+  --model      Cloud Agent model  [string]
+  --mode       Cloud Agent mode  [string]
+  --org-id     Kilo organization ID  [string]
+  --stream     connect to the WebSocket stream and print events as JSONL  [boolean]
+```
+
+### kilo cloud send
+
+```
+send a follow-up prompt to a Cloud Agent task
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --prompt      follow-up prompt for the Cloud Agent  [string] [required]
+```
+
+### kilo cloud status
+
+```
+show Cloud Agent task status
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --message-id  Cloud Agent message ID  [string] [required]
+```
+
+### kilo cloud result
+
+```
+show a Cloud Agent task result
+
+Options:
+  --help        Show help  [boolean]
+  --version     Show version number  [boolean]
+  --session-id  Cloud Agent session ID  [string] [required]
+  --message-id  Cloud Agent message ID  [string] [required]
 ```
 
 ## kilo db

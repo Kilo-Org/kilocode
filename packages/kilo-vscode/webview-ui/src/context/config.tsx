@@ -102,6 +102,22 @@ export const ConfigProvider: ParentComponent = (props) => {
       })
       return
     }
+    if (message.type === "chatSettingsLoaded") {
+      mergeSettings({
+        "chat.shiftTabCyclesVariant": message.settings.shiftTabCyclesVariant,
+      })
+      return
+    }
+    if (message.type === "throughputSettingLoaded") {
+      // Seed settings() so the DisplayTab Switch reflects persisted state on
+      // first open. DisplayProvider also reads this message to drive
+      // throughputVisible() for the per-message badge; both signals update
+      // from the same backend message without conflict.
+      mergeSettings({
+        showTokenThroughput: message.visible,
+      })
+      return
+    }
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.
@@ -186,6 +202,7 @@ export const ConfigProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "requestConfig" })
     vscode.postMessage({ type: "requestAutocompleteSettings" })
     vscode.postMessage({ type: "requestIndexingSettings" })
+    vscode.postMessage({ type: "requestChatSettings" })
   }
 
   // Request config immediately; if the extension's httpClient is not yet ready,

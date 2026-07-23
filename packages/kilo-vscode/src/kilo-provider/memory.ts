@@ -1,11 +1,5 @@
 import * as vscode from "vscode"
-import * as path from "node:path"
-import {
-  isMemoryOperation,
-  isMemoryPromptOperation,
-  type MemoryOperation,
-  type MemoryPromptOperation,
-} from "@kilocode/kilo-memory/commands"
+import { isMemoryOperation, type MemoryOperation } from "@kilocode/kilo-memory/commands"
 import { MemorySchema } from "@kilocode/kilo-memory/schema"
 import type { KiloClient, Session } from "@kilocode/sdk/v2/client"
 import { retry } from "../services/cli-backend/retry"
@@ -14,6 +8,7 @@ import { getErrorMessage } from "../kilo-provider-utils"
 type MemorySourceFile = MemorySchema.Source
 type MemoryApi = KiloClient["memory"]
 const CACHE_LIMIT = 8
+const STORED_LIMIT = 16
 const NO_PROJECT = "No active project for memory. Open a file in the target folder to manage its memory."
 
 export type KiloProviderMemoryMessage = {
@@ -51,6 +46,20 @@ function mode(value: unknown) {
 
 function memory(client: KiloClient | undefined): MemoryApi | undefined {
   return (client as { memory?: MemoryApi } | undefined)?.memory
+}
+
+function count(text: string) {
+  return text.split("\n").filter((line) => line.trim().startsWith("- ")).length
+}
+
+function stored(text: string) {
+  return text
+    .split("\n")
+    .filter((line) => line.trim())
+    .map((line) => {
+      const marker = line.indexOf(":: ")
+      return marker === -1 ? line : line.slice(marker + 3)
+    })
 }
 
 function request(input: Record<string, unknown>): { value: KiloProviderMemoryMessage } | { error: string } {
@@ -102,14 +111,16 @@ export class KiloProviderMemory {
 
   async handle(message: Record<string, unknown>): Promise<boolean> {
     if (message.type === "requestMemory") {
-      this.fetch(
-        typeof message.sessionID === "string" ? message.sessionID : undefined,
-        message.includeSources === true,
-      ).catch((err: unknown) => console.error("[Kilo New] fetchAndSendMemory failed:", err))
+      this.fetch(typeof message.sessionID === "string" ? message.sessionID : undefined).catch((err: unknown) =>
+        console.error("[Kilo New] fetchAndSendMemory failed:", err),
+      )
       return true
     }
     if (message.type === "memoryShow") {
-      await this.show(typeof message.sessionID === "string" ? message.sessionID : undefined)
+      await this.show(
+        typeof message.sessionID === "string" ? message.sessionID : undefined,
+        message.mode === "status" ? "status" : "show",
+      )
       return true
     }
     if (message.type === "memoryOperation") {
@@ -127,17 +138,11 @@ export class KiloProviderMemory {
       await this.run(parsed.value)
       return true
     }
-    if (message.type === "memoryPrompt") {
-      const op = isMemoryPromptOperation(message.operation) ? message.operation : undefined
-      if (!op) return true
-      await this.prompt(op, typeof message.sessionID === "string" ? message.sessionID : undefined)
-      return true
-    }
     return false
   }
 
-  fetch(sessionID?: string, includeSources = false): Promise<void> {
-    return this.serial(() => this.load(sessionID, includeSources))
+  fetch(sessionID?: string): Promise<void> {
+    return this.serial(() => this.load(sessionID))
   }
 
   /** Resolves once the serialized operation queue has drained. */
@@ -145,7 +150,7 @@ export class KiloProviderMemory {
     return this.tail
   }
 
-  private async load(sessionID?: string, includeSources = false): Promise<void> {
+  private async load(sessionID?: string): Promise<void> {
     try {
       const directory = this.input.dir(sessionID ?? this.input.session()?.id)
       const client = this.input.client()
@@ -168,14 +173,10 @@ export class KiloProviderMemory {
       }
 
       const { data: status } = await retry(() => api.status({ directory }, { throwOnError: true }))
-      const show = includeSources
-        ? (await retry(() => api.show({ directory }, { throwOnError: true }))).data
-        : undefined
       const msg = {
         type: "memoryLoaded",
         sessionID,
         status,
-        ...(show ? { show } : {}),
       }
       this.cache(directory, msg)
       this.input.post(msg)
@@ -189,27 +190,11 @@ export class KiloProviderMemory {
     }
   }
 
-  async prompt(value: MemoryPromptOperation, sessionID?: string): Promise<void> {
-    const title = value === "remember" ? "Remember in project memory" : "Forget project memory"
-    const placeHolder = value === "remember" ? "Project fact, command, or correction" : "Text to remove"
-    const text = await vscode.window.showInputBox({ title, placeHolder, ignoreFocusOut: true })
-    if (!text?.trim()) {
-      // Clear the webview's pending state for this action when the input is dismissed.
-      this.input.post({ type: "memoryOperationResult", operation: value, sessionID, ok: true })
-      return
-    }
-    await this.run({
-      operation: value,
-      sessionID,
-      ...(value === "remember" ? { text: text.trim() } : { query: text.trim() }),
-    })
+  show(sessionID?: string, mode: "status" | "show" = "show"): Promise<void> {
+    return this.serial(() => this.doShow(sessionID, mode))
   }
 
-  show(sessionID?: string): Promise<void> {
-    return this.serial(() => this.doShow(sessionID))
-  }
-
-  private async doShow(sessionID?: string): Promise<void> {
+  private async doShow(sessionID: string | undefined, mode: "status" | "show"): Promise<void> {
     const client = this.input.client()
     if (!client) {
       this.input.post({
@@ -237,55 +222,56 @@ export class KiloProviderMemory {
         this.input.post({ type: "memoryLoaded", sessionID, error: NO_PROJECT })
         return
       }
-      const { data: show } = await retry(() => api.show({ directory }, { throwOnError: true }))
-      const { data: status } = await retry(() => api.status({ directory }, { throwOnError: true }))
-      const current = sessionID ?? this.input.session()?.id
-      const startup =
-        current && status.state.stats.lastInjectedSessionID === current ? status.state.stats.lastInjectedTokens : 0
-      const content = [
-        "# Kilo Memory",
-        "",
-        `Root: ${show.root}`,
-        `Enabled: ${show.state.enabled ? "yes" : "no"}`,
-        `Auto-save: ${show.state.autoConsolidate ? "on" : "off"}`,
-        `Startup context: ${show.state.autoInject ? "on" : "off"}`,
-        `Stored index tokens: ${status.index.estimatedTokens}`,
-        `Startup context tokens for this session: ${startup}`,
-        `Last auto-save model usage: ${status.state.stats.lastConsolidationTokens} tokens`,
-        "",
-        "## project.md",
-        show.sources.project.trim(),
-        "",
-        "## environment.md",
-        show.sources.environment.trim(),
-        "",
-        "## corrections.md",
-        show.sources.corrections.trim(),
-        "",
-        "## index.kmem",
-        show.index.trim(),
-        "",
-        "## items",
-        show.items.trim(),
-        "",
-        "## changes",
-        show.changes.trim(),
-        "",
-        "## decisions.jsonl",
-        show.decisions.trim(),
-        "",
-      ].join("\n")
-      await vscode.workspace
-        .openTextDocument({ content, language: "markdown" })
-        .then((doc) => vscode.window.showTextDocument(doc, { preview: true }))
+      const [{ data: show }, { data: status }] = await Promise.all([
+        retry(() => api.show({ directory }, { throwOnError: true })),
+        retry(() => api.status({ directory }, { throwOnError: true })),
+      ])
       const msg = {
         type: "memoryLoaded",
         sessionID,
         status,
-        show,
       }
       this.cache(directory, msg)
       this.input.post(msg)
+      const items = stored(show.items)
+      if (mode === "show" && items.length === 0) {
+        void vscode.window.showInformationMessage(
+          "This project doesn't have any memory yet. It will start showing after you use Kilo.",
+        )
+        return
+      }
+      const entries: vscode.QuickPickItem[] = [
+        {
+          label: `${status.state.enabled ? "Enabled" : "Disabled"} · ${status.state.scope}`,
+          description: status.state.autoConsolidate ? "Auto-save on" : "Auto-save off",
+        },
+        { label: "Storage", detail: status.root },
+        {
+          label: "Sources",
+          description: `project.md ${count(show.sources.project)} · environment.md ${count(show.sources.environment)} · corrections.md ${count(show.sources.corrections)}`,
+        },
+        {
+          label: "Index",
+          description: `${status.index.estimatedTokens.toLocaleString()} estimated tokens`,
+        },
+      ]
+      if (mode === "show") {
+        const shown = items.slice(0, STORED_LIMIT)
+        entries.push(
+          {
+            label: "Stored memory",
+            description:
+              shown.length < items.length ? `${shown.length} of ${items.length} shown` : `${shown.length} shown`,
+          },
+          ...shown.map((label) => ({ label })),
+        )
+      }
+      void vscode.window.showQuickPick(entries, {
+        title: mode === "show" ? "Memory" : "Memory status",
+        placeHolder: mode === "show" ? "Stored project memory" : "Project memory status",
+        matchOnDescription: true,
+        matchOnDetail: true,
+      })
     } catch (err) {
       console.error("[Kilo New] KiloProvider: Failed to show memory:", err)
       this.input.post({
@@ -358,31 +344,28 @@ export class KiloProviderMemory {
         return false
       }
       const data = await this.action(api, directory, message)
-      const refreshed = await Promise.all([
-        retry(() => api.status({ directory }, { throwOnError: true })),
-        retry(() => api.show({ directory }, { throwOnError: true })),
-      ]).catch((err: unknown) => {
-        console.warn("[Kilo New] Memory changed but refresh failed:", err)
-        return undefined
-      })
-      const status = refreshed?.[0].data
-      const show = refreshed?.[1].data
+      const refreshed =
+        message.operation === "status"
+          ? { data }
+          : await retry(() => api.status({ directory }, { throwOnError: true })).catch((err: unknown) => {
+              console.warn("[Kilo New] Memory changed but refresh failed:", err)
+              return undefined
+            })
+      const status = refreshed?.data
       const result = {
         type: "memoryOperationResult",
         operation: message.operation,
         sessionID: message.sessionID,
         ok: true,
         ...(status ? { status } : {}),
-        ...(show ? { show } : {}),
         result: data,
       }
       this.input.post(result)
-      if (status && show) {
+      if (status) {
         const loaded = {
           type: "memoryLoaded",
           sessionID: message.sessionID,
           status,
-          show,
         }
         this.cache(directory, loaded)
         this.input.post(loaded)
@@ -409,7 +392,7 @@ export class KiloProviderMemory {
     const op = message.operation
     if (op === "enable") return (await api.enable({ directory }, { throwOnError: true })).data
     if (op === "status") return (await api.status({ directory }, { throwOnError: true })).data
-    if (op === "edit") return this.edit(api, directory)
+    if (op === "inspect") return this.inspect(api, directory)
     if (op === "disable") return (await api.disable({ directory }, { throwOnError: true })).data
     if (op === "rebuild") return (await api.rebuild({ directory }, { throwOnError: true })).data
     if (op === "purge") return this.purge(api, directory, message)
@@ -459,12 +442,10 @@ export class KiloProviderMemory {
     return (await api.forget({ directory, query, sessionID: message.sessionID }, { throwOnError: true })).data
   }
 
-  private async edit(api: MemoryApi, directory: string) {
+  private async inspect(api: MemoryApi, directory: string) {
     const { data: status } = await retry(() => api.status({ directory }, { throwOnError: true }))
     if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-    const uri = vscode.Uri.file(path.join(status.root, "project.md"))
-    const doc = await vscode.workspace.openTextDocument(uri)
-    await vscode.window.showTextDocument(doc, { preview: false })
+    await vscode.commands.executeCommand("revealFileInOS", vscode.Uri.file(status.root))
     return status
   }
 

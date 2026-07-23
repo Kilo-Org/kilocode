@@ -52,6 +52,9 @@ export const ContextOverflowError = NamedError.create("ContextOverflowError", {
   message: Schema.String,
   responseBody: Schema.optional(Schema.String),
 })
+export const ContentFilterError = NamedError.create("ContentFilterError", {
+  message: Schema.String,
+})
 
 export class OutputFormatText extends Schema.Class<OutputFormatText>("OutputFormatText")({
   type: Schema.Literal("text"),
@@ -225,6 +228,16 @@ export const StepStartPart = Schema.Struct({
   ...partBase,
   type: Schema.Literal("step-start"),
   snapshot: Schema.optional(Schema.String),
+  // kilocode_change start - wall-clock timestamps captured at the processor
+  // and consumed by the webview's weighted throughput aggregator. Marked
+  // optional so older persisted sessions (and synthetic messages) without
+  // timing still decode cleanly.
+  time: Schema.optional(
+    Schema.Struct({
+      start: NonNegativeInt,
+    }),
+  ),
+  // kilocode_change end
 }).annotate({ identifier: "StepStartPart" })
 export type StepStartPart = Types.DeepMutable<Schema.Schema.Type<typeof StepStartPart>>
 
@@ -238,6 +251,25 @@ export const StepFinishPart = Schema.Struct({
     Schema.Struct({
       providerID: ProviderV2.ID,
       modelID: ModelV2.ID,
+    }),
+  ),
+  metrics: Schema.optional(
+    Schema.Struct({
+      prompt: Schema.optional(Schema.Finite),
+      generation: Schema.optional(Schema.Finite),
+      source: Schema.Literals(["provider", "computed"]),
+    }),
+  ),
+  // Wall-clock timestamps + active generation duration captured at the
+  // session processor. The webview's weighted throughput aggregator uses
+  // `time.elapsed` (active model-generation duration in milliseconds,
+  // excluding tool execution and idle waiting) to weight the per-turn
+  // rate. Optional so legacy persisted sessions keep decoding.
+  time: Schema.optional(
+    Schema.Struct({
+      start: NonNegativeInt,
+      end: NonNegativeInt,
+      elapsed: Schema.Finite,
     }),
   ),
   // kilocode_change end
@@ -409,6 +441,7 @@ const AssistantErrorSchema = Schema.Union([
   AbortedError.EffectSchema,
   StructuredOutputError.EffectSchema,
   ContextOverflowError.EffectSchema,
+  ContentFilterError.EffectSchema,
   APIError.EffectSchema,
 ]).annotate({ discriminator: "name" })
 type AssistantError = Schema.Schema.Type<typeof AssistantErrorSchema>
@@ -551,6 +584,7 @@ const SessionRevert = Schema.Struct({
   partID: optionalOmitUndefined(PartID),
   snapshot: optionalOmitUndefined(Schema.String),
   diff: optionalOmitUndefined(Schema.String),
+  workspace: optionalOmitUndefined(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])), // kilocode_change
 })
 
 const SessionModel = Schema.Struct({

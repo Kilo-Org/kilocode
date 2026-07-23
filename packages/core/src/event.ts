@@ -7,6 +7,7 @@ import { EventSequenceTable, EventTable } from "./event/sql"
 import { Location } from "./location"
 import { externalID, type ExternalID, NonNegativeInt, withStatics } from "./schema"
 import { Identifier } from "./util/identifier"
+import { LayerNode } from "./effect/layer-node"
 import { isDeepStrictEqual } from "node:util"
 
 export const ID = Schema.String.check(Schema.isStartsWith("evt_")).pipe(
@@ -30,6 +31,7 @@ export type Definition<Type extends string = string, DataSchema extends Schema.T
   readonly sync?: {
     readonly version: number
     readonly aggregate: string
+    readonly codec?: Schema.Codec<unknown, unknown, never, never> // kilocode_change - storage-only compatibility decoder
   }
   readonly data: DataSchema
 }
@@ -90,13 +92,16 @@ type SyncDefinition = Definition & {
 const syncRegistry = new Map<string, SyncDefinition>()
 
 // Synchronized events cross a JSON boundary, so their data schemas must encode and decode without services.
-const syncCodec = (definition: Definition) => definition.data as Schema.Codec<unknown, unknown, never, never>
+// kilocode_change - keep persistence compatibility codecs out of public event schemas
+const syncCodec = (definition: Definition) =>
+  definition.sync?.codec ?? (definition.data as Schema.Codec<unknown, unknown, never, never>)
 
 export function define<const Type extends string, Fields extends Schema.Struct.Fields>(input: {
   readonly type: Type
   readonly sync?: {
     readonly version: number
     readonly aggregate: string
+    readonly codec?: Schema.Codec<unknown, unknown, never, never> // kilocode_change
   }
   readonly schema: Fields
 }): Schema.Schema<Payload<Definition<Type, Schema.Struct<Fields>>>> & Definition<Type, Schema.Struct<Fields>> {
@@ -410,9 +415,7 @@ export const layerWith = (options?: LayerOptions) =>
           Effect.catchCauseIf(
             (cause) => !Cause.hasInterrupts(cause),
             (cause) =>
-              Effect.logError("Event observer failed").pipe(
-                Effect.annotateLogs({ eventID: event.id, eventType: event.type, kind, cause }),
-              ),
+              Effect.logError("Event observer failed", { eventID: event.id, eventType: event.type, kind, cause }),
           ),
         )
 
@@ -676,5 +679,6 @@ export const layerWith = (options?: LayerOptions) =>
   )
 
 export const layer = layerWith()
+export const node = LayerNode.make(layer, [Database.node])
 
 export const defaultLayer = layer.pipe(Layer.provide(Database.defaultLayer))

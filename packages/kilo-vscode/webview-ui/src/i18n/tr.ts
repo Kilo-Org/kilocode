@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Yinele",
   "revert.banner.redo.all": "Tümünü Yinele",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Konuşma geri alındı. Anlık görüntüler devre dışı olduğu için dosya değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.unavailable":
+    "Konuşma geri alındı. Dosya kontrol noktası olmadığından çalışma alanı değişiklikleri geri yüklenmedi.",
+  "revert.banner.workspace.legacy":
+    "Konuşma geri alındı. Bu önceki geri alma için çalışma alanı geri yükleme durumu kullanılamıyor.",
+  "revert.banner.workspace.enableSnapshots": "Anlık Görüntüleri Etkinleştir",
   "revert.disabled.agentBusy": "Ajanın bitmesini bekleyin",
   "command.session.compact": "Oturumu sıkıştır",
   "command.session.compact.description": "Bağlam boyutunu azaltmak için oturumu özetle",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Aktif dosyayı dahil et",
   "prompt.context.removeActiveFile": "Aktif dosyayı bağlamdan çıkar",
   "prompt.context.removeFile": "Dosyayı bağlamdan çıkar",
+  "prompt.thinking.tooltip": "Akıl yürütme eforu",
   "prompt.action.attachFile": "Dosya ekle",
   "prompt.attachment.remove": "Eki kaldır",
   "prompt.action.send": "Gönder",
@@ -1105,6 +1113,11 @@ export const dict = {
   "session.showHistory": "Geçmişi Göster",
   "session.search.placeholder": "Oturum ara...",
   "session.empty": "Henüz oturum yok. Yeni bir sohbet başlatmak için + tıklayın.",
+  "session.tabs.switcher.open": "Açık sekmeleri göster",
+  "session.tabs.switcher.search": "Açık sekmelerde ara...",
+  "session.tabs.switcher.current": "Geçerli",
+  "session.tabs.switcher.pending": "Yeni",
+  "session.tabs.switcher.busy": "Çalışıyor",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Yalnızca bu depo",
@@ -1256,6 +1269,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Qdrant API anahtarı",
   "settings.indexing.qdrantApiKey.description": "Qdrant örneği için isteğe bağlı API anahtarı.",
   "settings.indexing.qdrantApiKey.placeholder": "İsteğe bağlı API anahtarı",
+  "settings.indexing.fileExtensions.title": "Dosya Uzantıları",
+  "settings.indexing.fileExtensions.description":
+    "Virgülle ayrılmış izin listesi. Yerleşik varsayılanları kullanmak için boş bırakın.",
+  "settings.indexing.fileExtensions.invalid": "Geçersiz uzantı: {{extension}}",
   "settings.indexing.tuning.description": "Gelişmiş arama ve toplu işlem parametresi.",
 
   "settings.experimental.title": "Deneysel",
@@ -1482,11 +1499,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Özel Komut",
   "settings.agentBehaviour.prompt.description": "Bu ajan için ek sistem komutu",
   "settings.agentBehaviour.temperature.title": "Sıcaklık",
-  "settings.agentBehaviour.temperature.description": "Örnekleme sıcaklığı (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Yapay zekâ yanıtlarının ne kadar rastgele olacağını kontrol eder (0–2). Daha düşük değerler (ör. 0.2) odaklı ve tutarlı çıktılar üretir. Daha yüksek değerler (ör. 1.0) daha çeşitli ve yaratıcı yanıtlar üretir. Modelin varsayılan değerini kullanmak için boş bırakın.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Çekirdek örnekleme parametresi (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Çekirdek örnekleme eşiği (0–1). Token seçeneklerini, kümülatif olasılığı P’ye ulaşan en küçük kümeyle sınırlar. Daha düşük değerler çıktıyı daha odaklı hâle getirir; daha yüksek değerler daha fazla çeşitliliğe izin verir. Modelin varsayılan değerini kullanmak için boş bırakın.",
   "settings.agentBehaviour.maxSteps.title": "Maksimum Adım",
-  "settings.agentBehaviour.maxSteps.description": "Maksimum ajanlık yinelemesi",
+  "settings.agentBehaviour.maxSteps.description":
+    "Maksimum ajan adımı sayısıdır. Sınıra ulaşıldığında ajana araçları kullanmayı bırakması ve son bir yanıt vermesi talimatı verilir. Karmaşık ve çok adımlı görevler için artırın; yanıtları daha kısa ve öngörülebilir tutmak için azaltın.",
   "settings.agentBehaviour.hidden.title": "Gizli",
   "settings.agentBehaviour.hidden.description": "Bu ajanı sohbet girişindeki mod değiştiriciden gizle",
   "settings.agentBehaviour.disable.title": "Devre dışı",
@@ -1615,36 +1635,18 @@ export const dict = {
   "settings.context.memory.autoSave.title": "Proje belleğini otomatik kaydet",
   "settings.context.memory.autoSave.description":
     "Bellek açıkken tamamlanan turlardan kalıcı proje gerçeklerini otomatik olarak kaydeder.",
-  "settings.context.memory.index.title": "Bellek indeksi",
+  "settings.context.memory.storage.title": "Storage",
   "settings.context.memory.status.notLoaded": "Yüklenmedi",
   "settings.context.memory.status.disabled": "Devre dışı",
-  "settings.context.memory.status.enabledTokensOps":
-    "Etkin - bu oturumda ~{{session}} başlangıç bağlamı tokenı - depolanan indekste ~{{tokens}} token - son işlem {{ops}}",
-  "settings.context.memory.index.path": "{{path}}/index.kmem",
-  "settings.context.memory.index.enable": "Proje belleği dosyalarını oluşturmak için belleği etkinleştirin.",
+  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.storage.path": "{{path}}",
+  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
   "settings.context.memory.inspect": "İncele",
-  "settings.context.memory.rebuild": "Bellek indeksini yeniden oluştur",
-  "chat.memory.on": "Bellek açık",
-  "chat.memory.label": "Bellek · {{tokens}} token",
-  "chat.memory.status.loading": "Bellek durumu yükleniyor",
-  "chat.memory.session.tokens": "Bu oturumdaki başlangıç bağlamı: {{tokens}} token",
-  "chat.memory.total.tokens": "Depolanan indeks: {{tokens}} token",
-  "chat.memory.project.enabled": "Proje belleği etkin",
   "chat.memory.project.disabled": "Proje belleği devre dışı",
+  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
   "chat.memory.command.failed": "Bellek komutu başarısız oldu",
-  "chat.memory.savedOperations": "Son bellek işlemi: {{count}} işlem",
-  "chat.memory.inspect": "Belleği incele",
-  "chat.memory.remember": "Hatırla",
-  "chat.memory.forget": "Unut",
-  "chat.memory.rebuild": "İndeksi yeniden oluştur",
-  "chat.memory.disable": "Belleği devre dışı bırak",
-  "chat.memory.badge.injected": "Bellek eklendi",
-  "chat.memory.badge.recalled": "Bellek geri çağrıldı",
-  "chat.memory.badge.startupCtx": "başlangıç ctx",
-  "chat.memory.badge.items": "{{count}} öğe",
-  "chat.memory.badge.tokens": "{{tokens}} token",
-  "chat.memory.badge.recalledDetail": "Bellek geri çağrıldı: {{count}} öğe - {{tokens}} token",
-  "chat.memory.badge.files": "Bellek dosyaları: {{files}}",
+  "chat.memory.updated": "Memory updated",
+  "chat.memory.rebuild": "Memory index rebuilt",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Özel prompt Kullan",
@@ -1668,6 +1670,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Akıl yürütmeyi otomatik daralt",
   "settings.display.reasoningAutoCollapse.description":
     "Ajan yazmayı bitirdikten sonra akıl yürütme bloklarını daraltır. Manuel olarak daraltmadığınız sürece akıl yürütmenin geniş kalması için kapalı bırakın.",
+  "settings.display.shiftTabCycle.title": "Shift+Tab ile akıl yürütme eforunu değiştir",
+  "settings.display.shiftTabCycle.description":
+    "Bir sonraki akıl yürütme eforu seviyesine geçmek için komut girişinde Shift+Tab tuşlarına basın. Shift+Tab tuşunu klavye odağında gezinmek için korumak üzere devre dışı bırakın.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1677,6 +1682,14 @@ export const dict = {
     "Kod düzenleme ve fark bloklarının başlangıçta genişletilmiş mi yoksa daraltılmış mı olacağını seçin.",
   "settings.display.codeEdit.expanded": "Genişletilmiş",
   "settings.display.codeEdit.collapsed": "Daraltılmış",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
 
   "settings.providers.defaultModel.title": "Varsayılan Model",
   "settings.providers.defaultModel.description": "Sohbetler için birincil model",

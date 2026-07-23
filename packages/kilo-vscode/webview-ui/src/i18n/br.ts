@@ -137,6 +137,13 @@ export const dict = {
   "revert.banner.redo": "Refazer",
   "revert.banner.redo.all": "Refazer Tudo",
   "revert.banner.hint": "You can redo these changes until you send a new message",
+  "revert.banner.workspace.snapshotsDisabled":
+    "Conversa revertida. As alterações nos arquivos não foram restauradas porque os snapshots estão desativados.",
+  "revert.banner.workspace.unavailable":
+    "Conversa revertida. Nenhum ponto de restauração dos arquivos estava disponível, portanto as alterações no espaço de trabalho não foram restauradas.",
+  "revert.banner.workspace.legacy":
+    "Conversa revertida. O status da restauração do espaço de trabalho não está disponível para esta reversão anterior.",
+  "revert.banner.workspace.enableSnapshots": "Ativar snapshots",
   "revert.disabled.agentBusy": "Aguarde o agente terminar",
   "command.session.compact": "Compactar sessão",
   "command.session.compact.description": "Resumir a sessão para reduzir o tamanho do contexto",
@@ -350,6 +357,7 @@ export const dict = {
   "prompt.context.includeActiveFile": "Incluir arquivo ativo",
   "prompt.context.removeActiveFile": "Remover arquivo ativo do contexto",
   "prompt.context.removeFile": "Remover arquivo do contexto",
+  "prompt.thinking.tooltip": "Esforço de raciocínio",
   "prompt.action.attachFile": "Anexar arquivo",
   "prompt.attachment.remove": "Remover anexo",
   "prompt.action.send": "Enviar",
@@ -1115,6 +1123,11 @@ export const dict = {
   "session.showHistory": "Mostrar Histórico",
   "session.search.placeholder": "Buscar sessões...",
   "session.empty": "Nenhuma sessão ainda. Clique + para iniciar uma nova conversa.",
+  "session.tabs.switcher.open": "Mostrar abas abertas",
+  "session.tabs.switcher.search": "Buscar abas abertas...",
+  "session.tabs.switcher.current": "Atual",
+  "session.tabs.switcher.pending": "Nova",
+  "session.tabs.switcher.busy": "Trabalhando",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nuvem",
   "session.cloud.repoOnly": "Apenas este repositório",
@@ -1266,6 +1279,10 @@ export const dict = {
   "settings.indexing.qdrantApiKey.title": "Chave de API do Qdrant",
   "settings.indexing.qdrantApiKey.description": "Chave de API opcional para a instância do Qdrant.",
   "settings.indexing.qdrantApiKey.placeholder": "Chave de API opcional",
+  "settings.indexing.fileExtensions.title": "Extensões de arquivo",
+  "settings.indexing.fileExtensions.description":
+    "Lista de permissões separada por vírgulas. Deixe em branco para usar os padrões integrados.",
+  "settings.indexing.fileExtensions.invalid": "Extensão inválida: {{extension}}",
   "settings.indexing.dimension.title": "Dimensão do vetor",
   "settings.indexing.dimension.description":
     "Deixe vazio para detectar automaticamente a dimensão de embedding do modelo.",
@@ -1494,11 +1511,14 @@ export const dict = {
   "settings.agentBehaviour.prompt.title": "Prompt personalizado",
   "settings.agentBehaviour.prompt.description": "Prompt de sistema adicional para este agente",
   "settings.agentBehaviour.temperature.title": "Temperatura",
-  "settings.agentBehaviour.temperature.description": "Temperatura de amostragem (0-2)",
+  "settings.agentBehaviour.temperature.description":
+    "Controla o grau de aleatoriedade das respostas da IA (0–2). Valores mais baixos (por exemplo, 0.2) produzem resultados focados e consistentes. Valores mais altos (por exemplo, 1.0) produzem respostas mais variadas e criativas. Deixe em branco para usar o padrão do modelo.",
   "settings.agentBehaviour.topP.title": "Top P",
-  "settings.agentBehaviour.topP.description": "Parâmetro de amostragem nucleus (0-1)",
+  "settings.agentBehaviour.topP.description":
+    "Limite da amostragem nucleus (0–1). Restringe as opções de tokens ao menor conjunto cuja probabilidade acumulada atinge P. Valores mais baixos tornam o resultado mais focado; valores mais altos permitem maior diversidade. Deixe em branco para usar o padrão do modelo.",
   "settings.agentBehaviour.maxSteps.title": "Passos máximos",
-  "settings.agentBehaviour.maxSteps.description": "Iterações máximas do agente",
+  "settings.agentBehaviour.maxSteps.description":
+    "Número máximo de etapas do agente. Ao atingir o limite, o agente é instruído a parar de usar ferramentas e fornecer uma resposta final. Aumente para tarefas complexas com várias etapas; reduza para manter as respostas mais curtas e previsíveis.",
   "settings.agentBehaviour.hidden.title": "Oculto",
   "settings.agentBehaviour.hidden.description": "Ocultar este agente do seletor de modos na entrada do chat",
   "settings.agentBehaviour.disable.title": "Desativado",
@@ -1668,36 +1688,18 @@ export const dict = {
   "settings.context.memory.autoSave.title": "Salvar memória do projeto automaticamente",
   "settings.context.memory.autoSave.description":
     "Salva automaticamente fatos duradouros do projeto a partir de turnos concluídos quando a memória está ativada.",
-  "settings.context.memory.index.title": "Índice da memória",
+  "settings.context.memory.storage.title": "Storage",
   "settings.context.memory.status.notLoaded": "Não carregada",
   "settings.context.memory.status.disabled": "Desativada",
-  "settings.context.memory.status.enabledTokensOps":
-    "Ativada - ~{{session}} tokens de contexto inicial nesta sessão - ~{{tokens}} tokens no índice armazenado - última op. {{ops}}",
-  "settings.context.memory.index.path": "{{path}}/index.kmem",
-  "settings.context.memory.index.enable": "Ative a memória para criar arquivos de memória do projeto.",
+  "settings.context.memory.status.enabledTokens": "Enabled - ~{{tokens}} stored tokens",
+  "settings.context.memory.storage.path": "{{path}}",
+  "settings.context.memory.storage.enable": "Enable memory to create project memory files.",
   "settings.context.memory.inspect": "Inspecionar",
-  "settings.context.memory.rebuild": "Reconstruir índice da memória",
-  "chat.memory.on": "Memória ligada",
-  "chat.memory.label": "Memória · {{tokens}} tokens",
-  "chat.memory.status.loading": "Carregando status da memória",
-  "chat.memory.session.tokens": "Contexto inicial desta sessão: {{tokens}} tokens",
-  "chat.memory.total.tokens": "Índice armazenado: {{tokens}} tokens",
-  "chat.memory.project.enabled": "Memória do projeto ativada",
   "chat.memory.project.disabled": "Memória do projeto desativada",
+  "chat.memory.project.empty": "This project doesn't have any memory yet. It will start showing after you use Kilo.",
   "chat.memory.command.failed": "Comando de memória falhou",
-  "chat.memory.savedOperations": "Última operação de memória: {{count}} ops",
-  "chat.memory.inspect": "Inspecionar memória",
-  "chat.memory.remember": "Lembrar",
-  "chat.memory.forget": "Esquecer",
-  "chat.memory.rebuild": "Reconstruir índice",
-  "chat.memory.disable": "Desativar memória",
-  "chat.memory.badge.injected": "Memória injetada",
-  "chat.memory.badge.recalled": "Memória recuperada",
-  "chat.memory.badge.startupCtx": "ctx inicial",
-  "chat.memory.badge.items": "{{count}} itens",
-  "chat.memory.badge.tokens": "{{tokens}} tokens",
-  "chat.memory.badge.recalledDetail": "Memória recuperada: {{count}} itens - {{tokens}} tokens",
-  "chat.memory.badge.files": "Arquivos de memória: {{files}}",
+  "chat.memory.updated": "Memory updated",
+  "chat.memory.rebuild": "Memory index rebuilt",
 
   "settings.commitMessage.title": "Commit Message",
   "settings.commitMessage.override.title": "Usar prompt personalizado",
@@ -1721,6 +1723,9 @@ export const dict = {
   "settings.display.reasoningAutoCollapse.title": "Recolher raciocínio automaticamente",
   "settings.display.reasoningAutoCollapse.description":
     "Recolhe os blocos de raciocínio depois que o agente termina de escrevê-los. Deixe desativado para manter o raciocínio expandido, a menos que você o recolha manualmente.",
+  "settings.display.shiftTabCycle.title": "Alternar o esforço de raciocínio com Shift+Tab",
+  "settings.display.shiftTabCycle.description":
+    "Pressione Shift+Tab em um campo de entrada de prompt para alternar para o próximo nível de esforço de raciocínio. Desative para manter Shift+Tab para navegação de foco pelo teclado.",
   "settings.display.terminalCommand.title": "Terminal Command Blocks",
   "settings.display.terminalCommand.description": "Choose whether terminal command blocks start expanded or collapsed.",
   "settings.display.terminalCommand.expanded": "Expanded",
@@ -1730,6 +1735,15 @@ export const dict = {
     "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Recolhidos",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",

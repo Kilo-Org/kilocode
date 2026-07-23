@@ -1443,56 +1443,16 @@ body.am-wt-dragging-active * {
   padding-right: 4px;
   border-left: 1px solid var(--border-weak-base);
 }
-.am-sidebar-search-trigger {
-  display: inline-flex;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-weak);
-  cursor: pointer;
-}
-
-.am-sidebar-search-trigger:hover,
-.am-sidebar-search-trigger[data-expanded] {
-  background: var(--surface-inset-base-hover);
-  color: var(--text-base);
-}
-
 .am-sidebar-search-popover[data-component="popover-content"] {
-  width: min(360px, calc(100vw - 24px));
   max-height: min(480px, calc(100vh - 64px));
-  padding: 0;
-  overflow: hidden;
-}
-
-.am-sidebar-search-popover [data-slot="popover-body"] {
-  padding: 0;
 }
 
 .am-sidebar-search [data-component="list"] {
   max-height: min(440px, calc(100vh - 88px));
-  gap: 0;
-  padding: 8px 0 0;
-}
-
-.am-sidebar-search [data-slot="list-search-wrapper"] {
-  margin: 0 0 4px;
-  padding: 0 8px;
-}
-
-.am-sidebar-search [data-slot="list-search"] {
-  background: var(--surface-inset-base);
 }
 
 .am-sidebar-search [data-slot="list-scroll"] {
   max-height: 360px;
-  gap: 2px;
   padding: 0 4px;
 }
 
@@ -1513,65 +1473,11 @@ body.am-wt-dragging-active * {
   padding: 6px 8px;
 }
 
-.am-sidebar-search [data-slot="list-item"][data-active="true"],
-.am-sidebar-search [data-slot="list-item"][data-selected="true"] {
-  background: color-mix(in srgb, var(--text-base) 10%, transparent);
-}
-
-.am-sidebar-search-result {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-}
-
-.am-sidebar-search-icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-weak);
-}
-
-.am-sidebar-search-spinner {
-  width: 14px;
-  height: 14px;
-}
-
-.am-sidebar-search-copy {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 1px;
-  text-align: left;
-}
-
-.am-sidebar-search-title,
-.am-sidebar-search-meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.am-sidebar-search-title {
-  color: var(--text-base);
-  font-size: var(--kilo-font-size-12);
-  font-weight: 500;
-  line-height: 1.35;
-}
-
 .am-sidebar-search-meta {
   display: flex;
   align-items: center;
   gap: 5px;
   color: var(--text-base);
-  font-size: var(--kilo-font-size-10);
-  font-weight: 400;
-  line-height: 1.35;
 }
 
 .am-sidebar-search-swatch {
@@ -1579,16 +1485,6 @@ body.am-wt-dragging-active * {
   height: 6px;
   flex-shrink: 0;
   border-radius: 50%;
-}
-
-.am-sidebar-search-status,
-.am-sidebar-search-count,
-.am-sidebar-search-time {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: var(--text-base);
-  font-size: var(--kilo-font-size-10);
-  font-weight: 400;
 }
 
 .am-sidebar-search-status {
@@ -2658,10 +2554,13 @@ body.am-wt-dragging-active * {
   min-height: 0;
 }
 
-/* Allow portal-based dropdowns to escape the dialog bounds */
+/* Allow portal-based dropdowns to escape the dialog bounds.
+   Wider than the kilo-ui default so the prompt stays readable for long input. */
 [data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
   overflow: visible;
   max-height: 85vh;
+  width: 640px;
+  max-width: 92vw;
 }
 
 /* Scrollable form content area — keeps submit button always visible */
@@ -2702,7 +2601,10 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
-/* Dialog overrides for prompt-input-container — resizable from bottom edge */
+/* Dialog overrides for prompt-input-container — resizable from bottom edge.
+   The container is the only element that changes size (auto-grow + manual
+   resize); the textarea always fills it and is the only element that scrolls,
+   so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
@@ -2716,8 +2618,7 @@ body.am-wt-dragging-active * {
 .am-nv-dialog .am-prompt-input-wrapper {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* While any inline (non-portaled) selector popover is open, let it escape the
@@ -2740,8 +2641,9 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   max-height: none;
+  overflow-y: auto;
 }
 
 .am-nv-config-label {
@@ -2918,6 +2820,7 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   padding: 4px 10px;
   min-height: 30px;
   transition: background 80ms;
@@ -3012,6 +2915,11 @@ body.am-wt-dragging-active * {
 
 .am-mm-count-select:focus {
   border-color: var(--border-focus);
+}
+
+.am-mm-variant-select {
+  max-width: 110px;
+  text-overflow: ellipsis;
 }
 
 .am-nv-spinner {

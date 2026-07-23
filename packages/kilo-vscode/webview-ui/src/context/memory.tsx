@@ -5,26 +5,21 @@ import { useSession } from "./session"
 import { useVSCode } from "./vscode"
 import { useLanguage } from "./language"
 import { showToast } from "@kilocode/kilo-ui/toast"
-import type { MemoryShowResponse, MemoryStatusResponse } from "@kilocode/sdk/v2"
+import type { MemoryStatusResponse } from "@kilocode/sdk/v2"
 import type { ExtensionMessage } from "../types/messages"
 
 export interface MemoryContextValue {
   status: Accessor<MemoryStatusResponse | undefined>
-  show: Accessor<MemoryShowResponse | undefined>
   loading: Accessor<boolean>
   pending: Accessor<boolean>
   error: Accessor<string | undefined>
   enabled: Accessor<boolean>
-  sessionTokens: Accessor<number>
   totalTokens: Accessor<number>
-  refresh: (includeSources?: boolean) => void
-  showMemory: () => void
+  refresh: () => void
+  inspect: () => void
   enable: () => void
   disable: () => void
   auto: (mode: "on" | "off") => void
-  rebuild: () => void
-  remember: () => void
-  forget: () => void
 }
 
 export const MemoryContext = createContext<MemoryContextValue>()
@@ -36,7 +31,6 @@ export const MemoryProvider: ParentComponent = (props) => {
   const session = useSession()
   const language = useLanguage()
   const [status, setStatus] = createSignal<MemoryStatusResponse | undefined>()
-  const [show, setShow] = createSignal<MemoryShowResponse | undefined>()
   const [loading, setLoading] = createSignal(false)
   const [pending, setPending] = createSignal<string | undefined>()
   const [error, setError] = createSignal<string | undefined>()
@@ -54,24 +48,27 @@ export const MemoryProvider: ParentComponent = (props) => {
 
   const clear = () => {
     setStatus(undefined)
-    setShow(undefined)
     setError(undefined)
     setPending(undefined)
     last = undefined
   }
 
-  const refresh = (includeSources = false) => {
+  const refresh = () => {
     if (!server.isConnected()) return
     setLoading(true)
     setError(undefined)
-    vscode.postMessage({ type: "requestMemory", sessionID: id(), includeSources })
+    vscode.postMessage({ type: "requestMemory", sessionID: id() })
   }
 
-  const operation = (op: "enable" | "disable" | "rebuild") => {
+  const operation = (op: "enable" | "disable") => {
     if (!server.isConnected()) return
     setPending(key(id()))
     setError(undefined)
-    vscode.postMessage({ type: "memoryOperation", operation: op, sessionID: id() })
+    vscode.postMessage({
+      type: "memoryOperation",
+      operation: op,
+      sessionID: id(),
+    })
   }
 
   const auto = (mode: "on" | "off") => {
@@ -81,36 +78,22 @@ export const MemoryProvider: ParentComponent = (props) => {
     vscode.postMessage({ type: "memoryOperation", operation: "auto", mode, sessionID: id() })
   }
 
-  const prompt = (op: "remember" | "forget") => {
+  const inspect = () => {
     if (!server.isConnected()) return
     setPending(key(id()))
     setError(undefined)
-    vscode.postMessage({ type: "memoryPrompt", operation: op, sessionID: id() })
-  }
-
-  const showMemory = () => {
-    if (!server.isConnected()) return
-    setLoading(true)
-    setError(undefined)
-    vscode.postMessage({ type: "memoryShow", sessionID: id() })
+    vscode.postMessage({ type: "memoryOperation", operation: "inspect", sessionID: id() })
   }
 
   const event = (message: Extract<ExtensionMessage, { type: "memoryEvent" }>) => {
     if (!current(message.sessionID)) return
-    if (message.detail.type === "skipped") return
+    if (message.detail.type !== "error") return
     if (!message.detail.message) return
     const dedupeKey = `${message.sessionID ?? ""}:${message.detail.type ?? ""}:${message.detail.message}`
     const now = Date.now()
     if (last?.key === dedupeKey && now - last.time < EVENT_DEDUPE_MS) return
     last = { key: dedupeKey, time: now }
-    showToast({
-      ...(message.detail.type === "saved"
-        ? { variant: "success" as const }
-        : message.detail.type === "error"
-          ? { variant: "error" as const }
-          : {}),
-      title: message.detail.message,
-    })
+    showToast({ variant: "error", title: message.detail.message })
   }
 
   const loaded = (message: Extract<ExtensionMessage, { type: "memoryLoaded" }>) => {
@@ -119,11 +102,9 @@ export const MemoryProvider: ParentComponent = (props) => {
     if (message.error) {
       setError(message.error)
       setStatus(undefined)
-      setShow(undefined)
       return
     }
     if (message.status) setStatus(message.status)
-    if (message.show) setShow(message.show)
     setError(undefined)
   }
 
@@ -138,8 +119,13 @@ export const MemoryProvider: ParentComponent = (props) => {
       return
     }
     if (message.status) setStatus(message.status)
-    if (message.show) setShow(message.show)
     setError(undefined)
+    if (message.operation === "remember" || message.operation === "correct" || message.operation === "forget") {
+      showToast({ variant: "success", title: language.t("chat.memory.updated") })
+    }
+    if (message.operation === "rebuild") {
+      showToast({ variant: "success", title: language.t("chat.memory.rebuild") })
+    }
   }
 
   const receive = (message: ExtensionMessage) => {
@@ -155,7 +141,7 @@ export const MemoryProvider: ParentComponent = (props) => {
       done(message)
       return
     }
-    if (message.type === "extensionDataReady" && server.isConnected() && !status()) refresh(false)
+    if (message.type === "extensionDataReady" && server.isConnected() && !status()) refresh()
   }
 
   const unsubscribe = vscode.onMessage(receive)
@@ -175,37 +161,23 @@ export const MemoryProvider: ParentComponent = (props) => {
       setLoading(false)
       return
     }
-    refresh(false)
+    refresh()
   })
-
-  const sessionTokens = (snapshot?: MemoryStatusResponse) => {
-    const sid = id()
-    if (!snapshot?.state.enabled) return 0
-    if (!sid || snapshot.state.stats.lastInjectedSessionID !== sid) return 0
-    return snapshot.state.stats.lastInjectedTokens
-  }
 
   const total = createMemo(() => status()?.index.estimatedTokens ?? 0)
 
-  const sessionTotal = createMemo(() => sessionTokens(status()))
-
   const value: MemoryContextValue = {
     status,
-    show,
     loading,
     pending: createMemo(() => pending() === key(id())),
     error,
     enabled: createMemo(() => status()?.state.enabled ?? false),
-    sessionTokens: sessionTotal,
     totalTokens: total,
     refresh,
-    showMemory,
+    inspect,
     enable: () => operation("enable"),
     disable: () => operation("disable"),
     auto,
-    rebuild: () => operation("rebuild"),
-    remember: () => prompt("remember"),
-    forget: () => prompt("forget"),
   }
 
   return <MemoryContext.Provider value={value}>{props.children}</MemoryContext.Provider>

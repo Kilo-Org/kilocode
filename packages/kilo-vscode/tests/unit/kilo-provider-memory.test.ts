@@ -1,5 +1,6 @@
-import { describe, expect, it } from "bun:test"
+import { describe, expect, it, spyOn } from "bun:test"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import * as vscode from "vscode"
 import { KiloProviderMemory } from "../../src/kilo-provider/memory"
 
 function subject(client: KiloClient | undefined) {
@@ -18,6 +19,7 @@ function status(root: string) {
     root: `${root}/.kilo/memory`,
     state: {
       enabled: true,
+      scope: "project",
       autoConsolidate: true,
       stats: {
         lastInjectedSessionID: "",
@@ -42,6 +44,89 @@ function show(root: string) {
 }
 
 describe("KiloProviderMemory", () => {
+  it("shows stored memory and explains empty projects", async () => {
+    const picker = spyOn(vscode.window, "showQuickPick")
+    const notice = spyOn(vscode.window, "showInformationMessage")
+    const full = status("/repo")
+    const view = show("/repo")
+    view.items = "record id=project.md:Facts:test :: Stored memory fact :: with context"
+    const stored = subject({
+      memory: {
+        show: async () => ({ data: view }),
+        status: async () => ({ data: full }),
+      },
+    } as unknown as KiloClient)
+    const empty = subject({
+      memory: {
+        show: async () => ({ data: show("/empty") }),
+        status: async () => ({ data: status("/empty") }),
+      },
+    } as unknown as KiloClient)
+
+    try {
+      await stored.memory.show("ses_stored")
+      await empty.memory.show("ses_empty")
+
+      expect(picker).toHaveBeenCalledTimes(1)
+      expect(picker.mock.calls[0]?.[0]).toContainEqual(
+        expect.objectContaining({ label: "Storage", detail: "/repo/.kilo/memory" }),
+      )
+      expect(picker.mock.calls[0]?.[0]).toContainEqual(
+        expect.objectContaining({ label: "Stored memory fact :: with context" }),
+      )
+      expect(notice).toHaveBeenCalledWith(
+        "This project doesn't have any memory yet. It will start showing after you use Kilo.",
+      )
+    } finally {
+      picker.mockRestore()
+      notice.mockRestore()
+    }
+  })
+
+  it("shows the stored memory total when the list is truncated", async () => {
+    const picker = spyOn(vscode.window, "showQuickPick")
+    const view = show("/repo")
+    view.items = Array.from({ length: 17 }, (_, i) => `- id=item-${i} :: Fact ${i}`).join("\n")
+    const item = subject({
+      memory: {
+        show: async () => ({ data: view }),
+        status: async () => ({ data: status("/repo") }),
+      },
+    } as unknown as KiloClient)
+
+    try {
+      await item.memory.show("ses_stored")
+
+      expect(picker.mock.calls[0]?.[0]).toContainEqual(
+        expect.objectContaining({ label: "Stored memory", description: "16 of 17 shown" }),
+      )
+      expect(picker.mock.calls[0]?.[0]).toHaveLength(21)
+    } finally {
+      picker.mockRestore()
+    }
+  })
+
+  it("routes inspect operations to the memory folder", async () => {
+    const reveal = spyOn(vscode.commands, "executeCommand")
+    const item = subject({
+      memory: {
+        status: async () => ({ data: status("/repo") }),
+        show: async () => ({ data: show("/repo") }),
+      },
+    } as unknown as KiloClient)
+
+    try {
+      await item.memory.run({ operation: "inspect", sessionID: "ses_inspect" })
+
+      expect(reveal).toHaveBeenCalledWith("revealFileInOS", expect.objectContaining({ fsPath: "/repo/.kilo/memory" }))
+      expect(item.posts).toContainEqual(
+        expect.objectContaining({ type: "memoryOperationResult", operation: "inspect", ok: true }),
+      )
+    } finally {
+      reveal.mockRestore()
+    }
+  })
+
   it("handles clients without memory endpoints gracefully", async () => {
     const item = subject({} as KiloClient)
 
@@ -117,7 +202,7 @@ describe("KiloProviderMemory", () => {
     expect(posts[1]).toMatchObject({
       type: "memoryLoaded",
       sessionID: "ses_8",
-      show: { root: "/repo/ses_8/.kilo/memory" },
+      status: { root: "/repo/ses_8/.kilo/memory" },
     })
   })
 
@@ -158,26 +243,22 @@ describe("KiloProviderMemory", () => {
   it("routes status operations without mutating memory", async () => {
     const calls: string[] = []
     const state = status("/repo")
-    const view = show("/repo")
     const item = subject({
       memory: {
         status: async () => {
           calls.push("status")
           return { data: state }
         },
-        show: async () => {
-          calls.push("show")
-          return { data: view }
-        },
       },
     } as unknown as KiloClient)
 
     await item.memory.run({ operation: "status", sessionID: "ses_memory" })
 
-    expect(calls).toEqual(["status", "status", "show"])
+    expect(calls).toEqual(["status"])
     expect(item.posts).toContainEqual(
-      expect.objectContaining({ type: "memoryOperationResult", operation: "status", ok: true }),
+      expect.objectContaining({ type: "memoryOperationResult", operation: "status", ok: true, result: state }),
     )
+    expect(item.posts).toContainEqual(expect.objectContaining({ type: "memoryLoaded", status: state }))
   })
 
   it("routes auto-save and purge operations with explicit payloads", async () => {

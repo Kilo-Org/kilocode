@@ -77,7 +77,7 @@ class BaseQuestionView(
 
     private val text = Stack.vertical()
 
-    private val header = object : JPanel(BorderLayout(UiStyle.Gap.sm(), 0)) {
+    private val header = object : JPanel(BorderLayout(UiStyle.Gap.md(), 0)) {
         override fun getMaximumSize(): Dimension {
             val size = preferredSize
             return Dimension(Int.MAX_VALUE, size.height)

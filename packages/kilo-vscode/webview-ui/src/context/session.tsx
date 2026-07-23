@@ -259,6 +259,7 @@ interface SessionContextValue {
   // Actions
   revertSession: (messageID: string, partID?: string) => void
   unrevertSession: () => void
+  deleteQueuedMessage: (sessionID: string, messageID: string) => void
   sendMessage: (
     text: string,
     providerID?: string,
@@ -1084,6 +1085,7 @@ export const SessionProvider: ParentComponent = (props) => {
     if (handleModelUsageMessage(message)) return
     refreshModelUsageForMessage(message)
     if (handleStreamMessage(message)) return
+    handleCommandCompletion(message)
     cah.handleMessage(message)
     switch (message.type) {
       case "sessionCreated":
@@ -1600,6 +1602,10 @@ export const SessionProvider: ParentComponent = (props) => {
       setStore("parts", message.id, message.parts)
     }
     rebuildToolParts(message.sessionID, store.messages[message.sessionID] ?? [])
+  }
+
+  function handleCommandCompletion(message: ExtensionMessage): void {
+    if (message.type === "sessionCommandCompleted") finishSubmission(message.messageID)
   }
 
   function handlePartUpdated(
@@ -2781,7 +2787,23 @@ export const SessionProvider: ParentComponent = (props) => {
         .filter((p) => p.type === "text" && !(p as { synthetic?: boolean }).synthetic)
         .map((p) => (p as { text: string }).text ?? "")
         .join("")
-      if (text) window.postMessage({ type: "setChatBoxMessage", text }, "*")
+      // Pass the original attachments' exact paths alongside the restored text
+      // so PromptInput can seed them directly rather than re-deriving mentions
+      // from the text via regex, which truncates at the first space in a
+      // filename (see PromptInput's setChatBoxMessage handler).
+      const paths = parts
+        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+        .map((p) => p.source?.path)
+        .filter((p): p is string => !!p && !p.startsWith("session:"))
+      const sessions = parts
+        .filter((p): p is Extract<Part, { type: "file" }> => p.type === "file")
+        .filter((p) => p.url.startsWith("session:"))
+        .map((p) => ({
+          id: p.url.slice("session:".length),
+          title: p.source?.text?.value.replace(/^@/, "") ?? p.filename ?? p.url,
+          updated: 0,
+        }))
+      if (text) window.postMessage({ type: "setChatBoxMessage", text, paths, sessions }, "*")
     }
     vscode.postMessage({ type: "revertSession", sessionID: id, messageID, partID })
   }
@@ -2792,6 +2814,15 @@ export const SessionProvider: ParentComponent = (props) => {
     // Clear the prompt input on full redo (matching TUI/desktop behavior)
     window.postMessage({ type: "setChatBoxMessage", text: "" }, "*")
     vscode.postMessage({ type: "unrevertSession", sessionID: id })
+  }
+
+  // Clear local send bookkeeping and request deletion. The message stays visible
+  // until messageRemoved confirms deletion; a false response leaves it in place.
+  function deleteQueuedMessage(sessionID: string, messageID: string) {
+    if (!server.isConnected()) return
+    pendingOptimistic.get(sessionID)?.delete(messageID)
+    finishSubmission(messageID)
+    vscode.postMessage({ type: "deleteMessage", sessionID, messageID })
   }
 
   function syncSession(sessionID: string) {
@@ -2986,6 +3017,7 @@ export const SessionProvider: ParentComponent = (props) => {
     worktreeStats,
     revertSession,
     unrevertSession,
+    deleteQueuedMessage,
     sendMessage,
     sendCommand,
     abort,

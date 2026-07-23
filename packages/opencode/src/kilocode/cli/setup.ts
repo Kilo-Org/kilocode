@@ -12,6 +12,7 @@ import { SessionExport } from "@/kilocode/session-export"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
+import { CloudCommand } from "@/kilocode/cli/cmd/cloud"
 import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
 import { ProfileCommand } from "@/kilocode/cli/cmd/profile"
 import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
@@ -19,6 +20,7 @@ import { DevSetupCommand, DevAliasCommand } from "@/kilocode/cli/dev-setup"
 import { RemoteCommand } from "@/cli/cmd/remote"
 import { ConfigCommand as ConfigCLICommand } from "@/cli/cmd/config"
 import { JsonMigration } from "@/kilocode/storage/json-migration"
+import { KiloLog } from "@/kilocode/log"
 
 const log = Log.create({ service: "kilocode.cli" })
 
@@ -31,6 +33,7 @@ export namespace KiloCli {
   export function register<T>(cli: Argv<T>): Argv<T> {
     cli
       .command(KiloConsoleCommand)
+      .command(CloudCommand)
       .command(RollCallCommand)
       .command(ProfileCommand)
       .command(RemoteCommand)
@@ -52,6 +55,7 @@ export namespace KiloCli {
   // Runs from the upstream `.middleware`, before any command handler. Env tagging is additive so
   // it never has to modify upstream's own env assignments.
   export async function bootstrap(): Promise<void> {
+    await KiloLog.init()
     if (!process.env[ENV_FEATURE]) process.env[ENV_FEATURE] = process.argv.includes("serve") ? "unknown" : "cli"
     if (!process.env[ENV_VERSION]) process.env[ENV_VERSION] = InstallationVersion
     process.env.KILO = "1"

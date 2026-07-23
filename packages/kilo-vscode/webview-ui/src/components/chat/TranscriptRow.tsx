@@ -21,6 +21,11 @@ interface TranscriptRowViewProps {
   /** Part behind the currently hovered/focused task-timeline bar, if any. */
   highlight?: () => TimelineHighlight | undefined
   activeSearch?: boolean
+  /** id of the part (tool call/reasoning block) containing the current chat
+   * search match within this row, if any. */
+  activeSearchPartID?: string
+  /** For a multi-file apply_patch match, the specific file within that part. */
+  activeSearchPartFile?: string
 }
 
 export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
@@ -61,6 +66,9 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               onFork={
                 props.onForkMessage ? () => props.onForkMessage?.(row().message.sessionID, row().message.id) : undefined
               }
+              onDelete={
+                row().queued ? () => session.deleteQueuedMessage(row().message.sessionID, row().message.id) : undefined
+              }
               onRevert={
                 row().answered
                   ? () => {
@@ -81,6 +89,8 @@ export const TranscriptRowView: Component<TranscriptRowViewProps> = (props) => {
               message={row().message as unknown as SDKAssistantMessage}
               parts={row().parts as unknown as SDKPart[]}
               showAssistantCopyPartID={row().copy}
+              forceOpenPartID={props.activeSearchPartID}
+              forceOpenFile={props.activeSearchPartFile}
               highlight={props.highlight}
               feedback={{
                 enabled: feedback.telemetryEnabled(),

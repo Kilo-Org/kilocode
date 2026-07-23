@@ -8,13 +8,12 @@
  * session activity) and a context window progress bar.
  */
 
-import { Component, For, Show, createMemo, createSignal, createEffect, onMount, onCleanup } from "solid-js"
+import { Component, For, Show, createMemo, createSignal, createEffect, on, onMount, onCleanup } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Checkbox } from "@kilocode/kilo-ui/checkbox"
 import { useSession } from "../../context/session"
-import { useMemory } from "../../context/memory"
 import { calcTokenUsage, collapseCostBreakdown } from "../../context/session-utils"
 import { useLanguage } from "../../context/language"
 import { useVSCode } from "../../context/vscode"
@@ -27,7 +26,6 @@ import { hasModelUsage, tokenSummary } from "../../context/model-usage"
 import { SessionRenameEditor } from "../shared/SessionRenameEditor"
 import { target as todoTarget } from "../../context/todo-revert"
 import type { Part, TodoItem, ExtensionMessage } from "../../types/messages"
-import { formatCompactCount } from "../../utils/format"
 
 interface TaskHeaderProps {
   readonly?: boolean
@@ -35,7 +33,6 @@ interface TaskHeaderProps {
 
 export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   const session = useSession()
-  const memory = useMemory()
   const language = useLanguage()
   const search = useTranscriptSearch()
 
@@ -89,17 +86,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
     return false
   })
 
-  const memoryLabel = createMemo(() => {
-    const count = memory.sessionTokens()
-    return count > 0
-      ? language.t("chat.memory.label", { tokens: formatCompactCount(count) })
-      : language.t("chat.memory.on")
-  })
-
-  const memoryTooltip = createMemo(() =>
-    language.t("chat.memory.session.tokens", { tokens: formatCompactCount(memory.sessionTokens()) }),
-  )
-
   const vscode = useVSCode()
   const [expanded, setExpanded] = createSignal(true)
 
@@ -110,6 +96,36 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
   }
   window.addEventListener("message", handler)
   onCleanup(() => window.removeEventListener("message", handler))
+
+  // "Kilo Code: Toggle Chat Search" (Command Palette) toggles the search
+  // bar from here rather than TranscriptSearch.tsx itself: that component
+  // only mounts once search.active() is already true (it's behind a
+  // <Show>), so it can never be what turns search on in the first place —
+  // and it also wouldn't exist anymore to react to a request to close it.
+  // TaskHeader is mounted the whole time there's an active chat, so it's
+  // the right place to react to the external toggle request.
+  const toggleSearch = () => (search.active() ? search.closeSearch() : search.setActive(true))
+  window.addEventListener("focusTranscriptSearch", toggleSearch)
+  onCleanup(() => window.removeEventListener("focusTranscriptSearch", toggleSearch))
+
+  // Whenever search closes via an explicit user action — the header toggle
+  // button, the command palette toggle above, the search bar's own "X", or
+  // Escape — send focus back to the chat input rather than leaving it
+  // stranded on whatever control was just clicked/removed. Watches
+  // `closeSignal` rather than `active()` transitions so that MessageList
+  // silently resetting the widget on a session/tab change (which also
+  // flips `active()` false) can't trigger this same aggressive restore and
+  // steal focus back from the tab strip's own focus handling. `defer: true`
+  // skips the initial run so mounting doesn't immediately steal focus.
+  createEffect(
+    on(
+      () => search.closeSignal(),
+      () => {
+        window.dispatchEvent(new CustomEvent("focusPrompt", { detail: { restore: true } }))
+      },
+      { defer: true },
+    ),
+  )
 
   const toggle = () => {
     const next = !expanded()
@@ -196,7 +212,9 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 startRename()
               }}
             >
-              <span data-slot="task-header-title-label">{title()}</span>
+              <span data-slot="task-header-title-label" dir="auto">
+                {title()}
+              </span>
             </span>
           </Show>
         </div>
@@ -238,7 +256,7 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
                 variant="ghost"
                 class="task-header-search-toggle"
                 data-active={search.active() ? "" : undefined}
-                onClick={() => search.setActive(!search.active())}
+                onClick={toggleSearch}
                 aria-label={language.t("chat.search.toggle")}
                 aria-pressed={search.active()}
               />
@@ -270,69 +288,6 @@ export const TaskHeader: Component<TaskHeaderProps> = (props) => {
             <ContextProgress />
           </div>
           <Show when={tokens()}>{(tk) => <TaskUsage tokens={tk()} usage={session.modelUsage()} />}</Show>
-        </div>
-      </Show>
-      <Show when={memory.enabled()}>
-        <div data-slot="task-header-memory">
-          <Tooltip value={memoryTooltip()} placement="bottom" class="task-header-memory-tooltip">
-            <span data-slot="task-header-memory-status">
-              <Icon name="brain" size="small" />
-              <span>{memoryLabel()}</span>
-            </span>
-          </Tooltip>
-          <span data-slot="task-header-memory-actions">
-            <Tooltip value={language.t("chat.memory.inspect")} placement="bottom">
-              <IconButton
-                icon="eye"
-                size="small"
-                variant="ghost"
-                disabled={memory.loading() || memory.pending()}
-                onClick={() => memory.showMemory()}
-                aria-label={language.t("chat.memory.inspect")}
-              />
-            </Tooltip>
-            <Tooltip value={language.t("chat.memory.remember")} placement="bottom">
-              <IconButton
-                icon="plus-small"
-                size="small"
-                variant="ghost"
-                disabled={memory.pending() || !memory.enabled()}
-                onClick={() => memory.remember()}
-                aria-label={language.t("chat.memory.remember")}
-              />
-            </Tooltip>
-            <Tooltip value={language.t("chat.memory.forget")} placement="bottom">
-              <IconButton
-                icon="trash"
-                size="small"
-                variant="ghost"
-                disabled={memory.pending() || !memory.enabled()}
-                onClick={() => memory.forget()}
-                aria-label={language.t("chat.memory.forget")}
-              />
-            </Tooltip>
-            <Tooltip value={language.t("chat.memory.rebuild")} placement="bottom">
-              <IconButton
-                icon="reset"
-                size="small"
-                variant="ghost"
-                disabled={memory.pending() || !memory.enabled()}
-                onClick={() => memory.rebuild()}
-                aria-label={language.t("chat.memory.rebuild")}
-              />
-            </Tooltip>
-            {/* Strip only mounts when enabled, so this is always the disable action; re-enable lives in Settings > Context. */}
-            <Tooltip value={language.t("chat.memory.disable")} placement="bottom">
-              <IconButton
-                icon="circle-ban-sign"
-                size="small"
-                variant="ghost"
-                disabled={memory.pending()}
-                onClick={() => memory.disable()}
-                aria-label={language.t("chat.memory.disable")}
-              />
-            </Tooltip>
-          </span>
         </div>
       </Show>
       <Show when={hasTodos()}>

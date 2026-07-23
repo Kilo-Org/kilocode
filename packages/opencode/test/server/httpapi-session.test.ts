@@ -9,6 +9,7 @@ import { HttpClient, HttpClientRequest, HttpClientResponse, HttpRouter, HttpServ
 import { layerWebSocketConstructorGlobal } from "effect/unstable/socket/Socket"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { registerAdapter } from "../../src/control-plane/adapters"
 import type { WorkspaceAdapter } from "../../src/control-plane/types"
 import { Workspace } from "../../src/control-plane/workspace"
@@ -29,15 +30,12 @@ import { SessionMessage } from "@opencode-ai/core/session/message"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import * as DateTime from "effect/DateTime"
-import * as Log from "@opencode-ai/core/util/log"
 import { eq } from "drizzle-orm"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, provideInstanceEffect, TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { TestLLMServer } from "../lib/llm-server"
 import { testProviderConfig } from "../lib/test-provider"
-import { testEffect } from "../lib/effect"
-
-void Log.init({ print: false })
+import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
 
 const originalWorkspaces = Flag.KILO_EXPERIMENTAL_WORKSPACES
 const workspaceLayer = Workspace.defaultLayer.pipe(
@@ -69,7 +67,7 @@ const it = testEffect(
     workspaceLayer,
     Database.defaultLayer,
     httpApiLayer,
-  ),
+  ).pipe(Layer.provide(Ripgrep.defaultLayer)),
 )
 
 function pathFor(path: string, params: Record<string, string>) {
@@ -165,6 +163,45 @@ const insertLegacyAssistantMessage = (sessionID: SessionIDType, seq = 1, time = 
       .pipe(Effect.orDie)
     return message
   })
+
+// kilocode_change start - released V2 clients persisted media-shaped tool content
+const insertLegacyToolMessage = (sessionID: SessionIDType) =>
+  Effect.gen(function* () {
+    const id = SessionMessage.ID.create()
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(SessionMessageTable)
+      .values({
+        id,
+        session_id: sessionID,
+        type: "assistant",
+        seq: 1,
+        time_created: 1,
+        data: {
+          agent: "build",
+          model: { id: "model", providerID: "provider" },
+          content: [
+            {
+              type: "tool",
+              id: "tool",
+              name: "read",
+              state: {
+                status: "completed",
+                input: {},
+                content: [{ type: "media", mediaType: "image/png", data: "AAAA", filename: "image.png" }],
+                structured: {},
+              },
+              time: { created: 1, completed: 1 },
+            },
+          ],
+          time: { created: 1, completed: 1 },
+        } as NonNullable<(typeof SessionMessageTable.$inferInsert)["data"]>,
+      })
+      .run()
+      .pipe(Effect.orDie)
+    return id
+  })
+// kilocode_change end
 
 const insertCorruptV2Message = (sessionID: SessionIDType, time = 1) =>
   Effect.gen(function* () {
@@ -532,6 +569,36 @@ describe("session HttpApi", () => {
     { git: true, config: { formatter: false, lsp: false } },
   )
 
+  // kilocode_change start - protect mixed-version session database compatibility
+  it.instance(
+    "normalizes released tool content on paginated v2 message reads",
+    () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const session = yield* createSession({ title: "legacy tool content" })
+        const id = yield* insertLegacyToolMessage(session.id)
+        const response = yield* request(`/api/session/${session.id}/message`, {
+          headers: { "x-kilo-directory": test.directory },
+        })
+        expect(response.status).toBe(200)
+        const body = yield* json<{ data: SessionMessage.Message[] }>(response)
+        expect(body.data).toEqual([
+          expect.objectContaining({
+            id,
+            content: [
+              expect.objectContaining({
+                state: expect.objectContaining({
+                  content: [{ type: "file", uri: "data:image/png;base64,AAAA", mime: "image/png", name: "image.png" }],
+                }),
+              }),
+            ],
+          }),
+        ])
+      }),
+    { git: true, config: { formatter: false, lsp: false } },
+  )
+  // kilocode_change end
+
   it.instance(
     "returns v2 public not found errors for missing sessions",
     () =>
@@ -643,16 +710,16 @@ describe("session HttpApi", () => {
         expect(compact.status).toBe(503)
         expect(yield* responseJson(compact)).toEqual({
           _tag: "ServiceUnavailableError",
-          message: "V2 session compact is not available yet",
-          service: "v2.session.compact",
+          message: "Session compact is not available yet",
+          service: "session.compact",
         })
 
         const wait = yield* request(`/api/session/${session.id}/wait`, { method: "POST", headers })
         expect(wait.status).toBe(503)
         expect(yield* responseJson(wait)).toEqual({
           _tag: "ServiceUnavailableError",
-          message: "V2 session wait is not available yet",
-          service: "v2.session.wait",
+          message: "Session wait is not available yet",
+          service: "session.wait",
         })
       }),
     { git: true, config: { formatter: false, lsp: false } },
@@ -939,6 +1006,65 @@ describe("session HttpApi", () => {
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
+
+  // kilocode_change start - deleting a prompt that already started is a successful no-op
+  it.live(
+    "returns false when an active prompt wins the deletion race",
+    () => {
+      const release = Promise.withResolvers<void>()
+      return Effect.gen(function* () {
+        const llm = yield* TestLLMServer
+        yield* llm.hold("done", release.promise)
+
+        const dir = yield* tmpdirScoped({ git: true, config: testProviderConfig(llm.url) })
+        const session = yield* createSession({ title: "Active delete race" }).pipe(provideInstanceEffect(dir))
+        const messageID = MessageID.ascending()
+        const headers = { "x-kilo-directory": dir, "content-type": "application/json" }
+
+        const prompt = yield* request(pathFor(SessionPaths.promptAsync, { sessionID: session.id }), {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            messageID,
+            agent: "build",
+            model: { providerID: "test", modelID: "test-model" },
+            parts: [{ type: "text", text: "keep running" }],
+          }),
+        })
+        expect(prompt.status).toBe(204)
+        yield* llm.wait(1)
+
+        expect(
+          yield* requestJson<boolean>(pathFor(SessionPaths.deleteMessage, { sessionID: session.id, messageID }), {
+            method: "DELETE",
+            headers,
+          }),
+        ).toBe(false)
+
+        release.resolve()
+        yield* pollWithTimeout(
+          requestJson<Record<string, unknown>>(SessionPaths.status, { headers }).pipe(
+            Effect.map((statuses) => (statuses[session.id] ? undefined : true)),
+          ),
+          "Timed out waiting for active prompt to finish",
+        )
+
+        const messages = yield* Session.use
+          .messages({ sessionID: session.id })
+          .pipe(provideInstanceEffect(dir), Effect.orDie)
+        expect(messages.some((message) => message.info.id === messageID)).toBe(true)
+        expect(
+          messages.some((message) => message.info.role === "assistant" && message.info.parentID === messageID),
+        ).toBe(true)
+      }).pipe(
+        Effect.ensuring(Effect.sync(() => release.resolve())),
+        Effect.provide(TestLLMServer.layer),
+        Effect.provide(CrossSpawnSpawner.defaultLayer),
+      )
+    },
+    10_000,
+  )
+  // kilocode_change end
 
   it.instance(
     "rejects part updates whose path and body ids disagree",

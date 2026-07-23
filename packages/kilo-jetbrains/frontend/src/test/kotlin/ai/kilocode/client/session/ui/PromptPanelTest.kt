@@ -44,7 +44,6 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -56,7 +55,6 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
@@ -71,6 +69,7 @@ import com.intellij.ui.LanguageTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.Producer
 import com.intellij.util.ui.EmptyIcon
+import com.intellij.ui.scale.JBUIScale
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -277,7 +276,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(editor.preferredSize.height > min)
     }
 
-    fun `test prompt editor keeps three line minimum`() {
+    fun `test prompt editor keeps compact empty minimum`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         val editor = panel.defaultFocusedComponent as EditorTextField
 
@@ -287,6 +286,53 @@ class PromptPanelTest : BasePlatformTestCase() {
             JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
 
         assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt ignores narrow placeholder preferred height`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 400)
+        UIUtil.dispatchAllInvocationEvents()
+        val view = editor.getEditor(false)!!
+        val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+            JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+        assertEquals(min, editor.preferredSize.height)
+    }
+
+    fun `test empty prompt minimum ignores user scale factor`() {
+        // The empty-prompt minimum is line height (ide scale) plus scaled chrome. Under a
+        // raised user scale factor it must equal that computed minimum, not a doubled value.
+        val original = JBUIScale.scale(1f)
+        try {
+            JBUIScale.setUserScaleFactorForTest(2f)
+            val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+            val editor = panel.defaultFocusedComponent as EditorTextField
+
+            realize(panel, 400, 400)
+            UIUtil.dispatchAllInvocationEvents()
+            val view = editor.getEditor(false)!!
+            val min = view.lineHeight * SessionUiStyle.View.Prompt.EDITOR_LINES +
+                JBUI.scale(SessionUiStyle.View.Prompt.EDITOR_CHROME)
+
+            assertEquals(min, editor.preferredSize.height)
+        } finally {
+            JBUIScale.setUserScaleFactorForTest(original)
+        }
+    }
+
+    fun `test empty prompt panel stays compact at narrow width`() {
+        val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
+        val editor = panel.defaultFocusedComponent as EditorTextField
+
+        realize(panel, 80, 900)
+        UIUtil.dispatchAllInvocationEvents()
+        val chrome = (panel.shellForTest().preferredSize.height - editor.preferredSize.height).coerceAtLeast(0)
+        val ins = panel.insets
+
+        assertEquals(editor.preferredSize.height + chrome + ins.top + ins.bottom, panel.preferredSize.height)
+        assertTrue(panel.preferredSize.height < 180)
     }
 
     fun `test prompt editor grows when single line wraps`() {
@@ -407,28 +453,20 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
     }
 
-    fun `test prompt editor exposes file editor for undo redo`() {
+    fun `test prompt editor does not expose file editor for platform undo`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
         realize(panel, 260, 400)
         val editor = field.getEditor(false)!!
-        WriteCommandAction.runWriteCommandAction(project) {
-            editor.document.insertString(0, "hello")
-        }
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
 
-        assertNotNull(file)
-        assertSame(editor.document, file.editor.document)
-        UndoManager.getInstance(project).undo(file)
-        assertEquals("", editor.document.text)
-        UndoManager.getInstance(project).redo(file)
-        assertEquals("hello", editor.document.text)
+        assertNull(sink.file)
+        assertSame(true, editor.getUserData(EditorTextField.SUPPLEMENTARY_KEY))
     }
 
-    fun `test prompt editor platform undo redo actions target prompt editor`() {
+    fun `test prompt editor platform undo redo actions do not throw`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
@@ -440,13 +478,10 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(true, editor.contentComponent.getClientProperty(UndoRedoAction.IGNORE_SWING_UNDO_MANAGER))
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
-        assertSame(editor.document, file.editor.document)
-        assertTrue("prompt file editor should have undo", UndoManager.getInstance(project).isUndoAvailable(file))
+        assertNull(sink.file)
 
-        invokeAction(IdeActions.ACTION_UNDO, editor.contentComponent, file)
-        assertEquals("", editor.document.text)
-        invokeAction(IdeActions.ACTION_REDO, editor.contentComponent, file)
+        updatePlatformAction(IdeActions.ACTION_UNDO, editor)
+        updatePlatformAction(IdeActions.ACTION_REDO, editor)
         assertEquals("hello", editor.document.text)
     }
 
@@ -1316,21 +1351,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun invokeAction(id: String, component: java.awt.Component, file: TextEditor) {
+    private fun updatePlatformAction(id: String, editor: Editor) {
         val action = ActionManager.getInstance().getAction(id) ?: error("missing action $id")
         val ctx = DataContext { data ->
             when (data) {
                 CommonDataKeys.PROJECT.name -> project
-                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> component
-                PlatformCoreDataKeys.FILE_EDITOR.name -> file
+                CommonDataKeys.EDITOR.name -> editor
+                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> editor.contentComponent
                 else -> null
             }
         }
         val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
         ActionUtil.updateAction(action, event)
-        assertTrue("action $id should be enabled", event.presentation.isEnabled)
-        ActionUtil.performAction(action, event)
-        UIUtil.dispatchAllInvocationEvents()
     }
 
     private fun waitForLookupItems(editor: Editor): List<String> {
