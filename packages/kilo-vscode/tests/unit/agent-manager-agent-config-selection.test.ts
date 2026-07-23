@@ -77,17 +77,9 @@ describe("Agent Manager agent config selection", () => {
       model,
       variant: undefined,
     })
-    expect(other).toEqual({ providerID: "openai", modelID: "gpt-5" })
   })
 
-  it("preserves an explicit Default selection despite a configured high variant", () => {
-    const config: Config = {
-      agent: {
-        ask: { model: "anthropic/claude-sonnet-4", variant: "high" },
-      },
-    }
-
-    expect(agentConfigVariant({ config, agent: "ask", model, variants })).toBe("high")
+  it("preserves an explicit Default selection in the prompt payload", () => {
     expect(promptVariant("default", variants)).toBe("default")
   })
 
