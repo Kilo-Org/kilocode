@@ -277,7 +277,7 @@ export async function findRepoFrom(start: string): Promise<string | undefined> {
 
 // bunfs single-file executable virtual roots — `import.meta.url` points here,
 // which is not a real on-disk path and must be skipped.
-function isBunfsPath(p: string): boolean {
+export function isBunfsPath(p: string): boolean {
   if (p.startsWith("/$bunfs/")) return true
   // Windows bunfs root, e.g. `B:/~BUN/root/...`. Drive letter may be any case.
   if (/^[A-Za-z]:[\\/]~BUN[\\/]/.test(p)) return true
