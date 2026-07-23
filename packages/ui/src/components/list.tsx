@@ -181,9 +181,10 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
 
     if (e.key === "Enter" && !e.isComposing) {
       e.preventDefault()
-      // kilocode_change - fall back to first result when no item is active (noInitialSelection)
+      // kilocode_change start - fall back to first result when no item is active (noInitialSelection)
       const target = selected ?? all[0]
       if (target) handleSelect(target, all.indexOf(target))
+      // kilocode_change end
     } else if (props.search) {
       if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === "n" || e.key === "p")) {
         onKeyDown(e)
