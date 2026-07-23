@@ -254,6 +254,34 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test in-place action cells are hidden on unfocused selected row`() {
+        edt {
+            val row = item("with", "Alpha", "Description", SettingsListCell("edit", "Edit"))
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+            assertTrue(actionCells(renderer).none { it.isVisible })
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            assertEquals(listOf("edit"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
+        }
+    }
+
+    fun `test always visible action cells stay on unfocused row`() {
+        edt {
+            val row = item("with", "Alpha", "Description", SettingsListCell("level", "Allow", alwaysVisible = true))
+            val model = CollectionListModel<SettingsListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = SettingsListRenderer(model, SettingsListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            assertEquals(listOf("level"), actionCells(renderer).filter { it.isVisible }.map { it.cellId })
+        }
+    }
+
     fun `test active popup paints selected row as active without focus`() {
         edt {
             val row = item("with", "Alpha", "Description")
@@ -368,6 +396,9 @@ class SettingsListViewTest : BasePlatformTestCase() {
         root.components.filterIsInstance<Container>().forEach { layout(it) }
         UIUtil.dispatchAllInvocationEvents()
     }
+
+    private fun actionCells(root: java.awt.Component): List<SettingsListActionCell> =
+        components(root).filterIsInstance<SettingsListActionCell>()
 
     private fun components(root: java.awt.Component): List<java.awt.Component> {
         val out = mutableListOf<java.awt.Component>()

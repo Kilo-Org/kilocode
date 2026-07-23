@@ -278,7 +278,7 @@ internal class ActiveListView(
             return
         }
         val height = rows.indices.maxOfOrNull { idx ->
-            list.cellRenderer.getListCellRendererComponent(list, rows[idx], idx, true, list.hasFocus()).preferredSize.height
+            list.cellRenderer.getListCellRendererComponent(list, rows[idx], idx, true, true).preferredSize.height
         } ?: -1
         if (list.fixedCellHeight == height) return
         list.fixedCellHeight = height

@@ -97,7 +97,10 @@ internal fun activeListCellBounds(
     @Suppress("UNCHECKED_CAST")
     val renderer = list.cellRenderer as? ListCellRenderer<Any?> ?: return emptyMap()
     val cell = list.getCellBounds(index, index) ?: return emptyMap()
-    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, list.hasFocus())
+    // Render as focused so the action-cell geometry is available for hit-testing even when the
+    // list is not the focus owner. Painting still hides the cells on an unfocused list; this only
+    // resolves click targets and keeps them stable regardless of focus.
+    val comp = renderer.getListCellRendererComponent(list, model.getElementAt(index), index, selected, true)
     comp.setBounds(0, 0, cell.width, cell.height)
     activeListLayout(comp)
     val out = linkedMapOf<String, Rectangle>()

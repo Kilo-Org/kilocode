@@ -5,7 +5,6 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.plugin.KiloBundle
-import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.settings.base.SettingsBadge
 import ai.kilocode.client.settings.base.SettingsDraftPage
 import ai.kilocode.client.settings.base.SettingsDraftState
@@ -15,7 +14,13 @@ import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.settings.base.SettingsListView
+import ai.kilocode.client.settings.base.SettingsContentField
 import ai.kilocode.client.settings.base.SettingsMessageException
+import ai.kilocode.client.settings.base.SettingsPathDialog
+import ai.kilocode.client.settings.base.SettingsPathDialogHandle
+import ai.kilocode.client.settings.base.settingsChoosePath
+import ai.kilocode.client.settings.base.settingsContentScroll
+import ai.kilocode.client.settings.base.settingsEditorFileType
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.log.KiloLog
@@ -34,25 +39,15 @@ import com.intellij.openapi.application.EDT
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
-import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
-import com.intellij.openapi.fileChooser.FileChooser
 import com.intellij.openapi.fileChooser.FileChooserDescriptor
 import com.intellij.openapi.fileTypes.FileType
-import com.intellij.openapi.fileTypes.FileTypeManager
-import com.intellij.openapi.fileTypes.PlainTextFileType
-import com.intellij.openapi.fileTypes.UnknownFileType
 import com.intellij.openapi.project.DumbAwareAction
-import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ui.TextFieldWithBrowseButton
-import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.ui.EditorTextField
 import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBTextField
 import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -83,7 +78,9 @@ internal class SkillsSettingsUi(
     scope: CoroutineScope,
     dir: String,
     private val choose: (JComponent) -> String? = ::chooseSkillPath,
-    private val input: (String, String) -> String? = ::inputSkillUrl,
+    private val source: (Boolean, Boolean, String) -> SettingsPathDialogHandle = { adding, path, value ->
+        SettingsPathDialog(sourceDialogTitle(adding, path), value, if (path) choose else null)
+    },
     private val edit: (SkillDto, Boolean) -> SkillEditDialogHandle = ::SkillEditDialog,
 ) : SettingsListPanel(scope, SettingsListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private val cs = scope
@@ -96,7 +93,7 @@ internal class SkillsSettingsUi(
         set(value) {
             state.draft = value
         }
-    internal val sources = SkillSourcesView(this, choose, input)
+    internal val sources = SkillSourcesView(this, source)
 
     init {
         start()
@@ -323,7 +320,7 @@ private fun saved(base: SkillsDraft, draft: SkillsDraft): Boolean = base == draf
 
 internal class SkillEditDialog(private val skill: SkillDto, private val savable: Boolean) : DialogWrapper(true), SkillEditDialogHandle {
     private val base = initial()
-    private val editor = SkillEditor(base, skill.location, savable)
+    private val editor = SettingsContentField(base, skillFileType(skill.location, base), savable)
 
     init {
         title = skill.name
@@ -338,12 +335,7 @@ internal class SkillEditDialog(private val skill: SkillDto, private val savable:
         })
     }
 
-    override fun createCenterPanel(): JComponent = JBScrollPane(editor).apply {
-        viewportBorder = editorPad()
-        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-        preferredSize = JBUI.size(720, 520)
-    }
+    override fun createCenterPanel(): JComponent = settingsContentScroll(editor)
 
     override fun createActions() = if (savable) arrayOf(okAction, cancelAction) else arrayOf(cancelAction)
 
@@ -352,35 +344,11 @@ internal class SkillEditDialog(private val skill: SkillDto, private val savable:
     private fun initial() = skill.content?.takeIf { it.isNotBlank() }
         ?: skill.description?.takeIf { it.isNotBlank() }
         ?: KiloBundle.message("settings.agentBehavior.skills.content.empty")
-
-    private class SkillEditor(value: String, location: String, editable: Boolean) : EditorTextField(
-        EditorFactory.getInstance().createDocument(value),
-        ProjectManager.getInstance().defaultProject,
-        skillFileType(location, value),
-        false,
-        !editable,
-    ) {
-        init {
-            border = JBUI.Borders.empty()
-            setOneLineMode(false)
-            addSettingsProvider { ed ->
-                ed.setBorder(JBUI.Borders.empty())
-                ed.scrollPane.border = JBUI.Borders.empty()
-                ed.scrollPane.viewportBorder = JBUI.Borders.empty()
-                ed.settings.isUseSoftWraps = true
-                ed.settings.isPaintSoftWraps = false
-                ed.settings.isAdditionalPageAtBottom = false
-                ed.scrollPane.horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-                ed.scrollPane.verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-            }
-        }
-    }
 }
 
 internal class SkillSourcesView(
     private val parent: SkillsSettingsUi,
-    private val choose: (JComponent) -> String?,
-    private val input: (String, String) -> String?,
+    private val source: (Boolean, Boolean, String) -> SettingsPathDialogHandle,
 ) : Stack(ai.kilocode.client.ui.layout.StackAxis.VERTICAL, UiStyle.Gap.sm()) {
     private val view = SettingsListView(
         KiloBundle.message("settings.agentBehavior.skills.sources.empty"),
@@ -423,16 +391,17 @@ internal class SkillSourcesView(
     }
 
     internal fun addPath() {
-        val path = choose(parent)?.trim()?.takeIf { it.isNotBlank() } ?: return
+        val dialog = source(true, true, "")
+        if (!dialog.showAndGet()) return
+        val path = dialog.value().trim().takeIf { it.isNotBlank() } ?: return
         if (path in cfg.paths) return
         parent.updateSources(cfg.paths + path, cfg.urls)
     }
 
     internal fun addUrl() {
-        val url = input(
-            KiloBundle.message("settings.agentBehavior.skills.sources.addUrl.title"),
-            KiloBundle.message("settings.agentBehavior.skills.sources.addUrl.prompt"),
-        )?.trim()?.takeIf { it.isNotBlank() } ?: return
+        val dialog = source(true, false, "")
+        if (!dialog.showAndGet()) return
+        val url = dialog.value().trim().takeIf { it.isNotBlank() } ?: return
         if (url in cfg.urls) return
         parent.updateSources(cfg.paths, cfg.urls + url)
     }
@@ -460,7 +429,7 @@ internal class SkillSourcesView(
     private fun edit(key: String) {
         val path = key.startsWith(PATH_PREFIX)
         val old = key.removePrefix(if (path) PATH_PREFIX else URL_PREFIX)
-        val dialog = SkillSourceDialog(old, path, choose)
+        val dialog = source(false, path, old)
         if (!dialog.showAndGet()) return
         val next = dialog.value().trim().takeIf { it.isNotBlank() } ?: return
         if (path) {
@@ -507,34 +476,17 @@ internal class SkillSourcesView(
     }
 }
 
-private class SkillSourceDialog(
-    value: String,
-    private val path: Boolean,
-    private val choose: (JComponent) -> String?,
-) : DialogWrapper(true) {
-    private val field = JBTextField(value)
-
-    init {
-        title = if (path) KiloBundle.message("settings.agentBehavior.skills.sources.editPath.title")
-        else KiloBundle.message("settings.agentBehavior.skills.sources.editUrl.title")
-        setOKButtonText(KiloBundle.message("common.save"))
-        init()
-    }
-
-    override fun createCenterPanel(): JComponent {
-        if (!path) return field.apply { columns = SOURCE_COLUMNS }
-        val component = TextFieldWithBrowseButton(field.apply { columns = SOURCE_COLUMNS })
-        component.addActionListener {
-            choose(component)?.let { field.text = it }
-        }
-        return component
-    }
-
-    fun value() = field.text
-}
+private fun sourceDialogTitle(adding: Boolean, path: Boolean): String = KiloBundle.message(
+    when {
+        adding && path -> "settings.agentBehavior.skills.sources.addPath.title"
+        adding -> "settings.agentBehavior.skills.sources.addUrl.title"
+        path -> "settings.agentBehavior.skills.sources.editPath.title"
+        else -> "settings.agentBehavior.skills.sources.editUrl.title"
+    },
+)
 
 private fun chooseSkillPath(parent: JComponent): String? {
-    return FileChooser.chooseFile(skillPathDescriptor(), parent, null, null as VirtualFile?)?.path
+    return settingsChoosePath(parent, skillPathDescriptor())
 }
 
 internal fun skillPathDescriptor() = FileChooserDescriptor(false, true, false, false, false, false).apply {
@@ -542,42 +494,8 @@ internal fun skillPathDescriptor() = FileChooserDescriptor(false, true, false, f
     description = KiloBundle.message("settings.agentBehavior.skills.sources.addPath.prompt")
 }
 
-internal fun skillFileType(location: String, content: String? = null): FileType {
-    val syntax = content?.syntaxName()
-    val name = syntax ?: location.substringAfterLast('/').substringAfterLast('\\').ifBlank { SKILL_FILE }
-    val type = FileTypeManager.getInstance().getFileTypeByFileName(name)
-    if (type == UnknownFileType.INSTANCE) return PlainTextFileType.INSTANCE
-    return type
-}
+internal fun skillFileType(location: String, content: String? = null): FileType =
+    settingsEditorFileType(location.ifBlank { SKILL_FILE }, content)
 
-private fun String.syntaxName(): String? {
-    val text = trimStart()
-    if (text.isBlank()) return null
-    if (text.looksHtml()) return "index.html"
-    if (text.looksMarkdown()) return SKILL_FILE
-    return null
-}
-
-private fun String.looksHtml() = contains(Regex("^\\s*(<!doctype\\s+html|<html\\b|<body\\b|</?(h[1-6]|p|pre|code|ul|ol|li|blockquote|br)\\b)", RegexOption.IGNORE_CASE))
-
-private fun String.looksMarkdown() = lineSequence().any { line ->
-    line.matches(Regex("\\s{0,3}(#{1,6}\\s+.+|[-*+]\\s+.+|\\d+\\.\\s+.+|```.*|>\\s+.+)")) ||
-        line.contains(Regex("(`[^`]+`|\\[[^]]+][(][^)]+[)])"))
-}
-
-private fun inputSkillUrl(title: String, prompt: String): String? = Messages.showInputDialog(
-    prompt,
-    title,
-    Messages.getQuestionIcon(),
-)
-
-private fun editorPad() = JBUI.Borders.empty(
-    JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-    JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-    JBUI.scale(SessionUiStyle.View.Prompt.SHELL_VERTICAL_PADDING),
-    JBUI.scale(SessionUiStyle.View.Prompt.SHELL_HORIZONTAL_PADDING),
-)
-
-private const val SOURCE_COLUMNS = 60
 private const val SKILL_FILE = "SKILL.md"
 private const val SKILL_LOAD_TIMEOUT_MS = 10_000L

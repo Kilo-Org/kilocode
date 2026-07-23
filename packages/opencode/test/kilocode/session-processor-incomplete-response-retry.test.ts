@@ -72,13 +72,14 @@ function model(): Provider.Model {
   } as Provider.Model
 }
 
-function empty() {
+function empty(vercelID?: string) {
   const usage = new Usage({})
+  const providerMetadata = vercelID ? { kilo: { vercelID } } : undefined
   return [
     LLMEvent.stepStart({ index: 0 }),
     LLMEvent.reasoningStart({ id: "reasoning" }),
     LLMEvent.reasoningEnd({ id: "reasoning" }),
-    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage }),
+    LLMEvent.stepFinish({ index: 0, reason: "unknown", usage, providerMetadata }),
     LLMEvent.finish({ reason: "unknown", usage }),
   ]
 }
@@ -242,9 +243,9 @@ describe("session processor incomplete response retry", () => {
       (dir) =>
         Effect.gen(function* () {
           const ctx = yield* setup(dir)
-          yield* ctx.test.reply(...empty())
-          yield* ctx.test.reply(...empty())
-          yield* ctx.test.reply(...empty())
+          yield* ctx.test.reply(...empty("attempt-1"))
+          yield* ctx.test.reply(...empty("attempt-2"))
+          yield* ctx.test.reply(...empty("final-id"))
           yield* ctx.test.push(Stream.fail(new Error("unexpected extra llm call")))
           const delay = spyOn(SessionRetry, "delay").mockReturnValue(0)
 
@@ -260,6 +261,7 @@ describe("session processor incomplete response retry", () => {
           expect(MessageV2.APIError.isInstance(error)).toBe(true)
           if (!MessageV2.APIError.isInstance(error)) throw new Error("expected API error")
           expect(error.data.message).toBe(KiloSessionProcessor.INCOMPLETE_RESPONSE_MESSAGE)
+          expect(error.data.responseHeaders?.["x-vercel-id"]).toBe("final-id")
           expect(yield* MessageV2.parts(ctx.msg.id)).toEqual([])
         }),
       { git: true },

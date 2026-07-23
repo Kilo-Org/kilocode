@@ -1,6 +1,6 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
-  "version": "7.4.13",
+  "version": "7.4.15",
   "name": "@kilocode/cli",
   "type": "module",
   "license": "MIT",
@@ -12,8 +12,8 @@
     "bench:test": "bun run script/bench-test-suite.ts",
     "profile:test": "bun run script/profile-test-files.ts",
     "build": "bun run script/build.ts",
-    "dev": "bun run --conditions=browser ./src/index.ts",
-    "dev:temporary": "bun run --conditions=browser ./src/temporary.ts",
+    "dev": "bun run --conditions=node ./src/index.ts",
+    "dev:temporary": "bun run --conditions=node ./src/temporary.ts",
     "test:ci": "bun run script/test-runner.ts --ci"
   },
   "bin": {
