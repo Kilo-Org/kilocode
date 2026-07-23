@@ -55,6 +55,24 @@
     text-underline-offset: 2px;
   }
 
+  /* kilocode_change start — file-path links from markdown [text](path) */
+  a.file-path-link {
+    color: var(--syntax-string);
+    font-family: var(--font-family-mono);
+    font-feature-settings: var(--font-family-mono--font-feature-settings);
+    font-weight: var(--font-weight-medium);
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 2px;
+    transition: color 0.15s ease;
+  }
+
+  a.file-path-link:hover {
+    color: var(--text-interactive-base);
+    text-decoration-style: solid;
+  }
+  /* kilocode_change end */
+
   /* Lists */
   ul,
   ol {

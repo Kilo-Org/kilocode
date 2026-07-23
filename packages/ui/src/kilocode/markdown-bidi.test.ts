@@ -60,14 +60,61 @@ describe("Markdown bidirectional rendering contract", () => {
     const parser = createMarkedParser({})
     const html = await Promise.resolve(
       parser.parse(
-        ["متن با `inlineCode`", "", "```ts", "const value = 1", "```", "", "$$", "a = b + c", "$$"].join("\n"),
+        ["متن با `format()`", "", "```ts", "const value = 1", "```", "", "$$", "a = b + c", "$$"].join("\n"),
       ),
     )
 
-    expect(html).toContain('<code dir="auto">inlineCode</code>')
+    // `format()` contains code punctuation, so it is not a file-link candidate
+    // and renders as plain code with isolated dir.
+    expect(html).toContain('<code dir="auto">format()</code>')
     expect(html).toContain('<pre dir="auto"><code class="language-ts" data-lang="ts">')
     expect(html).toContain("const value = 1")
     expect(html.match(/<span dir="auto"><span class="katex/g)?.length).toBe(1)
+  })
+
+  test("marks path-like and extensionless code spans as candidates, leaving code expressions plain", async () => {
+    const parser = createMarkedParser({})
+    const withPath = await Promise.resolve(parser.parse("see `src/foo.ts:12:5`"))
+    expect(withPath).toContain('class="file-link-candidate"')
+    expect(withPath).toContain('data-file-candidate="./src/foo.ts"')
+    expect(withPath).toContain('data-file-line="12"')
+    expect(withPath).toContain('data-file-col="5"')
+
+    // Extensionless files (e.g. `install`) are candidates too — the filesystem
+    // check downstream decides whether they resolve to a real file.
+    const bare = await Promise.resolve(parser.parse("run `install` here"))
+    expect(bare).toContain('class="file-link-candidate"')
+    expect(bare).toContain('data-file-candidate="./install"')
+
+    // Spans with code punctuation are not candidates, so they never probe.
+    const plain = await Promise.resolve(parser.parse("call `useState()` here"))
+    expect(plain).toContain('<code dir="auto">useState()</code>')
+    expect(plain).not.toContain("file-link-candidate")
+  })
+
+  test("escapes the candidate attribute so a quote can't break out", async () => {
+    const parser = createMarkedParser({})
+    // Path-like (has an extension) but contains a quote from raw model output.
+    const html = await Promise.resolve(parser.parse('`a".ts`'))
+    expect(html).toContain('data-file-candidate="./a&quot;.ts"')
+    // The quote must be escaped, not left raw to break the attribute and
+    // inject a new one.
+    expect(html).not.toContain('data-file-candidate="./a".ts"')
+  })
+
+  test("tags file-path markdown links but keeps target/rel", async () => {
+    const parser = createMarkedParser({})
+    const html = await Promise.resolve(parser.parse("[open](src/foo.ts)"))
+    expect(html).toContain('class="external-link file-path-link"')
+    expect(html).toContain('target="_blank"')
+    expect(html).toContain('rel="noopener noreferrer"')
+  })
+
+  test("escapes an ampersand in a link href so it can't break the attribute", async () => {
+    const parser = createMarkedParser({})
+    const html = await Promise.resolve(parser.parse("[q](https://e.com/x?a=1&b=2)"))
+    expect(html).toContain('href="https://e.com/x?a=1&amp;b=2"')
+    expect(html).not.toContain('href="https://e.com/x?a=1&b=2"')
   })
 
   test("updates streaming code highlight in place while preserving direction", () => {

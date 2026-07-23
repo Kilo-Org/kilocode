@@ -10,7 +10,13 @@ import katex from "katex"
 import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
 // kilocode_change end
 import { bundledLanguages, type BundledLanguage } from "shiki"
-import { parseFilePath } from "../file-path" // kilocode_change
+import {
+  extractSuffix,
+  normalizeCandidatePath,
+  extractFilePathFromHref,
+  looksLikeCandidate,
+  escapeAttribute,
+} from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
 import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
 import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_change
@@ -119,8 +125,6 @@ async function highlightCodeBlocks(html: string): Promise<string> {
 }
 
 export type NativeMarkdownParser = (markdown: string) => Promise<string>
-
-// kilocode_change: parseFilePath imported from ../file-path
 
 // kilocode_change start: highlight cache for deferred highlighting
 
@@ -285,24 +289,52 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
     {
       renderer: {
         link({ href, title, text }) {
-          const titleAttr = title ? ` title="${title}"` : ""
-          return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          // kilocode_change start: escape href/title for the attribute context —
+          // both come from raw model output, so a stray `"` must not break out of
+          // the attribute (defense-in-depth alongside the DOMPurify pass). The
+          // browser decodes the entities back, so the click handler still reads
+          // the original href.
+          const safeHref = href ? escapeAttribute(href) : ""
+          const titleAttr = title ? ` title="${escapeAttribute(title)}"` : ""
+          // file-path links get a distinct class for styling. Keep target/rel so
+          // the shared (opencode) consumer's navigation and security behavior is
+          // unchanged — Kilo's click handler intercepts these via preventDefault
+          // and opens the file instead.
+          const isFile = href ? extractFilePathFromHref(href) : undefined
+          if (isFile) {
+            return `<a href="${safeHref}"${titleAttr} class="external-link file-path-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          }
+          return `<a href="${safeHref}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+          // kilocode_change end
         },
-        // kilocode_change start
+        // kilocode_change start — every code span is a file-link candidate.
+        // Post-render validation (via filesystem stat) will strip the class
+        // from candidates that don't correspond to real files.
         codespan({ text }) {
-          const file = parseFilePath(text)
           const escaped = text
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#39;")
-          if (file) {
-            const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
-            const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-            return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+          // Skip obvious non-paths: contains spaces, URLs, or is empty
+          if (!text || text.includes(" ") || text.includes("://")) {
+            return `<code dir="auto">${escaped}</code>`
           }
-          return `<code dir="auto">${escaped}</code>`
+          const { candidate, line, column } = extractSuffix(text)
+          // A candidate just needs to be a bare token (no code punctuation) —
+          // extensionless files (`install`, `run-script`) qualify too. The
+          // post-render filesystem check is authoritative, so non-files like
+          // `useState` are validated away; see looksLikeCandidate.
+          if (!looksLikeCandidate(candidate)) {
+            return `<code dir="auto">${escaped}</code>`
+          }
+          // Escape the candidate for the attribute — it's derived from raw
+          // model output, so a stray `"` must not break out of the attribute.
+          const normalized = escapeAttribute(normalizeCandidatePath(candidate))
+          const lineAttr = line ? ` data-file-line="${line}"` : ""
+          const colAttr = column ? ` data-file-col="${column}"` : ""
+          return `<code class="file-link-candidate" dir="auto" data-file-candidate="${normalized}"${lineAttr}${colAttr}>${escaped}</code>`
         },
         code({ text, lang }) {
           const escaped = text
