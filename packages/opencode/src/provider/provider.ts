@@ -48,21 +48,86 @@ import { ProviderError } from "./error"
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
 
-function wrapSSE(res: Response, ms: number, ctl: AbortController) {
-  if (typeof ms !== "number" || ms <= 0) return res
+// Pre-content (time-to-first-content / prompt-processing) bound. Mirrors the
+// S2 default in `KiloLLM.DEFAULT_FIRST_TOKEN_MS` in
+// `src/kilocode/session/llm.ts:19` — keep these in sync if either ever changes.
+// The provider's own request `timeout` signal is cleared once HTTP response
+// headers arrive (see `buildTimeoutSignal` in `src/kilocode/provider/provider.ts`),
+// so the SSE chunk-idle watchdog is the only thing that bounds the pre-content
+// phase, and it uses the configured `timeout` value (or this default) as its
+// budget. 5 min is generous for slow prompt processing on large-context / local
+// models while still bounding a genuine never-first-content hang.
+const SSE_FIRST_TOKEN_MS = 300_000
+
+function wrapSSE(res: Response, chunkTimeout: number, ctl: AbortController, firstTokenMs: number) {
+  if (typeof chunkTimeout !== "number" || chunkTimeout <= 0) return res
   if (!res.body) return res
   if (!res.headers.get("content-type")?.includes("text/event-stream")) return res
 
   const reader = res.body.getReader()
+  // Decode bytes observationally to detect the first content-bearing SSE
+  // `data:` event. The original bytes are still enqueued untouched — this
+  // decoder/buffer is for timing-budget selection only, not for re-serializing
+  // the stream.
+  const decoder = new TextDecoder("utf-8")
+  let decoderBuf = ""
+  let seenContent = false
+
+  // Returns true iff any COMPLETE SSE event in `text` so far has a `data:` line
+  // whose JSON `choices[0].delta` carries `content` / `reasoning_content` /
+  // `tool_calls`. The last (incomplete) event is skipped — it will be
+  // re-checked as the head of the next read's buffer. Structural/empty deltas
+  // (e.g. `{delta:{role:"assistant"}}`, `{delta:{}}`), `data: [DONE]`, and
+  // comment heartbeats do NOT count.
+  function looksLikeContentEvent(text: string): boolean {
+    const events = text.split(/\r?\n\r?\n/)
+    if (events.length <= 1) return false
+    const complete = events.slice(0, -1)
+    for (const evt of complete) {
+      const dataLines: string[] = []
+      for (const line of evt.split(/\r?\n/)) {
+        if (line.startsWith(":")) continue
+        if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).replace(/^ /, ""))
+        }
+        // `event:` / `id:` / `retry:` lines do not carry content.
+      }
+      if (dataLines.length === 0) continue
+      const payload = dataLines.join("\n")
+      if (payload === "[DONE]") continue
+      let parsed: unknown
+      try {
+        parsed = JSON.parse(payload)
+      } catch {
+        continue
+      }
+      if (!parsed || typeof parsed !== "object") continue
+      const choices = (parsed as { choices?: unknown }).choices
+      if (!Array.isArray(choices) || choices.length === 0) continue
+      const delta = (choices[0] as { delta?: unknown })?.delta
+      if (!delta || typeof delta !== "object") continue
+      const d = delta as { content?: unknown; reasoning_content?: unknown; tool_calls?: unknown }
+      if (typeof d.content === "string" && d.content.length > 0) return true
+      if (typeof d.reasoning_content === "string" && d.reasoning_content.length > 0) return true
+      if (Array.isArray(d.tool_calls) && d.tool_calls.length > 0) return true
+    }
+    return false
+  }
+
   const body = new ReadableStream<Uint8Array>({
     async pull(ctrl) {
+      // Pre-content reads are bounded by `firstTokenMs` (the request-timeout
+      // budget, see `SSE_FIRST_TOKEN_MS` above); once the first content-bearing
+      // `data:` event has been observed, subsequent reads are bounded by
+      // `chunkTimeout` (the per-chunk inter-content idle, unchanged behavior).
+      const budget = seenContent ? chunkTimeout : firstTokenMs
       const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
         const id = setTimeout(() => {
           const err = new ProviderError.ResponseStreamError("SSE read timed out")
           ctl.abort(err)
           void reader.cancel(err)
           reject(err)
-        }, ms)
+        }, budget)
 
         reader.read().then(
           (part) => {
@@ -79,6 +144,14 @@ function wrapSSE(res: Response, ms: number, ctl: AbortController) {
       if (part.done) {
         ctrl.close()
         return
+      }
+
+      if (!seenContent && part.value) {
+        decoderBuf += decoder.decode(part.value, { stream: true })
+        if (looksLikeContentEvent(decoderBuf)) {
+          seenContent = true
+          decoderBuf = ""
+        }
       }
 
       ctrl.enqueue(part.value)
@@ -1755,6 +1828,14 @@ export const layer = Layer.effect(
         const customFetch = options["fetch"]
         const chunkTimeout = options["chunkTimeout"]
         const headerTimeout = options["headerTimeout"]
+        // Pre-content (time-to-first-content) budget for `wrapSSE`. Mirrors
+        // `KiloLLM.resolveFirstTokenMs` semantics from S2: a positive finite
+        // `options["timeout"]` wins; `false`/`0`/unset/invalid fall back to
+        // `SSE_FIRST_TOKEN_MS`. See `wrapSSE` for why this is needed.
+        const firstTokenMs =
+          typeof options["timeout"] === "number" && Number.isFinite(options["timeout"]) && options["timeout"] > 0
+            ? options["timeout"]
+            : SSE_FIRST_TOKEN_MS
         delete options["chunkTimeout"]
         delete options["headerTimeout"]
 
@@ -1784,7 +1865,7 @@ export const layer = Layer.effect(
             }).finally(() => headerTimeoutCtl?.clear())
             timeout.clear()
             if (!chunkAbortCtl) return res
-            return wrapSSE(res, chunkTimeout, chunkAbortCtl)
+            return wrapSSE(res, chunkTimeout, chunkAbortCtl, firstTokenMs)
           } catch (err) {
             timeout.clear()
             throw err
