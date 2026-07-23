@@ -928,6 +928,11 @@ export const dict = {
   "session.history.sources": "Origine cronologia",
   "session.search.placeholder": "Cerca sessioni...",
   "session.empty": "Ancora nessuna sessione. Fai clic su + per avviare una nuova conversazione.",
+  "session.tabs.switcher.open": "Mostra schede aperte",
+  "session.tabs.switcher.search": "Cerca schede aperte...",
+  "session.tabs.switcher.current": "Corrente",
+  "session.tabs.switcher.pending": "Nuova",
+  "session.tabs.switcher.busy": "In corso",
   "session.tab.local": "Locale",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Solo questa repository",
@@ -1516,6 +1521,15 @@ export const dict = {
     "Scegli se i blocchi delle modifiche al codice e delle differenze iniziano espansi o compressi.",
   "settings.display.codeEdit.expanded": "Espansi",
   "settings.display.codeEdit.collapsed": "Compressi",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Modello predefinito",
   "settings.providers.defaultModel.description": "Modello principale per le conversazioni",
   "settings.providers.smallModel.title": "Modello leggero",

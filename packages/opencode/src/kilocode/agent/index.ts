@@ -173,6 +173,24 @@ function denies(user: Permission.Ruleset) {
   return user.filter((rule) => rule.action === "deny")
 }
 
+function editRestrictions(rules: Permission.Ruleset) {
+  const edit = rules.filter((rule) => rule.permission === "edit")
+  return edit.filter((rule, index) => {
+    if (rule.action !== "deny") return false
+    if (rule.pattern !== "*") return true
+    // A wildcard before a later edit exception is an allowlist baseline. The
+    // plan guard supplies the source catch-all, so do not append it alone.
+    return !edit.slice(index + 1).some((next) => next.action !== "deny")
+  })
+}
+
+function restrictions(user: Permission.Ruleset) {
+  return [
+    ...user.filter((rule) => rule.action === "deny" && rule.permission !== "edit"),
+    ...editRestrictions(user),
+  ]
+}
+
 function askEditGuard() {
   return Permission.fromConfig({ edit: "deny" })
 }
@@ -193,6 +211,17 @@ function planEditRules(worktree: string) {
 
 function planEditGuard(worktree: string) {
   return Permission.fromConfig({ edit: planEditRules(worktree) })
+}
+
+export function hardenPlan(
+  key: string,
+  item: { permission: Permission.Ruleset },
+  worktree: string,
+  ...explicit: Permission.Ruleset[]
+) {
+  if (key !== "plan" && key !== "architect") return
+  const edit = explicit.map(editRestrictions)
+  item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
 
 function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
@@ -402,7 +431,7 @@ export function patchAgents(
         planGuard(worktree, kilo.mcpRules),
         user,
         planEditGuard(worktree),
-        denies(user),
+        restrictions(user),
       ),
     }
   }

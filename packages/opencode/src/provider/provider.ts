@@ -41,6 +41,8 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
+  resolveSseFirstTokenMs,
+  wrapSSEFirstContent,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -48,53 +50,13 @@ import { ProviderError } from "./error"
 
 const OPENAI_HEADER_TIMEOUT_DEFAULT = 10_000
 
-function wrapSSE(res: Response, ms: number, ctl: AbortController) {
-  if (typeof ms !== "number" || ms <= 0) return res
-  if (!res.body) return res
-  if (!res.headers.get("content-type")?.includes("text/event-stream")) return res
-
-  const reader = res.body.getReader()
-  const body = new ReadableStream<Uint8Array>({
-    async pull(ctrl) {
-      const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
-        const id = setTimeout(() => {
-          const err = new ProviderError.ResponseStreamError("SSE read timed out")
-          ctl.abort(err)
-          void reader.cancel(err)
-          reject(err)
-        }, ms)
-
-        reader.read().then(
-          (part) => {
-            clearTimeout(id)
-            resolve(part)
-          },
-          (err) => {
-            clearTimeout(id)
-            reject(err)
-          },
-        )
-      })
-
-      if (part.done) {
-        ctrl.close()
-        return
-      }
-
-      ctrl.enqueue(part.value)
-    },
-    async cancel(reason) {
-      ctl.abort(reason)
-      await reader.cancel(reason)
-    },
-  })
-
-  return new Response(body, {
-    headers: new Headers(res.headers),
-    status: res.status,
-    statusText: res.statusText,
-  })
+// kilocode_change start
+// Kilo-specific SSE first-content-aware chunk-idle wrapper. The implementation
+// lives in `src/kilocode/provider/provider.ts` so upstream diffs stay minimal.
+function wrapSSE(res: Response, chunkTimeout: number, ctl: AbortController, firstTokenMs: number) {
+  return wrapSSEFirstContent(res, chunkTimeout, ctl, firstTokenMs)
 }
+// kilocode_change end
 
 function timeoutController(ms: number) {
   const ctl = new AbortController()
@@ -881,17 +843,23 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const account =
         env["SNOWFLAKE_ACCOUNT"] ??
         (auth?.type === "api" ? auth.metadata?.account : undefined) ??
+        (auth?.type === "oauth" ? auth.accountId : undefined) ??
         input.options?.account
 
-      const pat = env["SNOWFLAKE_CORTEX_PAT"] ?? (auth?.type === "api" ? auth.key : undefined) ?? input.options?.apiKey
+      const envToken = env["SNOWFLAKE_CORTEX_TOKEN"] ?? env["SNOWFLAKE_CORTEX_PAT"]
+      const apiKeyToken = auth?.type === "api" ? auth.key : undefined
+      const oauthToken = auth?.type === "oauth" ? auth.access : undefined
+      const configToken = input.options?.token ?? input.options?.apiKey
 
-      if (!account || !pat) {
-        const missing = [!account && "SNOWFLAKE_ACCOUNT", !pat && "SNOWFLAKE_CORTEX_PAT"].filter(Boolean).join(", ")
+      const token = envToken ?? apiKeyToken ?? oauthToken ?? configToken
+
+      if (!account || !token) {
+        const missing = [!account && "SNOWFLAKE_ACCOUNT", !token && "SNOWFLAKE_CORTEX_TOKEN"].filter(Boolean).join(", ")
         return {
           autoload: false,
           async getModel() {
             throw new Error(
-              `Snowflake Cortex: missing credentials (${missing}). Set via env var, kilo auth, or provider options.`, // kilocode_change
+              `Snowflake Cortex: missing credentials (${missing}). Provide a bearer token (OAuth, JWT, or PAT) via env var, Kilo auth, or provider options.`, // kilocode_change
             )
           },
         }
@@ -899,12 +867,17 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const baseURL = `https://${account}.snowflakecomputing.com/api/v2/cortex/v1`
 
-      return {
-        autoload: input.source === "config",
-        options: {
-          baseURL,
-          apiKey: pat,
-          fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+      const options: Record<string, any> = { baseURL, apiKey: token }
+
+      // Only skip provider-level fetch when the token is from OAuth with no override.
+      // For OAuth tokens, the plugin auth loader's combined fetch handles
+      // OAuth refresh + snowflake transformations in one place.
+      // For env/config/API-key tokens, the provider fetch applies snowflake
+      // transformations directly.
+      const useOAuthHandler =
+        oauthToken !== undefined && envToken === undefined && apiKeyToken === undefined && configToken === undefined
+      if (!useOAuthHandler) {
+        options.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
             if (init?.body && typeof init.body === "string") {
               try {
                 const body = JSON.parse(init.body)
@@ -957,8 +930,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
             }
 
             return response
-          },
-        },
+        }
+      }
+
+      return {
+        autoload: input.source === "config",
+        options,
       }
     }),
   }
@@ -1740,6 +1717,13 @@ export const layer = Layer.effect(
         const customFetch = options["fetch"]
         const chunkTimeout = options["chunkTimeout"]
         const headerTimeout = options["headerTimeout"]
+        // kilocode_change start
+        // Pre-content (time-to-first-content) budget for `wrapSSE`. Mirrors
+        // `KiloLLM.resolveFirstTokenMs` semantics from S2: a positive finite
+        // `options["timeout"]` wins; `false`/`0`/unset/invalid fall back to
+        // `SSE_FIRST_TOKEN_MS` in the Kilo mirror. See `resolveSseFirstTokenMs`.
+        const firstTokenMs = resolveSseFirstTokenMs(options)
+        // kilocode_change end
         delete options["chunkTimeout"]
         delete options["headerTimeout"]
 
@@ -1769,7 +1753,7 @@ export const layer = Layer.effect(
             }).finally(() => headerTimeoutCtl?.clear())
             timeout.clear()
             if (!chunkAbortCtl) return res
-            return wrapSSE(res, chunkTimeout, chunkAbortCtl)
+            return wrapSSE(res, chunkTimeout, chunkAbortCtl, firstTokenMs)
           } catch (err) {
             timeout.clear()
             throw err

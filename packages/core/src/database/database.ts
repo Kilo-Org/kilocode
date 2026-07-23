@@ -67,4 +67,5 @@ export const defaultLayer = Layer.unwrap(
   }),
 ).pipe(Layer.provide(Global.defaultLayer))
 
-export const node = LayerNode.make(layerFromPath(path()), [])
+// kilocode_change - resolve the database path when the layer builds, not at module evaluation, so KILO_DB overrides set after import (tests, embedded hosts) take effect
+export const node = LayerNode.make(Layer.unwrap(Effect.sync(() => layerFromPath(path()))), [])

@@ -6,6 +6,7 @@
 // This module exports patch functions and data that the upstream provider.ts
 // calls at well-defined injection points (each marked with kilocode_change).
 
+import { ProviderError } from "@/provider/error"
 import { createKilo, type KiloProvider, AI_SDK_PROVIDERS, PROMPTS } from "@kilocode/kilo-gateway"
 import { DEFAULT_HEADERS } from "@/kilocode/const"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -17,6 +18,173 @@ import { mapValues, omit, pickBy } from "remeda"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
+
+/**
+ * Pre-content (time-to-first-content) budget for raw SSE streams. Mirrors the
+ * value of `KiloLLM.DEFAULT_FIRST_TOKEN_MS` in `src/kilocode/session/llm.ts` —
+ * keep these two constants in sync if either ever changes.
+ */
+export const SSE_FIRST_TOKEN_MS = 300_000 // 5 minutes
+
+/**
+ * Resolves the pre-content timeout budget for `wrapSSEFirstContent`, mirroring
+ * `KiloLLM.resolveFirstTokenMs` semantics: a positive finite `options.timeout`
+ * wins; otherwise falls back to a positive finite provider `timeout`; otherwise
+ * `SSE_FIRST_TOKEN_MS`. `false` / `0` / unset / invalid / non-finite all map to
+ * the default, because a never-first-content hang must remain bounded.
+ */
+export function resolveSseFirstTokenMs(options: Record<string, any>, fallback: Record<string, any> = {}): number {
+  const val = options["timeout"]
+  if (typeof val === "number" && Number.isFinite(val) && val > 0) return val
+  const fb = fallback["timeout"]
+  if (typeof fb === "number" && Number.isFinite(fb) && fb > 0) return fb
+  return SSE_FIRST_TOKEN_MS
+}
+
+// ---------------------------------------------------------------------------
+// SSE first-content detection
+// ---------------------------------------------------------------------------
+
+type ContentEventResult = { found: boolean; carry: string }
+
+/**
+ * Returns `found: true` iff any COMPLETE SSE event in `text` has a `data:` line
+ * whose JSON `choices[0].delta` carries `content`, `reasoning_content`, or
+ * `tool_calls`. The last (incomplete) event is skipped — it will be re-checked
+ * as the head of the next read's buffer.
+ *
+ * To bound memory usage, callers should replace `decoderBuf` with `carry`
+ * after each call. `carry` is the trailing incomplete event fragment (the text
+ * after the last `\n\n` boundary), so completed events are never retained or
+ * re-scanned.
+ */
+export function looksLikeContentEvent(text: string): ContentEventResult {
+  const events = text.split(/\r?\n\r?\n/)
+  if (events.length <= 1) return { found: false, carry: text }
+
+  const complete = events.slice(0, -1)
+  for (const evt of complete) {
+    const dataLines: string[] = []
+    for (const line of evt.split(/\r?\n/)) {
+      if (line.startsWith(":")) continue
+      if (line.startsWith("data:")) {
+        dataLines.push(line.slice(5).replace(/^ /, ""))
+      }
+    }
+    if (dataLines.length === 0) continue
+    const payload = dataLines.join("\n")
+    if (payload === "[DONE]") continue
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(payload)
+    } catch {
+      continue
+    }
+    if (!parsed || typeof parsed !== "object") continue
+    const choices = (parsed as { choices?: unknown }).choices
+    if (!Array.isArray(choices) || choices.length === 0) continue
+    const delta = (choices[0] as { delta?: unknown })?.delta
+    if (!delta || typeof delta !== "object") continue
+    const d = delta as { content?: unknown; reasoning_content?: unknown; tool_calls?: unknown }
+    if (typeof d.content === "string" && d.content.length > 0) return { found: true, carry: "" }
+    if (typeof d.reasoning_content === "string" && d.reasoning_content.length > 0) return { found: true, carry: "" }
+    if (Array.isArray(d.tool_calls) && d.tool_calls.length > 0) return { found: true, carry: "" }
+  }
+
+  return { found: false, carry: events[events.length - 1] }
+}
+
+/**
+ * Wraps an SSE `Response` body so that reads before the first content-bearing
+ * `data:` event are bounded by `firstTokenMs`, while reads after content are
+ * bounded by the per-chunk `chunkTimeout`. Original bytes are enqueued
+ * untouched — the text decoder is observational only.
+ *
+ * This is the Kilo-specific first-content-aware layer; the upstream provider
+ * calls it at the single `wrapSSE` injection point.
+ *
+ * Scope note: this is installed for every provider SDK built by `resolveSDK`,
+ * but `looksLikeContentEvent` only recognizes the OpenAI chat-completions SSE
+ * shape (`choices[0].delta` with `content` / `reasoning_content` /
+ * `tool_calls`). For other provider-native shapes (Anthropic
+ * `content_block_delta`, OpenAI Responses `response.output_text.delta`, Google
+ * `candidates`, etc.) `seenContent` never flips, so pre-content reads remain
+ * bounded by `firstTokenMs` (the request `timeout` budget) rather than by
+ * `chunkTimeout` once content starts. This is intentional:
+ *   (a) the stream is still bounded (no hang);
+ *   (b) the provider-agnostic session-layer `KiloLLM.watchIterator` guards the
+ *       main session path for all providers using normalized AI SDK parts;
+ *   (c) treating the first arbitrary `data:` event as content would arm on
+ *       OpenAI's immediate role-delta and reintroduce the #12467 false-positive;
+ *   (d) this only arms when a positive provider-level `chunkTimeout` is
+ *       configured (no built-in default).
+ */
+export function wrapSSEFirstContent(
+  res: Response,
+  chunkTimeout: number,
+  ctl: AbortController,
+  firstTokenMs: number,
+): Response {
+  if (typeof chunkTimeout !== "number" || chunkTimeout <= 0) return res
+  if (!res.body) return res
+  if (!res.headers.get("content-type")?.includes("text/event-stream")) return res
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder("utf-8")
+  let decoderBuf = ""
+  let seenContent = false
+
+  const body = new ReadableStream<Uint8Array>({
+    async pull(ctrl) {
+      const budget = seenContent ? chunkTimeout : firstTokenMs
+      const part = await new Promise<Awaited<ReturnType<typeof reader.read>>>((resolve, reject) => {
+        const id = setTimeout(() => {
+          const err = new ProviderError.ResponseStreamError("SSE read timed out")
+          ctl.abort(err)
+          void reader.cancel(err)
+          reject(err)
+        }, budget)
+
+        reader.read().then(
+          (part) => {
+            clearTimeout(id)
+            resolve(part)
+          },
+          (err) => {
+            clearTimeout(id)
+            reject(err)
+          },
+        )
+      })
+
+      if (part.done) {
+        ctrl.close()
+        return
+      }
+
+      if (!seenContent && part.value) {
+        decoderBuf += decoder.decode(part.value, { stream: true })
+        const result = looksLikeContentEvent(decoderBuf)
+        if (result.found) {
+          seenContent = true
+        }
+        decoderBuf = result.carry
+      }
+
+      ctrl.enqueue(part.value)
+    },
+    async cancel(reason) {
+      ctl.abort(reason)
+      await reader.cancel(reason)
+    },
+  })
+
+  return new Response(body, {
+    headers: new Headers(res.headers),
+    status: res.status,
+    statusText: res.statusText,
+  })
+}
 
 // ---------------------------------------------------------------------------
 // Bundled providers

@@ -157,6 +157,7 @@ export interface MessagePartProps {
   animate?: boolean
   working?: boolean
   feedback?: MessageFeedbackControls
+  throughput?: JSX.Element
 }
 
 export type PartComponent = Component<MessagePartProps>
@@ -743,6 +744,7 @@ export function UserMessageDisplay(props: {
   text?: string
   copyText?: string
   header?: JSX.Element
+  onDelete?: () => void
   onFork?: () => void
   onRevert?: () => void
 }) {
@@ -816,6 +818,23 @@ export function UserMessageDisplay(props: {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const Delete = () => (
+    <Show when={props.onDelete}>
+      <IconButton
+        data-slot="user-message-delete"
+        icon="close-small"
+        size="normal"
+        variant="ghost"
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={(event) => {
+          event.stopPropagation()
+          props.onDelete?.()
+        }}
+        aria-label={i18n.t("ui.message.deleteQueued")}
+      />
+    </Show>
+  )
+
   return (
     <GrowBox animate={!!props.animate} fade class="w-full min-w-0 self-stretch max-w-full">
       <div data-component="user-message" data-interrupted={props.interrupted ? "" : undefined}>
@@ -852,6 +871,12 @@ export function UserMessageDisplay(props: {
             </For>
           </div>
         </Show>
+        <Show when={!text() && !props.header && props.queued}>
+          <div data-slot="user-message-queued-indicator">
+            <TextShimmer text={i18n.t("ui.message.queued")} />
+            <Delete />
+          </div>
+        </Show>
         <Show when={text() || props.header}>
           <>
             <div data-slot="user-message-body">
@@ -864,6 +889,7 @@ export function UserMessageDisplay(props: {
               <GrowBox animate={!!props.animate} open={!!props.queued}>
                 <div data-slot="user-message-queued-indicator">
                   <TextShimmer text={i18n.t("ui.message.queued")} />
+                  <Delete />
                 </div>
               </GrowBox>
             </div>
@@ -950,9 +976,23 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
 
   const data = useData()
 
+  const session = (segment: HighlightSegment) => {
+    const ref = props.references.find((ref) => ref.source?.text?.value === segment.text)
+    const url = (ref as { url?: unknown } | undefined)?.url
+    if (typeof url !== "string" || !url.startsWith("session:")) return
+    return url.slice("session:".length)
+  }
+
   const click = (segment: HighlightSegment, e: MouseEvent) => {
-    if (segment.type !== "file" || !data.openFile) return
+    if (segment.type !== "file") return
     e.preventDefault()
+    // Past-chat mentions carry a session: URL — open that session instead of a file.
+    const id = session(segment)
+    if (id) {
+      data.navigateToSession?.(id)
+      return
+    }
+    if (!data.openFile) return
     const path = segment.text.replace(/^@/, "")
     if (path) data.openFile(path)
   }
@@ -962,7 +1002,9 @@ function HighlightedText(props: { text: string; references: FilePart[]; agents: 
       {(segment) => (
         <span
           data-highlight={segment.type}
-          data-clickable={segment.type === "file" && data.openFile ? "" : undefined}
+          data-clickable={
+            segment.type === "file" && (session(segment) ? data.navigateToSession : data.openFile) ? "" : undefined
+          }
           onClick={[click, segment]}
         >
           {segment.text}
@@ -991,6 +1033,7 @@ export function Part(props: MessagePartProps) {
         animate={props.animate}
         working={props.working}
         feedback={props.feedback}
+        throughput={props.throughput}
       />
     </Show>
   )
@@ -1447,6 +1490,9 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                   aria-label={i18n.t("ui.message.feedback.notHelpful")}
                 />
               </Tooltip>
+            </Show>
+            <Show when={props.throughput}>
+              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
             </Show>
           </div>
         </Show>
