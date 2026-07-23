@@ -205,6 +205,8 @@ import type {
   KiloEditResponses,
   KiloFimErrors,
   KiloFimResponses,
+  KiloModelsEndpointsErrors,
+  KiloModelsEndpointsResponses,
   KiloModelsImagesErrors,
   KiloModelsImagesResponses,
   KiloModesErrors,
@@ -6748,6 +6750,40 @@ export class Models extends HeyApiClient {
     )
     return (options?.client ?? this.client).get<KiloModelsImagesResponses, KiloModelsImagesErrors, ThrowOnError>({
       url: "/kilo/models/images",
+      ...options,
+      ...params,
+    })
+  }
+
+  /**
+   * Model endpoints
+   *
+   * List the upstream endpoints (inference providers) serving a model, usable as provider routing preferences for Kilo Gateway requests
+   */
+  public endpoints<ThrowOnError extends boolean = false>(
+    parameters: {
+      directory?: string
+      workspace?: string
+      model: string
+      catalog?: "kilo" | "public"
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "query", key: "model" },
+            { in: "query", key: "catalog" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<KiloModelsEndpointsResponses, KiloModelsEndpointsErrors, ThrowOnError>({
+      url: "/kilo/models/endpoints",
       ...options,
       ...params,
     })

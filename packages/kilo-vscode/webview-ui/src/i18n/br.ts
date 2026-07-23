@@ -258,6 +258,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Os modelos de {{provider}} não estão mais disponíveis.",
   "model.tag.free": "Grátis",
   "model.tag.dataCollected": "Os dados podem ser usados para treinamento",
+  "model.routing.label": "Roteamento de provedor",
+  "model.routing.auto": "Automático",
+  "model.routing.loading": "Carregando provedores…",
+  "model.routing.empty": "Nenhuma lista de provedores disponível para este modelo",
+  "model.routing.preview.quantization": "Quantização",
+  "model.routing.preview.maxOutput": "Saída máxima",
+  "model.routing.preview.cacheRead": "Leitura do cache",
+  "model.routing.preview.cacheWrite": "Gravação no cache",
+  "model.routing.preview.uptime": "Disponibilidade (30 min)",
+  "model.routing.preview.autoDescription": "O gateway seleciona dinamicamente um provedor ao enviar cada solicitação.",
+  "model.routing.unavailable": "Indisponível no momento",
   "model.tag.latest": "Mais recente",
   "model.group.auto": "Modelos automáticos",
   "model.group.recommended": "Recomendado",
@@ -939,6 +950,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Ocultar modelos que treinam com prompts",
   "settings.models.hidePromptTraining.description":
     "Oculte os modelos do Kilo Gateway cujos provedores podem usar seus prompts para treinamento.",
+  "settings.models.providerRouting.title": "Roteamento de provedor",
+  "settings.models.providerRouting.description":
+    "Fixe o modelo padrão em um provedor de inferência específico ao roteá-lo pelo Kilo Gateway. No modo Automático, o gateway escolhe o provedor.",
   "settings.providers.modeModels": "Modelo por Modo",
   "settings.providers.custom.note": "Adicione um provedor personalizado por URL base.",
   "settings.providers.modeModels.description":

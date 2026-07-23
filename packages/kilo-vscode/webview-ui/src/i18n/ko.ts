@@ -261,6 +261,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "{{provider}} 모델을 더 이상 사용할 수 없습니다.",
   "model.tag.free": "무료",
   "model.tag.dataCollected": "데이터가 학습에 사용될 수 있습니다",
+  "model.routing.label": "공급자 라우팅",
+  "model.routing.auto": "자동",
+  "model.routing.loading": "공급자 로드 중…",
+  "model.routing.empty": "이 모델에 사용할 수 있는 공급자 목록이 없습니다",
+  "model.routing.preview.quantization": "양자화",
+  "model.routing.preview.maxOutput": "최대 출력",
+  "model.routing.preview.cacheRead": "캐시 읽기",
+  "model.routing.preview.cacheWrite": "캐시 쓰기",
+  "model.routing.preview.uptime": "가동 시간(30분)",
+  "model.routing.preview.autoDescription": "게이트웨이는 각 요청을 전송할 때 공급자를 동적으로 선택합니다.",
+  "model.routing.unavailable": "현재 사용할 수 없음",
   "model.tag.latest": "최신",
   "model.group.auto": "자동 모델",
   "model.group.recommended": "추천",
@@ -930,6 +941,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "프롬프트를 학습에 사용하는 모델 숨기기",
   "settings.models.hidePromptTraining.description":
     "제공업체가 사용자의 프롬프트를 학습에 사용할 수 있는 Kilo Gateway 모델을 숨깁니다.",
+  "settings.models.providerRouting.title": "공급자 라우팅",
+  "settings.models.providerRouting.description":
+    "Kilo Gateway를 통해 라우팅할 때 기본 모델을 특정 업스트림 추론 공급자에 고정합니다. 자동을 선택하면 게이트웨이가 공급자를 선택합니다.",
   "settings.providers.modeModels": "모드별 모델",
   "settings.providers.custom.note": "Base URL로 사용자 정의 공급자를 추가합니다.",
   "settings.providers.modeModels.description":

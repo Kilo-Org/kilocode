@@ -43,6 +43,11 @@ export {
   type KiloImageModelsResult,
 } from "./api/models.js"
 export {
+  fetchKiloModelEndpoints,
+  type KiloModelEndpoint,
+  type KiloModelEndpointsResult,
+} from "./api/endpoints.js"
+export {
   EMPTY_KILO_EMBEDDING_MODEL_CATALOG,
   fetchKiloEmbeddingModelCatalog,
   type KiloEmbeddingModel,

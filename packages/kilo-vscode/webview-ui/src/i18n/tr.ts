@@ -258,6 +258,17 @@ export const dict = {
 
   "model.tag.free": "Ücretsiz",
   "model.tag.dataCollected": "Veriler eğitim için kullanılabilir",
+  "model.routing.label": "Sağlayıcı yönlendirmesi",
+  "model.routing.auto": "Otomatik",
+  "model.routing.loading": "Sağlayıcılar yükleniyor…",
+  "model.routing.empty": "Bu model için kullanılabilir sağlayıcı listesi yok",
+  "model.routing.preview.quantization": "Niceleme",
+  "model.routing.preview.maxOutput": "Maks. çıktı",
+  "model.routing.preview.cacheRead": "Önbellek okuma",
+  "model.routing.preview.cacheWrite": "Önbellek yazma",
+  "model.routing.preview.uptime": "Çalışma süresi (30 dk.)",
+  "model.routing.preview.autoDescription": "Ağ geçidi, her istek gönderilirken dinamik olarak bir sağlayıcı seçer.",
+  "model.routing.unavailable": "Şu anda kullanılamıyor",
   "model.tag.latest": "En yeni",
   "model.group.auto": "Otomatik Modeller",
   "model.group.recommended": "Önerilen",
@@ -1694,6 +1705,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "İstemlerle eğitilen modelleri gizle",
   "settings.models.hidePromptTraining.description":
     "Sağlayıcıları istemlerinizi eğitim için kullanabilecek Kilo Gateway modellerini gizleyin.",
+  "settings.models.providerRouting.title": "Sağlayıcı yönlendirmesi",
+  "settings.models.providerRouting.description":
+    "Kilo Gateway üzerinden yönlendirilirken varsayılan modeli belirli bir çıkarım sağlayıcısına sabitleyin. Otomatik seçildiğinde sağlayıcıyı Kilo Gateway seçer.",
   "settings.providers.modeModels": "Mod Başına Model",
   "settings.providers.modeModels.description":
     "Belirli modlar için varsayılan modeli geçersiz kılın. Ayarlanmadıysa genel varsayılan model kullanılır.",

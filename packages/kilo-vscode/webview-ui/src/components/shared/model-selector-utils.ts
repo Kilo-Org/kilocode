@@ -1,4 +1,4 @@
-import type { ModelSelection } from "../../types/messages"
+import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 import type { EnrichedModel } from "../../context/provider"
 import {
   KILO_PROVIDER_ID as KILO_GATEWAY_ID,
@@ -21,6 +21,23 @@ export function isAuto(model: Pick<EnrichedModel, "providerID" | "id">): boolean
   return (
     model.providerID === KILO_GATEWAY_ID && (model.id.startsWith("kilo-auto/") || KILO_AUTO_SMALL_IDS.has(model.id))
   )
+}
+
+// Providers whose backends understand OpenRouter-style provider routing preferences.
+const ROUTED = new Set<string>([KILO_GATEWAY_ID, "openrouter"])
+
+/** Whether a model can be pinned to a specific upstream inference provider. */
+export function routable(providerID: string, modelID: string): boolean {
+  // Auto routing (kilo-auto/* and the legacy auto-small) has no single upstream to pin.
+  return ROUTED.has(providerID) && !modelID.startsWith("kilo-auto/") && !KILO_AUTO_SMALL_IDS.has(modelID)
+}
+
+export function routingPreview(
+  row: ModelEndpoint | null | undefined,
+  pinned: ModelEndpoint | undefined,
+): ModelEndpoint | undefined {
+  if (row === null) return undefined
+  return row ?? pinned
 }
 
 export function isAutoEfficient(model: Pick<EnrichedModel, "providerID" | "id">): boolean {

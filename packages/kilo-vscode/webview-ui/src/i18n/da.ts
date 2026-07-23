@@ -258,6 +258,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke længere tilgængelige.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Data kan bruges til træning",
+  "model.routing.label": "Udbyderrouting",
+  "model.routing.auto": "Automatisk",
+  "model.routing.loading": "Indlæser udbydere…",
+  "model.routing.empty": "Ingen udbyderliste tilgængelig for denne model",
+  "model.routing.preview.quantization": "Kvantisering",
+  "model.routing.preview.maxOutput": "Maks. output",
+  "model.routing.preview.cacheRead": "Cachelæsning",
+  "model.routing.preview.cacheWrite": "Cacheskrivning",
+  "model.routing.preview.uptime": "Oppetid (30 min.)",
+  "model.routing.preview.autoDescription": "Gatewayen vælger dynamisk en udbyder, når hver anmodning sendes.",
+  "model.routing.unavailable": "Ikke tilgængelig i øjeblikket",
   "model.tag.latest": "Nyeste",
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalet",
@@ -979,6 +990,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Skjul modeller, der træner på prompts",
   "settings.models.hidePromptTraining.description":
     "Skjul Kilo Gateway-modeller, hvis udbydere muligvis bruger dine prompts til træning.",
+  "settings.models.providerRouting.title": "Udbyderrouting",
+  "settings.models.providerRouting.description":
+    "Fastgør standardmodellen til en bestemt inferensudbyder, når den routes gennem Kilo Gateway. Vælg Automatisk for at lade gatewayen vælge.",
   "settings.providers.modeModels": "Model pr. tilstand",
   "settings.providers.custom.note": "Tilføj en brugerdefineret udbyder via basis-URL.",
   "settings.providers.modeModels.description":

@@ -258,6 +258,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Modele {{provider}} nie są już dostępne.",
   "model.tag.free": "Darmowy",
   "model.tag.dataCollected": "Dane mogą być wykorzystywane do trenowania",
+  "model.routing.label": "Routing dostawców",
+  "model.routing.auto": "Automatyczny",
+  "model.routing.loading": "Ładowanie dostawców…",
+  "model.routing.empty": "Brak dostępnej listy dostawców dla tego modelu",
+  "model.routing.preview.quantization": "Kwantyzacja",
+  "model.routing.preview.maxOutput": "Maks. wyjście",
+  "model.routing.preview.cacheRead": "Odczyt z pamięci podręcznej",
+  "model.routing.preview.cacheWrite": "Zapis do pamięci podręcznej",
+  "model.routing.preview.uptime": "Dostępność (30 min)",
+  "model.routing.preview.autoDescription": "Brama dynamicznie wybiera dostawcę podczas wysyłania każdego żądania.",
+  "model.routing.unavailable": "Obecnie niedostępny",
   "model.tag.latest": "Najnowszy",
   "model.group.auto": "Modele automatyczne",
   "model.group.recommended": "Zalecane",
@@ -937,6 +948,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Ukryj modele trenujące na promptach",
   "settings.models.hidePromptTraining.description":
     "Ukryj modele Kilo Gateway, których dostawcy mogą używać Twoich promptów do trenowania.",
+  "settings.models.providerRouting.title": "Routing dostawców",
+  "settings.models.providerRouting.description":
+    "Podczas routingu przez Kilo Gateway przypisz model domyślny do konkretnego dostawcy inferencji. W trybie automatycznym dostawcę wybiera brama.",
   "settings.providers.modeModels": "Model na tryb",
   "settings.providers.custom.note": "Dodaj niestandardowego dostawcę przez bazowy URL.",
   "settings.providers.modeModels.description":

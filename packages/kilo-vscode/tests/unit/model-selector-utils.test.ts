@@ -13,6 +13,7 @@ import {
   isAuto,
   autoSummary,
   autoChoices,
+  routingPreview,
 } from "../../webview-ui/src/components/shared/model-selector-utils"
 
 const labels = { select: "Select model", noProviders: "No providers", notSet: "Not set" }
@@ -121,6 +122,23 @@ describe("isAuto", () => {
     expect(isAuto({ providerID: KILO_GATEWAY_ID, id: "auto-small" })).toBe(true)
     expect(isAuto({ providerID: "anthropic", id: "kilo-auto/efficient" })).toBe(false)
     expect(isAuto({ providerID: KILO_GATEWAY_ID, id: "anthropic/claude-sonnet" })).toBe(false)
+  })
+})
+
+describe("routingPreview", () => {
+  const pinned = { provider: "gmicloud/fp8", name: "GMI Cloud" }
+  const hovered = { provider: "chutes", name: "Chutes" }
+
+  it("shows the Auto description instead of the pinned endpoint for the Auto row", () => {
+    expect(routingPreview(null, pinned)).toBeUndefined()
+  })
+
+  it("keeps the pinned endpoint before a row receives focus", () => {
+    expect(routingPreview(undefined, pinned)).toBe(pinned)
+  })
+
+  it("shows the focused endpoint", () => {
+    expect(routingPreview(hovered, pinned)).toBe(hovered)
   })
 })
 

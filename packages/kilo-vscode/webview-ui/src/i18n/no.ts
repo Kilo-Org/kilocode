@@ -261,6 +261,17 @@ export const dict = {
   "provider.disconnect.toast.disconnected.description": "Modeller fra {{provider}} er ikke lenger tilgjengelige.",
   "model.tag.free": "Gratis",
   "model.tag.dataCollected": "Data kan brukes til trening",
+  "model.routing.label": "Leverandørruting",
+  "model.routing.auto": "Automatisk",
+  "model.routing.loading": "Laster leverandører…",
+  "model.routing.empty": "Ingen leverandørliste er tilgjengelig for denne modellen",
+  "model.routing.preview.quantization": "Kvantisering",
+  "model.routing.preview.maxOutput": "Maks. utdata",
+  "model.routing.preview.cacheRead": "Cachelesing",
+  "model.routing.preview.cacheWrite": "Cacheskriving",
+  "model.routing.preview.uptime": "Oppetid (30 min)",
+  "model.routing.preview.autoDescription": "Gatewayen velger en leverandør dynamisk når hver forespørsel sendes.",
+  "model.routing.unavailable": "Utilgjengelig for øyeblikket",
   "model.tag.latest": "Nyeste",
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalt",
@@ -940,6 +951,9 @@ export const dict = {
   "settings.models.hidePromptTraining.title": "Skjul modeller som trener på ledetekster",
   "settings.models.hidePromptTraining.description":
     "Skjul Kilo Gateway-modeller der leverandørene kan bruke ledetekstene dine til trening.",
+  "settings.models.providerRouting.title": "Leverandørruting",
+  "settings.models.providerRouting.description":
+    "Knytt standardmodellen til en bestemt leverandør når den rutes gjennom Kilo Gateway. Med Automatisk velger gatewayen.",
   "settings.providers.modeModels": "Modell per modus",
   "settings.providers.custom.note": "Legg til en egendefinert leverandør via basis-URL.",
   "settings.providers.modeModels.description":
