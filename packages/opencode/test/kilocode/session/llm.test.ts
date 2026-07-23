@@ -31,8 +31,8 @@ describe("kilocode.session.llm.resolveIdleMs", () => {
     ).toBe(30_000)
   })
 
-  test("defaults the chunk idle timeout to 60_000 ms when no override is configured", () => {
-    expect(KiloLLM.resolveIdleMs({ options: {} })).toBe(60_000)
+  test("defaults the chunk idle timeout to 300_000 ms when no override is configured", () => {
+    expect(KiloLLM.resolveIdleMs({ options: {} })).toBe(300_000)
   })
 
   test("returns undefined when prepared is false (disabled)", () => {
