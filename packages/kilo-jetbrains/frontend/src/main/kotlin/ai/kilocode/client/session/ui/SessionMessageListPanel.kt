@@ -96,25 +96,29 @@ class SessionMessageListPanel(
                 is SessionModelEvent.TurnRemoved -> onTurnRemoved(event.id)
 
                 is SessionModelEvent.ContentAdded -> {
-                    msgToView[event.messageId]?.upsertPart(event.content)
-                    msgToTurn[event.messageId]?.syncCopyToolbars()
-                    refresh()
+                    if (msgToView[event.messageId]?.upsertPartChanged(event.content) == true) {
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                        refresh()
+                    }
                 }
 
                 is SessionModelEvent.ContentUpdated -> {
-                    msgToView[event.messageId]?.upsertPart(event.content)
-                    msgToTurn[event.messageId]?.syncCopyToolbars()
-                    refresh()
+                    if (msgToView[event.messageId]?.upsertPartChanged(event.content) == true) {
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                        refresh()
+                    }
                 }
 
                 is SessionModelEvent.ContentRemoved -> {
-                    msgToView[event.messageId]?.removePart(event.contentId)
-                    msgToTurn[event.messageId]?.syncCopyToolbars()
-                    refresh()
+                    if (msgToView[event.messageId]?.removePartChanged(event.contentId) == true) {
+                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                        refresh()
+                    }
                 }
 
                 is SessionModelEvent.ContentDelta -> {
                     if (event.created) return@addListener
+                    if (event.delta.isEmpty()) return@addListener
                     val handled = msgToView[event.messageId]?.appendDelta(event.contentId, event.delta) == true
                     if (handled) {
                         msgToTurn[event.messageId]?.syncCopyToolbars()
@@ -122,8 +126,10 @@ class SessionMessageListPanel(
                     }
                     val content = model.content(event.messageId, event.contentId)
                     if (content != null) {
-                        msgToView[event.messageId]?.upsertPart(content)
-                        msgToTurn[event.messageId]?.syncCopyToolbars()
+                        if (msgToView[event.messageId]?.upsertPartChanged(content) == true) {
+                            msgToTurn[event.messageId]?.syncCopyToolbars()
+                            refresh()
+                        }
                     }
                 }
 
@@ -132,6 +138,7 @@ class SessionMessageListPanel(
 
                 is SessionModelEvent.StateChanged -> {
                     syncActive(event.state)
+                    syncSettled(event.state)
                     syncReverted()
                     syncReverting(event.state)
                     anchorFooter()
@@ -222,6 +229,7 @@ class SessionMessageListPanel(
         tv.syncCopyToolbars()
         syncReverted()
         add(tv)
+        syncSettled()
         anchorFooter()
         refresh()
     }
@@ -234,8 +242,7 @@ class SessionMessageListPanel(
         // Remove messages no longer in this turn
         for (id in prev) {
             if (id !in next) {
-                tv.removeMessage(id)
-                unregister(id)
+                if (tv.removeMessageChanged(id)) unregister(id)
             }
         }
 
@@ -248,6 +255,7 @@ class SessionMessageListPanel(
         }
         tv.syncCopyToolbars()
         syncReverted()
+        syncSettled()
 
         refresh()
     }
@@ -257,6 +265,7 @@ class SessionMessageListPanel(
         for (msgId in tv.messageIds()) unregister(msgId)
         remove(tv)
         Disposer.dispose(tv)
+        syncSettled()
         anchorFooter()
         refresh()
     }
@@ -285,6 +294,7 @@ class SessionMessageListPanel(
         }
 
         syncActive(model.state)
+        syncSettled(model.state)
         syncReverted()
         syncReverting(model.state)
         banner?.update()
@@ -313,6 +323,7 @@ class SessionMessageListPanel(
         revertingMessage = null
         removeAll()
         syncActive(model.state)
+        syncSettled(model.state)
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
@@ -373,6 +384,11 @@ class SessionMessageListPanel(
         if (hiddenTool == ref) return
         hiddenTool = ref
         for (mv in msgToView.values) mv.setHiddenQuestionTool(ref)
+    }
+
+    private fun syncSettled(state: SessionState = model.state) {
+        val active = if (state.isBusy()) turnViews.values.lastOrNull() else null
+        for (view in turnViews.values) view.setSettled(view !== active)
     }
 
     /**

@@ -39,6 +39,8 @@ import ai.kilocode.rpc.dto.TodoDto
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
@@ -53,7 +55,9 @@ import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
 import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.RepaintManager
 import javax.swing.SwingUtilities
 import javax.swing.border.Border
 
@@ -399,6 +403,151 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         val tv = panel.findMessage("a1")!!.part("p1") as TextView
         assertEquals("hello world", tv.markdown())
+    }
+
+    fun `test empty ContentDelta does not refresh panel`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+        val mv = panel.findMessage("a1")!!
+        val tv = mv.part("p1") as TextView
+        val repaint = TrackingRepaintManager(setOf(panel, mv, tv))
+        val old = RepaintManager.currentManager(panel)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            model.appendDelta("a1", "p1", "")
+
+            assertEquals("hello", tv.markdown())
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    fun `test identical ContentUpdated does not refresh panel`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+        val mv = panel.findMessage("a1")!!
+        val tv = mv.part("p1") as TextView
+        val comp = tv.md.component
+        val repaint = TrackingRepaintManager(setOf(panel, mv, tv))
+        val old = RepaintManager.currentManager(panel)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+
+            assertSame(tv, mv.part("p1"))
+            assertSame(comp, tv.md.component)
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    // ------ settled turns / validate roots (B) ------
+
+    fun `test turns are validate roots when idle`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+
+        assertTrue(panel.findTurn("u1")!!.isValidateRoot())
+        assertTrue(panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test streaming turn is not a validate root while busy`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant"))
+
+        model.setState(SessionState.Busy("thinking"))
+
+        assertTrue("prior turn stays a validate root", panel.findTurn("u1")!!.isValidateRoot())
+        assertFalse("streaming turn must not be a validate root", panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test turns settle again when idle`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setState(SessionState.Busy("thinking"))
+
+        model.setState(SessionState.Idle)
+
+        assertTrue(panel.findTurn("u1")!!.isValidateRoot())
+        assertTrue(panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test turn added while busy becomes the active non-root turn`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.setState(SessionState.Busy("thinking"))
+        assertFalse(panel.findTurn("u1")!!.isValidateRoot())
+
+        model.upsertMessage(msg("u2", "user"))
+
+        assertTrue("previous turn settles once a newer turn is active", panel.findTurn("u1")!!.isValidateRoot())
+        assertFalse("newest turn is the active streaming turn", panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test validate roots flag disables turn isolation`() {
+        disableValidateRoots()
+        model.upsertMessage(msg("u1", "user"))
+
+        assertFalse(panel.findTurn("u1")!!.isValidateRoot())
+    }
+
+    fun `test settled turns still follow panel width top down`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "answer"))
+        val turn = panel.findTurn("a1")!!
+        assertTrue("idle turn is a validate root", turn.isValidateRoot())
+
+        panel.setSize(600, 2000)
+        layout(panel)
+        val wide = turn.width
+
+        panel.setSize(500, 2000)
+        layout(panel)
+
+        assertTrue("validate-root turns must still relayout top-down", turn.width < wide)
+        assertTrue(turn.isValidateRoot())
+    }
+
+    // ------ streaming stress / teardown ------
+
+    fun `test many streamed turns stay bounded and fully tear down`() {
+        val empty = count(panel)
+
+        repeat(40) { i ->
+            model.upsertMessage(msg("u$i", "user"))
+            model.updateContent("u$i", part("up$i", "u$i", "text", text = "q$i"))
+            model.upsertMessage(msg("a$i", "assistant"))
+            model.updateContent("a$i", part("ap$i", "a$i", "text", text = "```kotlin\nval x = $i\n```"))
+            repeat(20) { j -> model.appendDelta("a$i", "ap$i", " tok$j") }
+        }
+        assertEquals(40, panel.turnCount())
+
+        // Retained instances stay identical while streaming into an earlier message,
+        // and streaming deltas must not grow the component tree.
+        val tv = panel.findMessage("a0")!!.part("ap0") as TextView
+        val comp = tv.md.component
+        val count = count(panel)
+        repeat(50) { model.appendDelta("a0", "ap0", " x$it") }
+
+        assertSame(tv, panel.findMessage("a0")!!.part("ap0"))
+        assertSame(comp, tv.md.component)
+        assertEquals(count, count(panel))
+
+        model.clear()
+
+        assertEquals(0, panel.turnCount())
+        assertTrue("transcript turns must be removed on clear", panel.components.none { it is TurnView })
+        assertEquals("clear must return the transcript to its empty component tree", empty, count(panel))
     }
 
     fun `test ContentDelta preserves TextView and markdown component`() {
@@ -1152,6 +1301,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         for (child in root.components) if (child is Container) layout(child)
     }
 
+    /** The plugin's `<registryKey>` extensions are not loaded in tests, so contribute the key here. */
+    private fun disableValidateRoots() {
+        val key = "kilo.session.validateRoots"
+        Registry.mutateContributedKeys {
+            it + (key to RegistryKeyDescriptor(key, "test", "true", false, false, null, null))
+        }
+        Disposer.register(testRootDisposable) {
+            Registry.mutateContributedKeys { it - key }
+        }
+        Registry.get(key).setValue(false, testRootDisposable)
+    }
+
     private fun promptBox(root: MessageView): Component {
         return components(root).first { it.parent != root && it is JPanel && it.componentCount == 1 && it.components.single() is TextView }
     }
@@ -1173,6 +1334,21 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             components(row).filterIsInstance<JBLabel>()
                 .mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }
                 .joinToString(" ")
+        }
+    }
+
+    private class TrackingRepaintManager(private val watched: Set<JComponent>) : RepaintManager() {
+        val dirty = mutableListOf<JComponent>()
+        val invalid = mutableListOf<JComponent>()
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c in watched) dirty.add(c)
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent in watched) invalid.add(invalidComponent)
+            super.addInvalidComponent(invalidComponent)
         }
     }
 }

@@ -346,7 +346,7 @@ internal class SessionScroll(
 
     @RequiresEdt
     private fun layoutScroll() {
-        root.validate()
+        component.validate()
     }
 
     @RequiresEdt

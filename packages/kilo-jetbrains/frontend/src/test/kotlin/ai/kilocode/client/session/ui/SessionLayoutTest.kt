@@ -7,6 +7,7 @@ import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.Dimension
 import java.awt.Insets
+import javax.swing.JPanel
 import javax.swing.JLabel
 
 /**
@@ -281,6 +282,49 @@ class SessionLayoutTest : BasePlatformTestCase() {
         assertEquals(20 + JBUI.scale(8), c2.y)
     }
 
+    fun `test valid child reuses cached preferred height`() {
+        val p = panel(width = 300)
+        val child = probe(height = 20)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        val count = child.count
+
+        p.doLayout()
+
+        assertEquals(count, child.count)
+        assertEquals(20, child.height)
+    }
+
+    fun `test invalid child is measured again`() {
+        val p = panel(width = 300)
+        val child = probe(height = 20)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        val count = child.count
+
+        child.invalidate()
+        p.doLayout()
+
+        assertEquals(count + 1, child.count)
+    }
+
+    fun `test width change forces cached child remeasure`() {
+        val p = panel(width = 300)
+        val child = probe(height = 20)
+        p.add(child)
+        p.doLayout()
+        child.markValid()
+        val count = child.count
+
+        p.setSize(320, 2000)
+        p.doLayout()
+
+        assertEquals(count + 1, child.count)
+        assertEquals(320, child.width)
+    }
+
     // ---- helpers ------
 
     /** A fixed-height JLabel. The width is reported as 0 until layout sets it. */
@@ -292,5 +336,26 @@ class SessionLayoutTest : BasePlatformTestCase() {
         override val sessionViewKind = kind
 
         override fun getPreferredSize(): Dimension = Dimension(0, height)
+    }
+
+    private fun probe(height: Int) = object : JPanel() {
+        var count = 0
+        private var valid = false
+
+        override fun isValid() = valid
+
+        override fun invalidate() {
+            valid = false
+            super.invalidate()
+        }
+
+        fun markValid() {
+            valid = true
+        }
+
+        override fun getPreferredSize(): Dimension {
+            count++
+            return Dimension(0, height)
+        }
     }
 }
