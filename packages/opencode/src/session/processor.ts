@@ -269,11 +269,14 @@ export const layer = Layer.effect(
         input: { title?: string; metadata?: Record<string, any> },
       ) {
         const match = yield* readToolCall(toolCallID)
+        // approval provenance is written once during ask() and must survive later tool metadata writes
+        const carryApproval = (prev: Record<string, any> | undefined, next: Record<string, any> | undefined) => {
+          if (!next || !prev?.approval || "approval" in next) return next
+          return { ...next, approval: prev.approval }
+        }
         if (!match || match.part.state.status !== "running") {
-          ctx.toolmeta[toolCallID] = {
-            ...ctx.toolmeta[toolCallID],
-            ...input,
-          }
+          const prev = ctx.toolmeta[toolCallID]
+          ctx.toolmeta[toolCallID] = { ...prev, ...input, metadata: carryApproval(prev?.metadata, input.metadata) }
           return
         }
         yield* updateToolCall(toolCallID, (part) => {
@@ -283,7 +286,7 @@ export const layer = Layer.effect(
             state: {
               ...part.state,
               title: input.title ?? part.state.title,
-              metadata: input.metadata ?? part.state.metadata,
+              metadata: carryApproval(part.state.metadata, input.metadata) ?? part.state.metadata,
             },
           }
         })
@@ -301,13 +304,17 @@ export const layer = Layer.effect(
       ) {
         const match = yield* readToolCall(toolCallID)
         if (!match || match.part.state.status !== "running") return
+        // kilocode_change start - preserve approval provenance recorded during permission checks
+        const prior = isRecord(match.part.state.metadata) ? match.part.state.metadata : undefined
+        const metadata = prior?.approval ? { ...output.metadata, approval: prior.approval } : output.metadata
+        // kilocode_change end
         yield* session.updatePart({
           ...match.part,
           state: {
             status: "completed",
             input: match.part.state.input,
             output: output.output,
-            metadata: output.metadata,
+            metadata, // kilocode_change - merged to keep approval
             title: output.title,
             time: { start: match.part.state.time.start, end: Date.now() },
             attachments: output.attachments,
