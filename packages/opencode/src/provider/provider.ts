@@ -41,6 +41,7 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
+  patchOpenAICompatibleOptions,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -1712,6 +1713,7 @@ export const layer = Layer.effect(
         if (model.api.npm.includes("@ai-sdk/openai-compatible") && options["includeUsage"] !== false) {
           options["includeUsage"] = true
         }
+        patchOpenAICompatibleOptions(model.api.npm, options) // kilocode_change
 
         const baseURL = iife(() => {
           let url =
