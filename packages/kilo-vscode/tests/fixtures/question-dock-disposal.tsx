@@ -16,6 +16,7 @@ const { Show, createSignal } = await import("solid-js")
 const { render } = await import("solid-js/web")
 const { SessionContext } = await import("../../webview-ui/src/context/session")
 const { LanguageContext } = await import("../../webview-ui/src/context/language")
+const { ConfigContext } = await import("../../webview-ui/src/context/config")
 const { QuestionDock } = await import("../../webview-ui/src/components/chat/QuestionDock")
 
 const request: QuestionRequest = {
@@ -50,11 +51,30 @@ const language = {
 }
 const root = document.createElement("div")
 document.body.append(root)
+const config = {
+  config: () => ({}),
+  globalConfig: () => ({}),
+  projectConfig: () => ({}),
+  settings: () => ({}),
+  features: () => ({ indexing: false, sandboxControls: false }),
+  loading: () => false,
+  isDirty: () => false,
+  saving: () => false,
+  saveError: () => null,
+  updateConfig: () => {},
+  updateGlobalConfig: () => {},
+  updateProjectConfig: () => {},
+  updateSetting: () => {},
+  saveConfig: () => {},
+  discardConfig: () => {},
+}
 const dispose = render(
   () => (
     <SessionContext.Provider value={session as never}>
       <LanguageContext.Provider value={language as never}>
-        <Show when={active()}>{(item) => <QuestionDock request={item()} />}</Show>
+        <ConfigContext.Provider value={config as never}>
+          <Show when={active()}>{(item) => <QuestionDock request={item()} />}</Show>
+        </ConfigContext.Provider>
       </LanguageContext.Provider>
     </SessionContext.Provider>
   ),

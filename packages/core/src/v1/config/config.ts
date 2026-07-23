@@ -329,6 +329,12 @@ export const Info = Schema.Struct({
       mcp_timeout: Schema.optional(PositiveInt).annotate({
         description: "Timeout in milliseconds for model context protocol (MCP) requests",
       }),
+      // kilocode_change start
+      smooth_scrolling: Schema.optional(Schema.Boolean).annotate({
+        description:
+          "Animate scroll positions in the Kilo Code chat webview (tab strip, question dock, streaming reasoning panel). Set to false for instant scrolling (default: true)",
+      }),
+      // kilocode_change end
       policies: Schema.optional(Schema.mutable(Schema.Array(ConfigExperimental.Policy))).annotate({
         description: "Policy statements applied to supported resources, such as provider access",
       }),

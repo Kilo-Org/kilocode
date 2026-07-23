@@ -1507,6 +1507,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner-Modell",
   "settings.experimental.swePrunerModel.description":
     "Modell zum Kürzen von Tool-Ausgaben; standardmäßig das konfigurierte Small Model",
+  "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
+  "settings.experimental.smoothScrolling.description":
+    "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
   "settings.experimental.mcpTimeout.title": "MCP-Zeitlimit (ms)",
   "settings.experimental.mcpTimeout.description": "Zeitlimit für MCP-Server-Anfragen in Millisekunden",
   "settings.experimental.remote.title": "Remote-Steuerung",

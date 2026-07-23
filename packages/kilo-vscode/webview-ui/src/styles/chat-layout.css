@@ -410,6 +410,17 @@
   background-color: var(--vscode-editor-findMatchHighlightBackground, rgba(234, 190, 0, 0.35));
 }
 
+/* When the user opts out of smooth scrolling (Settings → Experimental → Smooth
+   Scrolling), override the streaming reasoning panel's `scroll-behavior: smooth`
+   rule defined in kilo-ui's message-part.css. We use a body class instead of
+   touching the shared stylesheet to keep Kilo-specific behavior out of the
+   shared package. */
+html.kilo-no-smooth-scroll
+  [data-component="reasoning-part"][data-streaming][data-auto-collapse]
+  [data-slot="reasoning-content"] {
+  scroll-behavior: auto;
+}
+
 ::highlight(kilo-transcript-search-match-active) {
   background-color: var(--vscode-editor-findMatchBackground, rgba(255, 165, 0, 0.65));
 }

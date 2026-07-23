@@ -9,6 +9,7 @@ import { useTabScroll } from "../../utils/tab-scroll"
 import { focusPrompt, focusSelectedTab, focusTabElement, handleTabKey } from "../../utils/tab-navigation"
 import { setTabWidths } from "../../utils/tab-widths"
 import { useVSCode } from "../../context/vscode"
+import { useConfig } from "../../context/config"
 import { SessionTab } from "./SessionTab"
 import { SessionTabMenu } from "./SessionTabMenu"
 import { SessionTabSwitcher } from "./SessionTabSwitcher"
@@ -19,6 +20,7 @@ export const SessionTabStrip: Component = () => {
   const session = useSession()
   const language = useLanguage()
   const vscode = useVSCode()
+  const { config } = useConfig()
   const [dragging, setDragging] = createSignal<string>()
   const [announcement, setAnnouncement] = createSignal("")
   if (!tabs) return null
@@ -56,7 +58,8 @@ export const SessionTabStrip: Component = () => {
     }
     handleTabKey({ ids: tabs.ids(), id, event, select: tabs.select, root })
   }
-  const scroll = useTabScroll(tabs.ids, tabs.active)
+  const scroll = useTabScroll(tabs.ids, tabs.active, () => config().experimental?.smooth_scrolling !== false)
+  const root = () => document.querySelector("[data-component=session-tabs] .am-tab-list")
   const rows = createMemo(() =>
     tabs.ids().map((id) => ({
       id,

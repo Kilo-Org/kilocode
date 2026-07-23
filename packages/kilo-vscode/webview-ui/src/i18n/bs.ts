@@ -1483,6 +1483,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
   "settings.experimental.swePrunerModel.description":
     "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
+  "settings.experimental.smoothScrolling.title": "Smooth Scrolling",
+  "settings.experimental.smoothScrolling.description":
+    "Animate scroll positions in the chat (tab strip, question dock, reasoning panel). Turn off for instant scrolling. Mouse wheel inertia is controlled by your OS / VS Code and is not affected.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

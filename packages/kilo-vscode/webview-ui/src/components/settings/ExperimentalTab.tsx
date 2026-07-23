@@ -255,7 +255,6 @@ const ExperimentalTab: Component = () => {
         <SettingsRow
           title={language.t("settings.experimental.mcpTimeout.title")}
           description={language.t("settings.experimental.mcpTimeout.description")}
-          last
         >
           <TextField
             value={String(experimental().mcp_timeout ?? 60000)}
@@ -266,6 +265,20 @@ const ExperimentalTab: Component = () => {
               }
             }}
           />
+        </SettingsRow>
+
+        <SettingsRow
+          title={language.t("settings.experimental.smoothScrolling.title")}
+          description={language.t("settings.experimental.smoothScrolling.description")}
+          last
+        >
+          <Switch
+            checked={experimental().smooth_scrolling !== false}
+            onChange={(checked) => updateExperimental("smooth_scrolling", checked)}
+            hideLabel
+          >
+            {language.t("settings.experimental.smoothScrolling.title")}
+          </Switch>
         </SettingsRow>
       </Card>
 
