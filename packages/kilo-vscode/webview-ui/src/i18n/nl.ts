@@ -1299,6 +1299,7 @@ export const dict = {
   "session.outcome.unknown": "Beurt beëindigd zonder voltooiingsreden van het model",
   "session.outcome.filtered": "De provider heeft deze reactie gestopt vanwege een contentfilter.",
   "session.outcome.unexpected": "Reactie is onverwacht beëindigd en is mogelijk onvolledig.",
+  "session.outcome.generationId": "Generatie-ID: {{id}}",
   "session.outcome.interrupted": "Beurt onderbroken",
   "session.outcome.error": "Beurt mislukt",
   "session.outcome.finish": "Voltooiingsreden: {{reason}}",

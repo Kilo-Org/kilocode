@@ -1299,6 +1299,7 @@ export const dict = {
   "session.outcome.unknown": "モデルの終了理由なしでターンが終了しました",
   "session.outcome.filtered": "コンテンツフィルターにより、プロバイダーがこの応答を停止しました。",
   "session.outcome.unexpected": "応答が予期せず終了したため、不完全である可能性があります。",
+  "session.outcome.generationId": "生成 ID: {{id}}",
   "session.outcome.interrupted": "ターンが中断されました",
   "session.outcome.error": "ターンが失敗しました",
   "session.outcome.finish": "終了理由: {{reason}}",

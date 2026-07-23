@@ -1254,6 +1254,7 @@ export const dict = {
   "session.outcome.unknown": "Response ended without a finish reason and may be incomplete.",
   "session.outcome.filtered": "The provider stopped this response because of a content filter.",
   "session.outcome.unexpected": "Response ended unexpectedly and may be incomplete.",
+  "session.outcome.generationId": "Generation ID: {{id}}",
   "session.outcome.interrupted": "Turn interrupted.",
   "session.outcome.error": "Turn failed.",
   "session.outcome.finish": "Technical finish reason: {{reason}}",

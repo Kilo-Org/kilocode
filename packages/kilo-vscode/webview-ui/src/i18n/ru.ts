@@ -1310,6 +1310,7 @@ export const dict = {
   "session.outcome.unknown": "Раунд завершен без указания причины моделью",
   "session.outcome.filtered": "Провайдер остановил этот ответ из-за фильтра контента.",
   "session.outcome.unexpected": "Ответ неожиданно завершился и может быть неполным.",
+  "session.outcome.generationId": "Идентификатор генерации: {{id}}",
   "session.outcome.interrupted": "Раунд прерван",
   "session.outcome.error": "Раунд завершился с ошибкой",
   "session.outcome.finish": "Причина завершения: {{reason}}",

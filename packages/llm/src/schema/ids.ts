@@ -33,7 +33,15 @@ export type TextVerbosity = Schema.Schema.Type<typeof TextVerbosity>
 export const MessageRole = Schema.Literals(["system", "user", "assistant", "tool"])
 export type MessageRole = Schema.Schema.Type<typeof MessageRole>
 
-export const FinishReason = Schema.Literals(["stop", "length", "tool-calls", "content-filter", "error", "unknown"])
+export const FinishReason = Schema.Literals([
+  "stop",
+  "length",
+  "tool-calls",
+  "content-filter",
+  "error",
+  "other", // kilocode_change - preserve the AI SDK's unexpected provider finish reason
+  "unknown",
+])
 export type FinishReason = Schema.Schema.Type<typeof FinishReason>
 
 export const JsonSchema = Schema.Record(Schema.String, Schema.Unknown)

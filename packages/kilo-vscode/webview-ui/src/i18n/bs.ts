@@ -1311,6 +1311,7 @@ export const dict = {
   "session.outcome.unknown": "Potez završen bez razloga završetka modela",
   "session.outcome.filtered": "Provajder je zaustavio ovaj odgovor zbog filtera sadržaja.",
   "session.outcome.unexpected": "Odgovor je neočekivano završen i može biti nepotpun.",
+  "session.outcome.generationId": "ID generiranja: {{id}}",
   "session.outcome.interrupted": "Potez prekinut",
   "session.outcome.error": "Potez nije uspio",
   "session.outcome.finish": "Razlog završetka: {{reason}}",

@@ -577,7 +577,14 @@ describe("session processor empty tool-calls", () => {
               index: 0,
               reason: "stop",
               usage: usage(),
-              providerMetadata: { kilocode: { routedModelID: "openai/gpt-5.5-20260423" } },
+              providerMetadata: {
+                kilocode: { routedModelID: "openai/gpt-5.5-20260423" },
+                gateway: {
+                  generationId: "gen_test",
+                  routing: { finalProvider: "openai" },
+                  marketCost: "0.1",
+                },
+              },
             }),
             LLMEvent.finish({ reason: "stop", usage: usage() }),
           )
@@ -632,6 +639,9 @@ describe("session processor empty tool-calls", () => {
             providerID: selection.providerID,
             modelID: ModelV2.ID.make("openai/gpt-5.5-20260423"),
           })
+          expect(part?.generationID).toBe("gen_test")
+          expect(part).not.toHaveProperty("providerMetadata")
+          expect(part).not.toHaveProperty("gateway")
         }),
       { git: true },
     ),

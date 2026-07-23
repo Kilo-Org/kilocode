@@ -1295,6 +1295,7 @@ export const dict = {
   "session.outcome.unknown": "모델의 종료 이유 없이 턴이 종료되었습니다",
   "session.outcome.filtered": "콘텐츠 필터로 인해 제공자가 이 응답을 중단했습니다.",
   "session.outcome.unexpected": "응답이 예기치 않게 종료되었으며 불완전할 수 있습니다.",
+  "session.outcome.generationId": "생성 ID: {{id}}",
   "session.outcome.interrupted": "턴이 중단되었습니다",
   "session.outcome.error": "턴이 실패했습니다",
   "session.outcome.finish": "종료 이유: {{reason}}",

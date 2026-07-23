@@ -1295,6 +1295,7 @@ export const dict = {
   "session.outcome.unknown": "Tur, model bitiş nedeni olmadan sona erdi",
   "session.outcome.filtered": "Sağlayıcı, bir içerik filtresi nedeniyle bu yanıtı durdurdu.",
   "session.outcome.unexpected": "Yanıt beklenmedik bir şekilde sona erdi ve eksik olabilir.",
+  "session.outcome.generationId": "Oluşturma kimliği: {{id}}",
   "session.outcome.interrupted": "Tur kesintiye uğradı",
   "session.outcome.error": "Tur başarısız oldu",
   "session.outcome.finish": "Bitiş nedeni: {{reason}}",

@@ -782,6 +782,7 @@ export type StepFinishPart = {
     providerID: string
     modelID: string
   }
+  generationID?: string
   metrics?: {
     prompt?: number
     generation?: number

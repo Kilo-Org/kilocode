@@ -1291,6 +1291,7 @@ export const dict = {
   "session.outcome.unknown": "เทิร์นสิ้นสุดโดยไม่มีเหตุผลการเสร็จสิ้นของโมเดล",
   "session.outcome.filtered": "ผู้ให้บริการหยุดการตอบกลับนี้เนื่องจากตัวกรองเนื้อหา",
   "session.outcome.unexpected": "การตอบกลับสิ้นสุดลงโดยไม่คาดคิดและอาจไม่สมบูรณ์",
+  "session.outcome.generationId": "รหัสการสร้าง: {{id}}",
   "session.outcome.interrupted": "เทิร์นถูกขัดจังหวะ",
   "session.outcome.error": "เทิร์นล้มเหลว",
   "session.outcome.finish": "เหตุผลการเสร็จสิ้น: {{reason}}",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { terminal } from "../../webview-ui/src/context/session-outcome"
-import type { Message, TodoItem } from "../../webview-ui/src/types/messages"
+import type { Message, Part, TodoItem } from "../../webview-ui/src/types/messages"
 
 function message(finish?: string, error?: Message["error"]): Message {
   return {
@@ -68,6 +68,38 @@ describe("terminal", () => {
   it("surfaces filtered and unexpected provider finishes", () => {
     expect(terminal({ reason: "completed", messages: [message("content-filter")], todos: [] })?.kind).toBe("filtered")
     expect(terminal({ reason: "completed", messages: [message("other")], todos: [] })?.kind).toBe("unexpected")
+  })
+
+  it("includes a gateway generation id for unexpected provider finishes", () => {
+    const parts: Part[] = [
+      {
+        id: "p1",
+        sessionID: "s1",
+        messageID: "m1",
+        type: "step-finish",
+        reason: "other",
+        generationID: "gen_test",
+      },
+    ]
+    expect(
+      terminal({ reason: "completed", messages: [message("other")], todos: [], parts: () => parts }),
+    ).toMatchObject({ kind: "unexpected", finish: "other", generationID: "gen_test" })
+  })
+
+  it("does not expose generation ids for other terminal outcomes", () => {
+    const parts: Part[] = [
+      {
+        id: "p1",
+        sessionID: "s1",
+        messageID: "m1",
+        type: "step-finish",
+        reason: "unknown",
+        generationID: "gen_test",
+      },
+    ]
+    expect(
+      terminal({ reason: "completed", messages: [message("unknown")], todos: [], parts: () => parts }),
+    ).not.toHaveProperty("generationID")
   })
 
   it("surfaces interruption and failures without a rendered error", () => {

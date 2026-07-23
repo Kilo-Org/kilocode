@@ -253,6 +253,7 @@ export const StepFinishPart = Schema.Struct({
       modelID: ModelV2.ID,
     }),
   ),
+  generationID: Schema.optional(Schema.String), // kilocode_change
   metrics: Schema.optional(
     Schema.Struct({
       prompt: Schema.optional(Schema.Finite),
