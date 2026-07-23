@@ -67,10 +67,12 @@ test("allows untrusted absolute file references that resolve inside the scope ro
   }
 })
 
-test("rejects environment references in untrusted (project) config", async () => {
-  await expect(
-    ConfigVariable.substitute({ ...source, text: "value={env:SAFE_VALUE}", env: { SAFE_VALUE: "allowed" } }),
-  ).rejects.toBeInstanceOf(InvalidError)
+test("preserves environment references as literal text in untrusted (project) config", async () => {
+  // {env:} tokens are left as literal text — not resolved, not stripped.
+  // This prevents secret exfiltration while keeping config files loadable.
+  expect(
+    await ConfigVariable.substitute({ ...source, text: "value={env:SAFE_VALUE}", env: { SAFE_VALUE: "allowed" } }),
+  ).toBe("value={env:SAFE_VALUE}")
 })
 
 test("leaves untrusted text without references untouched", async () => {

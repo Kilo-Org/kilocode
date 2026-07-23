@@ -79,6 +79,12 @@ export namespace WorkflowsMigrator {
           return undefined
         })
       if (content === undefined) continue
+      // kilocode_change start - skip workflows with unresolved {env:} tokens (kept as literal in untrusted config)
+      if (/\{env:[^}]+\}/.test(content)) {
+        warnings.push(`Skipped workflow '${extractNameFromFilename(file)}': contains environment references`)
+        continue
+      }
+      // kilocode_change end
       workflows.push({
         name: extractNameFromFilename(file),
         path: file,
