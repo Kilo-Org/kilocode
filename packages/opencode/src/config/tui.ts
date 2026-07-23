@@ -153,7 +153,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
         ),
       )
       if (!text) return {} as Info
-      yield* Effect.logInfo("loading tui config", { path: filepath })
+      yield* Effect.logDebug("loading tui config", { path: filepath }) // kilocode_change - avoid leaking config paths in default-level TUI logs
       return yield* load(text, filepath, trusted, fileScope) // kilocode_change
     })
 
@@ -164,7 +164,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
       const data = yield* loadFile(file, trusted, fileScope) // kilocode_change
       if (Object.keys(data).length) {
         appliedOrder += 1
-        yield* Effect.logInfo("applying tui config", { path: file, order: appliedOrder })
+        yield* Effect.logDebug("applying tui config", { path: file, order: appliedOrder }) // kilocode_change - avoid leaking config paths in default-level TUI logs
       }
       acc.result = mergeDeep(acc.result, data)
       if (!data.plugin?.length) return

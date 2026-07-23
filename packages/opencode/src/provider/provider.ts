@@ -1053,6 +1053,7 @@ export const ListResult = Schema.Struct({
   default: DefaultModelIDs,
   connected: Schema.Array(Schema.String),
   failed: Schema.Array(Schema.String), // kilocode_change
+  disabled: Schema.Array(Info), // kilocode_change
 })
 export type ListResult = Types.DeepMutable<Schema.Schema.Type<typeof ListResult>>
 

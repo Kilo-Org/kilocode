@@ -158,6 +158,7 @@ describe("RemoteModelCatalog", () => {
       },
       connected: ["custom:edge", "anthropic"],
       failed: [],
+      disabled: [],
       truncated: false,
       currentModel: {
         model: {

@@ -34,6 +34,7 @@ export interface DialogSelectProps<T> {
   skipFilter?: boolean
   renderFilter?: boolean
   locked?: boolean
+  scrollbar?: boolean // kilocode_change - allow Kilo dialogs to opt into a visible scrollbar
   actions?: DialogSelectAction<T>[] // kilocode_change - supports actions without a selected option
   footerHints?: {
     title: string
@@ -557,6 +558,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
             paddingLeft={1}
             paddingRight={1}
             scrollbarOptions={{ visible: false }}
+            verticalScrollbarOptions={{ visible: props.scrollbar ?? false }} // kilocode_change
             scrollAcceleration={scrollAcceleration()}
             ref={(r: ScrollBoxRenderable) => (scroll = r)}
             maxHeight={height()}
@@ -716,6 +718,7 @@ function Option(props: {
         overflow="hidden"
         wrapMode="none"
         paddingLeft={3}
+        truncate // kilocode_change - append "…" when the row is narrower than the description
       >
         {props.titleView ??
           (props.truncateTitle === false
@@ -727,11 +730,15 @@ function Option(props: {
           <span style={{ fg: props.active && !props.muted ? fg : theme.textMuted }}> {props.description}</span>
         </Show>
       </text>
+      {/* kilocode_change start - keep a visible gap and right edge when truncating long descriptions */}
       <Show when={props.footer}>
-        <box flexShrink={0}>
-          <text fg={props.active && !props.muted ? fg : theme.textMuted}>{props.footer}</text>
+        <box flexShrink={0} paddingLeft={1} marginRight={3}>
+          <text fg={props.active && !props.muted ? fg : theme.textMuted} wrapMode="none">
+            {props.footer}
+          </text>
         </box>
       </Show>
+      {/* kilocode_change end */}
     </>
   )
 }

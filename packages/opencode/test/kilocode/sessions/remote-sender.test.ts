@@ -962,6 +962,7 @@ describe("RemoteSender", () => {
           default: {},
           connected: [],
           failed: [],
+          disabled: [], // kilocode_change
           protocolVersion: 1,
           truncated: false,
         },
