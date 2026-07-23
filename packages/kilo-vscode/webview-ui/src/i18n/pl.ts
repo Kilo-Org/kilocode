@@ -1280,7 +1280,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Łączenie z serwerem...",
   "prompt.placeholder.error": "Połączenie nie powiodło się. Sprawdź panel wyjściowy lub uruchom ponownie rozszerzenie.",
-  "prompt.placeholder.default": "Wpisz wiadomość... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
+  "prompt.placeholder.default":
+    "Wpisz wiadomość, @ aby wspomnieć pliki... (Enter, aby wysłać, Shift+Enter dla nowej linii)",
 
   "context.usage.sessionCost": "Koszt sesji",
   "context.usage.olderSessions": "{{count}} starszych sesji",

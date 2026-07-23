@@ -1335,7 +1335,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
   "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
-  "prompt.placeholder.default": "Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva línea)",
+  "prompt.placeholder.default":
+    "Escribe un mensaje, @ para mencionar archivos... (Enter para enviar, Shift+Enter para nueva línea)",
 
   "context.usage.sessionCost": "Coste de la sesión",
   "context.usage.olderSessions": "{{count}} sesiones anteriores",

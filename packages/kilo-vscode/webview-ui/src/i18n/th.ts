@@ -1308,7 +1308,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
-  "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",

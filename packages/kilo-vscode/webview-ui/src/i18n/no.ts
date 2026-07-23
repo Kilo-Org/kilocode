@@ -1281,7 +1281,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Kobler til server...",
   "prompt.placeholder.error": "Tilkobling mislyktes. Sjekk utdatapanelet eller start utvidelsen på nytt.",
-  "prompt.placeholder.default": "Skriv en melding... (Enter for å sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.default":
+    "Skriv en melding, @ for å nevne filer... (Enter for å sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sesjonskostnad",
   "context.usage.olderSessions": "{{count}} eldre sesjoner",

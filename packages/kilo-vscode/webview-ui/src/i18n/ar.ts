@@ -1299,7 +1299,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
-  "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
+  "prompt.placeholder.default": "اكتب رسالة، @ للإشارة إلى الملفات... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",

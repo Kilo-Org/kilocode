@@ -1123,7 +1123,8 @@ export const dict = {
   "ui.sessionTurn.status.consideringNextSteps": "Valutazione prossimi passi...",
   "dialog.model.noProviders": "Nessun provider",
   "prompt.placeholder.connecting": "Connessione al server...",
-  "prompt.placeholder.default": "Scrivi un messaggio... (Invio per inviare, Maiusc+Invio per nuova riga)",
+  "prompt.placeholder.default":
+    "Scrivi un messaggio, @ per menzionare i file... (Invio per inviare, Maiusc+Invio per nuova riga)",
   "prompt.placeholder.error": "Connessione non riuscita. Controlla il pannello output o riavvia l'estensione.",
   "context.usage.sessionCost": "Costo sessione",
   "context.usage.olderSessions": "{{count}} sessioni precedenti",
