@@ -73,6 +73,7 @@ mock.module("@/kilocode/help-command", () => ({
 
 for (const path of [
   "@/kilocode/cli/cmd/console",
+  "@/kilocode/cli/cmd/cloud",
   "@/kilocode/cli/cmd/roll-call",
   "@/kilocode/cli/cmd/profile",
   "@/kilocode/cli/cmd/daemon",
@@ -82,6 +83,7 @@ for (const path of [
 ]) {
   mock.module(path, () => ({
     KiloConsoleCommand: { command: "console", handler() {} },
+    CloudCommand: { command: "cloud", handler() {} },
     RollCallCommand: { command: "roll-call", handler() {} },
     ProfileCommand: { command: "profile", handler() {} },
     DaemonCommand: { command: "daemon", handler() {} },

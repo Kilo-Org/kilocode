@@ -571,7 +571,7 @@ it.instance(
         always: [],
         ruleset: [{ permission: "bash", pattern: "*", action: "allow" }],
       })
-      expect(result).toBeUndefined()
+      expect(result).toEqual({ manual: false, rule: { permission: "bash", pattern: "*", action: "allow" } }) // kilocode_change - ask returns the auto-approval decision instead of void
     }),
   { git: true },
 )
@@ -803,7 +803,7 @@ it.instance(
         always: [],
         ruleset: [],
       })
-      expect(result).toBeUndefined()
+      expect(result).toEqual({ manual: false, rule: { permission: "bash", pattern: "ls", action: "allow" } }) // kilocode_change - the persisted "always" rule auto-approves; ask reports that decision
     }),
   { git: true },
 )
@@ -1118,7 +1118,7 @@ it.instance(
         always: [],
         ruleset: [{ permission: "bash", pattern: "*", action: "allow" }],
       })
-      expect(result).toBeUndefined()
+      expect(result).toEqual({ manual: false, rule: { permission: "bash", pattern: "*", action: "allow" } }) // kilocode_change - ask returns the auto-approval decision instead of void
     }),
   { git: true },
 )

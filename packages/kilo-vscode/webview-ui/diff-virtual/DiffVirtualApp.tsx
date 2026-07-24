@@ -1,4 +1,4 @@
-import { createMemo, createSignal, onCleanup, Show } from "solid-js"
+import { createMemo, createSignal, onCleanup, Show, createEffect, on } from "solid-js"
 import type { Component } from "solid-js"
 import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
 import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
@@ -32,6 +32,19 @@ const DiffVirtualContent: Component = () => {
   const [diff, setDiff] = createSignal<DiffVirtualFile | null>(null)
   const [style, setStyle] = createSignal<DiffStyle>("unified")
   const [markdown, setMarkdown] = createSignal(false)
+  let scrollerRef: HTMLDivElement | undefined
+
+  createEffect(
+    on(
+      diff,
+      () => {
+        if (scrollerRef) {
+          scrollerRef.scrollTop = 0
+        }
+      },
+      { defer: true },
+    ),
+  )
 
   const handler = (event: MessageEvent) => {
     const msg = event.data as {
@@ -112,7 +125,7 @@ const DiffVirtualContent: Component = () => {
                 </Tooltip>
               </Show>
             </div>
-            <div class="am-review-diff" style={{ width: "100%" }}>
+            <div class="am-review-diff" style={{ width: "100%" }} ref={(el) => (scrollerRef = el)}>
               <Show when={view()}>
                 {(v) => (
                   <Show

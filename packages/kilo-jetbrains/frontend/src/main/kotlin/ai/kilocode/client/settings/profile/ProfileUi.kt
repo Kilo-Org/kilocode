@@ -3,6 +3,7 @@ package ai.kilocode.client.settings.profile
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.telemetry.Telemetry
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -16,6 +17,7 @@ import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.asContextElement
 import com.intellij.openapi.components.service
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +86,7 @@ internal class ProfileUi(
     private var shown: Card? = null
 
     init {
+        border = JBUI.Borders.empty(0, UiStyle.Gap.xl(), 0, UiStyle.Gap.xl())
         cards.add(out, Card.LOGGED_OUT.name)
         cards.add(account, Card.LOGGED_IN.name)
         add(cards, BorderLayout.NORTH)

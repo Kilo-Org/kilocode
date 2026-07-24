@@ -3,6 +3,7 @@ import { Effect, Schema } from "effect"
 import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
+import { KiloResponseMetadata } from "@/kilocode/session/response-metadata" // kilocode_change
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -106,7 +107,12 @@ export function toLLMEvents(
             index: state.step++,
             reason: finishReason(event.finishReason),
             usage: usage(event.usage),
-            providerMetadata: KiloRoutedModel.write(metadata, event.response?.modelId), // kilocode_change
+            // kilocode_change start
+            providerMetadata: KiloResponseMetadata.write(
+              KiloRoutedModel.write(metadata, event.response?.modelId),
+              event.response?.headers,
+            ),
+            // kilocode_change end
           }),
         ]
       })

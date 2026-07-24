@@ -224,6 +224,8 @@ jobs:
 
       - name: Run HttpApi exerciser gates
         run: bun turbo test:httpapi --filter='@kilocode/cli'
+        env:
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - same rationale as the CLI unit step: a watcher per scenario instance is too heavy for the exerciser
   # kilocode_change end
 
   # kilocode_change start

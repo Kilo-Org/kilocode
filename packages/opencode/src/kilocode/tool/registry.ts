@@ -1,4 +1,3 @@
-// kilocode_change - new file
 import { CodebaseSearchTool } from "../../tool/warpgrep"
 import { RecallTool } from "../../tool/recall"
 import { AgentManagerModelsTool } from "./agent-manager-models"
@@ -10,11 +9,13 @@ import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
+import { NotifyUserTool } from "./notify-user"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { Effect } from "effect"
 import { Notebook } from "@/kilocode/notebook/service"
 import { AgentManager, HostError } from "@/kilocode/agent-manager/service"
+import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import * as Log from "@opencode-ai/core/util/log"
 import type { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
@@ -76,13 +77,19 @@ export namespace KiloToolRegistry {
       const chart = yield* ChartTool
       const image = yield* GenerateImageTool
       const terminal = yield* InteractiveTerminalTool
-      if (!notebook) return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal }
+      // The notify_user tool depends on KiloSessions.Service, which the tool-registry layer provides
+      // via KiloSessions.defaultLayer (see src/tool/registry.ts). Grabs the service from the surrounding
+      // context here and injects it into the tool's init Effect.
+      const sessions = yield* KiloSessions.Service
+      const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
+      if (!notebook)
+        return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, ...tools }
+      return { codebase, recall, managerModels, memory, save, manager, process, chart, image, terminal, notify, ...tools }
     })
   }
 
@@ -100,6 +107,7 @@ export namespace KiloToolRegistry {
       chart: Tool.Info
       image: Tool.Info
       terminal?: Tool.Info
+      notify: Tool.Info
       notebookRead?: Tool.Info
       notebookEdit?: Tool.Info
       notebookExecute?: Tool.Info
@@ -118,6 +126,7 @@ export namespace KiloToolRegistry {
         process: Tool.init(tools.process),
         chart: Tool.init(tools.chart),
         image: Tool.init(tools.image),
+        notify: Tool.init(tools.notify),
       })
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
@@ -129,7 +138,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic }
+      return { ...base, terminal, ...notebooks, semantic, notify: base.notify }
     })
   }
 
@@ -172,6 +181,7 @@ export namespace KiloToolRegistry {
 
   /** Hide human-driven tools from agents that cannot interact with the user directly. */
   export function available(tool: Tool.Def, agent: Agent.Info) {
+    if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
     if (tool.id !== "interactive_terminal") return true
     return agent.mode === "primary"
   }
@@ -190,6 +200,7 @@ export namespace KiloToolRegistry {
       chart: Tool.Def
       image: Tool.Def
       terminal?: Tool.Def
+      notify: Tool.Def
       notebookRead?: Tool.Def
       notebookEdit?: Tool.Def
       notebookExecute?: Tool.Def
@@ -214,6 +225,7 @@ export namespace KiloToolRegistry {
       tools.notebookExecute
         ? [tools.notebookRead, tools.notebookEdit, tools.notebookExecute]
         : []),
+      tools.notify,
     ]
   }
 

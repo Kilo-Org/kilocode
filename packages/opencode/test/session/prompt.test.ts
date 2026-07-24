@@ -4,13 +4,11 @@ import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Database } from "@opencode-ai/core/database/database"
 import { eq } from "drizzle-orm"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { Bus } from "@/bus" // kilocode_change - ToolRegistry retains the Kilo bus dependency
+import { Bus } from "@/bus"
 import { FetchHttpClient } from "effect/unstable/http"
-// kilocode_change start
 import { expect, spyOn } from "bun:test"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { legacyReviewMessage } from "../../src/kilocode/review/command"
-// kilocode_change end
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath, pathToFileURL } from "url"
@@ -18,7 +16,7 @@ import { NamedError } from "@opencode-ai/core/util/error"
 import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
 import { Command } from "../../src/command"
-import { Auth } from "../../src/auth" // kilocode_change
+import { Auth } from "../../src/auth"
 import { Config } from "@/config/config"
 import { LSP } from "@/lsp/lsp"
 import { MCP } from "../../src/mcp"
@@ -43,8 +41,9 @@ import { SessionProcessor } from "../../src/session/processor"
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
-import { KiloSession } from "../../src/kilocode/session" // kilocode_change
-import { Suggestion } from "../../src/kilocode/suggestion" // kilocode_change - accept suggestion in telemetry test
+import { KiloSession } from "../../src/kilocode/session"
+import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
+import { Suggestion } from "../../src/kilocode/suggestion"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionV2 } from "@opencode-ai/core/session"
@@ -62,8 +61,8 @@ import { TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { MemoryService } from "@kilocode/kilo-memory/effect/service" // kilocode_change
-import { RepositoryCache } from "@opencode-ai/core/repository-cache" // kilocode_change
+import { MemoryService } from "@kilocode/kilo-memory/effect/service"
+import { RepositoryCache } from "@opencode-ai/core/repository-cache"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 
@@ -165,7 +164,6 @@ const status = SessionStatus.layer.pipe(Layer.provideMerge(EventV2Bridge.default
 const run = SessionRunState.layer.pipe(Layer.provide(status))
 const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
 
-// kilocode_change start
 const agent: AgentSvc.Info = {
   name: "build",
   mode: "primary",
@@ -194,7 +192,6 @@ const blockingProcessor = Layer.succeed(
       }),
   }),
 )
-// kilocode_change end
 
 function makePrompt(input?: { processor?: "blocking" }) {
   const deps = Layer.mergeAll(
@@ -202,7 +199,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Snapshot.defaultLayer,
     LLM.defaultLayer,
     Env.defaultLayer,
-    input?.processor === "blocking" ? fastAgents : AgentSvc.defaultLayer, // kilocode_change
+    input?.processor === "blocking" ? fastAgents : AgentSvc.defaultLayer,
     Command.defaultLayer,
     Permission.defaultLayer,
     Plugin.defaultLayer,
@@ -215,8 +212,8 @@ function makePrompt(input?: { processor?: "blocking" }) {
     status,
     Database.defaultLayer,
     EventV2Bridge.defaultLayer,
-    Bus.layer, // kilocode_change - satisfy the Kilo ToolRegistry dependency
-    MemoryService.layer, // kilocode_change
+    Bus.layer,
+    MemoryService.layer,
   ).pipe(Layer.provideMerge(infra))
   const question = Question.layer.pipe(Layer.provideMerge(deps))
   const todo = Todo.layer.pipe(Layer.provideMerge(deps))
@@ -226,10 +223,11 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provide(CrossSpawnSpawner.defaultLayer),
     Layer.provide(Git.defaultLayer),
     Layer.provide(Ripgrep.defaultLayer),
-    Layer.provide(RepositoryCache.defaultLayer), // kilocode_change - RepoCloneTool dependency
+    Layer.provide(RepositoryCache.defaultLayer),
     Layer.provide(Format.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provide(Auth.defaultLayer), // kilocode_change
+    Layer.provide(Auth.defaultLayer),
+    Layer.provide(KiloSessions.testLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),
@@ -258,7 +256,7 @@ function makePrompt(input?: { processor?: "blocking" }) {
     Layer.provideMerge(proc),
     Layer.provideMerge(registry),
     Layer.provideMerge(trunc),
-    Layer.provideMerge(question), // kilocode_change - SessionPrompt dismisses pending questions
+    Layer.provideMerge(question),
     Layer.provide(Instruction.defaultLayer),
     Layer.provide(SystemPrompt.defaultLayer),
     Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
@@ -341,7 +339,7 @@ const ensureDir = Effect.fn("test.ensureDir")(function* (dir: string) {
 const writeConfig = Effect.fn("test.writeConfig")(function* (dir: string, config: Partial<ConfigV1.Info>) {
   yield* writeText(
     path.join(dir, "opencode.json"),
-    JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...config }), // kilocode_change
+    JSON.stringify({ $schema: "https://app.kilo.ai/config.json", ...config }),
   )
 })
 
@@ -352,7 +350,6 @@ const useServerConfig = Effect.fn("test.useServerConfig")(function* (config: (ur
   return { dir, llm }
 })
 
-// kilocode_change start - wait for the runner state that cancel observes instead of session status
 const waitForBusy = (sessionID: SessionID, duration: Duration.Input = "2 seconds") =>
   pollWithTimeout(
     Effect.gen(function* () {
@@ -363,7 +360,6 @@ const waitForBusy = (sessionID: SessionID, duration: Duration.Input = "2 seconds
     `session ${sessionID} never became busy`,
     duration,
   )
-// kilocode_change end
 
 const hasBash = Effect.sync(() => Bun.which("bash") !== null)
 
@@ -535,7 +531,6 @@ it.instance("loop calls LLM and returns assistant message", () =>
   }),
 )
 
-// kilocode_change start - replacement prompts unblock pending Question service requests
 noLLMServer.instance(
   "new prompt dismisses a pending question",
   () =>
@@ -578,9 +573,7 @@ noLLMServer.instance(
     }),
   { config: cfg },
 )
-// kilocode_change end
 
-// kilocode_change start - cover user image normalization before persistence
 noLLMServer.instance(
   "normalizes user data images before persistence",
   () =>
@@ -690,7 +683,6 @@ noLLMServer.instance(
     }),
   { config: cfg },
 )
-// kilocode_change end
 
 it.instance("loop surfaces content-filter finishes as session errors", () =>
   Effect.gen(function* () {
@@ -1070,13 +1062,11 @@ noLLMServer.instance("prompt tools replace matching rules and preserve existing 
     })
 
     const reloaded = yield* sessions.get(session.id)
-    // kilocode_change start - Kilo preserves existing restrictions that the new prompt does not override
     expect(reloaded.permission).toEqual([
       { permission: "bash", pattern: "*", action: "deny" },
       { permission: "read", pattern: "*", action: "allow" },
     ])
     expect(Permission.evaluate("bash", "anything", reloaded.permission ?? []).action).toBe("deny")
-    // kilocode_change end
   }),
 )
 
@@ -1139,14 +1129,14 @@ it.instance(
       const tool = yield* pollWithTimeout(
         Effect.gen(function* () {
           const msgs = yield* MessageV2.filterCompactedEffect(chat.id)
-          const assistant = msgs.findLast((item) => item.info.role === "assistant" && item.info.agent === "code") // kilocode_change
+          const assistant = msgs.findLast((item) => item.info.role === "assistant" && item.info.agent === "code")
           const tool = assistant?.parts.find(
             (part): part is SessionV1.ToolPart => part.type === "tool" && part.tool === "task",
           )
           if (tool?.state.status === "running" && tool.state.metadata?.sessionId) return tool
         }),
         "timed out waiting for running task metadata",
-        "10 seconds", // kilocode_change - allow loaded Darwin runners to persist the tool transition
+        "10 seconds",
       )
 
       if (tool.state.status !== "running") return
@@ -1157,10 +1147,9 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  20_000, // kilocode_change
+  20_000,
 )
 
-// kilocode_change start - child task failures stay tool errors so the parent can recover
 it.instance(
   "failed task tool preserves metadata and lets the parent follow up",
   () =>
@@ -1203,12 +1192,10 @@ it.instance(
     }),
   10_000,
 )
-// kilocode_change end
 
 it.instance(
   "loop sets status to busy then idle",
   () =>
-    // kilocode_change start - hold the model response instead of cancelling an infinite stream
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
       const gate = yield* Deferred.make<void>()
@@ -1228,8 +1215,7 @@ it.instance(
       yield* Fiber.await(fiber)
       expect((yield* status.get(chat.id)).type).toBe("idle")
     }),
-  // kilocode_change end
-  10_000, // kilocode_change
+  10_000,
 )
 
 // Cancel semantics
@@ -1257,12 +1243,10 @@ it.instance(
         expect(exit.value.info.role).toBe("assistant")
       }
     }),
-  10_000, // kilocode_change - Windows CI can take longer to cancel the live loop
+  10_000,
 )
 
-// kilocode_change start
 unix(
-  // kilocode_change end
   "cancel records MessageAbortedError on interrupted process",
   () =>
     Effect.gen(function* () {
@@ -1285,7 +1269,7 @@ unix(
         }
       }
     }),
-  10_000, // kilocode_change - upstream's 3s deadline flakes under CI shard load (observed 3048ms on macOS)
+  10_000,
 )
 
 raceNoLLMServer.instance(
@@ -1310,12 +1294,10 @@ raceNoLLMServer.instance(
         parts: [{ type: "text", text: "first" }],
       })
 
-      // kilocode_change start
       const firstCreate = yield* Deferred.make<void>()
       processorCreateStarted.push(firstCreate)
       const first = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* awaitWithTimeout(Deferred.await(firstCreate), "processor.create did not start for first turn")
-      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const firstExit = yield* Fiber.await(first)
@@ -1338,12 +1320,10 @@ raceNoLLMServer.instance(
         parts: [{ type: "text", text: "second" }],
       })
 
-      // kilocode_change start
       const secondCreate = yield* Deferred.make<void>()
       processorCreateStarted.push(secondCreate)
       const second = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* awaitWithTimeout(Deferred.await(secondCreate), "processor.create did not start for second turn")
-      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
       const secondExit = yield* Fiber.await(second)
@@ -1378,7 +1358,7 @@ raceNoLLMServer.instance(
       }
     }),
   { config: cfg },
-  10_000, // kilocode_change - cancellation tree cleanup can exceed 3s under macOS CI shard load
+  10_000,
 )
 
 noLLMServer.instance(
@@ -1428,7 +1408,6 @@ noLLMServer.instance(
   30_000,
 )
 
-// kilocode_change start - handleSubtask propagates child session cost to wrapper (#6321)
 it.instance(
   "handleSubtask propagates subagent cost to wrapper message",
   () =>
@@ -1487,7 +1466,6 @@ it.instance(
     }),
   30_000,
 )
-// kilocode_change end
 
 it.instance(
   "cancel propagates from slash command subtask to child session",
@@ -1538,7 +1516,7 @@ it.instance(
       const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* llm.wait(1)
       const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.yieldNow // kilocode_change - let the queued caller join without a wall-clock race
+      yield* Effect.yieldNow
 
       yield* prompt.cancel(chat.id)
       const [exitA, exitB] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1549,7 +1527,7 @@ it.instance(
       }
     }),
   { git: true },
-  10_000, // kilocode_change - Windows CI can take longer to cancel queued live loops
+  10_000,
 )
 
 // Queue semantics
@@ -1572,7 +1550,6 @@ noLLMServer.instance("concurrent loop callers get same result", () =>
 it.instance(
   "concurrent loop callers all receive same error result",
   () =>
-    // kilocode_change start - gate the failing stream so both callers join the same run
     Effect.gen(function* () {
       const { llm } = yield* useServerConfig(providerCfg)
       const gate = yield* Deferred.make<void>()
@@ -1586,7 +1563,7 @@ it.instance(
       const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* llm.wait(1)
       const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.yieldNow // kilocode_change - let the queued caller join without a wall-clock race
+      yield* Effect.yieldNow
       yield* Deferred.succeed(gate, void 0)
 
       const [ea, eb] = yield* Effect.all([Fiber.await(a), Fiber.await(b)])
@@ -1596,8 +1573,7 @@ it.instance(
       expect(ea.value.info.id).toBe(eb.value.info.id)
       expect(ea.value.info.role).toBe("assistant")
     }),
-  // kilocode_change end
-  10_000, // kilocode_change
+  10_000,
 )
 
 it.instance(
@@ -1665,7 +1641,7 @@ it.instance(
       expect(inputs).toHaveLength(2)
       expect(JSON.stringify(inputs.at(-1)?.messages)).toContain("second")
     }),
-  10_000, // kilocode_change - loaded CI runners can exceed 3s for two prompt turns
+  10_000,
 )
 
 it.instance(
@@ -1694,7 +1670,7 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  10_000, // kilocode_change
+  10_000,
 )
 
 noLLMServer.instance("assertNotBusy succeeds when idle", () =>
@@ -1734,7 +1710,7 @@ it.instance(
       yield* prompt.cancel(chat.id)
       yield* Fiber.await(fiber)
     }),
-  10_000, // kilocode_change - Windows CI can take longer to enter and cancel the live loop
+  10_000,
 )
 
 unixNoLLMServer(
@@ -1834,7 +1810,6 @@ unixNoLLMServer(
   { config: cfg },
 )
 
-// kilocode_change start - verify shell v2 events correlate with the persisted tool part
 unixNoLLMServer(
   "shell correlates the persisted tool part with its completed v2 record",
   () =>
@@ -1849,7 +1824,7 @@ unixNoLLMServer(
       if (!tool) return
 
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
-        Effect.provide(SessionV2.defaultLayer), // kilocode_change - use the complete upstream v2 session layer
+        Effect.provide(SessionV2.defaultLayer),
       )
       const shell = messages.find((message) => message.type === "shell")
 
@@ -1863,7 +1838,6 @@ unixNoLLMServer(
     }),
   { config: cfg },
 )
-// kilocode_change end
 
 unixNoLLMServer(
   "shell lists files from the project directory",
@@ -1961,7 +1935,7 @@ it.instance(
       yield* waitForBusy(chat.id)
 
       const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.yieldNow // kilocode_change - give the queued loop a scheduler turn instead of a wall-clock window
+      yield* Effect.yieldNow
 
       expect(yield* llm.calls).toBe(0)
 
@@ -1976,7 +1950,7 @@ it.instance(
       expect(yield* llm.calls).toBe(1)
     }),
   { git: true },
-  30_000, // kilocode_change - Windows CI process startup can exceed 3s
+  30_000,
 )
 
 it.instance(
@@ -1999,7 +1973,7 @@ it.instance(
 
       const a = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       const b = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
-      yield* Effect.yieldNow // kilocode_change - give the queued loops a scheduler turn instead of a wall-clock window
+      yield* Effect.yieldNow
 
       expect(yield* llm.calls).toBe(0)
 
@@ -2015,7 +1989,7 @@ it.instance(
       expect(yield* llm.calls).toBe(1)
     }),
   { git: true },
-  30_000, // kilocode_change - Windows CI process startup can exceed 3s
+  30_000,
 )
 
 unix(
@@ -2158,7 +2132,6 @@ unix(
 
       const run = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* llm.wait(1)
-      // kilocode_change start
       yield* pollWithTimeout(
         sessions.messages({ sessionID: chat.id }).pipe(
           Effect.map((msgs) => {
@@ -2171,7 +2144,6 @@ unix(
         ),
         "timed out waiting for large bash output",
       )
-      // kilocode_change end
       yield* prompt.cancel(chat.id)
 
       const exit = yield* Fiber.await(run)
@@ -2199,7 +2171,6 @@ unixNoLLMServer(
 
       const sh = yield* prompt.shell({ sessionID: chat.id, agent: "build", command: "sleep 30" }).pipe(Effect.forkChild)
       yield* waitForBusy(chat.id)
-      // kilocode_change start - busy is set before shell persistence completes
       yield* pollWithTimeout(
         sessions
           .messages({ sessionID: chat.id })
@@ -2214,9 +2185,7 @@ unixNoLLMServer(
           ),
         `session ${chat.id} never persisted its running shell tool`,
       )
-      // kilocode_change end
 
-      // kilocode_change start - wait until the loop reaches the queued-run handoff
       const opened = yield* Deferred.make<void>()
       yield* Effect.acquireRelease(
         Effect.sync(() =>
@@ -2230,7 +2199,6 @@ unixNoLLMServer(
       const loop = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
       yield* awaitWithTimeout(Deferred.await(opened), `session ${chat.id} never opened its queued turn`)
       yield* Effect.yieldNow
-      // kilocode_change end
 
       yield* prompt.cancel(chat.id)
 
@@ -2444,7 +2412,6 @@ noLLMServer.instance(
   { config: cfg },
 )
 
-// kilocode_change start - expand configured Kilo references once per prompt
 noLLMServer.instance(
   "resolves configured reference mentions to one root directory attachment",
   () =>
@@ -2473,7 +2440,7 @@ noLLMServer.instance(
         source: { type: "file", path: "docs", text: { value: "@docs" } },
       })
       expect(fileURLToPath(files[0].url)).toBe(docs)
-      expect(agents.map((agent) => agent.name)).toEqual(["code"]) // kilocode_change
+      expect(agents.map((agent) => agent.name)).toEqual(["code"])
     }),
   {
     config: {
@@ -2484,9 +2451,7 @@ noLLMServer.instance(
     },
   },
 )
-// kilocode_change end
 
-// kilocode_change start - deduplicate configured Kilo references by source identity
 noLLMServer.instance(
   "does not let an unrelated directory attachment shadow a configured reference",
   () =>
@@ -2530,7 +2495,6 @@ noLLMServer.instance(
     },
   },
 )
-// kilocode_change end
 
 noLLMServer.instance(
   "stores raw reference mentions alongside directory attachments",
@@ -2557,8 +2521,8 @@ noLLMServer.instance(
       const text = stored.parts.find((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic)
 
       expect(text?.text).toBe("Use @docs for context")
-      expect(synthetic.some((part) => part.text.includes("Called the Read tool"))).toBe(true) // kilocode_change
-      expect(files).toHaveLength(1) // kilocode_change - directory attachment is expanded, not denied
+      expect(synthetic.some((part) => part.text.includes("Called the Read tool"))).toBe(true)
+      expect(files).toHaveLength(1)
 
       yield* sessions.remove(session.id)
     }),
@@ -2673,12 +2637,11 @@ it.instance(
         expect(last.info.error?.name).toBe("MessageAbortedError")
       }
     }),
-  10_000, // kilocode_change
+  10_000,
 )
 
 // Agent variant
 
-// kilocode_change start - Agent Manager records a model-less synthetic prompt after forking
 noLLMServer.instance(
   "preserves the session variant through a model-less handoff",
   () =>
@@ -2711,7 +2674,6 @@ noLLMServer.instance(
     }),
   { config: cfg },
 )
-// kilocode_change end
 
 noLLMServer.instance(
   "applies agent variant only when using agent model",
@@ -2782,7 +2744,6 @@ noLLMServer.instance(
   },
 )
 
-// kilocode_change start - Kilo review command behavior
 noLLMServer.instance(
   "deprecated review alias returns static message without LLM",
   () =>
@@ -2893,7 +2854,6 @@ it.instance(
     }),
   30_000,
 )
-// kilocode_change end
 
 // Agent / command resolution errors
 
@@ -2947,7 +2907,7 @@ noLLMServer.instance(
         const err = Cause.squash(exit.cause)
         expect(NamedError.Unknown.isInstance(err)).toBe(true)
         if (NamedError.Unknown.isInstance(err)) {
-          expect(err.data.message).toContain("code") // kilocode_change - "build" renamed to "code"
+          expect(err.data.message).toContain("code")
         }
       }
     }),

@@ -99,4 +99,29 @@ test.describe("history session accessibility", () => {
     await expect(local).toHaveAttribute("aria-selected", "true")
     await expect(page.getByRole("tabpanel", { name: "Local" })).toBeVisible()
   })
+
+  test("filters sessions to the current worktree and includes it in keyboard navigation", async ({ page }) => {
+    await story(page, "history-sessionlist--worktree-sources")
+
+    const local = page.getByRole("tab", { name: "Local" })
+    const worktree = page.getByRole("tab", { name: "Worktree" })
+    await local.focus()
+    await page.keyboard.press("End")
+    await expect(worktree).toBeFocused()
+    await page.keyboard.press("Enter")
+
+    await expect(worktree).toHaveAttribute("aria-selected", "true")
+    await expect(page.getByRole("tabpanel", { name: "Worktree" })).toBeVisible()
+    const rows = page.locator('[data-slot="list-item"]')
+    await expect(rows.filter({ hasText: "Refactor authentication module" })).toBeVisible()
+    await expect(rows.filter({ hasText: "Fix TypeScript errors in webview" })).toBeVisible()
+    await expect(rows.filter({ hasText: "Add screenshot test coverage" })).toHaveCount(0)
+
+    await rows.filter({ hasText: "Refactor authentication module" }).click()
+    await expect(page.locator('[data-slot="selected-session"]')).toHaveText("s1")
+
+    await worktree.focus()
+    await page.keyboard.press("ArrowRight")
+    await expect(local).toBeFocused()
+  })
 })

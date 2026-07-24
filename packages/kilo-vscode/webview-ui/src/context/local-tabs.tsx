@@ -21,10 +21,9 @@ import {
   insertSessionTabAfter,
   isPendingTab,
   openSessionTab,
-  pendingTabForCreated,
   reconcileTabs,
-  replacePendingTab,
   restoreTabs,
+  tabsForCreatedSession,
   type LocalTabState,
 } from "../utils/local-tabs"
 import {
@@ -186,10 +185,8 @@ export const LocalTabsProvider: ParentComponent = (props) => {
       }
       if (message.type === "sessionCreated") {
         if (message.draftID && promotePendingDraftDiscard(message.draftID, message.session.id)) return
-        const draft = pendingTabForCreated(ids(), message.draftID)
-        if (!draft) return
-        const before = active()
-        const next = replacePendingTab(current(), draft, message.session.id)
+        const next = tabsForCreatedSession(current(), message.session.id, message.draftID, message.activate)
+        if (!next) return
         fresh.add(message.session.id)
         apply(next)
         focus(next.active)

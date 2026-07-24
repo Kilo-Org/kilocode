@@ -175,14 +175,16 @@ export function List<T>(props: ListProps<T> & { ref?: (ref: ListRef) => void }) 
 
     const all = flat()
     const selected = all.find((x) => props.key(x) === active())
-    const index = selected ? all.indexOf(selected) : -1
     props.onKeyEvent?.(e, selected)
 
     if (e.defaultPrevented) return
 
     if (e.key === "Enter" && !e.isComposing) {
       e.preventDefault()
-      if (selected) handleSelect(selected, index)
+      // kilocode_change start - fall back to first result when no item is active (noInitialSelection)
+      const target = selected ?? (props.noInitialSelection ? all[0] : undefined)
+      if (target) handleSelect(target, all.indexOf(target))
+      // kilocode_change end
     } else if (props.search) {
       if (e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && (e.key === "n" || e.key === "p")) {
         onKeyDown(e)

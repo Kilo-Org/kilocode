@@ -14,6 +14,8 @@ import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.ModelSelectionUpdateDto
 import ai.kilocode.rpc.dto.ModelStateDto
 import ai.kilocode.rpc.dto.ModelVariantUpdateDto
+import ai.kilocode.rpc.dto.PermissionConfigDto
+import ai.kilocode.rpc.dto.PermissionRuleDto
 import ai.kilocode.rpc.dto.ProfileDto
 import ai.kilocode.rpc.dto.SkillsConfigDto
 import ai.kilocode.rpc.dto.TelemetryCaptureDto
@@ -230,7 +232,33 @@ class FakeAppRpcApi : KiloAppRpcApi {
             skills = patch.skills?.let { SkillsConfigDto(paths = it.paths.orEmpty(), urls = it.urls.orEmpty()) } ?: config.skills,
             mcp = mcp,
             agent = agents,
+            permission = mergePermission(config.permission, patch.permission),
         )
+    }
+
+    /** Mirrors the CLI's PATCH deep-merge for `config.permission`: `null` deletes a tool/pattern. */
+    private fun mergePermission(base: PermissionConfigDto?, patch: PermissionConfigDto?): PermissionConfigDto? {
+        if (patch == null) return base
+        val result = (base ?: emptyMap()).toMutableMap()
+        for ((tool, rule) in patch) {
+            when (rule) {
+                is PermissionRuleDto.Level -> {
+                    if (rule.value == null) result.remove(tool) else result[tool] = rule
+                }
+                is PermissionRuleDto.Patterns -> {
+                    val merged = when (val old = result[tool]) {
+                        is PermissionRuleDto.Level -> old.value?.let { mapOf("*" to it) } ?: emptyMap()
+                        is PermissionRuleDto.Patterns -> old.map
+                        null -> emptyMap()
+                    }.toMutableMap()
+                    for ((pattern, level) in rule.map) {
+                        if (level == null) merged.remove(pattern) else merged[pattern] = level
+                    }
+                    if (merged.isEmpty()) result.remove(tool) else result[tool] = PermissionRuleDto.Patterns(merged)
+                }
+            }
+        }
+        return result.takeIf { it.isNotEmpty() }
     }
 
     var fakeProfile: ProfileDto? = null

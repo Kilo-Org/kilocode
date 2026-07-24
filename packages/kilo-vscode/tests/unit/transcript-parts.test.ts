@@ -31,6 +31,13 @@ const SCRIPT = `
       state: { status: "completed", input: {}, output: "done", title: "Updated todos" },
     },
     { id: "read-running", type: "tool", tool: "read", state: { status: "running", input: {} } },
+    { id: "memory-running", type: "tool", tool: "kilo_memory_recall", state: { status: "running", input: {} } },
+    {
+      id: "memory-completed",
+      type: "tool",
+      tool: "kilo_memory_recall",
+      state: { status: "completed", input: {}, output: "memory", title: "Memory recalled" },
+    },
   ]
   const visible = parts.filter((part) => isRenderable(part, message)).map((part) => part.id)
 
@@ -38,7 +45,14 @@ const SCRIPT = `
     console.log("${FAIL}" + reason)
     process.exit(2)
   }
-  const expected = ["visible-text", "visible-reasoning", "todo-completed", "read-running"]
+  const expected = [
+    "visible-text",
+    "visible-reasoning",
+    "todo-completed",
+    "read-running",
+    "memory-running",
+    "memory-completed",
+  ]
   if (visible.length !== expected.length || visible.some((id, index) => id !== expected[index])) {
     fail("did not exclude transcript-invisible parts")
   }
