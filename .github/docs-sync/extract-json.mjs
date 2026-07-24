@@ -12,18 +12,33 @@ import { pathToFileURL } from "node:url"
 
 /** Returns validated triage entries, or null when extraction fails. */
 export function parseTriageEntries(raw) {
-  const start = raw.indexOf("[")
+  // `kilo run` prints the assistant message twice (streaming render + final
+  // summary), so stdout can hold the same array back-to-back. Find the
+  // largest valid trailing array: try each "[" from the end and keep the
+  // first candidate that parses.
   const end = raw.lastIndexOf("]")
-  if (start < 0 || end <= start) return null
+  if (end < 0) return null
 
-  let parsed
-  try {
-    parsed = JSON.parse(raw.slice(start, end + 1))
-  } catch {
-    return null
+  const starts = []
+  for (let i = 0; i <= end; i++) {
+    if (raw[i] === "[") starts.push(i)
   }
-  if (!Array.isArray(parsed)) return null
 
+  for (let s = starts.length - 1; s >= 0; s--) {
+    let parsed
+    try {
+      parsed = JSON.parse(raw.slice(starts[s], end + 1))
+    } catch {
+      continue
+    }
+    if (!Array.isArray(parsed)) continue
+    const entries = validate(parsed)
+    if (entries) return entries
+  }
+  return null
+}
+
+function validate(parsed) {
   const entries = []
   for (const e of parsed) {
     const pr = Number(e?.pr)
