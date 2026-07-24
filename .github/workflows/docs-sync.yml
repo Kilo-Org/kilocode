@@ -41,6 +41,11 @@ jobs:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 120
+    env:
+      # Both are required: without KILO_ORG_ID the gateway bills the key
+      # owner's personal balance (402 "Add credits") instead of the org.
+      KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+      KILO_ORG_ID: ${{ secrets.KILO_ORG_ID }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -74,8 +79,6 @@ jobs:
       - name: Triage merged PRs (LLM, chunked)
         id: triage
         if: steps.collect.outputs.count != '0'
-        env:
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
         run: node .github/docs-sync/triage.mjs
 
       - name: Filter docs-worthy PRs
@@ -103,8 +106,6 @@ jobs:
 
       - name: Update docs (Kilo CLI, batched)
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
-        env:
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
         run: node .github/docs-sync/edit.mjs
 
       - name: Verify docs build and tests
@@ -122,7 +123,6 @@ jobs:
         if: steps.verify.outcome == 'failure'
         continue-on-error: true
         env:
-          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           set -o pipefail
