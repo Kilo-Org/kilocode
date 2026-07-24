@@ -6,13 +6,16 @@ import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.UnknownFileType
 
 internal sealed class Kind {
-    data class Source(val file: FileType) : Kind()
+    data class Source(val file: FileType, val highlight: Highlight = Highlight.None) : Kind()
     data class Terminal(val stream: Stream, val mode: Mode) : Kind()
 }
 
 internal enum class Stream { Stdout, Stderr }
 
 internal enum class Mode { Ansi, Shell, Command }
+
+/** Extra overlay highlighting applied on top of a source code block. */
+internal enum class Highlight { None, Diff, DiffPure }
 
 internal object MdLanguage {
     /** Internal terminal fence tags produced by ShellToolView shell transcript markdown. */
@@ -58,11 +61,16 @@ internal object MdLanguage {
         "terraform" to "tf",
     )
 
+    private val diffs = setOf("diff", "patch", "udiff")
+    private val pure = setOf("diff-pure", "patch-pure")
+
     fun kind(lang: String?): Kind {
         val key = lang?.trim()?.split(Regex("\\s+"))?.take(2)?.joinToString(" ")?.lowercase().orEmpty()
         terms[key]?.let { return it }
         if (key == "shell script") return Kind.Source(type("sh"))
         val single = key.substringBefore(' ')
+        if (key in pure || single in pure) return Kind.Source(PlainTextFileType.INSTANCE, Highlight.DiffPure)
+        if (key in diffs || single in diffs) return Kind.Source(PlainTextFileType.INSTANCE, Highlight.Diff)
         terms[single]?.let { return it }
         files[key]?.let { return Kind.Source(type(it)) }
         files[single]?.let { return Kind.Source(type(it)) }

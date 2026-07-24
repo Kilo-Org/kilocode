@@ -1,4 +1,4 @@
-import type { Message, SessionCloseReason, TodoItem } from "../types/messages"
+import type { Message, Part, SessionCloseReason, TodoItem } from "../types/messages"
 
 type TerminalKind = "incomplete" | "limit" | "unknown" | "filtered" | "unexpected" | "interrupted" | "error"
 type TerminalTone = "warning" | "critical"
@@ -8,6 +8,7 @@ export interface TerminalState {
   tone: TerminalTone
   finish?: string
   vercelID?: string
+  generationID?: string
   remaining: number
 }
 
@@ -15,6 +16,7 @@ interface Input {
   reason?: SessionCloseReason
   messages: Message[]
   todos: TodoItem[]
+  parts?: (messageID: string) => Part[]
   hidden?: (id: string) => boolean
 }
 
@@ -26,10 +28,22 @@ function vercelID(message: Message | undefined) {
   )?.[1]
 }
 
+function identifiers(
+  message: Message | undefined,
+  parts: Input["parts"],
+): Pick<TerminalState, "vercelID" | "generationID"> {
+  if (message?.role !== "assistant" || message.finish !== "other") return {}
+  const part = (parts?.(message.id) ?? []).findLast(
+    (item): item is Extract<Part, { type: "step-finish" }> => item.type === "step-finish" && item.reason === "other",
+  )
+  return { vercelID: part?.vercelID ?? vercelID(message), generationID: part?.generationID }
+}
+
 export function terminal(input: Input): TerminalState | undefined {
   if (!input.reason) return undefined
   const last = input.messages[input.messages.length - 1]
   const finish = last?.role === "assistant" ? last.finish : undefined
+  const ids = identifiers(last, input.parts)
   const remaining = input.todos.filter((item) => item.status !== "completed" && item.status !== "cancelled").length
 
   if (input.reason === "interrupted") return { kind: "interrupted", tone: "warning", finish, remaining }
@@ -40,6 +54,8 @@ export function terminal(input: Input): TerminalState | undefined {
   if (finish === "length") return { kind: "limit", tone: "warning", finish, remaining }
   if (finish === "unknown") return { kind: "unknown", tone: "warning", finish, remaining, vercelID: vercelID(last) }
   if (finish === "content-filter") return { kind: "filtered", tone: "warning", finish, remaining }
-  if (finish === "other") return { kind: "unexpected", tone: "warning", finish, remaining }
+  if (finish === "other") {
+    return { kind: "unexpected", tone: "warning", finish, ...ids, remaining }
+  }
   return undefined
 }
