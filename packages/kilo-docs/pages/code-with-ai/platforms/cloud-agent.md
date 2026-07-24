@@ -64,6 +64,7 @@ Agent environment profiles are reusable bundles of environment settings for clou
 - Environment variables (plaintext)
 - Secrets (encrypted at rest; decrypted only by the cloud agent)
 - Setup commands (which Cloud Agent will execute before starting a session)
+- Skills (skill folders uploaded as `.zip` archives, with up to 40 companion files per skill)
 
 Profiles are owned by either a user or an organization. Names are unique per owner, and each owner can have a single default profile. This lets teams share standard environment setups across multiple sessions and triggers.
 

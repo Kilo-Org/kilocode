@@ -16,10 +16,34 @@ Install Kilo Code for Android from [Google Play](https://play.google.com/store/a
 The mobile app lets you:
 
 - View and manage Kilo Code sessions, including remote CLI and extension sessions running on your local machine.
+- Run slash commands (like `/compact`) on connected remote CLI sessions, and start a new session in the same workspace with `/new`. Older CLI versions that do not support remote commands prompt you to upgrade.
+- Review GitHub pull requests end to end — diffs, checks, comments, and merging.
 - Chat with KiloClaw from your phone.
 - Spawn Cloud Agents and code directly from the app.
 - Monitor and view all non-remote sessions in one place.
 - Create, onboard, and manage KiloClaw instances.
+
+## Reviewing GitHub pull requests
+
+Open a pull request from a PR link to review it without leaving the app:
+
+- **Overview** — PR state and CI checks at a glance.
+- **Files** — syntax-highlighted diffs with line-level comments and a file navigator.
+- **Discussion** — review threads with replies, resolve/unresolve, and reactions.
+
+Comments you leave are collected into a pending review on your device and submitted to GitHub as a single review. When the PR is ready, you can merge it (merge, squash, or rebase), enable or disable auto-merge, or update the branch — all from the app.
+
+PR review uses your connected GitHub account; the app asks you to connect GitHub if you have not already.
+
+## Session cost and model details
+
+The app shows what each session cost and which models did the work:
+
+- **Session list** — a finished session with a recorded cost shows it in the row's meta line (for example, `$0.12 · 5m ago`). Sessions that are still running or have no cost show no cost.
+- **Cost breakdown** — open a session's Context usage sheet to see a Token usage section (input, output, reasoning, cache read, and cache write tokens, plus the cache hit rate) and a collapsible Models section with each model's name, provider, step count, and cost. A Subagents row covers any remaining spend, so the per-model costs always add up to the session total.
+- **Per-message model label** — assistant messages show a dimmed model label on the first assistant reply and whenever the model changes during the session. Turns routed by [Auto Model](/docs/code-with-ai/agents/auto-model) show the concrete model that handled the turn.
+
+Cost is recorded when a session closes; sessions that closed before this feature shipped do not show a cost.
 
 ## Kilo Pass and Billing
 

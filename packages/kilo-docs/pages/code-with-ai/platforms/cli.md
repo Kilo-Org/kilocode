@@ -374,6 +374,25 @@ Common configuration options include:
 **Using a model that's not in the built-in list?** You can register any model by adding it under `provider.<provider_id>.models` in your config file. See [Custom Models](/docs/code-with-ai/agents/custom-models) for full details and examples.
 {% /callout %}
 
+### Model Stream Timeouts
+
+If a model stops sending data mid-response, Kilo aborts the stalled stream after 60 seconds of inactivity so the session returns control instead of hanging. The watchdog pauses while local tools run, so long-running shell commands and foreground subagents are not interrupted.
+
+Tune the window per provider with `options.chunkTimeout` (milliseconds), or set it to `false` to disable the watchdog:
+
+```json
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "chunkTimeout": 120000
+      }
+    }
+  }
+}
+```
+
 ### Formatter and LSP Toggles
 
 Set `formatter` or `lsp` to `true` to use built-in defaults, or `false` to disable the feature completely:

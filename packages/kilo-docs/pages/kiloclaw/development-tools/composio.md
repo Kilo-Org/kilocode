@@ -20,19 +20,21 @@ Before you begin, make sure you have:
 
 ## Setup
 
-### Step 1: Create a Composio account and get your API key
+### Step 1: Create a Composio account and get your consumer key
 
 1. Go to [composio.dev](https://composio.dev) and sign up for a free account
 2. Once logged in, open the **Settings** or **API Keys** section of your Composio dashboard
-3. Click **Create API Key**, give it a name (for example, `kiloclaw`), and copy the key
+3. Copy your consumer key (it starts with `ck_`)
 
-### Step 2: Add the API key to KiloClaw
+### Step 2: Add the consumer key to KiloClaw
 
 1. Go to the **Settings** tab on your [KiloClaw dashboard](/docs/kiloclaw/dashboard)
 2. Scroll to the **Integrations** section and find **Composio**
-3. Paste the API key into the **Composio API Key** field
+3. Paste the key into the **Composio** field
 4. Click **Save**
 5. **Redeploy** your instance to apply the changes
+
+KiloClaw connects your agent to Composio through Composio's hosted MCP server — nothing is installed on your instance. To disconnect, clear the key and redeploy.
 
 ### Step 3: Authenticate tools in Composio
 

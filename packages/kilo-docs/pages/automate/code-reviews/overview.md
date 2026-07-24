@@ -113,6 +113,30 @@ Each sub-agent must stay read-only, must not post comments, and must return find
 
 `REVIEW.md` can change review policy and sub-agent usage, but it cannot override Kilo's hard safety constraints, read-only mode, non-interactive execution, platform API instructions, diff-line rules, duplicate-comment rules, or output formatting requirements.
 
+## Council Reviews
+
+A council review runs several specialist models over the same change and combines their results into a single decision. When you create a review job, you can enable a council, select the specialist models, and pick a governance mode.
+
+Each specialist reports findings with a severity — `critical`, `warning`, `suggestion`, or `nitpick` — and the outcome is computed deterministically from those findings in code, not voted on by the models:
+
+- A specialist **blocks** when it reports at least one `critical` finding; otherwise it **passes**. `critical` is the only blocking severity.
+- A specialist with no usable result is shown as **No result** rather than counted as a pass or block.
+- When the review completes, Kilo posts a **Council Review** section on the PR/MR with the decision, the governance mode, and a per-specialist table (specialist, model, highest severity, finding count). Re-running the review updates this section in place.
+
+### Governance Modes
+
+| Mode | Behavior |
+|---|---|
+| **Advisory** (default) | Reports each specialist's vote with no aggregate decision and never blocks merging. |
+| **Unanimous** | Blocks unless every specialist passes. |
+| **Majority** | Blocks when block votes outnumber pass votes. |
+
+Under Unanimous or Majority, a `block` decision fails the PR/MR status check, so the change cannot be merged. If specialist results are missing or invalid, these modes fail closed to `block`. Reviews you start manually report the decision but never block merging.
+
+### Automated Review Exclusions
+
+On GitHub, automated (webhook-triggered) reviews never use a council for draft PRs, bot-authored PRs, or PRs opened from a fork — these run as standard reviews instead, even when the repository is opted in to council reviews. These exclusions are built in and cannot be overridden by configuration. The review still runs; only the council review type is skipped. Reviews you start manually can always use a council.
+
 ## Local Code Reviews
 
 Code Reviewer is also available locally. This is valuable for developers who want to review their code before pushing a pull request to their team publicly, or for developers who want reviews and don't need to ship a pull request to GitHub.

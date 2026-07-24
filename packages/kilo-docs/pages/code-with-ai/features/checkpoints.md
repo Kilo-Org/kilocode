@@ -98,6 +98,10 @@ Clicking **Revert to here** does two things:
 1. **Restores your workspace files** to the state they were in just before that message was sent
 2. **Hides all subsequent messages** in the chat so you see the conversation as it was at that point
 
+{% callout type="note" %}
+Workspace restoration requires snapshots. If snapshots are disabled or the reverted range has no stored checkpoint, only the conversation is rewound — the agent's file changes remain on disk, and the revert banner warns you (see below).
+{% /callout %}
+
 The button is only active when the agent is idle. While the agent is running, the button is disabled to prevent reverting mid-operation.
 
 ### The Revert Banner
@@ -112,6 +116,11 @@ The banner provides two actions:
 
 - **Redo** — Steps forward one message at a time, re-applying changes from the next reverted message
 - **Redo All** — Restores the workspace to the latest state and un-hides all messages (only shown when more than one message is reverted)
+
+If a revert could not restore your workspace files, the banner warns you that only the conversation was rewound:
+
+- **Snapshots disabled** — the banner explains that file changes were not restored because snapshots are disabled, and offers an **Enable snapshots** button that opens **Settings → Checkpoints**.
+- **No checkpoint available** — the banner explains that no file checkpoint was available, so workspace changes remain on disk (for example, when reverting a range that predates checkpoints).
 
 ### Making a Revert Permanent
 
