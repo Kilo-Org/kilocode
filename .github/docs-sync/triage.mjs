@@ -52,7 +52,16 @@ function triageChunk(chunk, index) {
     }
     fs.writeFileSync(`${OUT_DIR}/triage-raw-${index}.txt`, raw)
     const entries = parseTriageEntries(raw)
-    if (entries) return entries
+    if (entries) {
+      // An entry for a PR outside this chunk must not win the shared dedupe
+      // against the chunk that actually owns it — drop foreign entries.
+      const allowed = new Set(chunk.map((d) => d.url))
+      const owned = entries.filter((e) => allowed.has(e.url))
+      if (owned.length !== entries.length) {
+        console.warn(`chunk ${index}: dropped ${entries.length - owned.length} entries for PRs outside the chunk`)
+      }
+      if (owned.length > 0) return owned
+    }
     console.warn(`chunk ${index} attempt ${attempt}: no valid JSON in output`)
   }
 

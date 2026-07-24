@@ -22,17 +22,24 @@ const DOCS_PATH = "packages/kilo-docs"
 
 const git = (args) => execFileSync("git", args, { stdio: ["ignore", "pipe", "inherit"] }).toString().trim()
 
+// Agent-generated strings land in the PR body next to machine-read markers.
+// Strip HTML-comment sequences so a crafted/adversarial value cannot forge
+// section boundaries or the processed-through watermark.
+function clean(value) {
+  return String(value ?? "").replaceAll("<!--", "").replaceAll("-->", "")
+}
+
 function shortRef(url) {
-  return String(url).replace("https://github.com/", "").replace("/pull/", "#")
+  return clean(url).replace("https://github.com/", "").replace("/pull/", "#")
 }
 
 function changeRow(e) {
-  return `| ${e.action} | [${shortRef(e.url)}](${e.url}) |`
+  return `| ${clean(e.action)} | [${shortRef(e.url)}](${clean(e.url)}) |`
 }
 
 function skippedRow(e) {
-  const reason = String(e.reason ?? "").replaceAll("|", "\\|").replaceAll("\n", " ")
-  return `| [${shortRef(e.url)}](${e.url}) | ${reason} |`
+  const reason = clean(e.reason).replaceAll("|", "\\|").replaceAll("\n", " ")
+  return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
 }
 
 export function extractSectionRows(body, name) {
@@ -51,14 +58,14 @@ function section(name, header, rows) {
   return `<!-- docs-sync:${name}:start -->\n${body}\n<!-- docs-sync:${name}:end -->`
 }
 
-export function renderBody({ date, since, through, changesRows, skippedRows, verified, draftReasons }) {
+export function renderBody({ date, since, through, changesRows, skippedRows, verified, draftReasons, note }) {
   return `## Automated docs sync — ${date}
 
 This PR keeps kilo.ai/docs in sync with features merged to [Kilo-Org/cloud](https://github.com/Kilo-Org/cloud) and [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode). Every change below links to the merged PR it documents.
 
 - Window: \`${since}\` → \`${through}\`
 - Verification (docs build + tests): **${verified ? "passing" : "FAILING — needs a human look"}**
-${draftReasons.length > 0 ? `- Draft because: ${draftReasons.join("; ")}\n` : ""}
+${note ? `- ${note}\n` : ""}${draftReasons.length > 0 ? `- Draft because: ${draftReasons.join("; ")}\n` : ""}
 ### Changes
 
 ${section("changes", "| Docs change | Source |", changesRows)}
@@ -98,7 +105,7 @@ async function main() {
 
   const through = process.env.PROCESSED_THROUGH ?? new Date().toISOString()
   const since = process.env.SINCE ?? "unknown"
-  const mode = process.env.PREP_MODE === "update" ? "update" : "fresh"
+  const mode = ["update", "conflict"].includes(process.env.PREP_MODE) ? process.env.PREP_MODE : "fresh"
   const existingPr = process.env.PR_NUMBER || ""
   const verified = process.env.VERIFIED === "true"
   const date = through.slice(0, 10)
@@ -126,6 +133,15 @@ async function main() {
   const draftReasons = []
   if (changedFiles.length > FILE_CAP) draftReasons.push(`diff exceeds ${FILE_CAP} files (${changedFiles.length})`)
   if (!verified) draftReasons.push("docs build/tests not passing")
+  // Content gate: legitimate bot edits are docs pages and nav files. Anything
+  // else in the docs package (build config, components, tests) executes
+  // during the verify build, so force human review before merge.
+  const nonContent = changedFiles.filter(
+    (f) => !f.startsWith("packages/kilo-docs/pages/") && !f.startsWith("packages/kilo-docs/lib/nav/"),
+  )
+  if (nonContent.length > 0) {
+    draftReasons.push(`touches non-content files outside pages/ and lib/nav/: ${nonContent.slice(0, 5).join(", ")}`)
+  }
   const draft = draftReasons.length > 0
 
   git(mode === "update" ? ["push", "origin", `HEAD:${BRANCH}`] : ["push", "--force-with-lease", "origin", `HEAD:${BRANCH}`])
@@ -152,6 +168,10 @@ async function main() {
     skippedRows: mergeRows(oldSkipped, skippedNew),
     verified,
     draftReasons,
+    note:
+      mode === "conflict" && existingPr
+        ? `Continues from #${existingPr}, whose branch conflicted with \`main\` (its commits are preserved there).`
+        : "",
   })
 
   try {
@@ -192,6 +212,14 @@ async function main() {
     prNumber = pr.number
     prUrl = pr.html_url
     await api(`/repos/${repo()}/issues/${prNumber}/labels`, { method: "POST", body: { labels: ["auto-docs"] } })
+    if (mode === "conflict" && existingPr) {
+      await api(`/repos/${repo()}/issues/${existingPr}/comments`, {
+        method: "POST",
+        body: {
+          body: `(bot) This branch conflicted with \`main\`, so the sync continues in ${prUrl}. Commits on this branch are preserved — please close this PR after the new one is reviewed.`,
+        },
+      })
+    }
   }
 
   appendOutput("pr_url", prUrl)

@@ -13,9 +13,9 @@ import { pathToFileURL } from "node:url"
 /** Returns validated triage entries, or null when extraction fails. */
 export function parseTriageEntries(raw) {
   // `kilo run` prints the assistant message twice (streaming render + final
-  // summary), so stdout can hold the same array back-to-back. Find the
-  // largest valid trailing array: try each "[" from the end and keep the
-  // first candidate that parses.
+  // summary), so stdout can hold the same array back-to-back. Try each "["
+  // from the right and return the first slice that parses — i.e. the last
+  // (most recent) valid array in the output.
   const end = raw.lastIndexOf("]")
   if (end < 0) return null
 

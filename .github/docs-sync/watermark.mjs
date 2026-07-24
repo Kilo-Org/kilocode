@@ -29,6 +29,9 @@ async function findWatermark() {
     const query = `repo:${r} is:pr label:auto-docs sort:created-desc ${state === "open" ? "is:open" : "is:merged"}`
     const prs = await searchIssues(query, { maxPages: 1 })
     for (const pr of prs) {
+      // Only trust markers on PRs authored by the bot itself: bodies are
+      // editable and the label can be applied by anyone with triage access.
+      if (pr.user?.login !== "github-actions[bot]") continue
       const marker = extractMarker(pr.body)
       if (marker) {
         console.log(`watermark from ${state} PR #${pr.number}: ${marker.toISOString()}`)
@@ -52,6 +55,13 @@ if (input) {
 } else {
   since =
     (await findWatermark()) ?? new Date(now.getTime() - FALLBACK_HOURS * 3600 * 1000)
+}
+
+// A forged, edited, or malformed marker in the future would silently match
+// nothing in the merged:>= search; clamp it loudly.
+if (since > now) {
+  console.warn(`watermark ${since.toISOString()} is in the future, clamping to now`)
+  since = now
 }
 
 const cap = new Date(now.getTime() - CAP_DAYS * 24 * 3600 * 1000)

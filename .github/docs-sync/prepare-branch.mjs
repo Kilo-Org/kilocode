@@ -32,11 +32,17 @@ if (prs.length > 0) {
     git(["merge", "origin/main", "--no-edit"])
     mode = "update"
   } catch {
-    console.warn(`merge of origin/main into ${branch} conflicted; resetting branch to origin/main.`)
-    console.warn("Unmerged work on the previous branch is re-derived from the watermark window.")
+    console.warn(`merge of origin/main into ${branch} conflicted.`)
+    console.warn("Leaving the conflicted branch untouched so human commits are preserved; continuing on a fresh dated branch.")
     git(["merge", "--abort"])
+    branch = `${DEFAULT_BRANCH}-${new Date().toISOString().slice(0, 10)}`
+    try {
+      git(["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`])
+    } catch {
+      // dated branch does not exist on origin yet — fine
+    }
     git(["checkout", "-B", branch, "origin/main"])
-    mode = "fresh"
+    mode = "conflict"
   }
 } else {
   // Keep the remote-tracking ref current so the later --force-with-lease

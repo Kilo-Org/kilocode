@@ -61,7 +61,9 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
       execFileSync(
         "kilo",
         ["run", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
-        { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 25 * 60 * 1000, stdio: ["ignore", "inherit", "inherit"] },
+        // stdout streams live to the Actions log; stderr is piped so failure
+        // warnings can include the tail of the actual CLI error.
+        { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 25 * 60 * 1000, stdio: ["ignore", "inherit", "pipe"] },
       )
       if (fs.existsSync(summaryFile)) return true
       // Tolerate the agent dropping the docs-sync-out/ prefix.

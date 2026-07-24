@@ -27,26 +27,44 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 export async function api(path, { method = "GET", body } = {}) {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(`${API}${path}`, {
-      method,
-      headers: {
-        authorization: `Bearer ${token()}`,
-        accept: "application/vnd.github+json",
-        "x-github-api-version": "2022-11-28",
-        "user-agent": "kilo-docs-sync-bot",
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
+    let res
+    try {
+      res = await fetch(`${API}${path}`, {
+        method,
+        headers: {
+          authorization: `Bearer ${token()}`,
+          accept: "application/vnd.github+json",
+          "x-github-api-version": "2022-11-28",
+          "user-agent": "kilo-docs-sync-bot",
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
+    } catch (err) {
+      if (attempt < MAX_RETRIES) {
+        console.warn(`network error (${err.message}), retrying in ${5 * attempt}s`)
+        await sleep(5000 * attempt)
+        continue
+      }
+      throw err
+    }
 
-    if (res.status === 403 && attempt < MAX_RETRIES) {
+    if (res.status === 403) {
       const text = await res.text()
-      if (text.includes("rate limit")) {
+      if (text.includes("rate limit") && attempt < MAX_RETRIES) {
         const retryAfter = Number(res.headers.get("retry-after")) || 30
         console.warn(`rate limited, retrying in ${retryAfter}s`)
         await sleep(retryAfter * 1000)
         continue
       }
-      throw new Error(`${method} ${path} -> 403: ${text}`)
+      const err = new Error(`${method} ${path} -> 403: ${text}`)
+      err.status = 403
+      throw err
+    }
+
+    if (res.status >= 500 && attempt < MAX_RETRIES) {
+      console.warn(`${method} ${path} -> ${res.status}, retrying in ${5 * attempt}s`)
+      await sleep(5000 * attempt)
+      continue
     }
 
     if (!res.ok) {

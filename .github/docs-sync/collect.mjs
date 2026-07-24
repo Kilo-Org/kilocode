@@ -42,7 +42,7 @@ const since = argSince()
 console.log(`collecting PRs merged since ${since.toISOString()}`)
 
 const digest = []
-const dropped = { bot: 0, label: 0, title: 0, docs_only: 0 }
+const dropped = { bot: 0, label: 0, title: 0, docs_only: 0, fetch_error: 0 }
 
 for (const fullRepo of SOURCE_REPOS) {
   const prs = await mergedPrs(fullRepo, since)
@@ -64,9 +64,21 @@ for (const fullRepo of SOURCE_REPOS) {
     }
 
     const number = item.number
-    const pr = await api(`/repos/${fullRepo}/pulls/${number}`)
-    const files = await listPrFiles(fullRepo, number)
-    if (files.length > 0 && files.every((f) => DOCS_ONLY_PATH.test(f.filename))) {
+    let pr
+    let files
+    try {
+      pr = await api(`/repos/${fullRepo}/pulls/${number}`)
+      files = await listPrFiles(fullRepo, number)
+    } catch (err) {
+      // Isolate per-PR failures: one dead PR must not abort the whole run.
+      console.warn(`::warning::skipping ${fullRepo}#${number}: ${err.message}`)
+      dropped.fetch_error++
+      continue
+    }
+    // listPrFiles caps at 300 files; a truncated list can't support the
+    // docs-only classification, so keep such PRs and record the true total.
+    const truncated = files.length >= 300
+    if (!truncated && files.length > 0 && files.every((f) => DOCS_ONLY_PATH.test(f.filename))) {
       dropped.docs_only++
       continue
     }
@@ -92,7 +104,7 @@ for (const fullRepo of SOURCE_REPOS) {
       labels: (pr.labels ?? []).map((l) => l.name),
       body: (pr.body ?? "").slice(0, BODY_LIMIT),
       files: files.slice(0, FILE_LIMIT).map((f) => `${f.status} ${f.filename} (+${f.additions}/-${f.deletions})`),
-      files_total: files.length,
+      files_total: pr.changed_files ?? files.length,
       patch_excerpt: patch,
     })
   }
@@ -120,7 +132,7 @@ appendSummary(
     "",
     `- window: since \`${since.toISOString()}\``,
     `- kept: **${digest.length}** PRs`,
-    `- dropped: ${dropped.bot} bot, ${dropped.label} auto-docs, ${dropped.title} title filter, ${dropped.docs_only} docs-only`,
+    `- dropped: ${dropped.bot} bot, ${dropped.label} auto-docs, ${dropped.title} title filter, ${dropped.docs_only} docs-only, ${dropped.fetch_error} fetch errors`,
     "",
     ...digest.map((d) => `- [${d.repo}#${d.number}](${d.url}) ${d.title}`),
   ].join("\n"),
