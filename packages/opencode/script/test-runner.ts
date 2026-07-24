@@ -272,7 +272,9 @@ async function signal(proc: Proc, sig: "SIGTERM" | "SIGKILL") {
       try {
         process.kill(target, sig)
       } catch (error) {
-        if (!(typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH")) throw error
+        if (typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH") continue
+        // A kill failure (e.g. EPERM in a sandboxed runner) must not take down the whole run.
+        console.error(`warn: failed to signal ${target} with ${sig}:`, error)
       }
     }
   }
