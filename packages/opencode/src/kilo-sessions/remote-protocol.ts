@@ -23,11 +23,22 @@ export namespace RemoteProtocol {
       attachments: z.boolean().optional(),
     })
     .optional()
+
+  // Identity of the `kilo remote` spawner for the mobile Run-on picker.
+  // Absent on legacy CLIs that predate the spawner; the relay excludes those.
+  export const Instance = z.object({
+    name: z.string().min(1).max(64),
+    projectName: z.string().min(1).max(64),
+    version: z.string().max(32).optional(),
+  })
+  export type Instance = z.infer<typeof Instance>
+
   export const Heartbeat = z.object({
     type: z.literal("heartbeat"),
     sessions: z.array(SessionInfo),
     protocolVersion: z.string().optional(), // lets relay detect CLI capabilities without probing commands
     capabilities: Capabilities,
+    instance: Instance.optional(),
   })
   export type Heartbeat = z.infer<typeof Heartbeat>
 

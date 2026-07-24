@@ -42,6 +42,8 @@ export namespace RemoteWS {
     gatherTimeout?: number
     /** Max unresolved gather operations before cycles send degraded heartbeats. Defaults to 4. */
     maxOutstandingGathers?: number
+    /** Spawner identity advertised on every heartbeat. Omitted on legacy callers. */
+    instance?: RemoteProtocol.Instance
   }
 
   export type Connection = {
@@ -238,6 +240,7 @@ export namespace RemoteWS {
                 protocolVersion: InstallationVersion,
                 capabilities: { attachments: true },
                 sessions: fresh,
+                ...(options.instance ? { instance: options.instance } : {}),
               })
               if (sentLive) {
                 // A waiter requiring a specific id is satisfied only when
@@ -274,6 +277,7 @@ export namespace RemoteWS {
                 protocolVersion: InstallationVersion,
                 capabilities: { attachments: true },
                 sessions: lastGood ?? [],
+                ...(options.instance ? { instance: options.instance } : {}),
               })
               waiters = cycleWaiters.concat(waiters)
             }

@@ -321,4 +321,58 @@ describe("RemoteProtocol", () => {
       expect(result.data.type).toBe("heartbeat")
     }
   })
+
+  test("heartbeat with instance parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "macbook", projectName: "cloud", version: "7.4.15" },
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance).toEqual({
+        name: "macbook",
+        projectName: "cloud",
+        version: "7.4.15",
+      })
+    }
+  })
+
+  test("heartbeat without instance parses", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+    })
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.data.instance).toBeUndefined()
+    }
+  })
+
+  test("heartbeat rejects empty instance.name", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "", projectName: "cloud" },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  test("heartbeat rejects overlong instance.projectName", () => {
+    const result = RemoteProtocol.Heartbeat.safeParse({
+      type: "heartbeat",
+      sessions: [],
+      instance: { name: "host", projectName: "x".repeat(65) },
+    })
+    expect(result.success).toBe(false)
+  })
+
+  test("instance rejects overlong version", () => {
+    const result = RemoteProtocol.Instance.safeParse({
+      name: "host",
+      projectName: "proj",
+      version: "v".repeat(33),
+    })
+    expect(result.success).toBe(false)
+  })
 })

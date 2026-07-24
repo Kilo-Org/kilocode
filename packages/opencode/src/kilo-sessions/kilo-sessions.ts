@@ -25,6 +25,7 @@ import { Vcs } from "@/project/vcs"
 import simpleGit from "simple-git"
 import type { RemoteWS } from "@/kilo-sessions/remote-ws"
 import type { RemoteSender } from "@/kilo-sessions/remote-sender"
+import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -34,6 +35,55 @@ import { withTimeout } from "@/util/timeout"
 import { Snapshot } from "@/snapshot"
 import { cumulativeSessionDiff } from "@/kilocode/session-portability/cumulative-diff"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { InstallationVersion } from "@opencode-ai/core/installation/version"
+import os from "os"
+
+/** Strip controls, collapse whitespace, clamp, fall back when empty. */
+export function sanitizeLabel(value: string, fallback: string, max: number): string {
+  const cleaned = value
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max)
+  return cleaned.length > 0 ? cleaned : fallback
+}
+
+/** Basename of a launch directory for the heartbeat `projectName` field. */
+export function projectLabel(directory: string): string {
+  // Strip trailing slashes so `/tmp/proj/` → "proj" (not "").
+  const trimmed = directory.replace(/[\\/]+$/, "")
+  const base = trimmed.split(/[\\/]/).pop() ?? ""
+  return sanitizeLabel(base, "unknown-project", 64)
+}
+
+/** OS hostname for the heartbeat `name` field; empty → "Kilo runtime". */
+export function hostLabel(hostname = os.hostname()): string {
+  return sanitizeLabel(hostname, "Kilo runtime", 64)
+}
+
+/** CLI version clamped to the cloud contract's 32-char cap. */
+export function versionLabel(version = InstallationVersion): string | undefined {
+  const cleaned = version
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 32)
+  return cleaned.length > 0 ? cleaned : undefined
+}
+
+/** Build and validate the spawner `instance` once at remote enable. */
+export function buildRemoteInstance(input: {
+  directory: string
+  hostname?: string
+  version?: string
+}): RemoteProtocol.Instance {
+  const version = versionLabel(input.version)
+  return RemoteProtocol.Instance.parse({
+    name: hostLabel(input.hostname),
+    projectName: projectLabel(input.directory),
+    ...(version ? { version } : {}),
+  })
+}
 
 async function provide<R>(input: { directory: string; fn: () => R }): Promise<R> {
   const { provide } = await import("@/kilocode/instance")
@@ -480,6 +530,9 @@ export namespace KiloSessions {
       // Capture directory so the heartbeat timer can re-enter the Instance context
       // (setInterval runs outside AsyncLocalStorage scope)
       const directory = Instance.directory
+      // Spawner identity for the mobile Run-on picker. Validated once here so a
+      // bad value fails at enable rather than silently per heartbeat.
+      const instance = buildRemoteInstance({ directory })
       const getSessions = async () => {
         const [gitUrl, gitBranch] = await Promise.all([
           getGitUrl().catch(() => undefined),
@@ -520,6 +573,7 @@ export namespace KiloSessions {
         getToken: kilocodeToken,
         withContext: (fn) => provide({ directory, fn }),
         getSessions,
+        instance,
         log,
         onOpen: () => {
           void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: true })

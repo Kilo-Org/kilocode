@@ -255,6 +255,48 @@ describe("RemoteWS", () => {
     expect(parsed.capabilities).toEqual({ attachments: true })
   })
 
+  test("fresh heartbeat includes instance when provided", async () => {
+    server = createServer()
+    const connecting = server.waitForConnect()
+    const msg = server.waitForMessage()
+    const instance = { name: "macbook", projectName: "cloud", version: "7.4.15" }
+
+    conn = RemoteWS.connect({
+      url: server.url,
+      getToken: async () => "tok",
+      getSessions: async () => ({ sessions: [] }),
+      log: nolog(),
+      heartbeat: 100,
+      instance,
+    })
+
+    await connecting
+    await settled()
+    const parsed = JSON.parse(await msg)
+    expect(parsed.type).toBe("heartbeat")
+    expect(parsed.instance).toEqual(instance)
+  })
+
+  test("fresh heartbeat omits instance key when not provided", async () => {
+    server = createServer()
+    const connecting = server.waitForConnect()
+    const msg = server.waitForMessage()
+
+    conn = RemoteWS.connect({
+      url: server.url,
+      getToken: async () => "tok",
+      getSessions: async () => ({ sessions: [] }),
+      log: nolog(),
+      heartbeat: 100,
+    })
+
+    await connecting
+    await settled()
+    const parsed = JSON.parse(await msg)
+    expect(parsed.type).toBe("heartbeat")
+    expect(parsed).not.toHaveProperty("instance")
+  })
+
   test("serializes concurrent heartbeat snapshots", async () => {
     server = createServer()
     const connecting = server.waitForConnect()
@@ -1268,6 +1310,64 @@ describe("RemoteWS", () => {
       )
       await flushLong()
       expect(resolved).toBe(false)
+    })
+  })
+
+  test("degraded heartbeat includes instance when provided", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+      const instance = { name: "host", projectName: "proj", version: "1.0.0" }
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+        instance,
+      })
+
+      await flush()
+      FakeWebSocket.instances[0].open()
+      void conn.heartbeat().catch(() => {})
+      clock.advance(1000)
+      await flushLong()
+
+      const parsed = JSON.parse(FakeWebSocket.instances[0].sent[0])
+      expect(parsed.type).toBe("heartbeat")
+      expect(parsed.instance).toEqual(instance)
+    })
+  })
+
+  test("degraded heartbeat omits instance key when not provided", async () => {
+    await withFakeWebSocket(async (clock) => {
+      const getSessions = () => new Promise<{ sessions: RemoteWS.SessionInfo[] }>(() => {})
+
+      conn = RemoteWS.connect({
+        url: "ws://example.test",
+        getToken: async () => "tok",
+        getSessions,
+        log: nolog(),
+        heartbeat: 60_000,
+        timers: clock,
+        now: () => clock.now,
+        timeout: 300_000,
+        gatherTimeout: 1000,
+      })
+
+      await flush()
+      FakeWebSocket.instances[0].open()
+      void conn.heartbeat().catch(() => {})
+      clock.advance(1000)
+      await flushLong()
+
+      const parsed = JSON.parse(FakeWebSocket.instances[0].sent[0])
+      expect(parsed.type).toBe("heartbeat")
+      expect(parsed).not.toHaveProperty("instance")
     })
   })
 
