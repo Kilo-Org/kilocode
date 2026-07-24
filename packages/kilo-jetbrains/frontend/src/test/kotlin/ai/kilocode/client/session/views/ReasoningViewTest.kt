@@ -290,8 +290,8 @@ class ReasoningViewTest : BasePlatformTestCase() {
             val panel = scroll.viewport.view as JPanel
 
             assertEquals(1, panel.components.filterIsInstance<JComponent>().size)
-            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(350))
-            assertEquals(JBUI.scale(450), body.component.preferredSize.height)
+            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
+            assertEquals(JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT), body.component.preferredSize.height)
         } finally {
             Disposer.dispose(body.disposable)
         }

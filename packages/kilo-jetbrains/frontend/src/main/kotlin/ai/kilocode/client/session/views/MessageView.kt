@@ -7,6 +7,7 @@ import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
+import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolCallRef
 import ai.kilocode.client.session.model.ToolExecState
@@ -110,7 +111,12 @@ class MessageView(
     /** Add or update the renderer for [content]. */
     @RequiresEdt
     fun upsertPart(content: Content) {
-        if (content is StepFinish) return
+        upsertPartChanged(content)
+    }
+
+    @RequiresEdt
+    fun upsertPartChanged(content: Content): Boolean {
+        if (content is StepFinish) return false
         if (isHidden(content)) {
             if (isPromptMention(content)) syncPromptMentions()
             // Remove any stale view for this content so it disappears when suppressed
@@ -122,7 +128,7 @@ class MessageView(
                     stale.remove(content.id)
                     if (!stale.isEmpty()) {
                         refresh()
-                        return
+                        return true
                     }
                     attachments = null
                 }
@@ -131,14 +137,15 @@ class MessageView(
                 Disposer.dispose(stale)
                 syncBorder()
                 refresh()
+                return true
             }
-            return
+            return false
         }
         val id = aliases[content.id]
         if (id != null && content is Reasoning) {
-            updateAlias(content, id)
+            if (!updateAlias(content, id)) return false
             refresh()
-            return
+            return true
         }
         if (id != null) {
             aliases.remove(content.id)
@@ -149,20 +156,24 @@ class MessageView(
             if (existing is PromptAttachmentView && content is FileAttachment) {
                 existing.upsert(content)
                 refresh()
-                return
+                return true
             }
             if (ViewFactory.shouldReplace(existing, content)) {
                 replacePart(content, existing)
-                return
+                return true
+            }
+            if (content is Text && existing is TextView && existing !is PromptView && existing.markdown() == content.content.toString()) {
+                return false
             }
             existing.update(content)
             syncPromptToolbar()
             refresh()
-            return
+            return true
         }
         addPart(content)
         syncBorder()
         refresh()
+        return true
     }
 
     @RequiresEdt
@@ -203,14 +214,15 @@ class MessageView(
     }
 
     @RequiresEdt
-    private fun updateAlias(content: Reasoning, id: String) {
-        val view = parts[id] as? ReasoningView ?: return
+    private fun updateAlias(content: Reasoning, id: String): Boolean {
+        val view = parts[id] as? ReasoningView ?: return false
         val prev = sources[content.id].orEmpty()
         val next = content.content.toString()
         val delta = if (next.startsWith(prev)) next.removePrefix(prev) else next
         sources[content.id] = next
-        if (delta.isEmpty()) return
+        if (delta.isEmpty()) return false
         view.update(merged(view, content, delta))
+        return true
     }
 
     private fun merged(view: ReasoningView, content: Reasoning, delta: String) = Reasoning(view.contentId).also {
@@ -242,16 +254,21 @@ class MessageView(
     /** Remove the renderer for [contentId] if present. */
     @RequiresEdt
     fun removePart(contentId: String) {
+        removePartChanged(contentId)
+    }
+
+    @RequiresEdt
+    fun removePartChanged(contentId: String): Boolean {
         if (aliases.remove(contentId) != null) {
             sources.remove(contentId)
-            return
+            return true
         }
-        val view = parts.remove(contentId) ?: return
+        val view = parts.remove(contentId) ?: return false
         if (view is PromptAttachmentView) {
             view.remove(contentId)
             if (!view.isEmpty()) {
                 refresh()
-                return
+                return true
             }
             attachments = null
         }
@@ -262,6 +279,7 @@ class MessageView(
         Disposer.dispose(view)
         syncBorder()
         refresh()
+        return true
     }
 
     /**
@@ -335,6 +353,7 @@ class MessageView(
     /** Append a streaming delta to the renderer for [contentId]. */
     @RequiresEdt
     fun appendDelta(contentId: String, delta: String): Boolean {
+        if (delta.isEmpty()) return false
         val id = aliases[contentId]
         if (id != null) sources[contentId] = sources[contentId].orEmpty() + delta
         val part = parts[id ?: contentId] ?: return false
