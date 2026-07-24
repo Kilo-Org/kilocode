@@ -115,7 +115,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -204,7 +204,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
 
         // curl was NOT in rules — still requires permission
         const curlFiber = yield* ask({
@@ -255,7 +255,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -325,7 +325,7 @@ describe("saveAlwaysRules", () => {
             { permission: "bash", pattern: "gh *", action: "ask" },
           ],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -350,7 +350,7 @@ describe("saveAlwaysRules", () => {
           ruleset,
           hardRuleset: ruleset,
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -386,7 +386,7 @@ describe("saveAlwaysRules", () => {
           ],
           hardRuleset: [{ permission: "*", pattern: "*", action: "deny" }],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -448,7 +448,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -486,7 +486,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(result).toBeUndefined()
+        expect(result.manual).toBe(false)
       }),
     ),
   )
@@ -522,7 +522,7 @@ describe("saveAlwaysRules", () => {
           always: [],
           ruleset: [],
         })
-        expect(allowed).toBeUndefined()
+        expect(allowed.manual).toBe(false)
 
         // "git status" should be denied (only matches broad deny)
         const exit = yield* ask({

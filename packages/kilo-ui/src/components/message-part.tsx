@@ -47,6 +47,8 @@ import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
+import { ToolApprovalProvider, toolApprovalFrom } from "@opencode-ai/ui/tool-approval"
+export { ToolApprovalProvider, toolApprovalFrom } from "@opencode-ai/ui/tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
@@ -1307,26 +1309,28 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
             }}
           </Match>
           <Match when={true}>
-            <Dynamic
-              component={render()}
-              input={input()}
-              tool={part.tool}
-              partID={part.id}
-              callID={part.callID}
-              metadata={meta()}
-              partMetadata={top()}
-              // @ts-expect-error
-              output={part.state.output}
-              status={part.state.status}
-              // @ts-expect-error
-              attachments={part.state.attachments}
-              hideDetails={props.hideDetails}
-              defaultOpen={props.defaultOpen}
-              forceOpen={props.forceOpen}
-              forceOpenFile={props.forceOpenFile}
-              animate
-              reveal={props.animate}
-            />
+            <ToolApprovalProvider value={() => toolApprovalFrom(meta())}>
+              <Dynamic
+                component={render()}
+                input={input()}
+                tool={part.tool}
+                partID={part.id}
+                callID={part.callID}
+                metadata={meta()}
+                partMetadata={top()}
+                // @ts-expect-error
+                output={part.state.output}
+                status={part.state.status}
+                // @ts-expect-error
+                attachments={part.state.attachments}
+                hideDetails={props.hideDetails}
+                defaultOpen={props.defaultOpen}
+                forceOpen={props.forceOpen}
+                forceOpenFile={props.forceOpenFile}
+                animate
+                reveal={props.animate}
+              />
+            </ToolApprovalProvider>
           </Match>
         </Switch>
       </div>

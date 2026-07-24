@@ -116,6 +116,7 @@ export namespace KilocodeTuiConfig {
     delete result.plugin_origins
     delete result.instruction_origins
     delete result.skill_path_origins
+    delete result.permission_origins
     const keybinds: Record<string, string> = defaults
       ? Object.fromEntries(KilocodeKeybinds.list().map((item) => [item.id, item.default]))
       : {}
