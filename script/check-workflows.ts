@@ -39,6 +39,7 @@ const active = new Set([
   "containers.yml",
   "docs-build.yml",
   "docs-check-links.yml",
+  "docs-sync.yml",
   "generate.yml",
   "kilo-auto-close.yml",
   "nix-eval.yml",

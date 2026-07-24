@@ -47,6 +47,8 @@ import { checksum } from "@opencode-ai/core/util/encode"
 import { Tooltip } from "./tooltip"
 import { IconButton } from "./icon-button"
 import { TextShimmer } from "@opencode-ai/ui/text-shimmer"
+import { ToolApprovalProvider, resolveToolApproval } from "./tool-approval"
+export { ToolApprovalProvider, resolveToolApproval } from "./tool-approval"
 import { GrowBox } from "./grow-box"
 import { COLLAPSIBLE_SPRING } from "./motion"
 import { busy, createThrottledValue, useToolFade, useContextToolPending } from "./tool-utils"
@@ -820,18 +822,20 @@ export function UserMessageDisplay(props: {
 
   const Delete = () => (
     <Show when={props.onDelete}>
-      <IconButton
-        data-slot="user-message-delete"
-        icon="close-small"
-        size="normal"
-        variant="ghost"
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={(event) => {
-          event.stopPropagation()
-          props.onDelete?.()
-        }}
-        aria-label={i18n.t("ui.message.deleteQueued")}
-      />
+      <Tooltip value={i18n.t("ui.message.deleteQueued")} placement="right" gutter={4}>
+        <IconButton
+          data-slot="user-message-delete"
+          icon="close-small"
+          size="normal"
+          variant="ghost"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={(event) => {
+            event.stopPropagation()
+            props.onDelete?.()
+          }}
+          aria-label={i18n.t("ui.message.deleteQueued")}
+        />
+      </Tooltip>
     </Show>
   )
 
@@ -1307,26 +1311,28 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
             }}
           </Match>
           <Match when={true}>
-            <Dynamic
-              component={render()}
-              input={input()}
-              tool={part.tool}
-              partID={part.id}
-              callID={part.callID}
-              metadata={meta()}
-              partMetadata={top()}
-              // @ts-expect-error
-              output={part.state.output}
-              status={part.state.status}
-              // @ts-expect-error
-              attachments={part.state.attachments}
-              hideDetails={props.hideDetails}
-              defaultOpen={props.defaultOpen}
-              forceOpen={props.forceOpen}
-              forceOpenFile={props.forceOpenFile}
-              animate
-              reveal={props.animate}
-            />
+            <ToolApprovalProvider value={() => resolveToolApproval(meta(), i18n.t as (k: string, p?: Record<string, string | number | boolean>) => string)}>
+              <Dynamic
+                component={render()}
+                input={input()}
+                tool={part.tool}
+                partID={part.id}
+                callID={part.callID}
+                metadata={meta()}
+                partMetadata={top()}
+                // @ts-expect-error
+                output={part.state.output}
+                status={part.state.status}
+                // @ts-expect-error
+                attachments={part.state.attachments}
+                hideDetails={props.hideDetails}
+                defaultOpen={props.defaultOpen}
+                forceOpen={props.forceOpen}
+                forceOpenFile={props.forceOpenFile}
+                animate
+                reveal={props.animate}
+              />
+            </ToolApprovalProvider>
           </Match>
         </Switch>
       </div>

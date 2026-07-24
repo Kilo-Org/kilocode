@@ -26075,6 +26075,12 @@
             "required": ["providerID", "modelID"],
             "additionalProperties": false
           },
+          "generationID": {
+            "type": "string"
+          },
+          "vercelID": {
+            "type": "string"
+          },
           "metrics": {
             "type": "object",
             "properties": {

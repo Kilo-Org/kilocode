@@ -140,7 +140,7 @@ describe("KiloProvider follow-up sessions", () => {
           revert: null,
           summary: null,
         },
-        draftID: undefined,
+        activate: true,
       },
     ])
   })
