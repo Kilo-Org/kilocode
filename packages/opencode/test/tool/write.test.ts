@@ -1,5 +1,5 @@
 import { afterEach, describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect" // kilocode_change
 import path from "path"
 import fs from "fs/promises"
 import { WriteTool } from "../../src/tool/write"
@@ -94,6 +94,29 @@ describe("tool.write", () => {
   })
 
   describe("existing file overwrite", () => {
+    // kilocode_change start
+    it.instance("does not read or write ignored files", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "secret.txt")
+        const calls: unknown[] = []
+        yield* Effect.promise(() =>
+          Promise.all([
+            fs.writeFile(filepath, "KILO_11637_SECRET", "utf-8"),
+            fs.writeFile(path.join(test.directory, ".kilocodeignore"), "secret.txt\n", "utf-8"),
+          ]),
+        )
+
+        const next = { ...ctx, ask: () => Effect.sync(() => calls.push(true)) }
+        const exit = yield* run({ filePath: filepath, content: "changed" }, next).pipe(Effect.exit)
+
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(calls).toEqual([])
+        expect(yield* Effect.promise(() => fs.readFile(filepath, "utf-8"))).toBe("KILO_11637_SECRET")
+      }),
+    )
+    // kilocode_change end
+
     it.instance("overwrites existing file content", () =>
       Effect.gen(function* () {
         const test = yield* TestInstance

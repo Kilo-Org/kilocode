@@ -257,6 +257,37 @@ describe("tool.read external_directory permission", () => {
 })
 
 describe("tool.read env file permissions", () => {
+  // kilocode_change start
+  it.live("does not append an ignored nearby instruction", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, "nested", "file.ts")
+      const instruction = path.join(dir, "nested", "AGENTS.md")
+      yield* put(file, "export const value = 1\n")
+      yield* put(instruction, "KILO_11637_INSTRUCTION_SECRET")
+      yield* put(path.join(dir, ".kilocodeignore"), "nested/AGENTS.md\n")
+
+      const result = yield* exec(dir, { filePath: file })
+      expect(result.output).toContain("export const value")
+      expect(result.output).not.toContain("KILO_11637_INSTRUCTION_SECRET")
+      expect(result.metadata.loaded).not.toContain(instruction)
+    }),
+  )
+
+  it.live("denies .kilocodeignore paths before reading file content", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped()
+      const file = path.join(dir, ".env.local")
+      yield* put(file, "KILO_11637_SECRET")
+      yield* put(path.join(dir, ".kilocodeignore"), ".env*\n")
+
+      const err = yield* fail(dir, { filePath: file })
+      expect(err).toBeInstanceOf(PermissionV1.DeniedError)
+      expect(err.message).not.toContain("KILO_11637_SECRET")
+    }),
+  )
+  // kilocode_change end
+
   const cases: [string, boolean][] = [
     [".env", true],
     [".env.local", true],
@@ -267,9 +298,8 @@ describe("tool.read env file permissions", () => {
     ["environment.ts", false],
   ]
 
-  // kilocode_change start - renamed from "build" to "code"
+  // kilocode_change start - renamed from "build" to "code" and evaluate Effect-based permissions
   for (const agentName of ["code", "plan"] as const) {
-    // kilocode_change end
     describe(`agent=${agentName}`, () => {
       for (const [filename, shouldAsk] of cases) {
         it.live(`${filename} asks=${shouldAsk}`, () =>
@@ -309,6 +339,7 @@ describe("tool.read env file permissions", () => {
       }
     })
   }
+  // kilocode_change end
 })
 
 describe("tool.read truncation", () => {

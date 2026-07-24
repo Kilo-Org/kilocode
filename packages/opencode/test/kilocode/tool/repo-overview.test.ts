@@ -112,6 +112,22 @@ describe("tool.repo_overview", () => {
     ),
   )
 
+  it.live("ignores malformed package metadata", () =>
+    provideTmpdirInstance((dir) =>
+      Effect.gen(function* () {
+        const fs = yield* FSUtil.Service
+        yield* fs.writeWithDirs(path.join(dir, "package.json"), "not json")
+        yield* fs.writeWithDirs(path.join(dir, "README.md"), "# Valid repository\n")
+
+        const tool = yield* init()
+        const result = yield* tool.execute({ path: dir }, ctx)
+
+        expect(result.metadata.path).toBe(dir)
+        expect(result.output).toContain("README.md")
+      }),
+    ),
+  )
+
   it.live("resolves a cached repository from repository shorthand", () =>
     provideTmpdirInstance((_dir) =>
       Effect.gen(function* () {

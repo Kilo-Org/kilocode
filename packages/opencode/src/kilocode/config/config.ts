@@ -18,7 +18,6 @@ import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
 import { WorkflowsMigrator } from "../workflows-migrator"
 import { McpMigrator } from "../mcp-migrator"
-import { IgnoreMigrator } from "../ignore-migrator"
 
 export namespace KilocodeConfig {
   const log = Log.create({ service: "kilocode.config" })
@@ -283,20 +282,6 @@ export namespace KilocodeConfig {
     const mcp = await McpMigrator.loadMcpConfig(input.projectDir, skipGlobal)
     if (Object.keys(mcp).length > 0) {
       result = input.merge(result, { mcp })
-    }
-
-    // Load .kilocodeignore patterns
-    try {
-      const permission = await IgnoreMigrator.loadIgnoreConfig(input.projectDir)
-      if (Object.keys(permission).length > 0) {
-        result = input.merge(result, { permission })
-        log.debug("loaded kilocode ignore patterns", {
-          hasRead: !!(permission as Record<string, unknown>).read,
-          hasEdit: !!(permission as Record<string, unknown>).edit,
-        })
-      }
-    } catch (err) {
-      log.warn("failed to load kilocode ignore patterns", { error: err })
     }
 
     return { config: result, warnings }

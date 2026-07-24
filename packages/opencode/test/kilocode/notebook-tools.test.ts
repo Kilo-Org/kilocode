@@ -7,8 +7,11 @@ import { MessageID, SessionID } from "@/session/schema"
 import * as Tool from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { Truncate } from "@/tool/truncate"
-import { Effect, Layer } from "effect"
+import { Effect, Exit, Layer } from "effect"
+import path from "path"
+import fs from "fs/promises"
 import { testEffect } from "../lib/effect"
+import { TestInstance } from "../fixture/fixture"
 
 const calls: Notebook.Input[] = []
 const notebook = Layer.mock(Notebook.Service, {
@@ -86,12 +89,14 @@ describe("native notebook tools", () => {
           ctx,
         )
 
-        expect(asks.map((item) => item.permission)).toEqual(["notebook_read", "notebook_edit", "notebook_execute"])
-        expect(asks.map((item) => item.patterns[0])).toEqual([
-          "analysis.ipynb",
-          "analysis.ipynb",
-          "/workspace/analysis.ipynb",
+        expect(asks.map((item) => item.permission)).toEqual([
+          "notebook_read",
+          "notebook_edit",
+          "external_directory",
+          "notebook_execute",
         ])
+        expect(asks.slice(0, 2).map((item) => item.patterns[0])).toEqual(["analysis.ipynb", "analysis.ipynb"])
+        expect(asks[3]?.patterns[0]?.replaceAll("\\", "/")).toMatch(/workspace\/analysis\.ipynb$/)
         expect(calls.map((item) => item.operation)).toEqual(["read", "edit", "execute"])
         expect(calls[1]).toMatchObject({ expectedRevision: "content:read" })
         expect(calls[2]).toMatchObject({ expectedRevision: "content:edit" })
@@ -148,10 +153,44 @@ describe("native notebook tools", () => {
 
         expect(asks.map((item) => item.permission)).toEqual(["notebook_edit"])
         expect(calls).toEqual([
-          { operation: "edit", sessionID: ctx.sessionID, path: "fresh.ipynb", index: 0, edit: { action: "create" } },
+          expect.objectContaining({
+            operation: "edit",
+            sessionID: ctx.sessionID,
+            path: expect.stringMatching(/fresh\.ipynb$/),
+            index: 0,
+            edit: { action: "create" },
+          }),
         ])
         expect(result.title).toContain("created notebook")
-        expect(result.metadata).toMatchObject({ path: "fresh.ipynb", revision: "content:create", index: 0 })
+        expect(result.metadata).toMatchObject({
+          path: expect.stringMatching(/fresh\.ipynb$/),
+          revision: "content:create",
+          index: 0,
+        })
+      }),
+    { git: true },
+  )
+
+  it.instance(
+    "does not send ignored notebooks to the host",
+    () =>
+      Effect.gen(function* () {
+        calls.length = 0
+        const test = yield* TestInstance
+        const read = yield* NotebookReadTool.pipe(Effect.flatMap(Tool.init))
+        const asks: Parameters<Tool.Context["ask"]>[0][] = []
+        const filepath = path.join(test.directory, "secret.ipynb")
+        yield* Effect.promise(() =>
+          Promise.all([
+            fs.writeFile(filepath, "KILO_11637_NOTEBOOK_SECRET", "utf-8"),
+            fs.writeFile(path.join(test.directory, ".kilocodeignore"), "secret.ipynb\n", "utf-8"),
+          ]),
+        )
+
+        const exit = yield* read.execute({ path: filepath }, context(asks)).pipe(Effect.exit)
+        expect(Exit.isFailure(exit)).toBe(true)
+        expect(asks).toEqual([])
+        expect(calls).toEqual([])
       }),
     { git: true },
   )

@@ -69,9 +69,7 @@ export function fallbackSanitization(content: string): string {
 
 // kilocode_change start - accept source trust and confine untrusted markdown source reads
 export async function parse(filePath: string, options: KilocodeMarkdown.Options) {
-  const template = options.trusted
-    ? await Filesystem.readText(filePath)
-    : await KilocodeMarkdown.read(filePath, options)
+  const template = await KilocodeMarkdown.read(filePath, options)
   // kilocode_change end
 
   // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization

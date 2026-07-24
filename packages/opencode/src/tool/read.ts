@@ -15,10 +15,12 @@ import { isPdfAttachment, sniffAttachmentMime } from "@/util/media"
 // kilocode_change start
 import * as Encoding from "../kilocode/encoding"
 import { KiloReference } from "@/kilocode/reference/contains"
+import { KiloFileGuard } from "@/kilocode/tool/file-guard"
 import * as KiloConfiguredReference from "@/kilocode/reference"
 import { KiloReadObject } from "@/kilocode/tool/read-object"
 import * as Extract from "../kilocode/tool/read-extract"
 import * as TextStream from "../kilocode/text-stream"
+import { IgnorePermission } from "@/kilocode/permission/ignore"
 // kilocode_change end
 
 const DEFAULT_READ_LIMIT = 2000
@@ -232,16 +234,19 @@ export const ReadTool = Tool.define<
       }
       // kilocode_change end
 
-      // kilocode_change start - directory mentions expose only a bound listing, never child file bodies
+      // kilocode_change start - directory listings and file reads enforce Kilo policy and stable object access
       if (info.type === "Directory") {
+        yield* IgnorePermission.assert({
+          ctx: instance,
+          access: "read",
+          candidates: [{ requested, directory: true }],
+        }).pipe(Effect.orDie)
         const resolved = yield* fs.realPath(requested)
         const target = process.platform === "win32" ? FSUtil.normalizePath(resolved) : resolved
         const explicit =
           typeof ctx.extra?.["referenceRoot"] === "string" &&
           (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], target))
-        const referenced =
-          explicit ||
-          (yield* KiloReference.contains({ fs, references, target }))
+        const referenced = explicit || (yield* KiloReference.contains({ fs, references, target }))
         yield* assertExternalDirectoryEffect(ctx, target, { bypass: referenced, kind: "directory" })
         yield* ctx.ask({
           permission: "read",
@@ -249,7 +254,11 @@ export const ReadTool = Tool.define<
           always: ["*"],
           metadata: {},
         })
-        // kilocode_change start - reject any canonical path change after permission approval
+        yield* IgnorePermission.assert({
+          ctx: instance,
+          access: "read",
+          candidates: [{ requested, target, directory: true }],
+        }).pipe(Effect.orDie)
         if (ctx.extra?.["denyDirectory"] === true) {
           // Re-resolve after permission approval to detect TOCTOU symlink swaps.
           // If the canonical target changed, the approved permission no longer
@@ -260,7 +269,6 @@ export const ReadTool = Tool.define<
             return yield* Effect.fail(new Error(`Directory attachments cannot be expanded: ${requested}`))
           }
         }
-        // kilocode_change end
         const items = yield* list(target)
         const limit = Math.max(1, params.limit ?? DEFAULT_READ_LIMIT) // kilocode_change - prevent zero-limit loops
         const offset = params.offset || 1
@@ -286,8 +294,8 @@ export const ReadTool = Tool.define<
             loaded: [],
             display: {
               type: "directory" as const,
-              path: target,
-              entries: sliced,
+              path: target, // kilocode_change
+              entries: sliced, // kilocode_change
               offset,
               totalEntries: items.length,
               truncated,
@@ -295,14 +303,11 @@ export const ReadTool = Tool.define<
           },
         }
       }
-      // kilocode_change start - authorize metadata, then bind every content read to the same reopened object
-      const file = yield* KiloReadObject.file(requested)
+      const file = yield* KiloFileGuard.file({ ctx: instance, requested })
       const explicit =
         typeof ctx.extra?.["referenceRoot"] === "string" &&
         (yield* KiloReference.path(fs, ctx.extra["referenceRoot"], file.target))
-      const referenced =
-        explicit ||
-        (yield* KiloReference.contains({ fs, references, target: file.target }))
+      const referenced = explicit || (yield* KiloReference.contains({ fs, references, target: file.target }))
       yield* assertExternalDirectoryEffect(ctx, file.target, { bypass: referenced, kind: "file" })
       yield* ctx.ask({
         permission: "read",
@@ -310,7 +315,7 @@ export const ReadTool = Tool.define<
         always: ["*"],
         metadata: {},
       })
-      return yield* KiloReadObject.use(file, (bound) =>
+      return yield* KiloFileGuard.use({ ctx: instance, info: file }, (bound) =>
         Effect.gen(function* () {
           const loaded =
             ctx.extra?.["includeInstructions"] === false

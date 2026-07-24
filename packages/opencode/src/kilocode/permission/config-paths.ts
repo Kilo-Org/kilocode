@@ -2,6 +2,7 @@ import path from "path"
 import { existsSync, realpathSync } from "fs"
 import { Global } from "@opencode-ai/core/global"
 import { KilocodePaths } from "@/kilocode/paths"
+import type { InstanceContext } from "@/project/instance-context"
 
 export namespace ConfigProtection {
   /**
@@ -20,7 +21,14 @@ export namespace ConfigProtection {
    * Root-level config files that must be protected.
    * Matched only when the relative path has no directory component.
    */
-  const CONFIG_ROOT_FILES = new Set(["kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc", "AGENTS.md"])
+  const CONFIG_ROOT_FILES = new Set([
+    "kilo.json",
+    "kilo.jsonc",
+    "opencode.json",
+    "opencode.jsonc",
+    "AGENTS.md",
+    ".kilocodeignore",
+  ])
 
   /** Metadata key used to signal the UI to hide the "Allow always" option. */
   export const DISABLE_ALWAYS_KEY = "disableAlways" as const
@@ -170,16 +178,32 @@ export namespace ConfigProtection {
     return path.isAbsolute(p) ? isAbsolute(p) : isRelative(p)
   }
 
+  function project(p: string, ctx?: InstanceContext) {
+    if (!ctx) return false
+    const base = ctx.worktree === "/" ? ctx.directory : ctx.worktree
+    const root = physical(base)
+    const target = physical(path.isAbsolute(p) ? p : path.resolve(base, p))
+    if (!root || !target) return false
+    const relative = path.relative(root, target)
+    if (relative === "" || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
+      return false
+    return isRelative(relative)
+  }
+
   /**
    * Determine if a permission request targets config files.
    * Gates `edit` permissions and bash-originated `external_directory` requests.
    * File-tool reads are not restricted.
    */
-  export function isRequest(request: {
-    permission: string
-    patterns: readonly string[]
-    metadata?: Record<string, any>
-  }): boolean {
+  export function isRequest(
+    request: {
+      permission: string
+      patterns: readonly string[]
+      metadata?: Record<string, any>
+    },
+    ctx?: InstanceContext,
+  ): boolean {
+    if (request.metadata?.[CONFIG_PROTECTED_KEY] === true) return true
     if (request.permission === "external_directory") {
       // File tools include metadata.filepath. They may read global config
       // without prompting, but edits are still protected separately via `edit`.
@@ -198,7 +222,7 @@ export namespace ConfigProtection {
 
     // Check patterns — handle both relative and absolute
     for (const pattern of request.patterns) {
-      if (protected_(pattern)) return true
+      if (protected_(pattern) || project(pattern, ctx)) return true
     }
 
     // Check metadata.filepath (absolute for edit, comma-joined relative for apply_patch)
@@ -207,7 +231,7 @@ export namespace ConfigProtection {
       // apply_patch joins relative paths with ", "
       const parts = fp.includes(", ") ? fp.split(", ") : [fp]
       for (const part of parts) {
-        if (protected_(part)) return true
+        if (protected_(part) || project(part, ctx)) return true
       }
     }
 
@@ -217,7 +241,7 @@ export namespace ConfigProtection {
       for (const file of files) {
         for (const key of ["filePath", "movePath"] as const) {
           const val = file?.[key]
-          if (typeof val === "string" && protected_(val)) return true
+          if (typeof val === "string" && (protected_(val) || project(val, ctx))) return true
         }
       }
     }

@@ -24,6 +24,7 @@ import { lazy } from "@/util/lazy"
 import path from "path"
 import z from "zod"
 import { PlanFile } from "@/kilocode/plan-file"
+import { KiloFileGuard } from "@/kilocode/tool/file-guard"
 
 const agents = lazy(() => makeRuntime(Agent.Service, Agent.defaultLayer))
 const providers = lazy(() => makeRuntime(Provider.Service, Provider.defaultLayer))
@@ -257,10 +258,9 @@ export namespace PlanFollowup {
       log.warn("resolvePlan: no saved plan file found", { sessionID: input.sessionID, target })
       return ""
     }
-    const plan = await Bun.file(file)
-      .text()
-      .catch(() => "")
-    return plan.trim()
+    const ctx = Instance.current
+    const plan = await Effect.runPromise(KiloFileGuard.read({ ctx, requested: file })).catch(() => undefined)
+    return plan?.toString().trim() ?? ""
   }
 
   async function inject(input: {
