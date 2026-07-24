@@ -1,5 +1,4 @@
-import type { Message, Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2"
-import type { Event } from "./event"
+import type { Event, Message, Part, PermissionRequest, QuestionRequest, ToolPart } from "@kilocode/sdk/v2" // kilocode_change - use the native event contract
 import * as Locale from "@/util/locale"
 import {
   bootstrapSessionData,

@@ -28,7 +28,6 @@ import { Agent } from "@/agent/agent"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { FormatError, FormatUnknownError } from "../error"
 import { INTERACTIVE_INPUT_ERROR, resolveInteractiveStdin } from "./run/runtime.stdin"
-import { event as normalizeEvent } from "./run/event"
 import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { KiloRunAuto } from "@/kilocode/cli/run-auto" // kilocode_change
 import { KiloHeadless } from "@/kilocode/permission/headless" // kilocode_change
@@ -728,9 +727,9 @@ export const RunCommand = effectCmd({
           let retries = 0 // kilocode_change
           let error: string | undefined
 
-          for await (const payload of events.stream) {
-            const event = normalizeEvent(payload)
-            if (!event) continue
+          // kilocode_change start - consume the native event once; sync envelopes are compatibility copies
+          for await (const event of events.stream) {
+            // kilocode_change end
 
             if (
               event.type === "message.updated" &&
