@@ -601,16 +601,9 @@ async function openKiloInNewTab(
   remoteService: RemoteStatusService,
   autoApprove: ReturnType<typeof registerToggleAutoApprove>,
 ) {
-  const lastCol = Math.max(...vscode.window.visibleTextEditors.map((e) => e.viewColumn || 0), 0)
-  const hasVisibleEditors = vscode.window.visibleTextEditors.length > 0
+  const col = Math.max(...vscode.window.tabGroups.all.map((group) => group.viewColumn || 0), 1) + 1
 
-  if (!hasVisibleEditors) {
-    await vscode.commands.executeCommand("workbench.action.newGroupRight")
-  }
-
-  const targetCol = hasVisibleEditors ? Math.max(lastCol + 1, 1) : vscode.ViewColumn.Two
-
-  const panel = vscode.window.createWebviewPanel("kilo-code.new.TabPanel", EXTENSION_DISPLAY_NAME, targetCol, {
+  const panel = vscode.window.createWebviewPanel("kilo-code.new.TabPanel", EXTENSION_DISPLAY_NAME, col, {
     enableScripts: true,
     retainContextWhenHidden: true,
     localResourceRoots: [context.extensionUri],
