@@ -333,7 +333,7 @@ export namespace KilocodeConfig {
 
   // ── Bash permission migration ────────────────────────────────────────
 
-  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+  const GLOBAL_CONFIG_FILES = ["config.json", "opencode.json", "opencode.jsonc", "kilo.json", "kilo.jsonc"]
 
   /**
    * Migrate bash permission for existing users before config is consumed.
