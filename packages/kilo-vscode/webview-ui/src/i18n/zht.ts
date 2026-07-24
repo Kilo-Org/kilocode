@@ -1088,6 +1088,11 @@ export const dict = {
   "session.showHistory": "顯示歷史",
   "session.search.placeholder": "搜尋工作階段...",
   "session.empty": "尚無工作階段。點選 + 以開始新的對話。",
+  "session.tabs.switcher.open": "顯示開啟的分頁",
+  "session.tabs.switcher.search": "搜尋開啟的分頁...",
+  "session.tabs.switcher.current": "目前",
+  "session.tabs.switcher.pending": "新增",
+  "session.tabs.switcher.busy": "工作中",
   "session.tab.local": "本機",
   "session.tab.cloud": "雲端",
   "session.cloud.repoOnly": "僅此儲存庫",
@@ -1604,6 +1609,15 @@ export const dict = {
   "settings.display.codeEdit.description": "選擇程式碼編輯區塊與差異區塊的初始狀態：展開或收合。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "收合",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "預設模型",
   "settings.providers.defaultModel.description": "對話的主要模型",
   "settings.providers.smallModel.title": "小模型",

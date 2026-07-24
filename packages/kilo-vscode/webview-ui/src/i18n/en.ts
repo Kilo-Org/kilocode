@@ -1077,6 +1077,11 @@ export const dict = {
   "session.history.sources": "History source",
   "session.search.placeholder": "Search sessions...",
   "session.empty": "No sessions yet. Click + to start a new conversation.",
+  "session.tabs.switcher.open": "Show open tabs",
+  "session.tabs.switcher.search": "Search open tabs...",
+  "session.tabs.switcher.current": "Current",
+  "session.tabs.switcher.pending": "New",
+  "session.tabs.switcher.busy": "Working",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
   "session.cloud.repoOnly": "Only this repository",
@@ -1691,6 +1696,13 @@ export const dict = {
   "settings.display.codeEdit.description": "Choose whether code edit and diff blocks start expanded or collapsed.",
   "settings.display.codeEdit.expanded": "Expanded",
   "settings.display.codeEdit.collapsed": "Collapsed",
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
 
   "settings.providers.defaultModel.title": "Default Model",
   "settings.providers.defaultModel.description": "Primary model for conversations",

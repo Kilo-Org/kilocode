@@ -1151,6 +1151,11 @@ export const dict = {
   "session.showHistory": "แสดงประวัติ",
   "session.search.placeholder": "ค้นหาเซสชัน...",
   "session.empty": "ยังไม่มีเซสชัน คลิก + เพื่อเริ่มการสนทนาใหม่",
+  "session.tabs.switcher.open": "แสดงแท็บที่เปิดอยู่",
+  "session.tabs.switcher.search": "ค้นหาแท็บที่เปิดอยู่...",
+  "session.tabs.switcher.current": "ปัจจุบัน",
+  "session.tabs.switcher.pending": "ใหม่",
+  "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
   "session.cloud.repoOnly": "เฉพาะรีโพซิทอรีนี้",
@@ -1688,6 +1693,15 @@ export const dict = {
   "settings.display.codeEdit.description": "เลือกว่าบล็อกการแก้ไขโค้ดและบล็อกแสดงความแตกต่างจะเริ่มต้นแบบขยายหรือยุบ",
   "settings.display.codeEdit.expanded": "ขยาย",
   "settings.display.codeEdit.collapsed": "ยุบ",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "โมเดลเริ่มต้น",
   "settings.providers.defaultModel.description": "โมเดลหลักสำหรับบทสนทนา",
   "settings.providers.smallModel.title": "โมเดลขนาดเล็ก",

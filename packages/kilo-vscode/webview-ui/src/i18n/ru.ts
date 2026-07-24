@@ -1167,6 +1167,11 @@ export const dict = {
   "session.showHistory": "Показать историю",
   "session.search.placeholder": "Поиск сессий...",
   "session.empty": "Сессий пока нет. Нажмите + чтобы начать новый разговор.",
+  "session.tabs.switcher.open": "Показать открытые вкладки",
+  "session.tabs.switcher.search": "Поиск открытых вкладок...",
+  "session.tabs.switcher.current": "Текущая",
+  "session.tabs.switcher.pending": "Новая",
+  "session.tabs.switcher.busy": "В работе",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
   "session.cloud.repoOnly": "Только этот репозиторий",
@@ -1719,6 +1724,15 @@ export const dict = {
     "Выберите, будут ли блоки изменений кода и различий изначально развёрнуты или свёрнуты.",
   "settings.display.codeEdit.expanded": "Развёрнуты",
   "settings.display.codeEdit.collapsed": "Свёрнуты",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Модель по умолчанию",
   "settings.providers.defaultModel.description": "Основная модель для разговоров",
   "settings.providers.smallModel.title": "Малая модель",

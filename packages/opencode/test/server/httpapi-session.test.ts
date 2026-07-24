@@ -35,7 +35,7 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, provideInstanceEffect, TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { TestLLMServer } from "../lib/llm-server"
 import { testProviderConfig } from "../lib/test-provider"
-import { testEffect } from "../lib/effect"
+import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
 
 const originalWorkspaces = Flag.KILO_EXPERIMENTAL_WORKSPACES
 const workspaceLayer = Workspace.defaultLayer.pipe(
@@ -1006,6 +1006,65 @@ describe("session HttpApi", () => {
       }),
     { git: true, config: { formatter: false, lsp: false } },
   )
+
+  // kilocode_change start - deleting a prompt that already started is a successful no-op
+  it.live(
+    "returns false when an active prompt wins the deletion race",
+    () => {
+      const release = Promise.withResolvers<void>()
+      return Effect.gen(function* () {
+        const llm = yield* TestLLMServer
+        yield* llm.hold("done", release.promise)
+
+        const dir = yield* tmpdirScoped({ git: true, config: testProviderConfig(llm.url) })
+        const session = yield* createSession({ title: "Active delete race" }).pipe(provideInstanceEffect(dir))
+        const messageID = MessageID.ascending()
+        const headers = { "x-kilo-directory": dir, "content-type": "application/json" }
+
+        const prompt = yield* request(pathFor(SessionPaths.promptAsync, { sessionID: session.id }), {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            messageID,
+            agent: "build",
+            model: { providerID: "test", modelID: "test-model" },
+            parts: [{ type: "text", text: "keep running" }],
+          }),
+        })
+        expect(prompt.status).toBe(204)
+        yield* llm.wait(1)
+
+        expect(
+          yield* requestJson<boolean>(pathFor(SessionPaths.deleteMessage, { sessionID: session.id, messageID }), {
+            method: "DELETE",
+            headers,
+          }),
+        ).toBe(false)
+
+        release.resolve()
+        yield* pollWithTimeout(
+          requestJson<Record<string, unknown>>(SessionPaths.status, { headers }).pipe(
+            Effect.map((statuses) => (statuses[session.id] ? undefined : true)),
+          ),
+          "Timed out waiting for active prompt to finish",
+        )
+
+        const messages = yield* Session.use
+          .messages({ sessionID: session.id })
+          .pipe(provideInstanceEffect(dir), Effect.orDie)
+        expect(messages.some((message) => message.info.id === messageID)).toBe(true)
+        expect(
+          messages.some((message) => message.info.role === "assistant" && message.info.parentID === messageID),
+        ).toBe(true)
+      }).pipe(
+        Effect.ensuring(Effect.sync(() => release.resolve())),
+        Effect.provide(TestLLMServer.layer),
+        Effect.provide(CrossSpawnSpawner.defaultLayer),
+      )
+    },
+    10_000,
+  )
+  // kilocode_change end
 
   it.instance(
     "rejects part updates whose path and body ids disagree",

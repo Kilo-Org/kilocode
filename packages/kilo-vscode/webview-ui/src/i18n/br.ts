@@ -1123,6 +1123,11 @@ export const dict = {
   "session.showHistory": "Mostrar Histórico",
   "session.search.placeholder": "Buscar sessões...",
   "session.empty": "Nenhuma sessão ainda. Clique + para iniciar uma nova conversa.",
+  "session.tabs.switcher.open": "Mostrar abas abertas",
+  "session.tabs.switcher.search": "Buscar abas abertas...",
+  "session.tabs.switcher.current": "Atual",
+  "session.tabs.switcher.pending": "Nova",
+  "session.tabs.switcher.busy": "Trabalhando",
   "session.tab.local": "Local",
   "session.tab.cloud": "Nuvem",
   "session.cloud.repoOnly": "Apenas este repositório",
@@ -1730,6 +1735,15 @@ export const dict = {
     "Escolha se os blocos que exibem edições de código e diferenças começam expandidos ou recolhidos.",
   "settings.display.codeEdit.expanded": "Expandidos",
   "settings.display.codeEdit.collapsed": "Recolhidos",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "Modelo padrão",
   "settings.providers.defaultModel.description": "Modelo principal para conversas",
   "settings.providers.smallModel.title": "Modelo pequeno",

@@ -1157,6 +1157,11 @@ export const dict = {
   "session.showHistory": "履歴を表示",
   "session.search.placeholder": "セッションを検索...",
   "session.empty": "セッションがありません。+ をクリックして新しい会話を始めましょう。",
+  "session.tabs.switcher.open": "開いているタブを表示",
+  "session.tabs.switcher.search": "開いているタブを検索...",
+  "session.tabs.switcher.current": "現在",
+  "session.tabs.switcher.pending": "新規",
+  "session.tabs.switcher.busy": "作業中",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
   "session.cloud.repoOnly": "このリポジトリのみ",
@@ -1708,6 +1713,15 @@ export const dict = {
     "コード編集ブロックと差分ブロックを最初から展開するか折りたたむかを選択します。",
   "settings.display.codeEdit.expanded": "展開",
   "settings.display.codeEdit.collapsed": "折りたたみ",
+
+  "settings.display.tokenThroughput.title": "Show Token Throughput",
+  "settings.display.tokenThroughput.description":
+    "Display the text-generation rate (tokens/sec) on the latest assistant message and in the task header. Hidden by default to keep the chat uncluttered.",
+
+  "chat.throughput.tooltip":
+    "Average {{speed}} tokens/s for this turn. Includes output and reasoning tokens; excludes tool execution and waiting time.",
+  "chat.throughput.tooltip.missing": "Throughput metrics unavailable for this turn.",
+
   "settings.providers.defaultModel.title": "デフォルトモデル",
   "settings.providers.defaultModel.description": "会話のプライマリモデル",
   "settings.providers.smallModel.title": "小型モデル",

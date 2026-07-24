@@ -26,6 +26,7 @@ import { SpeechToTextButton } from "../speech-to-text/SpeechToTextButton"
 import { canUseSpeechToText, selectedSpeechToTextModel } from "../speech-to-text/availability"
 import { ThinkingSelector } from "../shared/ThinkingSelector"
 import { useFileMention } from "../../hooks/useFileMention"
+import type { MentionResult } from "../../hooks/file-mention-utils"
 import { useTerminalContext } from "../../hooks/useTerminalContext"
 import { useGitChangesContext } from "../../hooks/useGitChangesContext"
 import { hasTerminalMention } from "../../hooks/terminal-context-utils"
@@ -35,6 +36,7 @@ import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
 import { convertToMentionPath } from "../../utils/path-mentions"
+import { SessionMentionPicker } from "./SessionMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
 import { WandSparkles } from "@kilocode/kilo-ui/lucide"
@@ -108,6 +110,54 @@ interface PromptInputProps {
   questioning?: () => boolean
   boxId?: string
   pendingSessionID?: string
+}
+
+function MentionItemContent(props: { item: MentionResult }) {
+  const item = props.item
+  if (item.type === "terminal")
+    return (
+      <>
+        <Icon name="console" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "git-changes")
+    return (
+      <>
+        <Icon name="branch" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "past-chats")
+    return (
+      <>
+        <Icon name="history" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  if (item.type === "file-picker")
+    return (
+      <>
+        <Icon name="folder" class="file-mention-icon" />
+        <span class="file-mention-name">{item.label}</span>
+        <span class="file-mention-dir">{item.description}</span>
+      </>
+    )
+  return (
+    <>
+      <FileIcon
+        node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
+        class="file-mention-icon"
+      />
+      <span class="file-mention-name">
+        {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
+      </span>
+      <span class="file-mention-dir">{dirName(item.value)}</span>
+    </>
+  )
 }
 
 export const PromptInput: Component<PromptInputProps> = (props) => {
@@ -468,6 +518,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     textareaRef ? atEnd(textareaRef.selectionStart, textareaRef.selectionEnd, textareaRef.value.length) : false
   const highlightMentions = () => {
     const paths = new Set(mention.mentionedPaths())
+    for (const token of mention.mentionedSessions().keys()) paths.add(token)
     if (hasTerminalMention(text())) paths.add("terminal")
     if (hasGit() && hasGitChangesMention(text())) paths.add("git-changes")
     return paths
@@ -636,6 +687,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       // filename and cannot be relied on to reconstruct spaced paths correctly.
       if (message.paths?.length) mention.seedFromParts(message.paths, message.text)
       else mention.seedFromText(message.text)
+      if (message.sessions?.length) mention.seedSessions(message.sessions, message.text)
       if (textareaRef) {
         textareaRef.value = message.text
         adjustHeight()
@@ -1182,58 +1234,45 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
       <Show when={mention.showMention()}>
         <div class="file-mention-dropdown" ref={dropdownRef}>
           <Show
-            when={mention.mentionResults().length > 0}
-            fallback={<div class="file-mention-empty">No files or folders found</div>}
+            when={!mention.sessionPicker()}
+            fallback={
+              <SessionMentionPicker
+                sessions={mention.sessionCandidates()}
+                onSelect={(picked) => {
+                  if (textareaRef) mention.selectSession(picked, textareaRef, setText, adjustHeight)
+                }}
+                onClose={() => {
+                  mention.closeMention()
+                  textareaRef?.focus()
+                }}
+              />
+            }
           >
-            <For each={mention.mentionResults()}>
-              {(item, index) => (
-                <>
-                  <div
-                    class="file-mention-item"
-                    classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
-                    onMouseDown={(e) => {
-                      e.preventDefault()
-                      if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
-                    }}
-                    onMouseEnter={() => mention.setMentionIndex(index())}
-                  >
-                    {item.type === "terminal" ? (
-                      <>
-                        <Icon name="console" class="file-mention-icon" />
-                        <span class="file-mention-name">{item.label}</span>
-                        <span class="file-mention-dir">{item.description}</span>
-                      </>
-                    ) : item.type === "git-changes" ? (
-                      <>
-                        <Icon name="branch" class="file-mention-icon" />
-                        <span class="file-mention-name">{item.label}</span>
-                        <span class="file-mention-dir">{item.description}</span>
-                      </>
-                    ) : item.type === "file-picker" ? (
-                      <>
-                        <Icon name="folder" class="file-mention-icon" />
-                        <span class="file-mention-name">{item.label}</span>
-                        <span class="file-mention-dir">{item.description}</span>
-                      </>
-                    ) : (
-                      <>
-                        <FileIcon
-                          node={{ path: item.value, type: item.type === "folder" ? "directory" : "file" }}
-                          class="file-mention-icon"
-                        />
-                        <span class="file-mention-name">
-                          {item.type === "folder" ? `${fileName(item.value)}/` : fileName(item.value)}
-                        </span>
-                        <span class="file-mention-dir">{dirName(item.value)}</span>
-                      </>
-                    )}
-                  </div>
-                  <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
-                    <div class="file-mention-separator" />
-                  </Show>
-                </>
-              )}
-            </For>
+            <Show
+              when={mention.mentionResults().length > 0}
+              fallback={<div class="file-mention-empty">No files or folders found</div>}
+            >
+              <For each={mention.mentionResults()}>
+                {(item, index) => (
+                  <>
+                    <div
+                      class="file-mention-item"
+                      classList={{ "file-mention-item--active": index() === mention.mentionIndex() }}
+                      onMouseDown={(e) => {
+                        e.preventDefault()
+                        if (textareaRef) mention.selectMention(item, textareaRef, setText, adjustHeight)
+                      }}
+                      onMouseEnter={() => mention.setMentionIndex(index())}
+                    >
+                      <MentionItemContent item={item} />
+                    </div>
+                    <Show when={item.type === "file-picker" && index() < mention.mentionResults().length - 1}>
+                      <div class="file-mention-separator" />
+                    </Show>
+                  </>
+                )}
+              </For>
+            </Show>
           </Show>
         </div>
       </Show>
@@ -1335,6 +1374,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                     classList={{ "prompt-input-file-mention--file": isPathMention(seg().text) }}
                     onClick={(e) => {
                       if (!isPathMention(seg().text)) return
+                      if (mention.mentionedSessions().has(seg().text.replace(/^@/, ""))) return
                       e.preventDefault()
                       e.stopPropagation()
                       vscode.postMessage({ type: "openFile", filePath: seg().text.replace(/^@/, "") })

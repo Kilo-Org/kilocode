@@ -43,6 +43,28 @@ describe("terminal", () => {
     expect(terminal({ reason: "completed", messages: [message("unknown")], todos: [] })?.kind).toBe("unknown")
   })
 
+  it("includes the Vercel response ID for an unknown finish", () => {
+    expect(
+      terminal({
+        reason: "completed",
+        messages: [
+          message("unknown", {
+            name: "APIError",
+            data: { responseHeaders: { "X-Vercel-Id": "fra1::abc" } },
+          }),
+        ],
+        todos: [],
+        hidden: () => true,
+      }),
+    ).toEqual({
+      kind: "unknown",
+      tone: "warning",
+      finish: "unknown",
+      remaining: 0,
+      vercelID: "fra1::abc",
+    })
+  })
+
   it("surfaces filtered and unexpected provider finishes", () => {
     expect(terminal({ reason: "completed", messages: [message("content-filter")], todos: [] })?.kind).toBe("filtered")
     expect(terminal({ reason: "completed", messages: [message("other")], todos: [] })?.kind).toBe("unexpected")

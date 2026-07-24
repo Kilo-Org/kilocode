@@ -273,12 +273,32 @@ class MdViewHybridTest : BasePlatformTestCase() {
         assertTrue(iter.isValid)
         val rect = pane.modelToView2D(iter.startOffset)!!.bounds
 
+        // Real AWT delivers MOUSE_ENTERED before MOUSE_MOVED; the enter arms scroll tracking.
+        pane.dispatchEvent(MouseEvent(pane, MouseEvent.MOUSE_ENTERED, System.currentTimeMillis(), 0, rect.x + 1, rect.y + rect.height / 2, 0, false, MouseEvent.NOBUTTON))
         pane.dispatchEvent(MouseEvent(pane, MouseEvent.MOUSE_MOVED, System.currentTimeMillis(), 0, rect.x + 1, rect.y + rect.height / 2, 0, false, MouseEvent.NOBUTTON))
         host.viewport.viewPosition = Point(0, 32)
         drainEdt()
 
         assertTrue(events.contains(HyperlinkEvent.EventType.ENTERED))
         assertTrue(events.contains(HyperlinkEvent.EventType.EXITED))
+    }
+
+    fun `test prose pane tracks viewport scrolls only while hovered`() {
+        view.set("See [docs](https://example.com)\n\n" + (1..20).joinToString("\n") { "line $it" })
+        val pane = htmls().single()
+        val host = JBScrollPane(view.component)
+        host.setSize(420, 64)
+        view.component.setSize(420, view.component.preferredSize.height)
+        host.doLayout()
+        view.component.doLayout()
+        drainEdt()
+        val base = host.viewport.changeListeners.size
+
+        pane.dispatchEvent(MouseEvent(pane, MouseEvent.MOUSE_ENTERED, System.currentTimeMillis(), 0, 1, 1, 0, false, MouseEvent.NOBUTTON))
+        assertEquals("hovered prose pane must follow viewport scrolls", base + 1, host.viewport.changeListeners.size)
+
+        pane.dispatchEvent(MouseEvent(pane, MouseEvent.MOUSE_EXITED, System.currentTimeMillis(), 0, -1, -1, 0, false, MouseEvent.NOBUTTON))
+        assertEquals("pane must stop following scrolls once the pointer leaves", base, host.viewport.changeListeners.size)
     }
 
     fun `test file ref links include line suffix and exclude punctuation`() {

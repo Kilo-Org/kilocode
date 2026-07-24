@@ -416,15 +416,42 @@ class ShellToolViewTest : BasePlatformTestCase() {
             assertTrue(field.preferredSize.height - border.top >= editor.lineHeight * lines)
             assertTrue(field.minimumSize.height - border.top >= editor.lineHeight * lines)
             assertTrue(pane.preferredSize.height >= field.preferredSize.height + pad.top + pad.bottom)
-            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(350))
+            assertTrue(body.component.preferredSize.width in 1..JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
             assertTrue(body.component.preferredSize.height > 0)
-            assertTrue(body.component.preferredSize.height <= JBUI.scale(450))
+            assertTrue(body.component.preferredSize.height <= JBUI.scale(SessionUiStyle.View.Popup.MAX_HEIGHT))
         } finally {
             Disposer.dispose(body.disposable)
         }
         UIUtil.dispatchAllInvocationEvents()
 
         assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test shell header popup widens to command content`() {
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "echo ${"x".repeat(180)}")
+        }))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(body.component.preferredSize.width > JBUI.scale(SessionUiStyle.View.Popup.MAX_WIDTH))
+            assertTrue(body.component.preferredSize.width <= JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
+    }
+
+    fun `test shell header popup stays narrow for short command`() {
+        val view = track(ShellToolView(tool().also {
+            it.input = mapOf("command" to "ls")
+        }))
+        val body = view.headerPopup()!!.build()
+
+        try {
+            assertTrue(body.component.preferredSize.width < JBUI.scale(SessionUiStyle.View.Popup.WIDE_MAX_WIDTH))
+        } finally {
+            Disposer.dispose(body.disposable)
+        }
     }
 
     fun `test shell header popup breaks chained operators outside quotes`() {

@@ -1129,6 +1129,11 @@
           "default": true,
           "description": "Show the task timeline graph in the chat header"
         },
+        "kilo-code.new.showTokenThroughput": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show tokens-per-second (prompt-processing / text-generation) badges on assistant messages and the task header"
+        },
         "kilo-code.new.chat.shiftTabCyclesVariant": {
           "type": "boolean",
           "default": true,
