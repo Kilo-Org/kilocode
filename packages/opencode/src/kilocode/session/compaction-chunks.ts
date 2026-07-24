@@ -252,16 +252,10 @@ export namespace KiloCompactionChunks {
       const mdl = model(input.model, input.outputTokenMax)
       const worker = yield* input.processors.create({ assistantMessage: msg, sessionID: input.sessionID, model: mdl })
       const opts = input.agent.options
-      const agent = {
-        ...input.agent,
-        options: {
-          ...opts,
-          maxOutputTokens: Math.min(
-            mdl.limit.output,
-            typeof opts?.maxOutputTokens === "number" ? opts.maxOutputTokens : mdl.limit.output,
-          ),
-        },
-      }
+      // agent.options feeds into providerOptions; strip maxOutputTokens
+      // so it does not leak into the wire body. The output cap is enforced
+      // independently via the constrained model and llm.ts re-cap.
+      const agent = { ...input.agent, options: opts ?? {} }
       const out = yield* Effect.gen(function* () {
         const result = yield* worker.process({
           user: input.user,
