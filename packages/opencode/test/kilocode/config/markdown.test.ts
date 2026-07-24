@@ -26,6 +26,7 @@ test("confines project markdown substitutions while preserving trusted substitut
       },
     })
 
+    // {file:} references outside the project scope are still rejected
     const file = await KilocodeMarkdown.substitute(tmp.extra.file, tmp.extra.item, {
       trusted: false,
       fileScope: { root: tmp.extra.project, source: tmp.extra.item },
@@ -34,14 +35,14 @@ test("confines project markdown substitutions while preserving trusted substitut
       () => true,
     )
     expect(file).toBe(true)
+
+    // {env:} in untrusted config is preserved as literal text — not resolved, not stripped.
+    // This prevents secret exfiltration while keeping config files loadable.
     const env = await KilocodeMarkdown.substitute(tmp.extra.env, tmp.extra.item, {
       trusted: false,
       fileScope: { root: tmp.extra.project, source: tmp.extra.item },
-    }).then(
-      () => false,
-      () => true,
-    )
-    expect(env).toBe(true)
+    })
+    expect(env).toBe(tmp.extra.env)
     expect(
       await KilocodeMarkdown.substitute("{file:../../allowed.txt}", tmp.extra.item, {
         trusted: false,

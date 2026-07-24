@@ -187,7 +187,7 @@ describe("instruction markdown substitutions", () => {
     ),
   )
 
-  it.live("omits nearby project instructions with environment substitutions", () =>
+  it.live("preserves environment tokens as literal text in nearby project instructions", () =>
     provideTmpdirInstance((dir) =>
       Effect.gen(function* () {
         const name = "KILO_INSTRUCTION_PROJECT_SECRET"
@@ -198,7 +198,11 @@ describe("instruction markdown substitutions", () => {
         const svc = yield* Instruction.Service
         const results = yield* svc.resolve([], path.join(dir, "subdir", "nested", "file.ts"), MessageID.ascending())
 
-        expect(results).toEqual([])
+        // {env:} tokens in project config are preserved as literal text — not resolved, not omitted.
+        // This prevents secret exfiltration while keeping instructions loadable.
+        expect(results).toHaveLength(1)
+        expect(results[0].content).toContain(`{env:${name}}`)
+        expect(results[0].content).not.toContain("environment secret")
         delete process.env[name]
       }).pipe(Effect.provide(layer(path.join(dir, "global")))),
     ),
