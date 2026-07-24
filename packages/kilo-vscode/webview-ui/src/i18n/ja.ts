@@ -1164,6 +1164,7 @@ export const dict = {
   "session.tabs.switcher.busy": "作業中",
   "session.tab.local": "ローカル",
   "session.tab.cloud": "クラウド",
+  "session.tab.worktree": "ワークツリー",
   "session.cloud.repoOnly": "このリポジトリのみ",
   "session.cloud.import": "クラウドからインポート",
   "feedback.button": "フィードバック & サポート",

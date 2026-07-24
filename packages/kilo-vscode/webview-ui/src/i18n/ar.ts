@@ -1109,6 +1109,7 @@ export const dict = {
   "session.tabs.switcher.busy": "جارٍ العمل",
   "session.tab.local": "محلي",
   "session.tab.cloud": "السحابة",
+  "session.tab.worktree": "شجرة العمل",
   "session.cloud.repoOnly": "هذا المستودع فقط",
   "session.cloud.import": "استيراد من السحابة",
   "feedback.button": "التغذية الراجعة والدعم",

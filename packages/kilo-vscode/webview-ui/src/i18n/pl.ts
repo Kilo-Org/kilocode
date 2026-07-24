@@ -1128,6 +1128,7 @@ export const dict = {
   "session.tabs.switcher.busy": "Pracuje",
   "session.tab.local": "Lokalny",
   "session.tab.cloud": "Chmura",
+  "session.tab.worktree": "Drzewo robocze",
   "session.cloud.repoOnly": "Tylko to repozytorium",
   "session.cloud.import": "Importuj z chmury",
   "feedback.button": "Opinie i wsparcie",

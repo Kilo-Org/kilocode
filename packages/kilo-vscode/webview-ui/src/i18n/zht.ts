@@ -1095,6 +1095,7 @@ export const dict = {
   "session.tabs.switcher.busy": "工作中",
   "session.tab.local": "本機",
   "session.tab.cloud": "雲端",
+  "session.tab.worktree": "工作樹",
   "session.cloud.repoOnly": "僅此儲存庫",
   "session.cloud.import": "從雲端匯入",
   "feedback.button": "意見回饋與支援",

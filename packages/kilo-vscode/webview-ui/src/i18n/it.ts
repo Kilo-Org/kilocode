@@ -935,6 +935,7 @@ export const dict = {
   "session.tabs.switcher.busy": "In corso",
   "session.tab.local": "Locale",
   "session.tab.cloud": "Cloud",
+  "session.tab.worktree": "Albero di lavoro",
   "session.cloud.repoOnly": "Solo questa repository",
   "session.cloud.import": "Importa sessione",
   "feedback.button": "Feedback e supporto",

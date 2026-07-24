@@ -1158,6 +1158,7 @@ export const dict = {
   "session.tabs.switcher.busy": "กำลังทำงาน",
   "session.tab.local": "ในเครื่อง",
   "session.tab.cloud": "คลาวด์",
+  "session.tab.worktree": "เวิร์กทรี Git",
   "session.cloud.repoOnly": "เฉพาะรีโพซิทอรีนี้",
   "session.cloud.import": "นำเข้าจากคลาวด์",
   "feedback.button": "ข้อเสนอแนะและการสนับสนุน",

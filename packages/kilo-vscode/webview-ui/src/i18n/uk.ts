@@ -1121,6 +1121,7 @@ export const dict = {
   "session.tabs.switcher.busy": "Працює",
   "session.tab.local": "Локальний",
   "session.tab.cloud": "Хмарний",
+  "session.tab.worktree": "Робоче дерево",
   "session.cloud.repoOnly": "Лише цей репозиторій",
   "session.cloud.import": "Імпортувати з хмари",
   "feedback.button": "Зворотний зв'язок і підтримка",

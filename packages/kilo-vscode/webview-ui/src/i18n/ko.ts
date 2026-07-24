@@ -1118,6 +1118,7 @@ export const dict = {
   "session.tabs.switcher.busy": "작업 중",
   "session.tab.local": "로컬",
   "session.tab.cloud": "클라우드",
+  "session.tab.worktree": "작업 트리",
   "session.cloud.repoOnly": "이 저장소만",
   "session.cloud.import": "클라우드에서 가져오기",
   "feedback.button": "피드백 & 지원",

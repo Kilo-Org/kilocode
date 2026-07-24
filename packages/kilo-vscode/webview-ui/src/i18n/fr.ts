@@ -1188,6 +1188,7 @@ export const dict = {
   "session.tabs.switcher.busy": "En cours",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
+  "session.tab.worktree": "Arbre de travail",
   "session.cloud.repoOnly": "Uniquement ce dépôt",
   "session.cloud.import": "Importer depuis le cloud",
   "feedback.button": "Commentaires & support",

@@ -1177,6 +1177,7 @@ export const dict = {
   "session.tabs.switcher.busy": "Radi",
   "session.tab.local": "Lokalno",
   "session.tab.cloud": "Oblak",
+  "session.tab.worktree": "Radno stablo",
   "session.cloud.repoOnly": "Samo ovaj repozitorij",
   "session.cloud.import": "Uvezi iz oblaka",
   "feedback.button": "Povratne informacije i podrška",

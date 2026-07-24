@@ -1120,6 +1120,7 @@ export const dict = {
   "session.tabs.switcher.busy": "Çalışıyor",
   "session.tab.local": "Local",
   "session.tab.cloud": "Cloud",
+  "session.tab.worktree": "Çalışma ağacı",
   "session.cloud.repoOnly": "Yalnızca bu depo",
   "session.cloud.import": "Buluttan içe aktar",
   "feedback.button": "Geri Bildirim ve Destek",

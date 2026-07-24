@@ -1174,6 +1174,7 @@ export const dict = {
   "session.tabs.switcher.busy": "В работе",
   "session.tab.local": "Локальный",
   "session.tab.cloud": "Облако",
+  "session.tab.worktree": "Рабочее дерево",
   "session.cloud.repoOnly": "Только этот репозиторий",
   "session.cloud.import": "Импорт из облака",
   "feedback.button": "Отзывы и поддержка",

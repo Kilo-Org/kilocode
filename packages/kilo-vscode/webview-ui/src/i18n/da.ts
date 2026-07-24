@@ -1169,6 +1169,7 @@ export const dict = {
   "session.tabs.switcher.busy": "Arbejder",
   "session.tab.local": "Lokal",
   "session.tab.cloud": "Sky",
+  "session.tab.worktree": "Arbejdstræ",
   "session.cloud.repoOnly": "Kun dette repository",
   "session.cloud.import": "Importér fra skyen",
   "feedback.button": "Feedback & support",
