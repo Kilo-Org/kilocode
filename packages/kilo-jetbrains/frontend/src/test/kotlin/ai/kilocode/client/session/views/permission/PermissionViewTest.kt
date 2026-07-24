@@ -1,32 +1,50 @@
 package ai.kilocode.client.session.views.permission
 
+import ai.kilocode.client.plugin.KiloPluginSettings
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
 import ai.kilocode.client.session.model.PermissionRequestState
-import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.model.PermissionRuleCandidate
+import ai.kilocode.client.session.model.PermissionRuleDecision
 import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
-import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.md.MdCommon
+import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
+import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
+import com.intellij.openapi.editor.EditorFactory
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import javax.swing.AbstractButton
+import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
 class PermissionViewTest : BasePlatformTestCase() {
 
-    private val replies = mutableListOf<Pair<String, PermissionReplyDto>>()
+    private val replies = mutableListOf<Triple<String, PermissionReplyDto, PermissionAlwaysRulesDto?>>()
     private lateinit var view: PermissionView
 
     override fun setUp() {
         super.setUp()
+        KiloPluginSettings.unsetPermissionRulesExpanded()
         view = PermissionView(
-            reply = { id, dto -> replies.add(id to dto) },
+            reply = { id, dto, rules -> replies.add(Triple(id, dto, rules)) },
         )
+    }
+
+    override fun tearDown() {
+        try {
+            view.dispose()
+            KiloPluginSettings.unsetPermissionRulesExpanded()
+        } finally {
+            super.tearDown()
+        }
     }
 
     fun `test run button replies once`() {
@@ -37,6 +55,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals(1, replies.size)
         assertEquals("perm1", replies.single().first)
         assertEquals("once", replies.single().second.reply)
+        assertNull(replies.single().third)
         assertFalse(view.runButtonForTest().isEnabled)
         assertFalse(view.denyButtonForTest().isEnabled)
     }
@@ -49,6 +68,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals(1, replies.size)
         assertEquals("perm1", replies.single().first)
         assertEquals("reject", replies.single().second.reply)
+        assertNull(replies.single().third)
     }
 
     fun `test view is visible after show`() {
@@ -99,7 +119,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertTrue("Expected no code labels for star-only patterns", view.codeLabelsForTest().isEmpty())
     }
 
-    fun `test bash permission shows action and command on same row`() {
+    fun `test bash permission shows action and command editor`() {
         view.show(
             Permission(
                 id = "perm4",
@@ -113,10 +133,15 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val text = allText(view)
         assertTrue("Expected Shell action label in text, got: $text", text.contains("Shell"))
-        assertTrue("Expected command in text, got: $text", text.contains("git status --short"))
         val labels = view.codeLabelsForTest()
-        assertEquals("Expected exactly one target pane for command", 1, labels.size)
-        assertTrue("Expected command in target pane, got: ${labels[0].text}", labels[0].text.contains("git status --short"))
+        assertEquals("Expected exactly one command editor", 1, labels.size)
+        assertTrue("Expected command in editor, got: ${labels[0].text}", labels[0].text.contains("git status --short"))
+        val editor = labels[0].getEditor(true)!!
+        val spans = editor.markupModel.allHighlighters.map {
+            labels[0].text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
+        }
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains("--short" to DefaultLanguageHighlighterColors.KEYWORD))
     }
 
     fun `test bash permission shows only header and compact detail`() {
@@ -134,12 +159,12 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val text = allText(view)
         assertTrue("Expected permission header, got: $text", text.contains("Permission required"))
-        assertTrue("Expected command in text, got: $text", text.contains("git status --short"))
+        assertTrue("Expected command editor text", view.codeLabelsForTest().single().text.contains("git status --short"))
         // State message should not appear for PENDING state
         assertFalse("Should not show state message for PENDING, got: $text", text.contains("Run this command?"))
     }
 
-    fun `test non-bash patterns show action and path as separate labels`() {
+    fun `test non-bash patterns show action and path in editor`() {
         view.show(
             Permission(
                 id = "perm5",
@@ -153,11 +178,10 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val text = allText(view)
         assertTrue("Expected 'Read' in text, got: $text", text.contains("Read"))
-        assertTrue("Expected path in text, got: $text", text.containsPath("src/App.kt"))
 
         val labels = view.codeLabelsForTest()
-        assertEquals("Expected exactly one target pane for the pattern", 1, labels.size)
-        assertTrue("Expected path in target pane, got: ${labels[0].text}", labels[0].text.containsPath("src/App.kt"))
+        assertEquals("Expected exactly one target editor for the pattern", 1, labels.size)
+        assertTrue("Expected path in editor, got: ${labels[0].text}", labels[0].text.containsPath("src/App.kt"))
     }
 
     fun `test multiple patterns joined in code label`() {
@@ -200,8 +224,8 @@ class PermissionViewTest : BasePlatformTestCase() {
         )
 
         val text = allText(view)
-        assertTrue("Should render target file once, got: $text", text.containsPath("src/A.kt"))
-        assertEquals("Should not duplicate target file path, got: $text", 1, pathOccurrences(text, "src/A.kt"))
+        assertTrue("Should render target file in editor", view.codeLabelsForTest().single().text.containsPath("src/A.kt"))
+        assertEquals("Should render target file once in labels, got: $text", 1, pathOccurrences(text, "src/A.kt"))
         // Patch markers should NOT appear — no diff content is shown
         assertFalse("Should not render patch content, got: $text", text.contains("@@"))
         assertFalse("Should not render old line, got: $text", text.contains("-old"))
@@ -237,8 +261,8 @@ class PermissionViewTest : BasePlatformTestCase() {
         )
 
         val text = allText(view)
-        assertTrue("Should render target file once, got: $text", text.containsPath("src/A.kt"))
-        assertEquals("Should not duplicate target file path, got: $text", 1, pathOccurrences(text, "src/A.kt"))
+        assertTrue("Should render target file in editor", view.codeLabelsForTest().single().text.containsPath("src/A.kt"))
+        assertEquals("Should render target file once in labels, got: $text", 1, pathOccurrences(text, "src/A.kt"))
         // No "unavailable" fallback text expected in new design
         assertFalse("Should not render unavailable fallback, got: $text", text.contains("unavailable"))
         val badge = view.diffViewsForTest().single().badgeForTest()
@@ -284,7 +308,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertFalse("Should not render patch markers, got: $text", text.contains("@@"))
     }
 
-    fun `test no rule controls rendered`() {
+    fun `test rule controls render collapsed when candidates exist`() {
         view.show(
             Permission(
                 id = "perm7",
@@ -292,15 +316,53 @@ class PermissionViewTest : BasePlatformTestCase() {
                 name = "edit",
                 patterns = listOf("*.kt"),
                 always = listOf("src/**"),
-                meta = PermissionMeta(rules = listOf("rule1")),
+                meta = PermissionMeta(
+                    ruleDecisions = listOf(
+                        PermissionRuleCandidate("*.kt", defaultDecision = PermissionRuleDecision.DENIED),
+                        PermissionRuleCandidate("src/**", PermissionRuleDecision.APPROVED),
+                    ),
+                ),
             )
         )
 
         val text = allText(view)
-        assertFalse("Should not contain 'Manage Auto-Approve Rules'", text.contains("Manage Auto-Approve Rules"))
-        // Only Run and Deny buttons — not extra rule toggle buttons
-        val btns = buttons(view)
-        assertEquals("Expected exactly 2 buttons (Run and Deny)", 2, btns.size)
+        assertTrue("Should contain rules title, got: $text", text.contains("Auto-approve Rules"))
+        assertFalse("Rules should be collapsed by default", view.rulesForTest().isExpanded())
+        assertTrue("Rules body should be lazy", view.rulesForTest().commandFieldsForTest().isEmpty())
+
+        view.rulesForTest().toggle()
+
+        val approve = view.rulesForTest().approveButtonsForTest()
+        val deny = view.rulesForTest().denyButtonsForTest()
+        assertEquals(2, approve.size)
+        assertEquals(2, deny.size)
+        assertEquals("Add to allowed", approve[0].toolTipText)
+        assertEquals("Remove from allowed", approve[1].toolTipText)
+        assertEquals("Add to denied", deny[1].toolTipText)
+        val commands = view.rulesForTest().commandFieldsForTest()
+        assertEquals(2, commands.size)
+        assertEquals("*.kt", commands[0].text)
+        assertEquals("src/**", commands[1].text)
+        layoutTree(view)
+        val hintY = SwingUtilities.convertPoint(view.rulesForTest().hintLabelsForTest()[0], 0, 0, view).y
+        val fieldY = SwingUtilities.convertPoint(commands[0], 0, 0, view).y
+        assertTrue("Rule hint should render below the controls row", hintY > fieldY)
+        assertTrue(allText(view).contains("Future matching calls will use the default permission setting: Reject."))
+        assertTrue(allText(view).contains("This request and future matching calls will be allowed."))
+        assertEquals("Allow once", view.runButtonForTest().text)
+        assertEquals("Reject", view.denyButtonForTest().text)
+        assertEquals("Expected exactly 6 buttons including rule toggles", 6, buttons(view).size)
+        view.runButtonForTest().doClick()
+        assertNull(replies.single().third)
+    }
+
+    fun `test no rule controls render when no candidates`() {
+        view.show(permission())
+
+        val text = allText(view)
+        assertFalse("Should not contain rules title, got: $text", text.contains("Auto-approve Rules"))
+        assertFalse(view.rulesForTest().isVisible)
+        assertEquals("Allow once", view.runButtonForTest().text)
     }
 
     fun `test responding state disables buttons`() {
@@ -315,6 +377,27 @@ class PermissionViewTest : BasePlatformTestCase() {
                 state = PermissionRequestState.RESPONDING,
             )
         )
+
+        assertFalse(view.runButtonForTest().isEnabled)
+        assertFalse(view.denyButtonForTest().isEnabled)
+    }
+
+    fun `test responding state keeps buttons disabled when rules change`() {
+        view.show(
+            Permission(
+                id = "perm_responding_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = listOf("git status"),
+                always = listOf("git status"),
+                meta = PermissionMeta(
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+                state = PermissionRequestState.RESPONDING,
+            )
+        )
+
+        view.rulesForTest().update(listOf(PermissionRuleCandidate("git status", PermissionRuleDecision.APPROVED)))
 
         assertFalse(view.runButtonForTest().isEnabled)
         assertFalse(view.denyButtonForTest().isEnabled)
@@ -384,6 +467,7 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         assertEquals(1, replies.size)
         assertEquals("once", replies.single().second.reply)
+        assertNull(replies.single().third)
     }
 
     fun `test deny button uses bundle text and rejects`() {
@@ -393,6 +477,165 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         assertEquals(1, replies.size)
         assertEquals("reject", replies.single().second.reply)
+        assertNull(replies.single().third)
+    }
+
+    fun `test approved rule changes label and replies with rules`() {
+        view.show(
+            Permission(
+                id = "perm_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "git add .",
+                    ruleDecisions = listOf(
+                        PermissionRuleCandidate("git *"),
+                        PermissionRuleCandidate("git add *"),
+                    ),
+                ),
+            )
+        )
+
+        assertEquals("Allow once", view.runButtonForTest().text)
+        view.rulesForTest().toggle()
+        view.rulesForTest().approveButtonsForTest()[1].doClick()
+
+        assertEquals("Allow", view.runButtonForTest().text)
+        assertEquals("Reject", view.denyButtonForTest().text)
+        assertTrue(view.runButtonForTest().isEnabled)
+        assertFalse(view.denyButtonForTest().isEnabled)
+        assertTrue(allText(view).contains("This request and future matching calls will be allowed."))
+        view.runButtonForTest().doClick()
+
+        assertEquals(1, replies.size)
+        assertEquals("perm_rules", replies.single().first)
+        assertEquals("once", replies.single().second.reply)
+        assertEquals(listOf("git add *"), replies.single().third?.approvedAlways)
+        assertEquals(emptyList<String>(), replies.single().third?.deniedAlways)
+    }
+
+    fun `test denied rule changes label and replies with denied rules`() {
+        view.show(
+            Permission(
+                id = "perm_deny_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "git clean -fd",
+                    ruleDecisions = listOf(PermissionRuleCandidate("git clean *")),
+                ),
+            )
+        )
+
+        view.rulesForTest().toggle()
+        view.rulesForTest().approveButtonsForTest()[0].doClick()
+        assertEquals("Remove from allowed", view.rulesForTest().approveButtonsForTest()[0].toolTipText)
+        view.rulesForTest().denyButtonsForTest()[0].doClick()
+
+        assertEquals("Remove from denied", view.rulesForTest().denyButtonsForTest()[0].toolTipText)
+        assertEquals("Allow", view.runButtonForTest().text)
+        assertEquals("Reject", view.denyButtonForTest().text)
+        assertFalse(view.runButtonForTest().isEnabled)
+        assertTrue(view.denyButtonForTest().isEnabled)
+        assertTrue(allText(view).contains("This request and future matching calls will be rejected."))
+        view.denyButtonForTest().doClick()
+
+        assertEquals("reject", replies.single().second.reply)
+        assertEquals(emptyList<String>(), replies.single().third?.approvedAlways)
+        assertEquals(listOf("git clean *"), replies.single().third?.deniedAlways)
+    }
+
+    fun `test reject with changed rules replies with rules`() {
+        view.show(
+            Permission(
+                id = "perm_reject_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "git push",
+                    ruleDecisions = listOf(PermissionRuleCandidate("git push *")),
+                ),
+            )
+        )
+
+        view.rulesForTest().toggle()
+        view.rulesForTest().denyButtonsForTest()[0].doClick()
+        view.denyButtonForTest().doClick()
+
+        assertEquals("reject", replies.single().second.reply)
+        assertEquals(emptyList<String>(), replies.single().third?.approvedAlways)
+        assertEquals(listOf("git push *"), replies.single().third?.deniedAlways)
+    }
+
+    fun `test active rule toggle clears back to allow once`() {
+        view.show(
+            Permission(
+                id = "perm_clear_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "git status",
+                    ruleDecisions = listOf(PermissionRuleCandidate("git status")),
+                ),
+            )
+        )
+
+        view.rulesForTest().toggle()
+        view.rulesForTest().approveButtonsForTest()[0].doClick()
+        view.rulesForTest().approveButtonsForTest()[0].doClick()
+
+        assertEquals("Add to allowed", view.rulesForTest().approveButtonsForTest()[0].toolTipText)
+        assertEquals("Allow once", view.runButtonForTest().text)
+        view.runButtonForTest().doClick()
+        assertNull(replies.single().third)
+    }
+
+    fun `test rules expansion persists for new view`() {
+        view.show(
+            Permission(
+                id = "perm_persist_rules",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "pwd",
+                    ruleDecisions = listOf(PermissionRuleCandidate("pwd")),
+                ),
+            )
+        )
+
+        view.rulesForTest().toggle()
+        assertTrue(KiloPluginSettings.getPermissionRulesExpanded())
+
+        val next = PermissionView(reply = { id, dto, rules -> replies.add(Triple(id, dto, rules)) })
+        try {
+            next.show(
+                Permission(
+                    id = "perm_persist_rules_next",
+                    sessionId = "ses",
+                    name = "bash",
+                    patterns = emptyList(),
+                    always = emptyList(),
+                    meta = PermissionMeta(
+                        command = "pwd",
+                        ruleDecisions = listOf(PermissionRuleCandidate("pwd")),
+                    ),
+                )
+            )
+            assertTrue(next.rulesForTest().isExpanded())
+            assertEquals(1, next.rulesForTest().commandFieldsForTest().size)
+        } finally {
+            next.dispose()
+        }
     }
 
     // ------ shared card shell ------
@@ -410,8 +653,28 @@ class PermissionViewTest : BasePlatformTestCase() {
         val labels = findAll<JBLabel>(view)
         assertTrue(
             "Expected permission warning icon in header",
-            labels.any { it.icon == SessionViewIcons.warning },
+            labels.any { it.icon == AllIcons.General.Warning },
         )
+    }
+
+    fun `test permission description renders as content row`() {
+        view.show(
+            Permission(
+                id = "perm_desc",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "bun test",
+                    raw = mapOf("description" to "Run the targeted tests"),
+                ),
+            )
+        )
+
+        val text = allText(view)
+        assertTrue("Expected description content row, got: $text", text.contains("Run the targeted tests"))
+        assertTrue("Expected permission header, got: $text", text.contains("Permission required"))
     }
 
     // ------ button types ------
@@ -456,8 +719,8 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val labels = view.codeLabelsForTest()
         assertNotNull("Should have at least one code label for command", labels.firstOrNull())
-        assertEquals("Code label font family should use transcript family", style.transcriptFont.name, labels[0].font.name)
-        assertEquals(style.transcriptFont.size, labels[0].font.size)
+        assertEquals("Code label font family should use editor family", style.editorFont.name, labels[0].font.name)
+        assertEquals(style.editorFont.size, labels[0].font.size)
     }
 
     fun `test permission header uses headerFont not editor font family`() {
@@ -480,7 +743,7 @@ class PermissionViewTest : BasePlatformTestCase() {
         assertEquals("Permission header should equal headerFont", style.headerFont, header)
     }
 
-    fun `test code label uses code background`() {
+    fun `test command editor uses markdown code block background`() {
         view.show(
             Permission(
                 id = "perm_bg",
@@ -494,7 +757,124 @@ class PermissionViewTest : BasePlatformTestCase() {
 
         val labels = view.codeLabelsForTest()
         assertFalse("Expected code labels", labels.isEmpty())
-        assertEquals(SessionUiStyle.View.Surface.headerHoverBgColor(), labels[0].background)
+        assertEquals(MdCommon.defaults(SessionEditorStyle.current()).preBg, labels[0].background)
+    }
+
+    fun `test command editor is retained and disposed`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        view.show(
+            Permission(
+                id = "perm_retain",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(command = "git status"),
+            )
+        )
+        val editor = view.codeLabelsForTest().single()
+        editor.getEditor(true)
+        val count = EditorFactory.getInstance().allEditors.size
+
+        repeat(40) { i ->
+            view.show(
+                Permission(
+                    id = "perm_retain",
+                    sessionId = "ses",
+                    name = "bash",
+                    patterns = emptyList(),
+                    always = emptyList(),
+                    meta = PermissionMeta(command = "echo $i"),
+                    state = if (i % 2 == 0) PermissionRequestState.PENDING else PermissionRequestState.RESPONDING,
+                )
+            )
+            assertSame(editor, view.codeLabelsForTest().single())
+            view.codeLabelsForTest().single().getEditor(true)
+            assertEquals(count, EditorFactory.getInstance().allEditors.size)
+        }
+
+        view.hideView()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(view.codeLabelsForTest().isEmpty())
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test rule command field uses editor font after applyStyle`() {
+        view.show(
+            Permission(
+                id = "perm_rule_codefont",
+                sessionId = "ses",
+                name = "bash",
+                patterns = emptyList(),
+                always = emptyList(),
+                meta = PermissionMeta(
+                    command = "git log --oneline -10",
+                    ruleDecisions = listOf(PermissionRuleCandidate("git log *")),
+                ),
+            )
+        )
+        val style = SessionEditorStyle.create(family = "Courier New", size = 18)
+        view.applyStyle(style)
+        view.rulesForTest().toggle()
+
+        val field = view.rulesForTest().commandFieldsForTest().single()
+        assertEquals("git log *", field.text)
+        assertEquals(style.editorFont.name, field.font.name)
+        assertEquals(style.editorFont.size, field.font.size)
+    }
+
+    fun `test rule command fields are retained and disposed`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        view.show(permissionWithRules("perm_rules_retain", listOf("git status *", "git push *")))
+        view.rulesForTest().toggle()
+
+        val fields = view.rulesForTest().commandFieldsForTest()
+        assertEquals(2, fields.size)
+        fields.forEach { it.getEditor(true) }
+        val count = EditorFactory.getInstance().allEditors.size
+        val components = componentCount(view.rulesForTest())
+
+        repeat(40) {
+            view.show(permissionWithRules("perm_rules_retain", listOf("git status *", "git push *")))
+
+            val next = view.rulesForTest().commandFieldsForTest()
+            assertEquals(2, next.size)
+            assertSame(fields[0], next[0])
+            assertSame(fields[1], next[1])
+            assertEquals(components, componentCount(view.rulesForTest()))
+            next.forEach { it.getEditor(true) }
+            assertEquals(count, EditorFactory.getInstance().allEditors.size)
+        }
+
+        view.hideView()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(view.rulesForTest().commandFieldsForTest().isEmpty())
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
+    }
+
+    fun `test stale rule command fields are released on rebuild`() {
+        val base = EditorFactory.getInstance().allEditors.size
+        view.show(permissionWithRules("perm_rules_rebuild", listOf("git status *")))
+        view.rulesForTest().toggle()
+        view.rulesForTest().commandFieldsForTest().single().getEditor(true)
+        val count = EditorFactory.getInstance().allEditors.size
+
+        repeat(20) { i ->
+            view.show(permissionWithRules("perm_rules_rebuild", listOf("git command $i *")))
+
+            val fields = view.rulesForTest().commandFieldsForTest()
+            assertEquals(1, fields.size)
+            fields.single().getEditor(true)
+            assertEquals(count, EditorFactory.getInstance().allEditors.size)
+        }
+
+        view.hideView()
+        UIUtil.dispatchAllInvocationEvents()
+
+        assertTrue(view.rulesForTest().commandFieldsForTest().isEmpty())
+        assertEquals(base, EditorFactory.getInstance().allEditors.size)
     }
 
     private fun permission() = Permission(
@@ -507,6 +887,18 @@ class PermissionViewTest : BasePlatformTestCase() {
         message = "Review file changes",
     )
 
+    private fun permissionWithRules(id: String, patterns: List<String>) = Permission(
+        id = id,
+        sessionId = "ses_test",
+        name = "bash",
+        patterns = emptyList(),
+        always = emptyList(),
+        meta = PermissionMeta(
+            command = "git status",
+            ruleDecisions = patterns.map { PermissionRuleCandidate(it) },
+        ),
+    )
+
     private fun buttons(root: Container): List<AbstractButton> = root.components.flatMap { comp ->
         val item = if (comp is AbstractButton) listOf(comp) else emptyList()
         if (comp is Container) item + buttons(comp) else item
@@ -515,6 +907,7 @@ class PermissionViewTest : BasePlatformTestCase() {
     private fun allText(root: Container): String = buildString {
         fun collect(c: Container) {
             for (comp in c.components) {
+                if (!comp.isVisible) continue
                 if (comp is javax.swing.text.JTextComponent) append(comp.text).append(" ")
                 if (comp is javax.swing.JLabel) append(comp.text).append(" ")
                 if (comp is AbstractButton) append(comp.text).append(" ")
@@ -523,6 +916,20 @@ class PermissionViewTest : BasePlatformTestCase() {
         }
         collect(root)
     }
+
+    private fun layoutTree(root: Container) {
+        root.setSize(900, 600)
+        fun layout(node: Container) {
+            node.doLayout()
+            for (child in node.components) {
+                if (child is Container) layout(child)
+            }
+        }
+        layout(root)
+    }
+
+    private fun componentCount(root: Container): Int =
+        1 + root.components.sumOf { if (it is Container) componentCount(it) else 1 }
 
     private fun occurrences(text: String, token: String): Int {
         if (token.isEmpty()) return 0

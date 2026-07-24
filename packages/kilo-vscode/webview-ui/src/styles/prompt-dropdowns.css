@@ -72,6 +72,73 @@
 }
 
 /* ============================================
+   Session Mention Picker (past chats)
+   ============================================ */
+
+/* The kilo-ui List owns scrolling through its list-scroll container (its
+   keyboard navigation auto-scrolls that element), so the dropdown wrapper
+   must not scroll or cap the height itself while the picker is open. */
+.file-mention-dropdown:has(> .session-mention-picker) {
+  max-height: none;
+  overflow-y: hidden;
+}
+
+.session-mention-picker {
+  font-size: var(--kilo-font-size-12);
+  color: var(--vscode-foreground);
+}
+
+.session-mention-picker [data-component="list"] {
+  max-height: 300px;
+  gap: 0;
+  padding: 4px 0 0;
+}
+
+.session-mention-picker [data-slot="list-search-wrapper"] {
+  margin: 0 0 4px;
+  padding: 0 4px;
+}
+
+.session-mention-picker [data-slot="list-scroll"] {
+  max-height: 240px;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.session-mention-picker [data-slot="list-item"] {
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.session-mention-picker [data-slot="list-item"][data-active="true"],
+.session-mention-picker [data-slot="list-item"][data-selected="true"] {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+.session-mention-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+}
+
+.session-mention-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.session-mention-time {
+  flex-shrink: 0;
+  opacity: 0.6;
+  font-size: var(--kilo-font-size-11);
+}
+
+/* ============================================
    Slash Command Dropdown
    ============================================ */
 

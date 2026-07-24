@@ -123,6 +123,8 @@ export const dict = {
   "agentManager.dialog.compareModels.tooltip": "異なるモデルでエージェントを並行実行し、結果を比較します",
   "agentManager.dialog.compareModels.searchModels": "モデルを検索...",
   "agentManager.dialog.compareModels.selectModels": "モデルを選択...",
+  "agentManager.dialog.compareModels.effort": "推論エフォート",
+  "agentManager.dialog.compareModels.effortDefault": "デフォルト",
   "agentManager.dialog.creating": "作成中...",
   "agentManager.dialog.createWorktree": "ワークツリーを作成",
   "agentManager.dialog.removeImage": "画像を削除",

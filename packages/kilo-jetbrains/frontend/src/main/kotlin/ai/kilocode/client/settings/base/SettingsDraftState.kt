@@ -11,6 +11,8 @@ internal class SettingsDraftState<D>(
 
     private var base = initial
     private var pending: D? = null
+    private var stale: List<D> = emptyList()
+    private var applied: D? = null
     private var save = false
     private var err: String? = null
 
@@ -29,6 +31,10 @@ internal class SettingsDraftState<D>(
     fun accept(next: D) {
         val target = pending
         if (target == null) {
+            val done = applied
+            if (done != null && saved(base, done) && stale.any { saved(next, it) }) return
+            stale = emptyList()
+            applied = null
             val prev = base
             val edit = draft
             base = next
@@ -51,12 +57,15 @@ internal class SettingsDraftState<D>(
 
     fun complete(token: SettingsDraftSave<D>, returned: D) {
         val edit = draft
-        val next = if (saved(returned, token.target)) returned else token.target
+        val fresh = saved(returned, token.target)
+        val next = if (fresh) returned else token.target
         base = next
         draft = if (saved(edit, token.target)) next else edit
         pending = null
         save = false
         err = null
+        stale += token.previous
+        applied = token.target
     }
 
     fun fail(token: SettingsDraftSave<D>, message: String) {
@@ -66,6 +75,8 @@ internal class SettingsDraftState<D>(
         pending = null
         save = false
         err = message
+        stale = emptyList()
+        applied = null
     }
 }
 

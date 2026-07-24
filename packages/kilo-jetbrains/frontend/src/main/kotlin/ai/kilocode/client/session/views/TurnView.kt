@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import javax.swing.JComponent
 
@@ -38,6 +39,7 @@ class TurnView(
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
+    private var settled = true
 
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -46,6 +48,17 @@ class TurnView(
 
     init {
         isOpaque = false
+    }
+
+    @RequiresEdt
+    fun setSettled(value: Boolean) {
+        if (settled == value) return
+        settled = value
+        revalidate()
+    }
+
+    override fun isValidateRoot(): Boolean {
+        return Registry.`is`("kilo.session.validateRoots", true) && settled
     }
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
@@ -60,11 +73,17 @@ class TurnView(
 
     /** Remove the [MessageView] for [msgId] if present. */
     fun removeMessage(msgId: String) {
-        val view = messages.remove(msgId) ?: return
+        removeMessageChanged(msgId)
+    }
+
+    @RequiresEdt
+    fun removeMessageChanged(msgId: String): Boolean {
+        val view = messages.remove(msgId) ?: return false
         remove(view)
         Disposer.dispose(view)
         syncCopyToolbars()
         revalidate()
+        return true
     }
 
     @RequiresEdt

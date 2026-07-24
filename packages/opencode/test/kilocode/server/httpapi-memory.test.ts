@@ -151,8 +151,8 @@ describe("HttpApi memory", () => {
     expect(String(show.index)).toContain("httpapi_memory")
     expect(String(show.items)).toContain("httpapi_memory")
     expect(String(rec(show.sources).project)).toContain("httpapi_memory")
-    expect(typeof show.decisions).toBe("string")
-    expect(String(show.decisions)).toContain('"sessionID":"ses_http_memory"')
+    expect(show.changes).toBe("")
+    expect(show.decisions).toBe("")
 
     const forgotten = await json("POST", MemoryPaths.forget, { query: "httpapi_memory" })
     expectOperation(forgotten)

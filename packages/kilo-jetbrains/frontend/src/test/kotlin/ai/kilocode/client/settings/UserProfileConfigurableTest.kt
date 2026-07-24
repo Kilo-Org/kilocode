@@ -6,6 +6,7 @@ import ai.kilocode.client.settings.profile.formatResetDate
 import ai.kilocode.client.settings.profile.formatShortBalance
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.DeviceAuthDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
@@ -90,6 +91,13 @@ class UserProfileConfigurableTest : BasePlatformTestCase() {
             assertTrue(buttons(panel).any { it.text == "Log Out" })
         }
         assertEquals(listOf("https://auth.kilo.ai/device"), urls)
+    }
+
+    fun `test profile page has standard horizontal content padding`() {
+        edt {
+            assertEquals(UiStyle.Gap.xl(), panel.insets.left)
+            assertEquals(UiStyle.Gap.xl(), panel.insets.right)
+        }
     }
 
     fun `test logout updates profile UI`() {

@@ -119,6 +119,8 @@ export const dict = {
   "agentManager.dialog.compareModels.tooltip": "เรียกใช้เอเจนต์บนโมเดลต่าง ๆ พร้อมกันเพื่อเปรียบเทียบผลลัพธ์",
   "agentManager.dialog.compareModels.searchModels": "ค้นหาโมเดล...",
   "agentManager.dialog.compareModels.selectModels": "เลือกโมเดล...",
+  "agentManager.dialog.compareModels.effort": "ระดับการใช้เหตุผล",
+  "agentManager.dialog.compareModels.effortDefault": "ค่าเริ่มต้น",
   "agentManager.dialog.creating": "กำลังสร้าง...",
   "agentManager.dialog.createWorktree": "สร้าง Worktree",
   "agentManager.dialog.removeImage": "ลบรูปภาพ",

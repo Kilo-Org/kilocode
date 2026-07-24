@@ -23,6 +23,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
+  actions: write
   contents: write
   pull-requests: read
 
@@ -198,6 +199,19 @@ jobs:
           KIND: ${{ steps.release.outputs.kind }}
           ARCHIVE: ${{ steps.archive.outputs.path }}
           NOTES: packages/kilo-jetbrains/build/release-notes.md
+
+      - name: Dispatch bundled GitHub release build
+        continue-on-error: true
+        run: |
+          gh workflow run publish-jetbrains-bundled.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f pr="$PR_NUMBER" \
+            -f merge_commit="$MERGE_COMMIT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr }}
+          MERGE_COMMIT: ${{ github.event.pull_request.merge_commit_sha || inputs.merge_commit }}
 
       - name: Upload workflow artifact
         if: always()

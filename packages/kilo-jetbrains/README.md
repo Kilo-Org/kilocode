@@ -78,7 +78,7 @@ The built plugin archive is at `build/distributions/kilo.jetbrains-<version>.zip
 
 ## Releasing
 
-See [RELEASING.md](RELEASING.md) for the full release process, including how to tag and push an RC, where to watch workflow progress, and how to install RC builds via the custom plugin repository.
+See [RELEASING.md](RELEASING.md) for the full release process, including how to tag and push an RC, where to watch workflow progress, how to install RC builds, and how the signed bundled CLI build is published to the GitHub-hosted stable plugin repository.
 
 ---
 
