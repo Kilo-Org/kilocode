@@ -1,5 +1,6 @@
 import path from "path"
 import fs from "fs/promises"
+import { createRequire } from "module"
 
 export namespace TestCli {
   export const ENV = "KILO_TEST_CLI_PATH"
@@ -24,16 +25,26 @@ export namespace TestCli {
     })
     if (!result.success) throw new AggregateError(result.logs, "Failed to build CLI subprocess test bundle")
     await fs.cp(path.join(root, "migration"), path.join(dir, "migration"), { recursive: true })
-    const meta = JSON.parse(await Bun.file(path.join(root, "node_modules/@opentui/core/package.json")).text())
+    // Resolve through Node's lookup from the package root: Bun's isolated layout does not
+    // materialize package-level node_modules on every platform (e.g. the Windows runners).
+    const req = createRequire(path.join(root, "package.json"))
+    const core = path.dirname(req.resolve("@opentui/core"))
+    const meta = JSON.parse(await Bun.file(path.join(core, "package.json")).text())
     const scope = path.join(dir, "node_modules/@opentui")
     await fs.mkdir(scope, { recursive: true })
-    const core = await fs.realpath(path.join(root, "node_modules/@opentui/core"))
+    // Anchor variant lookup to the core package so links stay inside the same install tree.
+    const deps = createRequire(path.join(core, "package.json"))
+    const kind = process.platform === "win32" ? "junction" : "dir"
     for (const name of Object.keys(meta.optionalDependencies ?? {})) {
-      const basename = name.replace("@opentui/", "")
-      const target = path.join(core, "..", basename)
-      if (await Bun.file(path.join(target, "package.json")).exists()) {
-        await fs.symlink(target, path.join(scope, basename), "dir")
-      }
+      const target = await (async () => {
+        try {
+          return path.dirname(deps.resolve(name))
+        } catch {
+          // Optional native variant is not installed for this platform.
+          return
+        }
+      })()
+      if (target) await fs.symlink(target, path.join(scope, name.replace("@opentui/", "")), kind)
     }
     return path.join(out, "cli.js")
   }
