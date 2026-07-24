@@ -67,7 +67,7 @@ export function ChartTool(props: ToolProps) {
           return {
             ...dataset,
             backgroundColor: data.map((_, j) => colors.series[j % colors.series.length]),
-            borderColor: colors.series.map(c => c),
+            borderColor: colors.series.map((c) => c),
           }
         }
         return {
@@ -122,11 +122,7 @@ export function ChartTool(props: ToolProps) {
       defaultOpen={props.defaultOpen ?? true}
     >
       <div data-component="chart-container">
-        {error() ? (
-          <div data-slot="chart-error">{error()}</div>
-        ) : (
-          <canvas ref={canvas} data-slot="chart-render" />
-        )}
+        {error() ? <div data-slot="chart-error">{error()}</div> : <canvas ref={canvas} data-slot="chart-render" />}
       </div>
     </BasicTool>
   )
