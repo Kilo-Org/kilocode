@@ -38,13 +38,18 @@ import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { InstallationVersion } from "@opencode-ai/core/installation/version"
 import os from "os"
 
-/** Strip controls, collapse whitespace, clamp, fall back when empty. */
-export function sanitizeLabel(value: string, fallback: string, max: number): string {
-  const cleaned = value
+/** Strip controls, collapse whitespace, clamp. Empty input may yield "". */
+function cleanLabel(value: string, max: number): string {
+  return value
     .replace(/[\u0000-\u001f\u007f]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, max)
+}
+
+/** Strip controls, collapse whitespace, clamp, fall back when empty. */
+export function sanitizeLabel(value: string, fallback: string, max: number): string {
+  const cleaned = cleanLabel(value, max)
   return cleaned.length > 0 ? cleaned : fallback
 }
 
@@ -63,11 +68,7 @@ export function hostLabel(hostname = os.hostname()): string {
 
 /** CLI version clamped to the cloud contract's 32-char cap. */
 export function versionLabel(version = InstallationVersion): string | undefined {
-  const cleaned = version
-    .replace(/[\u0000-\u001f\u007f]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 32)
+  const cleaned = cleanLabel(version, 32)
   return cleaned.length > 0 ? cleaned : undefined
 }
 
