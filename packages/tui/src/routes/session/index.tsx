@@ -1747,7 +1747,7 @@ function AssistantMessage(props: {
       </Switch>
     </>
   )
-} // kilocode_change
+}
 
 // kilocode_change start - register rendered step-finish parts
 const PART_MAPPING = {
@@ -1758,7 +1758,7 @@ const PART_MAPPING = {
 }
 // kilocode_change end
 
-const INLINE_TOOL_ICON_WIDTH = 2 // kilocode_change
+const INLINE_TOOL_ICON_WIDTH = 2
 
 // kilocode_change start - show concrete routed models reported by gateway/provider responses
 function StepFinishPart(props: { last: boolean; part: StepFinishPart; message: AssistantMessage }) {

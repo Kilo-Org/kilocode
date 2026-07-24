@@ -1275,7 +1275,7 @@ export function options(input: {
       if (
         input.model.api.npm === "@ai-sdk/openai" ||
         input.model.api.npm === "@ai-sdk/azure" ||
-        input.model.api.npm === "@ai-sdk/github-copilot" || // kilocode_change
+        input.model.api.npm === "@ai-sdk/github-copilot" ||
         input.model.api.npm === "@openrouter/ai-sdk-provider" || // kilocode_change
         input.model.api.npm === "@kilocode/kilo-gateway" || // kilocode_change
         input.model.api.npm === "@ai-sdk/amazon-bedrock/mantle"

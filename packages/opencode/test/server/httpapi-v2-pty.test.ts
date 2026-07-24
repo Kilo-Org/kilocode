@@ -179,6 +179,24 @@ describe("v2 pty HttpApi", () => {
     () =>
       Effect.gen(function* () {
         const dir = yield* tmpdirScoped({ git: true, config: { formatter: false, lsp: false } })
+        // kilocode_change start - verify child env precedence and credential stripping through the canonical PTY route
+        const previous = {
+          password: process.env.KILO_SERVER_PASSWORD,
+          username: process.env.KILO_SERVER_USERNAME,
+        }
+        yield* Effect.acquireRelease(
+          Effect.sync(() => {
+            process.env.KILO_SERVER_PASSWORD = "host-password"
+            process.env.KILO_SERVER_USERNAME = "host-username"
+          }),
+          () =>
+            Effect.sync(() => {
+              if (previous.password === undefined) delete process.env.KILO_SERVER_PASSWORD
+              else process.env.KILO_SERVER_PASSWORD = previous.password
+              if (previous.username === undefined) delete process.env.KILO_SERVER_USERNAME
+              else process.env.KILO_SERVER_USERNAME = previous.username
+            }),
+        )
         const plugin = path.join(dir, "plugin.ts")
         const cwd = path.join(dir, "child")
         yield* Effect.promise(() => mkdir(cwd))
@@ -191,6 +209,10 @@ describe("v2 pty HttpApi", () => {
               '    output.env.SHARED = "plugin"',
               '    output.env.PLUGIN = "plugin"',
               '    output.env.TERM = "plugin"',
+              '    output.env.KILO_TERMINAL = "plugin"',
+              '    output.env.KILO_PTY_ID = "plugin"',
+              '    output.env.KILO_SERVER_PASSWORD = "plugin-password"',
+              '    output.env.KILO_SERVER_USERNAME = "plugin-username"',
               "    output.env.HOOK_CWD = input.cwd",
               "  },",
               "})",
@@ -209,9 +231,20 @@ describe("v2 pty HttpApi", () => {
           directoryHeader(dir),
           HttpClientRequest.bodyJson({
             command: "/bin/sh",
-            args: ["-c", 'printf "%s|%s|%s|%s|%s\\n" "$CALLER" "$SHARED" "$PLUGIN" "$TERM" "$HOOK_CWD"; sleep 5'],
+            args: [
+              "-c",
+              'printf "%s|%s|%s|%s|%s|%s|%s|%s|%s\\n" "$CALLER" "$SHARED" "$PLUGIN" "$TERM" "$KILO_TERMINAL" "$KILO_PTY_ID" "${KILO_SERVER_PASSWORD-unset}" "${KILO_SERVER_USERNAME-unset}" "$HOOK_CWD"; sleep 5',
+            ],
             cwd,
-            env: { CALLER: "caller", SHARED: "caller", TERM: "caller" },
+            env: {
+              CALLER: "caller",
+              SHARED: "caller",
+              TERM: "caller",
+              KILO_TERMINAL: "caller",
+              KILO_PTY_ID: "caller",
+              KILO_SERVER_PASSWORD: "caller-password",
+              KILO_SERVER_USERNAME: "caller-username",
+            },
           }),
           Effect.flatMap(HttpClient.execute),
         )
@@ -240,9 +273,9 @@ describe("v2 pty HttpApi", () => {
             return yield* takeUntil(expected, next)
           })
 
-        expect(yield* takeUntil(`caller|plugin|plugin|xterm-256color|${cwd}`)).toContain(
-          `caller|plugin|plugin|xterm-256color|${cwd}`,
-        )
+        const output = yield* takeUntil("caller|plugin|plugin|xterm-256color")
+        expect(output).toContain(`caller|plugin|plugin|xterm-256color|1|${info.id}|||${cwd}`)
+        // kilocode_change end
         yield* write(new Socket.CloseEvent(1000, "done")).pipe(Effect.catch(() => Effect.void))
         yield* HttpClientRequest.delete(`/api/pty/${info.id}`).pipe(directoryHeader(dir), HttpClient.execute)
       }),

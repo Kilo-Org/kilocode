@@ -50,7 +50,7 @@ describe("LLMGatewayPlugin", () => {
       })
       expect((yield* catalog.provider.get(ProviderV2.ID.make("llmgateway"))).request.headers).toEqual({
         Existing: "value",
-        "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+        "HTTP-Referer": "https://kilo.ai/",
         "X-Title": "Kilo Code", // kilocode_change
         "X-Source": "kilo", // kilocode_change
       })

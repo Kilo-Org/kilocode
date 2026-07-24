@@ -17,7 +17,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { eq } from "drizzle-orm"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { resetDatabase } from "../fixture/db"
-import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { pollWithTimeout, testEffect } from "../lib/effect"
 
 const env = LayerNode.buildLayer(CrossSpawnSpawner.node)
 const it = testEffect(env)
@@ -304,13 +304,13 @@ describe("ShareNext", () => {
                 deletions: 0,
                 status: "modified",
               },
-            ], // kilocode_change
+            ],
           })
           const sync = yield* pollWithTimeout(
             Effect.sync(() => seen[0]),
             "share sync was not sent",
             "3 seconds",
-          ) // kilocode_change
+          )
 
           expect(seen).toHaveLength(1)
           expect(sync.url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync") // kilocode_change

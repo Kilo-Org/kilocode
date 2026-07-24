@@ -216,9 +216,10 @@ export const layer = Layer.effect(
         KILO_TERMINAL: "1",
         KILO_PTY_ID: id, // kilocode_change - let nested Kilo processes identify their parent terminal
       } as Record<string, string>
-      // kilocode_change start - do not expose the local server credential to processes spawned by user terminals
-      delete env.KILO_SERVER_PASSWORD
-      delete env.KILO_SERVER_USERNAME
+      // kilocode_change start - do not expose local server credentials to user terminals.
+      // node-pty inherits parent values for omitted keys, so empty tombstones are required.
+      env.KILO_SERVER_PASSWORD = ""
+      env.KILO_SERVER_USERNAME = ""
       // kilocode_change end
       if (process.platform === "win32") {
         env.LC_ALL = "C.UTF-8"

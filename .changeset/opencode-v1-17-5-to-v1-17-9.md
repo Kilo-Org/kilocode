@@ -17,6 +17,8 @@ Changes from opencode v1.17.5 to v1.17.9 upstream:
 - Core Bugfixes: MCP tool failures now surface the server's error text instead of a generic failure.
 - Core Bugfixes: MCP OAuth error pages now escape provider error text correctly.
 - Core Bugfixes: Honor configured agent step limits by forcing a final text response instead of failing mid-run.
+- Core Bugfixes: Queue steering prompts before dismissing pending questions so the previous turn cannot resume first.
+- Core Bugfixes: Prevent local server credentials from leaking into spawned PTY processes.
 - Core Bugfixes: Fix Devstral model detection when provider IDs use different casing. (@Robin1987China)
 - Core Bugfixes: Pass configured custom headers to Copilot model requests.
 - Core Improvements: MCP servers can now receive the current workspace as a client root.
@@ -25,3 +27,4 @@ Changes from opencode v1.17.5 to v1.17.9 upstream:
 - Core Improvements: Stop wrapping follow-up user messages in a steering reminder so prompt caching stays effective.
 - TUI Bugfixes: MCP debug now uses the SDK's latest protocol version.
 - TUI Bugfixes: Only show the background subagent shortcut when the server supports it.
+- UI Bugfixes: Render completed Mermaid blocks from diagram source instead of fenced Markdown.

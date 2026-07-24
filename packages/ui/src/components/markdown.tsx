@@ -43,6 +43,7 @@ type RenderedBlock =
       key: string
       mode: "code"
       raw: string
+      src: string // kilocode_change - Mermaid consumes delimiter-free source while raw preserves stream identity
       hash: string
       language: string
       complete: boolean
@@ -385,6 +386,7 @@ export function Markdown(
                 key: blockKey,
                 mode: block.mode,
                 raw: block.raw,
+                src: block.src, // kilocode_change
                 hash: String(block.raw.length),
                 complete: !!block.complete,
                 language: "mermaid",
@@ -401,6 +403,7 @@ export function Markdown(
               key: blockKey,
               mode: block.mode,
               raw: block.raw,
+              src: block.src, // kilocode_change
               hash: String(block.raw.length),
               complete: !!block.complete,
               ...result,
@@ -603,6 +606,7 @@ function pendingBlocks(
       key,
       mode: block.mode,
       raw: block.raw,
+      src: block.src, // kilocode_change
       hash: String(block.raw.length),
       language: block.language ?? "text",
       complete: !!block.complete,
@@ -716,7 +720,7 @@ function updateCodeBlock(
     pre.setAttribute("dir", "auto")
     const codeElement = document.createElement("code")
     codeElement.setAttribute("data-lang", "mermaid")
-    codeElement.textContent = block.raw
+    codeElement.textContent = block.src // kilocode_change - Mermaid rejects fenced Markdown as diagram source
     pre.appendChild(codeElement)
     wrapper.appendChild(pre)
     wrapper.appendChild(createCopyButton(labels))
@@ -760,7 +764,7 @@ function updateCodeBlock(
   const wrapper = document.createElement("div")
   wrapper.setAttribute("data-component", "markdown-code")
   const pre = document.createElement("pre")
-  pre.className = "shiki Kilo" // kilocode_change
+  pre.className = "shiki Kilo"
   pre.setAttribute("dir", "auto") // kilocode_change
   const codeElement = document.createElement("code")
   codeElement.className = `language-${block.language}`

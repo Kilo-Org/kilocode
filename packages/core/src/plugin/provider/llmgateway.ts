@@ -17,7 +17,7 @@ export const LLMGatewayPlugin = PluginV2.define({
           if (item.provider.api.url !== "https://api.llmgateway.io/v1") continue
           if (item.provider.id !== ProviderV2.ID.make("llmgateway")) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
-            provider.request.headers["HTTP-Referer"] = "https://kilo.ai/" // kilocode_change
+            provider.request.headers["HTTP-Referer"] = "https://kilo.ai/"
             // kilocode_change start
             provider.request.headers["X-Title"] = "Kilo Code"
             provider.request.headers["X-Source"] = "kilo"
