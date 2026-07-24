@@ -15,8 +15,7 @@
 // Demo mode also handles permission and question replies locally, completing
 // or failing the synthetic tool parts as appropriate.
 import path from "path"
-import type { ToolPart } from "@kilocode/sdk/v2"
-import type { Event } from "./event"
+import type { Event, ToolPart } from "@kilocode/sdk/v2" // kilocode_change - revert to upstream native Event type
 import { createSessionData, reduceSessionData, type SessionData } from "./session-data"
 import { writeSessionOutput } from "./stream"
 import type { FooterApi, PermissionReply, QuestionReject, QuestionReply, RunPrompt, StreamCommit } from "./types"
