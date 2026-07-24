@@ -39,7 +39,7 @@ if (prs.length > 0) {
     try {
       git(["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`])
     } catch {
-      // dated branch does not exist on origin yet — fine
+      console.log(`dated branch ${branch} does not exist on origin yet; will create it on push`)
     }
     git(["checkout", "-B", branch, "origin/main"])
     mode = "conflict"
@@ -50,7 +50,7 @@ if (prs.length > 0) {
   try {
     git(["fetch", "origin", `+refs/heads/${branch}:refs/remotes/origin/${branch}`])
   } catch {
-    // branch does not exist on origin yet — fine
+    console.log(`branch ${branch} does not exist on origin yet; will create it on push`)
   }
   git(["checkout", "-B", branch, "origin/main"])
 }

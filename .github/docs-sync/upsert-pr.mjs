@@ -34,7 +34,7 @@ function shortRef(url) {
 }
 
 function changeRow(e) {
-  return `| ${clean(e.action)} | [${shortRef(e.url)}](${clean(e.url)}) |`
+  return `| ${clean(e.action).replaceAll("|", "\\|")} | [${shortRef(e.url)}](${clean(e.url)}) |`
 }
 
 function skippedRow(e) {
@@ -140,7 +140,12 @@ async function main() {
     (f) => !f.startsWith("packages/kilo-docs/pages/") && !f.startsWith("packages/kilo-docs/lib/nav/"),
   )
   if (nonContent.length > 0) {
-    draftReasons.push(`touches non-content files outside pages/ and lib/nav/: ${nonContent.slice(0, 5).join(", ")}`)
+    // File paths are agent-chosen; sanitize before they land in the PR body.
+    const listed = nonContent
+      .slice(0, 5)
+      .map((f) => clean(f).replaceAll("|", "\\|"))
+      .join(", ")
+    draftReasons.push(`touches non-content files outside pages/ and lib/nav/: ${listed}`)
   }
   const draft = draftReasons.length > 0
 
