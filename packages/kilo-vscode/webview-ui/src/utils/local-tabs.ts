@@ -109,6 +109,22 @@ export function pendingTabForCreated(
   return ids.includes(draft) && check(draft) ? draft : undefined
 }
 
+// Tab outcome for a created session: explicit activation opens it in the
+// foreground, otherwise only a matching pending draft promotes into it.
+// Callers never combine activate with a draftID; activation wins if they do.
+export function tabsForCreatedSession(
+  state: LocalTabState,
+  id: string,
+  draftID: string | undefined,
+  activate: boolean | undefined,
+  check: PendingTabCheck = isPendingTab,
+): LocalTabState | undefined {
+  if (activate) return openSessionTab(state, id)
+  const draft = pendingTabForCreated(state.ids, draftID, check)
+  if (!draft) return undefined
+  return replacePendingTab(state, draft, id)
+}
+
 export function nextTabAfterClose(ids: readonly string[], id: string): string | undefined {
   const index = ids.indexOf(id)
   if (index === -1) return undefined
