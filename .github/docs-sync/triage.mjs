@@ -10,8 +10,8 @@
  * "unclassified" entries (docs_worthy=false) instead of failing the run —
  * the PR body then shows those PRs as skipped, visible to reviewers.
  *
- * Env: TRIAGE_MODEL (provider/model), KILO_API_KEY (gateway auth, set by the workflow;
- * the kilo provider reads it natively). Reads the prompt from triage-prompt.md next to this script.
+ * Env: TRIAGE_MODEL (provider/model), KILO_API_KEY + KILO_ORG_ID (gateway auth, set by
+ * the workflow; the kilo provider reads them natively). Reads the prompt from triage-prompt.md next to this script.
  */
 
 import { execFileSync } from "node:child_process"
