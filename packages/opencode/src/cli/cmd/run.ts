@@ -727,7 +727,7 @@ export const RunCommand = effectCmd({
           let retries = 0 // kilocode_change
           let error: string | undefined
 
-          // kilocode_change start - consume the native event once; sync envelopes are compatibility copies
+          // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
           for await (const event of events.stream) {
             // kilocode_change end
 
