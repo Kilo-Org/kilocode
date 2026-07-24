@@ -1225,7 +1225,83 @@ export const PermissionDockHeredoc: Story = {
 }
 
 // ---------------------------------------------------------------------------
-// 17. MCP tool cards — collapsed
+// 19. Permission dock — many parallel edits (scrollability test)
+// ---------------------------------------------------------------------------
+
+const simplePatch = (file: string, from: string, to: string) =>
+  `===================================================================\n--- ${file}\n+++ ${file}\n@@ -1,3 +1,3 @@\n ${from}\n-  return "${from}"\n+  return "${to}"\n }\n`
+
+const manyEditsPermission: PermissionRequest = {
+  id: "perm-many-edits-001",
+  sessionID: SESSION_ID,
+  toolName: "edit",
+  patterns: ["*"],
+  always: ["*"],
+  args: {
+    filepath: "src/a.ts, src/b.ts, src/c.ts, src/d.ts, src/e.ts",
+    files: [
+      {
+        relativePath: "src/components/Header.tsx",
+        type: "update",
+        patch: simplePatch("src/components/Header.tsx", "export function Header()", "Header"),
+        additions: 1,
+        deletions: 1,
+      },
+      {
+        relativePath: "src/components/Footer.tsx",
+        type: "update",
+        patch: simplePatch("src/components/Footer.tsx", "export function Footer()", "Footer"),
+        additions: 1,
+        deletions: 1,
+      },
+      {
+        relativePath: "src/utils/api.ts",
+        type: "update",
+        patch: simplePatch("src/utils/api.ts", "export function fetchData()", "fetchData"),
+        additions: 1,
+        deletions: 1,
+      },
+      {
+        relativePath: "src/utils/format.ts",
+        type: "update",
+        patch: simplePatch("src/utils/format.ts", "export function formatDate()", "formatDate"),
+        additions: 1,
+        deletions: 1,
+      },
+      {
+        relativePath: "src/hooks/useAuth.ts",
+        type: "update",
+        patch: simplePatch("src/hooks/useAuth.ts", "export function useAuth()", "useAuth"),
+        additions: 1,
+        deletions: 1,
+      },
+    ],
+  },
+  tool: { messageID: ASST_MSG_ID, callID: "call-many-edits-001" },
+}
+
+export const PermissionDockManyEdits: Story = {
+  name: "Permission Dock — many parallel edits (overflow)",
+  render: () => {
+    const perms = [manyEditsPermission]
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "busy", permissions: perms }),
+      messages: () => [{ id: "msg-001" }] as any[],
+    }
+    return (
+      <StoryProviders permissions={perms} sessionID={SESSION_ID} status="busy" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ width: "100%", height: "350px", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// 20. MCP tool cards — collapsed
 // ---------------------------------------------------------------------------
 
 const mcpCompleted: ToolPart = {
