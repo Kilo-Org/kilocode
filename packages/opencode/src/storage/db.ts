@@ -5,6 +5,7 @@ export * from "drizzle-orm"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { LocalContext } from "@/util/local-context"
 import { Global } from "@opencode-ai/core/global"
+import { DbPreflight } from "@opencode-ai/core/kilocode/db-preflight" // kilocode_change
 import * as Log from "@opencode-ai/core/util/log"
 import { NamedError } from "@opencode-ai/core/util/error"
 import path from "path"
@@ -102,6 +103,7 @@ export const Client = Object.assign(
     const dbPath = getPath(flags)
     log.info("opening database", { path: dbPath })
 
+    DbPreflight.assertWritable(dbPath) // kilocode_change - actionable error (and self-heal for kilo-owned files) instead of an opaque wal_checkpoint crash on read-only db files
     const db = init(dbPath)
 
     db.run("PRAGMA journal_mode = WAL")

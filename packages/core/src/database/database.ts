@@ -7,6 +7,7 @@ import { Global } from "../global"
 import { Flag } from "../flag/flag"
 import { isAbsolute, join } from "path"
 import { existsSync } from "fs" // kilocode_change
+import { DbPreflight } from "../kilocode/db-preflight" // kilocode_change
 import { DatabaseMigration } from "./migration"
 import { InstallationChannel } from "../installation/version"
 import { LayerNode } from "../effect/layer-node"
@@ -38,6 +39,7 @@ export const layer = Layer.effect(
 )
 
 export function layerFromPath(filename: string) {
+  DbPreflight.assertWritable(filename) // kilocode_change - actionable error (and self-heal for kilo-owned files) instead of an opaque wal_checkpoint crash on read-only db files
   return layer.pipe(Layer.provide(sqliteLayer({ filename })))
 }
 
