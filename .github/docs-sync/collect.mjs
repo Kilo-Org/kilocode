@@ -6,10 +6,12 @@
  * triage pass.
  *
  * Pre-filter drops (triage never sees these):
- *   - bot-authored PRs (includes this bot's own rolling PRs)
- *   - PRs labeled auto-docs
+ *   - PRs labeled auto-docs (this bot's own rolling PRs)
  *   - chore/test/ci/build/docs/style/refactor/revert conventional titles
  *   - PRs touching only docs/non-product paths
+ *
+ * Bot-authored PRs are kept: release/dependency bots ship user-facing
+ * changes too, and the label + docs-only guards above prevent loops.
  */
 
 import fs from "node:fs"
@@ -42,7 +44,7 @@ const since = argSince()
 console.log(`collecting PRs merged since ${since.toISOString()}`)
 
 const digest = []
-const dropped = { bot: 0, label: 0, title: 0, docs_only: 0, fetch_error: 0 }
+const dropped = { label: 0, title: 0, docs_only: 0, fetch_error: 0 }
 
 for (const fullRepo of SOURCE_REPOS) {
   const prs = await mergedPrs(fullRepo, since)
@@ -50,10 +52,6 @@ for (const fullRepo of SOURCE_REPOS) {
 
   for (const item of prs) {
     const author = item.user?.login ?? ""
-    if (author.endsWith("[bot]")) {
-      dropped.bot++
-      continue
-    }
     if ((item.labels ?? []).some((l) => l.name === "auto-docs")) {
       dropped.label++
       continue
@@ -132,7 +130,7 @@ appendSummary(
     "",
     `- window: since \`${since.toISOString()}\``,
     `- kept: **${digest.length}** PRs`,
-    `- dropped: ${dropped.bot} bot, ${dropped.label} auto-docs, ${dropped.title} title filter, ${dropped.docs_only} docs-only, ${dropped.fetch_error} fetch errors`,
+    `- dropped: ${dropped.label} auto-docs, ${dropped.title} title filter, ${dropped.docs_only} docs-only, ${dropped.fetch_error} fetch errors`,
     "",
     ...digest.map((d) => `- [${d.repo}#${d.number}](${d.url}) ${d.title}`),
   ].join("\n"),
