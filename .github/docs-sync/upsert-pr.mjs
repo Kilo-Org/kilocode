@@ -117,9 +117,12 @@ async function main() {
   git(["config", "user.name", "github-actions[bot]"])
   git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"])
   git(["add", DOCS_PATH])
-  const changedFiles = git(["diff", "--cached", "--name-only"]).split("\n").filter(Boolean)
   git(["commit", "-m", `docs: sync with merged PRs (${date})`])
 
+  // The draft cap bounds the cumulative PR diff, not just this run's commit.
+  const changedFiles = git(["diff", "--name-only", "origin/main...HEAD", "--", DOCS_PATH])
+    .split("\n")
+    .filter(Boolean)
   const draftReasons = []
   if (changedFiles.length > FILE_CAP) draftReasons.push(`diff exceeds ${FILE_CAP} files (${changedFiles.length})`)
   if (!verified) draftReasons.push("docs build/tests not passing")

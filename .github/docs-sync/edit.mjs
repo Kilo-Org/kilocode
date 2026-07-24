@@ -52,7 +52,7 @@ function editBatch(batch, index) {
 
   const prompt = `${basePrompt}
 
-Batch specifics for this run: the PRs to handle are in the attached ${batchFile} (full details) and ${triageFile} (triage verdicts). Write your per-PR results to ${summaryFile} at the repository root in the summary JSON format described above. Handle ONLY the PRs in these batch files.`
+Batch specifics for this run: the PRs to handle are in the attached ${batchFile} (full details) and ${triageFile} (triage verdicts). Handle ONLY the PRs in these batch files. When finished, write your per-PR results in the summary JSON format described above to the file \`${summaryFile}\` (path relative to the repository root).`
 
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
@@ -64,6 +64,12 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
         { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 25 * 60 * 1000, stdio: ["ignore", "inherit", "inherit"] },
       )
       if (fs.existsSync(summaryFile)) return true
+      // Tolerate the agent dropping the docs-sync-out/ prefix.
+      const alt = path.basename(summaryFile)
+      if (fs.existsSync(alt)) {
+        fs.renameSync(alt, summaryFile)
+        return true
+      }
       console.warn(`batch ${index} attempt ${attempt}: summary file ${summaryFile} not produced`)
     } catch (err) {
       const stderr = String(err.stderr ?? "").trim().split("\n").slice(-5).join("\n")
