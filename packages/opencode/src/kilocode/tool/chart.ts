@@ -10,7 +10,7 @@ const Parameters = Schema.Struct({
     description: "Optional subtitle shown below the title",
   }),
   spec: Schema.String.annotate({
-    description: "A valid Vega-Lite v6 JSON specification string describing the chart to render",
+    description: "A valid Chart.js v4 JSON configuration string describing the chart to render",
   }),
 })
 
@@ -25,7 +25,7 @@ export const ChartTool = Tool.define(
   Effect.gen(function* () {
     return {
       description:
-        "Render a data visualization chart using a Vega-Lite v6 JSON spec. Use this when the user asks to visualize data as a chart, graph, or plot. The spec is rendered inline in the session as an interactive SVG chart.",
+        "Render a data visualization chart using a Chart.js v4 config. Use this when the user asks to visualize data as a chart, graph, or plot. The config is rendered inline in the session.",
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
@@ -40,7 +40,7 @@ export const ChartTool = Tool.define(
           } catch {
             return {
               title: params.title,
-              output: `Invalid chart spec: could not parse JSON. Please provide a valid Vega-Lite v6 JSON string.`,
+              output: `Invalid chart spec: could not parse JSON. Please provide a valid Chart.js v4 JSON string.`,
               metadata: { title: params.title, description: params.description, error: "invalid-json" } as Meta,
             }
           }
