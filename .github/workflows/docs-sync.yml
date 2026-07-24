@@ -33,8 +33,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  TRIAGE_MODEL: ${{ vars.DOCS_SYNC_TRIAGE_MODEL || 'kilocode/moonshotai/kimi-k3' }}
-  EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilocode/moonshotai/kimi-k3' }}
+  TRIAGE_MODEL: ${{ vars.DOCS_SYNC_TRIAGE_MODEL || 'kilo/moonshotai/kimi-k3' }}
+  EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/moonshotai/kimi-k3' }}
 
 jobs:
   sync:
@@ -75,7 +75,7 @@ jobs:
         id: triage
         if: steps.collect.outputs.count != '0'
         env:
-          KILO_CONFIG_CONTENT: ${{ secrets.DOCS_SYNC_KILO_CONFIG }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
         run: node .github/docs-sync/triage.mjs
 
       - name: Filter docs-worthy PRs
@@ -104,7 +104,7 @@ jobs:
       - name: Update docs (Kilo CLI, batched)
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         env:
-          KILO_CONFIG_CONTENT: ${{ secrets.DOCS_SYNC_KILO_CONFIG }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
         run: node .github/docs-sync/edit.mjs
 
       - name: Verify docs build and tests
@@ -122,13 +122,12 @@ jobs:
         if: steps.verify.outcome == 'failure'
         continue-on-error: true
         env:
-          KILO_CONFIG_CONTENT: ${{ secrets.DOCS_SYNC_KILO_CONFIG }}
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           set -o pipefail
-          kilo run -m "$EDIT_MODEL" --dir "$GITHUB_WORKSPACE" \
-            -f docs-sync-out/verify.log \
-            "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
+          kilo run "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
+            -m "$EDIT_MODEL" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
             | tee -a docs-sync-out/edit-log.txt
           { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify2.log
 

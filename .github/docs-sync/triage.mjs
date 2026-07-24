@@ -10,8 +10,8 @@
  * "unclassified" entries (docs_worthy=false) instead of failing the run —
  * the PR body then shows those PRs as skipped, visible to reviewers.
  *
- * Env: TRIAGE_MODEL (provider/model), KILO_CONFIG_CONTENT (CLI auth, set by
- * the workflow). Reads the prompt from triage-prompt.md next to this script.
+ * Env: TRIAGE_MODEL (provider/model), KILO_API_KEY (gateway auth, set by the workflow;
+ * the kilo provider reads it natively). Reads the prompt from triage-prompt.md next to this script.
  */
 
 import { execFileSync } from "node:child_process"
@@ -38,13 +38,16 @@ function triageChunk(chunk, index) {
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     let raw
     try {
+      // Message positional first: --file is multi-value and would otherwise
+      // consume a trailing message as a file path ("File not found").
       raw = execFileSync(
         "kilo",
-        ["run", "-m", model, "--dir", process.cwd(), "-f", chunkFile, prompt],
+        ["run", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
         { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 10 * 60 * 1000, stdio: ["ignore", "pipe", "pipe"] },
       )
     } catch (err) {
-      console.warn(`chunk ${index} attempt ${attempt}: kilo run failed: ${err.message}`)
+      const stderr = String(err.stderr ?? "").trim().split("\n").slice(-5).join("\n")
+      console.warn(`chunk ${index} attempt ${attempt}: kilo run failed: ${stderr || err.message}`)
       continue
     }
     fs.writeFileSync(`${OUT_DIR}/triage-raw-${index}.txt`, raw)

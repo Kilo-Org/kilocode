@@ -10,7 +10,7 @@
  * warning — its PRs show up in the rolling PR body as skipped, so nothing
  * fails silently.
  *
- * Env: EDIT_MODEL (provider/model), KILO_CONFIG_CONTENT (set by workflow).
+ * Env: EDIT_MODEL (provider/model), KILO_API_KEY (set by workflow; read natively by the kilo provider).
  */
 
 import { execFileSync } from "node:child_process"
@@ -56,15 +56,18 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
 
   for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
     try {
+      // Message positional first: --file is multi-value and would otherwise
+      // consume a trailing message as a file path ("File not found").
       execFileSync(
         "kilo",
-        ["run", "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile, prompt],
+        ["run", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
         { encoding: "utf8", maxBuffer: 32 * 1024 * 1024, timeout: 25 * 60 * 1000, stdio: ["ignore", "inherit", "inherit"] },
       )
       if (fs.existsSync(summaryFile)) return true
       console.warn(`batch ${index} attempt ${attempt}: summary file ${summaryFile} not produced`)
     } catch (err) {
-      console.warn(`batch ${index} attempt ${attempt}: kilo run failed: ${err.message}`)
+      const stderr = String(err.stderr ?? "").trim().split("\n").slice(-5).join("\n")
+      console.warn(`batch ${index} attempt ${attempt}: kilo run failed: ${stderr || err.message}`)
     }
   }
   console.warn(`::warning::edit batch ${index} failed after ${ATTEMPTS} attempts; ${batch.length} PRs skipped`)
