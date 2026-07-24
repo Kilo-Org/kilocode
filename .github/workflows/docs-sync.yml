@@ -1,0 +1,166 @@
+# kilocode_change - new file
+name: docs-sync
+
+# Daily bot: collects PRs merged to Kilo-Org/cloud and Kilo-Org/kilocode,
+# triages them for docs relevance, runs Kilo CLI headless to update
+# packages/kilo-docs, and maintains one rolling PR for human review.
+#
+# Security posture: scheduled/manual only, checks out main, never executes
+# code from PR branches. State is derived from the bot's own PRs (watermark
+# marker in the PR body), so missed or failed runs self-heal on the next run.
+
+on:
+  schedule:
+    - cron: "0 7 * * *" # 07:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Override watermark (ISO date, e.g. 2026-07-20). Default: last processed-through marker, 72h fallback, 14d cap."
+        required: false
+        type: string
+      dry_run:
+        description: "Collect + triage only, no edits, no PR"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # push the rolling branch, create the auto-docs label
+  pull-requests: write # create/update the rolling PR
+  issues: write # comment on the rolling PR
+
+concurrency:
+  group: docs-sync
+  cancel-in-progress: false
+
+env:
+  TRIAGE_MODEL: ${{ vars.DOCS_SYNC_TRIAGE_MODEL || 'kilo/moonshotai/kimi-k3' }}
+  EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/moonshotai/kimi-k3' }}
+
+jobs:
+  sync:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 120
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # prepare-branch merges main into the rolling branch
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Install Kilo CLI
+        run: |
+          npm install -g @kilocode/cli
+          kilo --version
+
+      - name: Resolve watermark
+        id: wm
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SINCE: ${{ inputs.since }}
+        run: node .github/docs-sync/watermark.mjs
+
+      - name: Collect merged PRs
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/docs-sync/collect.mjs --since "${{ steps.wm.outputs.since }}"
+
+      - name: Triage merged PRs (LLM, chunked)
+        id: triage
+        if: steps.collect.outputs.count != '0'
+        env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+        run: node .github/docs-sync/triage.mjs
+
+      - name: Filter docs-worthy PRs
+        id: worthy
+        if: steps.collect.outputs.count != '0'
+        run: |
+          node .github/docs-sync/filter-worthy.mjs \
+            docs-sync-out/digest-full.json docs-sync-out/triage.json docs-sync-out/worthy.json
+          count=$(node -p "require('./docs-sync-out/worthy.json').length")
+          echo "count=$count" >> "$GITHUB_OUTPUT"
+          if [ "$count" = "0" ]; then
+            echo "No docs-worthy PRs in this window; skipping edit/verify/PR."
+          fi
+
+      - name: Setup Bun
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        uses: ./.github/actions/setup-bun
+
+      - name: Prepare rolling branch
+        id: prep
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/docs-sync/prepare-branch.mjs
+
+      - name: Update docs (Kilo CLI, batched)
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+        run: node .github/docs-sync/edit.mjs
+
+      - name: Verify docs build and tests
+        id: verify
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        run: |
+          set -o pipefail
+          { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify.log
+
+      - name: Fix verify failures (one pass)
+        id: fix
+        if: steps.verify.outcome == 'failure'
+        continue-on-error: true
+        env:
+          KILO_API_KEY: ${{ secrets.KILO_API_KEY }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
+        run: |
+          set -o pipefail
+          kilo run "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
+            -m "$EDIT_MODEL" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
+            | tee -a docs-sync-out/edit-log.txt
+          { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify2.log
+
+      - name: Re-verify status
+        id: verified
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          VERIFY_OUTCOME: ${{ steps.verify.outcome }}
+          FIX_OUTCOME: ${{ steps.fix.outcome }}
+        run: |
+          if [ "$VERIFY_OUTCOME" = "success" ] || [ "$FIX_OUTCOME" = "success" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upsert rolling PR
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
+          SINCE: ${{ steps.wm.outputs.since }}
+          BRANCH: ${{ steps.prep.outputs.branch }}
+          PREP_MODE: ${{ steps.prep.outputs.mode }}
+          PR_NUMBER: ${{ steps.prep.outputs.pr_number }}
+          VERIFIED: ${{ steps.verified.outputs.ok }}
+        run: node .github/docs-sync/upsert-pr.mjs
+
+      - name: Upload run artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-sync-out
+          path: docs-sync-out/
+          retention-days: 14
+          if-no-files-found: ignore
