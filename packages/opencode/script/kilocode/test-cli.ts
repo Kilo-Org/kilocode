@@ -24,6 +24,17 @@ export namespace TestCli {
     })
     if (!result.success) throw new AggregateError(result.logs, "Failed to build CLI subprocess test bundle")
     await fs.cp(path.join(root, "migration"), path.join(dir, "migration"), { recursive: true })
+    const meta = JSON.parse(await Bun.file(path.join(root, "node_modules/@opentui/core/package.json")).text())
+    const scope = path.join(dir, "node_modules/@opentui")
+    await fs.mkdir(scope, { recursive: true })
+    const core = await fs.realpath(path.join(root, "node_modules/@opentui/core"))
+    for (const name of Object.keys(meta.optionalDependencies ?? {})) {
+      const basename = name.replace("@opentui/", "")
+      const target = path.join(core, "..", basename)
+      if (await Bun.file(path.join(target, "package.json")).exists()) {
+        await fs.symlink(target, path.join(scope, basename), "dir")
+      }
+    }
     return path.join(out, "cli.js")
   }
 }
