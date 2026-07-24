@@ -70,14 +70,6 @@
   <!-- packages/kilo-vscode/src/agent-manager/WorktreeManager.ts -->
 - <https://github.com>
   <!-- packages/opencode/src/kilocode/security/github.ts -->
-- <https://github.com/anomalyco/opencode/issues/11948>
-  <!-- packages/opencode/src/mcp/index.ts -->
-- <https://github.com/anomalyco/opencode/issues/23066>
-  <!-- packages/opencode/src/mcp/index.ts -->
-- <https://github.com/anomalyco/opencode/issues/2308>
-  <!-- packages/opencode/src/mcp/index.ts -->
-- <https://github.com/anomalyco/opencode/issues/28567>
-  <!-- packages/opencode/src/mcp/index.ts -->
 - <https://github.com/apps/kiloconnect>
   <!-- packages/opencode/src/cli/cmd/github.handler.ts -->
 - <https://github.com/cline/cline/blob/main/evals/diff-edits/diff-apply/diff-06-23-25.ts>

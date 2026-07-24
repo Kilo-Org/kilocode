@@ -10,8 +10,8 @@
     "url": "git+https://github.com/Kilo-Org/kilocode.git",
     "directory": "packages/http-recorder"
   },
-  "homepage": "https://github.com/anomalyco/opencode/tree/dev/packages/http-recorder",
-  "bugs": "https://github.com/anomalyco/opencode/issues",
+  "homepage": "https://github.com/Kilo-Org/kilocode/tree/main/packages/http-recorder",
+  "bugs": "https://github.com/Kilo-Org/kilocode/issues",
   "keywords": [
     "effect",
     "http",
