@@ -1599,7 +1599,8 @@ export const layer = Layer.effect(
                   }
                 }
                 return models
-              } catch {
+              } catch (error) {
+                Effect.runSync(Effect.logWarning("openai-compatible model discovery failed", { providerID, error }))
                 return {}
               } finally {
                 timeout.clear()
