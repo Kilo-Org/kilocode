@@ -1228,6 +1228,7 @@ export const dict = {
   "session.outcome.unknown": "回合已結束，模型未提供結束原因",
   "session.outcome.filtered": "提供商因為內容過濾器停止了此回應。",
   "session.outcome.unexpected": "回應意外結束，可能不完整。",
+  "session.outcome.generationId": "生成 ID：{{id}}",
   "session.outcome.interrupted": "回合已中斷",
   "session.outcome.error": "回合失敗",
   "session.outcome.finish": "結束原因：{{reason}}",

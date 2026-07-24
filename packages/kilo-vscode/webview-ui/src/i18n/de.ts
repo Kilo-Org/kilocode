@@ -1325,6 +1325,7 @@ export const dict = {
   "session.outcome.unknown": "Zug ohne Modell-Abschlussgrund beendet",
   "session.outcome.filtered": "Der Anbieter hat diese Antwort aufgrund eines Inhaltsfilters gestoppt.",
   "session.outcome.unexpected": "Die Antwort wurde unerwartet beendet und ist möglicherweise unvollständig.",
+  "session.outcome.generationId": "Generierungs-ID: {{id}}",
   "session.outcome.interrupted": "Zug unterbrochen",
   "session.outcome.error": "Zug fehlgeschlagen",
   "session.outcome.finish": "Abschlussgrund: {{reason}}",

@@ -1263,6 +1263,7 @@ export const dict = {
   "session.outcome.unknown": "Tura zakończona bez powodu zakończenia od modelu",
   "session.outcome.filtered": "Dostawca zatrzymał tę odpowiedź z powodu filtru treści.",
   "session.outcome.unexpected": "Odpowiedź zakończyła się nieoczekiwanie i może być niekompletna.",
+  "session.outcome.generationId": "ID generowania: {{id}}",
   "session.outcome.interrupted": "Tura przerwana",
   "session.outcome.error": "Tura nie powiodła się",
   "session.outcome.finish": "Powód zakończenia: {{reason}}",

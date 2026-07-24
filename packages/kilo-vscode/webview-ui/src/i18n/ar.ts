@@ -1282,6 +1282,7 @@ export const dict = {
   "session.outcome.unknown": "انتهى الدور بدون سبب إنهاء من النموذج",
   "session.outcome.filtered": "أوقف المزود هذه الاستجابة بسبب عامل تصفية المحتوى.",
   "session.outcome.unexpected": "انتهت الاستجابة بشكل غير متوقع وقد تكون غير مكتملة.",
+  "session.outcome.generationId": "معرّف التوليد: {{id}}",
   "session.outcome.interrupted": "تمت مقاطعة الدور",
   "session.outcome.error": "فشل الدور",
   "session.outcome.finish": "سبب الإنهاء: {{reason}}",

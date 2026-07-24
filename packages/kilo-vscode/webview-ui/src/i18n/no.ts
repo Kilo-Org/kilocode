@@ -1264,6 +1264,7 @@ export const dict = {
   "session.outcome.unknown": "Runden ble avsluttet uten avslutningsårsak fra modellen",
   "session.outcome.filtered": "Leverandøren stoppet denne responsen på grunn av et innholdsfilter.",
   "session.outcome.unexpected": "Responsen ble avsluttet uventet og kan være ufullstendig.",
+  "session.outcome.generationId": "Genererings-ID: {{id}}",
   "session.outcome.interrupted": "Runde avbrutt",
   "session.outcome.error": "Runden feilet",
   "session.outcome.finish": "Avslutningsårsak: {{reason}}",

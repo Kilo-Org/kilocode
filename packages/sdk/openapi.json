@@ -26075,6 +26075,9 @@
             "required": ["providerID", "modelID"],
             "additionalProperties": false
           },
+          "generationID": {
+            "type": "string"
+          },
           "metrics": {
             "type": "object",
             "properties": {

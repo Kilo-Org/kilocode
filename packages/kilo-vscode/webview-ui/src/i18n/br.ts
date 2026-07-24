@@ -1308,6 +1308,7 @@ export const dict = {
   "session.outcome.unknown": "Turno encerrado sem um motivo de conclusão do modelo",
   "session.outcome.filtered": "O provedor interrompeu esta resposta devido a um filtro de conteúdo.",
   "session.outcome.unexpected": "A resposta terminou inesperadamente e pode estar incompleta.",
+  "session.outcome.generationId": "ID da geração: {{id}}",
   "session.outcome.interrupted": "Turno interrompido",
   "session.outcome.error": "Turno falhou",
   "session.outcome.finish": "Motivo da conclusão: {{reason}}",

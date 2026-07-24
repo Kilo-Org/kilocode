@@ -1267,6 +1267,7 @@ export const dict = {
   "session.outcome.unknown": "回合已结束，模型未提供结束原因",
   "session.outcome.filtered": "提供商因为内容过滤器停止了此响应。",
   "session.outcome.unexpected": "响应意外结束，可能不完整。",
+  "session.outcome.generationId": "生成 ID：{{id}}",
   "session.outcome.interrupted": "回合已中断",
   "session.outcome.error": "回合失败",
   "session.outcome.finish": "结束原因：{{reason}}",

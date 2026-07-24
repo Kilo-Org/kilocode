@@ -1304,6 +1304,7 @@ export const dict = {
   "session.outcome.unknown": "Tur afsluttet uden en model-afslutningsårsag",
   "session.outcome.filtered": "Udbyderen stoppede dette svar på grund af et indholdsfilter.",
   "session.outcome.unexpected": "Svaret sluttede uventet og kan være ufuldstændigt.",
+  "session.outcome.generationId": "Genererings-id: {{id}}",
   "session.outcome.interrupted": "Tur afbrudt",
   "session.outcome.error": "Tur mislykkedes",
   "session.outcome.finish": "Afslutningsårsag: {{reason}}",

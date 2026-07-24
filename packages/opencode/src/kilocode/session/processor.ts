@@ -10,7 +10,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Cause, Effect, Exit } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EffectBridge } from "@/effect/bridge"
-import type { LLMEvent, Usage } from "@opencode-ai/llm"
+import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionRetry } from "@/session/retry"
 import { computeMetrics as computeMetricsHelper, type TokenRates } from "@/kilocode/session/metrics"
@@ -136,6 +136,14 @@ export namespace KiloSessionProcessor {
   export const computeMetrics: typeof computeMetricsHelper = computeMetricsHelper
   /** Returned shape for downstream consumers that prefer the namespace. */
   export type Metrics = TokenRates
+
+  export function generationID(meta: ProviderMetadata | undefined) {
+    const value = meta?.gateway?.generationId
+    if (typeof value !== "string") return
+    const id = value.trim()
+    if (!/^gen_[A-Za-z0-9_-]{1,200}$/.test(id)) return
+    return id
+  }
 
   /**
    * Effect-based offline handler for the retry schedule.

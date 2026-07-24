@@ -1292,6 +1292,7 @@ export const dict = {
   "session.outcome.unknown": "Хід завершився без причини завершення моделі",
   "session.outcome.filtered": "Провайдер зупинив цю відповідь через фільтр вмісту.",
   "session.outcome.unexpected": "Відповідь завершилася несподівано і може бути неповною.",
+  "session.outcome.generationId": "Ідентифікатор генерації: {{id}}",
   "session.outcome.interrupted": "Хід перервано",
   "session.outcome.error": "Хід не вдався",
   "session.outcome.finish": "Причина завершення: {{reason}}",
