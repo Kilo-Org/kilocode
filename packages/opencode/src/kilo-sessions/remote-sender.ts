@@ -683,10 +683,14 @@ export namespace RemoteSender {
         return
       }
       if (msg.command === "create_session") {
-        // kilocode_change start - remote /new creation: root session, attached + heartbeat before response
+        // kilocode_change start - remote /new creation: root session, attached + heartbeat before response.
+        // Scope selection is three explicit cases:
+        //   (1) sessionId ABSENT -> connection-scoped (options.directory / launch dir)
+        //   (2) sessionId present and decodable -> session-scoped (that session's directory)
+        //   (3) sessionId present but UNDECODABLE -> reject (same as parse-gate error)
+        // A present-but-undecodable sessionId must NOT fall through to (1).
         const parsed = CreateSessionRequest.safeParse(msg.data)
-        const current = msg.sessionId ? decodeSessionID(msg.sessionId) : Option.none<SessionID>()
-        if (!parsed.success || Option.isNone(current)) {
+        if (!parsed.success) {
           options.conn.send({
             type: "response",
             id: msg.id,
@@ -694,11 +698,27 @@ export namespace RemoteSender {
           })
           return
         }
+        // Distinguish absent vs present-but-undecodable: only omit sessionId for (1).
+        let directory: Promise<string> | string
+        if (msg.sessionId === undefined) {
+          directory = options.directory
+        } else {
+          const current = decodeSessionID(msg.sessionId)
+          if (Option.isNone(current)) {
+            options.conn.send({
+              type: "response",
+              id: msg.id,
+              error: "invalid create_session command",
+            })
+            return
+          }
+          directory = session.get(current.value).then((info) => info.directory)
+        }
         const run = options.provide ?? provide
         void (async () => {
           try {
             const result = await run({
-              directory: (await session.get(current.value)).directory,
+              directory: await directory,
               fn: async () => {
                 const created = await sessionCreate({})
                 // attachSession is the duplicate-safe seam: it mutates the

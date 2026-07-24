@@ -2904,7 +2904,67 @@ describe("RemoteSender slash commands", () => {
     expect(sent).toEqual([{ type: "response", id: "req_create", result: { protocolVersion: 1, sessionID: "ses_new" } }])
   })
 
-  test("create_session rejects unsupported protocol versions and missing or invalid session IDs", async () => {
+  test("create_session connection-scoped creates a root session in the launch directory", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const createCalls: { input: unknown; calls: number } = { input: undefined, calls: 0 }
+    const attachCalls: string[] = []
+    const getCalls: string[] = []
+    const order: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/workspace/launch-dir",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async (sessionID) => {
+          getCalls.push(sessionID)
+          throw new Error("must not look up session for connection-scoped create_session")
+        },
+        children: async () => [],
+        create: async (input) => {
+          createCalls.calls += 1
+          createCalls.input = input
+          order.push("create")
+          return { id: SessionID.make("ses_conn_new"), directory: "/workspace/launch-dir", parentID: undefined } as any
+        },
+      },
+      attachSession: async (id) => {
+        attachCalls.push(id)
+        order.push("attach")
+        await (conn as any).heartbeat()
+      },
+    })
+    ;(conn as any).heartbeat = async () => {
+      order.push("heartbeat")
+    }
+
+    const response = expectResponse(conn, sent, "req_create_conn")
+    sender.handle({
+      type: "command",
+      id: "req_create_conn",
+      command: "create_session",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    expect(dirs).toEqual(["/workspace/launch-dir"])
+    expect(getCalls).toEqual([])
+    expect(createCalls.calls).toBe(1)
+    expect(createCalls.input).toEqual({})
+    expect(attachCalls).toEqual(["ses_conn_new"])
+    expect(order).toEqual(["create", "attach", "heartbeat"])
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_conn", result: { protocolVersion: 1, sessionID: "ses_conn_new" } },
+    ])
+  })
+
+  test("create_session rejects invalid request data for both scopes", async () => {
     const { conn, sent } = fakeConn()
     const createCalls: unknown[] = []
     const sender = RemoteSender.create({
@@ -2930,6 +2990,7 @@ describe("RemoteSender slash commands", () => {
       throw new Error("must not heartbeat for invalid request")
     }
 
+    // Session-scoped invalid protocol version
     sender.handle({
       type: "command",
       id: "req_v2",
@@ -2937,19 +2998,14 @@ describe("RemoteSender slash commands", () => {
       sessionId: "ses_current",
       data: { protocolVersion: 2 },
     })
+    // Connection-scoped invalid protocol version
     sender.handle({
       type: "command",
-      id: "req_no_session",
+      id: "req_v2_conn",
       command: "create_session",
-      data: { protocolVersion: 1 },
+      data: { protocolVersion: 2 },
     })
-    sender.handle({
-      type: "command",
-      id: "req_bad_session",
-      command: "create_session",
-      sessionId: "not-a-session-id",
-      data: { protocolVersion: 1 },
-    })
+    // Session-scoped extra field (strict schema)
     sender.handle({
       type: "command",
       id: "req_extra_field",
@@ -2957,14 +3013,118 @@ describe("RemoteSender slash commands", () => {
       sessionId: "ses_current",
       data: { protocolVersion: 1, extra: true },
     })
+    // Connection-scoped extra field
+    sender.handle({
+      type: "command",
+      id: "req_extra_field_conn",
+      command: "create_session",
+      data: { protocolVersion: 1, extra: true },
+    })
 
     expect(sent).toEqual([
       { type: "response", id: "req_v2", error: "invalid create_session command" },
-      { type: "response", id: "req_no_session", error: "invalid create_session command" },
-      { type: "response", id: "req_bad_session", error: "invalid create_session command" },
+      { type: "response", id: "req_v2_conn", error: "invalid create_session command" },
       { type: "response", id: "req_extra_field", error: "invalid create_session command" },
+      { type: "response", id: "req_extra_field_conn", error: "invalid create_session command" },
     ])
     expect(createCalls).toHaveLength(0)
+  })
+
+  test("create_session rejects present but undecodable sessionId without creating", async () => {
+    const { conn, sent } = fakeConn()
+    const createCalls: unknown[] = []
+    const getCalls: string[] = []
+    const dirs: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/workspace/launch-dir",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async (sessionID) => {
+          getCalls.push(sessionID)
+          throw new Error("must not look up session for undecodable sessionId")
+        },
+        children: async () => [],
+        create: async (input) => {
+          createCalls.push(input)
+          return { id: SessionID.make("ses_unused") } as any
+        },
+      },
+      attachSession: async () => {
+        throw new Error("must not attach for undecodable sessionId")
+      },
+    })
+    ;(conn as any).heartbeat = async () => {
+      throw new Error("must not heartbeat for undecodable sessionId")
+    }
+
+    // Present malformed sessionId + valid data must NOT fall through to the
+    // connection-scoped path (options.directory); it is rejected like a parse gate.
+    sender.handle({
+      type: "command",
+      id: "req_create_bad_session",
+      command: "create_session",
+      sessionId: "not-a-session-id",
+      data: { protocolVersion: 1 },
+    })
+
+    expect(sent).toEqual([
+      { type: "response", id: "req_create_bad_session", error: "invalid create_session command" },
+    ])
+    expect(createCalls).toHaveLength(0)
+    expect(getCalls).toEqual([])
+    expect(dirs).toEqual([])
+  })
+
+  test("create_session rolls back the created session when attachSession fails on the connection-scoped path", async () => {
+    const { conn, sent } = fakeConn()
+    const dirs: string[] = []
+    const removeCalls: string[] = []
+    const getCalls: string[] = []
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/workspace/launch-dir",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      provide: async <R>(input: { directory: string; fn: () => R }) => {
+        dirs.push(input.directory)
+        return input.fn()
+      },
+      session: {
+        get: async (sessionID) => {
+          getCalls.push(sessionID)
+          throw new Error("must not look up session for connection-scoped create_session")
+        },
+        children: async () => [],
+        create: async () => ({ id: SessionID.make("ses_conn_new"), directory: "/workspace/launch-dir" }) as any,
+        remove: async (id) => {
+          removeCalls.push(id)
+        },
+      },
+      attachSession: async () => {
+        throw new Error("attach failed: credential=must-not-leak")
+      },
+    })
+
+    const response = expectResponse(conn, sent, "req_attach_failed_conn")
+    sender.handle({
+      type: "command",
+      id: "req_attach_failed_conn",
+      command: "create_session",
+      data: { protocolVersion: 1 },
+    })
+    await response.promise
+    response.restore()
+
+    expect(dirs).toEqual(["/workspace/launch-dir"])
+    expect(getCalls).toEqual([])
+    expect(removeCalls).toEqual(["ses_conn_new"])
+    expect(sent).toEqual([{ type: "response", id: "req_attach_failed_conn", error: "failed to create session" }])
   })
 
   test("create_session returns a sanitized error and never reports success when creation throws", async () => {
