@@ -331,27 +331,38 @@ internal open class MdViewHybrid(
                 customStyleSheetProvider { sheet() }
             },
         ), UiDataProvider {
+            // A stationary pointer over scrolling content must keep this pane's hovered link and
+            // cursor fresh, so we replay a synthetic mouse move whenever the enclosing viewport
+            // scrolls. Only the pane under the pointer subscribes — otherwise every prose block in a
+            // large transcript would run a native pointer query + event dispatch on every scroll tick.
             private var viewport: JViewport? = null
+            private var listening = false
             private val scroll = ChangeListener { hover() }
+            private val pointer = object : java.awt.event.MouseAdapter() {
+                override fun mouseEntered(e: MouseEvent) = listen(true)
+                override fun mouseExited(e: MouseEvent) = listen(false)
+            }
             private val hierarchy = java.awt.event.HierarchyListener { event ->
-                if (event.changeFlags and HierarchyEvent.PARENT_CHANGED.toLong() != 0L) attach()
+                if (event.changeFlags and HierarchyEvent.PARENT_CHANGED.toLong() != 0L) retarget()
             }
 
             init {
+                addMouseListener(pointer)
                 addHierarchyListener(hierarchy)
                 Disposer.register(disposable) {
-                    viewport?.removeChangeListener(scroll)
+                    listen(false)
+                    removeMouseListener(pointer)
                     removeHierarchyListener(hierarchy)
                 }
             }
 
             override fun addNotify() {
                 super.addNotify()
-                attach()
+                retarget()
             }
 
             override fun removeNotify() {
-                viewport?.removeChangeListener(scroll)
+                listen(false)
                 viewport = null
                 super.removeNotify()
             }
@@ -360,12 +371,20 @@ internal open class MdViewHybrid(
                 selection?.provideCopy(sink) { document.getText(0, document.length).trim() }
             }
 
-            private fun attach() {
+            // Follow the enclosing viewport as this pane is reparented, keeping any live subscription.
+            private fun retarget() {
                 val next = SwingUtilities.getAncestorOfClass(JViewport::class.java, this) as? JViewport
                 if (viewport === next) return
-                viewport?.removeChangeListener(scroll)
+                if (listening) viewport?.removeChangeListener(scroll)
                 viewport = next
-                next?.addChangeListener(scroll)
+                if (listening) viewport?.addChangeListener(scroll)
+            }
+
+            // Track viewport scrolls only while the pointer is over this pane.
+            private fun listen(on: Boolean) {
+                if (listening == on) return
+                listening = on
+                if (on) viewport?.addChangeListener(scroll) else viewport?.removeChangeListener(scroll)
             }
 
             private fun hover() {
