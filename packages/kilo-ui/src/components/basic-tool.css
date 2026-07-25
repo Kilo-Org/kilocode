@@ -494,3 +494,25 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
     }
   }
 }
+
+/* "why was this allowed" line inside a tool's expanded body */
+[data-slot="tool-approval-line"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 0 6px;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  color: var(--text-weak);
+
+  [data-slot="tool-approval-decision"] {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-strong);
+  }
+
+  [data-slot="tool-approval-rule"] {
+    font-family: var(--font-family-mono);
+  }
+}

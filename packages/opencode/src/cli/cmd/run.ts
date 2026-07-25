@@ -728,9 +728,9 @@ export const RunCommand = effectCmd({
           let retries = 0 // kilocode_change
           let error: string | undefined
 
-          for await (const payload of events.stream) {
-            const event = normalizeEvent(payload)
-            if (!event) continue
+          // kilocode_change start - revert to upstream: consume native events without normalizing sync copies
+          for await (const event of events.stream) {
+            // kilocode_change end
 
             if (
               event.type === "message.updated" &&

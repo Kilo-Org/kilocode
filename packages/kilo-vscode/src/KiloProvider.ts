@@ -768,7 +768,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   }
 
   /** Register a session created externally and notify the webview. */
-  public registerSession(session: Session): void {
+  public registerSession(session: Session, activate = false): void {
     this.stopCurrentSessionProcesses(session.id)
     this.setCurrentSession(session)
     this.contextSessionID = session.id
@@ -776,6 +776,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.postMessage({
       type: "sessionCreated",
       session: this.sessionToWebview(session),
+      ...(activate ? { activate: true } : {}),
     })
   }
 
@@ -4479,7 +4480,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     this.pendingFollowup = null
     this.trackDirectory(session.id, session.directory)
     for (const cb of this.followupListeners) cb(session, session.directory)
-    this.registerSession(session)
+    this.registerSession(session, true)
     void this.handleLoadMessages(session.id)
     return true
   }

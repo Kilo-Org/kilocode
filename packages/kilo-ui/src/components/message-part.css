@@ -1,5 +1,17 @@
 /* Kilo Message Part overrides */
 
+/* Message action rows (copy, fork, revert, feedback, delete queued)
+   share one compact icon-button size. */
+[data-component="text-part"] [data-slot="text-part-copy-wrapper"][data-is-turn-copy],
+[data-component="text-part"] [data-slot="assistant-copy-wrapper"],
+[data-component="user-message"] [data-slot="user-message-copy-wrapper"],
+[data-component="user-message"] [data-slot="user-message-queued-indicator"] {
+  [data-component="icon-button"] {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 [data-component="text-part"] {
   margin-top: 8px;
 
@@ -13,11 +25,6 @@
 
   [data-slot="text-part-copy-wrapper"][data-is-turn-copy] {
     display: flex;
-
-    [data-component="icon-button"] {
-      width: 20px;
-      height: 20px;
-    }
   }
 
   [data-slot="assistant-copy-wrapper"] {
@@ -26,11 +33,6 @@
     justify-content: flex-start;
     gap: 2px;
     margin-top: 2px;
-
-    [data-component="icon-button"] {
-      width: 20px;
-      height: 20px;
-    }
 
     /* Thumbs up/down: fill the outline on hover to preview the rated state. */
     [data-component="icon-button"][data-icon="thumbs-up"]:hover [data-slot="icon-svg"] path,
@@ -512,11 +514,6 @@ html[data-theme="kilo-vscode"] [data-component="todos"] {
 
     [data-slot="user-message-meta-wrap"] {
       display: none;
-    }
-
-    [data-component="icon-button"] {
-      width: 20px;
-      height: 20px;
     }
   }
 }
