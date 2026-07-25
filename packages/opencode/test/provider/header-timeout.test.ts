@@ -45,56 +45,10 @@ it.live("headerTimeout does not abort delayed SSE body after headers arrive", ()
   }),
 )
 
-// kilocode_change start - S2b: under the first-content-aware fix, a slow FIRST
-// content chunk is no longer raced against `chunkTimeout`; it is bounded by
-// the request `timeout` (or the Kilo default of 5 min) instead. With no
-// `timeout` configured here, a 250ms first-content delay is comfortably
-// within that budget, so the stream completes without error. The previous
-// assertion (that this would raise `ProviderError.ResponseStreamError`) is
-// what the fix removes.
-it.live("chunkTimeout does NOT abort a slow first content chunk (bounded by timeout instead)", () =>
+it.live("chunkTimeout raises a response stream error when SSE body stalls", () =>
   Effect.gen(function* () {
     const server = yield* Effect.acquireRelease(
       Effect.promise(() => delayedBodyServer(250)),
-      (server) => Effect.sync(() => server.server.close()),
-    )
-
-    yield* provideTmpdirInstance(
-      () =>
-        Effect.gen(function* () {
-          const provider = yield* Provider.Service
-          const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
-          const result = streamText({
-            model: yield* provider.getLanguage(model),
-            onError() {},
-            messages: [{ role: "user", content: "hello" }],
-          })
-
-          const { error, text } = yield* Effect.promise(async () => {
-            try {
-              const text = await result.text
-              return { error: undefined, text }
-            } catch (error) {
-              return { error, text: "" }
-            }
-          })
-          expect(error).toBeUndefined()
-          expect(text).toBe("late")
-        }),
-      { config: providerConfig(server.url, { chunkTimeout: 50 }) },
-    )
-  }),
-)
-
-// kilocode_change - S2b AC9b: mid-content stall protection is preserved. After
-// the first content-bearing SSE `data:` chunk is observed, `wrapSSE` reverts
-// to racing subsequent reads against `chunkTimeout`; a stall past that window
-// must still raise `ProviderError.ResponseStreamError` (this is the protection
-// the raw-`fullStream` memory/agent consumers rely on — see plan AC9).
-it.live("chunkTimeout still aborts a mid-content stall after the first content chunk", () =>
-  Effect.gen(function* () {
-    const server = yield* Effect.acquireRelease(
-      Effect.promise(() => contentThenStallServer(5000)),
       (server) => Effect.sync(() => server.server.close()),
     )
 
@@ -124,7 +78,6 @@ it.live("chunkTimeout still aborts a mid-content stall after the first content c
     )
   }),
 )
-// kilocode_change end
 
 it.live("headerTimeout aborts when response headers do not arrive", () =>
   Effect.gen(function* () {
@@ -252,25 +205,6 @@ async function delayedBodyServer(delay: number, prelude = ""): Promise<{ server:
     setTimeout(() => {
       res.end('data: {"choices":[{"delta":{"content":"late"}}]}\n\ndata: [DONE]\n\n')
     }, delay)
-  })
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
-  const address = server.address()
-  if (!address || typeof address === "string") throw new Error("server did not bind to a TCP port")
-  return { server, url: `http://127.0.0.1:${address.port}` }
-}
-
-// Writes a content-bearing SSE `data:` chunk immediately, flushes, then holds
-// the connection open without sending any further bytes. Used to exercise the
-// post-first-content branch of `wrapSSE` (mid-content stall must still be
-// caught by `chunkTimeout`).
-async function contentThenStallServer(stallMs: number): Promise<{ server: Server; url: string }> {
-  const server = createServer((_, res) => {
-    res.writeHead(200, { "content-type": "text/event-stream" })
-    res.flushHeaders()
-    res.write('data: {"choices":[{"delta":{"content":"hi"}}]}\n\n')
-    setTimeout(() => {
-      res.end('data: {"choices":[{"delta":{"content":"there"}}]}\n\ndata: [DONE]\n\n')
-    }, stallMs)
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
   const address = server.address()

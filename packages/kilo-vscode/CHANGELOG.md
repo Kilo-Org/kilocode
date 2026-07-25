@@ -1,5 +1,40 @@
 # kilo-code
 
+## 7.4.16
+
+### Minor Changes
+
+- [#12370](https://github.com/Kilo-Org/kilocode/pull/12370) [`b367105`](https://github.com/Kilo-Org/kilocode/commit/b367105c8d648c8e05b62c2d27a28a95a4772f61) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Support deleting queued chat messages from the VS Code chat before they run.
+
+- [#12297](https://github.com/Kilo-Org/kilocode/pull/12297) [`bcff5cb`](https://github.com/Kilo-Org/kilocode/commit/bcff5cb3608f9fc6a6a441405cf50694f6bf3efa) - Emit session queue state so remote clients can show queued messages.
+
+- [#12456](https://github.com/Kilo-Org/kilocode/pull/12456) [`3d648d7`](https://github.com/Kilo-Org/kilocode/commit/3d648d7fcdc186f86b2c63ab842e70acb1f0aee2) - Reference past chats inline with `@` in the prompt. Typing `@` now surfaces a "Past chats" option that opens a searchable picker of previous sessions (scoped to the current workspace/worktree, searched like the Agent Manager session search); selecting one attaches that session's transcript as context so the model can build on a prior conversation. Clicking the mention opens that session. Available in the CLI TUI and the VS Code extension.
+
+- [#12462](https://github.com/Kilo-Org/kilocode/pull/12462) [`8eeaa54`](https://github.com/Kilo-Org/kilocode/commit/8eeaa546aeec9c06d513248b42546ec779ab2178) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Add a searchable open-tabs switcher to the sidebar tab bar.
+
+- [#12494](https://github.com/Kilo-Org/kilocode/pull/12494) [`85dbf44`](https://github.com/Kilo-Org/kilocode/commit/85dbf443af727524a90c1838eeecd37d5011bcaa) Thanks [@bagatao-anaconda](https://github.com/bagatao-anaconda)! - Show why a tool call was auto-approved. Expanding a tool call now explains whether it ran automatically or after your approval, and which rule allowed it — from your agent, the project config, your global config, or auto-approve (YOLO) mode.
+
+- [#12509](https://github.com/Kilo-Org/kilocode/pull/12509) [`99c04c7`](https://github.com/Kilo-Org/kilocode/commit/99c04c7163efb8cafa6e35f052b743c6dcf96f12) - Filter `/sessions` history to sessions in the current Agent Manager worktree.
+
+### Patch Changes
+
+- [#12486](https://github.com/Kilo-Org/kilocode/pull/12486) [`d0e8a86`](https://github.com/Kilo-Org/kilocode/commit/d0e8a86bfce001821441e8ac8d7398bfba6c93f6) Thanks [@hdcodedev](https://github.com/hdcodedev)! - Prevent Enter from activating the first result in searchable lists when no row is highlighted.
+
+- [#12511](https://github.com/Kilo-Org/kilocode/pull/12511) [`9e1b54d`](https://github.com/Kilo-Org/kilocode/commit/9e1b54d8754e670dd149a8536ed25b16e223fe2e) - Open plan implementation sessions immediately and submit recovered plan choices without requiring a second click.
+
+- [#12496](https://github.com/Kilo-Org/kilocode/pull/12496) [`2fcb137`](https://github.com/Kilo-Org/kilocode/commit/2fcb137ebcbf9101ca655804d0a61af2f222bbc5) - Preserve unexpected provider finish reasons and show the request and Gateway generation IDs when a response ends unexpectedly.
+
+- [#12488](https://github.com/Kilo-Org/kilocode/pull/12488) [`c25f041`](https://github.com/Kilo-Org/kilocode/commit/c25f041eb3922defc4dadb9ad7b2f8c8edb74fbd) - Show the request ID when a model response ends without a finish reason.
+
+- Updated dependencies [[`b367105`](https://github.com/Kilo-Org/kilocode/commit/b367105c8d648c8e05b62c2d27a28a95a4772f61), [`c1f057a`](https://github.com/Kilo-Org/kilocode/commit/c1f057ad5a2021cd57e003cad7d45e5e6b0b4cba), [`2fcb137`](https://github.com/Kilo-Org/kilocode/commit/2fcb137ebcbf9101ca655804d0a61af2f222bbc5), [`f715e2f`](https://github.com/Kilo-Org/kilocode/commit/f715e2f5fa4db5abe5c734e1c360e8da3367f3e5), [`dcc0d64`](https://github.com/Kilo-Org/kilocode/commit/dcc0d64a3249bdd3aa27d564759253126ff9a5fe)]:
+  - @kilocode/kilo-ui@7.5.0
+  - @kilocode/sdk@7.5.0
+  - @kilocode/kilo-gateway@7.4.16
+  - @kilocode/plugin@7.4.16
+  - @opencode-ai/ui@7.4.16
+  - @opencode-ai/core@7.4.16
+  - @kilocode/kilo-indexing@7.4.16
+
 ## 7.4.15
 
 ### Patch Changes
