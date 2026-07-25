@@ -631,19 +631,22 @@ describe("KiloSessions.detachRemoteSession heartbeat fence (K1 W1)", () => {
     return chat.id
   }
 
-  for (const { label, status } of [
-    { label: "busy", status: { type: "busy" as const } },
+  for (const { label, status, heartbeatStatus } of [
+    { label: "busy", status: { type: "busy" as const }, heartbeatStatus: "busy" },
     {
       label: "retry",
       status: { type: "retry" as const, attempt: 1, message: "retrying", next: 100 },
+      heartbeatStatus: "retry",
     },
     {
+      // SessionStatus.offline maps to heartbeat "retry" (same as deriveStatus).
       label: "offline",
       status: {
         type: "offline" as const,
         requestID: QuestionID.ascending(),
         message: "waiting for user",
       },
+      heartbeatStatus: "retry",
     },
   ]) {
     test(`clears ${label} SessionStatus so the detach heartbeat fence resolves`, async () => {
@@ -661,7 +664,7 @@ describe("KiloSessions.detachRemoteSession heartbeat fence (K1 W1)", () => {
 
           const getSessions = capturedGetSessions()
           const before = await getSessions()
-          expect(before.sessions.some((s) => s.id === id && s.status === label)).toBe(true)
+          expect(before.sessions.some((s) => s.id === id && s.status === heartbeatStatus)).toBe(true)
 
           await KiloSessions.detachRemoteSession(id)
 
@@ -674,4 +677,309 @@ describe("KiloSessions.detachRemoteSession heartbeat fence (K1 W1)", () => {
       // instant (status is set directly, not via a real retry schedule).
     }, 30000)
   }
+})
+
+// DEF-3 part 1: heartbeat per-session status must reflect pending
+// question/permission (same precedence as deriveStatus), with Permission and
+// Question list() called once per heartbeat — not once per session.
+describe("KiloSessions heartbeat attention status (DEF-3)", () => {
+  beforeEach(() => {
+    process.env["KILO_DISABLE_SESSION_INGEST"] = "0"
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    process.env["KILO_API_KEY"] = "tok"
+    reset("tok")
+    KiloSessions.resetInstanceAdvertisementForTests()
+
+    spyOn(RemoteSender, "create").mockImplementation(
+      () =>
+        ({
+          handle() {},
+          dispose() {},
+        }) as RemoteSender.Sender,
+    )
+    spyOn(RemoteWS, "connect").mockImplementation(
+      (options) =>
+        ({
+          connectionId: "test-conn",
+          send() {},
+          heartbeat: () => options.getSessions().then(() => undefined),
+          close() {},
+          get connected() {
+            return true
+          },
+        }) as RemoteWS.Connection,
+    )
+
+    clearInFlightCache("kilo-sessions:token")
+    clearInFlightCache("kilo-sessions:token-valid:tok")
+
+    globalThis.fetch = mock(async (input) => {
+      const url = String(input)
+      if (url.endsWith("/api/user")) {
+        return new Response(null, { status: 200 })
+      }
+      if (url.endsWith("/api/session")) {
+        return Response.json({ id: "remote-test", ingestPath: "/api/ingest/test" })
+      }
+      throw new Error(`unexpected fetch in test: ${url}`)
+    }) as unknown as typeof fetch
+  })
+
+  afterEach(async () => {
+    const pub = spyOn(Bus, "publish").mockResolvedValue(undefined as never)
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        KiloSessions.disableRemote()
+      },
+    })
+    pub.mockRestore()
+    mock.restore()
+    delete process.env["KILO_DISABLE_SESSION_INGEST"]
+    delete process.env["KILO_SESSION_INGEST_URL"]
+    delete process.env["KILO_PLATFORM"]
+    delete process.env["KILO_API_KEY"]
+    reset("tok")
+  })
+
+  function capturedGetSessions(): () => Promise<RemoteProtocol.Heartbeat> {
+    const calls = (RemoteWS.connect as unknown as { mock: { calls: { 0: RemoteWS.Options }[] } }).mock.calls
+    const getSessions = calls[0]?.[0].getSessions
+    if (!getSessions) throw new Error("RemoteWS.connect was not called")
+    return getSessions as () => Promise<RemoteProtocol.Heartbeat>
+  }
+
+  async function setupSession() {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { Session } = await import("@/session/session")
+    const chat = await AppRuntime.runPromise(Session.Service.use((svc) => svc.create({})))
+    return chat.id
+  }
+
+  const questionPrompt = [
+    {
+      header: "Continue?",
+      question: "Should I continue?",
+      options: [
+        { label: "Yes", description: "Go" },
+        { label: "No", description: "Stop" },
+      ],
+    },
+  ]
+
+  async function waitForPermission(sessionID: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { Permission } = await import("@/permission")
+    for (let i = 0; i < 50; i++) {
+      const pending = await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))
+      if (pending.some((p) => p.sessionID === sessionID)) return
+      await new Promise((r) => setTimeout(r, 10))
+    }
+    throw new Error(`timed out waiting for permission on ${sessionID}`)
+  }
+
+  async function waitForQuestion(sessionID: string) {
+    const { AppRuntime } = await import("@/effect/app-runtime")
+    const { Question } = await import("@/question")
+    for (let i = 0; i < 50; i++) {
+      const pending = await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+      if (pending.some((q) => q.sessionID === sessionID)) return
+      await new Promise((r) => setTimeout(r, 10))
+    }
+    throw new Error(`timed out waiting for question on ${sessionID}`)
+  }
+
+  test("reports permission when a permission request is pending", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        await KiloSessions.attachRemoteSession(id)
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const { Permission } = await import("@/permission")
+        const { PermissionV1 } = await import("@opencode-ai/core/v1/permission")
+        const requestID = PermissionV1.ID.make("permission_hb_perm")
+
+        AppRuntime.runFork(
+          Permission.Service.use((svc) =>
+            svc.ask({
+              id: requestID,
+              sessionID: id,
+              permission: "bash",
+              patterns: ["ls"],
+              metadata: {},
+              always: [],
+              ruleset: [],
+            }),
+          ),
+        )
+        await waitForPermission(id)
+
+        const payload = await capturedGetSessions()()
+        expect(payload.sessions.some((s) => s.id === id && s.status === "permission")).toBe(true)
+
+        await AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply({ requestID, reply: "once" })))
+      },
+    })
+  }, 30000)
+
+  test("reports question when a structured question is pending", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        await KiloSessions.attachRemoteSession(id)
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const { Question } = await import("@/question")
+
+        AppRuntime.runFork(Question.Service.use((svc) => svc.ask({ sessionID: id, questions: questionPrompt })))
+        await waitForQuestion(id)
+
+        const payload = await capturedGetSessions()()
+        expect(payload.sessions.some((s) => s.id === id && s.status === "question")).toBe(true)
+
+        const pending = await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+        const req = pending.find((q) => q.sessionID === id)
+        expect(req).toBeDefined()
+        await AppRuntime.runPromise(Question.Service.use((svc) => svc.reject(req!.id)))
+      },
+    })
+  }, 30000)
+
+  test("permission takes precedence over question", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const id = await setupSession()
+        await KiloSessions.attachRemoteSession(id)
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const { Permission } = await import("@/permission")
+        const { Question } = await import("@/question")
+        const { PermissionV1 } = await import("@opencode-ai/core/v1/permission")
+        const requestID = PermissionV1.ID.make("permission_hb_both")
+
+        AppRuntime.runFork(Question.Service.use((svc) => svc.ask({ sessionID: id, questions: questionPrompt })))
+        AppRuntime.runFork(
+          Permission.Service.use((svc) =>
+            svc.ask({
+              id: requestID,
+              sessionID: id,
+              permission: "bash",
+              patterns: ["ls"],
+              metadata: {},
+              always: [],
+              ruleset: [],
+            }),
+          ),
+        )
+        await waitForPermission(id)
+        await waitForQuestion(id)
+
+        const payload = await capturedGetSessions()()
+        expect(payload.sessions.some((s) => s.id === id && s.status === "permission")).toBe(true)
+
+        await AppRuntime.runPromise(Permission.Service.use((svc) => svc.reply({ requestID, reply: "once" })))
+        const pending = await AppRuntime.runPromise(Question.Service.use((svc) => svc.list()))
+        const req = pending.find((q) => q.sessionID === id)
+        if (req) await AppRuntime.runPromise(Question.Service.use((svc) => svc.reject(req.id)))
+      },
+    })
+  }, 30000)
+
+  test("idle/busy/retry unchanged when no attention is pending", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const idleId = await setupSession()
+        const busyId = await setupSession()
+        const retryId = await setupSession()
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.set(busyId, { type: "busy" })))
+        await AppRuntime.runPromise(
+          SessionStatus.Service.use((svc) =>
+            svc.set(retryId, { type: "retry", attempt: 1, message: "retrying", next: 100 }),
+          ),
+        )
+
+        await KiloSessions.attachRemoteSession(idleId)
+        await KiloSessions.attachRemoteSession(busyId)
+        await KiloSessions.attachRemoteSession(retryId)
+
+        const payload = await capturedGetSessions()()
+        const byId = Object.fromEntries(payload.sessions.map((s) => [s.id, s.status]))
+        expect(byId[idleId]).toBe("idle")
+        expect(byId[busyId]).toBe("busy")
+        expect(byId[retryId]).toBe("retry")
+      },
+    })
+  }, 30000)
+
+  test("Permission and Question list() are called once per heartbeat across many sessions", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        for (let i = 0; i < 4; i++) {
+          const id = await setupSession()
+          await KiloSessions.attachRemoteSession(id)
+        }
+
+        const { AppRuntime } = await import("@/effect/app-runtime")
+        const { Permission } = await import("@/permission")
+        const { Question } = await import("@/question")
+
+        // list is readonly on the interface; cast to count calls in place.
+        type ListBag = { list: () => unknown }
+        const permSvc = (await AppRuntime.runPromise(
+          Permission.Service.use((svc) => Effect.succeed(svc)),
+        )) as unknown as ListBag
+        const qSvc = (await AppRuntime.runPromise(
+          Question.Service.use((svc) => Effect.succeed(svc)),
+        )) as unknown as ListBag
+
+        let permissionListCalls = 0
+        let questionListCalls = 0
+        const origPermList = permSvc.list.bind(permSvc)
+        const origQList = qSvc.list.bind(qSvc)
+        permSvc.list = () => {
+          permissionListCalls += 1
+          return origPermList()
+        }
+        qSvc.list = () => {
+          questionListCalls += 1
+          return origQList()
+        }
+
+        try {
+          await capturedGetSessions()()
+          // Once per heartbeat, not once per session (4 sessions attached).
+          expect(permissionListCalls).toBe(1)
+          expect(questionListCalls).toBe(1)
+
+          permissionListCalls = 0
+          questionListCalls = 0
+          await capturedGetSessions()()
+          expect(permissionListCalls).toBe(1)
+          expect(questionListCalls).toBe(1)
+        } finally {
+          permSvc.list = origPermList
+          qSvc.list = origQList
+        }
+      },
+    })
+  }, 30000)
 })
