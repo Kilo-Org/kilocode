@@ -1,6 +1,8 @@
 import { describe, expect, it } from "bun:test"
+import path from "node:path"
 import {
   deniedModeSwitch,
+  MODE_SWITCH_TRANSITION_ICON,
   modeSwitchEvent,
   permissionModeSwitch,
 } from "../../webview-ui/src/components/chat/mode-switch-ui"
@@ -62,6 +64,23 @@ describe("mode switch UI request detection", () => {
 })
 
 describe("mode switch transcript event", () => {
+  it("uses a transition glyph for static mode-switch surfaces", () => {
+    expect(MODE_SWITCH_TRANSITION_ICON).toBe("arrow-right")
+  })
+
+  it("reserves the selector glyph for the interactive prompt picker", async () => {
+    const root = path.resolve(import.meta.dir, "../../webview-ui/src/components")
+    const staticSources = await Promise.all(
+      ["chat/ModeSwitchCard.tsx", "chat/TaskToolExpanded.tsx", "chat/VscodeToolOverrides.tsx"].map((file) =>
+        Bun.file(path.join(root, file)).text(),
+      ),
+    )
+    const picker = await Bun.file(path.join(root, "shared/ModeSwitcher.tsx")).text()
+
+    expect(staticSources.join("\n")).not.toContain('name="selector"')
+    expect(picker).toContain('<Icon name="selector"')
+  })
+
   it("describes a successful transition and its reason", () => {
     expect(
       modeSwitchEvent(

@@ -6,6 +6,8 @@ export interface ModeSwitchDetails {
   reason: string
 }
 
+export const MODE_SWITCH_TRANSITION_ICON = "arrow-right" as const
+
 function text(value: unknown) {
   if (typeof value === "string" && value.trim()) return value.trim()
   if (typeof value === "number" || typeof value === "boolean") return String(value)

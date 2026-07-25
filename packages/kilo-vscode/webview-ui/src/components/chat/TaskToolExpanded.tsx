@@ -20,7 +20,7 @@ import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { childID } from "../../context/session-utils"
 import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
-import { modeSwitchEvent } from "./mode-switch-ui"
+import { MODE_SWITCH_TRANSITION_ICON, modeSwitchEvent } from "./mode-switch-ui"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -176,7 +176,7 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
                     metadata?: Record<string, unknown>
                   }
                   const event = modeSwitchEvent(state.input ?? {}, state.metadata ?? {})
-                  return { icon: "selector" as const, title: event.title, subtitle: event.reason }
+                  return { icon: MODE_SWITCH_TRANSITION_ICON, title: event.title, subtitle: event.reason }
                 })
                 const subtitle = createMemo(() => {
                   if (info().subtitle) return info().subtitle

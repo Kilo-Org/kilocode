@@ -4,7 +4,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import type { PermissionRequest, QuestionRequest } from "../../types/messages"
 import { useSession } from "../../context/session"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import type { ModeSwitchDetails } from "./mode-switch-ui"
+import { MODE_SWITCH_TRANSITION_ICON, type ModeSwitchDetails } from "./mode-switch-ui"
 
 const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
@@ -13,7 +13,7 @@ function Transition(props: { details: ModeSwitchDetails }) {
     <>
       <div data-slot="mode-switch-transition" aria-label={`${props.details.source} to ${props.details.target}`}>
         <span data-slot="mode-switch-mode">{props.details.source}</span>
-        <Icon name="arrow-right" size="small" />
+        <Icon name={MODE_SWITCH_TRANSITION_ICON} size="small" />
         <span data-slot="mode-switch-mode" data-target>
           {props.details.target}
         </span>
@@ -80,7 +80,7 @@ export const ModeSwitchPermissionCard: Component<{
       aria-labelledby={`mode-switch-title-${props.request.id}`}
     >
       <div data-slot="mode-switch-header">
-        <Icon name="selector" size="small" />
+        <Icon name={MODE_SWITCH_TRANSITION_ICON} size="small" />
         <span id={`mode-switch-title-${props.request.id}`}>Agent requests a mode change</span>
       </div>
       <Transition details={props.details} />

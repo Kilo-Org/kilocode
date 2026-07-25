@@ -11,7 +11,7 @@ import { createMemo, For, Show } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { BasicTool } from "@kilocode/kilo-ui/basic-tool"
 import { ToolRegistry, type ToolProps } from "@kilocode/kilo-ui/message-part"
-import { modeSwitchEvent } from "./mode-switch-ui"
+import { MODE_SWITCH_TRANSITION_ICON, modeSwitchEvent } from "./mode-switch-ui"
 
 /** Tools that should be open by default in the VS Code sidebar. */
 const DEFAULT_OPEN_TOOLS = ["bash"]
@@ -159,7 +159,7 @@ function ModeSwitchTool(props: ToolProps) {
     <div data-component="mode-switch-event" role="status" aria-live="polite">
       <BasicTool
         {...props}
-        icon="selector"
+        icon={MODE_SWITCH_TRANSITION_ICON}
         hideDetails
         trigger={{
           title: event().title,
