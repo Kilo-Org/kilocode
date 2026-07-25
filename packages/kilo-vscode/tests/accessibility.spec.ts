@@ -180,6 +180,25 @@ test.describe("webview accessibility ratchet", () => {
     await expect(page.getByText("⌘F", { exact: true })).toBeVisible()
   })
 
+  test("Search lists do not select an unhighlighted result on Enter by default", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const input = page.getByPlaceholder("Search worktrees and sessions", { exact: true })
+    const row = page.locator('[data-slot="list-item"]').first()
+    const selected = page.locator('[data-slot="sidebar-search-selection"]')
+
+    await input.fill("Render")
+    await expect(row).toContainText("Render images in diff viewer")
+    await row.dispatchEvent("mousemove", { movementX: 1 })
+    await expect(row).toHaveAttribute("data-active", "true")
+    await row.dispatchEvent("mouseleave")
+    await expect(page.locator('[data-slot="list-item"][data-active="true"]')).toHaveCount(0)
+
+    await input.press("Enter")
+    await expect(selected).toHaveText("worktree:wt-search")
+    await expect(input).toBeFocused()
+  })
+
   test("Session tab switcher restores chat focus after keyboard and mouse selection", async ({ page }) => {
     await open(page, "session-tabs--switcher-open")
 

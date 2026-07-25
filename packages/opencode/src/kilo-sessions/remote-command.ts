@@ -62,6 +62,18 @@ export namespace RemoteCommand {
     .object({
       protocolVersion: z.literal(1),
       commands: z.array(Info).max(MAX_COMMANDS),
+      // kilocode_change - K1 W1: `canExitSession` is an INDEPENDENT producer
+      // contract advertised by every CLI (interactive TUI and headless
+      // `kilo remote` alike) so the mobile client can rely on the
+      // interpretation of `exit_cli` as "detach THIS session" without having
+      // to inspect the synthetic `/exit` command entry's presence (which is
+      // gated on RemoteExit.get() — i.e. interactive-only — and therefore
+      // would lie to a headless host). Compatibility note: the wire command
+      // literal `exit_cli` is intentionally unchanged from the prior
+      // interactive-only meaning; this field documents the new interpretation
+      // rather than introducing a new command. The synthetic `/exit` entry
+      // (gated on exitAvailable) is kept as-is for the interactive TUI.
+      canExitSession: z.boolean().optional(),
     })
     .strict()
   export type Response = z.infer<typeof Response>
@@ -148,7 +160,14 @@ export namespace RemoteCommand {
     // response stays alphabetized regardless of input order.
     if (!names.has(compact.name)) commands.push(compact)
     if (exitAvailable) commands.push(exit)
-    return Response.parse({ protocolVersion: 1, commands: truncate(commands) })
+    // kilocode_change - K1 W1: always advertise `canExitSession: true`. This
+    // is the producer contract for the new `exit_cli`-as-detach semantics
+    // (independent of `exitAvailable`, which gates the synthetic `/exit`
+    // command entry on RemoteExit.get()). A headless `kilo remote` host has
+    // no RemoteExit callback, so it does NOT emit `/exit` here — but it
+    // DOES interpret `exit_cli` as a session-detach, so `canExitSession`
+    // is true for both interactive and headless producers.
+    return Response.parse({ protocolVersion: 1, commands: truncate(commands), canExitSession: true })
   }
 
   export type ExecuteInput = SendRequest & { sessionID: SessionID; catalog: Response }
