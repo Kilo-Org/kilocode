@@ -9,7 +9,8 @@
 // a source-text/regex assertion on the handler's structure.
 
 import { describe, expect, test } from "bun:test"
-import { buildInstanceAdvertisement } from "../../../../src/cli/cmd/remote"
+// Shared helper lives in kilo-sessions; remote.ts re-exports for the CLI path.
+import { buildInstanceAdvertisement } from "../../../../src/kilo-sessions/instance-advertisement"
 
 describe("RemoteCommand instance advertisement (K1 W1)", () => {
   test("buildInstanceAdvertisement resolves name/projectName/version from the directory and installation version", () => {

@@ -276,18 +276,17 @@ multi.live("isolates the process-wide listener by instance directory", () => {
   )
 })
 
-// kilocode_change start - K1 W1: instance advertisement + per-session platform.
+// kilocode_change start - K1 W1 / DEF-1: instance advertisement + per-session platform.
 //
-// The race is the heart of this slice: `enableRemote` is idempotent/coalescing
-// and can be called from either the explicit `kilo remote` command OR from
-// bootstrap auto-enable (`KILO_REMOTE=1` / `remote_control` config). The
-// module-level `instanceAdvertisement` flag must make the next heartbeat
-// carry `instance` regardless of which caller won the race, and the setter
-// must trigger an out-of-band heartbeat when called against an existing
-// connection (so the cloud learns about the instance without waiting for
-// the next 10s timer tick).
+// `enableRemote` is idempotent/coalescing and is called from `/remote`, the
+// explicit `kilo remote` command, and bootstrap auto-enable (`KILO_REMOTE=1` /
+// `remote_control`). Every successful entry must ensure a default instance
+// advertisement (including the already-connected early return — the common
+// `/remote`-after-auto-enable path). Explicit `setInstanceAdvertisement`
+// keeps replace semantics and fires one out-of-band heartbeat per set when
+// connected; `enableRemote` with an ad already set is a no-op (no extra HB).
 
-describe("KiloSessions.setInstanceAdvertisement (K1 W1)", () => {
+describe("KiloSessions.setInstanceAdvertisement (K1 W1 / DEF-1)", () => {
   let heartbeatCalls = 0
   let outOfBand: Promise<void> | undefined
 
@@ -375,27 +374,51 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1)", () => {
     return getSessions as () => Promise<RemoteProtocol.Heartbeat>
   }
 
-  test("flag is unset by default — heartbeats omit `instance`", async () => {
+  test("enableRemote alone advertises the instance (covers /remote and auto-enable)", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
       directory: tmp.path,
       fn: async () => {
+        // Contract: enableRemote entry with none set → derive and set.
+        // No prior setInstanceAdvertisement (simulates /remote or auto-enable).
         await KiloSessions.enableRemote()
         const payload = await capturedGetSessions()()
         expect(payload.type).toBe("heartbeat")
-        expect(payload.instance).toBeUndefined()
+        expect(payload.instance).toBeDefined()
+        expect(payload.instance!.projectName.length).toBeGreaterThan(0)
+        expect(payload.instance!.name.length).toBeGreaterThan(0)
       },
     })
   })
 
-  test("setting the flag makes the next getSessions include `instance` (race: setter after enable)", async () => {
+  test("enableRemote after already connected is a no-op for advertisement (no extra heartbeat)", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Auto-enable connects first and advertises.
+        await KiloSessions.enableRemote()
+        const first = await capturedGetSessions()()
+        expect(first.instance).toBeDefined()
+        const before = heartbeatCalls
+        // /remote calls enableRemote again; already-connected early return must
+        // not re-set or fire an extra out-of-band heartbeat.
+        await KiloSessions.enableRemote()
+        expect(heartbeatCalls).toBe(before)
+        const second = await capturedGetSessions()()
+        expect(second.instance).toEqual(first.instance)
+      },
+    })
+  })
+
+  test("explicit set after enable replaces the payload (kilo remote race)", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
       directory: tmp.path,
       fn: async () => {
         await KiloSessions.enableRemote()
-        // Race: the explicit `kilo remote` command now sets the flag, after
-        // `enableRemote` already coalesced with bootstrap auto-enable.
+        // Explicit set keeps replace semantics even when enableRemote already
+        // derived a default advertisement.
         KiloSessions.setInstanceAdvertisement({
           name: "mbp-igor",
           projectName: "cloud",
@@ -414,11 +437,10 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1)", () => {
       directory: tmp.path,
       fn: async () => {
         await KiloSessions.enableRemote()
-        const beforePayload = await capturedGetSessions()()
-        expect(beforePayload.instance).toBeUndefined()
+        // enableRemote already set a default ad; explicit set replaces and fires
+        // exactly one out-of-band heartbeat.
         const beforeHeartbeatCalls = heartbeatCalls
         KiloSessions.setInstanceAdvertisement({ name: "h", projectName: "p" })
-        // The setter fires one out-of-band heartbeat — wait for it.
         await outOfBand
         expect(heartbeatCalls).toBe(beforeHeartbeatCalls + 1)
         const afterPayload = await capturedGetSessions()()
@@ -427,7 +449,7 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1)", () => {
     })
   })
 
-  test("setter is idempotent — second call replaces the payload and still fires one out-of-band heartbeat", async () => {
+  test("setter replaces payload and fires one out-of-band heartbeat per call", async () => {
     await using tmp = await tmpdir({ git: true })
     await provide({
       directory: tmp.path,
@@ -441,6 +463,38 @@ describe("KiloSessions.setInstanceAdvertisement (K1 W1)", () => {
         expect(heartbeatCalls).toBe(before + 1)
         const payload = await capturedGetSessions()()
         expect(payload.instance).toEqual({ name: "second", projectName: "p" })
+      },
+    })
+  })
+
+  test("explicit set before enableRemote is preserved (no re-set on enable)", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        // Contract: set before connect → flag stored; enable must not replace.
+        KiloSessions.setInstanceAdvertisement({ name: "pre-set", projectName: "proj", version: "9.9.9" })
+        await KiloSessions.enableRemote()
+        const payload = await capturedGetSessions()()
+        expect(payload.instance).toEqual({ name: "pre-set", projectName: "proj", version: "9.9.9" })
+      },
+    })
+  })
+
+  test("disableRemote does not clear the advertisement flag", async () => {
+    await using tmp = await tmpdir({ git: true })
+    await provide({
+      directory: tmp.path,
+      fn: async () => {
+        await KiloSessions.enableRemote()
+        const before = await capturedGetSessions()()
+        expect(before.instance).toBeDefined()
+        KiloSessions.disableRemote()
+        // Re-enable: ensureDefault must no-op (flag still set), and the new
+        // connection's getSessions must still carry the same advertisement.
+        await KiloSessions.enableRemote()
+        const after = await capturedGetSessions()()
+        expect(after.instance).toEqual(before.instance)
       },
     })
   })

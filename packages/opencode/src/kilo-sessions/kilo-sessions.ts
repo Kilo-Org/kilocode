@@ -26,6 +26,7 @@ import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -456,9 +457,22 @@ export namespace KiloSessions {
 
   export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
 
+  // kilocode_change - DEF-1: default advertisement for every successful
+  // enableRemote() entry (covers `/remote` after auto-enable already connected).
+  // No-op when an advertisement is already set — must not re-set or fire an
+  // extra heartbeat. Explicit setInstanceAdvertisement keeps replace semantics.
+  function ensureDefaultInstanceAdvertisement() {
+    if (instanceAdvertisement) return
+    setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
+  }
+
   export async function enableRemote() {
-    if (remote) return
+    // ingestDisabled must not advertise. Every other successful entry — including
+    // already-connected and coalescing early returns — must ensure advertisement
+    // before returning, otherwise `/remote` after auto-enable never registers.
     if (ingestDisabled) return
+    ensureDefaultInstanceAdvertisement()
+    if (remote) return
     if (enabling) return enabling
     const seq = ++remoteSeq
     void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: false })
