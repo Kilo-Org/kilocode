@@ -1,10 +1,12 @@
 import { Agent } from "@/agent/agent"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import * as KiloAgent from "@/kilocode/agent"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
+import { ToolJsonSchema } from "@/tool/json-schema"
 import { Tool } from "@/tool/tool"
 import { SessionEvent } from "@opencode-ai/core/session/event"
 import { SessionMessage } from "@opencode-ai/core/session/message"
@@ -42,12 +44,37 @@ export class UnavailableError extends Schema.TaggedErrorClass<UnavailableError>(
   available: Schema.Array(Schema.String),
 }) {
   override get message() {
-    return `Mode "${this.target}" is not an available built-in mode. Available modes: ${this.available.join(", ")}`
+    return `Cannot switch to mode "${this.target}". Choose one of: ${this.available.join(", ")}`
+  }
+}
+
+export class ActiveError extends Schema.TaggedErrorClass<ActiveError>()("ModeSwitchActiveError", {
+  target: Schema.String,
+  available: Schema.Array(Schema.String),
+}) {
+  override get message() {
+    return `Mode "${this.target}" is already active. Choose a different mode: ${this.available.join(", ")}`
   }
 }
 
 export function modes(items: Agent.Info[]) {
   return items.filter((item) => item.native === true && item.mode !== "subagent" && item.hidden !== true)
+}
+
+export function schema(items: Agent.Info[]) {
+  const base = ToolJsonSchema.fromSchema(Params)
+  const target = base.properties?.target
+  if (!target || typeof target !== "object") return base
+  return {
+    ...base,
+    properties: {
+      ...base.properties,
+      target: {
+        ...target,
+        enum: modes(items).map((item) => item.name),
+      },
+    },
+  }
 }
 
 function denied(err: unknown) {
@@ -69,13 +96,16 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
 ) {
   const source = ctx.agent
   const available = modes(yield* deps.agents.list())
-  const target = available.find((item) => item.name === params.target)
-  if (!target || target.name === source) {
+  const name = KiloAgent.resolveKey(params.target)
+  const target = available.find((item) => item.name === name)
+  const choices = available.filter((item) => item.name !== source).map((item) => item.name)
+  if (!target) {
     return yield* new UnavailableError({
       target: params.target,
-      available: available.filter((item) => item.name !== source).map((item) => item.name),
+      available: choices,
     })
   }
+  if (target.name === source) return yield* new ActiveError({ target: target.name, available: choices })
   yield* deps.agents.guardRequirements(target)
 
   const approval = yield* deps
@@ -147,10 +177,12 @@ export const ModeSwitchTool = Tool.define<
     const sessions = yield* Session.Service
     const question = yield* Question.Service
     const events = yield* EventV2Bridge.Service
+    const available = yield* agents.list()
     return {
       description:
         "Switch the active mode for the current task when another built-in mode is better suited. Provide the destination mode and a short reason. The task automatically resumes with its existing context after approval.",
       parameters: Params,
+      jsonSchema: schema(available),
       execute: (params, ctx) =>
         execute(params, ctx, {
           agents,

@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { Permission } from "@/permission"
 import { Question } from "@/question"
 import { MessageID, PartID, SessionID } from "@/session/schema"
-import { execute, modes, type Params } from "@/kilocode/tool/mode-switch"
+import { execute, modes, schema, type Params } from "@/kilocode/tool/mode-switch"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
 import type { Agent } from "@/agent/agent"
 import type * as Tool from "@/tool/tool"
@@ -136,6 +136,20 @@ test("automatic approval persists the destination and resumes the active user ta
   expect(item.switched).toEqual(["debug"])
 })
 
+test("legacy build target switches to the canonical code mode", async () => {
+  const item = fixture({
+    source: "plan",
+    target: "build",
+    available: [mode("plan"), mode("code"), mode("debug")],
+  })
+
+  const result = await item.run()
+
+  expect(result.metadata).toMatchObject({ source: "plan", target: "code" })
+  expect(item.updated.map((msg) => (msg.role === "user" ? msg.agent : undefined))).toEqual(["code"])
+  expect(item.switched).toEqual(["code"])
+})
+
 test("confirmation approval follows the same switch path", async () => {
   let confirmed = false
   const item = fixture({
@@ -194,7 +208,21 @@ test("unavailable and custom target modes are rejected", async () => {
   if (Exit.isFailure(result)) {
     const err = Cause.squash(result.cause)
     expect(err).toBeInstanceOf(Error)
-    if (err instanceof Error) expect(err.message).toContain("Available modes: debug")
+    if (err instanceof Error) expect(err.message).toBe('Cannot switch to mode "custom". Choose one of: debug')
+  }
+  expect(item.requests).toEqual([])
+})
+
+test("selecting the active mode has a dedicated error", async () => {
+  const item = fixture({ target: "code" })
+
+  const result = await item.exit()
+  expect(Exit.isFailure(result)).toBe(true)
+  if (Exit.isFailure(result)) {
+    const err = Cause.squash(result.cause)
+    expect(err).toBeInstanceOf(Error)
+    if (err instanceof Error)
+      expect(err.message).toBe('Mode "code" is already active. Choose a different mode: debug, ask, plan')
   }
   expect(item.requests).toEqual([])
 })
@@ -229,6 +257,21 @@ test("all visible built-in primary modes are valid transition targets", async ()
       expect(result.metadata).toMatchObject({ status: "switched", source: source.name, target: target.name })
     }
   }
+})
+
+test("model-facing schema lists only visible built-in modes", () => {
+  const builtins = [mode("code"), mode("ask"), mode("debug"), mode("plan")]
+  const result = schema([
+    ...builtins,
+    mode("custom", { native: false }),
+    mode("hidden", { hidden: true }),
+    mode("explore", { mode: "subagent" }),
+  ])
+
+  expect(result.properties?.target).toMatchObject({
+    type: "string",
+    enum: builtins.map((item) => item.name),
+  })
 })
 
 test("the mode switch tool is visible only to built-in interactive modes", () => {
