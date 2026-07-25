@@ -1,7 +1,7 @@
 import { cmd } from "./cmd"
 import { UI } from "@/cli/ui"
 import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
-import { importCloudSession, reportCloudImportError, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
+import { importCloudSession, validateCloudFork, reportCloudImportError } from "@/kilocode/cloud-session" // kilocode_change
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { validateSession } from "../tui/validate-session"
 import { ServerAuth } from "@/server/auth"
