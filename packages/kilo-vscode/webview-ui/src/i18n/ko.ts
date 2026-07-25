@@ -1880,4 +1880,8 @@ export const dict = {
   "chat.search.invalidRegex": "정규식이 잘못되었습니다",
   "chat.search.noResults": "검색 결과 없음",
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
+  "ui.permission.toolLabel.modeSwitch": "모드 전환",
+  "ui.permission.modeSwitch.prompt": "모드를 {{source}}에서 {{target}}(으)로 전환 — 이유: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "모드를 전환합니다. 에이전트가 현재 작업을 다른 기본 제공 모드에서 재개할 수 있도록 합니다.",
 }

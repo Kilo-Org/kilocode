@@ -643,6 +643,8 @@ export const dict = {
   "ui.permission.toolLabel.task": "Task",
   "ui.permission.toolLabel.skill": "Skill",
   "ui.permission.toolLabel.lsp": "LSP",
+  "ui.permission.toolLabel.modeSwitch": "Switch Mode",
+  "ui.permission.modeSwitch.prompt": "Switch mode from {{source}} to {{target}} — Reason: {{reason}}",
   "ui.permission.toolLabel.bash": "Bash",
   "ui.permission.toolLabel.todoRead": "Todo Read",
   "ui.permission.toolLabel.todoWrite": "Todo Write",
@@ -1075,7 +1077,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Access files outside the project directory",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Detect repeated tool calls with identical input",
-
   "session.delete.failed.title": "Failed to delete session",
   "session.delete.title": "Delete session",
   "session.delete.confirm": 'Delete session "{{name}}"?',
@@ -1644,6 +1645,8 @@ export const dict = {
   "settings.autoApprove.tool.websearch": "Search the web. Allows performing external web searches.",
   "settings.autoApprove.tool.doom_loop":
     "Prevent repeated identical actions. Triggered when the same tool call repeats with identical input.",
+  "settings.autoApprove.tool.mode_switch":
+    "Switch modes. Allows agents to resume the current task in another built-in mode.",
 
   "settings.checkpoints.enable.title": "Enable Snapshots",
   "settings.checkpoints.enable.description": "Create checkpoints before file edits so you can restore previous states",

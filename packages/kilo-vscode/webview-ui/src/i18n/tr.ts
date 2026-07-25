@@ -1926,4 +1926,8 @@ export const dict = {
   "chat.search.invalidRegex": "Geçersiz normal ifade",
   "chat.search.noResults": "Sonuç yok",
   "chat.search.searchingHistory": "Önceki mesajlarda aranıyor…",
+  "ui.permission.toolLabel.modeSwitch": "Mod değiştir",
+  "ui.permission.modeSwitch.prompt": "Modu {{source}} modundan {{target}} moduna değiştir — Neden: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Modları değiştir. Aracıların mevcut görevi başka bir yerleşik modda sürdürmesine izin verir.",
 }

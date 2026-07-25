@@ -1898,4 +1898,8 @@ export const dict = {
   "chat.search.invalidRegex": "Ugyldig regulært uttrykk",
   "chat.search.noResults": "Ingen resultater",
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
+  "ui.permission.toolLabel.modeSwitch": "Bytt modus",
+  "ui.permission.modeSwitch.prompt": "Bytt modus fra {{source}} til {{target}} — Årsak: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Bytt modus. Lar agenter fortsette den gjeldende oppgaven i en annen innebygd modus.",
 } satisfies Partial<Record<Keys, string>>

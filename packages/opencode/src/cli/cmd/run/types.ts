@@ -254,6 +254,12 @@ export type FooterEvent =
       type: "model"
       model: string
     }
+  // kilocode_change start
+  | {
+      type: "agent"
+      agent: string
+    }
+  // kilocode_change end
   | {
       type: "turn.send"
       queue: number

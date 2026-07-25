@@ -1913,4 +1913,8 @@ export const dict = {
   "chat.search.invalidRegex": "Nevažeći regularni izraz",
   "chat.search.noResults": "Nema rezultata",
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
+  "ui.permission.toolLabel.modeSwitch": "Promijeni način",
+  "ui.permission.modeSwitch.prompt": "Promijeni način sa {{source}} na {{target}} — Razlog: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Promijenite načine rada. Omogućava agentima da nastave trenutni zadatak u drugom ugrađenom načinu.",
 }

@@ -69,6 +69,26 @@ function idle(sessionID = "session-1") {
   } satisfies SdkEvent
 }
 
+function sessionUpdated(agent: string): SdkEvent {
+  return {
+    id: `evt-session-1-${agent}`,
+    type: "session.updated",
+    properties: {
+      sessionID: "session-1",
+      info: {
+        id: "session-1",
+        slug: "session-1",
+        projectID: "project-1",
+        directory: "/tmp",
+        title: "Session",
+        version: "1",
+        agent,
+        time: { created: 1, updated: 2 },
+      },
+    },
+  }
+}
+
 function retry(sessionID: string, attempt: number, message: string) {
   return {
     id: `evt-${sessionID}-retry-${attempt}`,
@@ -468,6 +488,28 @@ function sdk(
 }
 
 describe("run stream transport", () => {
+  test("updates the active CLI agent from session events", async () => {
+    const src = globalFeed()
+    const agents: string[] = []
+    const transport = await createSessionTransport({
+      sdk: sdk({ globalStream: src.stream }),
+      sessionID: "session-1",
+      thinking: true,
+      limits: () => ({}),
+      footer: footer().api,
+      onAgentChange: (agent) => agents.push(agent),
+    })
+
+    try {
+      src.push(globalEvent(sessionUpdated("debug")))
+      await waitFor(() => agents[0])
+      expect(agents).toEqual(["debug"])
+    } finally {
+      src.close()
+      await transport.close()
+    }
+  })
+
   test("ignores the sync copy of a native message event", async () => {
     const src = globalFeed()
     const ui = footer()

@@ -1953,4 +1953,8 @@ export const dict = {
   "chat.search.invalidRegex": "Expression régulière non valide",
   "chat.search.noResults": "Aucun résultat",
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
+  "ui.permission.toolLabel.modeSwitch": "Changer de mode",
+  "ui.permission.modeSwitch.prompt": "Passer du mode {{source}} au mode {{target}} — Raison : {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Changer de mode. Permet aux agents de reprendre la tâche en cours dans un autre mode intégré.",
 }

@@ -1905,4 +1905,8 @@ export const dict = {
   "chat.search.invalidRegex": "Ugyldigt regulært udtryk",
   "chat.search.noResults": "Ingen resultater",
   "chat.search.searchingHistory": "Søger i tidligere beskeder…",
+  "ui.permission.toolLabel.modeSwitch": "Skift tilstand",
+  "ui.permission.modeSwitch.prompt": "Skift tilstand fra {{source}} til {{target}} — Årsag: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Skift tilstand. Giver agenter mulighed for at fortsætte den aktuelle opgave i en anden indbygget tilstand.",
 }

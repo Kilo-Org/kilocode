@@ -1909,4 +1909,8 @@ export const dict = {
   "chat.search.invalidRegex": "Недопустимое регулярное выражение",
   "chat.search.noResults": "Нет результатов",
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
+  "ui.permission.toolLabel.modeSwitch": "Переключить режим",
+  "ui.permission.modeSwitch.prompt": "Переключить режим с {{source}} на {{target}} — Причина: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Переключение режимов. Позволяет агентам возобновить текущую задачу в другом встроенном режиме.",
 }

@@ -21,6 +21,7 @@ import { createRuntimeLifecycle } from "./runtime.lifecycle"
 import { trace } from "./trace"
 import { cycleVariant, formatModelLabel, resolveSavedVariant, resolveVariant, saveVariant } from "./variant.shared"
 import type { LocalReplayAnchor, LocalReplayRow, RunInput, RunPrompt, RunProvider, StreamCommit } from "./types"
+import * as Locale from "@/util/locale" // kilocode_change
 
 /** @internal Exported for testing */
 export { pickVariant, resolveVariant } from "./variant.shared"
@@ -499,6 +500,12 @@ async function runInteractiveRuntime(input: RunRuntimeInput, deps: RunRuntimeDep
         limits: () => state.limits,
         providers: () => state.providers,
         footer,
+        // kilocode_change start
+        onAgentChange: (agent) => {
+          state.agent = agent
+          footer.event({ type: "agent", agent: Locale.titlecase(agent) })
+        },
+        // kilocode_change end
         trace: log,
       })
       if (footer.isClosed) {

@@ -1911,4 +1911,8 @@ export const dict = {
   "chat.search.invalidRegex": "Nieprawidłowe wyrażenie regularne",
   "chat.search.noResults": "Brak wyników",
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
+  "ui.permission.toolLabel.modeSwitch": "Przełącz tryb",
+  "ui.permission.modeSwitch.prompt": "Przełącz tryb z {{source}} na {{target}} — Powód: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Przełączanie trybów. Pozwala agentom wznowić bieżące zadanie w innym wbudowanym trybie.",
 }

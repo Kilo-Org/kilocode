@@ -397,6 +397,13 @@ export class RunFooter implements FooterApi {
   }
 
   public event(next: FooterEvent): void {
+    // kilocode_change start
+    if (next.type === "agent") {
+      this.options.agentLabel = next.agent
+      return
+    }
+    // kilocode_change end
+
     if (next.type === "turn.duration") {
       const current = this.currentModel()
       this.flush()

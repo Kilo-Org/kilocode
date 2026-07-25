@@ -1823,4 +1823,7 @@ export const dict = {
   "chat.search.invalidRegex": "正则表达式无效",
   "chat.search.noResults": "无结果",
   "chat.search.searchingHistory": "正在搜索更早的消息…",
+  "ui.permission.toolLabel.modeSwitch": "切换模式",
+  "ui.permission.modeSwitch.prompt": "将模式从 {{source}} 切换到 {{target}} — 原因：{{reason}}",
+  "settings.autoApprove.tool.mode_switch": "切换模式。允许代理在另一个内置模式中继续当前任务。",
 } satisfies Partial<Record<Keys, string>>

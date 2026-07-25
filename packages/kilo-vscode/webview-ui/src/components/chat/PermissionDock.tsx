@@ -54,9 +54,18 @@ export const PermissionDock: Component<{
     const val = props.request.args?.description
     return typeof val === "string" && val.length > 0 ? val : undefined
   }
-  const description = createMemo(() =>
-    command() ? null : describePatterns(props.request.toolName, props.request.patterns, language.t),
-  )
+  const description = createMemo(() => {
+    if (command() || props.request.toolName === "mode_switch") return null
+    return describePatterns(props.request.toolName, props.request.patterns, language.t)
+  })
+  const modeSwitch = createMemo(() => {
+    if (props.request.toolName !== "mode_switch") return
+    const source = props.request.args?.source
+    const target = props.request.args?.target
+    const reason = props.request.args?.reason
+    if (typeof source !== "string" || typeof target !== "string" || typeof reason !== "string") return
+    return { source, target, reason }
+  })
 
   const diffs = createMemo(() => permissionDiffs(props.request))
 
@@ -268,6 +277,17 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
+        <Show when={modeSwitch()}>
+          {(item) => (
+            <div data-slot="permission-hint">
+              {language.t("ui.permission.modeSwitch.prompt", {
+                source: item().source,
+                target: item().target,
+                reason: item().reason,
+              })}
+            </div>
+          )}
+        </Show>
         <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
         <Show when={command()}>
           {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}

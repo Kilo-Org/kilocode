@@ -8,6 +8,7 @@ import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
+import { ModeSwitchTool } from "./mode-switch"
 import { NotifyUserTool } from "./notify-user"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -71,6 +72,7 @@ export namespace KiloToolRegistry {
       const managerModels = yield* AgentManagerModelsTool
       const memory = yield* MemoryRecallTool
       const save = yield* MemorySaveTool
+      const mode = yield* ModeSwitchTool
       const manager = yield* AgentManagerTool.pipe(Effect.provideService(AgentManager.Service, host ?? unavailable))
       const process = yield* BackgroundProcessTool
       const image = yield* GenerateImageTool
@@ -81,13 +83,13 @@ export namespace KiloToolRegistry {
       const sessions = yield* KiloSessions.Service
       const notify = yield* NotifyUserTool.pipe(Effect.provideService(KiloSessions.Service, sessions))
       if (!notebook)
-        return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, notify }
+        return { codebase, recall, managerModels, memory, save, mode, manager, process, image, terminal, notify }
       const tools = yield* Effect.all({
         notebookRead: NotebookReadTool,
         notebookEdit: NotebookEditTool,
         notebookExecute: NotebookExecuteTool,
       }).pipe(Effect.provideService(Notebook.Service, notebook))
-      return { codebase, recall, managerModels, memory, save, manager, process, image, terminal, notify, ...tools }
+      return { codebase, recall, managerModels, memory, save, mode, manager, process, image, terminal, notify, ...tools }
     })
   }
 
@@ -100,6 +102,7 @@ export namespace KiloToolRegistry {
       managerModels: Tool.Info
       memory: Tool.Info
       save: Tool.Info
+      mode?: Tool.Info
       manager: Tool.Info
       process: Tool.Info
       image: Tool.Info
@@ -124,6 +127,7 @@ export namespace KiloToolRegistry {
         image: Tool.init(tools.image),
         notify: Tool.init(tools.notify),
       })
+      const mode = tools.mode ? yield* Tool.init(tools.mode) : undefined
       const terminal = tools.terminal ? yield* Tool.init(tools.terminal) : undefined
       const notebooks =
         tools.notebookRead && tools.notebookEdit && tools.notebookExecute
@@ -134,7 +138,7 @@ export namespace KiloToolRegistry {
             })
           : {}
       const semantic = yield* semanticTool(deps, loaders)
-      return { ...base, terminal, ...notebooks, semantic, notify: base.notify }
+      return { ...base, mode, terminal, ...notebooks, semantic, notify: base.notify }
     })
   }
 
@@ -178,6 +182,7 @@ export namespace KiloToolRegistry {
   /** Hide human-driven tools from agents that cannot interact with the user directly. */
   export function available(tool: Tool.Def, agent: Agent.Info) {
     if (tool.id === "notify_user") return KiloSessions.remoteStatus().enabled
+    if (tool.id === "mode_switch") return agent.native === true && agent.mode !== "subagent" && agent.hidden !== true
     if (tool.id !== "interactive_terminal") return true
     return agent.mode === "primary"
   }
@@ -191,6 +196,7 @@ export namespace KiloToolRegistry {
       managerModels: Tool.Def
       memory: Tool.Def
       save: Tool.Def
+      mode?: Tool.Def
       manager: Tool.Def
       process: Tool.Def
       image: Tool.Def
@@ -208,6 +214,7 @@ export namespace KiloToolRegistry {
       ...(tools.semantic ? [tools.semantic] : []),
       tools.memory,
       tools.save,
+      ...(tools.mode ? [tools.mode] : []),
       tools.recall,
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),

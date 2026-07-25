@@ -1870,4 +1870,7 @@ export const dict = {
   "chat.search.invalidRegex": "تعبير عادي غير صالح",
   "chat.search.noResults": "لا توجد نتائج",
   "chat.search.searchingHistory": "جارٍ البحث في الرسائل السابقة…",
+  "ui.permission.toolLabel.modeSwitch": "تبديل الوضع",
+  "ui.permission.modeSwitch.prompt": "تبديل الوضع من {{source}} إلى {{target}} — السبب: {{reason}}",
+  "settings.autoApprove.tool.mode_switch": "تبديل الأوضاع. يسمح للوكلاء باستئناف المهمة الحالية في وضع مدمج آخر.",
 }

@@ -1921,4 +1921,8 @@ export const dict = {
   "chat.search.invalidRegex": "Expressão regular inválida",
   "chat.search.noResults": "Nenhum resultado",
   "chat.search.searchingHistory": "Pesquisando mensagens anteriores…",
+  "ui.permission.toolLabel.modeSwitch": "Alternar modo",
+  "ui.permission.modeSwitch.prompt": "Alternar modo de {{source}} para {{target}} — Motivo: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Alternar modos. Permite que os agentes retomem a tarefa atual em outro modo integrado.",
 }

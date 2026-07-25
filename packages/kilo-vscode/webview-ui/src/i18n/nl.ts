@@ -1939,4 +1939,8 @@ export const dict = {
   "chat.search.invalidRegex": "Ongeldige reguliere expressie",
   "chat.search.noResults": "Geen resultaten",
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
+  "ui.permission.toolLabel.modeSwitch": "Modus wisselen",
+  "ui.permission.modeSwitch.prompt": "Modus wisselen van {{source}} naar {{target}} — Reden: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Modi wisselen. Hiermee kunnen agents de huidige taak in een andere ingebouwde modus hervatten.",
 }

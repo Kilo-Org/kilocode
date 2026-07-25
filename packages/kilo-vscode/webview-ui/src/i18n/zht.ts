@@ -1829,4 +1829,7 @@ export const dict = {
   "chat.search.invalidRegex": "規則運算式無效",
   "chat.search.noResults": "無結果",
   "chat.search.searchingHistory": "正在搜尋較早的訊息…",
+  "ui.permission.toolLabel.modeSwitch": "切換模式",
+  "ui.permission.modeSwitch.prompt": "將模式從 {{source}} 切換到 {{target}} — 原因：{{reason}}",
+  "settings.autoApprove.tool.mode_switch": "切換模式。允許代理在另一個內建模式中繼續目前的工作。",
 } satisfies Partial<Record<Keys, string>>

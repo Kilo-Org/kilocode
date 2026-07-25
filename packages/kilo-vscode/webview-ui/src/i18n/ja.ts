@@ -1898,4 +1898,8 @@ export const dict = {
   "chat.search.invalidRegex": "正規表現が無効です",
   "chat.search.noResults": "見つかりませんでした",
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
+  "ui.permission.toolLabel.modeSwitch": "モードを切り替え",
+  "ui.permission.modeSwitch.prompt": "モードを{{source}}から{{target}}に切り替え — 理由: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "モードを切り替えます。エージェントが現在のタスクを別の組み込みモードで再開できるようにします。",
 }

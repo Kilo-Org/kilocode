@@ -1878,4 +1878,8 @@ export const dict = {
   "chat.search.invalidRegex": "นิพจน์ทั่วไปไม่ถูกต้อง",
   "chat.search.noResults": "ไม่มีผลลัพธ์",
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
+  "ui.permission.toolLabel.modeSwitch": "สลับโหมด",
+  "ui.permission.modeSwitch.prompt": "สลับโหมดจาก {{source}} เป็น {{target}} — เหตุผล: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "สลับโหมด อนุญาตให้เอเจนต์ทำงานปัจจุบันต่อในโหมดในตัวอื่นได้",
 }

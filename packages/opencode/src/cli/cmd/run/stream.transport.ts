@@ -76,6 +76,7 @@ type StreamInput = {
   limits: () => Record<string, number>
   providers?: () => RunProvider[]
   footer: FooterApi
+  onAgentChange?: (agent: string) => void // kilocode_change
   trace?: Trace
   signal?: AbortSignal
 }
@@ -133,6 +134,8 @@ type TransportService = {
 class Service extends Context.Service<Service, TransportService>()("@opencode/RunStreamTransport") {}
 
 function sid(event: Event): string | undefined {
+  if (event.type === "session.updated") return event.properties.sessionID // kilocode_change
+
   if (event.type === "message.updated") {
     return event.properties.sessionID
   }
@@ -891,6 +894,16 @@ function createLayer(input: StreamInput) {
         }
 
         const applyEvent = Effect.fn("RunStreamTransport.applyEvent")(function* (event: Event) {
+          // kilocode_change start
+          if (
+            event.type === "session.updated" &&
+            event.properties.sessionID === input.sessionID &&
+            typeof event.properties.info.agent === "string"
+          ) {
+            input.onAgentChange?.(event.properties.info.agent)
+          }
+          // kilocode_change end
+
           if (event.type === "message.part.delta" && event.properties.sessionID === input.sessionID) {
             if (replayedParts.has(event.properties.partID)) {
               const seen = state.data.text.get(event.properties.partID) ?? ""

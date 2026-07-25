@@ -1943,4 +1943,8 @@ export const dict = {
   "chat.search.invalidRegex": "Ungültiger regulärer Ausdruck",
   "chat.search.noResults": "Keine Ergebnisse",
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
+  "ui.permission.toolLabel.modeSwitch": "Modus wechseln",
+  "ui.permission.modeSwitch.prompt": "Modus von {{source}} zu {{target}} wechseln — Grund: {{reason}}",
+  "settings.autoApprove.tool.mode_switch":
+    "Modi wechseln. Ermöglicht Agenten, die aktuelle Aufgabe in einem anderen integrierten Modus fortzusetzen.",
 } satisfies Partial<Record<Keys, string>>
