@@ -18,7 +18,10 @@ import { useTuiConfig } from "../../config"
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { normalizeUrls } from "@/kilocode/util/url"
-import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
+import {
+  MemoryPermissionRegistry,
+  type PermissionInfo,
+} from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -214,7 +217,8 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
       </Match>
       <Match when={store.stage === "permission"}>
         {(() => {
-          const info = () => {
+          // kilocode_change - keep Kilo permission renderers in the type system so heading/options are visible
+          const info = (): PermissionInfo => {
             const permission = props.request.permission
             const data = input()
 
@@ -424,7 +428,8 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             <box flexDirection="column" gap={0}>
               <box flexDirection="row" gap={1} flexShrink={0}>
                 <text fg={theme.warning}>{"△"}</text>
-                <text fg={theme.text}>Permission required</text>
+                {/* kilocode_change - allow Kilo permission renderers to provide focused approval copy */}
+                <text fg={theme.text}>{current.heading ?? "Permission required"}</text>
               </box>
               <box flexDirection="row" gap={1} paddingLeft={2} flexShrink={0}>
                 <text fg={theme.textMuted} flexShrink={0}>
@@ -447,9 +452,11 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
           )
 
           // kilocode_change start - hide "Always allow" for protected Kilo configuration access
-          const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-            ? { once: "Allow once", reject: "Reject" }
-            : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          const options: Record<string, string> =
+            current.options ??
+            (props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+              ? { once: "Allow once", reject: "Reject" }
+              : { once: "Allow once", always: "Allow always", reject: "Reject" })
           // kilocode_change end
 
           const body = (
