@@ -45,6 +45,8 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var mcpConnectResult = true
     var mcpDisconnectResult = true
     var mcpAuthenticateResult = true
+    var claudeCodeCompat = false
+    val compatSaves = mutableListOf<Boolean>()
 
     override suspend fun agents(directory: String): List<AgentDetailDto> {
         assertNotEdt("agentBehavior.agents")
@@ -163,11 +165,13 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
 
     override suspend fun claudeCodeCompat(): Boolean {
         assertNotEdt("agentBehavior.claudeCodeCompat")
-        return false
+        return claudeCodeCompat
     }
 
     override suspend fun setClaudeCodeCompat(value: Boolean): Boolean {
         assertNotEdt("agentBehavior.setClaudeCodeCompat")
+        compatSaves.add(value)
+        claudeCodeCompat = value
         return value
     }
 }

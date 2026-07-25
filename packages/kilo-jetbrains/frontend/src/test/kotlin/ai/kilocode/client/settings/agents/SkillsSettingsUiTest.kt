@@ -4,6 +4,7 @@ import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.settings.base.SettingsListItem
+import ai.kilocode.client.settings.base.SettingsPathDialogHandle
 import ai.kilocode.client.settings.base.settingsListCellBounds
 import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
@@ -287,7 +288,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
     fun `test add path and url write skills config patch on apply`() {
         var path = "/extra/skills"
         var url = "https://skills.test/index.json"
-        val panel = panel(choose = { path }, input = { _, _ -> url })
+        val panel = panel(source = { _, isPath, _ -> FakeSourceDialog(if (isPath) path else url) })
         flushUntil { rows(panel).size == 3 }
 
         edt { panel.sources.addPath(); true }
@@ -313,7 +314,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
         val path = "/extra/skills"
         val url = "https://skills.test/index.json"
         val extra = "$path/extra/SKILL.md"
-        val panel = panel(choose = { path }, input = { _, _ -> url })
+        val panel = panel(source = { _, isPath, _ -> FakeSourceDialog(if (isPath) path else url) })
         appRpc.configUpdateReturnStale = true
         appRpc.afterConfig = { agentRpc.skills = agentRpc.skills + SkillDto("extra", "Extra skill", extra) }
         flushUntil { rows(panel).size == 3 }
@@ -335,7 +336,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test blocked reload completes apply with warning`() {
         val path = "/extra/skills"
-        val panel = panel(choose = { path })
+        val panel = panel(source = { _, isPath, _ -> FakeSourceDialog(if (isPath) path else null) })
         agentRpc.reloadSkillResult = false
         flushUntil { rows(panel).size == 3 }
 
@@ -365,7 +366,7 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     fun `test source reset discards staged changes`() {
         val path = "/extra/skills"
-        val panel = panel(choose = { path })
+        val panel = panel(source = { _, isPath, _ -> FakeSourceDialog(if (isPath) path else null) })
         flushUntil { rows(panel).size == 3 }
 
         edt { panel.sources.addPath(); true }
@@ -460,11 +461,11 @@ class SkillsSettingsUiTest : BasePlatformTestCase() {
 
     private fun panel(
         choose: (JComponent) -> String? = { null },
-        input: (String, String) -> String? = { _, _ -> null },
+        source: (Boolean, Boolean, String) -> SettingsPathDialogHandle = { _, _, _ -> FakeSourceDialog(null) },
         edit: (SkillDto, Boolean) -> SkillEditDialogHandle = { _, _ -> FakeSkillDialog("# Plan\nUse steps") },
     ): SkillsSettingsUi {
         install()
-        val panel = edt { SkillsSettingsUi(scope!!, DIR, choose, input, edit) }
+        val panel = edt { SkillsSettingsUi(scope!!, DIR, choose, source, edit) }
         ui = panel
         edt { panel.reload(); true }
         return panel
@@ -612,4 +613,9 @@ private class FakeSkillDialog(private val text: String, private val show: () -> 
         return true
     }
     override fun content() = text
+}
+
+private class FakeSourceDialog(private val text: String?) : SettingsPathDialogHandle {
+    override fun showAndGet() = text != null
+    override fun value() = text ?: ""
 }

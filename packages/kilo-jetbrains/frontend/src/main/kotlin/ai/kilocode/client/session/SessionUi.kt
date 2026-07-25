@@ -343,7 +343,7 @@ class SessionUi(
             focus = focus,
         )
         permission = PermissionView(
-            reply = { id, dto -> controller.replyPermission(id, dto) },
+            reply = { id, dto, rules -> controller.replyPermission(id, dto, rules) },
             selection = selection,
             focus = focus,
         )

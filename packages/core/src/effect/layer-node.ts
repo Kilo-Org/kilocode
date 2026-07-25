@@ -17,7 +17,7 @@ declare const $ErrorType: unique symbol
 export type Node<A, E = never> = {
   readonly kind: "layer" | "group"
   readonly implementation?: Layer.Any
-  readonly dependencies: readonly AnyNode[]
+  readonly dependencies: readonly AnyNode[] | (() => readonly AnyNode[])
   readonly [$OutputType]?: () => A
   readonly [$ErrorType]?: () => E
 }
@@ -78,7 +78,7 @@ export function buildLayer<A, E>(node: Node<A, E>, options?: { readonly replacem
     visiting.add(node)
     stack.push(node)
     try {
-      const dependencies = node.dependencies.map(visit)
+      const dependencies = (typeof node.dependencies === "function" ? node.dependencies() : node.dependencies).map(visit)
       const nonEmpty = dependencies as [RuntimeLayer, ...RuntimeLayer[]]
       const result =
         node.kind === "group"
@@ -98,5 +98,25 @@ export function buildLayer<A, E>(node: Node<A, E>, options?: { readonly replacem
 
   return visit(node) as unknown as Layer.Layer<A, E, never>
 }
+
+// kilocode_change start - defer node construction to break circular dependency chains
+export function suspend<A, E>(fn: () => Node<A, E>): Node<A, E> {
+  let cached: Node<A, E> | undefined
+  const getNode = () => {
+    if (!cached) cached = fn()
+    return cached
+  }
+  return {
+    kind: "layer",
+    implementation: Layer.suspend(
+      () => (getNode().implementation ?? Layer.empty) as Layer.Layer<unknown, unknown, unknown>,
+    ),
+    dependencies: () => {
+      const raw = getNode().dependencies
+      return typeof raw === "function" ? raw() : raw
+    },
+  }
+}
+// kilocode_change end
 
 export * as LayerNode from "./layer-node"

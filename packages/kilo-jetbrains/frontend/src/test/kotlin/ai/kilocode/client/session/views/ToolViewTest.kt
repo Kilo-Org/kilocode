@@ -9,6 +9,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.scale.JBUIScale
@@ -97,6 +98,24 @@ class ToolViewTest : BasePlatformTestCase() {
         view.toggle()
         assertTrue(view.bodyVisible())
         assertTrue(view.bodyCreated())
+    }
+
+    fun `test bash tool editor highlights command text`() {
+        val t = tool("p1", "bash", ToolExecState.COMPLETED).also {
+            it.input = mapOf("command" to "git remote -v", "description" to "View remotes")
+            it.output = "origin git@example.com:repo.git"
+        }
+        val view = track(ToolView(t))
+
+        view.toggle()
+        val field = view.bodyEditor()!!
+        val editor = field.getEditor(true)!!
+        val spans = editor.markupModel.allHighlighters.map {
+            field.text.substring(it.startOffset, it.endOffset) to it.textAttributesKey
+        }
+
+        assertTrue(spans.contains("git" to DefaultLanguageHighlighterColors.KEYWORD))
+        assertTrue(spans.contains("-v" to DefaultLanguageHighlighterColors.KEYWORD))
     }
 
     fun `test bash tool uses secondary chrome`() {

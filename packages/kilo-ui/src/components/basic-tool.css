@@ -7,11 +7,15 @@
   }
 
   [data-slot="basic-tool-tool-info"] {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
     font-size: var(--kilo-font-size-12);
     text-align: start;
   }
 
   [data-slot="basic-tool-tool-info-structured"] {
+    width: 100%;
     min-width: 0;
     overflow: hidden;
   }
@@ -25,6 +29,7 @@
   }
 
   [data-slot="basic-tool-tool-info-main"] {
+    width: 100%;
     align-items: baseline;
     overflow: hidden;
   }
@@ -34,6 +39,7 @@
   }
 
   [data-slot="basic-tool-tool-subtitle"] {
+    flex: 1 1 auto;
     font-size: var(--kilo-font-size-12);
     color: var(--text-weak);
   }
@@ -51,6 +57,8 @@
   }
 
   [data-slot="basic-tool-tool-arg"] {
+    flex: 0 1 auto;
+    max-width: 24ch;
     font-size: var(--kilo-font-size-12);
     color: var(--text-weak);
   }
@@ -484,5 +492,27 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
     [data-component="collapsible"].tool-collapsible > [data-slot="collapsible-content"][data-closed] {
       animation-duration: 0.01ms;
     }
+  }
+}
+
+/* "why was this allowed" line inside a tool's expanded body */
+[data-slot="tool-approval-line"] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px 0 6px;
+  font-family: var(--font-family-sans);
+  font-size: var(--font-size-small);
+  line-height: var(--line-height-normal);
+  color: var(--text-weak);
+
+  [data-slot="tool-approval-decision"] {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-strong);
+  }
+
+  [data-slot="tool-approval-rule"] {
+    font-family: var(--font-family-mono);
   }
 }

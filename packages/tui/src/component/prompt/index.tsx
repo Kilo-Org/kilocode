@@ -1060,7 +1060,6 @@ export function Prompt(props: PromptProps) {
       sessionID: props.sessionID,
       toast,
       dialog,
-      renderer,
       done: () => {
         history.append({
           ...store.prompt,

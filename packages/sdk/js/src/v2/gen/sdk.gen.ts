@@ -85,12 +85,8 @@ import type {
   ExperimentalConsoleSwitchOrgResponses,
   ExperimentalControlPlaneMoveSessionErrors,
   ExperimentalControlPlaneMoveSessionResponses,
-  ExperimentalProjectCopyCreateErrors,
-  ExperimentalProjectCopyCreateResponses,
-  ExperimentalProjectCopyRefreshErrors,
-  ExperimentalProjectCopyRefreshResponses,
-  ExperimentalProjectCopyRemoveErrors,
-  ExperimentalProjectCopyRemoveResponses,
+  ExperimentalProjectCopyGenerateNameErrors,
+  ExperimentalProjectCopyGenerateNameResponses,
   ExperimentalResourceListErrors,
   ExperimentalResourceListResponses,
   ExperimentalSessionBackgroundErrors,
@@ -455,20 +451,10 @@ import type {
   V2AgentListResponses,
   V2CommandListErrors,
   V2CommandListResponses,
-  V2ConnectorConnectKeyErrors,
-  V2ConnectorConnectKeyResponses,
-  V2ConnectorConnectOauthBeginErrors,
-  V2ConnectorConnectOauthBeginResponses,
-  V2ConnectorConnectOauthCancelErrors,
-  V2ConnectorConnectOauthCancelResponses,
-  V2ConnectorConnectOauthCompleteErrors,
-  V2ConnectorConnectOauthCompleteResponses,
-  V2ConnectorConnectOauthStatusErrors,
-  V2ConnectorConnectOauthStatusResponses,
-  V2ConnectorGetErrors,
-  V2ConnectorGetResponses,
-  V2ConnectorListErrors,
-  V2ConnectorListResponses,
+  V2CredentialRemoveErrors,
+  V2CredentialRemoveResponses,
+  V2CredentialUpdateErrors,
+  V2CredentialUpdateResponses,
   V2EventSubscribeErrors,
   V2EventSubscribeResponses,
   V2FsFindErrors,
@@ -479,6 +465,20 @@ import type {
   V2FsReadResponses,
   V2HealthGetErrors,
   V2HealthGetResponses,
+  V2IntegrationAttemptCancelErrors,
+  V2IntegrationAttemptCancelResponses,
+  V2IntegrationAttemptCompleteErrors,
+  V2IntegrationAttemptCompleteResponses,
+  V2IntegrationAttemptStatusErrors,
+  V2IntegrationAttemptStatusResponses,
+  V2IntegrationConnectKeyErrors,
+  V2IntegrationConnectKeyResponses,
+  V2IntegrationConnectOauthErrors,
+  V2IntegrationConnectOauthResponses,
+  V2IntegrationGetErrors,
+  V2IntegrationGetResponses,
+  V2IntegrationListErrors,
+  V2IntegrationListResponses,
   V2LocationGetErrors,
   V2LocationGetResponses,
   V2ModelListErrors,
@@ -489,6 +489,12 @@ import type {
   V2PermissionSavedListResponses,
   V2PermissionSavedRemoveErrors,
   V2PermissionSavedRemoveResponses,
+  V2ProjectCopyCreateErrors,
+  V2ProjectCopyCreateResponses,
+  V2ProjectCopyRefreshErrors,
+  V2ProjectCopyRefreshResponses,
+  V2ProjectCopyRemoveErrors,
+  V2ProjectCopyRemoveResponses,
   V2ProviderGetErrors,
   V2ProviderGetResponses,
   V2ProviderListErrors,
@@ -1040,105 +1046,16 @@ export class Resource extends HeyApiClient {
 
 export class ProjectCopy extends HeyApiClient {
   /**
-   * Remove project copy
+   * Generate project copy name
    *
-   * Remove a local physical copy of a project using the selected strategy.
+   * Generate a short name for a project copy from task context.
    */
-  public remove<ThrowOnError extends boolean = false>(
+  public generateName<ThrowOnError extends boolean = false>(
     parameters: {
       projectID: string
-      workspace?: string
       directory?: string
-      force?: boolean
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "projectID" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "directory" },
-            { in: "body", key: "force" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).delete<
-      ExperimentalProjectCopyRemoveResponses,
-      ExperimentalProjectCopyRemoveErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/project/{projectID}/copy",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Create project copy
-   *
-   * Create a local physical copy of a project using the selected strategy.
-   */
-  public create<ThrowOnError extends boolean = false>(
-    parameters: {
-      projectID: string
       workspace?: string
-      strategy?: "git_worktree"
-      directory?: string
-      name?: string
       context?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "projectID" },
-            { in: "query", key: "workspace" },
-            { in: "body", key: "strategy" },
-            { in: "body", key: "directory" },
-            { in: "body", key: "name" },
-            { in: "body", key: "context" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      ExperimentalProjectCopyCreateResponses,
-      ExperimentalProjectCopyCreateErrors,
-      ThrowOnError
-    >({
-      url: "/experimental/project/{projectID}/copy",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  /**
-   * Refresh project copies
-   *
-   * Discover local project copies using one or all configured strategies.
-   */
-  public refresh<ThrowOnError extends boolean = false>(
-    parameters: {
-      projectID: string
-      directory?: string
-      workspace?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1150,18 +1067,24 @@ export class ProjectCopy extends HeyApiClient {
             { in: "path", key: "projectID" },
             { in: "query", key: "directory" },
             { in: "query", key: "workspace" },
+            { in: "body", key: "context" },
           ],
         },
       ],
     )
     return (options?.client ?? this.client).post<
-      ExperimentalProjectCopyRefreshResponses,
-      ExperimentalProjectCopyRefreshErrors,
+      ExperimentalProjectCopyGenerateNameResponses,
+      ExperimentalProjectCopyGenerateNameErrors,
       ThrowOnError
     >({
-      url: "/experimental/project/{projectID}/copy/refresh",
+      url: "/experimental/project/{projectID}/copy/generate-name",
       ...options,
       ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 }
@@ -9635,15 +9558,61 @@ export class Provider2 extends HeyApiClient {
   }
 }
 
-export class Oauth2 extends HeyApiClient {
+export class Connect extends HeyApiClient {
+  /**
+   * Connect with key
+   *
+   * Run a key authentication method and store the resulting credential.
+   */
+  public key<ThrowOnError extends boolean = false>(
+    parameters: {
+      integrationID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      key?: string
+      label?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "integrationID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "key" },
+            { in: "body", key: "label" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2IntegrationConnectKeyResponses,
+      V2IntegrationConnectKeyErrors,
+      ThrowOnError
+    >({
+      url: "/api/integration/{integrationID}/connect/key",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
   /**
    * Begin OAuth connection
    *
    * Start an OAuth attempt and return the authorization details.
    */
-  public begin<ThrowOnError extends boolean = false>(
+  public oauth<ThrowOnError extends boolean = false>(
     parameters: {
-      connectorID: string
+      integrationID: string
       location?: {
         directory?: string
         workspace?: string
@@ -9661,7 +9630,7 @@ export class Oauth2 extends HeyApiClient {
       [
         {
           args: [
-            { in: "path", key: "connectorID" },
+            { in: "path", key: "integrationID" },
             { in: "query", key: "location" },
             { in: "body", key: "methodID" },
             { in: "body", key: "inputs" },
@@ -9671,11 +9640,11 @@ export class Oauth2 extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      V2ConnectorConnectOauthBeginResponses,
-      V2ConnectorConnectOauthBeginErrors,
+      V2IntegrationConnectOauthResponses,
+      V2IntegrationConnectOauthErrors,
       ThrowOnError
     >({
-      url: "/api/connector/{connectorID}/connect/oauth",
+      url: "/api/integration/{integrationID}/connect/oauth",
       ...options,
       ...params,
       headers: {
@@ -9685,7 +9654,9 @@ export class Oauth2 extends HeyApiClient {
       },
     })
   }
+}
 
+export class Attempt extends HeyApiClient {
   /**
    * Cancel OAuth connection
    *
@@ -9713,11 +9684,11 @@ export class Oauth2 extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).delete<
-      V2ConnectorConnectOauthCancelResponses,
-      V2ConnectorConnectOauthCancelErrors,
+      V2IntegrationAttemptCancelResponses,
+      V2IntegrationAttemptCancelErrors,
       ThrowOnError
     >({
-      url: "/api/connector/oauth/{attemptID}",
+      url: "/api/integration/attempt/{attemptID}",
       ...options,
       ...params,
     })
@@ -9750,11 +9721,11 @@ export class Oauth2 extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).get<
-      V2ConnectorConnectOauthStatusResponses,
-      V2ConnectorConnectOauthStatusErrors,
+      V2IntegrationAttemptStatusResponses,
+      V2IntegrationAttemptStatusErrors,
       ThrowOnError
     >({
-      url: "/api/connector/oauth/{attemptID}",
+      url: "/api/integration/attempt/{attemptID}",
       ...options,
       ...params,
     })
@@ -9789,11 +9760,11 @@ export class Oauth2 extends HeyApiClient {
       ],
     )
     return (options?.client ?? this.client).post<
-      V2ConnectorConnectOauthCompleteResponses,
-      V2ConnectorConnectOauthCompleteErrors,
+      V2IntegrationAttemptCompleteResponses,
+      V2IntegrationAttemptCompleteErrors,
       ThrowOnError
     >({
-      url: "/api/connector/oauth/{attemptID}/complete",
+      url: "/api/integration/attempt/{attemptID}/complete",
       ...options,
       ...params,
       headers: {
@@ -9805,70 +9776,11 @@ export class Oauth2 extends HeyApiClient {
   }
 }
 
-export class Connect extends HeyApiClient {
+export class Integration extends HeyApiClient {
   /**
-   * Connect with key
+   * List integrations
    *
-   * Run a key authentication method and store the resulting credential.
-   */
-  public key<ThrowOnError extends boolean = false>(
-    parameters: {
-      connectorID: string
-      location?: {
-        directory?: string
-        workspace?: string
-      }
-      methodID?: string
-      key?: string
-      inputs?: {
-        [key: string]: string
-      }
-      label?: string
-    },
-    options?: Options<never, ThrowOnError>,
-  ) {
-    const params = buildClientParams(
-      [parameters],
-      [
-        {
-          args: [
-            { in: "path", key: "connectorID" },
-            { in: "query", key: "location" },
-            { in: "body", key: "methodID" },
-            { in: "body", key: "key" },
-            { in: "body", key: "inputs" },
-            { in: "body", key: "label" },
-          ],
-        },
-      ],
-    )
-    return (options?.client ?? this.client).post<
-      V2ConnectorConnectKeyResponses,
-      V2ConnectorConnectKeyErrors,
-      ThrowOnError
-    >({
-      url: "/api/connector/{connectorID}/connect/key",
-      ...options,
-      ...params,
-      headers: {
-        "Content-Type": "application/json",
-        ...options?.headers,
-        ...params.headers,
-      },
-    })
-  }
-
-  private _oauth?: Oauth2
-  get oauth(): Oauth2 {
-    return (this._oauth ??= new Oauth2({ client: this.client }))
-  }
-}
-
-export class Connector extends HeyApiClient {
-  /**
-   * List connectors
-   *
-   * Retrieve available connectors and their authentication methods.
+   * Retrieve available integrations and their authentication methods.
    */
   public list<ThrowOnError extends boolean = false>(
     parameters?: {
@@ -9880,21 +9792,21 @@ export class Connector extends HeyApiClient {
     options?: Options<never, ThrowOnError>,
   ) {
     const params = buildClientParams([parameters], [{ args: [{ in: "query", key: "location" }] }])
-    return (options?.client ?? this.client).get<V2ConnectorListResponses, V2ConnectorListErrors, ThrowOnError>({
-      url: "/api/connector",
+    return (options?.client ?? this.client).get<V2IntegrationListResponses, V2IntegrationListErrors, ThrowOnError>({
+      url: "/api/integration",
       ...options,
       ...params,
     })
   }
 
   /**
-   * Get connector
+   * Get integration
    *
-   * Retrieve one connector and its authentication methods.
+   * Retrieve one integration and its authentication methods.
    */
   public get<ThrowOnError extends boolean = false>(
     parameters: {
-      connectorID: string
+      integrationID: string
       location?: {
         directory?: string
         workspace?: string
@@ -9907,14 +9819,14 @@ export class Connector extends HeyApiClient {
       [
         {
           args: [
-            { in: "path", key: "connectorID" },
+            { in: "path", key: "integrationID" },
             { in: "query", key: "location" },
           ],
         },
       ],
     )
-    return (options?.client ?? this.client).get<V2ConnectorGetResponses, V2ConnectorGetErrors, ThrowOnError>({
-      url: "/api/connector/{connectorID}",
+    return (options?.client ?? this.client).get<V2IntegrationGetResponses, V2IntegrationGetErrors, ThrowOnError>({
+      url: "/api/integration/{integrationID}",
       ...options,
       ...params,
     })
@@ -9923,6 +9835,69 @@ export class Connector extends HeyApiClient {
   private _connect?: Connect
   get connect(): Connect {
     return (this._connect ??= new Connect({ client: this.client }))
+  }
+
+  private _attempt?: Attempt
+  get attempt(): Attempt {
+    return (this._attempt ??= new Attempt({ client: this.client }))
+  }
+}
+
+export class Credential extends HeyApiClient {
+  /**
+   * Remove credential
+   *
+   * Remove a stored integration credential.
+   */
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      credentialID: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "credentialID" }] }])
+    return (options?.client ?? this.client).delete<V2CredentialRemoveResponses, V2CredentialRemoveErrors, ThrowOnError>(
+      {
+        url: "/api/credential/{credentialID}",
+        ...options,
+        ...params,
+      },
+    )
+  }
+
+  /**
+   * Update credential
+   *
+   * Update a stored credential label.
+   */
+  public update<ThrowOnError extends boolean = false>(
+    parameters: {
+      credentialID: string
+      label?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "credentialID" },
+            { in: "body", key: "label" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).patch<V2CredentialUpdateResponses, V2CredentialUpdateErrors, ThrowOnError>({
+      url: "/api/credential/{credentialID}",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
   }
 }
 
@@ -10250,6 +10225,122 @@ export class Reference extends HeyApiClient {
   }
 }
 
+export class ProjectCopy2 extends HeyApiClient {
+  public remove<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      directory?: string
+      force?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "directory" },
+            { in: "body", key: "force" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).delete<
+      V2ProjectCopyRemoveResponses,
+      V2ProjectCopyRemoveErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/project/{projectID}/copy",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  public create<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+      strategy?: string
+      directory?: string
+      name?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "location" },
+            { in: "body", key: "strategy" },
+            { in: "body", key: "directory" },
+            { in: "body", key: "name" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2ProjectCopyCreateResponses, V2ProjectCopyCreateErrors, ThrowOnError>(
+      {
+        url: "/experimental/project/{projectID}/copy",
+        ...options,
+        ...params,
+        headers: {
+          "Content-Type": "application/json",
+          ...options?.headers,
+          ...params.headers,
+        },
+      },
+    )
+  }
+
+  public refresh<ThrowOnError extends boolean = false>(
+    parameters: {
+      projectID: string
+      location?: {
+        directory?: string
+        workspace?: string
+      }
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "projectID" },
+            { in: "query", key: "location" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<
+      V2ProjectCopyRefreshResponses,
+      V2ProjectCopyRefreshErrors,
+      ThrowOnError
+    >({
+      url: "/experimental/project/{projectID}/copy/refresh",
+      ...options,
+      ...params,
+    })
+  }
+}
+
 export class V2 extends HeyApiClient {
   private _health?: Health
   get health(): Health {
@@ -10281,9 +10372,14 @@ export class V2 extends HeyApiClient {
     return (this._provider ??= new Provider2({ client: this.client }))
   }
 
-  private _connector?: Connector
-  get connector(): Connector {
-    return (this._connector ??= new Connector({ client: this.client }))
+  private _integration?: Integration
+  get integration(): Integration {
+    return (this._integration ??= new Integration({ client: this.client }))
+  }
+
+  private _credential?: Credential
+  get credential(): Credential {
+    return (this._credential ??= new Credential({ client: this.client }))
   }
 
   private _permission?: Permission3
@@ -10319,6 +10415,11 @@ export class V2 extends HeyApiClient {
   private _reference?: Reference
   get reference(): Reference {
     return (this._reference ??= new Reference({ client: this.client }))
+  }
+
+  private _projectCopy?: ProjectCopy2
+  get projectCopy(): ProjectCopy2 {
+    return (this._projectCopy ??= new ProjectCopy2({ client: this.client }))
   }
 }
 

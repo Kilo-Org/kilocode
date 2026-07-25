@@ -268,6 +268,13 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         target(globalConfig())
     }
 
+    override suspend fun refreshConfigFiles(directory: String) {
+        val files = withContext(Dispatchers.IO) {
+            listOf(localConfig(directory), globalConfig()).map { it.toFile() }
+        }
+        LocalFileSystem.getInstance().refreshIoFiles(files, true, true, null)
+    }
+
     override suspend fun openLocalConfig(directory: String): Boolean = openConfig(withContext(Dispatchers.IO) {
         localConfig(directory)
     })

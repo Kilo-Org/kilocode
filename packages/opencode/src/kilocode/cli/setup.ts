@@ -12,6 +12,7 @@ import { SessionExport } from "@/kilocode/session-export"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
+import { CloudCommand } from "@/kilocode/cli/cmd/cloud"
 import { RollCallCommand } from "@/kilocode/cli/cmd/roll-call"
 import { ProfileCommand } from "@/kilocode/cli/cmd/profile"
 import { DaemonCommand } from "@/kilocode/cli/cmd/daemon"
@@ -32,6 +33,7 @@ export namespace KiloCli {
   export function register<T>(cli: Argv<T>): Argv<T> {
     cli
       .command(KiloConsoleCommand)
+      .command(CloudCommand)
       .command(RollCallCommand)
       .command(ProfileCommand)
       .command(RemoteCommand)

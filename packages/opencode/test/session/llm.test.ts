@@ -281,7 +281,7 @@ describe("session.llm.ai-sdk adapter", () => {
       {
         type: "step-finish",
         index: 0,
-        reason: "unknown",
+        reason: "other", // kilocode_change
         usage: {
           inputTokens: 10,
           outputTokens: 5,
@@ -294,7 +294,7 @@ describe("session.llm.ai-sdk adapter", () => {
       },
       {
         type: "finish",
-        reason: "unknown",
+        reason: "other", // kilocode_change
         usage: {
           inputTokens: 11,
           outputTokens: 6,

@@ -62,5 +62,5 @@ Then set your default model:
 ## Tips and Notes
 
 - **Performance:** Fireworks AI is optimized for speed and offers excellent performance for both chat and completion tasks.
-- **Pricing:** Refer to the [Fireworks AI Pricing](https://fireworks.ai/pricing) page for current pricing information.
+- **Pricing:** Refer to the [Fireworks AI Pricing](https://docs.fireworks.ai/serverless/pricing) page for current pricing information.
 - **Rate Limits:** Fireworks AI has usage-based rate limits. Monitor your usage in the dashboard and consider upgrading your plan if needed.

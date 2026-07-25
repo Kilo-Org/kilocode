@@ -1,13 +1,5 @@
 import type { KiloClient } from "@kilocode/sdk/v2"
-import type { CliRenderer } from "@opentui/core"
-import path from "path"
-import { Process } from "@/util/process"
-import { splitCommand } from "@/kilocode/util/split-command"
-import {
-  MEMORY_USAGE,
-  parseMemoryCommand,
-  type ParsedMemoryCommand,
-} from "@kilocode/kilo-memory/commands"
+import { MEMORY_USAGE, parseMemoryCommand, type ParsedMemoryCommand } from "@kilocode/kilo-memory/commands"
 import { errorMessage } from "@/util/error"
 
 export { MEMORY_USAGE }
@@ -48,33 +40,6 @@ function auto(input: boolean) {
   return `Memory auto-save ${input ? "on" : "off"}`
 }
 
-function verbose(input: boolean) {
-  return `Memory verbose ${input ? "on" : "off"}`
-}
-
-async function edit(input: { file: string; cwd?: string; renderer?: CliRenderer }) {
-  const editor = (process.env["VISUAL"] || process.env["EDITOR"])?.trim()
-  if (!editor) throw new Error("Set $VISUAL or $EDITOR to use /memory edit")
-
-  input.renderer?.suspend()
-  input.renderer?.currentRenderBuffer.clear()
-  try {
-    const proc = Process.spawn([...splitCommand(editor), input.file], {
-      cwd: input.cwd,
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-      shell: process.platform === "win32",
-    })
-    const code = await proc.exited
-    if (code !== 0) throw new Error(`Editor exited with code ${code}`)
-  } finally {
-    input.renderer?.currentRenderBuffer.clear()
-    input.renderer?.resume()
-    input.renderer?.requestRender()
-  }
-}
-
 export function parseMemoryInput(input: string): MemoryCommand | undefined {
   return parseMemoryCommand(input)
 }
@@ -86,7 +51,7 @@ export async function runMemoryCommand(input: {
   directory?: string
   sessionID?: string
   toast: Toast
-  renderer?: CliRenderer
+  inspect?(root: string): void | Promise<void>
   show(): void
   status(): void
   usage(message?: string): void
@@ -120,12 +85,12 @@ export async function runMemoryCommand(input: {
       input.status()
       return true
     }
-    if (parsed.operation === "edit") {
+    if (parsed.operation === "inspect") {
       const status = read(await input.client.memory.status(route(input)))
       if (!status.state.enabled) throw new Error("Memory is disabled. Run /memory on first.")
-      await edit({ file: path.join(status.root, "project.md"), cwd: input.directory, renderer: input.renderer })
-      const result = read(await input.client.memory.rebuild(route(input)))
-      input.toast.show({ variant: "success", message: `${name} rebuilt (${tokens(result.index.tokens)})` })
+      if (!input.inspect) throw new Error("Memory folder inspection is unavailable")
+      input.toast.show({ variant: "info", message: `Memory folder: ${status.root}` })
+      await input.inspect(status.root)
       return true
     }
     if (parsed.operation === "auto") {
@@ -136,16 +101,6 @@ export async function runMemoryCommand(input: {
         }),
       )
       input.toast.show({ variant: "info", message: auto(result.state.autoConsolidate) })
-      return true
-    }
-    if (parsed.operation === "verbose") {
-      const result = read(
-        await input.client.memory.configure({
-          ...route(input),
-          verbose: parsed.mode === "on",
-        }),
-      )
-      input.toast.show({ variant: "info", message: verbose(result.state.verbose) })
       return true
     }
     if (parsed.operation === "disable") {

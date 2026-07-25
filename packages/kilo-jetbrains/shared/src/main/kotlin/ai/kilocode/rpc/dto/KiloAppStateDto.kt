@@ -70,6 +70,7 @@ data class ConfigDto(
     val skills: SkillsConfigDto? = null,
     val mcp: Map<String, McpConfigDto> = emptyMap(),
     val agent: Map<String, AgentConfigDto> = emptyMap(),
+    val permission: PermissionConfigDto? = null,
 )
 
 @Serializable
@@ -129,6 +130,7 @@ data class ConfigPatchDto(
     val skills: SkillsPatchDto? = null,
     val mcp: Map<String, McpConfigDto?>? = null,
     val agents: Map<String, AgentConfigPatchDto> = emptyMap(),
+    val permission: PermissionConfigDto? = null,
 )
 
 @Serializable
