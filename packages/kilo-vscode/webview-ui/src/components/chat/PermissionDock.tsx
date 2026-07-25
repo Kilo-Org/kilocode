@@ -24,10 +24,12 @@ import { permissionDiffs } from "./permission-diff-utils"
 import { normalizeUrls } from "../../../../../opencode/src/kilocode/util/url"
 import type { PermissionRequest } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
+import { ModeSwitchPermissionCard } from "./ModeSwitchCard"
+import { permissionModeSwitch } from "./mode-switch-ui"
 
 let rulesExpandedPreference = false
 
-export const PermissionDock: Component<{
+const GenericPermissionDock: Component<{
   request: PermissionRequest
   responding: boolean
   onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
@@ -58,15 +60,6 @@ export const PermissionDock: Component<{
     if (command() || props.request.toolName === "mode_switch") return null
     return describePatterns(props.request.toolName, props.request.patterns, language.t)
   })
-  const modeSwitch = createMemo(() => {
-    if (props.request.toolName !== "mode_switch") return
-    const source = props.request.args?.source
-    const target = props.request.args?.target
-    const reason = props.request.args?.reason
-    if (typeof source !== "string" || typeof target !== "string" || typeof reason !== "string") return
-    return { source, target, reason }
-  })
-
   const diffs = createMemo(() => permissionDiffs(props.request))
 
   // Pre-populate toggle states from existing config rules so previously
@@ -277,17 +270,6 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
-        <Show when={modeSwitch()}>
-          {(item) => (
-            <div data-slot="permission-hint">
-              {language.t("ui.permission.modeSwitch.prompt", {
-                source: item().source,
-                target: item().target,
-                reason: item().reason,
-              })}
-            </div>
-          )}
-        </Show>
         <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
         <Show when={command()}>
           {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
@@ -348,4 +330,23 @@ export const PermissionDock: Component<{
       </DockPrompt>
     </div>
   )
+}
+
+export const PermissionDock: Component<{
+  request: PermissionRequest
+  responding: boolean
+  onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
+}> = (props) => {
+  const details = permissionModeSwitch(props.request)
+  if (details) {
+    return (
+      <ModeSwitchPermissionCard
+        request={props.request}
+        details={details}
+        responding={props.responding}
+        onDecide={props.onDecide}
+      />
+    )
+  }
+  return <GenericPermissionDock {...props} />
 }

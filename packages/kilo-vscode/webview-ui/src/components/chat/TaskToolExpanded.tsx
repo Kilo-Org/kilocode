@@ -20,6 +20,7 @@ import { useSession } from "../../context/session"
 import { useVSCode } from "../../context/vscode"
 import { childID } from "../../context/session-utils"
 import { taskResult, taskRunning, taskVisible } from "./task-tool-state"
+import { modeSwitchEvent } from "./mode-switch-ui"
 
 const TaskToolRenderer: Component<ToolProps> = (props) => {
   const i18n = useI18n()
@@ -168,7 +169,15 @@ const TaskToolRenderer: Component<ToolProps> = (props) => {
             <Show when={result()}>{(text) => <Markdown text={text()} />}</Show>
             <Index each={childToolParts()}>
               {(item) => {
-                const info = createMemo(() => getToolInfo(item().tool, item().state?.input))
+                const info = createMemo(() => {
+                  if (item().tool !== "mode_switch") return getToolInfo(item().tool, item().state?.input)
+                  const state = item().state as {
+                    input?: Record<string, unknown>
+                    metadata?: Record<string, unknown>
+                  }
+                  const event = modeSwitchEvent(state.input ?? {}, state.metadata ?? {})
+                  return { icon: "selector" as const, title: event.title, subtitle: event.reason }
+                })
                 const subtitle = createMemo(() => {
                   if (info().subtitle) return info().subtitle
                   const state = item().state as { status: string; title?: string }

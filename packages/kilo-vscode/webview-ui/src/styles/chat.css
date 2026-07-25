@@ -18,6 +18,7 @@
 @import "./prompt-dropdowns.css";
 @import "./model-selector.css";
 @import "./permission-dock.css";
+@import "./mode-switch-card.css";
 @import "./dialogs.css";
 @import "./history.css";
 @import "./notifications.css";
