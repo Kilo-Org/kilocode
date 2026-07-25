@@ -20,6 +20,8 @@ const { SessionContext } = await import("../../webview-ui/src/context/session")
 const { ModeSwitchDeniedCard, ModeSwitchPermissionCard } = await import(
   "../../webview-ui/src/components/chat/ModeSwitchCard"
 )
+const { ToolRegistry } = await import("@kilocode/kilo-ui/message-part")
+const { registerVscodeToolOverrides } = await import("../../webview-ui/src/components/chat/VscodeToolOverrides")
 
 const details = { source: "code", target: "debug", reason: "Investigate the failing request" }
 const permission: PermissionRequest = {
@@ -69,6 +71,12 @@ function permissionDecision(label: string) {
     ),
     root,
   )
+  if (root.textContent?.includes("Always allow")) {
+    throw new Error("Permission card rendered an in-card auto-approval control")
+  }
+  if (root.querySelector('[data-slot="mode-switch-header"] svg')) {
+    throw new Error("Permission card rendered a decorative title icon")
+  }
   button(root, label).click()
   const disabled = Array.from(root.querySelectorAll("button")).every((item) => item.disabled)
   dispose()
@@ -79,11 +87,6 @@ function permissionDecision(label: string) {
 const once = permissionDecision("Switch to debug")
 if (JSON.stringify(once.calls) !== JSON.stringify([["once", [], []]]) || !once.disabled) {
   throw new Error(`Unexpected switch decision: ${JSON.stringify(once)}`)
-}
-
-const always = permissionDecision("Always allow agent mode changes")
-if (JSON.stringify(always.calls) !== JSON.stringify([["once", ["*"], []]]) || !always.disabled) {
-  throw new Error(`Unexpected always decision: ${JSON.stringify(always)}`)
 }
 
 const stay = permissionDecision("Stay in code")
@@ -110,6 +113,43 @@ if (JSON.stringify(stay.calls) !== JSON.stringify([["reject", [], []]]) || !stay
   if (!root.textContent?.includes("Switching to debug…")) throw new Error("Pending state was not visible")
   if (!Array.from(root.querySelectorAll("button")).every((item) => item.disabled)) {
     throw new Error("Pending state left an action enabled")
+  }
+  dispose()
+  root.remove()
+}
+
+{
+  registerVscodeToolOverrides()
+  const component = ToolRegistry.render("mode_switch")
+  if (!component) throw new Error("Mode switch transcript renderer was not registered")
+
+  const root = document.createElement("div")
+  document.body.append(root)
+  const dispose = render(
+    () =>
+      component({
+        input: { target: "plan", reason: "User requested Plan Mode" },
+        metadata: {
+          status: "switched",
+          source: "code",
+          target: "plan",
+          reason: "User requested Plan Mode",
+        },
+        status: "completed",
+        tool: "mode_switch",
+      }),
+    root,
+  )
+  const title = root.querySelector('[data-slot="mode-switch-event-title"]')
+  const reason = root.querySelector('[data-slot="mode-switch-event-reason"]')
+  if (title?.textContent !== "Mode switched: code → plan") {
+    throw new Error(`Unexpected transcript title: ${title?.textContent}`)
+  }
+  if (reason?.textContent !== "User requested Plan Mode") {
+    throw new Error(`Unexpected transcript reason: ${reason?.textContent}`)
+  }
+  if (title?.parentElement !== reason?.parentElement || title?.nextElementSibling !== reason) {
+    throw new Error("Transcript reason was not rendered as the second line")
   }
   dispose()
   root.remove()

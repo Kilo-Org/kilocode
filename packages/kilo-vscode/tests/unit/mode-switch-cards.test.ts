@@ -28,6 +28,7 @@ describe("mode switch cards", () => {
       conditions: ["browser"],
       external: ["happy-dom"],
       format: "esm",
+      loader: { ".svg": "dataurl" },
       logLevel: "silent",
       platform: "node",
       plugins: [dedupe, solidPlugin()],

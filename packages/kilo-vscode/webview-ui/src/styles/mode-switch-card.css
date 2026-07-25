@@ -104,6 +104,30 @@
   }
 }
 
+:is([data-component="mode-switch-event"], [data-slot="task-tool-item"][data-mode-switch]) {
+  min-width: 0;
+
+  [data-slot="mode-switch-event-content"] {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+    padding-block: 2px;
+    font-size: var(--kilo-font-size-12);
+    line-height: 1.4;
+  }
+
+  [data-slot="mode-switch-event-title"] {
+    color: var(--text-weak, var(--vscode-descriptionForeground));
+  }
+
+  [data-slot="mode-switch-event-reason"] {
+    color: var(--text-weaker, var(--vscode-descriptionForeground));
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+}
+
 @keyframes mode-switch-card-in {
   from {
     opacity: 0;

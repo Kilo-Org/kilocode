@@ -161,11 +161,14 @@ function ModeSwitchTool(props: ToolProps) {
         {...props}
         icon={MODE_SWITCH_TRANSITION_ICON}
         hideDetails
-        trigger={{
-          title: event().title,
-          subtitle: event().reason,
-          args: [],
-        }}
+        trigger={
+          <div data-slot="mode-switch-event-content">
+            <span data-slot="mode-switch-event-title">{event().title}</span>
+            <Show when={event().reason}>
+              {(reason) => <span data-slot="mode-switch-event-reason">{reason()}</span>}
+            </Show>
+          </div>
+        }
       />
     </div>
   )

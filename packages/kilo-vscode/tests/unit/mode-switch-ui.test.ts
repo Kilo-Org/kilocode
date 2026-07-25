@@ -81,6 +81,23 @@ describe("mode switch transcript event", () => {
     expect(picker).toContain('<Icon name="selector"')
   })
 
+  it("keeps static transition reasons in a dedicated wrapping row", async () => {
+    const root = path.resolve(import.meta.dir, "../../webview-ui/src")
+    const renderers = await Promise.all(
+      ["components/chat/TaskToolExpanded.tsx", "components/chat/VscodeToolOverrides.tsx"].map((file) =>
+        Bun.file(path.join(root, file)).text(),
+      ),
+    )
+    const styles = await Bun.file(path.join(root, "styles/mode-switch-card.css")).text()
+
+    for (const renderer of renderers) {
+      expect(renderer).toContain('data-slot="mode-switch-event-title"')
+      expect(renderer).toContain('data-slot="mode-switch-event-reason"')
+    }
+    expect(styles).toContain("white-space: normal")
+    expect(styles).toContain("overflow-wrap: anywhere")
+  })
+
   it("describes a successful transition and its reason", () => {
     expect(
       modeSwitchEvent(

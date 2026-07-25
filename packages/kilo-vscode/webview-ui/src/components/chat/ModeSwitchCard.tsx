@@ -32,16 +32,16 @@ export const ModeSwitchPermissionCard: Component<{
   responding: boolean
   onDecide: (response: "once" | "reject", approvedAlways: string[], deniedAlways: string[]) => void
 }> = (props) => {
-  const [choice, setChoice] = createSignal<"switch" | "stay" | "always">()
+  const [choice, setChoice] = createSignal<"switch" | "stay">()
   let root!: HTMLDivElement
 
   const pending = () => props.responding || choice() !== undefined
 
-  const decide = (next: "switch" | "stay" | "always") => {
+  const decide = (next: "switch" | "stay") => {
     if (pending()) return
     setChoice(next)
     if (next === "stay") props.onDecide("reject", [], [])
-    else props.onDecide("once", next === "always" ? ["*"] : [], [])
+    else props.onDecide("once", [], [])
     focusPrompt()
   }
 
@@ -80,7 +80,6 @@ export const ModeSwitchPermissionCard: Component<{
       aria-labelledby={`mode-switch-title-${props.request.id}`}
     >
       <div data-slot="mode-switch-header">
-        <Icon name={MODE_SWITCH_TRANSITION_ICON} size="small" />
         <span id={`mode-switch-title-${props.request.id}`}>Agent requests a mode change</span>
       </div>
       <Transition details={props.details} />
@@ -93,9 +92,6 @@ export const ModeSwitchPermissionCard: Component<{
         </Button>
         <Button variant="ghost" size="small" disabled={pending()} onClick={() => decide("stay")}>
           Stay in {props.details.source}
-        </Button>
-        <Button variant="secondary" size="small" disabled={pending()} onClick={() => decide("always")}>
-          Always allow agent mode changes
         </Button>
       </div>
       <div data-slot="mode-switch-live" role="status" aria-live="polite">
