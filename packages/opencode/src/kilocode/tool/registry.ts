@@ -8,7 +8,7 @@ import { InteractiveTerminalTool } from "./interactive-terminal"
 import { NotebookEditTool, NotebookExecuteTool, NotebookReadTool } from "./notebook-host"
 import { MemoryRecallTool } from "./memory-recall"
 import { MemorySaveTool } from "./memory-save"
-import { ModeSwitchTool } from "./mode-switch"
+import { ModeSwitchTool, schema as modeSchema } from "./mode-switch"
 import { NotifyUserTool } from "./notify-user"
 import * as Tool from "../../tool/tool"
 import { Flag } from "@opencode-ai/core/flag/flag"
@@ -51,6 +51,16 @@ export namespace KiloToolRegistry {
     if (id.includes("oss") || family?.includes("oss") || family === "gpt-image") return false
     if (id.includes("gpt-")) return true
     return family?.startsWith("gpt") ?? false
+  }
+
+  export function schema(
+    tool: Tool.Def,
+    current: Tool.Def["jsonSchema"],
+    original: boolean,
+    agents: Pick<Agent.Interface, "list">,
+  ) {
+    if (tool.id !== ModeSwitchTool.id || !original) return Effect.succeed(current)
+    return agents.list().pipe(Effect.map(modeSchema))
   }
 
   /** Resolve Kilo-specific tool Infos outside any InstanceState, so their Truncate/Agent deps are

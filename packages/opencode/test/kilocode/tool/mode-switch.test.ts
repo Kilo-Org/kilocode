@@ -274,6 +274,24 @@ test("model-facing schema lists only visible built-in modes", () => {
   })
 })
 
+test("mode schema is resolved at request time without overriding plugin changes", async () => {
+  const tool = { id: "mode_switch" } as Tool.Def
+  const agents = {
+    list: () => Effect.succeed([mode("code"), mode("ask"), mode("plan")]),
+  }
+
+  const generated = await Effect.runPromise(KiloToolRegistry.schema(tool, undefined, true, agents))
+  expect(generated?.properties?.target).toMatchObject({ enum: ["code", "ask", "plan"] })
+
+  const custom = { type: "object" } as const
+  const preserved = await Effect.runPromise(
+    KiloToolRegistry.schema(tool, custom, false, {
+      list: () => Effect.die(new Error("agent list should not be called for plugin schemas")),
+    }),
+  )
+  expect(preserved).toBe(custom)
+})
+
 test("the mode switch tool is visible only to built-in interactive modes", () => {
   const tool = { id: "mode_switch" } as Tool.Def
   expect(KiloToolRegistry.available(tool, mode("code"))).toBe(true)

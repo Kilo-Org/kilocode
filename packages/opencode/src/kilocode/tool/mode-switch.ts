@@ -177,12 +177,10 @@ export const ModeSwitchTool = Tool.define<
     const sessions = yield* Session.Service
     const question = yield* Question.Service
     const events = yield* EventV2Bridge.Service
-    const available = yield* agents.list()
     return {
       description:
         "Switch the active mode for the current task when another built-in mode is better suited. Provide the destination mode and a short reason. The task automatically resumes with its existing context after approval.",
       parameters: Params,
-      jsonSchema: schema(available),
       execute: (params, ctx) =>
         execute(params, ctx, {
           agents,
