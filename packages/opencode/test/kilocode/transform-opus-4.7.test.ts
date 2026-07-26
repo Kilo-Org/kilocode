@@ -251,7 +251,16 @@ describe("ProviderTransform.variants - Claude Opus 4.7 / 4.8", () => {
     })
   })
 
-  test.each(["claude-opus-5.3", "claude-opus-6", "claude-6-opus", "claude-opus-10"])(
+  test.each([
+    "claude-opus-5.3",
+    "claude-opus-6",
+    "claude-6-opus",
+    "claude-opus-10",
+    "claude-sonnet-5.3",
+    "claude-sonnet-6",
+    "claude-6-sonnet",
+    "claude-sonnet-10",
+  ])(
     "%s is treated as an adaptive thinking model",
     (id) => {
       const model = mockModel({
