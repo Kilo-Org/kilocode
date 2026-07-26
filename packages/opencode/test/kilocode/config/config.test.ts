@@ -376,6 +376,48 @@ describe("kilocode sandbox config", () => {
   })
 })
 
+async function scoped(global: object | undefined, local: object) {
+  await using globalTmp = await tmpdir()
+  await using tmp = await tmpdir({ git: true })
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = globalTmp.path
+  await clear()
+  await disposeAllInstances()
+
+  try {
+    if (global) await writeConfig(globalTmp.path, global)
+    await writeConfig(tmp.path, local)
+    return await provideTestInstance({ directory: tmp.path, fn: load })
+  } finally {
+    ;(Global.Path as { config: string }).config = prev
+    await clear()
+    await disposeAllInstances()
+  }
+}
+
+describe("file safety guard config", () => {
+  test("prevents project config from disabling file safety guards", async () => {
+    const config = await scoped(undefined, { dangerously_disable_file_safety_guards: true })
+
+    expect(config.dangerously_disable_file_safety_guards).toBeUndefined()
+  })
+
+  test("allows project config to re-enable globally disabled file safety guards", async () => {
+    const config = await scoped(
+      { dangerously_disable_file_safety_guards: true },
+      { dangerously_disable_file_safety_guards: false },
+    )
+
+    expect(config.dangerously_disable_file_safety_guards).toBe(false)
+  })
+
+  test("keeps trusted global file safety configuration", async () => {
+    const config = await scoped({ dangerously_disable_file_safety_guards: true }, {})
+
+    expect(config.dangerously_disable_file_safety_guards).toBe(true)
+  })
+})
+
 describe("custom provider model config", () => {
   test("persists and removes reasoning across a global config reload", async () => {
     await using globalTmp = await tmpdir()

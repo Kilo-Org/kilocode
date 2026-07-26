@@ -1574,6 +1574,18 @@ test("config parser preserves permission order while rejecting unknown top-level
   }
 })
 
+// kilocode_change start
+test("parses the file safety guard escape hatch", () => {
+  const config = ConfigParse.schema(
+    ConfigV1.Info,
+    { dangerously_disable_file_safety_guards: true },
+    "test:file-safety",
+  )
+
+  expect(config.dangerously_disable_file_safety_guards).toBe(true)
+})
+// kilocode_change end
+
 // MCP config merging tests
 
 // kilocode_change start - regression for `env` alias on local MCP entries

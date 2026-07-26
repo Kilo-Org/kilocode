@@ -46,6 +46,7 @@ import { primaryPaths } from "../kilocode/primary-worktree"
 import { Git } from "@/git"
 import { KilocodeDefaultPlugins } from "@/kilocode/config/default-plugins"
 import { KilocodeGlobalConfigStamp } from "@/kilocode/config/global-stamp"
+import { FileSafety } from "@/kilocode/permission/file-safety"
 import { SandboxConfig } from "@/kilocode/sandbox/config"
 import type { KilocodeMarkdown } from "@/kilocode/config/markdown"
 import {
@@ -540,7 +541,7 @@ export const layer = Layer.effect(
         ) {
           const scope = kind ?? (yield* pluginScopeForSource(source))
           const trusted = sourceTrusted ?? scope === "global"
-          const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(next, scope), scope)
+          const scoped = KilocodeConfig.scopeIndexing(SandboxConfig.scope(FileSafety.scope(next, scope), scope), scope)
           result = mergeConfigConcatArrays(result, scoped)
           if (next.instructions?.length) {
             result.instruction_origins = origins(result.instruction_origins, next.instructions, trusted, source)
