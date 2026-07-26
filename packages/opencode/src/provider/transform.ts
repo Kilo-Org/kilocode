@@ -616,15 +616,17 @@ function anthropicOpus47OrLater(apiId: string) {
   return major > 4 || (major === 4 && minor >= 7)
 }
 
-// kilocode_change start - Claude 5 models are adaptive thinking models like opus-4.7/4.8
+// kilocode_change start - Claude 5 aliases and Opus 5+ are adaptive thinking models like opus-4.7/4.8
 function anthropicClaude5(apiId: string) {
   const id = apiId.toLowerCase()
-  return id.includes("fable") || /(?:opus|sonnet)[.-]5/.test(id)
+  if (id.includes("fable") || /sonnet[.-]5/.test(id)) return true
+  const opus = /opus[.-](\d+)(?:[.@-]|$)|claude-(\d+)(?:[.-]\d+)?-opus(?:[.@-]|$)/.exec(id)
+  return Number(opus?.[1] ?? opus?.[2]) >= 5
 }
 // kilocode_change end
 
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  // kilocode_change start - treat opus-4.8 and fable like opus-4.7
+  // kilocode_change start - include Claude 5 aliases and future Opus versions
   if (anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
@@ -977,7 +979,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
       if (adaptiveEfforts) {
         let efforts = [...adaptiveEfforts]
         if (model.providerID === "github-copilot") {
-          // kilocode_change start - treat opus-4.8 and fable like opus-4.7
+          // kilocode_change start - include Claude 5 aliases and future Opus versions
           if (
             model.api.id.includes("opus-4.7") ||
             model.api.id.includes("opus-4.8") ||
