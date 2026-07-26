@@ -643,7 +643,7 @@ function anthropicOmitsThinking(apiId: string) {
   return anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId) // kilocode_change - include Kilo's fable/sonnet-5 aliases
 }
 
-// kilocode_change start - Opus 4.5 emits enabled extended thinking + bare effort (matches upstream PR #38757)
+// kilocode_change start - Opus 4.5 emits enabled extended thinking + bare effort
 function anthropicOpus45(apiId: string) {
   return ["opus-4-5", "opus-4.5"].some((value) => apiId.includes(value))
 }
@@ -1019,7 +1019,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         )
       }
 
-      // kilocode_change start - Opus 4.5 emits enabled thinking + bare effort (matches upstream PR #38757)
+      // kilocode_change start - Opus 4.5 emits enabled thinking + bare effort
       if (anthropicOpus45(model.api.id)) {
         return Object.fromEntries(
           WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, anthropicOpus45Effort(model, effort)]),
@@ -1058,7 +1058,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           ]),
         )
       }
-      // kilocode_change start - Opus 4.5 on Bedrock uses enabled reasoningConfig + maxReasoningEffort (matches upstream PR #38757)
+      // kilocode_change start - Opus 4.5 on Bedrock uses enabled reasoningConfig + maxReasoningEffort
       if (anthropicOpus45(model.api.id)) {
         return Object.fromEntries(
           WIDELY_SUPPORTED_EFFORTS.map((effort) => [
@@ -1169,6 +1169,24 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
             ),
           )
         }
+        // kilocode_change start - Opus 4.5 on SAP emits enabled thinking (snake_case budget_tokens) + bare effort
+        if (anthropicOpus45(model.api.id)) {
+          return wrapInSapModelParams(
+            Object.fromEntries(
+              WIDELY_SUPPORTED_EFFORTS.map((effort) => [
+                effort,
+                {
+                  thinking: {
+                    type: "enabled",
+                    budget_tokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
+                  },
+                  effort,
+                },
+              ]),
+            ),
+          )
+        }
+        // kilocode_change end
         return wrapInSapModelParams({
           high: { thinking: { type: "enabled", budget_tokens: 16000 } },
           max: { thinking: { type: "enabled", budget_tokens: 31999 } },
