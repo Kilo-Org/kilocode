@@ -643,6 +643,22 @@ function anthropicOmitsThinking(apiId: string) {
   return anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId) // kilocode_change - include Kilo's fable/sonnet-5 aliases
 }
 
+// kilocode_change start - Opus 4.5 emits enabled extended thinking + bare effort (matches upstream PR #38757)
+function anthropicOpus45(apiId: string) {
+  return ["opus-4-5", "opus-4.5"].some((value) => apiId.includes(value))
+}
+
+function anthropicOpus45Effort(model: Provider.Model, effort: string) {
+  return {
+    thinking: {
+      type: "enabled",
+      budgetTokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
+    },
+    effort,
+  }
+}
+// kilocode_change end
+
 function googleThinkingLevelEfforts(apiId: string) {
   const id = apiId.toLowerCase()
   if (!id.includes("gemini-3")) return ["low", "high"]
@@ -1003,9 +1019,13 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
         )
       }
 
-      if (["opus-4-5", "opus-4.5"].some((v) => model.api.id.includes(v))) {
-        return Object.fromEntries(WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, { effort }]))
+      // kilocode_change start - Opus 4.5 emits enabled thinking + bare effort (matches upstream PR #38757)
+      if (anthropicOpus45(model.api.id)) {
+        return Object.fromEntries(
+          WIDELY_SUPPORTED_EFFORTS.map((effort) => [effort, anthropicOpus45Effort(model, effort)]),
+        )
       }
+      // kilocode_change end
 
       return {
         high: {
