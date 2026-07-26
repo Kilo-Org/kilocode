@@ -1,5 +1,6 @@
 // kilocode_change - new file
 import { Permission } from "@/permission"
+import { FileSafety } from "@/kilocode/permission/file-safety"
 import { NamedError } from "@opencode-ai/core/util/error"
 import { Glob } from "@opencode-ai/core/util/glob"
 import * as Truncate from "../../tool/truncate"
@@ -143,16 +144,11 @@ export const readOnlyBash: Record<string, "allow" | "ask" | "deny"> = {
   "man *-H*": "deny",
 }
 
-function askGuard(mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function askGuard(guards: boolean, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
     bash: readOnlyBash,
-    read: {
-      "*": "allow",
-      "*.env": "ask",
-      "*.env.*": "ask",
-      "*.env.example": "allow",
-    },
+    read: FileSafety.read(guards),
     grep: "allow",
     glob: "allow",
     list: "allow",
@@ -224,7 +220,7 @@ export function hardenPlan(
   item.permission = Permission.merge(item.permission, planEditGuard(worktree), ...edit)
 }
 
-function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
+function planGuard(worktree: string, guards: boolean, mcp: Record<string, "allow" | "ask" | "deny"> = {}) {
   return Permission.fromConfig({
     "*": "deny",
     question: "allow",
@@ -236,12 +232,7 @@ function planGuard(worktree: string, mcp: Record<string, "allow" | "ask" | "deny
       general: "deny",
     },
     bash: readOnlyBash,
-    read: {
-      "*": "allow",
-      "*.env": "ask",
-      "*.env.*": "ask",
-      "*.env.example": "allow",
-    },
+    read: FileSafety.read(guards),
     grep: "allow",
     glob: "allow",
     list: "allow",
@@ -295,6 +286,7 @@ export function cacheKey(cfg: Config.Info) {
     mcp: cfg.mcp,
     mode: cfg.mode,
     permission: cfg.permission,
+    dangerously_disable_file_safety_guards: cfg.dangerously_disable_file_safety_guards,
     native_notebook_tools: cfg.experimental?.native_notebook_tools,
     references: cfg.references,
     reference: cfg.reference,
@@ -406,6 +398,7 @@ export function patchAgents(
   worktree: string,
   whitelistedDirs: string[],
 ) {
+  const guards = FileSafety.enabled(cfg)
   // Rename "build" → "code" for backward compatibility
   if (agents.build) {
     agents.code = {
@@ -428,7 +421,7 @@ export function patchAgents(
       description: "Plan mode. Can only edit plan files; all other filesystem mutations are denied.",
       permission: Permission.merge(
         defaults,
-        planGuard(worktree, kilo.mcpRules),
+        planGuard(worktree, guards, kilo.mcpRules),
         user,
         planEditGuard(worktree),
         restrictions(user),
@@ -536,7 +529,7 @@ export function patchAgents(
     description: "Get answers and explanations without making changes to the codebase.",
     prompt: PROMPT_ASK,
     options: {},
-    permission: Permission.merge(defaults, askGuard(kilo.mcpRules), user, askEditGuard(), denies(user)),
+    permission: Permission.merge(defaults, askGuard(guards, kilo.mcpRules), user, askEditGuard(), denies(user)),
     mode: "primary",
     native: true,
   }

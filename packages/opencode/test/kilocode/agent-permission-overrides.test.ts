@@ -1,8 +1,12 @@
 import { afterEach, expect, test } from "bun:test"
 import type { ConfigV1 } from "@opencode-ai/core/v1/config/config"
+import { Global } from "@opencode-ai/core/global"
 import { Effect } from "effect"
+import path from "path"
 import { Agent } from "../../src/agent/agent"
+import * as KiloAgent from "../../src/kilocode/agent"
 import { Permission } from "../../src/permission"
+import { Filesystem } from "../../src/util/filesystem"
 import { provideTestInstance } from "../fixture/fixture"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../fixture/fixture"
 
@@ -22,6 +26,22 @@ async function get(config: Partial<ConfigV1.Info>, name = "plan") {
     fn: () => load(tmp.path, (svc) => svc.get(name)),
   })
   return item
+}
+
+async function configured(config: Partial<ConfigV1.Info>, run: (dir: string) => Promise<void>) {
+  await using globalTmp = await tmpdir()
+  await using tmp = await tmpdir({ git: true })
+  const prev = Global.Path.config
+  ;(Global.Path as { config: string }).config = globalTmp.path
+  await Filesystem.write(path.join(globalTmp.path, "kilo.json"), JSON.stringify(config))
+  await disposeAllInstances()
+
+  try {
+    await provideTestInstance({ directory: tmp.path, fn: () => run(tmp.path) })
+  } finally {
+    ;(Global.Path as { config: string }).config = prev
+    await disposeAllInstances()
+  }
 }
 
 function expectPlan(item: Agent.Info | undefined, action: Permission.Action = "allow") {
@@ -73,6 +93,44 @@ test("plan agent honors user bash allow over read-only deny default", async () =
       expect(Permission.evaluate("bash", "cargo search serde", plan!.permission).action).toBe("allow")
     },
   })
+})
+
+test(
+  "trusted config removes built-in env asks without weakening plan edits",
+  async () => {
+    await configured({ dangerously_disable_file_safety_guards: true }, async (dir) => {
+      for (const name of ["code", "ask", "plan"]) {
+        const item = await load(dir, (svc) => svc.get(name))
+        expect(Permission.evaluate("read", ".env", item!.permission).action).toBe("allow")
+      }
+      const plan = await load(dir, (svc) => svc.get("plan"))
+      expect(Permission.evaluate("edit", "src/output.log", plan!.permission).action).toBe("deny")
+    })
+  },
+  { timeout: 30_000 },
+)
+
+test(
+  "explicit env restrictions still override disabled built-in guards",
+  async () => {
+    await configured(
+      {
+        dangerously_disable_file_safety_guards: true,
+        permission: { read: { "*": "allow", "*.env": "deny" } },
+      },
+      async (dir) => {
+        const code = await load(dir, (svc) => svc.get("code"))
+        expect(Permission.evaluate("read", ".env", code!.permission).action).toBe("deny")
+      },
+    )
+  },
+  { timeout: 30_000 },
+)
+
+test("file safety config participates in the agent cache key", () => {
+  expect(KiloAgent.cacheKey({ dangerously_disable_file_safety_guards: true })).not.toBe(
+    KiloAgent.cacheKey({ dangerously_disable_file_safety_guards: false }),
+  )
 })
 
 test("plan agent still hard-denies non-plan edits after user edit allow", async () => {

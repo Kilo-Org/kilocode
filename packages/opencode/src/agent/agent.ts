@@ -29,6 +29,7 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer"
 import { AbsolutePath, type DeepMutable } from "@opencode-ai/core/schema"
 // kilocode_change start
 import * as KiloAgent from "@/kilocode/agent"
+import { FileSafety } from "@/kilocode/permission/file-safety" // kilocode_change
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import * as AgentRequirements from "@/kilocode/agent-requirements"
 import * as KiloReference from "@/kilocode/reference"
@@ -146,6 +147,7 @@ export const layer = Layer.effect(
           ...Object.fromEntries(whitelistedDirs.map((dir) => [dir, "allow"])),
         } satisfies Record<string, "allow" | "ask" | "deny">
 
+        const guards = FileSafety.enabled(cfg) // kilocode_change
         const baseDefaults = Permission.fromConfig({ // kilocode_change
           "*": "allow",
           doom_loop: "ask",
@@ -162,13 +164,7 @@ export const layer = Layer.effect(
           repo_clone: "deny",
           repo_overview: "deny",
           // kilocode_change end
-          // mirrors github.com/github/gitignore Node.gitignore pattern for .env files
-          read: {
-            "*": "allow",
-            "*.env": "ask",
-            "*.env.*": "ask",
-            "*.env.example": "allow",
-          },
+          read: FileSafety.read(guards), // kilocode_change
         })
 
         // kilocode_change start - patch defaults with bash allowlist and recall permission
