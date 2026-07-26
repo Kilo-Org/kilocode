@@ -10,6 +10,7 @@ import { Auth } from "@/auth"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { SessionExport } from "@/kilocode/session-export"
 import { KiloShutdown } from "@/kilocode/cli/shutdown"
+import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
 import { createHelpCommand } from "@/kilocode/help-command"
 import { KiloConsoleCommand } from "@/kilocode/cli/cmd/console"
 import { CloudCommand } from "@/kilocode/cli/cmd/cloud"
@@ -23,6 +24,11 @@ import { JsonMigration } from "@/kilocode/storage/json-migration"
 import { KiloLog } from "@/kilocode/log"
 
 const log = Log.create({ service: "kilocode.cli" })
+
+// Process-level ingest drain for non-TUI commands (`kilo run`, etc.).
+// KiloCli.shutdown() runs KiloShutdown before disposeAllInstances — preserve that order.
+// Registered at setup load time (not inside shutdown()) so the task is always present.
+KiloShutdown.register(() => KiloSessions.drainIngestForShutdown())
 
 // All Kilo-specific CLI customization lives here so the shared upstream entrypoint
 // (src/index.ts) only needs a handful of thin call-sites behind kilocode_change markers.
