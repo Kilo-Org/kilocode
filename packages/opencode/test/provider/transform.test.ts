@@ -4011,7 +4011,9 @@ describe("ProviderTransform.variants", () => {
         name: "opus 4.5",
         apiIds: ["claude-opus-4-5-20251101", "claude-opus-4.5-20251101"],
         efforts: ["low", "medium", "high"],
-        expectedHigh: { effort: "high" },
+        // kilocode_change - Opus 4.5 emits enabled thinking + bare effort (matches upstream PR #38757)
+        expectedHigh: { thinking: { type: "enabled", budgetTokens: 16000 }, effort: "high" },
+        // kilocode_change end
       },
       {
         name: "sonnet 4.6",
