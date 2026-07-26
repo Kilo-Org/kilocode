@@ -147,7 +147,9 @@ Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfe
 
 ### File safety escape hatch
 
-`dangerously_disable_file_safety_guards: true` may be set only by trusted global config. It lets normal permission rules, saved approvals, and allow-everything mode cover `.env` reads and protected Kilo config edits. Project config cannot enable it, but may set it to `false` to re-enable the guards. Explicit `ask` and `deny` rules and agent-mode restrictions still apply.
+`dangerously_disable_file_safety_guards`: Disable built-in safety guards for sensitive file reads and Kilo config edits so normal permission rules and approvals apply. Only trusted global config may enable this option.
+
+Set it to `true` only in trusted global config to let normal permission rules, saved approvals, and allow-everything mode cover `.env` reads and protected Kilo config edits. Project config cannot enable it, but may set it to `false` to re-enable the guards. Explicit `ask` and `deny` rules and agent-mode restrictions still apply.
 
 ```jsonc
 {
