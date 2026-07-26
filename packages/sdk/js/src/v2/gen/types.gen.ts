@@ -1595,6 +1595,9 @@ export type Config = {
   terminal_command_display?: "expanded" | "collapsed"
   code_edit_display?: "expanded" | "collapsed"
   hide_prompt_training_models?: boolean
+  /**
+   * Disable built-in safety guards for sensitive file reads and Kilo config edits so normal permission rules and approvals apply. Only trusted global config may enable this option.
+   */
   dangerously_disable_file_safety_guards?: boolean
   /**
    * Sandbox configuration for agent tools

@@ -129,10 +129,12 @@ export const Info = Schema.Struct({
   hide_prompt_training_models: Schema.optional(Schema.Boolean).annotate({
     description: "Hide Kilo Gateway models that may train on your prompts from model listings",
   }),
-  dangerously_disable_file_safety_guards: Schema.optional(Schema.Boolean).annotate({
-    description:
-      "Disable built-in safety guards for sensitive file reads and Kilo config edits so normal permission rules and approvals apply. Only trusted global config may enable this option.",
-  }),
+  dangerously_disable_file_safety_guards: Schema.optional(
+    Schema.Boolean.annotate({
+      description:
+        "Disable built-in safety guards for sensitive file reads and Kilo config edits so normal permission rules and approvals apply. Only trusted global config may enable this option.",
+    }),
+  ),
   sandbox: Schema.optional(
     Schema.Struct({
       enabled: Schema.optional(

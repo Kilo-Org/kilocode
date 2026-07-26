@@ -29195,7 +29195,8 @@
             "type": "boolean"
           },
           "dangerously_disable_file_safety_guards": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Disable built-in safety guards for sensitive file reads and Kilo config edits so normal permission rules and approvals apply. Only trusted global config may enable this option."
           },
           "sandbox": {
             "type": "object",
