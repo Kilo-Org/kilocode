@@ -265,6 +265,8 @@ export const dict = {
   "model.routing.preview.autoDescription":
     "La passerelle sélectionne dynamiquement un fournisseur lors de l’envoi de chaque requête.",
   "model.routing.unavailable": "Actuellement indisponible",
+  "model.routing.projectOverride":
+    "Le routage de fournisseur de ce modèle est défini dans le kilo.json du projet et remplace cette sélection.",
   "model.tag.latest": "Dernier",
   "model.group.auto": "Modèles automatiques",
   "model.group.recommended": "Recommandé",

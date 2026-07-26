@@ -269,6 +269,8 @@ export const dict = {
   "model.routing.preview.uptime": "Verfügbarkeit (30 Min.)",
   "model.routing.preview.autoDescription": "Das Gateway wählt beim Senden jeder Anfrage dynamisch einen Anbieter aus.",
   "model.routing.unavailable": "Derzeit nicht verfügbar",
+  "model.routing.projectOverride":
+    "Das Provider-Routing für dieses Modell ist in der kilo.json des Projekts gesetzt und überschreibt diese Auswahl.",
   "model.tag.latest": "Neueste",
   "model.group.auto": "Automatische Modelle",
   "model.group.recommended": "Empfohlen",

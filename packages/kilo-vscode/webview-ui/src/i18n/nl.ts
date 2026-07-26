@@ -265,6 +265,8 @@ export const dict = {
   "model.routing.preview.autoDescription":
     "De gateway selecteert voor elke aanvraag dynamisch een provider op het moment van verzenden.",
   "model.routing.unavailable": "Momenteel niet beschikbaar",
+  "model.routing.projectOverride":
+    "De providerroutering voor dit model staat in de kilo.json van het project en overschrijft deze keuze.",
   "model.tag.latest": "Nieuwste",
   "model.group.auto": "Automatische modellen",
   "model.group.recommended": "Aanbevolen",

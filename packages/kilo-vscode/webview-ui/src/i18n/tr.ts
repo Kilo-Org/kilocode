@@ -262,6 +262,8 @@ export const dict = {
   "model.routing.preview.uptime": "Çalışma süresi (30 dk.)",
   "model.routing.preview.autoDescription": "Ağ geçidi, her istek gönderilirken dinamik olarak bir sağlayıcı seçer.",
   "model.routing.unavailable": "Şu anda kullanılamıyor",
+  "model.routing.projectOverride":
+    "Bu modelin sağlayıcı yönlendirmesi projenin kilo.json dosyasında ayarlı ve bu seçimi geçersiz kılar.",
   "model.tag.latest": "En yeni",
   "model.group.auto": "Otomatik Modeller",
   "model.group.recommended": "Önerilen",

@@ -263,6 +263,8 @@ export const dict = {
   "model.routing.preview.uptime": "Uptime (30 min)",
   "model.routing.preview.autoDescription": "The gateway selects a provider dynamically when each request is sent.",
   "model.routing.unavailable": "Currently unavailable",
+  "model.routing.projectOverride":
+    "Provider routing for this model is set in the project kilo.json, which overrides this selection.",
   "model.group.auto": "Auto Models",
   "model.group.recommended": "Recommended",
   "model.group.favorites": "Favorites",

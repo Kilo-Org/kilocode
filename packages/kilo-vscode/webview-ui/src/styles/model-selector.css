@@ -705,6 +705,14 @@
   color: var(--text-weak, var(--vscode-descriptionForeground));
 }
 
+.routing-selector-override {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-base, var(--vscode-panel-border));
+  font-size: var(--kilo-font-size-11);
+  color: var(--vscode-editorWarning-foreground, #cca700);
+}
+
 /* ============================================
    Mode Switcher (uses kilo-ui Popover)
    ============================================ */

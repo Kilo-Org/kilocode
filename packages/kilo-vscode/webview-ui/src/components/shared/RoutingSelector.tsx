@@ -18,7 +18,7 @@ import { routable, routingPreview } from "./model-selector-utils"
 import { fmtPrice } from "./model-preview-utils"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { endpointsEntry, requestEndpoints } from "../../context/routing-endpoints"
-import { modelRouting } from "../../../../src/shared/provider-routing"
+import { modelRouting, routingOverriddenByProject } from "../../../../src/shared/provider-routing"
 import type { ModelEndpoint, ModelSelection } from "../../types/messages"
 
 // ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ export function useModelEndpoints(model: Accessor<ModelSelection | undefined>) {
 // ---------------------------------------------------------------------------
 
 export { routable }
-export { modelRouting, routingPartial } from "../../../../src/shared/provider-routing"
+export { modelRouting, routingOverriddenByProject, routingPartial } from "../../../../src/shared/provider-routing"
 
 function fmtContext(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M`
@@ -157,6 +157,8 @@ export interface RoutingSelectorBaseProps {
   onClear: () => void
   /** Called when the popover opens — used to lazily load endpoints */
   onOpen?: () => void
+  /** A project-level config pins routing for this model and wins over the write path. */
+  overridden?: boolean
   /** Popover placement — defaults to top-start. */
   placement?: "top-start" | "bottom-start" | "bottom-end" | "top-end"
   /** Render inline instead of through a portal when nested in a dialog. */
@@ -294,6 +296,9 @@ export const RoutingSelectorBase: Component<RoutingSelectorBaseProps> = (props) 
             <RoutingPreview endpoint={preview()} autoLabel={auto()} unavailable={unavailable()} />
           </div>
           <div class="routing-selector-divider" />
+          <Show when={props.overridden}>
+            <div class="routing-selector-override">{language.t("model.routing.projectOverride")}</div>
+          </Show>
           <div class="routing-selector-list" role="listbox" ref={listRef}>
             <For each={rows()}>
               {(row, i) => {
@@ -344,7 +349,7 @@ interface RoutingSelectorProps {
 export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
   const session = useSession()
   const vscode = useVSCode()
-  const { config } = useConfig()
+  const { config, projectConfig } = useConfig()
   const id = () => props.sessionID?.()
 
   const routed = () => {
@@ -372,6 +377,7 @@ export const RoutingSelector: Component<RoutingSelectorProps> = (props) => {
           onSelect={(provider) => persist(model(), provider)}
           onClear={() => persist(model(), null)}
           onOpen={endpoints.load}
+          overridden={routingOverriddenByProject(projectConfig(), model().providerID, model().modelID)}
         />
       )}
     </Show>

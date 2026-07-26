@@ -262,6 +262,8 @@ export const dict = {
   "model.routing.preview.uptime": "Oppetid (30 min.)",
   "model.routing.preview.autoDescription": "Gatewayen vælger dynamisk en udbyder, når hver anmodning sendes.",
   "model.routing.unavailable": "Ikke tilgængelig i øjeblikket",
+  "model.routing.projectOverride":
+    "Udbyderrouting for denne model er angivet i projektets kilo.json og tilsidesætter dette valg.",
   "model.tag.latest": "Nyeste",
   "model.group.auto": "Automatiske modeller",
   "model.group.recommended": "Anbefalet",

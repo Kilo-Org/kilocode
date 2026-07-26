@@ -14,6 +14,7 @@ import {
   RoutingSelectorBase,
   modelRouting,
   routable,
+  routingOverriddenByProject,
   routingPartial,
   useModelEndpoints,
 } from "../shared/RoutingSelector"
@@ -24,7 +25,7 @@ import { SPEECH_TO_TEXT_MODEL_OPTIONS } from "../speech-to-text/model-selector"
 import { AUTOCOMPLETE_SELECTOR_MODELS, getAutocompleteSelection } from "./autocomplete-model-selector"
 
 const ModelsTab: Component = () => {
-  const { config, settings, updateConfig, updateSetting } = useConfig()
+  const { config, projectConfig, settings, updateConfig, updateSetting } = useConfig()
   const language = useLanguage()
   const provider = useProvider()
   const session = useSession()
@@ -149,6 +150,7 @@ const ModelsTab: Component = () => {
                 onSelect={(provider) => updateRouting(provider)}
                 onClear={() => updateRouting(null)}
                 onOpen={routingEndpoints.load}
+                overridden={routingOverriddenByProject(projectConfig(), model().providerID, model().modelID)}
                 placement="bottom-start"
               />
             </SettingsRow>

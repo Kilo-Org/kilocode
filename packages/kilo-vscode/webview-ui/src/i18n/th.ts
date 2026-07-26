@@ -261,6 +261,8 @@ export const dict = {
   "model.routing.preview.uptime": "ระยะเวลาทำงาน (30 นาที)",
   "model.routing.preview.autoDescription": "เกตเวย์จะเลือกผู้ให้บริการแบบไดนามิกเมื่อส่งคำขอแต่ละครั้ง",
   "model.routing.unavailable": "ไม่พร้อมใช้งานในขณะนี้",
+  "model.routing.projectOverride":
+    "การกำหนดเส้นทางผู้ให้บริการของโมเดลนี้ตั้งค่าไว้ใน kilo.json ของโปรเจกต์ และจะแทนที่การเลือกนี้",
   "model.tag.latest": "ล่าสุด",
   "model.group.auto": "โมเดลอัตโนมัติ",
   "model.group.recommended": "แนะนำ",

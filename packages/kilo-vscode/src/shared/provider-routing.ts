@@ -27,15 +27,33 @@ export function routingUnsetPaths(providerID: string, modelID: string): string[]
   return ROUTING_KEYS.map((key) => ["provider", providerID, "models", modelID, "options", "provider", key])
 }
 
-/** Read the routing slug pinned for a model in a config object, if any. */
-export function modelRouting(config: unknown, providerID: string, modelID: string): string | undefined {
+/** Read the routing preferences configured for a model, if any. */
+function routingOptions(config: unknown, providerID: string, modelID: string): Record<string, unknown> | undefined {
   const providers = isRecord(config) ? config.provider : undefined
   const entry = isRecord(providers) ? providers[providerID] : undefined
   const models = isRecord(entry) ? entry.models : undefined
   const model = isRecord(models) ? models[modelID] : undefined
   const options = isRecord(model) ? model.options : undefined
   const routing = isRecord(options) ? options.provider : undefined
-  if (!isRecord(routing)) return undefined
+  return isRecord(routing) ? routing : undefined
+}
+
+/**
+ * Whether a project-level config sets any of the routing fields this UI owns.
+ * The project scope wins when configs merge, so while this is true a selection
+ * written to the global config cannot take effect — the UI says so instead of
+ * silently reverting.
+ */
+export function routingOverriddenByProject(projectConfig: unknown, providerID: string, modelID: string): boolean {
+  const routing = routingOptions(projectConfig, providerID, modelID)
+  if (!routing) return false
+  return ROUTING_KEYS.some((key) => routing[key] !== undefined)
+}
+
+/** Read the routing slug pinned for a model in a config object, if any. */
+export function modelRouting(config: unknown, providerID: string, modelID: string): string | undefined {
+  const routing = routingOptions(config, providerID, modelID)
+  if (!routing) return undefined
   const first = (value: unknown) => {
     if (!Array.isArray(value)) return undefined
     const head: unknown = value[0]

@@ -259,6 +259,7 @@ export const dict = {
   "model.routing.preview.uptime": "正常運行時間（30 分鐘）",
   "model.routing.preview.autoDescription": "閘道會在傳送每個請求時動態選擇供應商。",
   "model.routing.unavailable": "目前無法使用",
+  "model.routing.projectOverride": "此模型的供應商路由已在專案的 kilo.json 中設定，會覆寫此處的選擇。",
   "model.tag.latest": "最新",
   "model.group.auto": "自動模型",
   "model.group.recommended": "推薦",

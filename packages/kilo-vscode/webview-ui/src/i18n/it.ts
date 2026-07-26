@@ -215,6 +215,8 @@ export const dict = {
   "model.routing.preview.autoDescription":
     "Il gateway seleziona dinamicamente un provider al momento dell’invio di ogni richiesta.",
   "model.routing.unavailable": "Attualmente non disponibile",
+  "model.routing.projectOverride":
+    "L'instradamento del provider per questo modello è impostato nel kilo.json del progetto e ha la precedenza su questa selezione.",
   "model.tag.latest": "Più recente",
   "model.group.auto": "Modelli automatici",
   "model.group.recommended": "Consigliati",

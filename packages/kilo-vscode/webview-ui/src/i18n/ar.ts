@@ -260,6 +260,8 @@ export const dict = {
   "model.routing.preview.uptime": "وقت التشغيل (30 دقيقة)",
   "model.routing.preview.autoDescription": "تختار البوابة موفرًا ديناميكيًا عند إرسال كل طلب.",
   "model.routing.unavailable": "غير متاح حاليًا",
+  "model.routing.projectOverride":
+    "توجيه المزوّد لهذا النموذج محدَّد في ملف kilo.json الخاص بالمشروع ويتجاوز هذا الاختيار.",
   "model.tag.latest": "الأحدث",
   "model.group.auto": "النماذج التلقائية",
   "model.group.recommended": "موصى به",

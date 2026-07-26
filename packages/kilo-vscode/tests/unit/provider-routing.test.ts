@@ -3,6 +3,7 @@ import {
   ROUTING_KEYS,
   modelRouting,
   routingClear,
+  routingOverriddenByProject,
   routingPartial,
   routingUnsetPaths,
   routingValue,
@@ -91,5 +92,39 @@ describe("provider routing persistence", () => {
       provider: { [pid]: { models: { [mid]: { options: { provider: { ...siblings } } } } } },
     }
     expect(modelRouting(cleared, pid, mid)).toBeUndefined()
+  })
+})
+
+describe("project-level routing override", () => {
+  const projectConfig = (routing: Record<string, unknown>, model = mid) => ({
+    provider: { [pid]: { models: { [model]: { options: { provider: routing } } } } },
+  })
+
+  it("reports an override for every field the UI owns", () => {
+    for (const key of ROUTING_KEYS) {
+      expect(routingOverriddenByProject(projectConfig({ [key]: routingValue("gmicloud/fp8")[key] }), pid, mid)).toBe(
+        true,
+      )
+    }
+  })
+
+  it("ignores hand-configured sibling preferences the UI never writes", () => {
+    expect(routingOverriddenByProject(projectConfig(siblings), pid, mid)).toBe(false)
+  })
+
+  it("stays false without a project-level routing block", () => {
+    expect(routingOverriddenByProject({}, pid, mid)).toBe(false)
+    expect(routingOverriddenByProject(undefined, pid, mid)).toBe(false)
+    expect(routingOverriddenByProject({ provider: { [pid]: { models: {} } } }, pid, mid)).toBe(false)
+  })
+
+  it("is scoped to the one provider and model it is asked about", () => {
+    const config = projectConfig(routingValue("gmicloud/fp8"))
+    expect(routingOverriddenByProject(config, pid, "z-ai/glm-4.5")).toBe(false)
+    expect(routingOverriddenByProject(config, "openrouter", mid)).toBe(false)
+  })
+
+  it("flags allow_fallbacks alone — it shadows the pin the UI writes", () => {
+    expect(routingOverriddenByProject(projectConfig({ allow_fallbacks: true }), pid, mid)).toBe(true)
   })
 })
