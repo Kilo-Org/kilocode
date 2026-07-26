@@ -1058,6 +1058,22 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           ]),
         )
       }
+      // kilocode_change start - Opus 4.5 on Bedrock uses enabled reasoningConfig + maxReasoningEffort (matches upstream PR #38757)
+      if (anthropicOpus45(model.api.id)) {
+        return Object.fromEntries(
+          WIDELY_SUPPORTED_EFFORTS.map((effort) => [
+            effort,
+            {
+              reasoningConfig: {
+                type: "enabled",
+                budgetTokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
+                maxReasoningEffort: effort,
+              },
+            },
+          ]),
+        )
+      }
+      // kilocode_change end
       // For Anthropic models on Bedrock, use reasoningConfig with budgetTokens
       if (model.api.id.includes("anthropic")) {
         return {
