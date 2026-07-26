@@ -22,7 +22,7 @@ class KiloVirtualFile(
     }
 
     override fun getFileSystem(): KiloVirtualFileSystem = KiloVirtualFileSystem.getInstance()
-    override fun getFileType(): FileType = FileTypes.UNKNOWN
+    override fun getFileType(): FileType = kind()?.fileType(path.params) ?: FileTypes.UNKNOWN
     override fun getPath(): String = fileSystem.getPath(path)
     override fun getUrl(): String = "${fileSystem.protocol}://$path"
     override fun getName(): String = kind()?.title(path.params) ?: path.kind

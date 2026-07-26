@@ -107,12 +107,15 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         flush()
 
         var success = false
+        val removed = mutableListOf<WorktreeDto>()
+        controller.onRemoveSuccess = { removed.add(it) }
         controller.remove(controller.model.getElementAt(0), onSuccess = { success = true })
         flush()
 
         assertEquals(listOf(Triple("/test", item.path, "feature/x")), rpc.removes.toList())
         assertEquals(0, controller.model.size)
         assertTrue(success)
+        assertEquals(listOf(item), removed)
     }
 
     fun `test failed remove keeps the row and invokes the failure callback`() {

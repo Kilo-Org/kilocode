@@ -21,9 +21,14 @@ class KiloVfsManager(private val project: Project) {
 
     @RequiresEdt
     fun close(kind: String, params: Map<String, String> = emptyMap()) {
-        val file = file(kind, params) ?: return
-        FileEditorManager.getInstance(project).closeFile(file)
-        KiloVirtualFileSystem.getInstance().release(file.path)
+        val path = KiloPath(kind, params)
+        val fs = KiloVirtualFileSystem.getInstance()
+        val manager = FileEditorManager.getInstance(project)
+        val file = fs.cached(path) ?: manager.openFiles
+            .filterIsInstance<KiloVirtualFile>()
+            .firstOrNull { it.path.canonical() == path.canonical() }
+        if (file != null) manager.closeFile(file)
+        fs.release(path)
     }
 
     @RequiresEdt

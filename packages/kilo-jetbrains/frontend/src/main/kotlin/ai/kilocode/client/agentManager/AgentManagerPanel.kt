@@ -4,13 +4,17 @@ import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.agentManager.worktree.ConfigureWorktreeDialog
 import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
+import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
+import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.showWorktreeDeletePopup
+import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.icons.AllIcons
@@ -24,6 +28,7 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.components.service
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -50,6 +55,10 @@ class AgentManagerPanel(
             val item = item(key) ?: return@ActiveList
             if (worktreeDeletable(item, controller.isPending(item.id))) showDeletePopup(item, id)
         },
+        onClick = { row ->
+            val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
+            open(item)
+        },
     )
 
     init {
@@ -65,6 +74,7 @@ class AgentManagerPanel(
             if (list.select(key)) list.focusList()
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
+        controller.onRemoveSuccess = { item -> close(item) }
     }
 
     val component: JComponent get() = this
@@ -85,6 +95,18 @@ class AgentManagerPanel(
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
+    }
+
+    private fun open(item: WorktreeDto) {
+        val target = project ?: return
+        if (item.main || controller.isPending(item.id)) return
+        ensureWorktreeSessionEditorKind()
+        target.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item))
+    }
+
+    private fun close(item: WorktreeDto) {
+        val target = project ?: return
+        target.service<KiloVfsManager>().close(WorktreeSessionEditorKind.ID, worktreeSessionParams(item))
     }
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {

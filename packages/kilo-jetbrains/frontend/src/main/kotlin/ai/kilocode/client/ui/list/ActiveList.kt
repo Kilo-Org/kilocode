@@ -23,8 +23,9 @@ internal class ActiveList(
     onCell: (String, String) -> Unit,
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     onActivate: ((ActiveListItem) -> Unit)? = null,
+    onClick: ((ActiveListItem) -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, matcher, onActivate, onCell)
+    private val view = ActiveListView(emptyText, cfg, matcher, onActivate, onClick, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
 
     init {

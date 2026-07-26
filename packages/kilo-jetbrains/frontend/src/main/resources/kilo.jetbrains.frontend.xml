@@ -22,6 +22,9 @@
                     factoryClass="ai.kilocode.client.KiloToolWindowFactory"/>
 
         <fileEditorProvider id="KiloVfsEditor" implementation="ai.kilocode.client.vfs.KiloFileEditorProvider"/>
+        <fileType name="KILO_WORKTREE_SESSION"
+                  implementationClass="ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType"
+                  fieldName="INSTANCE"/>
 
         <applicationConfigurable
                 parentId="tools"

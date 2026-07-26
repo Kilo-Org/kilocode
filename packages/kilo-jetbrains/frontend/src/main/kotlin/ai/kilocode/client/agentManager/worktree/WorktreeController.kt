@@ -23,6 +23,7 @@ class WorktreeController(
     private val pending = LinkedHashMap<String, WorktreeDto>()
     var onSelect: ((String) -> Unit)? = null
     var onCreateFailure: ((String?) -> Unit)? = null
+    var onRemoveSuccess: ((WorktreeDto) -> Unit)? = null
 
     /** Branch checked out in the main worktree; used as the base for quick worktree creation. */
     @Volatile
@@ -107,6 +108,7 @@ class WorktreeController(
             if (result.ok) {
                 edt {
                     model.remove(dto)
+                    onRemoveSuccess?.invoke(dto)
                     onSuccess()
                     telemetry("Worktree Deleted", mapOf("branch" to dto.branch, "force" to force.toString()))
                 }

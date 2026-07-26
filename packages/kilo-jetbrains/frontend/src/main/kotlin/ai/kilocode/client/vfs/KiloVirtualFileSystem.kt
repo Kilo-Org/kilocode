@@ -22,6 +22,8 @@ class KiloVirtualFileSystem : VirtualFileSystem(), NonPhysicalFileSystem {
         return files.computeIfAbsent(path.canonical()) { KiloVirtualFile(it) }
     }
 
+    fun cached(path: KiloPath): KiloVirtualFile? = files[path.canonical()]
+
     fun release(path: KiloPath) {
         files.remove(path.canonical())
     }

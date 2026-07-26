@@ -1,0 +1,51 @@
+package ai.kilocode.client.agentManager.worktree
+
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.vfs.KiloEditorKind
+import ai.kilocode.client.vfs.KiloEditorKindRegistry
+import ai.kilocode.client.vfs.KiloVirtualFile
+import ai.kilocode.rpc.dto.WorktreeDto
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.components.service
+import com.intellij.openapi.fileTypes.FileType
+import com.intellij.openapi.project.Project
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.components.BorderLayoutPanel
+import javax.swing.Icon
+import javax.swing.JComponent
+
+object WorktreeSessionEditorKind : KiloEditorKind {
+    const val ID = "worktree-session"
+
+    override val id: String = ID
+
+    override fun title(params: Map<String, String>): String = params[PATH]?.let(::name) ?: KiloBundle.message("worktree.session.title")
+    override fun icon(params: Map<String, String>): Icon = WorktreeIcons.branch
+    override fun fileType(params: Map<String, String>): FileType = WorktreeSessionFileType
+    override fun presentablePath(params: Map<String, String>): String = params[PATH] ?: title(params)
+    override fun isValid(params: Map<String, String>): Boolean = !params[PATH].isNullOrBlank()
+
+    @RequiresEdt
+    override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
+        return BorderLayoutPanel()
+    }
+
+    private fun name(path: String): String {
+        val value = path.trimEnd('/', '\\')
+        return value.substringAfterLast('/').substringAfterLast('\\').takeIf { it.isNotBlank() } ?: value
+    }
+
+    private const val PATH = "path"
+}
+
+fun ensureWorktreeSessionEditorKind() {
+    service<KiloEditorKindRegistry>().register(WorktreeSessionEditorKind)
+}
+
+internal fun unregisterWorktreeSessionEditorKind() {
+    service<KiloEditorKindRegistry>().unregister(WorktreeSessionEditorKind.ID)
+}
+
+internal fun worktreeSessionParams(item: WorktreeDto): Map<String, String> = linkedMapOf(
+    "path" to item.path,
+)

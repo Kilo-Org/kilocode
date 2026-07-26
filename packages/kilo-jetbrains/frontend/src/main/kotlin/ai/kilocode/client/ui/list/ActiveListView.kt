@@ -36,6 +36,7 @@ internal class ActiveListView(
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
     private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
+    private val onClick: ((ActiveListItem) -> Unit)? = null,
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
@@ -95,6 +96,14 @@ internal class ActiveListView(
             }
 
             override fun mouseClicked(e: MouseEvent) {
+                if (e.clickCount == 1 && UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) {
+                    val action = onClick ?: return
+                    val hit = hit(e, enabled = false) ?: return
+                    if (hit.id != null) return
+                    action(hit.item)
+                    e.consume()
+                    return
+                }
                 if (e.clickCount != 2 || !UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) return
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
