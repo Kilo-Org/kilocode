@@ -10,7 +10,10 @@
 import { type Accessor, Component, createSignal, For, onCleanup, Show } from "solid-js"
 import { PopupSelector } from "./PopupSelector"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
+import { useConfig } from "../../context/config"
+import { useLanguage } from "../../context/language"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 
 // ---------------------------------------------------------------------------
@@ -38,11 +41,14 @@ export interface ThinkingSelectorBaseProps {
   deferDismiss?: boolean
   /** Listen for the global prompt trigger event. Defaults to true. */
   globalTrigger?: boolean
+  /** Show the Shift+Tab cycle hint in the trigger tooltip. */
+  cycleHint?: boolean
 }
 
 export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props) => {
   const [open, setOpen] = createSignal(false)
   const [focused, setFocused] = createSignal(-1)
+  const language = useLanguage()
   let listRef: HTMLDivElement | undefined
 
   const rows = () => (props.allowClear ? [undefined, ...props.variants] : props.variants)
@@ -135,52 +141,64 @@ export const ThinkingSelectorBase: Component<ThinkingSelectorBaseProps> = (props
 
   return (
     <Show when={rows().length > 0}>
-      <PopupSelector
-        expanded={false}
-        placement={props.placement ?? "top-start"}
-        preferredWidth={180}
-        minHeight={100}
-        portal={props.portal}
-        deferDismiss={props.deferDismiss}
-        open={open()}
-        onOpenChange={onOpen}
-        triggerAs={Button}
-        triggerProps={{ variant: "ghost", size: "small" }}
-        trigger={
-          <>
-            <span class="thinking-selector-trigger-label">{display(props.value)}</span>
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
-              <path d="M8 4l4 5H4l4-5z" />
-            </svg>
-          </>
-        }
-      >
-        {(bodyH) => (
-          <div
-            class="thinking-selector-list"
-            role="listbox"
-            ref={listRef}
-            onKeyDown={onKeyDown}
-            style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
-          >
-            <For each={rows()}>
-              {(v, i) => (
-                <div
-                  class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
-                  role="option"
-                  aria-selected={props.value === v}
-                  tabindex={focused() === i() ? 0 : -1}
-                  data-autofocus={focused() === i() ? "" : undefined}
-                  onClick={() => pick(v)}
-                  onFocus={() => setFocused(i())}
-                >
-                  <span class="thinking-selector-item-name">{display(v)}</span>
-                </div>
-              )}
-            </For>
+      <Tooltip
+        value={
+          <div data-slot="tooltip-keybind">
+            <span>{language.t("prompt.thinking.tooltip")}</span>
+            <Show when={props.cycleHint}>
+              <span data-slot="tooltip-keybind-key">Shift+Tab</span>
+            </Show>
           </div>
-        )}
-      </PopupSelector>
+        }
+        placement="top"
+      >
+        <PopupSelector
+          expanded={false}
+          placement={props.placement ?? "top-start"}
+          preferredWidth={180}
+          minHeight={100}
+          portal={props.portal}
+          deferDismiss={props.deferDismiss}
+          open={open()}
+          onOpenChange={onOpen}
+          triggerAs={Button}
+          triggerProps={{ variant: "ghost", size: "small" }}
+          trigger={
+            <>
+              <span class="thinking-selector-trigger-label">{display(props.value)}</span>
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" style={{ "flex-shrink": "0" }}>
+                <path d="M8 4l4 5H4l4-5z" />
+              </svg>
+            </>
+          }
+        >
+          {(bodyH) => (
+            <div
+              class="thinking-selector-list"
+              role="listbox"
+              ref={listRef}
+              onKeyDown={onKeyDown}
+              style={bodyH() !== undefined ? { "max-height": `${bodyH()}px` } : {}}
+            >
+              <For each={rows()}>
+                {(v, i) => (
+                  <div
+                    class={`thinking-selector-item${props.value === v ? " selected" : ""}`}
+                    role="option"
+                    aria-selected={props.value === v}
+                    tabindex={focused() === i() ? 0 : -1}
+                    data-autofocus={focused() === i() ? "" : undefined}
+                    onClick={() => pick(v)}
+                    onFocus={() => setFocused(i())}
+                  >
+                    <span class="thinking-selector-item-name">{display(v)}</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          )}
+        </PopupSelector>
+      </Tooltip>
     </Show>
   )
 }
@@ -195,6 +213,7 @@ interface ThinkingSelectorProps {
 
 export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
   const session = useSession()
+  const { settings } = useConfig()
   const id = () => props.sessionID?.()
 
   return (
@@ -202,6 +221,7 @@ export const ThinkingSelector: Component<ThinkingSelectorProps> = (props) => {
       variants={session.variantList(id())}
       value={session.currentVariant(id())}
       onSelect={(value) => session.selectVariant(value, id())}
+      cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
     />
   )
 }

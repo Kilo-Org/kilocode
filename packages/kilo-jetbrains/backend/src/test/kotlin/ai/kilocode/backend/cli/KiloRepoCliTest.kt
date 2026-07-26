@@ -12,6 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class KiloRepoCliTest {
@@ -39,6 +40,38 @@ class KiloRepoCliTest {
     }
 
     @Test
+    fun `extracts only current platform from multi platform archive`() = runBlocking {
+        val platform = KiloCliPlatform.current()
+        val other = if (platform == "windows-x64") "darwin-arm64" else "windows-x64"
+        val cli = KiloRepoCli.extract(false, dir) {
+            ByteArrayInputStream(multi(platform, other))
+        }
+
+        assertTrue(cli.isFile)
+        assertEquals("current", cli.readText())
+        assertFalse(File(dir, "$other/bin/kilo.exe").exists())
+        assertFalse(File(dir, "$other/bin/kilo").exists())
+    }
+
+    @Test
+    fun `prunes stale bundled cli versions after resolve`() = runBlocking {
+        val root = File(dir, "7.4.11")
+        val stale = File(dir, "7.4.10")
+        File(stale, "old").apply {
+            parentFile.mkdirs()
+            writeText("old")
+        }
+
+        val cli = KiloRepoCli.extract(false, root, cleanup = true) {
+            ByteArrayInputStream(archive("current"))
+        }
+
+        assertTrue(cli.isFile)
+        assertFalse(stale.exists())
+        assertTrue(root.isDirectory)
+    }
+
+    @Test
     fun `rejects archive entries that escape root`() = runBlocking {
         val ex = assertFailsWith<IllegalStateException> {
             KiloRepoCli.extract(false, dir) { ByteArrayInputStream(archive(entry = "../../../bad")) }
@@ -62,6 +95,19 @@ class KiloRepoCliTest {
             zip.closeEntry()
             zip.putNextEntry(ZipEntry("bin/kilo-sandbox-mutation-worker.js"))
             zip.write("worker".toByteArray())
+            zip.closeEntry()
+        }
+        return out.toByteArray()
+    }
+
+    private fun multi(platform: String, other: String): ByteArray {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { zip ->
+            zip.putNextEntry(ZipEntry("$platform/bin/${KiloCliPlatform.exe()}"))
+            zip.write("current".toByteArray())
+            zip.closeEntry()
+            zip.putNextEntry(ZipEntry("$other/bin/kilo.exe"))
+            zip.write("other".toByteArray())
             zip.closeEntry()
         }
         return out.toByteArray()

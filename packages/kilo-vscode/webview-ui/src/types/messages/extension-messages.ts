@@ -168,6 +168,7 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
+  activate?: boolean
 }
 
 export interface SessionForkedMessage {
@@ -282,6 +283,8 @@ export interface SetChatBoxMessage {
    * mention from a truncated prefix when the real path contains a space.
    */
   paths?: string[]
+  /** Past chats referenced by the restored message, seeded the same way as paths. */
+  sessions?: SessionSearchItem[]
 }
 
 export interface AppendChatBoxMessage {
@@ -347,6 +350,13 @@ export interface IndexingSettingsLoadedMessage {
   type: "indexingSettingsLoaded"
   settings: {
     showButtonWhenDisabled: boolean
+  }
+}
+
+export interface ChatSettingsLoadedMessage {
+  type: "chatSettingsLoaded"
+  settings: {
+    shiftTabCyclesVariant: boolean
   }
 }
 
@@ -448,6 +458,18 @@ export interface FileSearchResultMessage {
   paths: string[]
   items?: FileSearchItem[]
   dir: string
+  requestId: string
+}
+
+export interface SessionSearchItem {
+  id: string
+  title: string
+  updated: number
+}
+
+export interface SessionSearchResultMessage {
+  type: "sessionSearchResult"
+  sessions: SessionSearchItem[]
   requestId: string
 }
 
@@ -580,6 +602,11 @@ export interface NotificationSettingsLoadedMessage {
 
 export interface TimelineSettingLoadedMessage {
   type: "timelineSettingLoaded"
+  visible: boolean
+}
+
+export interface ThroughputSettingLoadedMessage {
+  type: "throughputSettingLoaded"
   visible: boolean
 }
 
@@ -1128,6 +1155,7 @@ export type ExtensionMessage =
   | NavigateMessage
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
+  | ChatSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ImageModelsLoadedMessage
   | ProvidersLoadedMessage
@@ -1143,6 +1171,7 @@ export type ExtensionMessage =
   | SpeechToTextResultMessage
   | SpeechToTextErrorMessage
   | FileSearchResultMessage
+  | SessionSearchResultMessage
   | FilePickerResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
@@ -1164,6 +1193,7 @@ export type ExtensionMessage =
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
+  | ThroughputSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage

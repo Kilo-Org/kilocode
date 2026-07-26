@@ -1,4 +1,4 @@
-import { Card } from "@kilocode/kilo-ui/card"
+import { Card, CardDescription } from "@kilocode/kilo-ui/card"
 import { type Component, Show, createMemo } from "solid-js"
 import { useSession } from "../../context/session"
 import { terminal, type TerminalState } from "../../context/session-outcome"
@@ -12,6 +12,7 @@ export const TurnOutcome: Component = () => {
       reason: session.closeReason(),
       messages: session.visibleMessages(),
       todos: session.todos(),
+      parts: session.getParts,
       hidden: session.isErrorHidden,
     }),
   )
@@ -34,7 +35,13 @@ export const TurnOutcome: Component = () => {
           role="status"
           title={value().finish ? language.t("session.outcome.finish", { reason: value().finish! }) : undefined}
         >
-          <Card variant={value().tone === "critical" ? "error" : "warning"}>{label(value())}</Card>
+          <Card variant={value().tone === "critical" ? "error" : "warning"}>
+            <div>{label(value())}</div>
+            <Show when={value().vercelID}>{(id) => <code>Request ID: {id()}</code>}</Show>
+            <Show when={value().generationID}>
+              {(id) => <CardDescription>{language.t("session.outcome.generationId", { id: id() })}</CardDescription>}
+            </Show>
+          </Card>
         </div>
       )}
     </Show>

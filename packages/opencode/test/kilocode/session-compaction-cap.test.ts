@@ -12,7 +12,7 @@ import { Agent as AgentSvc } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
 import { Bus } from "../../src/bus"
 import { Command } from "../../src/command"
-import { Auth } from "../../src/auth" // kilocode_change
+import { Auth } from "../../src/auth"
 import { Config } from "../../src/config/config"
 import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
@@ -25,6 +25,7 @@ import { Git } from "../../src/git"
 import { Image } from "../../src/image/image"
 import { KiloSession } from "../../src/kilocode/session"
 import { KiloSessionPrompt } from "../../src/kilocode/session/prompt"
+import { KiloSessions } from "../../src/kilo-sessions/kilo-sessions"
 import { LSP } from "../../src/lsp/lsp"
 import { MCP } from "../../src/mcp"
 import { Permission } from "../../src/permission"
@@ -167,7 +168,8 @@ function makeHttp() {
     Layer.provide(Format.defaultLayer),
     Layer.provide(Git.defaultLayer),
     Layer.provide(Command.defaultLayer),
-    Layer.provide(Auth.defaultLayer), // kilocode_change
+    Layer.provide(KiloSessions.testLayer),
+    Layer.provide(Auth.defaultLayer),
     Layer.provideMerge(todo),
     Layer.provideMerge(question),
     Layer.provideMerge(deps),

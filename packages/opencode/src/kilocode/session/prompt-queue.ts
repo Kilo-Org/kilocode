@@ -1,10 +1,12 @@
 import { Effect } from "effect"
 import { MessageV2 } from "@/session/message-v2"
 import { MessageID, SessionID } from "@/session/schema"
+import { KiloSession } from "@/kilocode/session"
 
 type Slot = {
   readonly seq: number
   readonly version: number
+  readonly target: MessageID
   readonly previous: Promise<void>
   readonly done: PromiseWithResolvers<void>
   readonly tail: Promise<void>
@@ -19,36 +21,94 @@ export namespace KiloSessionPromptQueue {
   const tails = new Map<SessionID, Promise<void>>()
   const versions = new Map<SessionID, number>()
   const targets = new Map<SessionID, Target>()
+  // Message IDs whose queued slot was cancelled via drop().
+  const dropped = new Map<SessionID, Set<MessageID>>()
   // Monotonic arrival counter per session. latest holds the seq of the most
   // recently enqueued slot; activeSince snapshots latest at the moment the
   // currently running slot actually started. hasFollowup returns true only when
   // a newer slot was enqueued after the active one began running.
   const latest = new Map<SessionID, number>()
   const activeSince = new Map<SessionID, number>()
+  // FIFO waiting list of user message IDs that have been
+  // enqueued but have not yet started running. The currently-running slot's
+  // own message is never in this list. Published via session.queue.changed so
+  // remote clients can reconcile "Queued" badges.
+  const waiting = new Map<SessionID, MessageID[]>()
   let seq = 0
 
   /** @internal - test-only helper */
   export function _hasInternalState(sessionID: SessionID): boolean {
-    return versions.has(sessionID) || targets.has(sessionID) || latest.has(sessionID) || activeSince.has(sessionID)
+    return (
+      versions.has(sessionID) ||
+      targets.has(sessionID) ||
+      dropped.has(sessionID) ||
+      latest.has(sessionID) ||
+      activeSince.has(sessionID) ||
+      waiting.has(sessionID)
+    )
   }
 
   const version = (sessionID: SessionID) => versions.get(sessionID) ?? 0
+  // Skip a slot when the whole session queue was cancelled after it was enqueued
+  // or when that specific queued message was dropped.
+  const isCancelled = (sessionID: SessionID, slot: Slot) =>
+    slot.version !== version(sessionID) || dropped.get(sessionID)?.has(slot.target)
   const settle = (promise: Promise<void>) =>
     promise.then(
       () => undefined,
       () => undefined,
     )
 
+  // Read-only FIFO snapshot of the per-session waiting
+  // list. Used by replay-on-subscribe in remote-sender.ts to always emit the
+  // current queue state (including empty) to a resubscribing client.
+  export function snapshot(sessionID: SessionID): MessageID[] {
+    return [...(waiting.get(sessionID) ?? [])]
+  }
+
+  // Emit session.queue.changed when the waiting set
+  // actually changes; suppress the redundant empty→empty transition to keep
+  // the bus quiet. Replay uses snapshot() directly so it is never affected.
+  const publishIfChanged = (sessionID: SessionID, next: MessageID[]) => {
+    const prev = waiting.get(sessionID) ?? []
+    if (prev.length === 0 && next.length === 0) return
+    if (prev.length === next.length && prev.every((id, i) => id === next[i])) return
+    if (next.length === 0) waiting.delete(sessionID)
+    else waiting.set(sessionID, next)
+    KiloSession.publishQueueChangedAsync({ sessionID, queued: snapshot(sessionID) })
+  }
+
   export function cancel(sessionID: SessionID) {
     return Effect.sync(() => {
       if (!tails.has(sessionID)) {
         versions.delete(sessionID)
         targets.delete(sessionID)
+        dropped.delete(sessionID)
         latest.delete(sessionID)
         activeSince.delete(sessionID)
+        // Cancel on an idle session still drops any
+        // lingering waiting entry, then publishes an empty snapshot.
+        publishIfChanged(sessionID, [])
         return
       }
+      // Active turn: bump version invalidates the
+      // queued slots, then drop the waiting list and publish empty.
+      publishIfChanged(sessionID, [])
       versions.set(sessionID, version(sessionID) + 1)
+      dropped.delete(sessionID)
+    })
+  }
+
+  export function drop(sessionID: SessionID, messageID: MessageID) {
+    return Effect.sync(() => {
+      const list = waiting.get(sessionID) ?? []
+      const index = list.indexOf(messageID)
+      if (index === -1) return false
+      publishIfChanged(sessionID, [...list.slice(0, index), ...list.slice(index + 1)])
+      const cancelled = dropped.get(sessionID) ?? new Set<MessageID>()
+      cancelled.add(messageID)
+      dropped.set(sessionID, cancelled)
+      return true
     })
   }
 
@@ -78,7 +138,7 @@ export namespace KiloSessionPromptQueue {
   export function hasFollowup(sessionID: SessionID): boolean {
     const l = latest.get(sessionID) ?? 0
     const a = activeSince.get(sessionID) ?? 0
-    return l > a
+    return l > a && (waiting.get(sessionID)?.length ?? 0) > 0
   }
 
   export function scope(sessionID: SessionID, messages: MessageV2.WithParts[]) {
@@ -128,21 +188,41 @@ export namespace KiloSessionPromptQueue {
       Effect.sync(() => {
         const mine = ++seq
         latest.set(sessionID, mine)
+        // Record whether this slot starts immediately
+        // (no existing tail) so we can publish the queue change exactly once
+        // on the transition that actually mutates the waiting list.
+        const startsImmediately = !tails.has(sessionID)
         const previous = tails.get(sessionID) ?? Promise.resolve()
         const done = Promise.withResolvers<void>()
         // Keep later queued prompts moving; each caller still observes its own failure.
         const tail = settle(previous).then(() => done.promise)
         tails.set(sessionID, tail)
-        return { seq: mine, version: version(sessionID), previous, done, tail } satisfies Slot
+        if (!startsImmediately) {
+          // Another slot is still running; this prompt joins the waiting FIFO.
+          const list = waiting.get(sessionID) ?? []
+          publishIfChanged(sessionID, [...list, target])
+        }
+        return { seq: mine, version: version(sessionID), target, previous, done, tail } satisfies Slot
       }),
       (slot) =>
         Effect.promise(() => settle(slot.previous)).pipe(
           Effect.flatMap(() => {
-            if (slot.version !== version(sessionID)) return cancelled
+            if (isCancelled(sessionID, slot)) return cancelled
             // Snapshot the latest seq at the moment this slot actually starts
             // running. hasFollowup compares against this value so the slot only
             // breaks when something newer than itself arrives.
             activeSince.set(sessionID, latest.get(sessionID) ?? slot.seq)
+            // This slot is taking over, so drop its
+            // own message ID from the head of the waiting list (if present)
+            // and publish the updated snapshot. Cancelled slots never reach
+            // this branch, so the waiting list retains only truly-pending IDs.
+            const list = waiting.get(sessionID)
+            if (list && list.length > 0) {
+              const head = list[0]
+              if (head === target) {
+                publishIfChanged(sessionID, list.slice(1))
+              }
+            }
             return Effect.acquireUseRelease(
               Effect.sync(() => {
                 targets.set(sessionID, { base: target, extras: new Set() })
@@ -162,8 +242,12 @@ export namespace KiloSessionPromptQueue {
           tails.delete(sessionID)
           versions.delete(sessionID)
           targets.delete(sessionID)
+          dropped.delete(sessionID)
           latest.delete(sessionID)
           activeSince.delete(sessionID)
+          // Last slot of the session finished cleanly;
+          // drop any lingering waiting entry and clear internal state.
+          waiting.delete(sessionID)
         }),
     )
   }

@@ -3,6 +3,7 @@
 import { Show, createEffect, createSignal } from "solid-js"
 import type { Accessor, Component } from "solid-js"
 import { Icon } from "@kilocode/kilo-ui/icon"
+import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { List } from "@kilocode/kilo-ui/list"
 import type { ListRef } from "@kilocode/kilo-ui/list"
 import { Popover } from "@kilocode/kilo-ui/popover"
@@ -71,16 +72,19 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
         onOpenChange={close}
         modal={false}
         portal={props.portal}
-        class="am-sidebar-search-popover"
-        triggerAs="button"
+        class="search-menu-popover am-sidebar-search-popover"
+        contentLabel={props.labels.search}
+        triggerAs={IconButton}
         triggerProps={{
           type: "button",
-          class: "am-sidebar-search-trigger",
+          icon: "magnifying-glass",
+          size: "normal",
+          variant: "ghost",
+          class: "search-menu-trigger",
           "aria-label": props.labels.search,
         }}
-        trigger={<Icon name="magnifying-glass" size="small" />}
       >
-        <div ref={root} class="am-sidebar-search" data-agent-manager-native-text-shortcuts>
+        <div ref={root} class="search-menu am-sidebar-search" data-agent-manager-native-text-shortcuts>
           <List<SidebarSearchItem>
             ref={(value) => {
               list = value
@@ -103,15 +107,15 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
               const working = item.state === "busy" || item.state === "retry"
               return (
                 <span
-                  class="am-sidebar-search-result"
+                  class="search-menu-row"
                   data-slot="sidebar-search-result"
                   data-kind={item.kind}
                   data-state={item.state}
                   data-session-id={item.kind === "session" ? item.sessionId : undefined}
                   data-worktree-id={item.kind === "worktree" ? item.worktreeId : undefined}
                 >
-                  <span class="am-sidebar-search-icon">
-                    <Show when={!working} fallback={<Spinner class="am-sidebar-search-spinner" />}>
+                  <span class="search-menu-icon">
+                    <Show when={!working} fallback={<Spinner class="search-menu-spinner" />}>
                       <Show
                         when={item.kind !== "local"}
                         fallback={
@@ -125,9 +129,9 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                       </Show>
                     </Show>
                   </span>
-                  <span class="am-sidebar-search-copy">
-                    <span class="am-sidebar-search-title">{item.title}</span>
-                    <span class="am-sidebar-search-meta">
+                  <span class="search-menu-copy">
+                    <span class="search-menu-title">{item.title}</span>
+                    <span class="search-menu-meta am-sidebar-search-meta">
                       <Show when={item.section}>
                         {(section) => (
                           <span
@@ -140,16 +144,18 @@ export const SidebarSearchMenu: Component<SidebarSearchMenuProps> = (props) => {
                     </span>
                   </span>
                   <Show when={item.state === "waiting"}>
-                    <span class="am-sidebar-search-status">{props.labels.waiting}</span>
+                    <span class="search-menu-status am-sidebar-search-status">{props.labels.waiting}</span>
                   </Show>
                   <Show when={item.state === "retry"}>
-                    <span class="am-sidebar-search-status">{props.labels.retry}</span>
+                    <span class="search-menu-status am-sidebar-search-status">{props.labels.retry}</span>
                   </Show>
                   <Show when={item.kind !== "session" && item.state === "idle"}>
-                    <span class="am-sidebar-search-count">{item.kind !== "session" ? item.count : ""}</span>
+                    <span class="search-menu-status am-sidebar-search-count">
+                      {item.kind !== "session" ? item.count : ""}
+                    </span>
                   </Show>
                   <Show when={item.kind === "session" && item.state === "idle"}>
-                    <span class="am-sidebar-search-time">{formatRelativeDate(item.updatedAt)}</span>
+                    <span class="search-menu-status">{formatRelativeDate(item.updatedAt)}</span>
                   </Show>
                 </span>
               )

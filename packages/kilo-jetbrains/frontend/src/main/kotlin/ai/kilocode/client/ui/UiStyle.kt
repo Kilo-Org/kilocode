@@ -148,6 +148,16 @@ object UiStyle {
 
         fun errorLabelForeground(): Color = JBColor.namedColor("Label.errorForeground", UIUtil.getErrorForeground())
 
+        fun addedForeground(): Color = JBColor.namedColor(
+            "Kilo.DiffStat.addedForeground",
+            JBColor(Color(0x1f, 0x9d, 0x66), Color(0x35, 0xd4, 0x9a)),
+        )
+
+        fun removedForeground(): Color = JBColor.namedColor(
+            "Kilo.DiffStat.removedForeground",
+            JBColor(Color(0xdb, 0x58, 0x66), Color(0xff, 0x6b, 0x7a)),
+        )
+
         fun warningLabelForeground(): Color = JBColor.lazy {
             UIManager.getColor("Component.warningFocusColor")
                 ?: UIManager.getColor("Label.warningForeground")

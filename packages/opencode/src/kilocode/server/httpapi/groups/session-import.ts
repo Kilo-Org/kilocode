@@ -59,6 +59,7 @@ const SessionSchema = Schema.Struct({
       partID: Schema.optional(Schema.String),
       snapshot: Schema.optional(Schema.String),
       diff: Schema.optional(Schema.String),
+      workspace: Schema.optional(Schema.Literals(["restored", "snapshots-disabled", "unavailable"])),
     }),
   ),
   permission: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),

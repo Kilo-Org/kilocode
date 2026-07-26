@@ -1,0 +1,321 @@
+# kilocode_change - new file
+name: publish-jetbrains-bundled
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Merged JetBrains release PR number to bundle
+        required: true
+        type: string
+      merge_commit:
+        description: Merge commit SHA from the reviewed release PR
+        required: true
+        type: string
+
+concurrency:
+  group: publish-jetbrains-bundled-pr-${{ inputs.pr }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  validate:
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      kind: ${{ steps.release.outputs.kind }}
+      tag: ${{ steps.release.outputs.tag }}
+      channel: ${{ steps.release.outputs.marketplace_channel }}
+    steps:
+      - name: Checkout trusted validation scripts
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Setup Bun for validation
+        uses: ./.github/actions/setup-bun
+
+      - name: Checkout merged release PR for validation
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          path: release
+          persist-credentials: false
+          ref: ${{ inputs.merge_commit }}
+
+      - name: Validate release PR and tag
+        id: release
+        working-directory: release
+        run: bun ../script/jetbrains-release-validate.ts --pr "$PR_NUMBER"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ inputs.pr }}
+
+  bundle:
+    needs: validate
+    if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    permissions:
+      actions: read
+      contents: write
+    outputs:
+      version: ${{ needs.validate.outputs.version }}
+      kind: ${{ needs.validate.outputs.kind }}
+    steps:
+      - name: Checkout merged release PR metadata
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ inputs.merge_commit }}
+
+      - name: Save reviewed release metadata
+        run: |
+          cp packages/kilo-jetbrains/CHANGELOG.md "$RUNNER_TEMP/jetbrains-CHANGELOG.md"
+          cp packages/kilo-jetbrains/gradle.properties "$RUNNER_TEMP/jetbrains-gradle.properties"
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.validate.outputs.tag }}
+
+      - name: Restore reviewed release metadata
+        run: |
+          cp "$RUNNER_TEMP/jetbrains-CHANGELOG.md" packages/kilo-jetbrains/CHANGELOG.md
+          cp "$RUNNER_TEMP/jetbrains-gradle.properties" packages/kilo-jetbrains/gradle.properties
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y patchelf zip unzip
+          curl --fail --location \
+            https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+            --output "$RUNNER_TEMP/zig.tar.xz"
+          echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+
+      - name: Validate signing secrets
+        run: |
+          missing=0
+          for name in JETBRAINS_CERTIFICATE_CHAIN JETBRAINS_PRIVATE_KEY JETBRAINS_PRIVATE_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required secret: $name" >&2
+              missing=1
+            fi
+          done
+          exit "$missing"
+        env:
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Build signed bundled plugin
+        working-directory: packages/kilo-jetbrains
+        run: |
+          ./gradlew clean buildPlugin signPlugin verifyPluginSignature verifyPlugin \
+            -Pproduction=true \
+            -Pkilo.version="$VERSION" \
+            -Pkilo.channel="$CHANNEL" \
+            -Pkilo.cli.bundled=true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.validate.outputs.version }}
+          CHANNEL: ${{ needs.validate.outputs.channel }}
+          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
+          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
+          JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
+
+      - name: Resolve bundled archive
+        id: archive
+        run: |
+          mapfile -t signed < <(compgen -G "packages/kilo-jetbrains/build/distributions/*-signed.zip")
+          if [[ "${#signed[@]}" -ne 1 ]]; then
+            echo "Expected exactly one signed bundled JetBrains plugin ZIP, found ${#signed[@]}." >&2
+            printf '%s\n' "${signed[@]}" >&2
+            exit 1
+          fi
+          asset="kilo-code-${VERSION}-bundled.zip"
+          dest="packages/kilo-jetbrains/build/release/$asset"
+          mkdir -p "$(dirname "$dest")"
+          cp "${signed[0]}" "$dest"
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
+          echo "path=$dest" >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+
+      - name: Upload bundled ZIP to GitHub Release
+        run: gh release upload "$TAG" "$ARCHIVE" --clobber --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+
+      - name: Resolve bundled asset URL
+        id: asset
+        run: |
+          url="$(gh release view "$TAG" --json assets --jq '.assets[] | select(.name == env.ASSET) | .url' --repo "$GITHUB_REPOSITORY")"
+          if [[ -z "$url" ]]; then
+            echo "Could not resolve GitHub Release URL for $ASSET" >&2
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          ASSET: ${{ steps.archive.outputs.asset }}
+
+      - name: Generate stable plugin repository XML
+        if: needs.validate.outputs.kind == 'stable'
+        run: |
+          mkdir -p pages/jetbrains
+          python3 <<'PY'
+          import html
+          import io
+          import os
+          import zipfile
+          import xml.etree.ElementTree as ET
+
+          archive = os.environ["ARCHIVE"]
+          asset = os.environ["ASSET_URL"]
+          version = os.environ["VERSION"]
+
+          def plugin_xml(path):
+              with zipfile.ZipFile(path) as zip:
+                  for name in zip.namelist():
+                      if name.endswith("META-INF/plugin.xml"):
+                          return zip.read(name)
+                  for name in zip.namelist():
+                      if not name.endswith(".jar"):
+                          continue
+                      with zipfile.ZipFile(io.BytesIO(zip.read(name))) as jar:
+                          for item in jar.namelist():
+                              if item.endswith("META-INF/plugin.xml"):
+                                  return jar.read(item)
+              raise SystemExit("bundled plugin ZIP did not contain META-INF/plugin.xml")
+
+          root = ET.fromstring(plugin_xml(archive))
+
+          def text(name, default=""):
+              item = root.find(name)
+              return item.text.strip() if item is not None and item.text else default
+
+          def cdata(value):
+              return "<![CDATA[" + value.replace("]]>", "]]]]><![CDATA[>") + "]]>"
+
+          plugin = text("id", "ai.kilocode.jetbrains")
+          name = text("name", "Kilo Code")
+          vendor = text("vendor", "Kilo Code")
+          desc = text("description")
+          notes = text("change-notes")
+          idea = root.find("idea-version")
+          attrs = ""
+          if idea is not None:
+              since = idea.attrib.get("since-build")
+              until = idea.attrib.get("until-build")
+              if since:
+                  attrs += f' since-build="{html.escape(since)}"'
+              if until:
+                  attrs += f' until-build="{html.escape(until)}"'
+
+          xml = [
+              '<?xml version="1.0" encoding="UTF-8"?>',
+              '<plugins>',
+              f'  <plugin id="{html.escape(plugin)}" version="{html.escape(version)}" url="{html.escape(asset)}">',
+              f'    <name>{html.escape(name)}</name>',
+              f'    <vendor>{html.escape(vendor)}</vendor>',
+              f'    <idea-version{attrs}/>',
+          ]
+          if desc:
+              xml.append(f'    <description>{cdata(desc)}</description>')
+          if notes:
+              xml.append(f'    <change-notes>{cdata(notes)}</change-notes>')
+          xml.extend(['  </plugin>', '</plugins>', ''])
+          with open("pages/jetbrains/updatePlugins.xml", "w", encoding="utf-8") as file:
+              file.write("\n".join(xml))
+          PY
+        env:
+          ARCHIVE: ${{ steps.archive.outputs.path }}
+          ASSET_URL: ${{ steps.asset.outputs.url }}
+          VERSION: ${{ needs.validate.outputs.version }}
+
+      - name: Upload stable Pages source
+        if: needs.validate.outputs.kind == 'stable'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jetbrains-pages-${{ needs.validate.outputs.version }}
+          path: pages
+          if-no-files-found: error
+
+      - name: Upload workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kilo-jetbrains-bundled-${{ needs.validate.outputs.version }}
+          path: |
+            packages/kilo-jetbrains/build/release/*.zip
+            pages/jetbrains/updatePlugins.xml
+          if-no-files-found: ignore
+
+  pages:
+    needs: bundle
+    if: needs.bundle.outputs.kind == 'stable'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      actions: read
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download stable Pages source
+        uses: actions/download-artifact@v4
+        with:
+          name: jetbrains-pages-${{ needs.bundle.outputs.version }}
+          path: pages
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: pages
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

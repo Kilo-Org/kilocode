@@ -16,6 +16,7 @@ import { KiloSession } from "@/kilocode/session"
 import { KiloSessionMessageOrder } from "@/kilocode/session/message-order"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
 import { Permission } from "@/permission"
+import { PermissionProvenance } from "@/kilocode/permission/provenance"
 import { Question } from "@/question"
 import { environmentDetails } from "@/kilocode/editor-context"
 import { Identifier } from "@/id/id"
@@ -229,6 +230,7 @@ export namespace KiloSessionPrompt {
     permission: Pick<Permission.Interface, "ask">
     agents: Pick<Agent.Interface, "get">
     sessions: Pick<Session.Interface, "get">
+    origins?: PermissionProvenance.Origins
     agent: Agent.Info
     session: Session.Info
     request: Omit<Permission.AskInput, "ruleset" | "hardRuleset">
@@ -237,11 +239,21 @@ export namespace KiloSessionPrompt {
     const session = yield* input.sessions
       .get(input.session.id)
       .pipe(Effect.catchCause(() => Effect.succeed(input.session)))
-    yield* input.permission.ask({
-      ...input.request,
-      ruleset: Permission.merge(agent.permission, guardPermissions({ agent, session })),
-      hardRuleset: hardPermissions({ agent }),
-    })
+
+    // kilocode_change start - tag every rule with its true origin before merging, so the winning
+    // rule (chosen by findLast) reports the correct source instead of classify() having to guess.
+    // guardPermissions re-appends agent.permission for ask/plan/architect modes and prepends
+    // session.permission, so tag those inputs up front rather than the outer copy alone.
+    const taggedAgent = PermissionProvenance.tagAgent(agent.permission, input.origins)
+    const taggedSession = PermissionProvenance.tagSession(session.permission ?? [])
+    const ruleset = Permission.merge(
+      taggedAgent,
+      guardPermissions({ agent: { name: agent.name, permission: taggedAgent }, session: { permission: taggedSession } }),
+    )
+    const outcome = yield* input.permission.ask({ ...input.request, ruleset, hardRuleset: hardPermissions({ agent }) })
+    if (outcome.manual) return { source: "manual" } satisfies PermissionProvenance.Approval
+    return PermissionProvenance.classify({ rule: outcome.rule, agent: agent.name, origins: input.origins })
+    // kilocode_change end
   })
 
   /**

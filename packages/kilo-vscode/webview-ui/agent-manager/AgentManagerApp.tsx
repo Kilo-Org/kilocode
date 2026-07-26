@@ -761,6 +761,16 @@ const AgentManagerContent: Component = () => {
     return sessionsForWorktree(sel)
   })
 
+  const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return undefined
+    return new Set(
+      managedSessions()
+        .filter((item) => item.worktreeId === sel)
+        .map((item) => item.id),
+    )
+  })
+
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (sel === LOCAL) return localSessions()
@@ -2898,6 +2908,7 @@ const AgentManagerContent: Component = () => {
               openLocally(id)
             }}
             onBack={() => setHistory(false)}
+            worktreeSessionIds={activeWorktreeSessionIds}
           />
         </Show>
         <Show when={!contextEmpty() && !history()}>
