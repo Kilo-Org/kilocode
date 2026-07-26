@@ -119,6 +119,12 @@ Loopback servers do not require an API key. For a remote endpoint, use HTTPS and
 OpenAI compatibility alone is not enough: the endpoint must support text completions with the `suffix` field, and the selected model must be trained for FIM. Validate this with the server's `/v1/completions` endpoint before enabling automatic suggestions.
 {% /callout %}
 
+### Measured local performance
+
+On an Apple M3 Pro with 36 GB of unified memory, `mlx-community/Qwen2.5-Coder-1.5B-4bit` served by OMLX produced a 283 ms cached time to first token (p50, 346 ms p90) and a 284 ms complete response (p50, 399 ms p90) on a realistic 3,968-token prompt. The server reused 3,840 prompt tokens, and all 15 measured edits were correct after Kilo Code's conservative identifier-boundary trimming.
+
+These measurements exclude editor debounce. Kilo Code's classic autocomplete provider starts at a 300 ms debounce and adapts down to a 150 ms floor, while the first request in a sequence can run immediately. Cold requests are substantially slower: the same 4K model/server path took about 2.3 seconds without a reusable prompt cache. Keep the model loaded and preserve a stable model-and-document session to get responsive ghost text.
+
 ### Models that do not work
 
 - **Qwen3-Coder-Next (instruct):** Hosted endpoints accept `POST /v1/completions` with `prompt` and `suffix` but ignore the suffix and route through the chat template, so responses are conversational prose instead of insertable code. The model only emits FIM content through chat completions with explicit `<|fim_prefix|>`/`<|fim_suffix|>`/`<|fim_middle|>` markers, and even then wraps it in Markdown code fences, which this transport does not send or strip. Common self-hosted servers do not bridge the gap either: vLLM rejects `suffix` and OMLX has no `suffix` field on `/v1/completions`. Only the separate Base checkpoint behind a server that maps `prompt`+`suffix` into Qwen FIM tokens (for example SGLang with `--completion-template qwen_coder`) fits this transport.
