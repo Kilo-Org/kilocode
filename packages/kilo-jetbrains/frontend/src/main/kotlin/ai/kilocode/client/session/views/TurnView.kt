@@ -36,6 +36,7 @@ class TurnView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val deleteQueued: ((String) -> Unit)? = null,
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
@@ -66,9 +67,16 @@ class TurnView(
         val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert)
         messages[msg.info.id] = view
         add(view)
+        if (msg.info.id == id && deleteQueued != null) view.setQueued(false) { deleteQueued.invoke(id) }
         syncCopyToolbars()
         revalidate()
         return view
+    }
+
+    @RequiresEdt
+    fun setQueued(active: Boolean, onDelete: (String) -> Unit) {
+        val anchor = messages.values.firstOrNull { it.role == SessionUiStyle.View.Message.USER_ROLE } ?: return
+        anchor.setQueued(active) { onDelete(id) }
     }
 
     /** Remove the [MessageView] for [msgId] if present. */

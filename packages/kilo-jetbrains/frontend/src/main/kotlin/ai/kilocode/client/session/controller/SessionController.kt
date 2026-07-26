@@ -464,6 +464,19 @@ class SessionController(
         }
     }
 
+    fun deleteQueuedMessage(message: String) {
+        assertEdt()
+        val id = sid ?: return
+        capture("Conversation Queued Message Removed", sessionProps(id))
+        cs.launch {
+            try {
+                sessions.deleteMessage(id, directory, message)
+            } catch (e: Exception) {
+                LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage failed message=${e.message}", e)
+            }
+        }
+    }
+
     fun unrevert() {
         assertEdt()
         val id = sid ?: return
@@ -1368,6 +1381,8 @@ class SessionController(
                 idle()
             }
 
+            is ChatEventDto.SessionQueueChanged -> updateModel { model.setQueued(event.queued.toSet()) }
+
             is ChatEventDto.SessionCompacted -> {
                 capture("Context Condensed", sessionProps(event.sessionID))
                 model.markCompacted()
@@ -1406,7 +1421,8 @@ class SessionController(
         is ChatEventDto.QuestionRejected,
         is ChatEventDto.SessionStatusChanged,
         is ChatEventDto.SessionUpdated,
-        is ChatEventDto.SessionIdle -> {
+        is ChatEventDto.SessionIdle,
+        is ChatEventDto.SessionQueueChanged -> {
             edt {
                 if (disposed) return@edt
                 updateModel { handleMetadata(event) }
@@ -1428,6 +1444,7 @@ class SessionController(
             is ChatEventDto.SessionStatusChanged -> status(event.status)
             is ChatEventDto.SessionUpdated -> model.setSession(event.session)
             is ChatEventDto.SessionIdle -> idle()
+            is ChatEventDto.SessionQueueChanged -> model.setQueued(event.queued.toSet())
             else -> Unit
         }
     }
@@ -2312,6 +2329,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionStatusChanged -> event.sessionID == id
     is ChatEventDto.SessionUpdated -> event.sessionID == id
     is ChatEventDto.SessionIdle -> event.sessionID == id
+    is ChatEventDto.SessionQueueChanged -> event.sessionID == id
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
     is ChatEventDto.TodoUpdated -> event.sessionID == id

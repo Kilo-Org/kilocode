@@ -33,6 +33,7 @@ internal class MessageToolbar(
         buttons.forEach { next(it) }
         next(button)
     }
+    private var custom: JComponent? = null
 
     init {
         isOpaque = false
@@ -41,10 +42,12 @@ internal class MessageToolbar(
 
     @RequiresEdt
     fun sync(value: Boolean) {
-        if (isVisible == value && button.isEnabled == value) return
+        val controls = customButtons()
+        if (isVisible == value && button.isEnabled == value && controls.all { it.isEnabled == value }) return
         isVisible = value
         button.isEnabled = value
         buttons.forEach { it.isEnabled = value }
+        controls.forEach { it.isEnabled = value }
         revalidate()
         repaint()
     }
@@ -59,6 +62,16 @@ internal class MessageToolbar(
 
     @RequiresEdt
     fun copyButton() = button
+
+    @RequiresEdt
+    fun setCustom(node: JComponent?) {
+        if (custom === node) return
+        remove(custom ?: row)
+        custom = node
+        add(node ?: row)
+        revalidate()
+        repaint()
+    }
 
     fun placeholder(): JComponent = object : JPanel() {
         init {
@@ -78,4 +91,6 @@ internal class MessageToolbar(
         copy.dismiss()
         super.removeNotify()
     }
+
+    private fun customButtons() = custom?.components?.filterIsInstance<javax.swing.AbstractButton>().orEmpty()
 }
