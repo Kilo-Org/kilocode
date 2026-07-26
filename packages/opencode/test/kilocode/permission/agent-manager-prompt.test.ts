@@ -20,8 +20,13 @@ describe("Agent Manager side-effect permissions", () => {
   test("requires consent despite a saved wildcard approval", () => {
     const rules = Permission.fromConfig({ agent_manager: "ask" })
     const saved = [{ permission: "agent_manager", pattern: "*", action: "allow" as const }]
-    expect(Permission.resolve("agent_manager", "prompt", rules, saved).action).toBe("ask")
-    expect(Permission.resolve("agent_manager", "stop", rules, saved).action).toBe("ask")
+    expect(Permission.resolve("agent_manager", "prompt", rules, { overrides: [saved] }).action).toBe("ask")
+    expect(Permission.resolve("agent_manager", "stop", rules, { overrides: [saved] }).action).toBe("ask")
+  })
+
+  test("requires consent when file guards are disabled", () => {
+    expect(Permission.resolve("agent_manager", "prompt", broad, { fileGuards: false }).action).toBe("ask")
+    expect(Permission.resolve("agent_manager", "stop", broad, { fileGuards: false }).action).toBe("ask")
   })
 
   test("allows only explicit side-effect approvals", () => {

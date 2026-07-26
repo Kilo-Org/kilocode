@@ -1,11 +1,12 @@
 import { Deferred, Effect } from "effect"
 import { Permission } from "@/permission"
-import { ConfigProtection } from "@/kilocode/permission/config-paths"
+import { FileSafety } from "@/kilocode/permission/file-safety"
 
 interface PendingEntry {
   info: Permission.Request
   ruleset: Permission.Ruleset
   hardRuleset?: Permission.Ruleset
+  fileGuards: boolean
   deferred: Deferred.Deferred<void, Permission.RejectedError | Permission.CorrectedError>
 }
 
@@ -31,12 +32,15 @@ export function drainCovered(
     for (const [id, entry] of pending) {
       if (id === exclude) continue
       // Never auto-resolve config file edit permissions
-      const skill = ConfigProtection.globalSkillPattern(entry.info)
-      if (ConfigProtection.isRequest(entry.info) && !skill) continue
+      const skill = FileSafety.skill(entry.fileGuards, entry.info)
+      if (FileSafety.protected(entry.fileGuards, entry.info) && !skill) continue
       const actions = entry.info.patterns.map((pattern: string) => {
         const rule = skill
           ? Permission.evaluate(entry.info.permission, skill, approved)
-          : Permission.resolve(entry.info.permission, pattern, entry.ruleset, approved)
+          : Permission.resolve(entry.info.permission, pattern, entry.ruleset, {
+              overrides: [approved],
+              fileGuards: entry.fileGuards,
+            })
         const hard = entry.hardRuleset
           ? Permission.evaluate(entry.info.permission, pattern, entry.hardRuleset)
           : undefined

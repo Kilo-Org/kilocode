@@ -99,6 +99,23 @@ describe("env read permissions", () => {
     }),
   )
 
+  it.live("disabled file guards let broad read approval cover env files", () =>
+    Effect.sync(() => {
+      const set = Permission.merge(rules(), Permission.fromConfig({ read: { "*": "allow" } }))
+      expect(Permission.resolve("read", "project/.env", set, { fileGuards: false }).action).toBe("allow")
+      expect(Permission.resolve("read", "project/.env.local", set, { fileGuards: false }).action).toBe("allow")
+    }),
+  )
+
+  it.live("disabled file guards preserve explicit env ask and deny", () =>
+    Effect.sync(() => {
+      const ask = Permission.fromConfig({ read: { "*": "allow", "*.env": "ask" } })
+      const deny = Permission.fromConfig({ read: { "*": "allow", "*.env": "deny" } })
+      expect(Permission.resolve("read", ".env", ask, { fileGuards: false }).action).toBe("ask")
+      expect(Permission.resolve("read", ".env", deny, { fileGuards: false }).action).toBe("deny")
+    }),
+  )
+
   it.live("saved wildcard read approval does not bypass env ask", () =>
     withDir(() =>
       Effect.gen(function* () {

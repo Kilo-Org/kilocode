@@ -16,7 +16,7 @@ import { SessionID } from "@/session/schema" // kilocode_change - used by AllowE
 import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { KiloHeadless } from "@/kilocode/permission/headless"
 import { drainCovered } from "@/kilocode/permission/drain"
-import { ReadPermission } from "@/kilocode/permission/read"
+import { FileSafety } from "@/kilocode/permission/file-safety"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 // kilocode_change end
@@ -99,6 +99,7 @@ interface PendingEntry {
   ruleset: Ruleset
   hardRuleset?: Ruleset
   saved?: boolean
+  fileGuards: boolean
   // kilocode_change end
   deferred: Deferred.Deferred<void, RejectedError | CorrectedError>
 }
@@ -122,18 +123,28 @@ export function evaluate(permission: string, pattern: string, ...rulesets: Permi
 }
 
 // kilocode_change start
-export function resolve(permission: string, pattern: string, ruleset: Ruleset, ...overrides: Ruleset[]): Rule {
+export function resolve(
+  permission: string,
+  pattern: string,
+  ruleset: Ruleset,
+  options: { overrides?: Ruleset[]; fileGuards?: boolean } = {},
+): Rule {
   const evalFn =
     permission === "external_directory"
       ? (permission: string, pattern: string, ...sets: Ruleset[]) =>
           ExternalDirectoryPermission.evaluate(permission, pattern, ...sets)
       : evaluate
+  const active = options.fileGuards !== false
   const base = AgentManagerPermission.harden(
     permission,
     pattern,
-    ReadPermission.harden(permission, pattern, evalFn(permission, pattern, ruleset)),
+    FileSafety.harden(active, permission, pattern, evalFn(permission, pattern, ruleset)),
   ) // kilocode_change
-  const saved = AgentManagerPermission.harden(permission, pattern, evalFn(permission, pattern, ...overrides)) // kilocode_change
+  const saved = AgentManagerPermission.harden(
+    permission,
+    pattern,
+    evalFn(permission, pattern, ...(options.overrides ?? [])),
+  ) // kilocode_change
   if (base.action === "deny") return base
   if (saved.action === "deny") return saved
   if (base.action === "ask") {
@@ -154,10 +165,15 @@ function subset(permission: string, ruleset: Ruleset) {
 }
 
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
-  if (ConfigProtection.isRequest(entry.info)) return false
+  if (FileSafety.protected(entry.fileGuards, entry.info)) return false
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
-    return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
+    return (
+      resolve(entry.info.permission, pattern, entry.ruleset, {
+        overrides: [approved, local],
+        fileGuards: entry.fileGuards,
+      }).action === "allow"
+    )
   })
 }
 // kilocode_change end
@@ -194,6 +210,7 @@ export const layer = Layer.effect(
 
     const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
+      const fileGuards = FileSafety.enabled(yield* config.get()) // kilocode_change
       // kilocode_change start
       const { ruleset, hardRuleset, ...request } = input
       const s = yield* InstanceState.get(state)
@@ -203,8 +220,8 @@ export const layer = Layer.effect(
       let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
-      const isProtected = ConfigProtection.isRequest(request)
-      const skill = ConfigProtection.globalSkillPattern(request)
+      const isProtected = FileSafety.protected(fileGuards, request)
+      const skill = FileSafety.skill(fileGuards, request)
       const trusted = skill
         ? (() => {
             const rule = ExternalDirectoryPermission.evaluate(request.permission, skill, approved)
@@ -222,7 +239,10 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        const rule = resolve(request.permission, pattern, ruleset, {
+          overrides: [approved, local],
+          fileGuards,
+        }) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
@@ -272,7 +292,7 @@ export const layer = Layer.effect(
       yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
-      pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
+      pending.set(id, { info, ruleset, hardRuleset, deferred, fileGuards }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
       // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
       yield* Effect.ensuring(
@@ -322,7 +342,11 @@ export const layer = Layer.effect(
       if (input.reply === "once") return
 
       // kilocode_change start - downgrade "always" to "once" for protected config paths
-      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
+      if (
+        FileSafety.protected(existing.fileGuards, existing.info) &&
+        FileSafety.skill(existing.fileGuards, existing.info) === undefined
+      )
+        return
       // kilocode_change end
 
       for (const pattern of existing.info.always) {
@@ -366,9 +390,9 @@ export const layer = Layer.effect(
       const existing = s.pending.get(input.requestID)
       if (!existing) return yield* new NotFoundError({ requestID: input.requestID })
 
-      if (ConfigProtection.isRequest(existing.info) && !ConfigProtection.isGlobalSkillRequest(existing.info)) return
-
-      const skill = ConfigProtection.globalSkillPattern(existing.info)
+      const isProtected = FileSafety.protected(existing.fileGuards, existing.info)
+      const skill = FileSafety.skill(existing.fileGuards, existing.info)
+      if (isProtected && skill === undefined) return
       const validRules = new Set(
         skill ? [skill] : [...((existing.info.metadata?.rules as string[] | undefined) ?? []), ...existing.info.always],
       )
