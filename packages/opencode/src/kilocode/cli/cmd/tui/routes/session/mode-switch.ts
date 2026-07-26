@@ -26,7 +26,8 @@ export namespace ModeSwitch {
     const reason = current?.reason ?? text(input.reason)
     const status = text(metadata.status)
     if (status === "switched" && source && target) return { title: `Mode switched: ${source} → ${target}`, reason }
-    if (status === "continued" && source) return { title: `Continued in ${source}`, reason }
+    if (status === "continued" && source) return { title: `Mode switch cancelled · Task continues in ${source}` }
+    if (status === "stopped") return { title: "Mode switch cancelled · Task stopped" }
     if (target) return { title: `Switching to ${target}…`, reason }
     return { title: "Switching mode…", reason }
   }

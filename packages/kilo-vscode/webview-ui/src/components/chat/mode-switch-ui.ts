@@ -1,4 +1,4 @@
-import type { PermissionRequest, QuestionRequest } from "../../types/messages"
+import type { PermissionRequest } from "../../types/messages"
 
 export interface ModeSwitchDetails {
   source: string
@@ -24,24 +24,6 @@ export function permissionModeSwitch(request: PermissionRequest): ModeSwitchDeta
   return { source, target, reason }
 }
 
-export function deniedModeSwitch(request: QuestionRequest): ModeSwitchDetails | undefined {
-  if (!request.tool) return
-  if (request.questions.length !== 1) return
-
-  const question = request.questions[0]
-  if (question?.header !== "Mode switch denied") return
-  if (question.options[0]?.label !== "Continue current mode" || question.options[1]?.label !== "Cancel task") return
-
-  const match = question.question.match(
-    /^Switching from (.+?) to (.+?) was denied\. Reason: (.+)\. Continue in (.+?) or cancel this task\?$/,
-  )
-  if (!match) return
-
-  const [, source, target, reason, continuedSource] = match
-  if (source !== continuedSource) return
-  return { source, target, reason }
-}
-
 export function modeSwitchEvent(
   input: Record<string, unknown>,
   metadata: Record<string, unknown>,
@@ -52,7 +34,8 @@ export function modeSwitchEvent(
   const outcome = text(metadata.status)
 
   if (outcome === "switched" && source && target) return { title: `Mode switched: ${source} → ${target}`, reason }
-  if (outcome === "continued" && source) return { title: `Continued in ${source}`, reason }
+  if (outcome === "continued" && source) return { title: `Mode switch cancelled · Task continues in ${source}` }
+  if (outcome === "stopped") return { title: "Mode switch cancelled · Task stopped" }
   if (target) return { title: `Switching to ${target}…`, reason }
   return { title: "Switching mode…", reason }
 }

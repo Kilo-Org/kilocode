@@ -1488,6 +1488,11 @@ export const dict = {
 
   "settings.agentBehaviour.defaultAgent.title": "Default Agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent to use when none is specified",
+  "settings.agentBehaviour.modeSwitchReject.title": "When a Mode Switch Is Cancelled",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Choose whether the current task continues in its existing mode or stops.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Continue task",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Stop task",
   "settings.agentBehaviour.availableAgents": "Available Agents",
   "settings.agentBehaviour.selectAgent": "Select an agent to configure…",
   "settings.agentBehaviour.selectAgent.title": "Agent",

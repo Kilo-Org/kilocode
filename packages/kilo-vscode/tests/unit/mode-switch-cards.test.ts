@@ -9,7 +9,7 @@ const WEBVIEW = path.join(ROOT, "webview-ui")
 const FIXTURE = path.join(ROOT, "tests/fixtures/mode-switch-cards.tsx")
 
 describe("mode switch cards", () => {
-  it("submits direct permission and denial actions exactly once", async () => {
+  it("submits direct permission actions exactly once", async () => {
     const solid = path.dirname(Bun.resolveSync("solid-js/package.json", WEBVIEW))
     const aliases: Record<string, string> = {
       "solid-js": path.join(solid, "dist/solid.js"),

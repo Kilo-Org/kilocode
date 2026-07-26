@@ -22,10 +22,8 @@ import {
   tr,
 } from "./question-dock-utils"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
-import { ModeSwitchDeniedCard } from "./ModeSwitchCard"
-import { deniedModeSwitch } from "./mode-switch-ui"
 
-const GenericQuestionDock: Component<{ request: QuestionRequest }> = (props) => {
+export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
   const session = useSession()
   const language = useLanguage()
   const id = props.request.id
@@ -551,10 +549,4 @@ const GenericQuestionDock: Component<{ request: QuestionRequest }> = (props) => 
       </div>
     </div>
   )
-}
-
-export const QuestionDock: Component<{ request: QuestionRequest }> = (props) => {
-  const details = deniedModeSwitch(props.request)
-  if (details) return <ModeSwitchDeniedCard request={props.request} details={details} />
-  return <GenericQuestionDock {...props} />
 }

@@ -26,6 +26,7 @@ export const KNOWN_KEYS: ReadonlyArray<string> = [
   "skills",
   "snapshot",
   "remote_control",
+  "mode_switch_on_reject",
   "share",
   "username",
   "watcher",

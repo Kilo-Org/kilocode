@@ -16,7 +16,7 @@ test("formats mode switch approval choices", () => {
   })
 })
 
-test("formats pending, switched, and continued transitions", () => {
+test("formats pending, switched, continued, and stopped transitions", () => {
   const input = { target: "debug", reason: "Investigate the failure." }
   expect(ModeSwitch.event(input, {})).toEqual({
     title: "Switching to debug…",
@@ -41,8 +41,17 @@ test("formats pending, switched, and continued transitions", () => {
       reason: "Investigate the failure.",
     }),
   ).toEqual({
-    title: "Continued in code",
-    reason: "Investigate the failure.",
+    title: "Mode switch cancelled · Task continues in code",
+  })
+  expect(
+    ModeSwitch.event(input, {
+      status: "stopped",
+      source: "code",
+      target: "debug",
+      reason: "Investigate the failure.",
+    }),
+  ).toEqual({
+    title: "Mode switch cancelled · Task stopped",
   })
 })
 

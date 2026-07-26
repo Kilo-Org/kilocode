@@ -1,5 +1,5 @@
 import { Window } from "happy-dom"
-import type { PermissionRequest, QuestionRequest } from "../../webview-ui/src/types/messages"
+import type { PermissionRequest } from "../../webview-ui/src/types/messages"
 
 const window = new Window()
 Object.assign(globalThis, {
@@ -16,10 +16,7 @@ Object.assign(globalThis, {
 })
 
 const { render } = await import("solid-js/web")
-const { SessionContext } = await import("../../webview-ui/src/context/session")
-const { ModeSwitchDeniedCard, ModeSwitchPermissionCard } = await import(
-  "../../webview-ui/src/components/chat/ModeSwitchCard"
-)
+const { ModeSwitchPermissionCard } = await import("../../webview-ui/src/components/chat/ModeSwitchCard")
 const { ToolRegistry } = await import("@kilocode/kilo-ui/message-part")
 const { registerVscodeToolOverrides } = await import("../../webview-ui/src/components/chat/VscodeToolOverrides")
 
@@ -32,24 +29,6 @@ const permission: PermissionRequest = {
   patterns: ["*"],
   always: ["*"],
 }
-const question: QuestionRequest = {
-  id: "question-1",
-  sessionID: "session-1",
-  tool: { messageID: "message-1", callID: "call-1" },
-  questions: [
-    {
-      header: "Mode switch denied",
-      question:
-        "Switching from code to debug was denied. Reason: Investigate the failing request. Continue in code or cancel this task?",
-      options: [
-        { label: "Continue current mode", description: "Resume the same task in code.", mode: "code" },
-        { label: "Cancel task", description: "Stop without another model step." },
-      ],
-      custom: false,
-    },
-  ],
-}
-
 function button(root: HTMLElement, label: string) {
   const result = Array.from(root.querySelectorAll("button")).find((item) => item.textContent?.trim() === label)
   if (!result) throw new Error(`Missing button: ${label}`)
@@ -153,46 +132,4 @@ if (JSON.stringify(stay.calls) !== JSON.stringify([["reject", [], []]]) || !stay
   }
   dispose()
   root.remove()
-}
-
-function deniedDecision(label: string) {
-  const root = document.createElement("div")
-  document.body.append(root)
-  const calls: Array<{ id: string; answers: string[][] }> = []
-  const session = {
-    questionErrors: () => new Set<string>(),
-    replyToQuestion: (id: string, answers: string[][]) => calls.push({ id, answers }),
-  }
-  const dispose = render(
-    () => (
-      <SessionContext.Provider value={session as never}>
-        <ModeSwitchDeniedCard request={question} details={details} />
-      </SessionContext.Provider>
-    ),
-    root,
-  )
-  if (root.textContent?.includes("Submit") || root.textContent?.includes("Dismiss")) {
-    throw new Error("Denied mode switch rendered redundant generic actions")
-  }
-  button(root, label).click()
-  const disabled = Array.from(root.querySelectorAll("button")).every((item) => item.disabled)
-  dispose()
-  root.remove()
-  return { calls, disabled }
-}
-
-const continued = deniedDecision("Continue in code")
-if (
-  JSON.stringify(continued.calls) !== JSON.stringify([{ id: "question-1", answers: [["Continue current mode"]] }]) ||
-  !continued.disabled
-) {
-  throw new Error(`Unexpected continue decision: ${JSON.stringify(continued)}`)
-}
-
-const cancelled = deniedDecision("Cancel task")
-if (
-  JSON.stringify(cancelled.calls) !== JSON.stringify([{ id: "question-1", answers: [["Cancel task"]] }]) ||
-  !cancelled.disabled
-) {
-  throw new Error(`Unexpected cancel decision: ${JSON.stringify(cancelled)}`)
 }

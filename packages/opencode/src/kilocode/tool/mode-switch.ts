@@ -1,8 +1,8 @@
 import { Agent } from "@/agent/agent"
+import { Config } from "@/config/config"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import * as KiloAgent from "@/kilocode/agent"
 import { Permission } from "@/permission"
-import { Question } from "@/question"
 import { MessageV2 } from "@/session/message-v2"
 import { Session } from "@/session/session"
 import { SessionID } from "@/session/schema"
@@ -25,7 +25,7 @@ const Params = Schema.Struct({
 export type Params = typeof Params.Type
 
 type Meta = {
-  status: "switched" | "continued"
+  status: "switched" | "continued" | "stopped"
   source: string
   target: string
   reason: string
@@ -33,9 +33,9 @@ type Meta = {
 
 type Deps = {
   agents: Pick<Agent.Interface, "list" | "guardRequirements">
+  config: Pick<Config.Interface, "get">
   sessions: Pick<Session.Interface, "updateMessage">
   ask: Tool.Context["ask"]
-  question: Pick<Question.Interface, "ask">
   switched: (input: { sessionID: SessionID; agent: string }) => Effect.Effect<void>
 }
 
@@ -121,33 +121,17 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
     const err = Cause.squash(approval.cause)
     if (!denied(err)) return yield* Effect.failCause(approval.cause)
 
-    const answers = yield* deps.question.ask({
-      sessionID: ctx.sessionID,
-      tool: ctx.callID ? { messageID: ctx.messageID, callID: ctx.callID } : undefined,
-      questions: [
-        {
-          header: "Mode switch denied",
-          question: `Switching from ${source} to ${target.name} was denied. Reason: ${params.reason}. Continue in ${source} or cancel this task?`,
-          options: [
-            {
-              label: "Continue current mode",
-              description: `Resume the same task in ${source}.`,
-              mode: source,
-            },
-            {
-              label: "Cancel task",
-              description: "Stop without another model step.",
-            },
-          ],
-          multiple: false,
-          custom: false,
-        },
-      ],
-    })
-    if (!answers[0]?.includes("Continue current mode")) return yield* new Question.RejectedError()
+    const action = (yield* deps.config.get()).mode_switch_on_reject ?? "continue"
+    if (action === "stop") {
+      return {
+        title: "Mode switch cancelled · Task stopped",
+        output: `The requested switch from ${source} to ${target.name} was cancelled. The task stops.`,
+        metadata: { status: "stopped", source, target: target.name, reason: params.reason } satisfies Meta,
+      }
+    }
     return {
-      title: `Mode switch denied: ${source} → ${target.name}`,
-      output: `The requested switch from ${source} to ${target.name} was denied. The user explicitly chose to continue in ${source}. Reason: ${params.reason}`,
+      title: `Mode switch cancelled · Task continues in ${source}`,
+      output: `The requested switch from ${source} to ${target.name} was cancelled. The task continues in ${source}.`,
       metadata: { status: "continued", source, target: target.name, reason: params.reason } satisfies Meta,
     }
   }
@@ -168,14 +152,14 @@ export const execute = Effect.fn("ModeSwitch.execute")(function* (
 export const ModeSwitchTool = Tool.define<
   typeof Params,
   Meta,
-  Agent.Service | Session.Service | Question.Service | EventV2Bridge.Service,
+  Agent.Service | Config.Service | Session.Service | EventV2Bridge.Service,
   "mode_switch"
 >(
   "mode_switch",
   Effect.gen(function* () {
     const agents = yield* Agent.Service
+    const config = yield* Config.Service
     const sessions = yield* Session.Service
-    const question = yield* Question.Service
     const events = yield* EventV2Bridge.Service
     return {
       description:
@@ -184,9 +168,9 @@ export const ModeSwitchTool = Tool.define<
       execute: (params, ctx) =>
         execute(params, ctx, {
           agents,
+          config,
           sessions,
           ask: ctx.ask,
-          question,
           switched: (input) =>
             events.publish(SessionEvent.AgentSwitched, {
               sessionID: input.sessionID,

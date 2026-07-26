@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test"
 import { Permission } from "@/permission"
-import { Question } from "@/question"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { execute, modes, schema, type Params } from "@/kilocode/tool/mode-switch"
 import { KiloToolRegistry } from "@/kilocode/tool/registry"
@@ -56,14 +55,13 @@ function fixture(input: {
   source?: string
   target?: string
   ask?: () => Effect.Effect<void>
-  answer?: string
+  action?: "continue" | "stop"
   available?: Agent.Info[]
 }) {
   const source = input.source ?? "code"
   const target = input.target ?? "debug"
   const updated: SessionV1.Info[] = []
   const switched: string[] = []
-  const prompts: string[] = []
   const requests: Array<{ permission: string; metadata: Record<string, unknown> }> = []
   const available = input.available ?? [mode("code"), mode("debug"), mode("ask"), mode("plan")]
   const ctx = {
@@ -78,6 +76,9 @@ function fixture(input: {
       list: () => Effect.succeed(available),
       guardRequirements: () => Effect.void,
     },
+    config: {
+      get: () => Effect.succeed({ mode_switch_on_reject: input.action }),
+    },
     sessions: {
       updateMessage: <T extends SessionV1.Info>(msg: T) =>
         Effect.sync(() => {
@@ -90,13 +91,6 @@ function fixture(input: {
         requests.push({ permission: request.permission, metadata: request.metadata ?? {} })
         yield* input.ask?.() ?? Effect.void
       })) satisfies Tool.Context["ask"],
-    question: {
-      ask: (request: { questions: ReadonlyArray<{ question: string }> }) =>
-        Effect.sync(() => {
-          prompts.push(request.questions[0]?.question ?? "")
-          return [[input.answer ?? "Continue current mode"]]
-        }),
-    },
     switched: (event: { agent: string }) =>
       Effect.sync(() => {
         switched.push(event.agent)
@@ -107,7 +101,6 @@ function fixture(input: {
     target,
     updated,
     switched,
-    prompts,
     requests,
     run: (params: Params = { target, reason: "The task needs debugging." }) =>
       Effect.runPromise(execute(params, ctx, deps)),
@@ -165,28 +158,31 @@ test("confirmation approval follows the same switch path", async () => {
   expect(item.switched).toEqual(["debug"])
 })
 
-test("denial requires explicit confirmation before continuing in the current mode", async () => {
+test("denial continues in the current mode by default without a follow-up question", async () => {
   const item = fixture({
     ask: () => Effect.die(new Permission.DeniedError({ ruleset: [] })),
-    answer: "Continue current mode",
   })
 
   const result = await item.run()
-  expect(result.metadata.status).toBe("continued")
-  expect(item.prompts[0]).toContain("Switching from code to debug was denied")
+  expect(result).toMatchObject({
+    title: "Mode switch cancelled · Task continues in code",
+    metadata: { status: "continued", source: "code", target: "debug" },
+  })
   expect(item.updated).toEqual([])
   expect(item.switched).toEqual([])
 })
 
-test("cancelling after denial stops the task", async () => {
+test("configured stop returns a completed cancellation status for the processor to stop", async () => {
   const item = fixture({
     ask: () => Effect.die(new Permission.DeniedError({ ruleset: [] })),
-    answer: "Cancel task",
+    action: "stop",
   })
 
-  const result = await item.exit()
-  expect(Exit.isFailure(result)).toBe(true)
-  if (Exit.isFailure(result)) expect(Cause.squash(result.cause)).toBeInstanceOf(Question.RejectedError)
+  const result = await item.run()
+  expect(result).toMatchObject({
+    title: "Mode switch cancelled · Task stopped",
+    metadata: { status: "stopped", source: "code", target: "debug" },
+  })
   expect(item.updated).toEqual([])
   expect(item.switched).toEqual([])
 })

@@ -783,6 +783,7 @@ export const layer = Layer.effect(
             if (output.metadata?.dismissed === true) {
               ctx.blocked = ctx.shouldBreak
             }
+            if (toolCall?.part.tool === "mode_switch" && output.metadata?.status === "stopped") ctx.blocked = true
             // kilocode_change end
             return
           }
