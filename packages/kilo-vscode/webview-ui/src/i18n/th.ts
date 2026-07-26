@@ -1880,5 +1880,9 @@ export const dict = {
   "chat.search.searchingHistory": "กำลังค้นหาข้อความก่อนหน้า…",
   "ui.permission.toolLabel.modeSwitch": "สลับโหมด",
   "ui.permission.modeSwitch.prompt": "สลับโหมดจาก {{source}} เป็น {{target}} — เหตุผล: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "เมื่อยกเลิกการสลับโหมด",
+  "settings.agentBehaviour.modeSwitchReject.description": "เลือกว่างานปัจจุบันจะดำเนินต่อในโหมดเดิมหรือหยุด",
+  "settings.agentBehaviour.modeSwitchReject.continue": "ทำงานต่อ",
+  "settings.agentBehaviour.modeSwitchReject.stop": "หยุดงาน",
   "settings.autoApprove.tool.mode_switch": "สลับโหมด อนุญาตให้เอเจนต์ทำงานปัจจุบันต่อในโหมดในตัวอื่นได้",
 }

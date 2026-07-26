@@ -1955,6 +1955,11 @@ export const dict = {
   "chat.search.searchingHistory": "Recherche dans les messages précédents…",
   "ui.permission.toolLabel.modeSwitch": "Changer de mode",
   "ui.permission.modeSwitch.prompt": "Passer du mode {{source}} au mode {{target}} — Raison : {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Lorsqu’un changement de mode est annulé",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Choisissez si la tâche actuelle continue dans son mode existant ou s’arrête.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Continuer la tâche",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Arrêter la tâche",
   "settings.autoApprove.tool.mode_switch":
     "Changer de mode. Permet aux agents de reprendre la tâche en cours dans un autre mode intégré.",
 }

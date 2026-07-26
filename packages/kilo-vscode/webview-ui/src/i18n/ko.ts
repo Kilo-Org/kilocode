@@ -1882,6 +1882,10 @@ export const dict = {
   "chat.search.searchingHistory": "이전 메시지를 검색하는 중…",
   "ui.permission.toolLabel.modeSwitch": "모드 전환",
   "ui.permission.modeSwitch.prompt": "모드를 {{source}}에서 {{target}}(으)로 전환 — 이유: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "모드 전환이 취소된 경우",
+  "settings.agentBehaviour.modeSwitchReject.description": "현재 작업을 기존 모드에서 계속할지 중지할지 선택합니다.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "작업 계속",
+  "settings.agentBehaviour.modeSwitchReject.stop": "작업 중지",
   "settings.autoApprove.tool.mode_switch":
     "모드를 전환합니다. 에이전트가 현재 작업을 다른 기본 제공 모드에서 재개할 수 있도록 합니다.",
 }

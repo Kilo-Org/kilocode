@@ -1945,6 +1945,11 @@ export const dict = {
   "chat.search.searchingHistory": "Frühere Nachrichten werden durchsucht…",
   "ui.permission.toolLabel.modeSwitch": "Modus wechseln",
   "ui.permission.modeSwitch.prompt": "Modus von {{source}} zu {{target}} wechseln — Grund: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Wenn ein Moduswechsel abgebrochen wird",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Wählen Sie, ob die aktuelle Aufgabe im bisherigen Modus fortgesetzt oder beendet wird.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Aufgabe fortsetzen",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Aufgabe beenden",
   "settings.autoApprove.tool.mode_switch":
     "Modi wechseln. Ermöglicht Agenten, die aktuelle Aufgabe in einem anderen integrierten Modus fortzusetzen.",
 } satisfies Partial<Record<Keys, string>>

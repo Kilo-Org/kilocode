@@ -1915,6 +1915,11 @@ export const dict = {
   "chat.search.searchingHistory": "Pretraživanje ranijih poruka…",
   "ui.permission.toolLabel.modeSwitch": "Promijeni način",
   "ui.permission.modeSwitch.prompt": "Promijeni način sa {{source}} na {{target}} — Razlog: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Kada se promjena načina otkaže",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Odaberite hoće li se trenutni zadatak nastaviti u postojećem načinu ili zaustaviti.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Nastavi zadatak",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Zaustavi zadatak",
   "settings.autoApprove.tool.mode_switch":
     "Promijenite načine rada. Omogućava agentima da nastave trenutni zadatak u drugom ugrađenom načinu.",
 }

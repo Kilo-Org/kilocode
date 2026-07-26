@@ -1900,6 +1900,11 @@ export const dict = {
   "chat.search.searchingHistory": "Søker i tidligere meldinger…",
   "ui.permission.toolLabel.modeSwitch": "Bytt modus",
   "ui.permission.modeSwitch.prompt": "Bytt modus fra {{source}} til {{target}} — Årsak: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Når et modusbytte avbrytes",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Velg om den gjeldende oppgaven skal fortsette i eksisterende modus eller stoppes.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Fortsett oppgaven",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Stopp oppgaven",
   "settings.autoApprove.tool.mode_switch":
     "Bytt modus. Lar agenter fortsette den gjeldende oppgaven i en annen innebygd modus.",
 } satisfies Partial<Record<Keys, string>>

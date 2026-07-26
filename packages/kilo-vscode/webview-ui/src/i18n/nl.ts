@@ -1941,6 +1941,11 @@ export const dict = {
   "chat.search.searchingHistory": "Eerdere berichten doorzoeken…",
   "ui.permission.toolLabel.modeSwitch": "Modus wisselen",
   "ui.permission.modeSwitch.prompt": "Modus wisselen van {{source}} naar {{target}} — Reden: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Wanneer een moduswissel wordt geannuleerd",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Kies of de huidige taak doorgaat in de bestaande modus of stopt.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Taak voortzetten",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Taak stoppen",
   "settings.autoApprove.tool.mode_switch":
     "Modi wisselen. Hiermee kunnen agents de huidige taak in een andere ingebouwde modus hervatten.",
 }

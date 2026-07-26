@@ -1825,5 +1825,9 @@ export const dict = {
   "chat.search.searchingHistory": "正在搜索更早的消息…",
   "ui.permission.toolLabel.modeSwitch": "切换模式",
   "ui.permission.modeSwitch.prompt": "将模式从 {{source}} 切换到 {{target}} — 原因：{{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "模式切换被取消时",
+  "settings.agentBehaviour.modeSwitchReject.description": "选择当前任务是在现有模式下继续还是停止。",
+  "settings.agentBehaviour.modeSwitchReject.continue": "继续任务",
+  "settings.agentBehaviour.modeSwitchReject.stop": "停止任务",
   "settings.autoApprove.tool.mode_switch": "切换模式。允许代理在另一个内置模式中继续当前任务。",
 } satisfies Partial<Record<Keys, string>>

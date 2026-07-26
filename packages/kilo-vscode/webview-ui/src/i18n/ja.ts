@@ -1900,6 +1900,11 @@ export const dict = {
   "chat.search.searchingHistory": "以前のメッセージを検索しています…",
   "ui.permission.toolLabel.modeSwitch": "モードを切り替え",
   "ui.permission.modeSwitch.prompt": "モードを{{source}}から{{target}}に切り替え — 理由: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "モード切り替えがキャンセルされた場合",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "現在のタスクを既存のモードで続行するか、停止するかを選択します。",
+  "settings.agentBehaviour.modeSwitchReject.continue": "タスクを続行",
+  "settings.agentBehaviour.modeSwitchReject.stop": "タスクを停止",
   "settings.autoApprove.tool.mode_switch":
     "モードを切り替えます。エージェントが現在のタスクを別の組み込みモードで再開できるようにします。",
 }

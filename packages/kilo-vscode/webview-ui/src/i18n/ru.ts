@@ -1911,6 +1911,11 @@ export const dict = {
   "chat.search.searchingHistory": "Поиск в более ранних сообщениях…",
   "ui.permission.toolLabel.modeSwitch": "Переключить режим",
   "ui.permission.modeSwitch.prompt": "Переключить режим с {{source}} на {{target}} — Причина: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "При отмене переключения режима",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Выберите, продолжить ли текущую задачу в прежнем режиме или остановить её.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Продолжить задачу",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Остановить задачу",
   "settings.autoApprove.tool.mode_switch":
     "Переключение режимов. Позволяет агентам возобновить текущую задачу в другом встроенном режиме.",
 }

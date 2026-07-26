@@ -1913,6 +1913,11 @@ export const dict = {
   "chat.search.searchingHistory": "Wyszukiwanie we wcześniejszych wiadomościach…",
   "ui.permission.toolLabel.modeSwitch": "Przełącz tryb",
   "ui.permission.modeSwitch.prompt": "Przełącz tryb z {{source}} na {{target}} — Powód: {{reason}}",
+  "settings.agentBehaviour.modeSwitchReject.title": "Gdy przełączenie trybu zostanie anulowane",
+  "settings.agentBehaviour.modeSwitchReject.description":
+    "Wybierz, czy bieżące zadanie ma być kontynuowane w dotychczasowym trybie, czy zatrzymane.",
+  "settings.agentBehaviour.modeSwitchReject.continue": "Kontynuuj zadanie",
+  "settings.agentBehaviour.modeSwitchReject.stop": "Zatrzymaj zadanie",
   "settings.autoApprove.tool.mode_switch":
     "Przełączanie trybów. Pozwala agentom wznowić bieżące zadanie w innym wbudowanym trybie.",
 }
