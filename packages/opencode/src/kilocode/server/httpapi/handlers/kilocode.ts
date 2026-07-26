@@ -63,7 +63,14 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
       const agent = yield* agents.get(ctx.payload.name)
       const dirs = yield* config.directories()
       yield* Effect.tryPromise({
-        try: () => KiloAgent.remove({ name: ctx.payload.name, agent, dirs, directory: instance.directory }),
+        try: () =>
+          KiloAgent.remove({
+            name: ctx.payload.name,
+            agent,
+            dirs,
+            directory: instance.directory,
+            worktree: instance.worktree,
+          }),
         catch: (err) => err,
       }).pipe(
         Effect.catch((err) => {
@@ -72,6 +79,8 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         }),
       )
       yield* store.dispose(instance)
+      const remaining = yield* store.provide(instance, agents.get(ctx.payload.name))
+      if (remaining && !remaining.native) return yield* Effect.fail(new HttpApiError.BadRequest({}))
       return true
     })
 

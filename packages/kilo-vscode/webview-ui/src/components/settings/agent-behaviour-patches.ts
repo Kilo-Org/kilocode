@@ -1,3 +1,9 @@
+import type { AgentInfo } from "../../types/messages"
+
+export function removable(agent: AgentInfo | undefined): boolean {
+  return !!agent && !agent.native && agent.source !== "organization"
+}
+
 export function selectedDefaultAgentValue(value: string): string | null {
   return value || null
 }

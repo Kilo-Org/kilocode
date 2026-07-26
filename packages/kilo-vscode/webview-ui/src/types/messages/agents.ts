@@ -19,6 +19,7 @@ export interface SlashCommandInfo {
 export interface AgentInfo {
   name: string
   displayName?: string
+  source?: string
   description?: string
   mode: "subagent" | "primary" | "all"
   native?: boolean

@@ -10,6 +10,7 @@ import path from "path"
 import { Global } from "@opencode-ai/core/global"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { applyEdits, modify, parse as parseJsonc } from "jsonc-parser"
+import { KilocodeConfigSources } from "../config/sources"
 
 import PROMPT_DEBUG from "../../agent/prompt/debug.txt"
 import PROMPT_ORCHESTRATOR from "../../agent/prompt/orchestrator.txt"
@@ -555,7 +556,13 @@ export const RemoveError = NamedError.create("AgentRemoveError", {
  * Scans all config directories for agent/mode .md files matching the name,
  * then also checks the .kilocodemodes files the ModesMigrator reads.
  */
-export async function remove(input: { name: string; agent?: AgentInfo; dirs: string[]; directory: string }) {
+export async function remove(input: {
+  name: string
+  agent?: AgentInfo
+  dirs: string[]
+  directory: string
+  worktree?: string
+}) {
   if (!input.agent) throw new RemoveError({ name: input.name, message: "agent not found" })
   if (input.agent.native) throw new RemoveError({ name: input.name, message: "cannot remove native agent" })
   // Prevent removal of organization-managed agents
@@ -582,7 +589,7 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
     }
   }
 
-  if (await removeConfigAgent(input.name, input.directory)) found = true
+  if (await removeConfigAgent(input.name, input.directory, input.worktree)) found = true
 
   // 2. Remove from legacy .kilocodemodes YAML files (read by ModesMigrator)
   const { ModesMigrator } = await import("@/kilocode/modes-migrator")
@@ -616,12 +623,17 @@ export async function remove(input: { name: string; agent?: AgentInfo; dirs: str
   if (!found) throw new RemoveError({ name: input.name, message: "no agent file found on disk" })
 }
 
-async function removeConfigAgent(name: string, directory: string) {
-  const { KilocodeConfigOverlay } = await import("@/kilocode/config/overlay")
-  const files = [
-    KilocodeConfigOverlay.globalTarget(),
-    await KilocodeConfigOverlay.projectTarget({ directory }),
-  ]
+async function removeConfigAgent(name: string, directory: string, worktree?: string) {
+  const result = await KilocodeConfigSources.list({ directory, worktree })
+  const files = result.sources
+    .filter(
+      (source) =>
+        source.exists &&
+        source.editable &&
+        source.path &&
+        ["global-file", "env-file", "project-file", "config-dir-file"].includes(source.kind),
+    )
+    .map((source) => source.path!)
   let found = false
 
   for (const file of new Set(files)) {
