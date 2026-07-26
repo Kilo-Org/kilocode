@@ -79,8 +79,6 @@ export const kilocodeHandlers = HttpApiBuilder.group(InstanceHttpApi, "kilocode"
         }),
       )
       yield* store.dispose(instance)
-      const remaining = yield* store.provide(instance, agents.get(ctx.payload.name))
-      if (remaining && !remaining.native) return yield* Effect.fail(new HttpApiError.BadRequest({}))
       return true
     })
 
