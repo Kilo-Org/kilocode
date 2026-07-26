@@ -231,11 +231,26 @@ export namespace IngestQueue {
       }
     }
 
+    async function resolveShare(sessionId: string) {
+      const fresh = await options.getShare(sessionId).catch(() => undefined)
+      if (fresh) shares.set(sessionId, fresh)
+      return fresh ?? (shutting ? shares.get(sessionId) : undefined)
+    }
+
+    async function resolveClient() {
+      // Preserve normal-path throw → outer catch logging; only swallow during shutdown so the
+      // cached client can be used.
+      const fresh = await options.getClient().catch((error) => {
+        if (!shutting) throw error
+        return undefined
+      })
+      if (fresh) cached = fresh
+      return fresh ?? (shutting ? cached : undefined)
+    }
+
     async function run(sessionId: string, items: Data[]) {
       try {
-        const freshShare = await options.getShare(sessionId).catch(() => undefined)
-        if (freshShare) shares.set(sessionId, freshShare)
-        const share = freshShare ?? (shutting ? shares.get(sessionId) : undefined)
+        const share = await resolveShare(sessionId)
         if (!share) {
           if (shutting) {
             options.log.error("ingest drain skipped", { sessionId, reason: "no share" })
@@ -243,14 +258,7 @@ export namespace IngestQueue {
           return
         }
 
-        const freshClient = await options.getClient().catch((error) => {
-          // Preserve normal-path throw → outer catch logging; only swallow during shutdown so the
-          // cached client can be used.
-          if (!shutting) throw error
-          return undefined
-        })
-        if (freshClient) cached = freshClient
-        const client = freshClient ?? (shutting ? cached : undefined)
+        const client = await resolveClient()
         if (!client) {
           if (shutting) {
             options.log.error("ingest drain skipped", { sessionId, reason: "no client" })

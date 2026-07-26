@@ -657,6 +657,59 @@ describe("share ingest queue", () => {
     expect(sched.size()).toBe(0)
   })
 
+  test("drain resolves when the bound expires on a never-settling flush", async () => {
+    const errors: { message: string; data: Record<string, unknown> }[] = []
+    const sched = scheduler(() => clock.now)
+    let started = false
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: {
+        error: (message, data) => {
+          errors.push({ message, data })
+        },
+      },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async () => {
+          started = true
+          // Never settles — drain must exit via its bound timeout, not the fetch.
+          return new Promise<Response>(() => {})
+        },
+      }),
+    })
+
+    await q.sync("s-bound", [{ type: "session", data: { id: "s-bound" } as any }])
+    expect(sched.size()).toBe(1)
+
+    const drained = q.drain()
+    let drainDone = false
+    void drained.then(() => {
+      drainDone = true
+    })
+
+    // Drain flushes immediately; fetch hangs and schedules the bound timer.
+    await Bun.sleep(0)
+    expect(started).toBe(true)
+    expect(drainDone).toBe(false)
+    expect(sched.size()).toBe(1)
+    expect(sched.nextAt()).toBe(3000)
+
+    // Advance past the 3s bound and fire the drain's internal timeout.
+    clock.now = 3000
+    sched.run()
+    await drained
+    await Bun.sleep(0)
+
+    expect(drainDone).toBe(true)
+    expect(errors.some((e) => e.message === "ingest drain timed out")).toBe(true)
+    // Bound expiry must not re-enqueue or leave a retry timer.
+    expect(sched.size()).toBe(0)
+  })
+
   test("session_close into open debounce window reschedules flush earlier", async () => {
     const sent: unknown[] = []
     const sched = scheduler(() => clock.now)
