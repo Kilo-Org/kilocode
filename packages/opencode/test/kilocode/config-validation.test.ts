@@ -30,14 +30,36 @@ describe("ConfigValidation.check", () => {
   test("validates valid JSONC config", async () => {
     await using tmp = await tmpdir({ git: true })
     const filepath = path.join(tmp.path, "kilo.json")
-    await Filesystem.write(filepath, JSON.stringify({ model: "anthropic/claude-sonnet-4-20250514" }))
+    for (const action of ["continue", "stop"]) {
+      await Filesystem.write(
+        filepath,
+        JSON.stringify({
+          model: "anthropic/claude-sonnet-4-20250514",
+          mode_switch_on_reject: action,
+        }),
+      )
+
+      const result = await provideTestInstance({
+        directory: tmp.path,
+        fn: () => check(filepath),
+      })
+      expect(result).toContain("config_validation")
+      expect(result).toContain("validated successfully")
+    }
+  })
+
+  test("rejects invalid cancelled mode switch behavior", async () => {
+    await using tmp = await tmpdir({ git: true })
+    const filepath = path.join(tmp.path, "kilo.json")
+    await Filesystem.write(filepath, JSON.stringify({ mode_switch_on_reject: "pause" }))
 
     const result = await provideTestInstance({
       directory: tmp.path,
       fn: () => check(filepath),
     })
     expect(result).toContain("config_validation")
-    expect(result).toContain("validated successfully")
+    expect(result).toContain("WARNING")
+    expect(result).toContain("invalid")
   })
 
   test("reports JSONC syntax errors", async () => {

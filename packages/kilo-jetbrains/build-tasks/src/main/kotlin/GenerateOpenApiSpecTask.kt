@@ -77,6 +77,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         val result = exec.exec {
             workingDir = root
             commandLine("bun", "run", "--conditions=browser", "./src/index.ts", "generate")
+            environment("XDG_CONFIG_HOME", temporaryDir.resolve("config").absolutePath)
             standardOutput = out
             errorOutput = err
             isIgnoreExitValue = true
@@ -89,6 +90,7 @@ abstract class GenerateOpenApiSpecTask : DefaultTask() {
         val err = ByteArrayOutputStream()
         val result = exec.exec {
             commandLine(kilo, "generate")
+            environment("XDG_CONFIG_HOME", temporaryDir.resolve("config").absolutePath)
             standardOutput = out
             errorOutput = err
             isIgnoreExitValue = true
