@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test"
 import { ProviderTransform } from "../../src/provider/transform"
+import { Provider } from "../../src/provider/provider"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 
-function mockModel(overrides: Partial<any> = {}): any {
+function mockModel(overrides: Partial<Provider.Model> = {}): Provider.Model {
   return {
-    id: "test/test-model",
-    providerID: "test",
+    id: ModelV2.ID.make("test/test-model"),
+    providerID: ProviderV2.ID.make("test"),
     api: {
       id: "test-model",
       url: "https://api.test.com",
@@ -65,8 +68,8 @@ describe("ProviderTransform.variants - Claude Opus 4.5 enabled-thinking payload"
 
   test("vertex opus-4-5 emits same shape via google-vertex/anthropic", () => {
     const model = mockModel({
-      id: "google-vertex-anthropic/claude-opus-4-5",
-      providerID: "google-vertex-anthropic",
+      id: ModelV2.ID.make("google-vertex-anthropic/claude-opus-4-5"),
+      providerID: ProviderV2.ID.make("google-vertex-anthropic"),
       api: {
         id: "claude-opus-4-5@default",
         url: "https://us-central1-aiplatform.googleapis.com",
@@ -83,8 +86,8 @@ describe("ProviderTransform.variants - Claude Opus 4.5 enabled-thinking payload"
 
   test("bedrock opus-4-5 emits enabled reasoningConfig + maxReasoningEffort", () => {
     const model = mockModel({
-      id: "bedrock/anthropic-claude-opus-4-5",
-      providerID: "bedrock",
+      id: ModelV2.ID.make("bedrock/anthropic-claude-opus-4-5"),
+      providerID: ProviderV2.ID.make("bedrock"),
       api: {
         id: "us.anthropic.claude-opus-4-5-20251101-v1:0",
         url: "https://bedrock.amazonaws.com",
@@ -104,8 +107,8 @@ describe("ProviderTransform.variants - Claude Opus 4.5 enabled-thinking payload"
 
   test("sap opus-4-5 emits enabled thinking (snake_case) wrapped in modelParams", () => {
     const model = mockModel({
-      id: "sap/anthropic--claude-opus-4-5-20251101",
-      providerID: "sap-ai-core",
+      id: ModelV2.ID.make("sap/anthropic--claude-opus-4-5-20251101"),
+      providerID: ProviderV2.ID.make("sap-ai-core"),
       api: {
         id: "anthropic--claude-opus-4-5-20251101",
         url: "https://api.ai.core.cloud.sap",

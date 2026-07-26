@@ -648,11 +648,15 @@ function anthropicOpus45(apiId: string) {
   return ["opus-4-5", "opus-4.5"].some((value) => apiId.includes(value))
 }
 
+function anthropicOpus45BudgetTokens(model: Provider.Model) {
+  return Math.min(16_000, Math.floor(model.limit.output / 2 - 1))
+}
+
 function anthropicOpus45Effort(model: Provider.Model, effort: string) {
   return {
     thinking: {
       type: "enabled",
-      budgetTokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
+      budgetTokens: anthropicOpus45BudgetTokens(model),
     },
     effort,
   }
@@ -1066,7 +1070,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
             {
               reasoningConfig: {
                 type: "enabled",
-                budgetTokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
+                budgetTokens: anthropicOpus45BudgetTokens(model),
                 maxReasoningEffort: effort,
               },
             },
@@ -1178,7 +1182,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
                 {
                   thinking: {
                     type: "enabled",
-                    budget_tokens: Math.min(16_000, Math.floor(model.limit.output / 2 - 1)),
+                    budget_tokens: anthropicOpus45BudgetTokens(model),
                   },
                   effort,
                 },
