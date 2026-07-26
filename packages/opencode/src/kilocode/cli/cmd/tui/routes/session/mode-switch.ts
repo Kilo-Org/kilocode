@@ -31,6 +31,16 @@ export namespace ModeSwitch {
     return { title: "Switching mode…", reason }
   }
 
+  export function reason(
+    value: string | undefined,
+    part: { sessionID: string; callID: string },
+    permissions: Record<string, { tool?: { callID: string } }[] | undefined>,
+  ) {
+    const callID = permissions[part.sessionID]?.at(0)?.tool?.callID
+    if (callID === part.callID) return
+    return value
+  }
+
   export function prompt(metadata: Record<string, unknown>) {
     const current = details({}, metadata)
     const source = current?.source ?? "current mode"

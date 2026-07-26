@@ -46,6 +46,16 @@ test("formats pending, switched, and continued transitions", () => {
   })
 })
 
+test("shows the reason after the mode switch confirmation closes", () => {
+  const part = { sessionID: "ses_mode", callID: "call_mode" }
+  const permissions = {
+    ses_mode: [{ tool: { callID: "call_mode" } }],
+  }
+
+  expect(ModeSwitch.reason("User requested plan mode", part, permissions)).toBeUndefined()
+  expect(ModeSwitch.reason("User requested plan mode", part, {})).toBe("User requested plan mode")
+})
+
 test("updates only the visible session mode", () => {
   const event = { properties: { sessionID: "ses_mode", agent: "debug" } }
   expect(ModeSwitch.switched("ses_mode", event)).toBe("debug")
