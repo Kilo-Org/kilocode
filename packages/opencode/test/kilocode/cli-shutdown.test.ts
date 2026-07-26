@@ -67,6 +67,10 @@ mock.module("@/kilocode/session-export", () => ({
   },
 }))
 
+mock.module("@/kilo-sessions/kilo-sessions", () => ({
+  KiloSessions: { async drainIngestForShutdown() {} },
+}))
+
 mock.module("@/kilocode/help-command", () => ({
   createHelpCommand: () => ({ command: "help", handler() {} }),
 }))
