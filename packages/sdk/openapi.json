@@ -29194,6 +29194,9 @@
           "hide_prompt_training_models": {
             "type": "boolean"
           },
+          "dangerously_disable_file_safety_guards": {
+            "type": "boolean"
+          },
           "sandbox": {
             "type": "object",
             "properties": {

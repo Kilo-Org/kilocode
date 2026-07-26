@@ -145,6 +145,18 @@ Actions: `"allow"`, `"ask"`, `"deny"`. Set `null` to delete an inherited key.
 
 Tool permissions: `read`, `edit`, `glob`, `grep`, `list`, `bash`, `task`, `webfetch`, `websearch`, `semantic_search`, `kilo_memory_save`, `kilo_memory_recall`, `lsp`, `skill`, `external_directory`, `todowrite`, `todoread`, `question`, `doom_loop`.
 
+### File safety escape hatch
+
+`dangerously_disable_file_safety_guards: true` may be set only by trusted global config. It lets normal permission rules, saved approvals, and allow-everything mode cover `.env` reads and protected Kilo config edits. Project config cannot enable it, but may set it to `false` to re-enable the guards. Explicit `ask` and `deny` rules and agent-mode restrictions still apply.
+
+```jsonc
+{
+  "dangerously_disable_file_safety_guards": true
+}
+```
+
+This can expose secrets and permit silent edits to configuration or agent instructions. Keep the guards enabled unless the user has deliberately accepted that risk.
+
 ## MCP Servers
 
 ```jsonc

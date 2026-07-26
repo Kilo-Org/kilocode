@@ -148,6 +148,25 @@ permission:
 
 Kilo treats `.env` and `.env.*` reads as sensitive. Broad read approvals, such as `read: allow`, `read: { "*": allow }`, saved wildcard approvals, or allow-everything mode do not bypass the built-in prompt for these files. `.env.example` is treated as safe documentation and can be allowed by default.
 
+{% callout type="danger" title="Disable built-in file guards" %}
+Set `dangerously_disable_file_safety_guards` to `true` only in global config when you intentionally want ordinary permission rules, saved approvals, and allow-everything mode to cover `.env` files and Kilo config files such as root `AGENTS.md`.
+
+Project config cannot enable this option, but it can set the option to `false` to re-enable the guards. Explicit `ask` and `deny` permission rules still apply.
+{% /callout %}
+
+```jsonc
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "dangerously_disable_file_safety_guards": true,
+  "permission": {
+    "read": "allow",
+    "edit": "allow"
+  }
+}
+```
+
+Enabling this option can expose secrets and allow silent changes to agent instructions or configuration. Keep the explicit sensitive-file rules below as the safe recommendation.
+
 Use explicit sensitive-file rules only when you intentionally want that behavior for a specific agent:
 
 ```yaml
