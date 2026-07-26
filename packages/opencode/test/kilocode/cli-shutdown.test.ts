@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test"
 const calls: string[] = []
 const timeouts: Array<number | undefined> = []
 let err: unknown
+let drainErr: unknown
+let drainCalls = 0
 let exit: string | number | null | undefined
 
 mock.module("@opencode-ai/core/global", () => ({
@@ -68,7 +70,12 @@ mock.module("@/kilocode/session-export", () => ({
 }))
 
 mock.module("@/kilo-sessions/kilo-sessions", () => ({
-  KiloSessions: { async drainIngestForShutdown() {} },
+  KiloSessions: {
+    async drainIngestForShutdown() {
+      drainCalls += 1
+      if (drainErr) throw drainErr
+    },
+  },
 }))
 
 mock.module("@/kilocode/help-command", () => ({
@@ -103,12 +110,28 @@ describe("KiloCli.shutdown", () => {
     calls.length = 0
     timeouts.length = 0
     err = undefined
+    drainErr = undefined
+    drainCalls = 0
     exit = process.exitCode
     process.exitCode = undefined
   })
 
   afterEach(() => {
     process.exitCode = exit
+  })
+
+  // Runs first: setup registers the drain task once at import; KiloShutdown.run() clears it.
+  test("rejects drain without blocking dispose", async () => {
+    drainErr = new Error("ingest drain failed")
+    process.exitCode = 0
+    const { KiloCli } = await import("../../src/kilocode/cli/setup")
+
+    await expect(KiloCli.shutdown()).resolves.toBeUndefined()
+
+    expect(drainCalls).toBe(1)
+    expect(timeouts).toEqual([2000])
+    expect(calls).toEqual(["track:0", "session", "telemetry", "dispose"])
+    expect(process.exitCode).toBe(0)
   })
 
   test("keeps telemetry shutdown timeout best-effort and still disposes instances", async () => {

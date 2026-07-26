@@ -30,9 +30,14 @@ const log = Log.create({ service: "kilocode.cli" })
 // Lazy-import kilo-sessions deliberately: a static import would pull the provider/plugin
 // graph into every CLI startup (including `kilo --help`). Dynamic import returns the same
 // in-process module singleton, so the drained queue is the one that received events.
+// Task must never reject: a drain failure must not take down the remaining shutdown sequence.
 KiloShutdown.register(async () => {
-  const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
-  await KiloSessions.drainIngestForShutdown()
+  try {
+    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+    await KiloSessions.drainIngestForShutdown()
+  } catch (err) {
+    log.warn("ingest drain failed", { err })
+  }
 })
 
 // All Kilo-specific CLI customization lives here so the shared upstream entrypoint
