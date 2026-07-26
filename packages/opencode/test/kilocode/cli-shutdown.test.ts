@@ -73,6 +73,7 @@ mock.module("@/kilo-sessions/kilo-sessions", () => ({
   KiloSessions: {
     async drainIngestForShutdown() {
       drainCalls += 1
+      calls.push("drain")
       if (drainErr) throw drainErr
     },
   },
@@ -121,6 +122,7 @@ describe("KiloCli.shutdown", () => {
   })
 
   // Runs first: setup registers the drain task once at import; KiloShutdown.run() clears it.
+  // That registration is also what scopes the drain-before-dispose ordering assertion to this test.
   test("rejects drain without blocking dispose", async () => {
     drainErr = new Error("ingest drain failed")
     process.exitCode = 0
@@ -130,7 +132,7 @@ describe("KiloCli.shutdown", () => {
 
     expect(drainCalls).toBe(1)
     expect(timeouts).toEqual([2000])
-    expect(calls).toEqual(["track:0", "session", "telemetry", "dispose"])
+    expect(calls).toEqual(["track:0", "session", "telemetry", "drain", "dispose"])
     expect(process.exitCode).toBe(0)
   })
 
