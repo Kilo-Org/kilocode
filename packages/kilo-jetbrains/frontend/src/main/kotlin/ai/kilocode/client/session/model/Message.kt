@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.MessageDto
+import ai.kilocode.rpc.dto.ApprovalDto
 import ai.kilocode.rpc.dto.PartSourceDto
 import ai.kilocode.rpc.dto.PartTimeDto
 import ai.kilocode.rpc.dto.TodoDto
@@ -82,6 +83,7 @@ class Tool(id: String, val name: String, var kind: ToolKind) : Content(id) {
     var title: String? = null
     var input: Map<String, String> = emptyMap()
     var metadata: Map<String, String> = emptyMap()
+    var approval: ApprovalDto? = null
     var childSessionId: String? = null
     var childTools: List<Tool> = emptyList()
     var output: String? = null

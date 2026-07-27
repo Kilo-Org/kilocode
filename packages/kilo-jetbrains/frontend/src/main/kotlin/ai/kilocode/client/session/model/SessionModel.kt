@@ -492,6 +492,7 @@ class SessionModel {
                 existing.title = dto.title
                 existing.input = dto.input
                 existing.metadata = dto.metadata
+                existing.approval = dto.approval
                 existing.childSessionId = childID(existing)
                 if (old != null && old != existing.childSessionId) {
                     childRefs.remove(old)
@@ -544,6 +545,7 @@ class SessionModel {
                 title = dto.title
                 input = dto.input
                 metadata = dto.metadata
+                approval = dto.approval
                 childSessionId = childID(this)
                 output = dto.output
                 error = dto.error

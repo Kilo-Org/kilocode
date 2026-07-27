@@ -13,6 +13,8 @@ import ai.kilocode.backend.workspace.ModelTerminalBenchInfo
 import ai.kilocode.backend.workspace.ProviderData
 import ai.kilocode.backend.workspace.ProviderInfo
 import ai.kilocode.rpc.dto.AgentConfigDto
+import ai.kilocode.rpc.dto.ApprovalDto
+import ai.kilocode.rpc.dto.ApprovalRuleDto
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
@@ -1085,6 +1087,7 @@ object KiloCliDataParser {
             filename = obj.str("filename"),
             synthetic = obj.flagOrNull("synthetic"),
             source = parseSource(obj["source"]),
+            approval = parseApproval(sequenceOf(stateMeta?.get("approval"), topMeta?.get("approval")).filterNotNull().firstOrNull()),
             tool = obj.str("tool"),
             callID = obj.str("callID"),
             state = state?.str("status"),
@@ -1127,6 +1130,23 @@ object KiloCliDataParser {
             uri = obj.str("uri"),
             name = obj.str("name"),
             kind = obj.long("kind")?.safeInt(),
+        )
+    }
+
+    private fun parseApproval(raw: JsonElement?): ApprovalDto? {
+        val obj = raw.obj() ?: return null
+        val source = obj.str("source") ?: return null
+        val rule = obj["rule"].obj()?.let { rule ->
+            ApprovalRuleDto(
+                permission = rule.str("permission") ?: return@let null,
+                pattern = rule.str("pattern") ?: return@let null,
+                action = rule.str("action") ?: return@let null,
+            )
+        }
+        return ApprovalDto(
+            source = source,
+            agent = obj.str("agent"),
+            rule = rule,
         )
     }
 

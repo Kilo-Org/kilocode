@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.model
 
 import ai.kilocode.rpc.dto.DiffFileDto
+import ai.kilocode.rpc.dto.ApprovalDto
+import ai.kilocode.rpc.dto.ApprovalRuleDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import ai.kilocode.rpc.dto.KiloAppStatusDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
@@ -386,6 +388,19 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals(view, p.todoView)
     }
 
+    fun `test updateContent tool stores approval`() {
+        model.addMessage(msg("m1", "assistant"))
+        val approval = ApprovalDto(
+            source = "blocked",
+            rule = ApprovalRuleDto(permission = "bash", pattern = "git push", action = "deny"),
+        )
+
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", approval = approval))
+
+        val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals(approval, p.approval)
+    }
+
     fun `test updateContent tool updates lifecycle`() {
         model.addMessage(msg("m1", "assistant"))
         model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", state = "pending"))
@@ -477,6 +492,19 @@ class SessionModelTest : BasePlatformTestCase() {
         assertEquals("git remote -v", p.input["command"])
         assertEquals("origin", p.output)
         assertEquals(todos, p.todos)
+        assertTrue(events.single() is SessionModelEvent.ContentUpdated)
+    }
+
+    fun `test updateContent tool updates approval`() {
+        model.addMessage(msg("m1", "assistant"))
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", approval = ApprovalDto(source = "manual")))
+        events.clear()
+        val approval = ApprovalDto(source = "global")
+
+        model.updateContent("m1", part("p1", "m1", "tool", tool = "bash", approval = approval))
+
+        val p = model.message("m1")!!.parts["p1"] as Tool
+        assertEquals(approval, p.approval)
         assertTrue(events.single() is SessionModelEvent.ContentUpdated)
     }
 
@@ -1117,6 +1145,7 @@ class SessionModelTest : BasePlatformTestCase() {
         filename: String? = null,
         synthetic: Boolean? = null,
         source: PartSourceDto? = null,
+        approval: ApprovalDto? = null,
     ) = PartDto(
         id = id,
         sessionID = "ses",
@@ -1128,6 +1157,7 @@ class SessionModelTest : BasePlatformTestCase() {
         filename = filename,
         synthetic = synthetic,
         source = source,
+        approval = approval,
         tool = tool,
         state = state,
         title = title,

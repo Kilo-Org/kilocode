@@ -72,6 +72,7 @@ class ToolParts(
     val center: JPanel,
     val controls: JComponent,
     val extra: JBLabel? = null,
+    val approval: JBLabel = JBLabel(),
     val targets: List<JBLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
 ) {
@@ -412,6 +413,10 @@ internal fun toolParts(
         next(link)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val approval = clip(JBLabel()).apply {
+        foreground = UiStyle.Colors.weak()
+        isVisible = false
+    }
     val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         isOpaque = false
         minimumSize = Dimension(0, minimumSize.height)
@@ -421,11 +426,12 @@ internal fun toolParts(
         isOpaque = false
         center.add(title, BorderLayout.WEST)
         center.add(slot, BorderLayout.CENTER)
+        center.add(approval, BorderLayout.SOUTH)
         add(glyph, BorderLayout.WEST)
         add(center, BorderLayout.CENTER)
         add(controls, BorderLayout.EAST)
     }
-    val parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, mode = mode)
+    val parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, approval = approval, mode = mode)
     return parts.also {
         controls.add(it.state)
     }
@@ -448,6 +454,7 @@ internal fun searchParts(count: Int): ToolParts {
         next(link)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
+    val approval = clip(JBLabel()).apply { isVisible = false }
     val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
     val target = stack.align(HAlign.TRACK, VAlign.CENTER)
     val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
@@ -463,7 +470,7 @@ internal fun searchParts(count: Int): ToolParts {
         add(center, BorderLayout.CENTER)
         add(controls, BorderLayout.EAST)
     }
-    return ToolParts(header, glyph, title, sub, link, slot, state, center, controls, targets = targets, mode = ToolBodyMode.EDITOR).also {
+    return ToolParts(header, glyph, title, sub, link, slot, state, center, controls, approval = approval, targets = targets, mode = ToolBodyMode.EDITOR).also {
         controls.add(it.state)
     }
 }
@@ -596,6 +603,46 @@ internal fun stateText(tool: Tool) = when (tool.state) {
     ToolExecState.RUNNING -> KiloBundle.message("session.part.tool.running")
     ToolExecState.COMPLETED -> ""
     ToolExecState.ERROR -> KiloBundle.message("session.part.tool.error")
+}
+
+@RequiresEdt
+internal fun syncApproval(parts: ToolParts, tool: Tool): Boolean {
+    val text = toolApprovalText(tool)
+    var changed = false
+    changed = setText(parts.approval, text) || changed
+    changed = setVisible(parts.approval, text.isNotBlank()) || changed
+    changed = setForeground(parts.approval, approvalColor(tool)) || changed
+    return changed
+}
+
+internal fun toolApprovalText(tool: Tool): String {
+    val approval = tool.approval ?: return ""
+    val base = when (approval.source) {
+        "manual" -> KiloBundle.message("session.part.tool.approval.manual")
+        "blocked" -> KiloBundle.message("session.part.tool.approval.blocked")
+        "blocked-hard" -> KiloBundle.message("session.part.tool.approval.blocked.hard")
+        else -> KiloBundle.message("session.part.tool.approval.auto", approvalSource(approval.source, approval.agent))
+    }
+    val rule = approval.rule ?: return base
+    if (rule.permission == "*" && rule.pattern == "*") return base
+    return KiloBundle.message("session.part.tool.approval.rule", base, rule.permission, rule.pattern)
+}
+
+private fun approvalSource(source: String, agent: String?) = when (source) {
+    "agent" -> agent?.takeIf { it.isNotBlank() }
+        ?.let { KiloBundle.message("session.part.tool.approval.source.agent.named", it) }
+        ?: KiloBundle.message("session.part.tool.approval.source.agent")
+    "global" -> KiloBundle.message("session.part.tool.approval.source.global")
+    "project" -> KiloBundle.message("session.part.tool.approval.source.project")
+    "yolo" -> KiloBundle.message("session.part.tool.approval.source.yolo")
+    "session" -> KiloBundle.message("session.part.tool.approval.source.session")
+    "default" -> KiloBundle.message("session.part.tool.approval.source.default")
+    else -> source
+}
+
+private fun approvalColor(tool: Tool) = when (tool.approval?.source) {
+    "blocked", "blocked-hard" -> UiStyle.Colors.errorLabelForeground()
+    else -> UiStyle.Colors.weak()
 }
 
 private fun readPath(tool: Tool): String {

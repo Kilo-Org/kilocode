@@ -8,6 +8,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.ApprovalDto
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -139,6 +140,15 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertTrue(view.rowText(0).contains("Changed"))
         assertTrue(view.hiddenText().contains("earlier to-do hidden"))
         assertTrue(view.hiddenText().contains("later to-do hidden"))
+    }
+
+    fun `test approval is hidden for todowrite`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.approval = ApprovalDto(source = "manual")
+            it.todos = listOf(TodoDto("Done", "completed", "high"))
+        })
+
+        assertFalse(view.labelText().contains("Approved by you"))
     }
 
     fun `test update reuses root and updates rows`() {
