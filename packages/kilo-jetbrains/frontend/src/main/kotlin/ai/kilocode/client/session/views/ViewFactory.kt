@@ -4,6 +4,7 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.views.base.GenericView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.question.QuestionResultView
+import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.GlobToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.SearchToolView
@@ -54,6 +55,7 @@ object ViewFactory {
             GlobToolView.canRender(content) -> GlobToolView(content, selection = selection, repo = repo)
             SearchToolView.canRender(content) -> SearchToolView(content, selection = selection, repo = repo)
             ReadToolView.canRender(content) -> ReadToolView(content, openFile, selection = selection)
+            EditToolView.canRender(content) -> EditToolView(content, openFile, selection = selection)
             TaskToolView.canRender(content) -> TaskToolView(content, selection = selection)
             else -> ToolView(content, selection = selection)
         }
@@ -100,6 +102,8 @@ object ViewFactory {
         if (view !is SearchToolView && SearchToolView.canRender(content)) return true
         if (view is ReadToolView) return !ReadToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view is ToolView && ReadToolView.canRender(content)) return true
+        if (view is EditToolView) return !EditToolView.canRender(content) || QuestionResultView.canRender(content)
+        if (view is ToolView && EditToolView.canRender(content)) return true
         if (view is TaskToolView) return !TaskToolView.canRender(content) || QuestionResultView.canRender(content)
         if (view !is TaskToolView && TaskToolView.canRender(content)) return true
         if (view is ToolView) return QuestionResultView.canRender(content)

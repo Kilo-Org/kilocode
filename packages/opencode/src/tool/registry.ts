@@ -58,6 +58,7 @@ import { Agent } from "../agent/agent"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { SessionStatus } from "@/session/status" // kilocode_change
+import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change - provide KiloSessions.Service so the notify_user tool's init resolves
 import { Git } from "@/git" // kilocode_change
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
@@ -438,8 +439,8 @@ export const defaultLayer: Layer.Layer<Service> = Layer.suspend(
         Layer.provide(RepositoryCache.defaultLayer),
         Layer.provide(Truncate.defaultLayer), // kilocode_change - split the pipe to stay within Effect's overload limit
       )
-      .pipe(Layer.provide(Auth.defaultLayer)),
-  // kilocode_change end
+      .pipe(Layer.provide(Auth.defaultLayer))
+      .pipe(Layer.provide(KiloSessions.defaultLayer)), // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the tool-registry graph
 )
 
 function isZodType(value: unknown): value is z.ZodType {
@@ -524,34 +525,37 @@ const busNode = LayerNode.make(Bus.layer, [])
 const notebookNode = LayerNode.make(Notebook.defaultLayer, [])
 const repositoryCacheNode = LayerNode.make(RepositoryCache.defaultLayer, [])
 
-export const node = LayerNode.make(layer.pipe(Layer.provide(Ripgrep.defaultLayer)), [
-  Config.node,
-  Plugin.node,
-  Question.node,
-  Todo.node,
-  Agent.node,
-  Skill.node,
-  Session.node,
-  BackgroundJob.node,
-  Provider.node,
-  LSP.node,
-  Instruction.node,
-  FSUtil.node,
-  EventV2Bridge.node,
-  networkNode,
-  CrossSpawnSpawner.node,
-  Format.node,
-  Truncate.node,
-  RuntimeFlags.node,
-  Database.node,
-  Command.node,
-  Git.node,
-  busNode,
-  Auth.node,
-  SessionStatus.node,
-  notebookNode,
-  repositoryCacheNode,
-])
+export const node = LayerNode.suspend(() =>
+  LayerNode.make(layer.pipe(Layer.provide(Ripgrep.defaultLayer)), [
+    Config.node,
+    Plugin.node,
+    Question.node,
+    Todo.node,
+    Agent.node,
+    Skill.node,
+    Session.node,
+    BackgroundJob.node,
+    Provider.node,
+    LSP.node,
+    Instruction.node,
+    FSUtil.node,
+    EventV2Bridge.node,
+    networkNode,
+    CrossSpawnSpawner.node,
+    Format.node,
+    Truncate.node,
+    RuntimeFlags.node,
+    Database.node,
+    Command.node,
+    Git.node,
+    busNode,
+    Auth.node,
+    SessionStatus.node,
+    notebookNode,
+    repositoryCacheNode,
+    KiloSessions.node, // kilocode_change - satisfy the notify_user tool's KiloSessions dependency in the runtime node graph
+  ]),
+)
 // kilocode_change end
 
 export * as ToolRegistry from "./registry"

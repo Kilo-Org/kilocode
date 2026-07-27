@@ -1,13 +1,7 @@
-import { appendFile, chmod } from "fs/promises"
-import path from "path"
 import z from "zod"
 import { MemoryFs } from "./fs"
-import { MemoryPaths } from "./paths"
-import { MemoryRedact } from "../capture/redact"
 
 export namespace MemoryAudit {
-  const MAX_LOG = 128_000
-  const LOG_MARGIN = 16_000
   const Log = z
     .object({
       kind: z.literal("log"),
@@ -49,45 +43,10 @@ export namespace MemoryAudit {
         }[]
       }
 
-  function cap(input: string) {
-    if (Buffer.byteLength(input) <= MAX_LOG) return input
-    const lines = input.split("\n").reverse()
-    const kept: string[] = []
-    lines.reduce((sum, line) => {
-      if (sum >= MAX_LOG) return sum
-      kept.push(line)
-      return sum + Buffer.byteLength(`${line}\n`)
-    }, 0)
-    return kept.reverse().join("\n")
-  }
-
-  async function line(file: string, text: string) {
-    await MemoryFs.dir(path.dirname(file))
-    const info = await MemoryFs.guard(file)
-    if (info && !info.isFile()) throw new Error(`memory path is not a file: ${file}`)
-    await appendFile(file, text, { mode: MemoryFs.FILE })
-    await chmod(file, MemoryFs.FILE).catch((error: unknown) => {
-      if (process.platform === "win32") return
-      throw error
-    })
-    const next = await MemoryFs.guard(file)
-    if (!next?.isFile()) throw new Error(`memory path is not a file: ${file}`)
-    if (next.size <= MAX_LOG + LOG_MARGIN) return
-    await MemoryFs.write(file, cap((await MemoryFs.read(file)) ?? ""))
-  }
-
-  async function audit(root: string, input: Decision) {
-    const data = MemoryRedact.value(input) as Decision
-    await MemoryFs.queue(root, () =>
-      line(
-        MemoryPaths.files(root).decisions,
-        `${JSON.stringify({
-          v: 1,
-          time: new Date().toISOString(),
-          ...data,
-        })}\n`,
-      ),
-    )
+  function audit(root: string, input: Decision) {
+    void root
+    void input
+    return Promise.resolve()
   }
 
   export async function append(root: string, text: string) {
@@ -99,12 +58,8 @@ export namespace MemoryAudit {
   }
 
   export async function readDecisions(root: string) {
-    return MemoryFs.read(MemoryPaths.files(root).decisions)
-      .then((text) => text ?? "")
-      .catch((error: unknown) => {
-        if (MemoryFs.miss(error)) return ""
-        throw error
-      })
+    void root
+    return ""
   }
 
   function record(input: string) {

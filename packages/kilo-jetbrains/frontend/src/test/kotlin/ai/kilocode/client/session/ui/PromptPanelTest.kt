@@ -44,7 +44,6 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.ex.ActionUtil
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.editor.DefaultLanguageHighlighterColors
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.EditorFactory
@@ -56,7 +55,6 @@ import com.intellij.openapi.editor.colors.EditorColorsManager
 import com.intellij.openapi.editor.colors.EditorColorsScheme
 import com.intellij.openapi.editor.ex.EditorEx
 import com.intellij.openapi.editor.markup.TextAttributes
-import com.intellij.openapi.fileEditor.TextEditor
 import com.intellij.openapi.ide.CopyPasteManager
 import com.intellij.openapi.fileTypes.PlainTextFileType
 import com.intellij.openapi.fileTypes.PlainTextLanguage
@@ -455,28 +453,20 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(spans.contains("@unknown" to CodeInsightColors.WRONG_REFERENCES_ATTRIBUTES))
     }
 
-    fun `test prompt editor exposes file editor for undo redo`() {
+    fun `test prompt editor does not expose file editor for platform undo`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
         realize(panel, 260, 400)
         val editor = field.getEditor(false)!!
-        WriteCommandAction.runWriteCommandAction(project) {
-            editor.document.insertString(0, "hello")
-        }
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
 
-        assertNotNull(file)
-        assertSame(editor.document, file.editor.document)
-        UndoManager.getInstance(project).undo(file)
-        assertEquals("", editor.document.text)
-        UndoManager.getInstance(project).redo(file)
-        assertEquals("hello", editor.document.text)
+        assertNull(sink.file)
+        assertSame(true, editor.getUserData(EditorTextField.SUPPLEMENTARY_KEY))
     }
 
-    fun `test prompt editor platform undo redo actions target prompt editor`() {
+    fun `test prompt editor platform undo redo actions do not throw`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> }, completion = completion())
         val field = panel.defaultFocusedComponent as EditorTextField
 
@@ -488,13 +478,10 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertSame(true, editor.contentComponent.getClientProperty(UndoRedoAction.IGNORE_SWING_UNDO_MANAGER))
         val sink = TestSink()
         (field as UiDataProvider).uiDataSnapshot(sink)
-        val file = sink.file as? TextEditor ?: error("missing file editor")
-        assertSame(editor.document, file.editor.document)
-        assertTrue("prompt file editor should have undo", UndoManager.getInstance(project).isUndoAvailable(file))
+        assertNull(sink.file)
 
-        invokeAction(IdeActions.ACTION_UNDO, editor.contentComponent, file)
-        assertEquals("", editor.document.text)
-        invokeAction(IdeActions.ACTION_REDO, editor.contentComponent, file)
+        updatePlatformAction(IdeActions.ACTION_UNDO, editor)
+        updatePlatformAction(IdeActions.ACTION_REDO, editor)
         assertEquals("hello", editor.document.text)
     }
 
@@ -1364,21 +1351,18 @@ class PromptPanelTest : BasePlatformTestCase() {
         UIUtil.dispatchAllInvocationEvents()
     }
 
-    private fun invokeAction(id: String, component: java.awt.Component, file: TextEditor) {
+    private fun updatePlatformAction(id: String, editor: Editor) {
         val action = ActionManager.getInstance().getAction(id) ?: error("missing action $id")
         val ctx = DataContext { data ->
             when (data) {
                 CommonDataKeys.PROJECT.name -> project
-                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> component
-                PlatformCoreDataKeys.FILE_EDITOR.name -> file
+                CommonDataKeys.EDITOR.name -> editor
+                PlatformCoreDataKeys.CONTEXT_COMPONENT.name -> editor.contentComponent
                 else -> null
             }
         }
         val event = AnActionEvent.createEvent(action, ctx, null, ActionPlaces.UNKNOWN, ActionUiKind.NONE, null)
         ActionUtil.updateAction(action, event)
-        assertTrue("action $id should be enabled", event.presentation.isEnabled)
-        ActionUtil.performAction(action, event)
-        UIUtil.dispatchAllInvocationEvents()
     }
 
     private fun waitForLookupItems(editor: Editor): List<String> {

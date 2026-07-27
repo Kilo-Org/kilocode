@@ -194,7 +194,7 @@ export async function runWithMessageConfirmation<T>(
   }
 }
 
-export function sessionToWebview(session: Session) {
+export function sessionToWebview(session: Pick<Session, "id" | "parentID" | "title" | "time" | "summary" | "revert">) {
   return {
     id: session.id,
     parentID: session.parentID ?? null,

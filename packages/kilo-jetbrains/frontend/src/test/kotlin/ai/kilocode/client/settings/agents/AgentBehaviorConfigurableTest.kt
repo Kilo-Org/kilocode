@@ -1,5 +1,6 @@
 package ai.kilocode.client.settings.agents
 
+import ai.kilocode.client.settings.rules.RulesConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.options.SearchableConfigurable
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -18,6 +19,8 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
     fun `test child ids match xml registration`() {
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.agents", AgentsConfigurable.ID)
         assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.mcp", McpConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.skills", SkillsConfigurable.ID)
+        assertEquals("ai.kilocode.jetbrains.settings.agentBehavior.rules", RulesConfigurable.ID)
     }
 
     fun `test createComponent contains child links in order`() {
@@ -26,7 +29,7 @@ class AgentBehaviorConfigurableTest : BasePlatformTestCase() {
         edt {
             val panel = cfg.createComponent()
             val labels = links(panel as Container).map { it.text }
-            assertEquals(listOf("Agents", "MCP Servers"), labels)
+            assertEquals(listOf("Agents", "MCP Servers", "Skills", "Rules"), labels)
         }
     }
 

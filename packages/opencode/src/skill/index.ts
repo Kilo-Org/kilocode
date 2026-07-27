@@ -218,7 +218,7 @@ const discoverSkills = Effect.fnUntraced(function* (
 
     // kilocode_change start
     const local = yield* fsys
-      .up({ targets: externalDirs, start: directory, stop: worktree })
+      .up({ targets: externalDirs, start: directory, stop: projectRoot })
       .pipe(Effect.catch(() => Effect.succeed([] as string[])))
     const fallbacks = yield* primaryPaths(directory, worktree, externalDirs) // kilocode_change
     const upDirs = [...fallbacks, ...local]

@@ -89,6 +89,66 @@ class SettingsDraftStateTest {
     }
 
     @Test
+    fun `stale external base after fallback completion does not revert applied target`() {
+        val state = SettingsDraftState("old")
+        state.update { "new" }
+        val token = state.start()!!
+        state.complete(token, "old")
+
+        state.accept("old")
+
+        assertEquals("new", state.baseline)
+        assertEquals("new", state.draft)
+        assertFalse(state.modified())
+    }
+
+    @Test
+    fun `stale external base after fresh completion does not revert applied target`() {
+        val state = SettingsDraftState("old")
+        state.update { "new" }
+        val token = state.start()!!
+        state.complete(token, "new")
+
+        state.accept("old")
+
+        assertEquals("new", state.baseline)
+        assertEquals("new", state.draft)
+        assertFalse(state.modified())
+    }
+
+    @Test
+    fun `fresh external base after ignored stale update is accepted`() {
+        val state = SettingsDraftState("old")
+        state.update { "new" }
+        val token = state.start()!!
+        state.complete(token, "old")
+        state.accept("old")
+
+        state.accept("other")
+
+        assertEquals("other", state.baseline)
+        assertEquals("other", state.draft)
+        assertFalse(state.modified())
+    }
+
+    @Test
+    fun `older stale external base after multiple saves is ignored`() {
+        val state = SettingsDraftState("old")
+        state.update { "new" }
+        val first = state.start()!!
+        state.complete(first, "new")
+        state.update { "other" }
+        val second = state.start()!!
+        state.complete(second, "other")
+
+        state.accept("old")
+
+        assertEquals("other", state.baseline)
+        assertEquals("other", state.draft)
+        assertFalse(state.modified())
+    }
+
+    @Test
     fun `failed save keeps draft dirty and restores previous base`() {
         val state = SettingsDraftState("old")
         state.update { "new" }

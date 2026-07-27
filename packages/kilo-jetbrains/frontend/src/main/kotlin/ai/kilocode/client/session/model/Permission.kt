@@ -4,6 +4,8 @@ enum class PermissionRequestState { PENDING, RESPONDING, RESOLVED, ERROR }
 
 enum class PermissionReply { ONCE, ALWAYS, REJECT }
 
+enum class PermissionRuleDecision { APPROVED, DENIED, PENDING }
+
 data class Permission(
     val id: String,
     val sessionId: String,
@@ -19,11 +21,18 @@ data class Permission(
 data class PermissionMeta(
     val command: String? = null,
     val rules: List<String> = emptyList(),
+    val ruleDecisions: List<PermissionRuleCandidate> = emptyList(),
     val diff: String? = null,
     val filePath: String? = null,
     val fileDiff: PermissionFileDiff? = null,
     val fileDiffs: List<PermissionFileDiff> = emptyList(),
     val raw: Map<String, String> = emptyMap(),
+)
+
+data class PermissionRuleCandidate(
+    val pattern: String,
+    val decision: PermissionRuleDecision = PermissionRuleDecision.PENDING,
+    val defaultDecision: PermissionRuleDecision = decision,
 )
 
 data class PermissionFileDiff(
