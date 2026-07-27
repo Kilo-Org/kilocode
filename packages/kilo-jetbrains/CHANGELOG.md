@@ -102,6 +102,16 @@
 
 ## [Unreleased]
 
+## [7.0.12-rc.2] - 2026-07-27
+
+### Added
+
+### Fixed
+
+- Fix the GitHub-hosted bundled JetBrains plugin build so signing uses certificate and private-key files during verification.
+
+### Changed
+
 ## [7.0.12-rc.1] - 2026-07-27
 
 ### Added
