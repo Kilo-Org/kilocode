@@ -225,7 +225,11 @@ export namespace KiloSessions {
 
   // Process-level once-guard: overlapping shutdown paths must not double-POST.
   // Do not call from per-directory instance finalizers — wrong granularity.
-  const drainIngest = IngestDrain.create(() => ingest.drain())
+  // Never-reject: serve/worker await this unguarded before dispose/stop.
+  const drainIngest = IngestDrain.create(
+    () => ingest.drain(),
+    (err) => log.warn("ingest drain failed", { err }),
+  )
 
   export async function drainIngestForShutdown() {
     await drainIngest()

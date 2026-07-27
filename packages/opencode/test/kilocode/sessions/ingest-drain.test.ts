@@ -37,4 +37,25 @@ describe("IngestDrain once-guard", () => {
     await drain()
     expect(calls).toBe(1)
   })
+
+  test("underlying run() rejection resolves, logs once, and does not retry", async () => {
+    let calls = 0
+    const errors: unknown[] = []
+    const drain = IngestDrain.create(
+      async () => {
+        calls += 1
+        throw new Error("boom")
+      },
+      (err) => {
+        errors.push(err)
+      },
+    )
+
+    await expect(drain()).resolves.toBeUndefined()
+    await expect(drain()).resolves.toBeUndefined()
+    expect(calls).toBe(1)
+    expect(errors).toHaveLength(1)
+    expect(errors[0]).toBeInstanceOf(Error)
+    expect((errors[0] as Error).message).toBe("boom")
+  })
 })
