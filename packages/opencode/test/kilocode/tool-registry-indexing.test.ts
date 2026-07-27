@@ -355,7 +355,6 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
-        "chart",
         "background_process",
         "interactive_terminal",
         "notify_user",
@@ -367,7 +366,6 @@ describe("kilocode tool registry indexing", () => {
           "kilo_memory_recall",
           "kilo_memory_save",
           "recall",
-          "chart",
           "background_process",
           "interactive_terminal",
           "notify_user",
@@ -384,7 +382,6 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
-        "chart",
         "background_process",
         "interactive_terminal",
         "notify_user",
@@ -441,7 +438,6 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
-        "chart",
         "notify_user",
       ])
 
@@ -451,7 +447,6 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
-        "chart",
         "notify_user",
       ])
 
@@ -461,7 +456,6 @@ describe("kilocode tool registry indexing", () => {
         "kilo_memory_recall",
         "kilo_memory_save",
         "recall",
-        "chart",
         "notify_user",
       ])
     } finally {
