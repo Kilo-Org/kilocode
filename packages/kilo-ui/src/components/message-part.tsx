@@ -31,7 +31,7 @@ import { useData } from "../context"
 import { useFileComponent } from "../context/file"
 import { useDialog } from "../context/dialog"
 import { type UiI18n, useI18n } from "../context/i18n"
-import { GenericTool, BasicTool } from "./basic-tool"
+import { BasicTool, useToolApprovalLine } from "./basic-tool"
 import { Accordion } from "./accordion"
 import { StickyAccordionHeader } from "./sticky-accordion-header"
 import { Card } from "./card"
@@ -1311,7 +1311,14 @@ PART_MAPPING["tool"] = function ToolPartDisplay(props) {
             }}
           </Match>
           <Match when={true}>
-            <ToolApprovalProvider value={() => resolveToolApproval(meta(), i18n.t as (k: string, p?: Record<string, string | number | boolean>) => string)}>
+            <ToolApprovalProvider
+              value={() =>
+                resolveToolApproval(
+                  meta(),
+                  i18n.t as (k: string, p?: Record<string, string | number | boolean>) => string,
+                )
+              }
+            >
               <Dynamic
                 component={render()}
                 input={input()}
@@ -1497,9 +1504,7 @@ PART_MAPPING["text"] = function TextPartDisplay(props) {
                 />
               </Tooltip>
             </Show>
-            <Show when={props.throughput}>
-              {(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}
-            </Show>
+            <Show when={props.throughput}>{(el) => <span data-slot="assistant-throughput-inline">{el()}</span>}</Show>
           </div>
         </Show>
         <Show when={summary()}>
@@ -2172,6 +2177,8 @@ ToolRegistry.register({
       }, 50)
     }
 
+    const approvalLine = useToolApprovalLine()
+
     const trigger = () => (
       <div data-slot="basic-tool-tool-info-structured">
         <div data-slot="basic-tool-tool-info-main">
@@ -2190,11 +2197,22 @@ ToolRegistry.register({
               </Match>
             </Switch>
           </Show>
+          {/* Keep the auto-approve line attached to the subagent card instead of forcing a collapsible body. */}
+          {approvalLine()}
         </div>
       </div>
     )
 
-    return <BasicTool hideDetails icon="task" status={props.status} trigger={trigger()} animated />
+    return (
+      <BasicTool
+        hideDetails
+        approvalPlacement="hidden"
+        icon="task"
+        status={props.status}
+        trigger={trigger()}
+        animated
+      />
+    )
   },
 })
 
@@ -2932,6 +2950,7 @@ ToolRegistry.register({
       <BasicTool
         {...props}
         defaultOpen
+        approvalPlacement="hidden"
         icon="checklist"
         trigger={
           <ToolTriggerRow

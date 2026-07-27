@@ -652,6 +652,19 @@ class KiloCliDataParserTest {
         }
 
         @Test
+        fun `parseChatEvent - session queue changed`() {
+            val data = globalEvent("""
+                "type": "session.queue.changed",
+                "properties": { "sessionID": "ses_1", "queued": ["msg2", "msg3"] }
+            """)
+            val result = KiloCliDataParser.parseChatEvent("session.queue.changed", data)
+            assertNotNull(result)
+            assertTrue(result is ChatEventDto.SessionQueueChanged)
+            assertEquals("ses_1", result.sessionID)
+            assertEquals(listOf("msg2", "msg3"), result.queued)
+        }
+
+        @Test
         fun `parseChatEvent - session updated`() {
             val data = globalEvent("""
                 "type": "session.updated",
