@@ -24,6 +24,11 @@ function record(data: unknown, event?: string) {
   return `${name}data: ${JSON.stringify(data)}`
 }
 
+function fetcher(records: string[], pkg: string, type?: string) {
+  const run = async () => filterSSE(response(records, type), pkg)
+  return Object.assign(run, { preconnect: fetch.preconnect })
+}
+
 describe("provider SSE filtering", () => {
   test("ignores named metadata in OpenAI-compatible streams", async () => {
     const records = [
@@ -52,7 +57,7 @@ describe("provider SSE filtering", () => {
       name: "test",
       baseURL: "https://example.com/v1",
       apiKey: "test",
-      fetch: async () => filterSSE(response(records, "Text/Event-Stream; Charset=UTF-8"), "@ai-sdk/openai-compatible"),
+      fetch: fetcher(records, "@ai-sdk/openai-compatible", "Text/Event-Stream; Charset=UTF-8"),
     })
 
     const result = streamText({ model: provider("test-model"), prompt: "Hi" })
@@ -101,7 +106,7 @@ describe("provider SSE filtering", () => {
     const provider = createAnthropic({
       baseURL: "https://example.com/v1",
       apiKey: "test",
-      fetch: async () => filterSSE(response(records), "@ai-sdk/anthropic"),
+      fetch: fetcher(records, "@ai-sdk/anthropic"),
     })
 
     const result = streamText({ model: provider("test-model"), prompt: "Hi" })
@@ -115,5 +120,10 @@ describe("provider SSE filtering", () => {
     expect(filterSSE(res, "@ai-sdk/openai-compatible")).toBe(res)
     expect(filterSSE(res, "@ai-sdk/anthropic")).toBe(res)
     expect(filterSSE(stream, "@ai-sdk/openai")).toBe(stream)
+  })
+
+  test("does not add empty event or id fields", async () => {
+    const res = filterSSE(response([record({ ok: true })]), "@ai-sdk/openai-compatible")
+    expect(await res.text()).toBe('data: {"ok":true}\n\n')
   })
 })

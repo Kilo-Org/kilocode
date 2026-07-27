@@ -285,8 +285,8 @@ const ANTHROPIC_EVENTS = new Set([
 const OPENAI_EVENTS = new Set<string>()
 
 function encodeSSE(event: EventSourceMessage) {
-  const name = event.event === undefined ? "" : `event: ${event.event}\n`
-  const id = event.id === undefined ? "" : `id: ${event.id}\n`
+  const name = event.event ? `event: ${event.event}\n` : ""
+  const id = event.id ? `id: ${event.id}\n` : ""
   const data = event.data
     .split("\n")
     .map((line) => `data: ${line}\n`)
