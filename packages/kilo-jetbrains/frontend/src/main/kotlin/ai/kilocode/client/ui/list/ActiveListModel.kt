@@ -45,8 +45,9 @@ internal data class ActiveListCell(
 /**
  * A row in an [ActiveList]. Carries the display contract shared by settings pages, the worktree
  * list, and the session history stack: a leading icon, a bold title with an inline [note], a
- * secondary [description] line, inline [badges], and action [cells]. Action cells are shown only
- * for the active focused selection unless [ActiveListCell.alwaysVisible] is true.
+ * secondary [description] line, inline [badges], optional right-aligned [trailing] text, and
+ * action [cells]. Action cells are shown only for the active focused selection unless
+ * [ActiveListCell.alwaysVisible] is true.
  */
 internal interface ActiveListItem {
     val key: String
@@ -59,6 +60,8 @@ internal interface ActiveListItem {
     val icon: Icon? get() = null
     val section: String? get() = null
     val badges: List<ActiveListBadge> get() = emptyList()
+    /** Right-aligned secondary text, such as a relative timestamp. */
+    val trailing: String? get() = null
     val cells: List<ActiveListCell> get() = emptyList()
     val disabled: Boolean get() = false
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */

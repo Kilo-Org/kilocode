@@ -2,8 +2,10 @@ package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.session.ui.PickerRow
+import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListActionCell
+import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListActive
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
@@ -157,6 +159,31 @@ class SettingsListViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test narrow row squeezes title but keeps tags full width`() {
+        edt {
+            val row = object : ActiveListItem {
+                override val key = "with"
+                override val title = "A very long session title that cannot fit in a narrow row"
+                override val badges = listOf(ActiveListBadge("Running"))
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+            renderer.setSize(160, renderer.preferredSize.height)
+            layout(renderer)
+
+            val badge = components(renderer).filterIsInstance<JBLabel>()
+                .single { (it.icon as? FilledBadgeIcon)?.text == "Running" }
+            val title = components(renderer).filterIsInstance<SimpleColoredComponent>().single()
+
+            assertTrue(badge.isVisible)
+            assertTrue(badge.width >= badge.icon.iconWidth)
+            assertTrue(title.width < title.preferredSize.width)
+        }
+    }
+
     fun `test renderer centers leading icon vertically in the row`() {
         edt {
             val row = object : ActiveListItem {
@@ -176,6 +203,33 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val icon = components(renderer).filterIsInstance<JBLabel>().single { it.icon === AllIcons.Nodes.Plugin }
 
             assertTrue(kotlin.math.abs(centerY(renderer, icon) - renderer.height / 2) <= 1)
+        }
+    }
+
+    fun `test renderer shows optional trailing text`() {
+        edt {
+            val with = object : ActiveListItem {
+                override val key = "with"
+                override val title = "Alpha"
+                override val trailing = "3h ago"
+            }
+            val without = object : ActiveListItem {
+                override val key = "without"
+                override val title = "Beta"
+            }
+            val model = CollectionListModel<ActiveListItem>(listOf(with, without))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, with, 0, true, true)
+
+            val trail = components(renderer).filterIsInstance<JBLabel>().single { it.text == "3h ago" }
+            assertTrue(trail.isVisible)
+            assertEquals(SwingConstants.RIGHT, trail.horizontalAlignment)
+
+            renderer.getListCellRendererComponent(list, without, 1, true, true)
+
+            assertTrue(components(renderer).filterIsInstance<JBLabel>().none { it.text == "3h ago" && it.isVisible })
         }
     }
 

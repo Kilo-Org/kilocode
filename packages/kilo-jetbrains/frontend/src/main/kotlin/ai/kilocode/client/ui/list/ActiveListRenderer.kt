@@ -35,23 +35,31 @@ internal class ActiveListRenderer(
     private val mark = icon.align(HAlign.CENTER, VAlign.CENTER)
     private val title = SimpleColoredComponent()
     private val badges = Stack.horizontal()
-    private val header = Stack.horizontal(UiStyle.Gap.xs()).next(title).next(badges)
+    // Title in CENTER clips when the row is narrow; trailing tags in EAST keep their full
+    // preferred width. A squeezed row sacrifices the title text but never drops the tags.
+    private val header = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
+        add(title, BorderLayout.CENTER)
+        add(badges, BorderLayout.EAST)
+    }
     private val desc = JBLabel()
     private val text = Stack.vertical().next(header).next(desc)
     private val textPane = text.align(HAlign.TRACK, VAlign.CENTER)
+    private val trail = JBLabel().apply { horizontalAlignment = SwingConstants.RIGHT }
+    private val trailPane = trail.align(HAlign.RIGHT, VAlign.CENTER)
     private val cells = Stack.horizontal(activeListCellGap())
     private val cellPane = cells.align(HAlign.RIGHT, VAlign.CENTER)
+    private val actions = Stack.horizontal(UiStyle.Gap.md()).next(trailPane).next(cellPane)
     private val row = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(mark, BorderLayout.WEST)
         add(textPane, BorderLayout.CENTER)
-        add(cellPane, BorderLayout.EAST)
+        add(actions, BorderLayout.EAST)
     }
     private val wrap = PickerRow()
 
     init {
         isOpaque = true
         top.isOpaque = true
-        UiStyle.Components.transparent(row, mark, icon, title, badges, header, text, textPane, desc, cells, cellPane)
+        UiStyle.Components.transparent(row, mark, icon, title, badges, header, text, textPane, desc, trail, trailPane, cells, cellPane, actions)
         row.border = JBUI.Borders.empty(
             UiStyle.Gap.md(),
             0,
@@ -100,11 +108,16 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty()
         }
         desc.foreground = weak
+        val end = value.trailing.orEmpty()
+        trail.text = end
+        trail.isVisible = end.isNotBlank()
+        trail.foreground = weak
 
         // In-place action buttons follow the selection highlight: only when the selection is
         // visible (list focused, or an owned popup is active). An unfocused list hides them.
         syncCells(value, active && list.isEnabled, list.isEnabled)
         cellPane.isVisible = cells.isVisible
+        actions.isVisible = trail.isVisible || cellPane.isVisible
         top.invalidate()
         return this
     }

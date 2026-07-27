@@ -49,7 +49,7 @@ class AgentManagerPanel(
     private val provider = WorktreeDeleteProvider()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
-        placeholder = KiloBundle.message("worktree.search.placeholder"),
+        showSearch = false,
         onCell = { key, id ->
             if (id != DELETE_CELL) return@ActiveList
             val item = item(key) ?: return@ActiveList

@@ -1,122 +1,105 @@
-# Plan: IntelliJ-style open/focus + inactive selection for the worktree & session lists
+# Plan: Worktree session rows — full visual parity with History rows
 
 ## Goal
 
-Make the Agent Manager **worktree list** and the **session list inside a worktree** behave like the IntelliJ Project view:
+Make the session list inside a worktree editor (`WorktreeSessionEditorPanel`) render with **full visual parity** to the History list rows:
 
-- **Single click** → open the target but **do not** move focus (focus stays on the list).
-- **Double click** → open **and** move focus to the editor / session.
-- **Enter** → open; focus is decided by the IntelliJ advanced-settings flag
-  `edit.source.on.enter.key.request.focus.in.editor` (platform default `true`), exactly like the platform's `EditSourceOnEnterKeyHandler`.
-- **F4** → open **and** move focus (mirrors `EditSource` = `BaseNavigateToSourceAction(true)`).
-- A **selected-but-unfocused** row draws the standard platform **inactive (muted) selection background** (like the Project view), using platform colors.
-- When the list is **not the focused/active selection**, **non-permanent action cells** (e.g. delete) are **hidden**. Permanent cells (`alwaysVisible`) stay. This must live in the shared base classes, not be duplicated per list.
+- Same activity **tags** (`RUNNING`, `PLAN`, `QUESTION`, `PERMISSION`, `LOGIN_REQUIRED`) — identical chip text, style, and glyph.
+- Same relative **time ago** on the right (e.g. "3h ago").
+- Same **date section headers** (Today / Yesterday / This week / …).
+- **Title only** — no leading branch icon, no directory subtitle.
+- Keep the recently added open/focus/selection behavior and the delete-on-focused-selection cell (do **not** revert the "no delete icon when unfocused" behavior — that was an intentional divergence from History requested earlier).
+
+Achieve this by **reusing shared helpers** (`SessionActivityKind`, `HistoryTime`, `LocalHistoryItem`) plus one small additive extension to the shared `ActiveList` renderer (a trailing text column). Do **not** duplicate `HistoryRenderer`, and do **not** move the worktree session list onto the History `HistoryModel`/`HistoryRenderer` stack (that would lose the shared `ActiveList` open/focus behavior and add duplication).
 
 ## Scope / boundaries
 
-- All edits are under `packages/kilo-jetbrains/frontend/src/main/kotlin/ai/kilocode/...` and its tests. This is Kilo-owned code (no upstream opencode presence), so **no `kilocode_change` markers are required**.
-- Do **not** change the main sidebar session behavior (it keeps focus-on-open via the default `focus = true`).
-- Do **not** introduce Kotlin UI DSL / Compose / JCEF. Use existing platform APIs and `UiStyle`.
+- Kilo-owned code under `packages/kilo-jetbrains/frontend/...`; no upstream opencode presence → **no `kilocode_change` markers**.
+- Do not change History behavior. Do not change the Agent Manager **worktree** list (top-level) rows.
+- The shared `ActiveList` renderer change must be additive and default-off so settings/history-adjacent lists are visually unchanged.
 
 ## Key findings (verified in code)
 
-- Both lists use the shared `ActiveList` component:
-  - Worktree list: `frontend/.../agentManager/AgentManagerPanel.kt` (`onClick = open`, no `onActivate`).
-  - Session list: `frontend/.../agentManager/worktree/WorktreeSessionEditorPanel.kt` (`onClick = open`).
-- Shared list internals:
-  - `frontend/.../ui/list/ActiveList.kt` (public wrapper, ctor `onClick`/`onActivate`/`onCell`).
-  - `frontend/.../ui/list/ActiveListView.kt` (`JBList` host: mouse + Enter handling in `init`; `primary()`/`activate()`).
-  - `frontend/.../ui/list/ActiveListRenderer.kt` (renderer; computes `active`, calls `wrap.update(...)` and `syncCells(...)`).
-  - `frontend/.../session/ui/PickerRow.kt` (`SelectablePanel`; `update(list, selected, focused)` already sets `selectionColor = if (selected) UIUtil.getListBackground(true, focused) else null`).
-- Renderer today (`ActiveListRenderer.getListCellRendererComponent`):
-  - `active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)`
-  - `wrap.update(list, active, active || focused)` → **no selection background at all when unfocused** (the bug behind the "no highlight" complaint).
-  - `syncCells(value, active && list.isEnabled, list.isEnabled)` → non-permanent cells already hidden when unfocused (requirement already satisfied; must be preserved).
-- Existing tests already lock in the cell-hiding contract: `SettingsListViewTest` → `test in-place action cells are hidden on unfocused selected row`, `test always visible action cells stay on unfocused row`, `test active popup paints selected row as active without focus`, `test unfocused selected row is not painted as active` (asserts `desc.foreground == UiStyle.Colors.weak()`).
-- Session open focus path: `WorktreeSessionEditorPanel.open` → `WorktreeSessionEditorManager.openSession(ref)` → `SessionHost.openSession(ref)` → `show(ui)` → **always** `focus(ui.defaultFocusedComponent)`.
-- Worktree open focus path: `AgentManagerPanel.open` → `KiloVfsManager.open(kind, params, focus = true)` (already supports a `focus` param → `FileEditorManager.openFile(file, focus)`).
-- IntelliJ references (from `$INTELLIJ_REPO`):
-  - `EditSourceAction` extends `BaseNavigateToSourceAction(true)`; keymap `$default.xml` binds `EditSource` → `F4` (focus = true).
-  - `EditSourceOnEnterKeyHandler` reads `AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor")`; `PlatformExtensions.xml` registers it with `default="true"`.
+- History rows: `HistoryRenderer` (`session/history/HistoryListRenderer.kt`) renders `title` + `BadgeLabel(FilledBadgeIcon(kind.label(), kind.style()))` + relative `time` + delete-on-selection, with `GroupHeaderSeparator` date sections. Time color = `if (selected) fg else UIUtil.getContextHelpForeground()`.
+- Worktree session rows: shared `ActiveList` with `SessionRow: ActiveListItem` (`agentManager/worktree/WorktreeSessionEditorPanel.kt`) currently sets `icon = WorktreeIcons.branch`, `description = session.directory`, a delete cell, and no badges/time/section.
+- Shared `ActiveList` already renders `ActiveListItem.badges` via the **same** `FilledBadgeIcon` History uses (`ui/list/ActiveListRenderer.kt` `syncBadges`), and already supports `ActiveListItem.section` headers (`activeListSectionTitle`). It has **no trailing time column**.
+- Reusable, no duplication needed:
+  - `SessionActivityKind.label()` / `.style()` (`session/SessionActivityKind.kt`) — identical chips.
+  - `HistoryTime.relative/section/title/sorted` (`session/history/HistoryTime.kt`) — `internal`, visible across the frontend module.
+  - `LocalHistoryItem(session)` (`session/history/HistoryItem.kt`) — public wrapper turning a `SessionDto` into a `HistoryItem`, so `HistoryTime.*` works directly on worktree sessions.
+- `UiStyle.Colors.weak() == UIUtil.getContextHelpForeground()`, so the shared renderer's existing `weak` color matches History's time color exactly.
+- Activity plumbing already exists: `WorktreeSessionEditorManager` (a `SessionHost`) exposes `activity(): Map<String, SessionActivityKind>` (base `KiloSessionService` RUNNING + live opened-UI kinds), and `activityChanged()` → `onListChanged` → panel `sync()`. Rebuilding rows in `sync()` refreshes tags/time live.
 
 ## Decisions
 
-1. **Keyboard mapping matches IntelliJ exactly.** Enter uses the advanced-settings flag `edit.source.on.enter.key.request.focus.in.editor` (default true) to decide focus. F4 always focuses. (Confirmed with user.)
-2. **Add an explicit navigation handler** `onOpen: ((ActiveListItem, focus: Boolean) -> Unit)?` to `ActiveList`/`ActiveListView`, distinct from the settings "primary/cell" model. When `onOpen` is set it drives click / double-click / Enter / F4. When it's null (settings lists), current behavior is unchanged. This avoids overloading `primary()` (which for the worktree row would wrongly fall through to the delete cell).
-3. **Inactive selection + cell gating are fixed once in the shared renderer** (`ActiveListRenderer` + `PickerRow`), benefiting every `ActiveList` consumer (settings, history, worktree, session).
-4. No `SessionManager` interface signature churn: add the focus-aware open as a new method on `SessionHost` (Kilo-owned); the existing 1-arg `openSession(ref)` delegates with `focus = true`.
+1. **Full parity via `ActiveList` config + one additive renderer field** (chosen by user). Reuse `SessionActivityKind` for tags and `HistoryTime` (via `LocalHistoryItem`) for time/section/sort. Add a reusable `trailing` text column to `ActiveList`.
+2. **Do not unify renderers.** Keep two renderers; parity comes from shared data helpers + identical `FilledBadgeIcon`, so chips/time strings are identical without duplicating rendering logic.
+3. **Keep delete-on-focused-selection** (ActiveList behavior). This intentionally differs from History (which shows delete on any selection) per the earlier requirement.
 
 ## Implementation tasks (ordered)
 
-### 1. Shared renderer: paint inactive selection; keep cells focus-gated
-File: `frontend/src/main/kotlin/ai/kilocode/client/ui/list/ActiveListRenderer.kt`
-- In `getListCellRendererComponent`, keep computing `active` as today.
-- Change the selection painting so the background is drawn whenever the row is `selected`, muted when not active:
-  - Replace `wrap.update(list, active, active || focused)` with `wrap.update(list, selected, active)`.
-    - `PickerRow.update(list, selected=true, focused=false)` → `UIUtil.getListBackground(true, false)` (muted).
-    - `PickerRow.update(list, selected=true, focused=true)` → `UIUtil.getListBackground(true, true)` (bright).
-- Leave `fg`, `weak`, and `syncCells(value, active && list.isEnabled, list.isEnabled)` unchanged so:
-  - description foreground stays `UiStyle.Colors.weak()` on an unfocused selected row (keeps `test unfocused selected row is not painted as active` green), and
-  - non-permanent action cells stay hidden unless the row is the active focused selection (requirement #5, already covered by `SettingsListViewTest`).
-- No change needed in `PickerRow.kt` (it already supports muted vs bright).
+### 1. Shared: add a reusable trailing text column to `ActiveList`
+Files: `ui/list/ActiveListModel.kt`, `ui/list/ActiveListRenderer.kt`
+- `ActiveListModel.kt`: add `val trailing: String? get() = null` to the `ActiveListItem` interface (right-aligned secondary text such as relative time). Document it.
+- `ActiveListRenderer.kt`:
+  - Add a right-aligned `JBLabel` (call it `trailing`) placed in the EAST region **before** the action cells. Simplest: wrap the existing `cellPane` and the new trailing label in a horizontal `Stack` (e.g. `Stack.horizontal(UiStyle.Gap.md()).next(trailingPane).next(cellPane)`) and put that in `row` `BorderLayout.EAST`; register both with `UiStyle.Components.transparent(...)`.
+  - In `getListCellRendererComponent`: set `trailing.text = value.trailing.orEmpty()`, `trailing.isVisible = !value.trailing.isNullOrBlank()`, `trailing.foreground = weak` (matches History; `weak = if (active) fg else UiStyle.Colors.weak()`).
+  - The trailing label is a plain `JBLabel`, not an `ActiveListActionCell`, so it does not affect `activeListCellBounds`/hit-testing.
+  - Default `trailing = null` → hidden → **no visual change** for existing consumers (settings, top-level worktree list).
 
-### 2. Shared list: add focus-aware `onOpen` and IntelliJ key bindings
-Files: `frontend/src/main/kotlin/ai/kilocode/client/ui/list/ActiveList.kt`, `ActiveListView.kt`
-- Add ctor param `onOpen: ((ActiveListItem, focus: Boolean) -> Unit)? = null` to both `ActiveList` and `ActiveListView`; pass through.
-- In `ActiveListView.init` mouse handler (`mouseClicked`):
-  - `clickCount == 1` and not a cell hit (`hit.id == null`): if `onOpen != null` call `onOpen(item, false)`, else fall back to existing `onClick`.
-  - `clickCount == 2` and not a cell hit: if `onOpen != null` call `onOpen(item, true)`, else existing `activate(item)`.
-- Enter key registration (currently `{ primary() }`): route through a small helper — if `onOpen != null`, `list.selectedValue?.let { onOpen(it, enterRequestsFocus()) }`, else `primary()`.
-  - `enterRequestsFocus()` = `AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor")` (`com.intellij.openapi.options.advanced.AdvancedSettings`).
-- Add a new F4 key binding on `list` (`KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0)`, `WHEN_FOCUSED`): if `onOpen != null`, `list.selectedValue?.let { onOpen(it, true) }`; otherwise no-op (leave platform default for non-navigation lists).
-- Keep `mousePressed` requesting focus on the list (it focuses the list, not the editor — correct for single-click "open without focus").
-- Optional cleanup: `onActivate` ctor param is never set by any caller; leave as-is to minimize risk (or remove in a follow-up).
+### 2. Worktree session rows: configure like History
+File: `agentManager/worktree/WorktreeSessionEditorPanel.kt`
+- List `cfg`: set `description = false` (hide the directory subtitle). Keep `ActiveListRowHeight.EQUAL` and `MULTIPLE_INTERVAL_SELECTION`.
+- `SessionRow` (`data class`) changes:
+  - Remove leading icon: drop `override val icon = WorktreeIcons.branch` (leave null → no glyph).
+  - Remove `description` override (directory) — no longer shown.
+  - Add `kind: SessionActivityKind?` field (passed in from `sync()`).
+  - `override val badges` = `listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })`.
+  - `override val trailing` = `HistoryTime.relative(LocalHistoryItem(session))`.
+  - `override val section` = `HistoryTime.title(HistoryTime.section(LocalHistoryItem(session)))`.
+  - Keep `title`, `tooltip`, `search`, and the delete `cells` as-is.
+- `sync()`:
+  - Sort the sessions the same way History does: `HistoryTime.sorted(sessions.map { LocalHistoryItem(it) })` then map back to `SessionDto`, or sort `SessionDto`s by `time.updated` desc with the same tiebreakers.
+  - Read the activity map once: `val kinds = manager.activity()` and build each `SessionRow(session, kinds[session.id])`.
+  - Keep `NewRow` pinned at index 0 when pending/new; `NewRow` keeps defaults (`badges` empty, `trailing`/`section` null) so it renders as a plain top row with no date header.
+- `NewRow`: leave as a plain title row (defaults). Since its `section` is null and the first real row's section differs, the first date header renders directly under the New row (acceptable).
 
-### 3. Thread focus through the session open path
-File: `frontend/src/main/kotlin/ai/kilocode/client/session/SessionHost.kt`
-- Add `show(ui: SessionUi, focus: Boolean = true)`; only call `focus(ui.defaultFocusedComponent)` when `focus`. Update the single existing `show(ui)` call site in `newSession()` to keep `focus = true` (default).
-- Refactor `openSession`: move the current body into a new open method `open fun openSession(ref: SessionRef, focus: Boolean)`, ending in `show(ui, focus)`. Keep `override fun openSession(ref: SessionRef) = openSession(ref, focus = true)` (satisfies `SessionManager`). Internal callers that use the 1-arg keep focus = true.
+### 3. Reuse check (no new logic)
+- Confirm `HistoryTime` (`internal`) and `LocalHistoryItem` (public) are importable from `ai.kilocode.client.agentManager.worktree` (same `frontend` module → yes).
+- Confirm `SessionActivityKind.style()` maps `RUNNING → Alert`, others `Primary` (identical chips to History).
 
-### 4. Session list panel: pass focus from gestures
-File: `frontend/src/main/kotlin/ai/kilocode/client/agentManager/worktree/WorktreeSessionEditorPanel.kt`
-- Change `open(row)` → `open(row, focus: Boolean)`; the NEW row branch still calls `manager.newSession()` (focus = true), otherwise `manager.openSession(SessionRef.Local(item), focus)`.
-- Replace `onClick = { row -> open(row) }` with `onOpen = { row, focus -> open(row, focus) }`.
+## Tests
 
-### 5. Worktree list panel: pass focus from gestures
-File: `frontend/src/main/kotlin/ai/kilocode/client/agentManager/AgentManagerPanel.kt`
-- Change `open(item)` → `open(item, focus: Boolean)` calling `KiloVfsManager.open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus)`.
-- Replace `onClick = { row -> ... open(item) }` with `onOpen = { row, focus -> (row as? WorktreeRow)?.dto?.let { open(it, focus) } }`.
-- Leave the delete-cell `onCell` handler and the `onSelect`/`focusList()` create-flow untouched.
+File: `frontend/src/test/.../agentManager/worktree/WorktreeSessionEditorPanelTest.kt`
+- Have `FakeManager` override `activity()` to return a controlled map (e.g. `mapOf("ses_1" to SessionActivityKind.RUNNING)`); this avoids depending on the project `KiloSessionService` instance.
+- Assert for a rendered `SessionRow`:
+  - `badges` == `listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style()))`.
+  - `icon == null` and `description == null` (no branch glyph, no directory subtitle).
+  - `trailing == HistoryTime.relative(LocalHistoryItem(session))`.
+  - `section == HistoryTime.title(HistoryTime.section(LocalHistoryItem(session)))`.
+- Assert rows are ordered by updated-desc (same as `HistoryTime.sorted`) and the `NewRow` stays at index 0 when pending.
+- Keep existing tests green (single/double click, Enter/F4 focus, delete).
 
-### 6. Tests
-- `frontend/src/test/.../settings/base/SettingsListViewTest.kt` (or a new `ActiveListViewTest` in the same package):
-  - Add: unfocused selected row paints muted selection — assert the `PickerRow`'s `selectionColor == UIUtil.getListBackground(true, false)` after `getListCellRendererComponent(list, row, 0, true, false)`.
-  - Add: focused selected row paints bright — `... == UIUtil.getListBackground(true, true)` (rendered with `focused = true` or `ActiveListActive.active() == true`).
-  - Keep existing cell-visibility tests (they already assert requirement #5).
-- `frontend/src/test/.../agentManager/worktree/WorktreeSessionEditorPanelTest.kt`:
-  - Update `FakeManager` to override the new `openSession(ref: SessionRef, focus: Boolean)` (record `focus`) instead of `openSession(ref)`.
-  - Update `test row click opens session` to also assert `focus == false`.
-  - Add a double-click test (`clickCount = 2`) asserting `focus == true`.
-  - Add Enter and F4 key tests: invoke the list's registered action via `list.getActionForKeyStroke(KeyStroke...)` (or dispatch `KeyEvent`s) after selecting a row; assert F4 → `focus == true`, Enter → `focus == AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor")`.
-- Add a new `AgentManagerPanel` open/focus test (new file) or an `ActiveListView`-level test proving `onOpen` receives `focus = false` on single-click / `true` on double-click / `true` on F4 / flag-driven on Enter. Prefer the `ActiveListView`-level test since it covers the shared behavior for both lists in one place and avoids the `KiloVfsManager` project-service seam.
+File: `frontend/src/test/.../settings/base/SettingsListViewTest.kt`
+- Add: a row with `trailing = "3h ago"` renders a visible right-aligned label with that text; a row with `trailing = null` hides it. (Locks the additive shared-renderer behavior and guards other consumers.)
 
 ## Risks / edge cases
 
-- **Blast radius of the renderer change**: `ActiveListRenderer` is shared by settings and history lists. After the change they will show a muted selection when unfocused (previously nothing). This is the platform-standard behavior and matches the UI guidelines; verify `SettingsListViewTest` / history tests still pass and adjust assertions only if they specifically asserted "no background when unfocused" (none currently do). `PickerPopup` uses its own renderer, so it is unaffected.
-- **`primary()` fallback bug**: today Enter on a worktree row falls through `primary()` to the first enabled cell (delete) and would pop the delete confirmation. Routing Enter through `onOpen` for navigation lists removes this; confirm no navigation list relies on Enter→cell.
-- **F4 binding in settings dialogs**: F4 is only bound when `onOpen != null` (navigation lists), so settings/dialog `EditSource` behavior is unchanged.
-- **`openFile(file, false)`** opens/selects the worktree tab without transferring focus; confirm the tab still becomes visible (expected) while focus remains on the Agent Manager list.
-- **New-session / delete-next-session flows** keep `focus = true` (creating or auto-opening a session should focus its prompt) — verify this matches desired UX.
+- **Shared renderer blast radius**: `trailing` defaults null → existing lists unchanged; verify `SettingsListViewTest` and any history-adjacent tests stay green.
+- **Section headers now appear** in the worktree session list (new). This is intended for full parity; if undesired later, return `section = null` from `SessionRow`.
+- **Row inset differences**: `ActiveListRenderer` uses `empty(md, 0, md, pad)`; `HistoryRenderer` uses `empty(lg, lg, lg, lg)`. Chips and time strings are identical, but padding differs slightly. If exact padding parity is required, align `ActiveListRenderer.row.border` for this list — treat as optional polish, and confirm it doesn't regress other `ActiveList` consumers (prefer leaving shared insets unchanged).
+- **Live time refresh**: relative time is recomputed on `sync()` (activity/list changes), same as History recomputes on repaint; it won't tick every minute on its own. Acceptable / matches History.
+- **Delete visibility** stays gated on focused selection (ActiveList) — intentionally different from History; do not change.
 
 ## Validation
 
 From `packages/kilo-jetbrains/`:
+- `./gradlew :frontend:test --tests ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorPanelTest --tests ai.kilocode.client.settings.base.SettingsListViewTest`
 - `./gradlew typecheck`
-- `./gradlew test` (or targeted: `SettingsListViewTest`, `WorktreeSessionEditorPanelTest`, and the new `ActiveListView`/renderer tests)
-- Manual (optional) `./gradlew runIde`: in Agent Manager, single-click a worktree (tab opens, list keeps focus + bright selection), double-click (editor focuses, list shows muted selection), Enter (focus per advanced setting), F4 (focus). Repeat for the session list inside a worktree. Confirm the delete icon is absent whenever the list is unfocused and the muted selection is visible.
+- Optional `./gradlew runIde`: worktree session rows show the same tag chips, "time ago", and date sections as History; single word title only, no branch icon/subtitle.
 
 ## Out of scope
 
-- Main sidebar session list behavior (unchanged).
-- Preview-tab semantics; we only toggle focus, not preview tabs.
-- Removing the now-unused `onActivate`/`onClick` params (optional later cleanup).
+- Migrating the worktree session list onto the History renderer/model stack.
+- Changing History rows or the top-level worktree list.
+- Auto-ticking relative time.

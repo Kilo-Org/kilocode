@@ -1,11 +1,15 @@
 package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.history.HistoryTime
+import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
+import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListItem
@@ -47,8 +51,12 @@ class WorktreeSessionEditorPanel(
     private val delete = DeleteAction()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
-        cfg = ActiveListConfig(ActiveListRowHeight.EQUAL, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
-        placeholder = KiloBundle.message("worktree.session.list.search.placeholder"),
+        cfg = ActiveListConfig(
+            ActiveListRowHeight.EQUAL,
+            description = false,
+            selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
+        ),
+        showSearch = false,
         onCell = { key, id -> if (id == DELETE_CELL) manager.deleteSessions(listOf(key)) },
         onOpen = { row, focus -> open(row, focus) },
         onSelect = { updateActions() },
@@ -126,10 +134,14 @@ class WorktreeSessionEditorPanel(
     @RequiresEdt
     private fun sync() {
         val rows = mutableListOf<ActiveListItem>()
-        if (manager.currentKey() == SessionHost.NEW) rows += NewRow
-        rows += (0 until controller.model.size).map { SessionRow(controller.model.getElementAt(it)) }
+        val key = manager.currentKey()
+        val pending = manager.hasPendingNew()
+        val kinds = manager.activity()
+        if (pending || key == SessionHost.NEW) rows += NewRow
+        rows += HistoryTime.sorted((0 until controller.model.size).map { LocalHistoryItem(controller.model.getElementAt(it)) })
+            .map { SessionRow(it.session, kinds[it.id]) }
         list.update(rows, ActiveListSelection.PreserveNoScroll)
-        select(manager.currentKey())
+        select(if (pending) SessionHost.NEW else key)
         updateActions()
     }
 
@@ -212,16 +224,17 @@ class WorktreeSessionEditorPanel(
     private object NewRow : ActiveListItem {
         override val key: String get() = SessionHost.NEW
         override val title: String get() = KiloBundle.message("worktree.session.new")
-        override val icon = AllIcons.General.Add
     }
 
-    private data class SessionRow(val session: SessionDto) : ActiveListItem {
+    private data class SessionRow(val session: SessionDto, val kind: SessionActivityKind?) : ActiveListItem {
+        private val item = LocalHistoryItem(session)
         override val key: String get() = session.id
         override val title: String get() = session.title.takeIf { it.isNotBlank() }
             ?: KiloBundle.message("worktree.session.untitled")
-        override val description: String get() = session.directory
         override val tooltip: String get() = title
-        override val icon = WorktreeIcons.branch
+        override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+        override val trailing: String get() = HistoryTime.relative(item)
+        override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
         override val cells: List<ActiveListCell>
             get() = listOf(ActiveListCell(

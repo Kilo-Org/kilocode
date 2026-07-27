@@ -49,6 +49,7 @@ open class WorktreeSessionEditorManager(
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
     private val right = JPanel(BorderLayout())
     private var last: String? = null
+    private var pending = false
     var onPresent: ((String?) -> Unit)? = null
     var onListChanged: (() -> Unit)? = null
 
@@ -63,6 +64,20 @@ open class WorktreeSessionEditorManager(
         list.reload {
             val dto = latest()
             if (dto != null) openSession(SessionRef.Local(dto)) else newSession()
+        }
+    }
+
+    @RequiresEdt
+    open fun hasPendingNew(): Boolean = pending
+
+    @RequiresEdt
+    override fun newSession() {
+        if (pending) return
+        pending = true
+        onListChanged?.invoke()
+        list.create { session ->
+            pending = false
+            if (session != null) openSession(SessionRef.Local(session)) else onListChanged?.invoke()
         }
     }
 

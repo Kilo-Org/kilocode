@@ -2,11 +2,16 @@ package ai.kilocode.client.agentManager.worktree
 
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.history.HistoryTime
+import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.ui.list.ActiveListBadge
+import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.actionSystem.DataKey
@@ -21,6 +26,7 @@ import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
@@ -69,6 +75,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertTrue(buttons.contains("New session"))
             assertTrue(buttons.contains("Delete session"))
             assertNotNull(UIUtil.findComponentOfType(panel, JBList::class.java))
+            assertNull(UIUtil.findComponentOfType(panel, SearchTextField::class.java))
         }
     }
 
@@ -79,6 +86,45 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
 
         assertEquals(1, manager.newCount)
+    }
+
+    fun `test pending new session appears in list`() {
+        manager.pending = true
+
+        edt { manager.onListChanged?.invoke() }
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        assertEquals("New session", edt { (list.model.getElementAt(0) as ActiveListItem).title })
+        assertEquals("new", edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test session rows match history visuals`() {
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING)
+        val session = session("ses_1", nowSeconds())
+        rpc.listed += session
+        edt { controller.reload() }
+        flush()
+
+        val row = row("ses_1")
+
+        assertEquals("Session ses_1", row.title)
+        assertNull(row.icon)
+        assertNull(row.description)
+        assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style())), row.badges)
+        assertEquals(HistoryTime.relative(LocalHistoryItem(session)), row.trailing)
+        assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
+    }
+
+    fun `test sessions sort by updated desc with new row pinned`() {
+        manager.pending = true
+        rpc.listed += session("ses_old", 1.0)
+        rpc.listed += session("ses_new", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        val keys = rows().map { it.key }
+
+        assertEquals(listOf("new", "ses_new", "ses_old"), keys)
     }
 
     fun `test row click opens session`() {
@@ -145,7 +191,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
         pump()
 
-        assertEquals(listOf("ses_1", "ses_2"), manager.deleted)
+        assertEquals(listOf("ses_2", "ses_1"), manager.deleted)
     }
 
     fun `test panel provides session manager and workspace data`() {
@@ -165,6 +211,15 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         version = "1",
         time = SessionTimeDto(created = 0.0, updated = updated),
     )
+
+    private fun nowSeconds() = System.currentTimeMillis().toDouble() / 1000.0
+
+    private fun rows(): List<ActiveListItem> {
+        val view = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        return edt { (0 until view.model.size).map { view.model.getElementAt(it) as ActiveListItem } }
+    }
+
+    private fun row(key: String): ActiveListItem = rows().single { it.key == key }
 
     private fun flush() = coroutines.drain(::pump)
 
@@ -212,9 +267,15 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         confirm = { _, _, _ -> true },
     ) {
         var newCount = 0
+        var pending = false
+        var kinds = emptyMap<String, SessionActivityKind>()
         val refs = mutableListOf<String>()
         val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
+
+        override fun hasPendingNew(): Boolean = pending
+
+        override fun activity(): Map<String, SessionActivityKind> = kinds
 
         override fun newSession() {
             newCount++

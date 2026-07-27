@@ -66,14 +66,17 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test new session shows a blank session on the right`() {
+    fun `test new session creates and opens a persisted session`() {
+        rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
         val manager = manager()
 
         edt { manager.newSession() }
+        flush()
 
         val active = edt { manager.component.getComponent(0) as JPanel }
         assertTrue(active is SessionUi)
-        assertEquals(listOf(DIR to null), created)
+        assertEquals(1, rpc.creates)
+        assertEquals(listOf(DIR to "ses_new"), created)
     }
 
     fun `test open session shows selected session`() {
@@ -96,6 +99,18 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         flush()
 
         assertEquals(listOf(DIR), rpc.lists)
+        assertEquals(listOf(DIR to "ses_new"), created)
+    }
+
+    fun `test start creates a session when none are listed`() {
+        rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
+        val manager = manager()
+
+        edt { manager.start() }
+        flush()
+
+        assertTrue(rpc.lists.contains(DIR))
+        assertEquals(1, rpc.creates)
         assertEquals(listOf(DIR to "ses_new"), created)
     }
 

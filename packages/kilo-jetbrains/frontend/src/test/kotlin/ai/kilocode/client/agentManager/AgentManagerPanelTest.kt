@@ -17,6 +17,7 @@ import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
@@ -65,6 +66,13 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val created = edt { controller.model.getElementAt(controller.model.size - 1) }
         assertEquals("feature/y", created.branch)
         assertEquals(created.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test panel hides worktree search field`() {
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+
+        assertNull(edt { UIUtil.findComponentOfType(panel, SearchTextField::class.java) })
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {

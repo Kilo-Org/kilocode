@@ -33,6 +33,25 @@ class WorktreeSessionListController(
         }
     }
 
+    fun create(done: (SessionDto?) -> Unit) {
+        cs.launch {
+            try {
+                val session = service.create(dir)
+                edt {
+                    val keep = (0 until model.size)
+                        .map { model.getElementAt(it) }
+                        .filter { it.id != session.id }
+                    model.replaceAll(listOf(session) + keep)
+                    capture("Worktree Session Created", mapOf("sessionId" to session.id))
+                    done(session)
+                }
+            } catch (e: Exception) {
+                LOG.warn("worktree session create failed dir=$dir message=${e.message}", e)
+                edt { done(null) }
+            }
+        }
+    }
+
     fun delete(ids: List<String>, done: () -> Unit) {
         val active = ids.distinct().filter { it.isNotBlank() }
         if (active.isEmpty()) {
