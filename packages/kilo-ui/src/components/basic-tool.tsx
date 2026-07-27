@@ -28,19 +28,25 @@ export function useToolApprovalLine() {
   }
 }
 
+/**
+ * Whether BasicTool should inject the approval line into its body.
+ */
+export function shouldRenderApprovalInBody(placement: BasicToolProps["approvalPlacement"], hasApproval: boolean) {
+  return placement !== "hidden" && hasApproval
+}
+
 export function BasicTool(props: BasicToolProps) {
   const key = () => toolOpenKey(props)
   const initial = () => initialOpen(props)
   const approval = useToolApproval()
-  // "hidden" means BasicTool must not inject the line (the card renders it itself, or it is omitted).
-  const inBody = () => props.approvalPlacement !== "hidden" && approval() !== undefined
+  const inBody = () => shouldRenderApprovalInBody(props.approvalPlacement, approval() !== undefined)
   const change = (open: boolean) => {
     writeToolOpen(key(), open)
     props.onOpenChange?.(open)
   }
   const details = () => (
     <div data-slot="basic-tool-details">
-      <Show when={approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
+      <Show when={inBody() && approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
       {props.children}
     </div>
   )
