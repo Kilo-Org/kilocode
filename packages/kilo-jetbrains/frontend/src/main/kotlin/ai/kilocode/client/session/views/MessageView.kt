@@ -19,13 +19,21 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.VAlign
 import ai.kilocode.client.ui.layout.align
+import ai.kilocode.client.ui.toolbarButton
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Point
 import java.awt.Graphics
@@ -397,6 +405,12 @@ class MessageView(
         wrap?.setReverting(active, text, onCancel)
     }
 
+    @RequiresEdt
+    fun setQueued(active: Boolean, onDelete: () -> Unit) {
+        if (role != SessionUiStyle.View.Message.USER_ROLE) return
+        wrap?.setQueued(active, onDelete)
+    }
+
     private val promptToolbar: MessageToolbar?
         get() = wrap?.bar
 
@@ -494,21 +508,26 @@ class MessageView(
     private inner class PromptWrap(
         private val box: JPanel,
     ) : JPanel(BorderLayout()), SessionCopyTarget {
+        private val footer = JPanel(BorderLayout()).also { it.isOpaque = false }
         val bar = MessageToolbar(
             { prompt?.copyMarkdown(trim = false) },
             revert?.let { fn -> { fn(msg.info.id) } },
         )
         private val placeholder = bar.placeholder()
-        private var progress: RevertProgress? = null
         private var reverting = false
+        private var progress: RevertProgress? = null
+        private var queuedRow: JPanel? = null
+        private var queued = false
 
         override val copyAnchor: JComponent get() = placeholder
-        override val copyToolbar: JComponent? get() = if (reverting) null else bar
+        override val copyToolbar: JComponent? get() = if (reverting || queued) null else bar
 
         init {
             isOpaque = false
             add(box, BorderLayout.CENTER)
-            add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.SOUTH)
+            footer.border = JBUI.Borders.emptyTop(UiStyle.Gap.xs())
+            footer.add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.CENTER)
+            add(footer, BorderLayout.SOUTH)
         }
 
         override fun copyText(): String? = prompt?.copyMarkdown(trim = false)
@@ -523,18 +542,53 @@ class MessageView(
                 node.setText(text)
                 if (reverting) return
                 reverting = true
-                remove((layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH))
-                add(node.align(HAlign.LEFT, VAlign.TOP), BorderLayout.SOUTH)
+                swapFooter(node.align(HAlign.LEFT, VAlign.TOP))
                 revalidate()
                 repaint()
                 return
             }
             if (!reverting) return
             reverting = false
-            remove((layout as BorderLayout).getLayoutComponent(BorderLayout.SOUTH))
-            add(placeholder.align(HAlign.RIGHT, VAlign.TOP), BorderLayout.SOUTH)
+            swapFooter(placeholder.align(HAlign.RIGHT, VAlign.TOP))
             revalidate()
             repaint()
+        }
+
+        @RequiresEdt
+        fun setQueued(active: Boolean, onDelete: () -> Unit) {
+            if (active) {
+                val node = queuedRow ?: queue(onDelete).also { queuedRow = it }
+                if (queued) return
+                queued = true
+                swapFooter(node.align(HAlign.RIGHT, VAlign.TOP))
+                revalidate()
+                repaint()
+                return
+            }
+            if (!queued) return
+            queued = false
+            swapFooter(placeholder.align(HAlign.RIGHT, VAlign.TOP))
+            revalidate()
+            repaint()
+        }
+
+        private fun swapFooter(node: JComponent) {
+            footer.removeAll()
+            footer.add(node, BorderLayout.CENTER)
+        }
+
+        private fun queue(onDelete: () -> Unit) = Stack.horizontal(UiStyle.Gap.sm()).also { row ->
+            row.isOpaque = false
+            row.next(JBLabel(KiloBundle.message("session.queued")).apply {
+                foreground = UIUtil.getContextHelpForeground()
+            })
+            row.next(toolbarButton(
+                ToolbarButtonAction(
+                    AllIcons.Actions.Close,
+                    KiloBundle.message("session.queued.remove"),
+                    onDelete,
+                ),
+            ))
         }
     }
 
