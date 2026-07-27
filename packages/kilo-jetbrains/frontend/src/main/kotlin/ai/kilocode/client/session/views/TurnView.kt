@@ -78,6 +78,7 @@ class TurnView(
     @RequiresEdt
     fun setDiffs(diffs: List<DiffFileDto>) {
         val card = modified ?: if (diffs.isEmpty()) null else ModifiedFilesView(openFile, selection).also {
+            it.resize = resize
             it.hover = hover
             it.applyStyle(style)
             modified = it
