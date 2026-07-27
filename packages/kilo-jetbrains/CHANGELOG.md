@@ -105,26 +105,19 @@
 ## [7.0.11] - 2026-07-27
 
 ### Added
-- feat: daily docs-sync bot keeping kilo-docs in sync with merged PRs by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12512
-- feat(jetbrains): publish bundled CLI builds on GitHub by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12518
+
+- Add a signed GitHub-hosted bundled JetBrains plugin build that includes the Kilo CLI for offline or restricted-network installs.
 
 ### Fixed
-- fix(tui): silence optional Kilo Pass failures by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12515
-- fix(cli): bound skill discovery in non-git projects by @LCZcn96 in https://github.com/Kilo-Org/kilocode/pull/12475
-- fix(ci): pass KILO_ORG_ID to docs-sync LLM steps by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12519
-- fix(vscode): preserve active editor pane by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12410
-- fix(cli): emit run events once by @lambertjosh in https://github.com/Kilo-Org/kilocode/pull/12505
-- fix(cli): stabilize cross-platform subprocess tests by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12514
-- fix(cli): support adaptive thinking for Claude 5+ by @chrarnoldus in https://github.com/Kilo-Org/kilocode/pull/12544
-- fix(cli): flush the session ingest tail on shutdown by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12545
-- fix(vscode): sync mode cycling state by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12560
-- fix(tui): restore variant cycle keybind hint in prompt footer by @IamCoder18 in https://github.com/Kilo-Org/kilocode/pull/12463
+
+- Load global skills reliably from JetBrains projects that are not inside a Git repository.
+- Support adaptive thinking for Claude Opus and Sonnet 5+ model identifiers across Anthropic, AI Gateway, and Bedrock providers.
+- Flush pending cloud session updates when the Kilo Core runtime shuts down, reducing cases where the final assistant message is missing when a session is reopened elsewhere.
+- Prune stale bundled CLI versions after upgrading bundled JetBrains installs.
 
 ### Changed
-- release(jetbrains): v7.0.10 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12516
-- chore(jetbrains): bump CLI pin to v7.4.16 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12517
-- Advertise the instance from enableRemote and report attention status on the heartbeat by @iscekic in https://github.com/Kilo-Org/kilocode/pull/12532
 
+- Update the JetBrains CLI pin from Kilo Core 7.4.15 to 7.4.16.
 
 ## [7.0.10] - 2026-07-24
 
