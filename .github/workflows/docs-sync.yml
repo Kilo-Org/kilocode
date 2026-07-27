@@ -5,9 +5,13 @@ name: docs-sync
 # triages them for docs relevance, runs Kilo CLI headless to update
 # packages/kilo-docs, and maintains one rolling PR for human review.
 #
-# Security posture: scheduled/manual only, checks out main, never executes
-# code from PR branches. State is derived from the bot's own PRs (watermark
-# marker in the PR body), so missed or failed runs self-heal on the next run.
+# Security posture: scheduled/manual runs check out the dispatched ref and may
+# push/comment with write permissions and org secrets. PR runs (paths-limited to
+# this workflow and .github/docs-sync/**) execute branch code only in a
+# read-only, secretless `selftest` job that never pushes, comments, or calls an
+# LLM. `pull_request` (not `pull_request_target`) keeps fork tokens read-only.
+# State is derived from the bot's own PRs (watermark marker in the PR body), so
+# missed or failed runs self-heal on the next run.
 
 on:
   schedule:
@@ -22,6 +26,10 @@ on:
         description: "Collect + triage only, no edits, no PR"
         type: boolean
         default: false
+  pull_request:
+    paths:
+      - ".github/docs-sync/**"
+      - ".github/workflows/docs-sync.yml"
 
 permissions:
   contents: write # push the rolling branch, create the auto-docs label
@@ -37,8 +45,26 @@ env:
   EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/moonshotai/kimi-k3' }}
 
 jobs:
-  sync:
+  selftest:
     if: github.repository == 'Kilo-Org/kilocode'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Run docs-sync selftest
+        run: node .github/docs-sync/selftest.mjs
+
+  sync:
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     # Budget: 3 setup/collect + 35 triage + 50 edit + 2 verify + 10 fix + 2 upsert = 102 min, 18-minute reserve.
     timeout-minutes: 120
@@ -63,6 +89,9 @@ jobs:
         with:
           node-version: "24"
           package-manager-cache: false
+
+      - name: Run docs-sync selftest
+        run: node .github/docs-sync/selftest.mjs
 
       - name: Install Kilo CLI
         run: |
