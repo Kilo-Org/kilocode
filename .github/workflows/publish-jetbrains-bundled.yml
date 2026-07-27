@@ -145,11 +145,17 @@ jobs:
       - name: Build signed bundled plugin
         working-directory: packages/kilo-jetbrains
         run: |
-          ./gradlew clean buildPlugin signPlugin verifyPluginSignature verifyPlugin \
-            -Pproduction=true \
-            -Pkilo.version="$VERSION" \
-            -Pkilo.channel="$CHANNEL" \
+          args=(
+            -Pproduction=true
+            -Pkilo.version="$VERSION"
+            -Pkilo.channel="$CHANNEL"
             -Pkilo.cli.bundled=true
+          )
+
+          ./gradlew clean buildPlugin "${args[@]}"
+          ./gradlew signPlugin "${args[@]}"
+          ./gradlew verifyPluginSignature "${args[@]}"
+          ./gradlew verifyPlugin "${args[@]}"
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
