@@ -47,6 +47,8 @@ This means:
 
 Skills are loaded from multiple locations, allowing both personal skills and project-specific instructions.
 
+In the JetBrains plugin, you can also inspect loaded skills and manage additional skill sources from **Settings → Tools → Kilo Code → Agent Behavior → Skills**.
+
 {% tabs %}
 {% tab label="VSCode" %}
 
