@@ -28,9 +28,12 @@ const STARTUP_TIMEOUT_SECONDS = 30
  * first's credentials, and let one window's exit delete another window's file.
  */
 function discoveryDir(): string {
-  return process.platform === "win32"
-    ? path.join(os.homedir(), ".local", "state", "kilo")
-    : path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), ".local", "state"), "kilo")
+  // Mirror the CLI's Global.Path.state (packages/core/src/global.ts): it resolves
+  // xdg-basedir's xdgState — $XDG_STATE_HOME on every platform, falling back to
+  // ~/.local/state — then joins the app name. Honoring XDG_STATE_HOME here (including
+  // on Windows) keeps vscode-server-<pid>.json in the same directory as daemon.json.
+  const base = process.env.XDG_STATE_HOME || path.join(os.homedir(), ".local", "state")
+  return path.join(base.replace(/[\r\n]+/g, ""), "kilo")
 }
 
 function discoveryFile(pid: number): string {
