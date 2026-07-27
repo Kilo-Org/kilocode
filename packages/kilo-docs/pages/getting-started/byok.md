@@ -92,7 +92,7 @@ Your IAM user or role must have the following permissions:
 
 Create an API key in the [NVIDIA API Catalog](https://build.nvidia.com/settings/api-keys), then add it as the NVIDIA provider.
 
-NVIDIA models use their own `nvidia-byok/` prefix, so select a model such as `nvidia-byok/nvidia/nemotron-3-super-120b-a12b` rather than a Kilo Gateway model with the same name. Only NVIDIA-hosted models that support tool calling are available.
+Models that do not support tool calling are excluded, as they are unlikely to be provide useful results.
 
 {% callout type="warning" title="NVIDIA API Catalog terms" %}
 NVIDIA limits Developer Program endpoints to prototyping, research, development, and testing. Serving production end users may require NVIDIA AI Enterprise licensing. Your prompts and model outputs are sent to NVIDIA under your NVIDIA agreement. Review the [API Catalog quickstart](https://docs.api.nvidia.com/nim/docs/api-quickstart) and the [NVIDIA API Trial Terms of Service](https://assets.ngc.nvidia.com/products/api-catalog/legal/NVIDIA%20API%20Trial%20Terms%20of%20Service.pdf).
