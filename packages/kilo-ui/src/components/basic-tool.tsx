@@ -11,6 +11,7 @@ export interface BasicToolProps extends BaseProps {
   tool?: string
   callID?: string
   partID?: string
+  approvalPlacement?: "body" | "hidden"
 }
 
 type OpenProps = Pick<BasicToolProps, "tool" | "callID" | "partID" | "forceOpen" | "defaultOpen">
@@ -19,26 +20,35 @@ export function initialOpen(props: OpenProps) {
   return props.forceOpen ? true : readToolOpen(toolOpenKey(props), props.defaultOpen)
 }
 
+export function useToolApprovalLine() {
+  const approval = useToolApproval()
+  return () => {
+    const value = approval()
+    return value ? <ToolApprovalLine display={value} /> : null
+  }
+}
+
 export function BasicTool(props: BasicToolProps) {
   const key = () => toolOpenKey(props)
   const initial = () => initialOpen(props)
   const approval = useToolApproval()
+  // "hidden" means BasicTool must not inject the line (the card renders it itself, or it is omitted).
+  const inBody = () => props.approvalPlacement !== "hidden" && approval() !== undefined
   const change = (open: boolean) => {
     writeToolOpen(key(), open)
     props.onOpenChange?.(open)
   }
-  // The "why was this allowed" line lives in the expanded body, above any tool-specific details.
   const details = () => (
     <div data-slot="basic-tool-details">
       <Show when={approval()}>{(value) => <ToolApprovalLine display={value()} />}</Show>
       {props.children}
     </div>
   )
-  if (!("children" in props) && !approval()) {
+  if (!("children" in props) && !inBody()) {
     return <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} />
   }
   return (
-    <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} hasDetails>
+    <Base {...props} defaultOpen={initial()} retainDetails={props.defer} onOpenChange={change} hasDetails={inBody()}>
       {details()}
     </Base>
   )
