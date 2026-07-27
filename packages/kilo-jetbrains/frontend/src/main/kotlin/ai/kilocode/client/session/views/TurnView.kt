@@ -67,7 +67,6 @@ class TurnView(
         val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert)
         messages[msg.info.id] = view
         add(view)
-        if (msg.info.id == id && deleteQueued != null) view.setQueued(false) { deleteQueued.invoke(id) }
         syncCopyToolbars()
         revalidate()
         return view

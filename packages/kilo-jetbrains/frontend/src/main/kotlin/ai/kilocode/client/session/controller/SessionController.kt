@@ -467,11 +467,19 @@ class SessionController(
     fun deleteQueuedMessage(message: String) {
         assertEdt()
         val id = sid ?: return
-        capture("Conversation Queued Message Removed", sessionProps(id))
         cs.launch {
             try {
-                sessions.deleteMessage(id, directory, message)
+                val ok = sessions.deleteMessage(id, directory, message)
+                if (!ok) {
+                    capture("Session Error", sessionProps(id) + mapOf("context" to "delete-message", "errorClass" to "DeleteMiss"))
+                    LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage missed message=$message")
+                    return@launch
+                }
+                capture("Conversation Queued Message Removed", sessionProps(id))
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "delete-message", "errorClass" to e::class.java.name))
                 LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage failed message=${e.message}", e)
             }
         }
