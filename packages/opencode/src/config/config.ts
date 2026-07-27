@@ -670,7 +670,7 @@ export const layer = Layer.effect(
             for (const file of yield* ConfigPaths.files(name, ctx.directory, ctx.worktree).pipe(Effect.orDie)) {
               yield* merge(
                 file,
-                // kilocode_change - project config is untrusted: {env:} rejected, {file:} confined to projectRoot
+                // kilocode_change - project config is untrusted: {env:} left literal (MCP headers expanded post-parse), {file:} confined to projectRoot
                 yield* loadFile(file, authEnv, false, { root: projectRoot, source: file }, warnings).pipe(
                   Effect.catchDefect((err: unknown) => {
                     caughtWarning(warnings, file, err)
