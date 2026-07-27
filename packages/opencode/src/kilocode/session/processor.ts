@@ -10,9 +10,10 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Cause, Effect, Exit } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { EffectBridge } from "@/effect/bridge"
-import type { LLMEvent, Usage } from "@opencode-ai/llm"
+import type { LLMEvent, ProviderMetadata, Usage } from "@opencode-ai/llm"
 import type { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionRetry } from "@/session/retry"
+import { computeMetrics as computeMetricsHelper, type TokenRates } from "@/kilocode/session/metrics"
 
 export type ReviewTelemetry = {
   mode: "review"
@@ -27,7 +28,7 @@ export namespace KiloSessionProcessor {
   export const INCOMPLETE_RESPONSE_MESSAGE =
     "The provider repeatedly ended the response before returning usable output."
   export class IncompleteResponseError extends Error {
-    constructor() {
+    constructor(readonly vercelID?: string) {
       super(INCOMPLETE_RESPONSE_MESSAGE)
       this.name = "IncompleteResponseError"
     }
@@ -129,6 +130,19 @@ export namespace KiloSessionProcessor {
         completionTime: input.elapsed,
       })
     }
+  }
+
+  /** Pure throughput helper re-exported for namespace symmetry. */
+  export const computeMetrics: typeof computeMetricsHelper = computeMetricsHelper
+  /** Returned shape for downstream consumers that prefer the namespace. */
+  export type Metrics = TokenRates
+
+  export function generationID(meta: ProviderMetadata | undefined) {
+    const value = meta?.gateway?.generationId
+    if (typeof value !== "string") return
+    const id = value.trim()
+    if (!/^gen_[A-Za-z0-9_-]{1,200}$/.test(id)) return
+    return id
   }
 
   /**
@@ -264,13 +278,13 @@ export namespace KiloSessionProcessor {
     return Effect.gen(function* () {
       for (const index of Array.from({ length: INCOMPLETE_RESPONSE_RETRIES + 1 }, (_, index) => index)) {
         const result = yield* input.run().pipe(Effect.exit)
-        if (Exit.isFailure(result)) {
-          const error = Cause.squash(result.cause)
-          if (!(error instanceof IncompleteResponseError)) return yield* Effect.fail(error)
-        } else if (!input.replayable()) return
+        const error = Exit.isFailure(result) ? Cause.squash(result.cause) : undefined
+        if (error && !(error instanceof IncompleteResponseError)) return yield* Effect.fail(error)
+        if (!error && !input.replayable()) return
 
         yield* input.discard()
-        if (index === INCOMPLETE_RESPONSE_RETRIES) return yield* Effect.fail(new IncompleteResponseError())
+        if (index === INCOMPLETE_RESPONSE_RETRIES)
+          return yield* Effect.fail(error ?? new IncompleteResponseError())
         const wait = SessionRetry.delay(index + 1)
         yield* input.set({ attempt: index + 1, message: INCOMPLETE_RESPONSE_MESSAGE, next: Date.now() + wait })
         yield* Effect.sleep(`${wait} millis`)
@@ -283,6 +297,7 @@ export namespace KiloSessionProcessor {
     return new MessageV2.APIError({
       message: error.message,
       isRetryable: true,
+      responseHeaders: error.vercelID ? { "x-vercel-id": error.vercelID } : undefined,
     }).toObject()
   }
 

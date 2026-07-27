@@ -26021,6 +26021,17 @@
           },
           "snapshot": {
             "type": "string"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number",
+                "minimum": 0
+              }
+            },
+            "required": ["start"],
+            "additionalProperties": false
           }
         },
         "required": ["id", "sessionID", "messageID", "type"],
@@ -26062,6 +26073,47 @@
               }
             },
             "required": ["providerID", "modelID"],
+            "additionalProperties": false
+          },
+          "generationID": {
+            "type": "string"
+          },
+          "vercelID": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "object",
+            "properties": {
+              "prompt": {
+                "type": "number"
+              },
+              "generation": {
+                "type": "number"
+              },
+              "source": {
+                "type": "string",
+                "enum": ["provider", "computed"]
+              }
+            },
+            "required": ["source"],
+            "additionalProperties": false
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "number",
+                "minimum": 0
+              },
+              "end": {
+                "type": "number",
+                "minimum": 0
+              },
+              "elapsed": {
+                "type": "number"
+              }
+            },
+            "required": ["start", "end", "elapsed"],
             "additionalProperties": false
           },
           "cost": {
@@ -27791,17 +27843,8 @@
                 "description": "Timeout in milliseconds to wait for response headers. Provider integrations may set defaults. Set to false to disable timeout."
               },
               "chunkTimeout": {
-                "anyOf": [
-                  {
-                    "type": "integer",
-                    "exclusiveMinimum": 0
-                  },
-                  {
-                    "type": "boolean",
-                    "enum": [false]
-                  }
-                ],
-                "description": "Timeout in milliseconds between streamed SSE chunks for this provider. If no chunk arrives within this window, the request is aborted. Set to false to disable the idle watchdog."
+                "type": "integer",
+                "exclusiveMinimum": 0
               }
             },
             "additionalProperties": {}

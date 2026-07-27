@@ -160,6 +160,7 @@ import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
+import { cycleAgent as cycle } from "../src/context/session-agent"
 const REVIEW_TAB_ID = "review"
 
 interface SetupState {
@@ -761,6 +762,16 @@ const AgentManagerContent: Component = () => {
     return sessionsForWorktree(sel)
   })
 
+  const activeWorktreeSessionIds = createMemo<ReadonlySet<string> | undefined>(() => {
+    const sel = selection()
+    if (!sel || sel === LOCAL) return undefined
+    return new Set(
+      managedSessions()
+        .filter((item) => item.worktreeId === sel)
+        .map((item) => item.id),
+    )
+  })
+
   const activeTabs = createMemo((): SessionInfo[] => {
     const sel = selection()
     if (sel === LOCAL) return localSessions()
@@ -1061,14 +1072,14 @@ const AgentManagerContent: Component = () => {
   }
 
   const cycleAgent = (direction: 1 | -1) => {
-    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
-    if (available.length <= 1) return
-    const current = session.selectedAgent()
-    const idx = available.findIndex((a) => a.name === current)
-    const raw = idx + direction
-    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
-    const agent = available[next]
-    if (agent) session.selectAgent(agent.name)
+    const id = session.currentSessionID() ?? activePendingId()
+    cycle({
+      agents: session.agents(),
+      scope: id,
+      direction,
+      selected: session.selectedAgent,
+      select: session.selectAgent,
+    })
   }
 
   const syncRunStatuses = (items: RunStatus[] = []) => {
@@ -2898,6 +2909,7 @@ const AgentManagerContent: Component = () => {
               openLocally(id)
             }}
             onBack={() => setHistory(false)}
+            worktreeSessionIds={activeWorktreeSessionIds}
           />
         </Show>
         <Show when={!contextEmpty() && !history()}>

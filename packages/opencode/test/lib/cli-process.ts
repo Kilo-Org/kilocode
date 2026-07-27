@@ -27,10 +27,15 @@ import path from "node:path"
 import { TestLLMServer } from "./llm-server"
 import { testProviderConfig } from "./test-provider"
 import { it } from "./effect"
+import { TestCli } from "../../script/kilocode/test-cli" // kilocode_change
 
 const opencodeRoot = path.resolve(import.meta.dir, "../../")
 const cliEntry = path.join(opencodeRoot, "src/index.ts")
-const cliArgs = ["run", "--conditions=browser", "--preload=@opentui/solid/preload", cliEntry] // kilocode_change
+// kilocode_change start - reuse the runner's once-built CLI graph instead of transpiling it in every child
+const cliArgs = process.env[TestCli.ENV]
+  ? ["run", process.env[TestCli.ENV]]
+  : ["run", "--conditions=browser", "--preload=@opentui/solid/preload", cliEntry]
+// kilocode_change end
 
 export const testModelID = "test/test-model"
 
@@ -205,6 +210,7 @@ export function withCliFixture<A, E>(
         env: { ...env, ...opts?.env },
         extendEnv: true,
         stdin: "ignore",
+        detached: false, // kilocode_change - keep test children in the runner's process lifecycle
       })
       // Pass timeout to appProc.run rather than wrapping with
       // Effect.timeoutOrElse externally: AppProcess.run is itself scoped, so
@@ -267,6 +273,7 @@ export function withCliFixture<A, E>(
             env: { ...process.env, ...env, ...opts?.env },
             stdout: "pipe",
             stderr: "pipe",
+            windowsHide: true, // kilocode_change
           }),
         ),
         (p) =>
@@ -339,6 +346,7 @@ export function withCliFixture<A, E>(
             stdin: "pipe",
             stdout: "pipe",
             stderr: "pipe",
+            windowsHide: true, // kilocode_change
           }),
         ),
         (p) =>
@@ -456,5 +464,12 @@ export const cliIt = {
     name: string,
     body: (input: CliFixture) => Effect.Effect<A, E, Scope.Scope | HttpClient.HttpClient>,
     opts?: number | TestOptions,
-  ) => test.concurrent(name, () => Effect.runPromise(Effect.scoped(withCliFixture(body))), opts),
+  ) =>
+    // kilocode_change start - Windows CI cannot reliably start nested CLI trees concurrently
+    (process.platform === "win32" ? test : test.concurrent)(
+      name,
+      () => Effect.runPromise(Effect.scoped(withCliFixture(body))),
+      opts,
+    ),
+  // kilocode_change end
 }
