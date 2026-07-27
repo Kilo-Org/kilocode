@@ -105,6 +105,7 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(WorktreeSessionEditorKind.ID, file.path.kind)
         assertEquals(item.path, file.path.params["path"])
         assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
+        assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
     }
 
     fun `test deleting a worktree closes and releases its worktree session editor`() {

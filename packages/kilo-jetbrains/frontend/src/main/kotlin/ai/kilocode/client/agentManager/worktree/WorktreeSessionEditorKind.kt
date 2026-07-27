@@ -6,6 +6,7 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
+import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.Disposable
@@ -31,6 +32,9 @@ object WorktreeSessionEditorKind : KiloEditorKind {
     override fun isValid(params: Map<String, String>): Boolean = !params[PATH].isNullOrBlank()
 
     @RequiresEdt
+    override fun preferredFocus(component: JComponent): JComponent? = (component as? WorktreeSessionEditorPanel)?.preferredFocus()
+
+    @RequiresEdt
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
         val path = file.path.params[PATH]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
         val worktree = service<KiloWorkspaceService>().workspace(path)
@@ -38,6 +42,7 @@ object WorktreeSessionEditorKind : KiloEditorKind {
         Disposer.register(parent) { cs.cancel() }
         val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
         val manager = WorktreeSessionEditorManager(parent, project, worktree, controller)
+        manager.startFocus = file.getUserData(KiloVfsManager.FOCUS) == true
         return WorktreeSessionEditorPanel(parent, manager, controller, worktree)
     }
 

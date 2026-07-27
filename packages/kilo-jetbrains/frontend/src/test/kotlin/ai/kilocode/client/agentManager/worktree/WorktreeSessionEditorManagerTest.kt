@@ -27,6 +27,7 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.flow.MutableStateFlow
+import javax.swing.JComponent
 import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
@@ -39,6 +40,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private lateinit var workspace: Workspace
     private lateinit var timers: TestUiTimers
     private val created = mutableListOf<Pair<String, String?>>()
+    private val requested = mutableListOf<JComponent>()
     private val ui = mutableListOf<SessionUi>()
     private var confirms = 0
 
@@ -77,6 +79,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(active is SessionUi)
         assertEquals(1, rpc.creates)
         assertEquals(listOf(DIR to "ses_new"), created)
+        assertEquals(1, requested.size)
     }
 
     fun `test open session shows selected session`() {
@@ -88,6 +91,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         val active = edt { manager.component.getComponent(0) as JPanel }
         assertTrue(active is SessionUi)
         assertEquals(listOf(DIR to "ses_1"), created)
+        assertEquals(1, requested.size)
     }
 
     fun `test start opens most recent listed session`() {
@@ -100,6 +104,18 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
         assertEquals(listOf(DIR), rpc.lists)
         assertEquals(listOf(DIR to "ses_new"), created)
+        assertTrue(requested.isEmpty())
+    }
+
+    fun `test start preserves focused open intent`() {
+        rpc.listed += session("ses_new", updated = 3.0)
+        val manager = manager(focus = true)
+
+        edt { manager.start() }
+        flush()
+
+        assertEquals(listOf(DIR to "ses_new"), created)
+        assertEquals(1, requested.size)
     }
 
     fun `test start creates a session when none are listed`() {
@@ -112,6 +128,16 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(rpc.lists.contains(DIR))
         assertEquals(1, rpc.creates)
         assertEquals(listOf(DIR to "ses_new"), created)
+        assertTrue(requested.isEmpty())
+    }
+
+    fun `test preferred focus returns active session focus component`() {
+        val session = session("ses_1", updated = 1.0)
+        val manager = manager()
+
+        edt { manager.openSession(SessionRef.Local(session)) }
+
+        assertSame(edt { ui.single().defaultFocusedComponent }, edt { manager.preferredFocus() })
     }
 
     fun `test deleting shown session removes it and falls back to next session`() {
@@ -131,7 +157,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(confirms > 0)
     }
 
-    private fun manager(): WorktreeSessionEditorManager {
+    private fun manager(focus: Boolean = false): WorktreeSessionEditorManager {
         val controller = WorktreeSessionListController(sessions, DIR, coroutines.scope)
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
@@ -164,9 +190,9 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             resolve = { workspaces.workspace(it) },
             status = { sessions.activity() },
             timers = timers,
-            request = {},
+            request = { requested += it },
             confirm = { _, _, _ -> confirms++; true },
-        )
+        ).also { it.startFocus = focus }
     }
 
     private fun session(id: String, updated: Double) = SessionDto(

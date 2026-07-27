@@ -79,6 +79,12 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test editor kind delegates preferred focus to panel`() {
+        edt {
+            assertSame(panel.preferredFocus(), WorktreeSessionEditorKind.preferredFocus(panel))
+        }
+    }
+
     fun `test new action creates session`() {
         edt {
             val button = components(panel).filterIsInstance<ActionButton>().single { it.presentation.text == "New session" }

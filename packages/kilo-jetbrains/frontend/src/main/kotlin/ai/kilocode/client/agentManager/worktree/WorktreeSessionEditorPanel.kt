@@ -85,7 +85,7 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
-    fun preferredFocus(): JComponent = list
+    fun preferredFocus(): JComponent = manager.preferredFocus() ?: list
 
     @RequiresEdt
     fun selectSessions(keys: List<String>) {

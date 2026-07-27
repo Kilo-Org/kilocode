@@ -5,6 +5,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.fileEditor.FileEditorProvider
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Key
 import com.intellij.util.concurrency.annotations.RequiresEdt
 
 @Service(Service.Level.PROJECT)
@@ -12,6 +13,7 @@ class KiloVfsManager(private val project: Project) {
     @RequiresEdt
     fun open(kind: String, params: Map<String, String> = emptyMap(), focus: Boolean = true): Boolean {
         val file = file(kind, params) ?: return false
+        file.putUserData(FOCUS, focus)
         if (ApplicationManager.getApplication().isUnitTestMode) {
             file.putUserData(FileEditorProvider.KEY, KiloFileEditorProvider())
         }
@@ -41,5 +43,9 @@ class KiloVfsManager(private val project: Project) {
         val path = KiloPath(kind, params)
         val fs = KiloVirtualFileSystem.getInstance()
         return fs.refreshAndFindFileByPath(fs.getPath(path)) as? KiloVirtualFile
+    }
+
+    companion object {
+        internal val FOCUS: Key<Boolean> = Key.create("ai.kilocode.vfs.focus")
     }
 }
