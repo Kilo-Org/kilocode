@@ -281,6 +281,8 @@ class ReasoningView(
         md.background = style.editorBackground
         md.component.border = JBUI.Borders.empty()
         md.set(text)
+        // The shared popup wrapper (HeaderPopupBody) provides the scroll pane, so pass the content
+        // panel directly instead of nesting a second scroll pane here.
         val panel = TrackPanel().apply {
             isOpaque = true
             background = style.editorBackground
@@ -290,15 +292,7 @@ class ReasoningView(
             )
             add(md.component, BorderLayout.CENTER)
         }
-        val scroll = JBScrollPane(panel).apply {
-            border = JBUI.Borders.empty()
-            isOpaque = true
-            background = style.editorBackground
-            viewport.background = style.editorBackground
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-            verticalScrollBarPolicy = ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED
-        }
-        return HeaderPopupBody(scroll, md, style.editorBackground)
+        return HeaderPopupBody(panel, md, style.editorBackground)
     }
 
     private fun bodyMaxHeight(): Int {

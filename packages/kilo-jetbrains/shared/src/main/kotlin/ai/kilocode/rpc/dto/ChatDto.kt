@@ -18,6 +18,12 @@ data class MessageDto(
     val cost: Double? = null,
     val tokens: TokensDto? = null,
     val error: MessageErrorDto? = null,
+    val summary: MessageSummaryDto? = null,
+)
+
+@Serializable
+data class MessageSummaryDto(
+    val diffs: List<DiffFileDto> = emptyList(),
 )
 
 @Serializable

@@ -150,12 +150,16 @@ class SessionMessageListPanel(
 
                 // Message events: structural changes are handled via turn events above.
                 is SessionModelEvent.MessageAdded,
-                is SessionModelEvent.MessageUpdated,
                 is SessionModelEvent.MessageRemoved,
                 is SessionModelEvent.TodosUpdated,
                 is SessionModelEvent.SessionUpdated,
                 is SessionModelEvent.HeaderUpdated,
                 is SessionModelEvent.Compacted -> Unit
+
+                is SessionModelEvent.MessageUpdated -> {
+                    turnViews[event.info.info.id]?.setDiffs(event.info.info.summary?.diffs.orEmpty())
+                    refresh()
+                }
 
                 is SessionModelEvent.DiffUpdated -> {
                     banner?.update()
@@ -223,6 +227,7 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(msgId, tv, mv)
         }
+        tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncReverted()
         add(tv)
@@ -250,6 +255,7 @@ class SessionMessageListPanel(
             val mv = tv.addMessage(msg)
             register(id, tv, mv)
         }
+        tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
         syncReverted()
         syncSettled()
@@ -286,6 +292,7 @@ class SessionMessageListPanel(
                 val mv = tv.addMessage(msg)
                 register(msgId, tv, mv)
             }
+            tv.setDiffs(diffsOf(turn))
             tv.syncCopyToolbars()
             add(tv)
         }
@@ -408,6 +415,9 @@ class SessionMessageListPanel(
         if (banner != null) add(banner)
         add(progress)
     }
+
+    private fun diffsOf(turn: ai.kilocode.client.session.model.Turn) =
+        model.message(turn.id)?.info?.summary?.diffs.orEmpty()
 
     private fun register(msgId: String, tv: TurnView, mv: MessageView) {
         msgToTurn[msgId] = tv

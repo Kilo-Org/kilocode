@@ -7,7 +7,9 @@ import ai.kilocode.client.session.model.Text
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
+import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -82,6 +84,32 @@ class TurnViewTest : BasePlatformTestCase() {
         tv.addMessage(msg("u1", "user"))
         tv.addMessage(msg("a1", "assistant"))
         assertEquals("user#u1, assistant#a1", tv.dump())
+    }
+
+    fun `test modified files card stays last in turn`() {
+        val tv = TurnView("u1", openFile)
+        tv.addMessage(msg("u1", "user"))
+
+        tv.setDiffs(listOf(diff("src/A.kt")))
+
+        val card = tv.components.last() as ModifiedFilesView
+        assertTrue(card.isVisible)
+
+        tv.addMessage(msg("a1", "assistant"))
+
+        assertSame(card, tv.components.last())
+        assertEquals(listOf("u1", "a1"), tv.messageIds())
+    }
+
+    fun `test modified files card hides for empty diffs`() {
+        val tv = TurnView("u1", openFile)
+
+        tv.setDiffs(listOf(diff("src/A.kt")))
+        val card = tv.components.last() as ModifiedFilesView
+
+        tv.setDiffs(emptyList())
+
+        assertFalse(card.isVisible)
     }
 
     // ------ MessageView ------
@@ -344,6 +372,8 @@ class TurnViewTest : BasePlatformTestCase() {
     private fun msg(id: String, role: String): Message =
         Message(MessageDto(id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0)))
 
+    private fun diff(path: String) = DiffFileDto(path, additions = 2, deletions = 1, patch = PATCH)
+
     private fun reasoning(id: String, content: String) = Reasoning(id).also {
         it.done = false
         it.content.append(content)
@@ -374,5 +404,17 @@ class TurnViewTest : BasePlatformTestCase() {
             if (invalidComponent in watched) invalid.add(invalidComponent)
             super.addInvalidComponent(invalidComponent)
         }
+    }
+
+    private companion object {
+        val PATCH = """
+            diff --git a/src/A.kt b/src/A.kt
+            --- a/src/A.kt
+            +++ b/src/A.kt
+            @@ -1,1 +1,2 @@
+            -old
+            +new
+            +more
+        """.trimIndent()
     }
 }

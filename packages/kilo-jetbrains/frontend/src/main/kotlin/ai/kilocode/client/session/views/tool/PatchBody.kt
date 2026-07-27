@@ -64,11 +64,14 @@ class PatchBody(
     private var signature = ""
 
     @RequiresEdt
-    override fun mount(tool: Tool): JComponent {
+    override fun mount(tool: Tool): JComponent = mountFiles(editFiles(tool))
+
+    @RequiresEdt
+    internal fun mountFiles(files: List<EditFileChange>): JComponent {
         root?.let { return it }
         val panel = Stack.vertical()
         root = panel
-        rebuild(tool)
+        rebuild(files)
         return panel
     }
 
@@ -83,9 +86,14 @@ class PatchBody(
 
     @RequiresEdt
     override fun update(tool: Tool): Boolean {
+        return updateFiles(editFiles(tool))
+    }
+
+    @RequiresEdt
+    internal fun updateFiles(files: List<EditFileChange>): Boolean {
         if (root == null) return false
-        if (signatureOf(tool) == signature) return false
-        rebuild(tool)
+        if (signatureOf(files) == signature) return false
+        rebuild(files)
         return true
     }
 
@@ -124,14 +132,14 @@ class PatchBody(
     }
 
     @RequiresEdt
-    private fun rebuild(tool: Tool) {
+    private fun rebuild(files: List<EditFileChange>) {
         val panel = root ?: return
         val parent = parent ?: error("Patch body has no parent")
         disposeBody()
         val disposable = Disposer.newDisposable("Patch body")
         Disposer.register(parent, disposable)
         owner = disposable
-        editFiles(tool).filter { it.patch.isNotBlank() }.forEachIndexed { index, file ->
+        files.filter { it.patch.isNotBlank() }.forEachIndexed { index, file ->
             if (index > 0) panel.gap(JBUI.scale(SessionUiStyle.View.Code.BLOCK_GAP))
             panel.next(header(file))
             panel.gap(UiStyle.Gap.sm())
@@ -142,12 +150,12 @@ class PatchBody(
             views.add(md)
             panel.next(md.component)
         }
-        signature = signatureOf(tool)
+        signature = signatureOf(files)
         panel.revalidate()
         panel.repaint()
     }
 
-    private fun signatureOf(tool: Tool): String = editFiles(tool)
+    private fun signatureOf(files: List<EditFileChange>): String = files
         .joinToString("\u0000") { "${it.path}\u0001${it.additions}\u0001${it.deletions}\u0001${it.patch}" }
 
     @RequiresEdt
