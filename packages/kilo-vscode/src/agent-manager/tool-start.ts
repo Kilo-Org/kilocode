@@ -251,20 +251,31 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
     deps.post({ type: "agentManager.multiVersionProgress", status: "creating", total, completed: state.ok, groupId })
   }
 
-  // Register the calling session as managed so the sessions it spawned can reply
-  // to it through the orchestration prompt guard, which only trusts managed
-  // sessions (see orchestration-domain.ts). The caller becomes a local managed
-  // session (no worktree). Only done when a child was actually created and the
-  // caller is not already managed (e.g. an existing worktree session).
-  const manager = deps.getState()
-  if (state.ok > 0 && req.sessionID && manager && !manager.getSession(req.sessionID)) {
-    manager.addSession(req.sessionID, null)
-    deps.push()
-  }
+  registerCaller(deps, req, state.ok)
 
   deps.post({ type: "agentManager.multiVersionProgress", status: "done", total, completed: state.ok, groupId })
   if (state.ok === 0) deps.error(`Failed to start any Agent Manager sessions for request ${req.requestID}.`)
   deps.log(`Agent Manager tool request ${req.requestID} complete: ${state.ok}/${total}`)
+}
+
+// Register the calling session as managed so the sessions it spawned can reply
+// to it through the orchestration prompt guard, which only trusts managed
+// sessions (see orchestration-domain.ts). Skipped unless a child was actually
+// created and the caller is not already managed (e.g. an existing worktree
+// session). The caller's worktreeId is resolved from its directory the same way
+// local() resolves a child's, so a caller running inside a tracked worktree is
+// registered under that worktree rather than as a root session (otherwise
+// orchestration-domain.ts would resolve its directory to root and replies to it
+// would fail cross_workspace).
+function registerCaller(deps: ToolDeps, req: ToolRequest, ok: number): void {
+  if (ok <= 0 || !req.sessionID) return
+  const manager = deps.getState()
+  if (!manager || manager.getSession(req.sessionID)) return
+  const root = deps.getRoot()
+  const dir = clean(req.directory)
+  const callerWt = root && dir && !sameDirectory(dir, root) ? manager.findWorktreeByPath(dir) : undefined
+  manager.addSession(req.sessionID, callerWt?.id ?? null)
+  deps.push()
 }
 
 function record(value: unknown): value is Record<string, unknown> {

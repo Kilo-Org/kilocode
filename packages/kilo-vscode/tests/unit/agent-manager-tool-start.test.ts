@@ -36,8 +36,7 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
         },
       }) as never,
     getRoot: () => "/repo",
-    getState: () =>
-      ({ addSession: mock(() => calls.push("addSession")), getSession: mock(() => undefined) }) as never,
+    getState: () => ({ addSession: mock(() => calls.push("addSession")), getSession: mock(() => undefined) }) as never,
     getPanel: () => panel as never,
     openPanel: mock(() => calls.push("openPanel")),
     waitReady: mock(async () => calls.push("waitReady")),
@@ -501,5 +500,36 @@ describe("agent manager tool start", () => {
 
     expect(state.addSession).not.toHaveBeenCalled()
     expect(c.error).toHaveBeenCalled()
+  })
+
+  it("registers the calling session under its worktree when it runs in a tracked worktree directory", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const state = {
+      addSession: mock(() => {}),
+      getSession: mock(() => undefined),
+      findWorktreeByPath: mock((p: string) =>
+        p === "/repo/.kilo/worktrees/wt-caller" ? { id: "wt-caller" } : undefined,
+      ),
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getState: () => state as never,
+    })
+
+    await startFromTool(c, {
+      requestID: "am-caller-in-worktree",
+      sessionID: "s-caller",
+      mode: "local",
+      directory: "/repo/.kilo/worktrees/wt-caller",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(state.findWorktreeByPath).toHaveBeenCalledWith("/repo/.kilo/worktrees/wt-caller")
+    expect(state.addSession).toHaveBeenCalledWith("s-caller", "wt-caller")
   })
 })
