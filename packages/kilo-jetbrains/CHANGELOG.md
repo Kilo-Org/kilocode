@@ -105,21 +105,8 @@
 ## [7.0.12-rc.1] - 2026-07-27
 
 ### Added
-- feat(jetbrains): support queued prompts by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12571
 
-### Fixed
-- fix(ui): refine auto-approval line for subagent and todo tools by @bagatao-anaconda in https://github.com/Kilo-Org/kilocode/pull/12556
-- fix(vscode): prevent recursive settings saves by @marius-kilocode in https://github.com/Kilo-Org/kilocode/pull/12561
-- fix(ui): preserve parenthesized tildes in markdown by @Githubguy132010 in https://github.com/Kilo-Org/kilocode/pull/12540
-- fix(jetbrains): split bundled publish Gradle tasks by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12567
-- fix(jetbrains): use file-based signing secrets for bundled publish workflow by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12570
-- fix(jetbrains): avoid writing release signing secrets by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12575
-
-### Changed
-- test(cli): cover TUI startup outside package by @shssoichiro in https://github.com/Kilo-Org/kilocode/pull/12417
-- release(jetbrains): v7.0.11 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12563
-- docs: note that bot-generated PRs are ignored by default in Code Reviews by @emilieschario in https://github.com/Kilo-Org/kilocode/pull/12572
-
+- Support sending another JetBrains prompt while a session is still running. Queued prompts now appear in the conversation and can be removed before Kilo starts processing them.
 
 ## [7.0.11] - 2026-07-27
 
