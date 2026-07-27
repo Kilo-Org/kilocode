@@ -157,6 +157,7 @@ For blocking I/O in coroutines, move the dispatcher switch inside the callee usi
 
 - CLI process spawning, download, extraction, and lifecycle belong in `backend`.
 - By default, the plugin does not bundle CLI binaries. At connect time the backend downloads the GitHub Release asset for the version pinned in `packages/kilo-jetbrains/package.json`; `backend` resources include `kilo.properties` with `cli.version` and `cli.pinned` for split-mode RPC and runtime use.
+- Bundled release builds pass `-Pkilo.cli.bundled=true` while keeping `kilo.cli.pinned=true`. This build-only flag stages all pinned CLI release assets into `kilo-cli.zip`; runtime detects that resource and extracts only the current platform instead of downloading. Do not add a `cli.bundled` key to `kilo.properties` or repurpose `kilo.cli.pinned=false` for public bundled releases.
 - For release questions, use the `release-jetbrains` skill and reference `.kilo/skills/release-jetbrains/SKILL.md`; it verifies the CLI pin before creating immutable `jetbrains/v*` tags.
 - For OS and environment checks, prefer IntelliJ Platform classes over raw JVM APIs such as `System.getProperty(...)` or `System.getenv(...)`.
 - Detect architecture with `com.intellij.util.system.CpuArch.CURRENT`, not `System.getProperty("os.arch")`.

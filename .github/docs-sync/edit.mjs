@@ -10,7 +10,7 @@
  * warning — its PRs show up in the rolling PR body as skipped, so nothing
  * fails silently.
  *
- * Env: EDIT_MODEL (provider/model), KILO_API_KEY (set by workflow; read natively by the kilo provider).
+ * Env: EDIT_MODEL (provider/model), KILO_API_KEY + KILO_ORG_ID (set by workflow; read natively by the kilo provider).
  */
 
 import { execFileSync } from "node:child_process"

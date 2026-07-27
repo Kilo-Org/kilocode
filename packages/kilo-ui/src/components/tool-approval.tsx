@@ -59,13 +59,18 @@ export function resolveToolApproval(
     if (approval.source === "manual") return undefined
     return t(`ui.approval.source.${approval.source}`)
   }
+  const rule = approval.rule
+  // The catch-all "*"/"*" rule carries no useful detail (it's the blanket allow-everything default),
+  // so drop the "matched `*` rule `*`" fragment and let the source alone explain the approval.
+  const ruleText =
+    rule && !(rule.permission === "*" && rule.pattern === "*")
+      ? t("ui.approval.rule", { permission: rule.permission, pattern: rule.pattern })
+      : undefined
   return {
     approval,
     decision: approval.source === "manual" ? t("ui.approval.manual") : t("ui.approval.auto"),
     source: sourceText(),
-    rule: approval.rule
-      ? t("ui.approval.rule", { permission: approval.rule.permission, pattern: approval.rule.pattern })
-      : undefined,
+    rule: ruleText,
   }
 }
 
@@ -76,9 +81,7 @@ export function ToolApprovalLine(props: { display: ToolApprovalDisplay }) {
     <div data-slot="tool-approval-line" data-source={props.display.approval.source}>
       <span data-slot="tool-approval-decision">{props.display.decision}</span>
       <Show when={!manual()}>
-        <Show when={props.display.source}>
-          {(text) => <span data-slot="tool-approval-source">{text()}</span>}
-        </Show>
+        <Show when={props.display.source}>{(text) => <span data-slot="tool-approval-source">{text()}</span>}</Show>
         <Show when={props.display.rule}>{(text) => <span data-slot="tool-approval-rule">{text()}</span>}</Show>
       </Show>
     </div>
