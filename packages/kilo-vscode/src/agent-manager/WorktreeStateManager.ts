@@ -12,6 +12,7 @@
 import * as path from "path"
 import * as fs from "fs"
 import { normalizePath } from "./git-import"
+import type { SidebarTarget } from "./project-route"
 
 export interface Worktree {
   id: string
@@ -79,6 +80,7 @@ interface StateFile {
   sidebarCollapsed?: boolean
   reviewDiffStyle?: "unified" | "split"
   defaultBaseBranch?: string
+  activeTarget?: SidebarTarget
 }
 
 export type StateLoadStatus = "loaded" | "missing" | "failed"
@@ -108,6 +110,7 @@ export class WorktreeStateManager {
   private sidebar = false
   private reviewDiffStyle: "unified" | "split" = "unified"
   private defaultBase: string | undefined
+  private activeTarget: SidebarTarget | undefined
   private readonly log: (msg: string) => void
   private saving: Promise<void> | undefined
   private dirty = false
@@ -382,6 +385,23 @@ export class WorktreeStateManager {
 
   removeTabOrder(key: string): void {
     delete this.tabOrder[key]
+    void this.save()
+  }
+
+  /** Last selected sidebar target (Local/worktree/session) for seamless restore. */
+  getActiveTarget(): SidebarTarget | undefined {
+    return this.activeTarget
+  }
+
+  setActiveTarget(target: SidebarTarget | undefined): void {
+    const cur = this.activeTarget
+    const same =
+      cur?.kind === target?.kind &&
+      cur?.projectId === target?.projectId &&
+      (cur?.kind !== "worktree" || target?.kind !== "worktree" || cur.worktreeId === target.worktreeId) &&
+      (cur?.kind !== "session" || target?.kind !== "session" || cur.sessionId === target.sessionId)
+    if (same) return
+    this.activeTarget = target
     void this.save()
   }
 
@@ -719,6 +739,7 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "split"
     }
     this.defaultBase = data.defaultBaseBranch
+    this.activeTarget = data.activeTarget
     this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     if (pruned > 0 || repaired) {
       if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)
@@ -826,6 +847,9 @@ export class WorktreeStateManager {
     }
     if (this.defaultBase) {
       data.defaultBaseBranch = this.defaultBase
+    }
+    if (this.activeTarget) {
+      data.activeTarget = this.activeTarget
     }
 
     const tmp = `${this.file}.${process.pid}.${Date.now()}.tmp`

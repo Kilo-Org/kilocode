@@ -135,6 +135,8 @@ import type {
   GlobalHealthResponses,
   GlobalUpgradeErrors,
   GlobalUpgradeResponses,
+  IndexingConsentErrors,
+  IndexingConsentResponses,
   IndexingModelsErrors,
   IndexingModelsResponses,
   IndexingStatusErrors,
@@ -1705,6 +1707,10 @@ export class Config2 extends HeyApiClient {
         [key: string]: unknown
       }
       unset?: Array<Array<string>>
+      expected?: {
+        path: string
+        revision: string
+      }
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -1718,6 +1724,7 @@ export class Config2 extends HeyApiClient {
             { in: "body", key: "scope" },
             { in: "body", key: "set" },
             { in: "body", key: "unset" },
+            { in: "body", key: "expected" },
           ],
         },
       ],
@@ -6470,6 +6477,43 @@ export class Indexing extends HeyApiClient {
       url: "/indexing/models",
       ...options,
       ...params,
+    })
+  }
+
+  /**
+   * Set indexing consent
+   *
+   * Set machine-local code indexing consent for the active project.
+   */
+  public consent<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      enabled?: boolean
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "enabled" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).put<IndexingConsentResponses, IndexingConsentErrors, ThrowOnError>({
+      url: "/indexing/consent",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 }

@@ -4,6 +4,8 @@ import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { buildChatSettingsMessage } from "./chat-settings"
+import { buildThroughputSettingMessage } from "./throughput-settings"
 
 type Ctx = {
   question: SuggestionContext
@@ -11,6 +13,7 @@ type Ctx = {
   connection: KiloConnectionService
   dir: string
   post: (msg: unknown) => void
+  browserSettings: () => void
   exportTranscript: (sessionID: string) => Promise<void>
   openSessions: (ids: string[]) => void
 }
@@ -29,6 +32,18 @@ export async function routeEarlyMessage(message: { type: string }, ctx: Ctx): Pr
       ? input.sessionIDs.filter((id): id is string => typeof id === "string")
       : []
     ctx.openSessions(ids)
+    return true
+  }
+  if (message.type === "requestChatSettings") {
+    ctx.post(buildChatSettingsMessage())
+    return true
+  }
+  if (message.type === "requestThroughputSetting") {
+    ctx.post(buildThroughputSettingMessage())
+    return true
+  }
+  if (message.type === "requestBrowserSettings") {
+    ctx.browserSettings()
     return true
   }
   return await routeInputToolMessage(message, { connection: ctx.connection, dir: ctx.dir, post: ctx.post })

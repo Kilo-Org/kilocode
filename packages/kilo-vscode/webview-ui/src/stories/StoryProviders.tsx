@@ -377,6 +377,9 @@ const ConfigWrapper: ParentComponent<{
         setSettings((prev) => ({ ...prev, [key]: value }))
         setDirty(true)
       },
+      applySetting: (key: string, value: unknown, _writeKey?: string) => {
+        setSettings((prev) => ({ ...prev, [key]: value }))
+      },
       saveConfig: () => setDirty(false),
       discardConfig: () => setDirty(false),
     }

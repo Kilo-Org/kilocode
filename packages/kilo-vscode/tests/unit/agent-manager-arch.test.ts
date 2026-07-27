@@ -40,6 +40,13 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/SidebarSearchMenu.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/SidebarToggleButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectsSection.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectSidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectList.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectActions.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/SidebarBody.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/TabBar.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/ProjectBranchDialog.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
@@ -149,7 +156,15 @@ describe("Agent Manager Provider Messages", () => {
     const cls = source.getFirstDescendantByKind(SyntaxKind.ClassDeclaration)
     const method = cls?.getMethod(name)
     expect(method, `method ${name} not found in AgentManagerProvider`).toBeTruthy()
-    return method!.getText()
+    const text = method!.getText()
+    // Follow one-line delegations into the extracted lifecycle module so the
+    // assertions keep covering the real handler logic.
+    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    if (!delegated) return text
+    const lifecycle = project.addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
+    const fn = lifecycle.getFunction(delegated[1]!)
+    expect(fn, `delegated function ${delegated[1]} not found in provider-lifecycle`).toBeTruthy()
+    return fn!.getText()
   }
 
   /**
@@ -177,6 +192,36 @@ describe("Agent Manager Provider Messages", () => {
     expect(warmup).toBeLessThan(create)
   })
 
+  /**
+   * Regression: WorktreeDiffController calls getRoot() eagerly during
+   * construction, so the project contexts must exist before it is created.
+   * Constructing them later crashed extension activation at runtime.
+   */
+  it("creates project wiring before services that eagerly read the root", () => {
+    const text = fs.readFileSync(PROVIDER_FILE, "utf-8")
+    const wiring = text.indexOf("createProjectWiring(")
+    const diffs = text.indexOf("new WorktreeDiffController(")
+
+    expect(wiring).toBeGreaterThanOrEqual(0)
+    expect(diffs).toBeGreaterThanOrEqual(0)
+    expect(wiring).toBeLessThan(diffs)
+  })
+
+  /**
+   * Regression: project-management messages must be consumed before the
+   * state gate, because selectProject triggers the state initialization
+   * that later messages wait for.
+   */
+  it("handles project messages before state-gated dispatch", () => {
+    const body = getMethodBody("onMessage") + getMethodBody("dispatchMessage")
+    const projects = body.indexOf("handleProjectMessage(m, this.projects)")
+    const gate = body.indexOf("if (this.shouldWaitForState(m))")
+
+    expect(projects).toBeGreaterThanOrEqual(0)
+    expect(gate).toBeGreaterThanOrEqual(0)
+    expect(projects).toBeLessThan(gate)
+  })
+
   it("state-mutating messages wait for state initialization", () => {
     const body = getMethodBody("shouldWaitForState")
     const messages = [
@@ -196,13 +241,13 @@ describe("Agent Manager Provider Messages", () => {
       expect(body, `${message} should wait for loaded state`).toContain(message)
     }
 
-    expect(getMethodBody("onMessage")).toContain("if (this.shouldWaitForState(m)) await this.waitForStateReady(m.type)")
+    expect(getMethodBody("dispatchMessage")).toContain("if (this.shouldWaitForState(m))")
   })
 
-  it("initializeState updates local git exclude before loading persisted state", () => {
-    const body = getMethodBody("initializeState")
-    const exclude = body.indexOf("await this.ensureGitExclude(manager)")
-    const load = body.indexOf("const loaded = await state.load()")
+  it("context state init updates local git exclude before loading persisted state", () => {
+    const text = fs.readFileSync(path.join(ROOT, "src/agent-manager/project-init.ts"), "utf-8")
+    const exclude = text.indexOf("ensureGitExclude(")
+    const load = text.indexOf("state.load()")
 
     expect(exclude).toBeGreaterThanOrEqual(0)
     expect(load).toBeGreaterThanOrEqual(0)
@@ -225,7 +270,7 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    expect(getMethodBody("onCloseSession")).toContain("await this.panel?.sessions.abortSessions([sessionId])")
+    expect(getMethodBody("onCloseSession")).toContain("await deps.abort([sessionId])")
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 
@@ -376,7 +421,17 @@ describe("Agent Manager Provider — onMessage routing", () => {
     setup()
     const method = cls.getMethod(name)
     expect(method, `method ${name} not found`).toBeTruthy()
-    return method!.getText()
+    const text = method!.getText()
+    // Follow one-line delegations into the extracted lifecycle module so the
+    // assertions keep covering the real handler logic.
+    const delegated = text.match(/return (\w+Lifecycle\w+)\(/)
+    if (!delegated) return text
+    const lifecycle = source
+      .getProject()
+      .addSourceFileAtPath(path.join(ROOT, "src/agent-manager/provider-lifecycle.ts"))
+    const fn = lifecycle.getFunction(delegated[1]!)
+    expect(fn, `delegated function ${delegated[1]} not found in provider-lifecycle`).toBeTruthy()
+    return fn!.getText()
   }
 
   function provider(): string {
@@ -446,7 +501,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
   })
 
   it("onMessage delegates to cohesive routing groups", () => {
-    const text = body("onMessage")
+    const text = body("onMessage") + body("dispatchMessage")
     expect(text).toContain("onWorktreeMessage")
     expect(text).toContain("onSessionMessage")
     expect(text).toContain("onImportMessage")
@@ -464,8 +519,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onDeleteWorktree")
     expect(text).toContain("manager.removeWorktree")
     expect(text).toContain("state.removeWorktree")
-    expect(text).toContain("clearSessionDirectory")
-    expect(text).toContain("this.pushState()")
+    expect(text).toContain("deps.clearDirectory")
+    expect(text).toContain("deps.push()")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------
@@ -477,8 +532,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onCreateWorktree runs setup script before creating session", () => {
     const text = body("onCreateWorktree")
-    const setupIdx = text.indexOf("runSetupScriptForWorktree")
-    const sessionIdx = text.indexOf("createSessionInWorktree")
+    const setupIdx = text.indexOf("deps.setup(")
+    const sessionIdx = text.indexOf("deps.createSession(")
     expect(setupIdx, "setup script call must exist").toBeGreaterThan(-1)
     expect(sessionIdx, "session creation call must exist").toBeGreaterThan(-1)
     expect(setupIdx, "setup script must run before session creation").toBeLessThan(sessionIdx)
@@ -500,7 +555,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onPromoteSession runs setup script before modifying session", () => {
     const text = body("onPromoteSession")
-    const setupIdx = text.indexOf("runSetupScriptForWorktree")
+    const setupIdx = text.indexOf("deps.setup(")
     const moveIdx = text.indexOf("moveSession")
     expect(setupIdx).toBeGreaterThan(-1)
     expect(moveIdx).toBeGreaterThan(-1)
@@ -593,7 +648,7 @@ describe("Agent Manager Webview — non-git sessionsLoaded fix", () => {
     // Find the agentManager.state handler block
     const start = tsx.indexOf('"agentManager.state"')
     expect(start, "agentManager.state handler must exist").toBeGreaterThan(-1)
-    const snippet = tsx.slice(start, start + 800)
+    const snippet = tsx.slice(start, start + 1600)
     expect(snippet, "must call setSessionsLoaded in the non-git branch").toContain("setSessionsLoaded")
     expect(snippet, "must check isGitRepo === false before setting sessionsLoaded").toMatch(
       /isGitRepo.*false|false.*isGitRepo/,
@@ -804,8 +859,8 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
  */
 const MAX_LINES: Record<string, { maxLines: number; note: string }> = {
   "AgentManagerProvider.ts": {
-    maxLines: 2000,
-    note: "diff and import workflows are extracted into cohesive domain services; extract more orchestration next",
+    maxLines: 1900,
+    note: "worktree lifecycle handlers extracted into provider-lifecycle.ts; extract more orchestration next",
   },
 }
 

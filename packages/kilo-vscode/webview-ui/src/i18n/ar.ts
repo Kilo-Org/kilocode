@@ -1461,6 +1461,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "نموذج SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "النموذج المستخدم لتقليم مخرجات الأدوات؛ افتراضيًا النموذج الصغير المكوَّن",
+  "settings.experimental.multiProject.title": "إدارة متعددة المشاريع",
+  "settings.experimental.multiProject.description":
+    "تفعيل إدارة الجلسات وأشجار العمل عبر مستودعات متعددة في Agent Manager. المستودع الحالي هو دائمًا المشروع الافتراضي.",
   "settings.experimental.mcpTimeout.title": "مهلة MCP (مللي ثانية)",
   "settings.experimental.mcpTimeout.description": "مهلة طلبات خادم MCP بالمللي ثانية",
   "settings.experimental.remote.title": "التحكم Remote",

@@ -1111,3 +1111,152 @@ export const SidebarSearchOpen: Story = {
     )
   },
 }
+
+// ---------------------------------------------------------------------------
+// Multi-project sidebar
+// ---------------------------------------------------------------------------
+
+import { ProjectList } from "../../agent-manager/ProjectList"
+import { useLanguage } from "../context/language"
+import type {
+  AgentManagerStateMessage,
+  AgentProjectSnapshot,
+  LocalGitStats,
+  ProjectSessionInfo,
+} from "../types/messages"
+
+const projectA: AgentProjectSnapshot = {
+  id: "prj-aaaa1111aaaa",
+  root: "/repos/kilocode",
+  label: "kilocode",
+  pinned: true,
+  active: true,
+  expanded: true,
+  initialized: true,
+  trusted: true,
+  missing: false,
+}
+const projectB: AgentProjectSnapshot = {
+  id: "prj-bbbb2222bbbb",
+  root: "/repos/kilo-gateway",
+  label: "kilo-gateway",
+  pinned: false,
+  active: false,
+  expanded: true,
+  initialized: true,
+  trusted: true,
+  missing: false,
+}
+
+const wt = (id: string, branch: string, label?: string): WorktreeState => ({
+  id,
+  branch,
+  path: `/repos/x/.kilo/worktrees/${id}`,
+  parentBranch: "main",
+  createdAt: "2026-07-20T10:00:00Z",
+  label,
+})
+
+const projectState = (
+  projectId: string,
+  worktrees: WorktreeState[],
+  sessions: { id: string; worktreeId: string | null }[],
+  sections: NonNullable<AgentManagerStateMessage["sections"]> = [],
+  baseBranch = "main",
+): AgentManagerStateMessage => ({
+  type: "agentManager.state",
+  projectId,
+  worktrees,
+  sessions: sessions.map((s) => ({ id: s.id, worktreeId: s.worktreeId, createdAt: "2026-07-20T10:00:00Z" })),
+  sections,
+  staleWorktreeIds: [],
+  isGitRepo: true,
+  defaultBaseBranch: baseBranch,
+  sessionsCollapsed: false,
+})
+
+const projectSession = (
+  id: string,
+  worktreeId: string | null,
+  title: string,
+  updatedAt: string,
+): ProjectSessionInfo => ({
+  id,
+  worktreeId,
+  title,
+  createdAt: "2026-07-19T09:00:00Z",
+  updatedAt,
+})
+
+const storyStats = (worktreeId: string, additions: number, deletions: number, ahead = 0): WorktreeGitStats => ({
+  worktreeId,
+  files: 3,
+  additions,
+  deletions,
+  ahead,
+  behind: 0,
+})
+
+const storyLocal = (branch: string, additions: number, deletions: number, ahead = 0, behind = 0): LocalGitStats => ({
+  branch,
+  files: 2,
+  additions,
+  deletions,
+  ahead,
+  behind,
+})
+
+export const MultiProjectSidebar: Story = {
+  name: "Project List — two expanded projects with restored controls",
+  render: () => {
+    const { t } = useLanguage()
+    return (
+      <StoryProviders noPadding>
+        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
+          <ProjectList
+            projects={[projectA, projectB]}
+            states={{
+              [projectA.id]: projectState(
+                projectA.id,
+                [wt("wt-a1", "feature/project-list", "Project list UI"), wt("wt-a2", "fix/session-routing")],
+                [
+                  { id: "ses-a1", worktreeId: null },
+                  { id: "ses-a2", worktreeId: "wt-a1" },
+                ],
+              ),
+              [projectB.id]: projectState(
+                projectB.id,
+                [wt("wt-b1", "feat/gateway-routing", "Gateway routing")],
+                [{ id: "ses-b1", worktreeId: null }],
+                [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
+                "master",
+              ),
+            }}
+            stats={{
+              [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
+              [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
+            }}
+            local={{
+              [projectA.id]: storyLocal("main", 124, 33, 1),
+              [projectB.id]: storyLocal("master", 0, 0, 0, 2),
+            }}
+            prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+            sessions={{
+              [projectA.id]: [
+                projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
+                projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
+              ],
+              [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
+            }}
+            selectedProject={projectA.id}
+            selection="local"
+            bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
+            t={t}
+            onSearchRef={() => {}}
+            onShortcuts={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    )
+  },
+}

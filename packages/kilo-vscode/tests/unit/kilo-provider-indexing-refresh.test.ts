@@ -23,11 +23,52 @@ type Internals = {
   fetchAndSendCommands: () => Promise<void>
   fetchAndSendNotifications: () => Promise<void>
   fetchAndSendIndexingStatus: () => Promise<void>
+  connectionGeneration: number
+  configBindings: {
+    create: (input: unknown) => { id: string }
+  }
+}
+
+function binding(internal: Internals, scope: "global" | "project") {
+  return internal.configBindings.create({
+    connection: internal.connectionGeneration,
+    scope,
+    directory: "/repo",
+    target: {
+      scope,
+      path: scope === "global" ? "/config/kilo.jsonc" : "/repo/.kilo/kilo.jsonc",
+      revision: `${scope}-revision`,
+      exists: false,
+      writable: true,
+      raw: {},
+    },
+  })
 }
 
 function createConnection() {
   let drains = 0
   const patches: unknown[] = []
+  const snapshot = {
+    effective: {},
+    targets: {
+      global: {
+        scope: "global",
+        path: "/config/kilo.jsonc",
+        revision: "global-next",
+        exists: true,
+        writable: true,
+        raw: {},
+      },
+      project: {
+        scope: "project",
+        path: "/repo/.kilo/kilo.jsonc",
+        revision: "project-next",
+        exists: true,
+        writable: true,
+        raw: {},
+      },
+    },
+  }
   const client = {
     global: {
       config: {
@@ -38,10 +79,10 @@ function createConnection() {
     config: {
       get: async () => ({ data: {} }),
       update: async () => ({ data: {} }),
-      overlay: async () => ({ data: { project: {} } }),
+      overlay: async () => ({ data: { project: {}, targets: snapshot.targets } }),
       overlayUpdate: async (patch: unknown) => {
         patches.push(patch)
-        return { data: {} }
+        return { data: snapshot }
       },
     },
   }
@@ -105,7 +146,7 @@ describe("KiloProvider indexing refresh", () => {
 
     await internal.handleUpdateConfig({})
 
-    expect(conn.drains()).toBe(1)
+    expect(conn.drains()).toBe(0)
     expect(indexing).toBe(0)
   })
 
@@ -118,8 +159,9 @@ describe("KiloProvider indexing refresh", () => {
     internal.fetchAndSendProviders = async () => {
       calls += 1
     }
+    const global = binding(internal, "global")
 
-    await internal.handleUpdateConfig({ hide_prompt_training_models: true })
+    await internal.handleUpdateConfig({ hide_prompt_training_models: true }, {}, [], [], global.id)
 
     expect(calls).toBe(1)
   })
@@ -129,29 +171,83 @@ describe("KiloProvider indexing refresh", () => {
     const provider = new KiloProvider({} as never, conn.service as never)
     const internal = provider as unknown as Internals
     internal.connectionState = "connected"
+    const global = binding(internal, "global")
+    const project = binding(internal, "project")
 
     await internal.handleUpdateConfig(
       { indexing: { qdrant: { apiKey: undefined } } },
       { indexing: { searchMinScore: undefined } },
       [["indexing", "qdrant", "apiKey"]],
       [["indexing", "searchMinScore"]],
+      global.id,
+      project.id,
     )
 
     expect(conn.patches()).toEqual([
       expect.objectContaining({
         scope: "global",
+        expected: { path: "/config/kilo.jsonc", revision: "global-revision" },
         set: { indexing: { qdrant: { apiKey: undefined } } },
         unset: [["indexing", "qdrant", "apiKey"]],
       }),
       expect.objectContaining({
         scope: "project",
+        expected: { path: "/repo/.kilo/kilo.jsonc", revision: "project-revision" },
         set: { indexing: { searchMinScore: undefined } },
         unset: [["indexing", "searchMinScore"]],
       }),
     ])
   })
 
-  it("fetchAndSendIndexingStatus uses current session directory header", async () => {
+  it("reports a completed global scope when the project write conflicts", async () => {
+    const target = (scope: "global" | "project", revision: string) => ({
+      scope,
+      path: scope === "global" ? "/config/kilo.jsonc" : "/repo/.kilo/kilo.jsonc",
+      revision,
+      exists: true,
+      writable: true,
+      raw: {},
+    })
+    const snapshot = {
+      effective: { model: "test/global" },
+      targets: { global: target("global", "global-next"), project: target("project", "project-revision") },
+    }
+    const client = {
+      config: {
+        overlayUpdate: async (input: { scope: string }) => {
+          if (input.scope === "project") throw new Error("revision conflict")
+          return { data: snapshot }
+        },
+      },
+    }
+    const provider = new KiloProvider(
+      {} as never,
+      { drainPendingPrompts: async () => {}, getClient: () => client } as never,
+    )
+    const internal = provider as unknown as Internals
+    const messages: Array<Record<string, unknown>> = []
+    provider.postMessage = (message) => messages.push(message as Record<string, unknown>)
+    internal.connectionState = "connected"
+    const global = binding(internal, "global")
+    const project = binding(internal, "project")
+
+    await internal.handleUpdateConfig(
+      { model: "test/global" },
+      { model: "test/project" },
+      [],
+      [],
+      global.id,
+      project.id,
+    )
+
+    expect(messages.find((message) => message.type === "configUpdateFailed")).toMatchObject({
+      completedScopes: ["global"],
+      config: snapshot.effective,
+      bindings: { global: { target: snapshot.targets.global }, project: { target: snapshot.targets.project } },
+    })
+  })
+
+  it("fetchAndSendIndexingStatus writes project consent through the dedicated endpoint", async () => {
     const worktree = "/repo/.kilo/.kilocode/worktrees/feature"
     const calls: { input: RequestInfo | URL; init?: RequestInit }[] = []
     const original = globalThis.fetch
@@ -180,6 +276,12 @@ describe("KiloProvider indexing refresh", () => {
           getClient: () => ({}) as never,
           getServerConfig: () => ({ baseUrl: "http://127.0.0.1:9999", password: "secret" }),
         } as never,
+        {
+          globalState: {
+            get: () => undefined,
+            update: async () => {},
+          },
+        } as never,
       )
       const internal = provider as unknown as Internals
       provider.setSessionDirectory("ses_worktree", worktree)
@@ -192,6 +294,9 @@ describe("KiloProvider indexing refresh", () => {
       const auth = Buffer.from("kilo:secret").toString("base64")
       expect(headers.get("Authorization")).toBe(`Basic ${auth}`)
       expect(headers.get("x-kilo-directory")).toBe(worktree)
+      expect(calls[0]?.init?.method).toBe("PUT")
+      expect(String(calls[0]?.input)).toBe("http://127.0.0.1:9999/indexing/consent")
+      expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ enabled: false })
     } finally {
       globalThis.fetch = original
     }
