@@ -24,7 +24,7 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
         val res = runGit(base, "worktree", "list", "--porcelain")
-        if (!res.ok) WorktreeListDto() else WorktreeListDto(parseWorktreeList(res.stdout))
+        if (!res.ok) WorktreeListDto() else WorktreeListDto(managedWorktrees(parseWorktreeList(res.stdout)))
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {
@@ -133,4 +133,15 @@ internal fun parseWorktreeList(raw: String): List<WorktreeDto> {
     }
     flush()
     return out
+}
+
+internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
+    val main = items.firstOrNull { it.main } ?: return emptyList()
+    val root = Path.of(main.path).normalize()
+    val storage = root.resolve(".kilo").resolve("worktrees").normalize()
+    return items.filter { item ->
+        if (item.main) return@filter true
+        val path = Path.of(item.path).normalize()
+        path.startsWith(storage) && path != storage
+    }
 }

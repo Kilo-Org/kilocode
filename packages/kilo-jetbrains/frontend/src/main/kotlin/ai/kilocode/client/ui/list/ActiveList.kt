@@ -24,11 +24,13 @@ internal class ActiveList(
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     onActivate: ((ActiveListItem) -> Unit)? = null,
     onClick: ((ActiveListItem) -> Unit)? = null,
+    onSelect: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
     private val view = ActiveListView(emptyText, cfg, matcher, onActivate, onClick, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
 
     init {
+        view.onSelect = onSelect
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
         val scroll = JBScrollPane(view).apply {
@@ -64,6 +66,12 @@ internal class ActiveList(
 
     @RequiresEdt
     fun selected(): ActiveListItem? = view.selected()
+
+    @RequiresEdt
+    fun selectedItems(): List<ActiveListItem> = view.selectedItems()
+
+    @RequiresEdt
+    fun selectedKeys(): List<String> = view.selectedKeys()
 
     @RequiresEdt
     fun point(key: String, cell: String? = null): RelativePoint = view.point(key, cell)

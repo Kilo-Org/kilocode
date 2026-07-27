@@ -70,6 +70,50 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `managedWorktrees keeps only agent manager worktrees`() {
+        val raw = """
+            worktree /repo
+            HEAD 1111111111111111111111111111111111111111
+            branch refs/heads/main
+
+            worktree /repo/.kilo/worktrees/feature-x
+            HEAD 2222222222222222222222222222222222222222
+            branch refs/heads/feature/x
+
+            worktree /Users/kirillk/Library/Caches/JetBrains/Air/agents/air/task/repo
+            HEAD 3333333333333333333333333333333333333333
+            branch refs/heads/air/task
+
+            worktree /repo/sibling
+            HEAD 4444444444444444444444444444444444444444
+            branch refs/heads/sibling
+
+        """.trimIndent()
+
+        val list = managedWorktrees(parseWorktreeList(raw))
+
+        assertEquals(listOf("/repo", "/repo/.kilo/worktrees/feature-x"), list.map { it.path })
+    }
+
+    @Test
+    fun `managedWorktrees rejects the storage root itself`() {
+        val raw = """
+            worktree /repo
+            HEAD 1111111111111111111111111111111111111111
+            branch refs/heads/main
+
+            worktree /repo/.kilo/worktrees
+            HEAD 2222222222222222222222222222222222222222
+            branch refs/heads/bad
+
+        """.trimIndent()
+
+        val list = managedWorktrees(parseWorktreeList(raw))
+
+        assertEquals(listOf("/repo"), list.map { it.path })
+    }
+
+    @Test
     fun `remove reports locked and force removes a locked worktree`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)

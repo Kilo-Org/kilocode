@@ -1,0 +1,142 @@
+package ai.kilocode.client.agentManager.worktree
+
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
+import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionActivityKind
+import ai.kilocode.client.session.SessionHost
+import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.SessionUi
+import ai.kilocode.client.session.SessionUiFactory
+import ai.kilocode.client.util.UiTimerSource
+import ai.kilocode.client.util.UiTimers
+import ai.kilocode.rpc.dto.SessionDto
+import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.Messages
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.util.concurrency.annotations.RequiresEdt
+import java.awt.BorderLayout
+import javax.swing.JComponent
+import javax.swing.JPanel
+
+open class WorktreeSessionEditorManager(
+    parent: Disposable,
+    project: Project,
+    private val worktree: Workspace,
+    private val list: WorktreeSessionListController,
+    create: (Project, Workspace, SessionManager, SessionRef?, UiTimerSource) -> SessionUi =
+        { project, workspace, manager, ref, timers ->
+            service<SessionUiFactory>().create(project, workspace, manager, ref, timers)
+        },
+    resolve: (String) -> Workspace = { dir -> service<KiloWorkspaceService>().workspace(dir) },
+    status: () -> Map<String, SessionActivityKind> = { project.service<KiloSessionService>().activity() },
+    timers: UiTimerSource = UiTimers,
+    request: (JComponent) -> Unit = { focus ->
+        ApplicationManager.getApplication().invokeLater({
+            IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
+        }, ModalityState.defaultModalityState())
+    },
+    private val confirm: (JComponent, String, String) -> Boolean = { parent, msg, title ->
+        Messages.showYesNoDialog(parent, msg, title, Messages.getWarningIcon()) == Messages.YES
+    },
+) : SessionHost(project, worktree, create, resolve, status, timers, request) {
+    private val right = JPanel(BorderLayout())
+    private var last: String? = null
+    var onPresent: ((String?) -> Unit)? = null
+    var onListChanged: (() -> Unit)? = null
+
+    val component: JPanel get() = right
+
+    init {
+        Disposer.register(parent, this)
+    }
+
+    @RequiresEdt
+    fun start() {
+        list.reload {
+            val dto = latest()
+            if (dto != null) openSession(SessionRef.Local(dto)) else newSession()
+        }
+    }
+
+    @RequiresEdt
+    override fun showHistory() {
+        list.reload()
+        onListChanged?.invoke()
+    }
+
+    @RequiresEdt
+    override fun activityChanged() {
+        super.activityChanged()
+        val id = currentUi()?.id
+        if (last == null && id != null) {
+            last = id
+            list.reload { onListChanged?.invoke() }
+            return
+        }
+        last = id
+        onListChanged?.invoke()
+    }
+
+    @RequiresEdt
+    open fun deleteSessions(ids: List<String>) {
+        val active = ids.filter { it != NEW }.distinct()
+        if (active.isEmpty()) return
+        val msg = if (active.size == 1)
+            KiloBundle.message("worktree.session.delete.confirm.message", title(active[0]))
+        else
+            KiloBundle.message("worktree.session.delete.confirm.message.multiple", active.size)
+        if (!confirm(right, msg, KiloBundle.message("worktree.session.delete.confirm.title"))) return
+        val key = currentKey()
+        val show = key in active
+        active.forEach(::forceSession)
+        list.delete(active) {
+            if (!show) {
+                onListChanged?.invoke()
+                return@delete
+            }
+            val next = latest()
+            if (next != null) openSession(SessionRef.Local(next)) else newSession()
+            onListChanged?.invoke()
+        }
+    }
+
+    @RequiresEdt
+    override fun present(ui: SessionUi?) {
+        right.removeAll()
+        if (ui != null) right.add(ui, BorderLayout.CENTER)
+        right.revalidate()
+        right.repaint()
+        last = ui?.id
+        onPresent?.invoke(currentKey())
+    }
+
+    @RequiresEdt
+    override fun onSessionsChanged() {
+        list.reload { onListChanged?.invoke() }
+    }
+
+    @RequiresEdt
+    private fun latest(): SessionDto? {
+        return (0 until list.model.size)
+            .map { list.model.getElementAt(it) }
+            .maxByOrNull { it.time.updated }
+    }
+
+    @RequiresEdt
+    private fun title(id: String): String {
+        return (0 until list.model.size)
+            .map { list.model.getElementAt(it) }
+            .firstOrNull { it.id == id }
+            ?.title
+            ?.takeIf { it.isNotBlank() }
+            ?: KiloBundle.message("worktree.session.untitled")
+    }
+}

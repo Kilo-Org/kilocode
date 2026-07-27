@@ -1,0 +1,211 @@
+package ai.kilocode.client.agentManager.worktree
+
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.session.SessionManager
+import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.testing.FakeSessionRpcApi
+import ai.kilocode.client.testing.TestCoroutines
+import ai.kilocode.client.testing.fire
+import ai.kilocode.rpc.dto.SessionDto
+import ai.kilocode.rpc.dto.SessionTimeDto
+import com.intellij.openapi.actionSystem.DataKey
+import com.intellij.openapi.actionSystem.DataMap
+import com.intellij.openapi.actionSystem.DataProvider
+import com.intellij.openapi.actionSystem.DataSink
+import com.intellij.openapi.actionSystem.DataSnapshotProvider
+import com.intellij.openapi.actionSystem.UiDataProvider
+import com.intellij.openapi.actionSystem.impl.ActionButton
+import com.intellij.openapi.ui.TestDialog
+import com.intellij.openapi.ui.TestDialogManager
+import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.components.JBList
+import com.intellij.util.ui.UIUtil
+import java.awt.Container
+import java.awt.Point
+import java.awt.event.InputEvent
+import java.awt.event.MouseEvent
+
+@Suppress("UnstableApiUsage")
+class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
+    private lateinit var coroutines: TestCoroutines
+    private lateinit var rpc: FakeSessionRpcApi
+    private lateinit var sessions: KiloSessionService
+    private lateinit var controller: WorktreeSessionListController
+    private lateinit var manager: FakeManager
+    private lateinit var panel: WorktreeSessionEditorPanel
+    private val workspace = Workspace(DIR, kotlinx.coroutines.flow.MutableStateFlow(ai.kilocode.rpc.dto.KiloWorkspaceStateDto(ai.kilocode.rpc.dto.KiloWorkspaceStatusDto.READY)), {}, {})
+
+    override fun setUp() {
+        super.setUp()
+        coroutines = TestCoroutines()
+        rpc = FakeSessionRpcApi()
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        controller = WorktreeSessionListController(sessions, DIR, coroutines.scope)
+        manager = FakeManager()
+        panel = edt { WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace) }
+    }
+
+    override fun tearDown() {
+        try {
+            TestDialogManager.setTestDialog(TestDialog.DEFAULT)
+            coroutines.close(::pump)
+        } finally {
+            super.tearDown()
+        }
+    }
+
+    fun `test panel builds splitter toolbar list and right component`() {
+        edt {
+            val splitter = UIUtil.findComponentOfType(panel, OnePixelSplitter::class.java)!!
+            assertSame(manager.component, splitter.secondComponent)
+            assertEquals(0.25f, splitter.proportion, 0.01f)
+            val buttons = components(panel).filterIsInstance<ActionButton>().mapNotNull { it.presentation.text }
+            assertTrue(buttons.contains("New session"))
+            assertTrue(buttons.contains("Delete session"))
+            assertNotNull(UIUtil.findComponentOfType(panel, JBList::class.java))
+        }
+    }
+
+    fun `test new action creates session`() {
+        edt {
+            val button = components(panel).filterIsInstance<ActionButton>().single { it.presentation.text == "New session" }
+            button.click()
+        }
+
+        assertEquals(1, manager.newCount)
+    }
+
+    fun `test row click opens session`() {
+        rpc.listed += session("ses_1", 1.0)
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(400, 100)
+            list.doLayout()
+            val bounds = list.getCellBounds(0, 0)
+            fire(list, MouseEvent(list, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, bounds.x + 8, bounds.y + bounds.height / 2, 1, false, MouseEvent.BUTTON1))
+        }
+
+        assertEquals(listOf("ses_1"), manager.refs)
+    }
+
+    fun `test multi select delete action deletes selected sessions`() {
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            panel.selectSessions(listOf("ses_1", "ses_2"))
+            panel.deleteSelected()
+        }
+        pump()
+
+        assertEquals(listOf("ses_1", "ses_2"), manager.deleted)
+    }
+
+    fun `test panel provides session manager and workspace data`() {
+        val sink = SessionSink()
+
+        edt { panel.uiDataSnapshot(sink) }
+
+        assertSame(manager, sink.manager)
+        assertSame(workspace, sink.workspace)
+    }
+
+    private fun session(id: String, updated: Double) = SessionDto(
+        id = id,
+        projectID = "proj_test",
+        directory = DIR,
+        title = "Session $id",
+        version = "1",
+        time = SessionTimeDto(created = 0.0, updated = updated),
+    )
+
+    private fun flush() = coroutines.drain(::pump)
+
+    private fun pump() {
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            UIUtil.dispatchAllInvocationEvents()
+        }
+    }
+
+    private fun <T> edt(block: () -> T): T {
+        val out = arrayOfNulls<Any?>(1)
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait { out[0] = block() }
+        @Suppress("UNCHECKED_CAST")
+        return out[0] as T
+    }
+
+    private fun components(root: java.awt.Component): List<java.awt.Component> {
+        val out = mutableListOf<java.awt.Component>()
+        fun visit(item: java.awt.Component) {
+            out += item
+            if (item is Container) item.components.forEach { visit(it) }
+        }
+        visit(root)
+        return out
+    }
+
+    private fun click(target: javax.swing.JComponent) {
+        target.setSize(target.preferredSize)
+        val point = Point(target.width.coerceAtLeast(2) / 2, target.height.coerceAtLeast(2) / 2)
+        listOf(
+            MouseEvent(target, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), InputEvent.BUTTON1_DOWN_MASK, point.x, point.y, 1, false, MouseEvent.BUTTON1),
+            MouseEvent(target, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), 0, point.x, point.y, 1, false, MouseEvent.BUTTON1),
+            MouseEvent(target, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, point.x, point.y, 1, false, MouseEvent.BUTTON1),
+        ).forEach(target::dispatchEvent)
+        UIUtil.dispatchAllInvocationEvents()
+    }
+
+    private inner class FakeManager : WorktreeSessionEditorManager(
+        testRootDisposable,
+        project,
+        workspace,
+        controller,
+        create = { _, _, _, _, _ -> error("unused") },
+        request = {},
+        confirm = { _, _, _ -> true },
+    ) {
+        var newCount = 0
+        val refs = mutableListOf<String>()
+        val deleted = mutableListOf<String>()
+
+        override fun newSession() {
+            newCount++
+        }
+
+        override fun openSession(ref: SessionRef) {
+            refs += ref.id
+        }
+
+        override fun deleteSessions(ids: List<String>) {
+            deleted += ids
+        }
+    }
+
+    private class SessionSink : DataSink {
+        var manager: SessionManager? = null
+        var workspace: Workspace? = null
+
+        override fun <T : Any> set(key: DataKey<T>, data: T?) {
+            if (key == SessionManager.KEY) manager = data as? SessionManager
+            if (key == SessionManager.WORKSPACE_KEY) workspace = data as? Workspace
+        }
+
+        override fun <T : Any> setNull(key: DataKey<T>) {}
+        override fun <T : Any> lazyNull(key: DataKey<T>) {}
+        override fun <T : Any> lazyValue(key: DataKey<T>, data: (DataMap) -> T?) {}
+        override fun uiDataSnapshot(provider: UiDataProvider) = provider.uiDataSnapshot(this)
+        override fun dataSnapshot(provider: DataSnapshotProvider) = provider.dataSnapshot(this)
+        override fun uiDataSnapshot(provider: DataProvider) {}
+    }
+
+    private companion object {
+        const val DIR = "/repo/.kilo/worktrees/feature-x"
+    }
+}

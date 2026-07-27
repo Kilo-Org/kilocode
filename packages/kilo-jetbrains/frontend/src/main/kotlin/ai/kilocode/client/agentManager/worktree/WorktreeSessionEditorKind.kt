@@ -1,6 +1,9 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.app.KiloSessionService
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
 import ai.kilocode.client.vfs.KiloVirtualFile
@@ -9,8 +12,10 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.components.service
 import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.components.BorderLayoutPanel
+import kotlinx.coroutines.cancel
 import javax.swing.Icon
 import javax.swing.JComponent
 
@@ -27,7 +32,13 @@ object WorktreeSessionEditorKind : KiloEditorKind {
 
     @RequiresEdt
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
-        return BorderLayoutPanel()
+        val path = file.path.params[PATH]?.takeIf { it.isNotBlank() } ?: return BorderLayoutPanel()
+        val worktree = service<KiloWorkspaceService>().workspace(path)
+        val cs = service<SessionUiFactory>().scope()
+        Disposer.register(parent) { cs.cancel() }
+        val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
+        val manager = WorktreeSessionEditorManager(parent, project, worktree, controller)
+        return WorktreeSessionEditorPanel(parent, manager, controller, worktree)
     }
 
     private fun name(path: String): String {
