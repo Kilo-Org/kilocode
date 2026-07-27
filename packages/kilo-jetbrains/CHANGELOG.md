@@ -118,7 +118,7 @@
 ### Changed
 
 - Update the JetBrains CLI pin from Kilo Core 7.4.15 to 7.4.16.
-
+## [7.0.10] - 2026-07-24
 ## [7.0.10] - 2026-07-24
 
 ### Added
