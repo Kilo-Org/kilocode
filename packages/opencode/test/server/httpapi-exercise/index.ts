@@ -17,7 +17,7 @@
  * - `.json(...)` / `.jsonEffect(...)` assert response shape and optional side effects.
  * - `.mutating()` tells the runner to reset isolated state after destructive routes.
  */
-import { Effect } from "effect"
+import { Effect, Layer } from "effect" // kilocode_change
 import { OpenApi } from "effect/unstable/httpapi"
 import { TestLLMServer } from "../../lib/llm-server"
 import path from "path"
@@ -1670,7 +1670,16 @@ const llmScenarios = new Set([
 ])
 
 const main = Effect.gen(function* () {
-  yield* Effect.addFinalizer(() => Effect.promise(() => disposeApps()).pipe(Effect.andThen(cleanupExercisePaths)))
+  // kilocode_change start - dispose final non-mutating instances so shared test scopes can close
+  yield* Effect.addFinalizer(() =>
+    Effect.gen(function* () {
+      yield* Effect.promise(() => disposeApps())
+      const modules = yield* Effect.promise(() => runtime())
+      yield* Effect.promise(() => modules.disposeAllInstances())
+      yield* cleanupExercisePaths
+    }),
+  )
+  // kilocode_change end
   const options = parseOptions(Bun.argv.slice(2))
   const modules = yield* Effect.promise(() => runtime())
   const effectRoutes = routeKeys(OpenApi.fromApi(modules.PublicApi))
@@ -1712,10 +1721,17 @@ const main = Effect.gen(function* () {
   return undefined
 })
 
-Effect.runPromise(main.pipe(Effect.provide(TestLLMServer.layer), Effect.scoped)).then(
+// kilocode_change start - route-only coverage must not acquire a listening fake LLM server
+const llm =
+  parseOptions(Bun.argv.slice(2)).mode === "coverage"
+    ? Layer.mock(TestLLMServer)({ url: "http://coverage.invalid" })
+    : TestLLMServer.layer
+
+Effect.runPromise(main.pipe(Effect.provide(llm), Effect.scoped)).then(
   () => process.exit(0),
   (error: unknown) => {
     console.error(`${color.red}${message(error)}${color.reset}`)
     process.exit(1)
   },
 )
+// kilocode_change end
