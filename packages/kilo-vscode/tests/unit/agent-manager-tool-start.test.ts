@@ -36,7 +36,8 @@ function deps(overrides: Partial<ToolDeps> = {}): ToolDeps {
         },
       }) as never,
     getRoot: () => "/repo",
-    getState: () => ({ addSession: mock(() => calls.push("addSession")) }) as never,
+    getState: () =>
+      ({ addSession: mock(() => calls.push("addSession")), getSession: mock(() => undefined) }) as never,
     getPanel: () => panel as never,
     openPanel: mock(() => calls.push("openPanel")),
     waitReady: mock(async () => calls.push("waitReady")),
@@ -411,6 +412,94 @@ describe("agent manager tool start", () => {
     })
 
     expect(client.session.create).not.toHaveBeenCalled()
+    expect(c.error).toHaveBeenCalled()
+  })
+
+  it("registers the calling session as managed so spawned sessions can reply to it", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const state = {
+      addSession: mock(() => {}),
+      getSession: mock(() => undefined),
+      findWorktreeByPath: mock(() => undefined),
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getState: () => state as never,
+    })
+
+    await startFromTool(c, {
+      requestID: "am-register-caller",
+      sessionID: "s-caller",
+      mode: "local",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(state.addSession).toHaveBeenCalledWith("s-local", null)
+    expect(state.addSession).toHaveBeenCalledWith("s-caller", null)
+    expect(c.push).toHaveBeenCalled()
+  })
+
+  it("does not re-register a calling session that is already managed", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const managed = { id: "s-caller", worktreeId: "wt-9", createdAt: "" }
+    const state = {
+      addSession: mock(() => {}),
+      getSession: mock((id: string) => (id === "s-caller" ? managed : undefined)),
+      findWorktreeByPath: mock(() => undefined),
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getState: () => state as never,
+    })
+
+    await startFromTool(c, {
+      requestID: "am-already-managed",
+      sessionID: "s-caller",
+      mode: "local",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(state.addSession).toHaveBeenCalledWith("s-local", null)
+    expect(state.addSession).not.toHaveBeenCalledWith("s-caller", null)
+  })
+
+  it("does not register the calling session when no child session was created", async () => {
+    const client = {
+      session: {
+        create: mock(async () => {
+          throw new Error("boom")
+        }),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const state = {
+      addSession: mock(() => {}),
+      getSession: mock(() => undefined),
+      findWorktreeByPath: mock(() => undefined),
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getState: () => state as never,
+    })
+
+    await startFromTool(c, {
+      requestID: "am-no-child",
+      sessionID: "s-caller",
+      mode: "local",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(state.addSession).not.toHaveBeenCalled()
     expect(c.error).toHaveBeenCalled()
   })
 })

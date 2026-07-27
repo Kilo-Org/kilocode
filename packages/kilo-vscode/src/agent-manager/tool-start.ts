@@ -251,6 +251,17 @@ export async function startFromTool(deps: ToolDeps, req: ToolRequest): Promise<v
     deps.post({ type: "agentManager.multiVersionProgress", status: "creating", total, completed: state.ok, groupId })
   }
 
+  // Register the calling session as managed so the sessions it spawned can reply
+  // to it through the orchestration prompt guard, which only trusts managed
+  // sessions (see orchestration-domain.ts). The caller becomes a local managed
+  // session (no worktree). Only done when a child was actually created and the
+  // caller is not already managed (e.g. an existing worktree session).
+  const manager = deps.getState()
+  if (state.ok > 0 && req.sessionID && manager && !manager.getSession(req.sessionID)) {
+    manager.addSession(req.sessionID, null)
+    deps.push()
+  }
+
   deps.post({ type: "agentManager.multiVersionProgress", status: "done", total, completed: state.ok, groupId })
   if (state.ok === 0) deps.error(`Failed to start any Agent Manager sessions for request ${req.requestID}.`)
   deps.log(`Agent Manager tool request ${req.requestID} complete: ${state.ok}/${total}`)
