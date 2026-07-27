@@ -214,7 +214,7 @@ export namespace KiloToolRegistry {
       tools.memory,
       tools.save,
       tools.recall,
-      tools.chart,
+      ...(Flag.KILO_CLIENT === "vscode" ? [tools.chart] : []),
       ...(Flag.KILO_CLIENT === "cli" || Flag.KILO_CLIENT === "vscode" ? [tools.process] : []),
       ...(Flag.KILO_CLIENT === "cli" && tools.terminal ? [tools.terminal] : []),
       ...(Flag.KILO_CLIENT === "vscode" ? [tools.managerModels, tools.manager] : []),

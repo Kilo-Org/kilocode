@@ -67,7 +67,7 @@ export function ChartTool(props: ToolProps) {
           return {
             ...dataset,
             backgroundColor: data.map((_, j) => colors.series[j % colors.series.length]),
-            borderColor: colors.series.map((c) => c),
+            borderColor: data.map((_, j) => colors.series[j % colors.series.length]),
           }
         }
         return {
