@@ -152,10 +152,10 @@ describe("global config updates", () => {
 })
 
 describe("kilocode web search config", () => {
-  test("accepts explicitly limiting web search to managed providers", () => {
-    const config = Schema.decodeUnknownSync(Config.Info)({ web_search: false })
+  test("accepts enabling web search for all providers", () => {
+    const config = Schema.decodeUnknownSync(Config.Info)({ web_search: true })
 
-    expect(config.web_search).toBe(false)
+    expect(config.web_search).toBe(true)
   })
 })
 

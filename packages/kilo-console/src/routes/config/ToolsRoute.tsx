@@ -12,7 +12,7 @@ export function ToolsRoute() {
   const [search, setSearch] = createSignal("")
   const snap = () => ctx.data()
   const websearch = createMemo(() => snap()?.overlay.fields.web_search)
-  const searchEnabled = createMemo(() => websearch()?.value !== false)
+  const searchEnabled = createMemo(() => websearch()?.value === true)
   const rows = createMemo(() => {
     const data = snap()
     if (!data) return []
