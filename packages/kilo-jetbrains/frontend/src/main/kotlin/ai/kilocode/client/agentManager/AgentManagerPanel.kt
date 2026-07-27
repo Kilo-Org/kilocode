@@ -55,9 +55,9 @@ class AgentManagerPanel(
             val item = item(key) ?: return@ActiveList
             if (worktreeDeletable(item, controller.isPending(item.id))) showDeletePopup(item, id)
         },
-        onClick = { row ->
+        onOpen = { row, focus ->
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
-            open(item)
+            open(item, focus)
         },
     )
 
@@ -97,11 +97,11 @@ class AgentManagerPanel(
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
     }
 
-    private fun open(item: WorktreeDto) {
+    private fun open(item: WorktreeDto, focus: Boolean) {
         val target = project ?: return
         if (item.main || controller.isPending(item.id)) return
         ensureWorktreeSessionEditorKind()
-        target.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item))
+        target.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(item), focus)
     }
 
     private fun close(item: WorktreeDto) {

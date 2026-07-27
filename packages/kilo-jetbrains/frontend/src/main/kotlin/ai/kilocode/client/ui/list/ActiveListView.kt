@@ -4,6 +4,7 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
@@ -35,6 +36,7 @@ internal class ActiveListView(
     empty: String,
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
     private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
+    private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
     private val onClick: ((ActiveListItem) -> Unit)? = null,
     private val onCell: (String, String) -> Unit,
@@ -82,10 +84,17 @@ internal class ActiveListView(
         list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         list.cellRenderer = ActiveListRenderer(model, cfg)
         list.registerKeyboardAction(
-            { primary() },
+            { open(enter()) },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
             JComponent.WHEN_FOCUSED,
         )
+        if (onOpen != null) {
+            list.registerKeyboardAction(
+                { source() },
+                KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0),
+                JComponent.WHEN_FOCUSED,
+            )
+        }
         list.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) return
@@ -97,17 +106,18 @@ internal class ActiveListView(
 
             override fun mouseClicked(e: MouseEvent) {
                 if (e.clickCount == 1 && UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) {
-                    val action = onClick ?: return
                     val hit = hit(e, enabled = false) ?: return
                     if (hit.id != null) return
-                    action(hit.item)
+                    val action = onOpen
+                    if (action != null) action(hit.item, false) else onClick?.invoke(hit.item) ?: return
                     e.consume()
                     return
                 }
                 if (e.clickCount != 2 || !UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) return
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
-                activate(hit.item)
+                val action = onOpen
+                if (action != null) action(hit.item, true) else activate(hit.item)
                 e.consume()
             }
 
@@ -341,6 +351,21 @@ internal class ActiveListView(
         primary(item)
     }
 
+    private fun open(focus: Boolean) {
+        val item = list.selectedValue ?: return
+        val action = onOpen
+        if (action != null) {
+            action(item, focus)
+            return
+        }
+        primary(item)
+    }
+
+    private fun source() {
+        val item = list.selectedValue ?: return
+        onOpen?.invoke(item, true)
+    }
+
     /**
      * Default action for a double-click. Resolves to the row's explicit activation only: an
      * [onActivate] handler, then the row's [ActiveListItem.doubleClick] cell, then a [primary] cell.
@@ -398,6 +423,8 @@ internal class ActiveListView(
         check(ApplicationManager.getApplication().isDispatchThread) { "Active list updates must run on EDT" }
     }
 
+    private fun enter(): Boolean = AdvancedSettings.getBoolean(ENTER_FOCUS)
+
     override fun getScrollableTracksViewportWidth() = true
 
     override fun getScrollableTracksViewportHeight() = false
@@ -422,6 +449,10 @@ internal class ActiveListView(
     private data class Hit(val item: ActiveListItem, val id: String?)
 
     private data class Press(val key: String, val id: String)
+
+    private companion object {
+        const val ENTER_FOCUS = "edit.source.on.enter.key.request.focus.in.editor"
+    }
 }
 
 private fun activeListIndex(items: List<ActiveListItem>, key: String?): Int {

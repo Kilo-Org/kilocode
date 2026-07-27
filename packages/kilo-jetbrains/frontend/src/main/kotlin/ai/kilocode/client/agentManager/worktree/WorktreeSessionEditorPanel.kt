@@ -50,7 +50,7 @@ class WorktreeSessionEditorPanel(
         cfg = ActiveListConfig(ActiveListRowHeight.EQUAL, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
         placeholder = KiloBundle.message("worktree.session.list.search.placeholder"),
         onCell = { key, id -> if (id == DELETE_CELL) manager.deleteSessions(listOf(key)) },
-        onClick = { row -> open(row) },
+        onOpen = { row, focus -> open(row, focus) },
         onSelect = { updateActions() },
     )
     private var started = false
@@ -114,13 +114,13 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
-    private fun open(row: ActiveListItem) {
+    private fun open(row: ActiveListItem, focus: Boolean) {
         if (row.key == SessionHost.NEW) {
             manager.newSession()
             return
         }
         val item = item(row.key) ?: return
-        manager.openSession(SessionRef.Local(item))
+        manager.openSession(SessionRef.Local(item), focus)
     }
 
     @RequiresEdt

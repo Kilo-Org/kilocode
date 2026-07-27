@@ -16,6 +16,7 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DataSnapshotProvider
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.impl.ActionButton
+import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -24,8 +25,11 @@ import com.intellij.ui.components.JBList
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import java.awt.Point
+import java.awt.event.ActionEvent
 import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.KeyStroke
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
@@ -91,6 +95,42 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
 
         assertEquals(listOf("ses_1"), manager.refs)
+        assertEquals(listOf(false), manager.focuses)
+    }
+
+    fun `test row double click opens and focuses session`() {
+        rpc.listed += session("ses_1", 1.0)
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(400, 100)
+            list.doLayout()
+            val bounds = list.getCellBounds(0, 0)
+            fire(list, MouseEvent(list, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, bounds.x + 8, bounds.y + bounds.height / 2, 2, false, MouseEvent.BUTTON1))
+        }
+
+        assertEquals(listOf("ses_1"), manager.refs)
+        assertEquals(listOf(true), manager.focuses)
+    }
+
+    fun `test enter opens with platform focus setting and f4 focuses session`() {
+        rpc.listed += session("ses_1", 1.0)
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.selectedIndex = 0
+            list.getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0))!!
+                .actionPerformed(ActionEvent(list, ActionEvent.ACTION_PERFORMED, ""))
+            list.getActionForKeyStroke(KeyStroke.getKeyStroke(KeyEvent.VK_F4, 0))!!
+                .actionPerformed(ActionEvent(list, ActionEvent.ACTION_PERFORMED, ""))
+        }
+
+        assertEquals(listOf("ses_1", "ses_1"), manager.refs)
+        assertEquals(listOf(AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor"), true), manager.focuses)
     }
 
     fun `test multi select delete action deletes selected sessions`() {
@@ -173,14 +213,16 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
     ) {
         var newCount = 0
         val refs = mutableListOf<String>()
+        val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
 
         override fun newSession() {
             newCount++
         }
 
-        override fun openSession(ref: SessionRef) {
+        override fun openSession(ref: SessionRef, focus: Boolean) {
             refs += ref.id
+            focuses += focus
         }
 
         override fun deleteSessions(ids: List<String>) {

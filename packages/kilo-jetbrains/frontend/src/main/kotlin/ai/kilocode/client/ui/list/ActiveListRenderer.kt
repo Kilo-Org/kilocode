@@ -78,7 +78,7 @@ internal class ActiveListRenderer(
 
         background = list.background
         top.background = list.background
-        wrap.update(list, active, active || focused)
+        wrap.update(list, selected, active)
         sep.caption = section
         sep.setHideLine(index == 0)
         top.isVisible = section != null

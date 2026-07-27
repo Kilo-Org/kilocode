@@ -21,12 +21,13 @@ internal class ActiveList(
     showSearch: Boolean = true,
     placeholder: String = "",
     onCell: (String, String) -> Unit,
+    onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     onActivate: ((ActiveListItem) -> Unit)? = null,
     onClick: ((ActiveListItem) -> Unit)? = null,
     onSelect: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, matcher, onActivate, onClick, onCell)
+    private val view = ActiveListView(emptyText, cfg, matcher, onOpen, onActivate, onClick, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
 
     init {

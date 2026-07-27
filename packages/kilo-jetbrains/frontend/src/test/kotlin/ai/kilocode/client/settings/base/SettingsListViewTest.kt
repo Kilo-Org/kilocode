@@ -1,6 +1,7 @@
 package ai.kilocode.client.settings.base
 
 import ai.kilocode.client.testing.fire
+import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveListActionCell
 import ai.kilocode.client.ui.list.ActiveListActive
@@ -284,6 +285,34 @@ class SettingsListViewTest : BasePlatformTestCase() {
 
             val desc = components(renderer).filterIsInstance<JBLabel>().single { it.text == "Description" }
             assertEquals(UiStyle.Colors.weak(), desc.foreground)
+        }
+    }
+
+    fun `test unfocused selected row paints inactive selection background`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, false)
+
+            val picker = components(renderer).filterIsInstance<PickerRow>().single()
+            assertEquals(UIUtil.getListBackground(true, false), picker.selectionColor)
+        }
+    }
+
+    fun `test focused selected row paints active selection background`() {
+        edt {
+            val row = item("with", "Alpha", "Description")
+            val model = CollectionListModel<ActiveListItem>(listOf(row))
+            val list = JBList(model)
+            val renderer = ActiveListRenderer(model, ActiveListConfig.Equal)
+
+            renderer.getListCellRendererComponent(list, row, 0, true, true)
+
+            val picker = components(renderer).filterIsInstance<PickerRow>().single()
+            assertEquals(UIUtil.getListBackground(true, true), picker.selectionColor)
         }
     }
 

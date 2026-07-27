@@ -43,6 +43,11 @@ abstract class SessionHost(
 
     @RequiresEdt
     override fun openSession(ref: SessionRef) {
+        openSession(ref, focus = true)
+    }
+
+    @RequiresEdt
+    open fun openSession(ref: SessionRef, focus: Boolean) {
         register(current)
         val ui = opened[ref.key] ?: run {
             val local = (ref as? SessionRef.Local)?.session?.id
@@ -54,7 +59,7 @@ abstract class SessionHost(
         }
         if (current === ui) return
         Telemetry.send("Session Opened", mapOf("source" to ref.type.name.lowercase(), "sessionId" to ref.id))
-        show(ui)
+        show(ui, focus)
     }
 
     @RequiresEdt
@@ -120,7 +125,7 @@ abstract class SessionHost(
     }
 
     @RequiresEdt
-    protected fun show(ui: SessionUi) {
+    protected fun show(ui: SessionUi, focus: Boolean = true) {
         cancel(ui)
         all.add(ui)
         register(ui)
@@ -129,7 +134,7 @@ abstract class SessionHost(
         release(current)
         current = ui
         present(ui)
-        focus(ui.defaultFocusedComponent)
+        if (focus) focus(ui.defaultFocusedComponent)
     }
 
     @RequiresEdt
