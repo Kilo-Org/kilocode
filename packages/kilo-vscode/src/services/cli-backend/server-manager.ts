@@ -2,6 +2,7 @@ import { type ChildProcess } from "child_process"
 import { spawn } from "../../util/process"
 import * as crypto from "crypto"
 import * as fs from "fs"
+import * as os from "os"
 import * as path from "path"
 import * as vscode from "vscode"
 import { resolveLocalBwrapEnv, resolveTreeSitterEnv } from "./cli-resources"
@@ -15,6 +16,52 @@ export interface ServerInstance {
 }
 
 const STARTUP_TIMEOUT_SECONDS = 30
+
+/**
+ * Discovery file so external agents (talk-back.js, other scripts) can find
+ * the VS Code extension's kilo serve process without the daemon.
+ * Same schema as daemon.json — drop-in compatible with existing tooling.
+ */
+function discoveryFile(): string {
+  const dir =
+    process.platform === "win32"
+      ? path.join(os.homedir(), ".local", "state", "kilo")
+      : path.join(process.env.XDG_STATE_HOME || path.join(os.homedir(), ".local", "state"), "kilo")
+  return path.join(dir, "vscode-server.json")
+}
+
+function writeDiscovery(instance: ServerInstance, version: string): void {
+  const file = discoveryFile()
+  const token = Buffer.from(`kilo:${instance.password}`).toString("base64")
+  const state = {
+    pid: instance.process.pid,
+    hostname: "127.0.0.1",
+    port: instance.port,
+    url: `http://127.0.0.1:${instance.port}`,
+    username: "kilo",
+    password: instance.password,
+    token,
+    version,
+    startedAt: new Date().toISOString(),
+    source: "vscode",
+  }
+  try {
+    fs.mkdirSync(path.dirname(file), { recursive: true })
+    fs.writeFileSync(file, JSON.stringify(state, null, 2), { mode: 0o600 })
+    console.log("[Kilo New] ServerManager: 📝 Discovery file written:", file)
+  } catch (err) {
+    console.warn("[Kilo New] ServerManager: ⚠️ Failed to write discovery file:", err)
+  }
+}
+
+function removeDiscovery(): void {
+  try {
+    fs.unlinkSync(discoveryFile())
+    console.log("[Kilo New] ServerManager: 🗑️ Discovery file removed")
+  } catch {
+    // Already gone — ignore
+  }
+}
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
 type ServerExitListener = (code: number | null) => void
@@ -167,7 +214,9 @@ export class ServerManager {
         if (port !== null && !resolved) {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
-          resolve({ port, password, process: serverProcess })
+          const instance: ServerInstance = { port, password, process: serverProcess }
+          writeDiscovery(instance, this.context.extension.packageJSON.version)
+          resolve(instance)
         }
       })
 
@@ -186,6 +235,7 @@ export class ServerManager {
 
       serverProcess.on("exit", (code) => {
         console.log("[Kilo New] ServerManager: 🛑 Process exited with code:", code)
+        removeDiscovery()
         if (this.instance?.process === serverProcess) {
           this.instance = null
           this.onExit?.(code)
@@ -250,6 +300,7 @@ export class ServerManager {
     }
     const proc = this.instance.process
     this.instance = null
+    removeDiscovery()
 
     console.log("[Kilo New] ServerManager: 🔴 Disposing — sending SIGTERM to process group, PID:", proc.pid)
     ServerManager.killProcess(proc, "SIGTERM")
