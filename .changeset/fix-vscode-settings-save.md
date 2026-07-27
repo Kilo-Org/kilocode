@@ -2,4 +2,4 @@
 "kilo-code": patch
 ---
 
-Prevent settings selects from recursively reapplying unchanged values when saving in VS Code.
+Fix settings changes sometimes failing to save and apply in VS Code.
