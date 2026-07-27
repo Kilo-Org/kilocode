@@ -37,7 +37,7 @@ permissions:
   issues: write # comment on the rolling PR
 
 concurrency:
-  group: docs-sync
+  group: ${{ github.event_name == 'pull_request' && format('docs-sync-pr-{0}', github.event.pull_request.number) || 'docs-sync' }}
   cancel-in-progress: false
 
 env:
