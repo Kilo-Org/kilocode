@@ -1,36 +1,6 @@
 import { describe, it, expect, vi } from "bun:test"
-import { VsCodeIde } from "../src/services/autocomplete/continuedev/core/vscode-test-harness/src/VSCodeIde"
+import { VsCodeIde } from "../../src/services/autocomplete/continuedev/core/vscode-test-harness/src/VSCodeIde"
 import * as vscode from "vscode"
-
-vi.mock("vscode", () => ({
-  Uri: {
-    parse: (fileUri: string) => ({
-      toString: () => fileUri,
-    }),
-    file: (path: string) => ({
-      toString: () => `file://${path}`,
-    }),
-  },
-  workspace: {
-    fs: {
-      stat: vi.fn().mockResolvedValue({} as any),
-      readFile: vi.fn(),
-    },
-    textDocuments: [],
-    notebookDocuments: [],
-    workspaceFolders: [],
-  },
-  window: {
-    visibleTextEditors: [],
-    activeTextEditor: undefined,
-  },
-  env: {
-    clipboard: {
-      readText: vi.fn().mockResolvedValue("")
-    },
-    machineId: "test-machine",
-  },
-}))
 
 describe("VsCodeIde", () => {
   it("awaits save on visible editor matching the URI", async () => {
