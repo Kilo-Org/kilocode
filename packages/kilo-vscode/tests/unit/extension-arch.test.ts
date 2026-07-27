@@ -127,6 +127,23 @@ describe("Extension — package.json command sync", () => {
       when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
     })
   })
+
+  it("scopes agent mode shortcuts to focused Kilo webviews", () => {
+    const bindings = pkg.contributes?.keybindings?.filter(
+      (item: { command: string }) =>
+        item.command === "kilo-code.new.cycleAgentMode" || item.command === "kilo-code.new.cyclePreviousAgentMode",
+    )
+    const when =
+      "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+
+    expect(bindings).toHaveLength(2)
+    expect(bindings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.cycleAgentMode", when }),
+        expect.objectContaining({ command: "kilo-code.new.cyclePreviousAgentMode", when }),
+      ]),
+    )
+  })
 })
 
 // ---------------------------------------------------------------------------

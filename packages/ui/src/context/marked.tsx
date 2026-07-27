@@ -321,6 +321,17 @@ export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser 
         },
         // kilocode_change end
       },
+      // kilocode_change start: Marked accepts a tilde preceded by an opening
+      // parenthesis as the closing delimiter. It is left-flanking there, so
+      // preserve it literally instead of corrupting text such as "(~1 GB)".
+      tokenizer: {
+        del(src) {
+          const match = this.rules.inline.del.exec(src)
+          if (match?.[0].at(-2) === "(") return
+          return false
+        },
+      },
+      // kilocode_change end
     },
     // kilocode_change start: enable only double-dollar math.
     // Single $ is far more common as a currency symbol in agent responses

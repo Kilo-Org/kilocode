@@ -177,6 +177,7 @@ export function Prompt(props: PromptProps) {
   const keymap = useOpencodeKeymap()
   const agentShortcut = useCommandShortcut("agent.cycle")
   const paletteShortcut = useCommandShortcut("command.palette.show")
+  const variantShortcut = useCommandShortcut("variant.cycle")
   const renderer = useRenderer()
   const exit = useExit()
   const dimensions = useTerminalDimensions()
@@ -1835,6 +1836,11 @@ export function Prompt(props: PromptProps) {
               </Show>
               <Switch>
                 <Match when={store.mode === "normal"}>
+                  <Show when={local.model.variant.list().length > 0}>
+                    <text fg={theme.text}>
+                      {variantShortcut()} <span style={{ fg: theme.textMuted }}>variants</span>
+                    </text>
+                  </Show>
                   <Switch>
                     <Match when={usage()}>
                       {(item) => (
