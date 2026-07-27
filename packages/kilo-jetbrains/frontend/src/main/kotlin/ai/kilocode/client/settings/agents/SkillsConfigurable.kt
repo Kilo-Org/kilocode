@@ -352,7 +352,7 @@ internal class SkillSourcesView(
 ) : Stack(ai.kilocode.client.ui.layout.StackAxis.VERTICAL, UiStyle.Gap.sm()) {
     private val view = ActiveListView(
         KiloBundle.message("settings.agentBehavior.skills.sources.empty"),
-        ActiveListConfig.Preferred.copy(description = false, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
+        ActiveListConfig(description = false, selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION),
     ) { key, id ->
         if (id == EDIT_CELL) edit(key)
     }

@@ -42,6 +42,7 @@ internal class ActiveListView(
     private val onCell: (String, String) -> Unit,
 ) : Stack(StackAxis.VERTICAL), Scrollable {
     private val model = CollectionListModel<ActiveListItem>()
+    private val renderer = ActiveListRenderer(model, cfg)
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
 
@@ -82,7 +83,7 @@ internal class ActiveListView(
 
     init {
         list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
-        list.cellRenderer = ActiveListRenderer(model, cfg)
+        list.cellRenderer = renderer
         list.registerKeyboardAction(
             { open(enter()) },
             KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0),
@@ -314,8 +315,22 @@ internal class ActiveListView(
     @RequiresEdt
     private fun syncCellHeight(rows: List<ActiveListItem>) {
         checkEdt()
+        renderer.setBodyHeight(null)
         if (cfg.height == ActiveListRowHeight.PREFERRED) {
             if (list.fixedCellHeight == -1) return
+            list.fixedCellHeight = -1
+            list.revalidate()
+            return
+        }
+        if (rows.any { it.section != null }) {
+            val height = rows.indices.maxOfOrNull { idx ->
+                renderer.bodyPreferredHeight(list, rows[idx], idx, true, true)
+            }
+            renderer.setBodyHeight(height)
+            if (list.fixedCellHeight == -1) {
+                list.revalidate()
+                return
+            }
             list.fixedCellHeight = -1
             list.revalidate()
             return

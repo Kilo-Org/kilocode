@@ -19,7 +19,7 @@ internal data class ActiveListBadge(val text: String, val style: UiStyle.Badge.S
 internal enum class ActiveListRowHeight { EQUAL, PREFERRED }
 
 internal data class ActiveListConfig(
-    val height: ActiveListRowHeight,
+    val height: ActiveListRowHeight = ActiveListRowHeight.EQUAL,
     val description: Boolean = true,
     val descriptionIndent: Boolean = true,
     val tooltip: Boolean = true,

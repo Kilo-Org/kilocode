@@ -15,6 +15,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
+import java.awt.Dimension
 import javax.swing.JList
 import javax.swing.JPanel
 import javax.swing.ListCellRenderer
@@ -24,7 +25,8 @@ internal class ActiveListRenderer(
     private val model: CollectionListModel<ActiveListItem>,
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
 ) : JPanel(BorderLayout()), ListCellRenderer<ActiveListItem> {
-    private val sep = GroupHeaderSeparator(JBUI.CurrentTheme.Popup.separatorLabelInsets())
+    private val insets = JBUI.CurrentTheme.Popup.separatorLabelInsets()
+    private val sep = GroupHeaderSeparator(insets)
     private val top = JPanel(BorderLayout()).apply {
         border = JBUI.Borders.empty()
         add(sep, BorderLayout.NORTH)
@@ -55,6 +57,7 @@ internal class ActiveListRenderer(
         add(actions, BorderLayout.EAST)
     }
     private val wrap = PickerRow()
+    private var bodyHeight: Int? = null
 
     init {
         isOpaque = true
@@ -81,8 +84,7 @@ internal class ActiveListRenderer(
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = if (active) fg else UiStyle.Colors.weak()
-        val current = model.items.getOrNull(index)
-        val section = if (current === value) activeListSectionTitle(model.items, index) else null
+        val section = activeListSectionTitle(model.items, index)
 
         background = list.background
         top.background = list.background
@@ -90,6 +92,7 @@ internal class ActiveListRenderer(
         sep.caption = section
         sep.setHideLine(index == 0)
         top.isVisible = section != null
+        top.setPreferredSize(section?.let { Dimension(0, sep.getFontMetrics(sep.font).height + insets.top + insets.bottom) })
 
         title.clear()
         title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
@@ -118,8 +121,30 @@ internal class ActiveListRenderer(
         syncCells(value, active && list.isEnabled, list.isEnabled)
         cellPane.isVisible = cells.isVisible
         actions.isVisible = trail.isVisible || cellPane.isVisible
+        val height = bodyHeight
+        wrap.setPreferredSize(height?.let { Dimension(0, it) })
         top.invalidate()
         return this
+    }
+
+    fun setBodyHeight(height: Int?) {
+        if (bodyHeight == height) return
+        bodyHeight = height
+    }
+
+    fun bodyPreferredHeight(
+        list: JList<out ActiveListItem>,
+        value: ActiveListItem,
+        index: Int,
+        selected: Boolean,
+        focused: Boolean,
+    ): Int {
+        val fixed = bodyHeight
+        bodyHeight = null
+        getListCellRendererComponent(list, value, index, selected, focused)
+        val height = wrap.preferredSize.height
+        bodyHeight = fixed
+        return height
     }
 
     private fun syncBadges(item: ActiveListItem) {

@@ -11,6 +11,7 @@ import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRenderer
+import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.ui.list.ActiveListView
 import ai.kilocode.client.ui.list.activeListCellAt
@@ -81,6 +82,30 @@ class SettingsListViewTest : BasePlatformTestCase() {
             val second = view.list.getCellBounds(1, 1)
 
             assertEquals(first.height, second.height)
+        }
+    }
+
+    fun `test active list config defaults to equal row height`() {
+        assertEquals(ActiveListRowHeight.EQUAL, ActiveListConfig().height)
+        assertEquals(ActiveListRowHeight.PREFERRED, ActiveListConfig.Preferred.height)
+    }
+
+    fun `test equal rows keep section headers out of body height`() {
+        edt {
+            val view = ActiveListView("Empty") { _, _ -> }
+            view.update(listOf(
+                sectionItem("first", "First", "Today"),
+                sectionItem("second", "Second", "Today"),
+                sectionItem("third", "Third", "Yesterday"),
+            ))
+            layout(view)
+
+            val first = view.list.getCellBounds(0, 0)
+            val second = view.list.getCellBounds(1, 1)
+            val third = view.list.getCellBounds(2, 2)
+
+            assertTrue("fixed=${view.list.fixedCellHeight} first=${first.height} second=${second.height} third=${third.height}", first.height > second.height)
+            assertTrue("fixed=${view.list.fixedCellHeight} first=${first.height} second=${second.height} third=${third.height}", third.height > second.height)
         }
     }
 
@@ -499,6 +524,12 @@ class SettingsListViewTest : BasePlatformTestCase() {
         override val title = name
         override val description = note
         override val cells = cells.toList()
+    }
+
+    private fun sectionItem(id: String, name: String, group: String) = object : ActiveListItem {
+        override val key = id
+        override val title = name
+        override val section = group
     }
 
     private fun layout(view: ActiveListView) {
