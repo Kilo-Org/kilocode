@@ -11,6 +11,7 @@ import { ConfigVariable } from "@/config/variable"
 import { Filesystem } from "@/util/filesystem"
 import { isRecord } from "@/util/record"
 import { KilocodeConfig } from "./config"
+import { expandProjectMcpHeaders } from "./mcp-headers"
 import { KilocodeConfigSources } from "./sources"
 
 export namespace KilocodeConfigOverlay {
@@ -220,11 +221,12 @@ export namespace KilocodeConfigOverlay {
   async function loadUnsafe(file: string, fileScope?: ConfigVariable.FileScope): Promise<Config.Info> {
     // kilocode_change end
     const text = await Bun.file(file).text()
-    // kilocode_change - overlay reads project config files: {env:} rejected, {file:} confined to fileScope.root
+    // kilocode_change - overlay reads project config files: {env:} left literal, expanded in MCP headers post-parse
     const expanded = await ConfigVariable.substitute({ text, type: "path", path: file, trusted: false, fileScope })
     const parsed = ConfigParse.jsonc(expanded, file)
     if (!isRecord(parsed)) return {}
-    return ConfigParse.schema(Config.Info, parsed, file) as Config.Info
+    const data = ConfigParse.schema(Config.Info, parsed, file) as Config.Info
+    return (await expandProjectMcpHeaders(data, undefined, file)).config
   }
 
   function field(
