@@ -406,7 +406,7 @@ it.instance(
         )
       }
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     const models = providers[ProviderV2.ID.make("custom-openai")].models
@@ -450,7 +450,7 @@ it.instance(
         )
       }
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     const models = providers[ProviderV2.ID.make("custom-openai")].models
@@ -482,7 +482,7 @@ it.instance(
       const url = input instanceof Request ? input.url : String(input)
       if (url === "https://custom.openai.com/v1/models") calls += 1
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("custom-openai")]).toBeDefined()
@@ -528,7 +528,7 @@ it.instance(
         })
       }
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("first-openai")].models["first-model"]).toBeDefined()
@@ -566,7 +566,7 @@ it.instance(
       const url = input instanceof Request ? input.url : String(input)
       if (url === "https://custom.openai.com/v1/models") calls += 1
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("custom-openai")]).toBeDefined()
@@ -603,7 +603,7 @@ it.instance(
         })
       }
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     const model = providers[ProviderV2.ID.make("custom-openai")].models["gpt-4.1"]
@@ -638,7 +638,7 @@ it.instance(
         return new Response("nope", { status: 500 })
       }
       return originalFetch(input as RequestInfo | URL, init)
-    }) as typeof globalThis.fetch
+    }) as unknown as typeof globalThis.fetch
 
     const providers = yield* list
     expect(providers[ProviderV2.ID.make("custom-openai")]).toBeDefined()
