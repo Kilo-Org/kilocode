@@ -15,6 +15,7 @@ object SessionViewIcons {
     val chevronExpanded: Icon = chevronDown
     val code = icon("code")
     val codeLines = icon("code-lines")
+    val edit = codeLines
     val console = icon("console")
     val eye = icon("eye")
     val glasses = icon("glasses")

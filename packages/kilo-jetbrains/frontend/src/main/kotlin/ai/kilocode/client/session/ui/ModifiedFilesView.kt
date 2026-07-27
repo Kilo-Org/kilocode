@@ -8,10 +8,14 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.EditFileChange
 import ai.kilocode.client.session.views.tool.POPUP_OPTS
 import ai.kilocode.client.session.views.tool.PatchBody
+import ai.kilocode.client.session.views.tool.setFont
+import ai.kilocode.client.session.views.tool.setForeground
+import ai.kilocode.client.session.views.tool.setIcon
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffBars
 import ai.kilocode.client.ui.UiStyle
@@ -20,7 +24,11 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import com.intellij.util.ui.JBUI
+import java.awt.BorderLayout
+import java.awt.Dimension
 import javax.swing.JComponent
+import javax.swing.JPanel
 
 class ModifiedFilesView private constructor(
     private val openFile: SessionFileOpener,
@@ -41,6 +49,7 @@ class ModifiedFilesView private constructor(
     init {
         body.parent = this
         isVisible = false
+        bindHeader(parts.glyph, parts.title, parts.count, parts.center, parts.controls)
         applyStyle(style)
     }
 
@@ -119,14 +128,23 @@ class ModifiedFilesView private constructor(
     }
 
     private class Header {
+        val glyph = JBLabel()
         val title = JBLabel(KiloBundle.message("session.changes.modified"))
         val count = JBLabel()
         private val bars = DiffBars(0, 0)
-        // Match the patch header: title and target sit a standard md gap apart, so the bars
-        // indicator is separated from the "Modified N files" label by the same gap.
-        val panel: JComponent = Stack.horizontal(UiStyle.Gap.md())
-            .next(Stack.horizontal(UiStyle.Gap.sm()).next(title).next(count))
-            .next(bars)
+        val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
+            isOpaque = false
+            minimumSize = Dimension(0, minimumSize.height)
+            add(Stack.horizontal(UiStyle.Gap.sm()).next(title).next(count), BorderLayout.WEST)
+        }
+        val controls: JComponent = Stack.horizontal().next(bars)
+        // Match edit/patch cards: glyph on the left, text in the center, and stats in the control slot.
+        val panel: JComponent = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
+            isOpaque = false
+            add(glyph, BorderLayout.WEST)
+            add(center, BorderLayout.CENTER)
+            add(controls, BorderLayout.EAST)
+        }
 
         @RequiresEdt
         fun update(total: Int, additions: Int, deletions: Int) {
@@ -137,10 +155,12 @@ class ModifiedFilesView private constructor(
 
         @RequiresEdt
         fun applyStyle(style: SessionEditorStyle) {
-            title.font = style.boldEditorFont
-            count.font = style.transcriptFont
-            title.foreground = UiStyle.Colors.fg()
-            count.foreground = UiStyle.Colors.weak()
+            setIcon(glyph, SessionViewIcons.edit)
+            setForeground(glyph, SessionUiStyle.View.Tool.completed())
+            setFont(title, style.boldEditorFont)
+            setFont(count, style.transcriptFont)
+            setForeground(title, UiStyle.Colors.fg())
+            setForeground(count, UiStyle.Colors.weak())
         }
     }
 

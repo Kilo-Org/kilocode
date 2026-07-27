@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui
 
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.editor.EditorFactory
@@ -33,6 +34,12 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
 
         assertTrue(view.isVisible)
         assertEquals("1 file", view.countText())
+    }
+
+    fun `test header uses edit icon`() {
+        val labels = components(view).filterIsInstance<JBLabel>()
+
+        assertTrue(labels.any { it.icon === SessionViewIcons.edit })
     }
 
     fun `test expand renders one link and badge per file`() {

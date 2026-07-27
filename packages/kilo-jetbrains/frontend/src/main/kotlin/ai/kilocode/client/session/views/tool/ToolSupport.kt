@@ -476,7 +476,7 @@ internal fun icon(tool: Tool) = when (tool.name) {
     "codesearch" -> SessionViewIcons.code
     "task" -> SessionViewIcons.task
     "bash" -> SessionViewIcons.console
-    "edit", "write", "apply_patch" -> SessionViewIcons.codeLines
+    "edit", "write", "apply_patch" -> SessionViewIcons.edit
     "todowrite", "todoread" -> SessionViewIcons.checklist
     "question" -> SessionViewIcons.bubble
     "skill" -> SessionViewIcons.brain
