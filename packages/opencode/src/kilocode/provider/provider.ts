@@ -14,6 +14,7 @@ import { optionalOmitUndefined } from "@opencode-ai/core/schema"
 import { Effect, Schema } from "effect"
 import type { LanguageModelV3 } from "@ai-sdk/provider"
 import { mapValues, omit, pickBy } from "remeda"
+import { EventSourceParserStream, type EventSourceMessage } from "eventsource-parser/stream"
 
 /** Default timeout (ms) for provider HTTP requests (connection phase). */
 export const REQUEST_TIMEOUT_MS = 300_000 // 5 minutes
@@ -269,4 +270,57 @@ export function buildTimeoutSignal(options: Record<string, any>): {
       clearTimeout(timer)
     },
   }
+}
+
+const ANTHROPIC_EVENTS = new Set([
+  "message_start",
+  "content_block_start",
+  "content_block_delta",
+  "content_block_stop",
+  "message_delta",
+  "message_stop",
+  "ping",
+  "error",
+])
+const OPENAI_EVENTS = new Set<string>()
+
+function encodeSSE(event: EventSourceMessage) {
+  const name = event.event === undefined ? "" : `event: ${event.event}\n`
+  const id = event.id === undefined ? "" : `id: ${event.id}\n`
+  const data = event.data
+    .split("\n")
+    .map((line) => `data: ${line}\n`)
+    .join("")
+  return `${name}${id}${data}\n`
+}
+
+export function filterSSE(res: Response, pkg: string) {
+  if (!res.body) return res
+  if (!res.headers.get("content-type")?.toLowerCase().includes("text/event-stream")) return res
+
+  const names = pkg.includes("@ai-sdk/openai-compatible")
+    ? OPENAI_EVENTS
+    : pkg.includes("@ai-sdk/anthropic")
+      ? ANTHROPIC_EVENTS
+      : undefined
+  if (!names) return res
+
+  const body = res.body
+    .pipeThrough(new TextDecoderStream())
+    .pipeThrough(new EventSourceParserStream())
+    .pipeThrough(
+      new TransformStream<EventSourceMessage, string>({
+        transform(event, ctrl) {
+          if (event.event && event.event !== "message" && !names.has(event.event)) return
+          ctrl.enqueue(encodeSSE(event))
+        },
+      }),
+    )
+    .pipeThrough(new TextEncoderStream())
+
+  return new Response(body, {
+    status: res.status,
+    statusText: res.statusText,
+    headers: res.headers,
+  })
 }

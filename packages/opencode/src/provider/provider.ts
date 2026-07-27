@@ -41,6 +41,7 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
+  filterSSE,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -1783,8 +1784,8 @@ export const layer = Layer.effect(
               timeout: false,
             }).finally(() => headerTimeoutCtl?.clear())
             timeout.clear()
-            if (!chunkAbortCtl) return res
-            return wrapSSE(res, chunkTimeout, chunkAbortCtl)
+            const streamed = chunkAbortCtl ? wrapSSE(res, chunkTimeout, chunkAbortCtl) : res
+            return filterSSE(streamed, model.api.npm)
           } catch (err) {
             timeout.clear()
             throw err

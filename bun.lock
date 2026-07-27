@@ -581,6 +581,7 @@
         "diff": "catalog:",
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
+        "eventsource-parser": "3.1.0",
         "fuzzysort": "3.1.0",
         "gitlab-ai-provider": "6.9.3",
         "glob": "13.0.5",
