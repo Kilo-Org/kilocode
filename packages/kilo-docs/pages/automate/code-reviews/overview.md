@@ -160,7 +160,7 @@ When a pull request or merge request is opened or updated:
 Reviews are posted directly in your platform (GitHub or GitLab) as if coming from a team reviewer.
 
 {% callout type="info" title="Bot-generated PRs are ignored by default" %}
-Kilo does not automatically review pull or merge requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes. I
+Kilo does not automatically review pull or merge requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes.
 {% /callout %}
 
 ## Review Styles
