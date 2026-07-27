@@ -517,6 +517,37 @@ describe("share ingest queue", () => {
     expect(sched.size()).toBe(0)
   })
 
+  test("drain does not re-enqueue on retryable HTTP status under shutdown", async () => {
+    const errors: Record<string, unknown>[] = []
+    const sched = scheduler(() => clock.now)
+
+    const q = IngestQueue.create({
+      now: () => clock.now,
+      setTimeout: sched.setTimeout,
+      clearTimeout: sched.clearTimeout,
+      log: {
+        error: (_message, data) => {
+          errors.push(data)
+        },
+      },
+      getShare: async () => ({ ingestPath: "/ingest" }),
+      getClient: async () => ({
+        url: "https://ingest.test",
+        fetch: async () => new Response("", { status: 429 }),
+      }),
+    })
+
+    await q.sync("s-429", [{ type: "session", data: { id: "s-429", v: 1 } as any }])
+    expect(sched.size()).toBe(1)
+
+    await q.drain()
+    await Bun.sleep(0)
+
+    // Shutdown path logs the retryable status and drops the item (no re-enqueue).
+    expect(errors.some((e) => e.status === 429 && e.shutdown === true)).toBe(true)
+    expect(sched.size()).toBe(0)
+  })
+
   test("drain POSTs using cached client/share when resolution fails at teardown", async () => {
     const urls: string[] = []
     const sched = scheduler(() => clock.now)
