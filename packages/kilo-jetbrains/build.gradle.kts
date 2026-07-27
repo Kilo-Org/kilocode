@@ -89,6 +89,8 @@ val tag = gitTag()?.removePrefix("jetbrains/v")
 val ver = override?.let(::checked) ?: prop?.let(::checked) ?: if (release) checked(
     tag ?: error("Missing JetBrains plugin version. Publish builds must set kilo.jetbrains.version or run from a jetbrains/v<version> tag."),
 ) else checked(tag ?: "0.0.0-dev")
+val chain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN_FILE")
+val key = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_FILE")
 
 if (release && !pinned) error(
     "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before a production/publish build."
@@ -207,8 +209,16 @@ intellijPlatform {
     }
 
     signing {
-        certificateChain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
-        privateKey = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
+        if (chain.isPresent) {
+            certificateChainFile = file(chain.get())
+        } else {
+            certificateChain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
+        }
+        if (key.isPresent) {
+            privateKeyFile = file(key.get())
+        } else {
+            privateKey = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
+        }
         password = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD")
     }
 

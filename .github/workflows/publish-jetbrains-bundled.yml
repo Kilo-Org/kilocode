@@ -127,7 +127,7 @@ jobs:
           tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
 
-      - name: Validate signing secrets
+      - name: Prepare signing secrets
         run: |
           missing=0
           for name in JETBRAINS_CERTIFICATE_CHAIN JETBRAINS_PRIVATE_KEY JETBRAINS_PRIVATE_KEY_PASSWORD; do
@@ -136,7 +136,19 @@ jobs:
               missing=1
             fi
           done
-          exit "$missing"
+          if [[ "$missing" -ne 0 ]]; then
+            exit "$missing"
+          fi
+
+          chain="$RUNNER_TEMP/jetbrains-certificate-chain.pem"
+          key="$RUNNER_TEMP/jetbrains-private-key.pem"
+          printf '%s' "$JETBRAINS_CERTIFICATE_CHAIN" > "$chain"
+          printf '%s' "$JETBRAINS_PRIVATE_KEY" > "$key"
+          chmod 600 "$chain" "$key"
+          {
+            echo "JETBRAINS_CERTIFICATE_CHAIN_FILE=$chain"
+            echo "JETBRAINS_PRIVATE_KEY_FILE=$key"
+          } >> "$GITHUB_ENV"
         env:
           JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
           JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
@@ -161,8 +173,6 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.validate.outputs.version }}
           CHANNEL: ${{ needs.validate.outputs.channel }}
-          JETBRAINS_CERTIFICATE_CHAIN: ${{ secrets.JETBRAINS_CERTIFICATE_CHAIN }}
-          JETBRAINS_PRIVATE_KEY: ${{ secrets.JETBRAINS_PRIVATE_KEY }}
           JETBRAINS_PRIVATE_KEY_PASSWORD: ${{ secrets.JETBRAINS_PRIVATE_KEY_PASSWORD }}
 
       - name: Resolve bundled archive
