@@ -102,6 +102,46 @@ class PromptLifecycleTest : SessionControllerTestBase() {
         assertFalse(message.properties.containsValue("git-changes"))
     }
 
+    fun `test session queue changed updates queued set`() {
+        val (c, _, modelEvents) = prompted()
+
+        emit(ChatEventDto.SessionQueueChanged("ses_test", listOf("u2")))
+
+        assertEquals(setOf("u2"), c.model.queued)
+        assertModelEvents(
+            """
+            QueueChanged [u2]
+            """,
+            modelEvents,
+        )
+
+        emit(ChatEventDto.SessionQueueChanged("ses_test", emptyList()))
+
+        assertEquals(emptySet<String>(), c.model.queued)
+    }
+
+    fun `test delete queued message delegates to RPC`() {
+        val (c, _, _) = prompted()
+
+        edt { c.deleteQueuedMessage("u2") }
+        flush()
+
+        assertEquals(listOf(ai.kilocode.client.testing.FakeSessionRpcApi.MessageDeleteCall("ses_test", "/test", "u2")), rpc.messageDeletes)
+        assertTrue(appRpc.telemetry.any { it.event == "Conversation Queued Message Removed" })
+    }
+
+    fun `test delete queued message miss captures error`() {
+        val (c, _, _) = prompted()
+        rpc.messageDeleteResult = false
+
+        edt { c.deleteQueuedMessage("u2") }
+        flush()
+
+        assertEquals(listOf(ai.kilocode.client.testing.FakeSessionRpcApi.MessageDeleteCall("ses_test", "/test", "u2")), rpc.messageDeletes)
+        assertFalse(appRpc.telemetry.any { it.event == "Conversation Queued Message Removed" })
+        assertTrue(appRpc.telemetry.any { it.event == "Session Error" && it.properties["context"] == "delete-message" })
+    }
+
     fun `test PermissionAsked moves state to AwaitingPermission`() {
         val (m, _, _) = prompted()
 
