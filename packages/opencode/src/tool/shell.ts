@@ -494,7 +494,7 @@ export const ShellTool = Tool.define(
       )
       return {
         ...process.env,
-        KILO_SESSION_ID: ctx.sessionID,
+        KILO_SESSION_ID: ctx.sessionID, // kilocode_change
         ...extra.env,
       }
     })
