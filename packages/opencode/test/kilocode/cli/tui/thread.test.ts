@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, mock, spyOn, test } from "bun:test"
 import fs from "fs/promises"
 import path from "path"
+import { fileURLToPath } from "node:url"
 import { spawn, type Exit } from "@opencode-ai/core/pty/driver"
 import { sanitizedProcessEnv } from "@opencode-ai/core/util/opencode-process"
 import { tmpdir } from "../../../fixture/fixture"
@@ -54,7 +55,7 @@ describe("kilo tui thread", () => {
         process.execPath,
         [
           "--conditions=browser",
-          `--preload=${import.meta.resolve("@opentui/solid/preload")}`,
+          `--preload=${fileURLToPath(import.meta.resolve("@opentui/solid/preload"))}`,
           path.resolve(import.meta.dir, "../../../../src/index.ts"),
         ],
         {
