@@ -102,6 +102,15 @@
 
 ## [Unreleased]
 
+## [7.0.12-rc.2] - 2026-07-27
+
+### Fixed
+- fix(jetbrains): use file signing inputs for bundled publish by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12578
+
+### Changed
+- release(jetbrains): v7.0.12-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12577
+
+
 ## [7.0.12-rc.1] - 2026-07-27
 
 ### Added
