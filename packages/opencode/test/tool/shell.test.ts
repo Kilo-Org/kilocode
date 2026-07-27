@@ -319,6 +319,38 @@ describe("tool.shell permissions", () => {
     )
   }
 
+  // kilocode_change start - #12326: bare `--` broke the PowerShell parse and skipped permission checks
+  for (const item of ps) {
+    it.live(`asks for permission on PowerShell commands with a bare double dash [${item.label}]`, () =>
+      withShell(
+        item,
+        Effect.gen(function* () {
+          const tmp = yield* tmpdirScoped()
+          yield* runIn(
+            tmp,
+            Effect.gen(function* () {
+              const err = new Error("stop after permission")
+              const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+              expect(
+                yield* fail(
+                  {
+                    command: "git checkout -- file",
+                    description: "Restore a file from git",
+                  },
+                  capture(requests, err),
+                ),
+              ).toMatchObject({ message: err.message })
+              const bashReq = requests.find((r) => r.permission === "bash")
+              expect(bashReq).toBeDefined()
+              expect(bashReq!.patterns).toContain("git checkout -- file")
+            }),
+          )
+        }),
+      ),
+    )
+  }
+  // kilocode_change end
+
   each("asks for external_directory permission for wildcard external paths", () =>
     runIn(
       projectRoot,
