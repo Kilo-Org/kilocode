@@ -74,7 +74,7 @@ describe("opencode run (non-interactive subprocess)", () => {
     ({ llm, opencode }) =>
       Effect.gen(function* () {
         yield* llm.text("structured output")
-        const result = yield* opencode.run("say hi", { format: "json" })
+        const result = yield* opencode.run("say hi", { format: "json", extraArgs: ["--auto"] })
         opencode.expectExit(result, 0)
 
         const events = opencode.parseJsonEvents(result.stdout)
@@ -83,9 +83,25 @@ describe("opencode run (non-interactive subprocess)", () => {
           expect(typeof evt.type).toBe("string")
           expect(typeof evt.sessionID).toBe("string")
         }
-        // At least one `text` event should appear with the LLM's response.
-        const text = events.find((e) => e.type === "text")
-        expect(text).toBeDefined()
+        expect(events.filter((event) => event.type === "step_start")).toHaveLength(1)
+        expect(events.filter((event) => event.type === "text")).toHaveLength(1)
+        expect(events.filter((event) => event.type === "step_finish")).toHaveLength(1)
+      }),
+    60_000,
+  )
+
+  cliIt.live(
+    "--format json emits each completed tool once",
+    ({ llm, opencode }) =>
+      Effect.gen(function* () {
+        yield* llm.tool("glob", { pattern: "package.json" })
+        yield* llm.text("tool complete")
+        const result = yield* opencode.run("find package.json", { format: "json", extraArgs: ["--auto"] })
+        opencode.expectExit(result, 0)
+
+        const events = opencode.parseJsonEvents(result.stdout)
+        expect(events.filter((event) => event.type === "tool_use")).toHaveLength(1)
+        expect(events.filter((event) => event.type === "text")).toHaveLength(1)
       }),
     60_000,
   )
