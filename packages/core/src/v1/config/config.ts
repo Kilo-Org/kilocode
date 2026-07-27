@@ -227,7 +227,8 @@ export const Info = Schema.Struct({
   permission: Schema.optional(ConfigPermissionV1.Info),
   tools: Schema.optional(Schema.Record(Schema.String, Schema.Boolean)),
   web_search: Schema.optional(Schema.Boolean).annotate({
-    description: "Make web search available to models from all providers",
+    description:
+      "Make web search available to models from all providers (default: true). Set to false to limit it to managed providers.",
   }), // kilocode_change
   attachment: Schema.optional(ConfigAttachmentV1.Info).annotate({
     description: "Attachment processing configuration, including image size limits and resizing behavior",

@@ -377,7 +377,7 @@ export const layer: Layer.Layer<
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
-          if (cfg.web_search === true) return true // kilocode_change
+          if (cfg.web_search !== false) return true // kilocode_change
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }
 

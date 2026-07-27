@@ -86,7 +86,7 @@ const BrowserTab: Component = () => {
             description={t("settings.webTools.webSearch.description")}
             last
           >
-            <Switch checked={config().web_search ?? false} onChange={updateWebsearch} hideLabel>
+            <Switch checked={config().web_search ?? true} onChange={updateWebsearch} hideLabel>
               {t("settings.webTools.webSearch.title")}
             </Switch>
           </SettingsRow>
