@@ -207,8 +207,15 @@ intellijPlatform {
     }
 
     signing {
-        certificateChain = providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN")
-        privateKey = providers.environmentVariable("JETBRAINS_PRIVATE_KEY")
+        // File-based inputs are preferred over raw content: certificateChain/privateKey take
+        // precedence over certificateChainFile/privateKeyFile in the IntelliJ Platform Gradle
+        // plugin, and passing multiline PEM content straight through as a certificateChain/
+        // privateKey value can get mishandled as extra CLI arguments by the zip-signer CLI when
+        // signPlugin/verifyPluginSignature run as separate Gradle invocations. Both CI
+        // (.github/workflows/publish-jetbrains-bundled.yml) and local releases
+        // (script/build-version.sh) write the secrets to files and export the *_FILE variables.
+        certificateChainFile.fileProvider(providers.environmentVariable("JETBRAINS_CERTIFICATE_CHAIN_FILE").map { file(it) })
+        privateKeyFile.fileProvider(providers.environmentVariable("JETBRAINS_PRIVATE_KEY_FILE").map { file(it) })
         password = providers.environmentVariable("JETBRAINS_PRIVATE_KEY_PASSWORD")
     }
 
