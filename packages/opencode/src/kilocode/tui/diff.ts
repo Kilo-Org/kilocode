@@ -13,11 +13,14 @@ export function splitDiffHunks(diff: string): string[] {
     if (start === -1) return [section.join("\n")]
 
     const prefix = section.slice(0, start)
-    const hunks = section.slice(start).reduce((acc, line) => {
-      if (line.startsWith("@@")) return [...acc, [line]]
-      if (acc.length === 0) return [[line]]
-      return [...acc.slice(0, -1), [...acc.at(-1)!, line]]
-    }, [] as string[][])
+    const hunks: string[][] = []
+    for (const line of section.slice(start)) {
+      if (line.startsWith("@@") || hunks.length === 0) {
+        hunks.push([line])
+        continue
+      }
+      hunks.at(-1)!.push(line)
+    }
 
     const head = prefix.join("\n")
     return hunks.map((hunk) => [head, ...hunk].join("\n"))

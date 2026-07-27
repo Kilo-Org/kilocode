@@ -13,6 +13,7 @@ const STORIES = [
   { id: "settings--providers-configure", name: "Settings / providers empty state" },
   { id: "marketplace--empty-list", name: "Marketplace / empty state" },
   { id: "agentmanager--sidebar-search-open", name: "Agent Manager / sidebar search" },
+  { id: "session-tabs--switcher-open", name: "Session tabs / switcher" },
 ]
 
 function url(id: string) {
@@ -177,5 +178,54 @@ test.describe("webview accessibility ratchet", () => {
       page.getByText("Searches the local workspace, local sessions, worktrees, and their sessions", { exact: true }),
     ).toBeVisible()
     await expect(page.getByText("⌘F", { exact: true })).toBeVisible()
+  })
+
+  test("Search lists do not select an unhighlighted result on Enter by default", async ({ page }) => {
+    await open(page, "agentmanager--sidebar-search-open")
+
+    const input = page.getByPlaceholder("Search worktrees and sessions", { exact: true })
+    const row = page.locator('[data-slot="list-item"]').first()
+    const selected = page.locator('[data-slot="sidebar-search-selection"]')
+
+    await input.fill("Render")
+    await expect(row).toContainText("Render images in diff viewer")
+    await row.dispatchEvent("mousemove", { movementX: 1 })
+    await expect(row).toHaveAttribute("data-active", "true")
+    await row.dispatchEvent("mouseleave")
+    await expect(page.locator('[data-slot="list-item"][data-active="true"]')).toHaveCount(0)
+
+    await input.press("Enter")
+    await expect(selected).toHaveText("worktree:wt-search")
+    await expect(input).toBeFocused()
+  })
+
+  test("Session tab switcher restores chat focus after keyboard and mouse selection", async ({ page }) => {
+    await open(page, "session-tabs--switcher-open")
+
+    const input = page.getByPlaceholder("Search open tabs")
+    const prompt = page.getByRole("textbox", { name: "Chat input" })
+    await expect(page.locator('[data-slot="list-item"][data-active="true"]')).toHaveCount(0)
+    await expect(page.locator('[data-slot="list-item"][data-key="current"]')).toHaveAttribute("data-selected", "true")
+    await expect(page.locator('[data-slot="list-item"][data-key="refactor"]')).toHaveAttribute("data-selected", "false")
+    await input.press("ArrowDown")
+    await input.press("Enter")
+    await expect(prompt).toBeFocused()
+
+    await page.getByRole("button", { name: "Show open tabs" }).click()
+    await page.locator('[data-slot="list-item"][data-key="current"]').click()
+    await expect(prompt).toBeFocused()
+
+    // Enter without prior ArrowDown selects the first filtered result (noInitialSelection)
+    await page.getByRole("button", { name: "Show open tabs" }).click()
+    await input.fill("Review")
+    await input.press("Enter")
+    await expect(prompt).toBeFocused()
+  })
+
+  test("Search popovers expose accessible dialog names", async ({ page }) => {
+    for (const id of ["agentmanager--sidebar-search-open", "session-tabs--switcher-open"]) {
+      await open(page, id)
+      await expect(page.getByRole("dialog")).toHaveAccessibleName(/.+/)
+    }
   })
 })

@@ -13,6 +13,8 @@ import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.Permission
 import ai.kilocode.client.session.model.PermissionFileDiff
 import ai.kilocode.client.session.model.PermissionMeta
+import ai.kilocode.client.session.model.PermissionRuleCandidate
+import ai.kilocode.client.session.model.PermissionRuleDecision
 import ai.kilocode.client.session.model.PermissionRequestState
 import ai.kilocode.client.session.model.Question
 import ai.kilocode.client.session.model.QuestionItem
@@ -41,6 +43,7 @@ import ai.kilocode.rpc.dto.ProfileStatusDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
 import ai.kilocode.rpc.dto.PermissionReplyDto
 import ai.kilocode.rpc.dto.PermissionRequestDto
+import ai.kilocode.rpc.dto.PermissionRuleDecisionDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.ProvidersDto
@@ -461,6 +464,27 @@ class SessionController(
         }
     }
 
+    fun deleteQueuedMessage(message: String) {
+        assertEdt()
+        val id = sid ?: return
+        cs.launch {
+            try {
+                val ok = sessions.deleteMessage(id, directory, message)
+                if (!ok) {
+                    capture("Session Error", sessionProps(id) + mapOf("context" to "delete-message", "errorClass" to "DeleteMiss"))
+                    LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage missed message=$message")
+                    return@launch
+                }
+                capture("Conversation Queued Message Removed", sessionProps(id))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "delete-message", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage failed message=${e.message}", e)
+            }
+        }
+    }
+
     fun unrevert() {
         assertEdt()
         val id = sid ?: return
@@ -657,7 +681,10 @@ class SessionController(
         updatePermission(requestId, PermissionRequestState.RESPONDING)
         cs.launch {
             try {
-                if (rules != null) sessions.savePermissionRules(requestId, directory, rules)
+                if (rules != null) {
+                    sessions.savePermissionRules(requestId, directory, rules)
+                    workspace.refreshConfigFiles()
+                }
                 sessions.replyPermission(requestId, directory, reply)
                 capture("Approval Answered", sessionProps() + mapOf(
                     "requestId" to requestId,
@@ -1362,6 +1389,8 @@ class SessionController(
                 idle()
             }
 
+            is ChatEventDto.SessionQueueChanged -> updateModel { model.setQueued(event.queued.toSet()) }
+
             is ChatEventDto.SessionCompacted -> {
                 capture("Context Condensed", sessionProps(event.sessionID))
                 model.markCompacted()
@@ -1400,7 +1429,8 @@ class SessionController(
         is ChatEventDto.QuestionRejected,
         is ChatEventDto.SessionStatusChanged,
         is ChatEventDto.SessionUpdated,
-        is ChatEventDto.SessionIdle -> {
+        is ChatEventDto.SessionIdle,
+        is ChatEventDto.SessionQueueChanged -> {
             edt {
                 if (disposed) return@edt
                 updateModel { handleMetadata(event) }
@@ -1422,6 +1452,7 @@ class SessionController(
             is ChatEventDto.SessionStatusChanged -> status(event.status)
             is ChatEventDto.SessionUpdated -> model.setSession(event.session)
             is ChatEventDto.SessionIdle -> idle()
+            is ChatEventDto.SessionQueueChanged -> model.setQueued(event.queued.toSet())
             else -> Unit
         }
     }
@@ -2306,6 +2337,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionStatusChanged -> event.sessionID == id
     is ChatEventDto.SessionUpdated -> event.sessionID == id
     is ChatEventDto.SessionIdle -> event.sessionID == id
+    is ChatEventDto.SessionQueueChanged -> event.sessionID == id
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
     is ChatEventDto.TodoUpdated -> event.sessionID == id
@@ -2436,6 +2468,9 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         ?: dto.metadata["filePath"]
         ?: dto.metadata["file"]
         ?: dto.metadata["path"]
+    val patterns = dto.rules.ifEmpty { dto.always }
+    val rules = dto.ruleDecisions.map { it.toRuleCandidate() }
+        .ifEmpty { patterns.map { PermissionRuleCandidate(it) } }
     return Permission(
         id = dto.id,
         sessionId = dto.sessionID,
@@ -2444,7 +2479,8 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         always = dto.always,
         meta = PermissionMeta(
             command = dto.command ?: dto.metadata["command"],
-            rules = dto.rules,
+            rules = patterns,
+            ruleDecisions = rules,
             diff = dto.metadata["diff"],
             filePath = file,
             fileDiff = diffs.firstOrNull(),
@@ -2455,6 +2491,20 @@ private fun toPermission(dto: PermissionRequestDto): Permission {
         tool = ref,
         state = state,
     )
+}
+
+private fun PermissionRuleDecisionDto.toRuleCandidate(): PermissionRuleCandidate {
+    val next = decision.toPermissionRuleDecision()
+    val default = defaultDecision.toPermissionRuleDecision()
+    return PermissionRuleCandidate(pattern, next, default)
+}
+
+private fun String.toPermissionRuleDecision(): PermissionRuleDecision {
+    return when (lowercase()) {
+        "approved", "allow" -> PermissionRuleDecision.APPROVED
+        "denied", "deny" -> PermissionRuleDecision.DENIED
+        else -> PermissionRuleDecision.PENDING
+    }
 }
 
 private fun toQuestion(dto: QuestionRequestDto): Question {

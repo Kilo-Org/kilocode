@@ -19,7 +19,6 @@ import { MessageV2 } from "./message-v2"
 import { Session } from "./session"
 import { SessionProcessor } from "./processor"
 import { PartID } from "./schema"
-import { Log } from "@opencode-ai/core/util/log"
 import { EffectBridge } from "@/effect/bridge"
 import * as SandboxPolicy from "@/kilocode/sandbox/policy" // kilocode_change
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -28,8 +27,6 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { SwePruner } from "@/kilocode/swe-pruner"
 import { Config } from "@/config/config"
 // kilocode_change end
-
-const log = Log.create({ service: "session.tools" })
 
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   agent: Agent.Info
@@ -41,7 +38,6 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   promptOps: TaskPromptOps
   memoryCache: MemoryMarker.Cache // kilocode_change
 }) {
-  using _ = log.time("resolveTools")
   const tools: Record<string, AITool> = {}
   const run = yield* EffectBridge.make()
   const plugin = yield* Plugin.Service
@@ -55,7 +51,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const truncate = yield* Truncate.Service
   // kilocode_change start - SWE-Pruner (experimental)
   const config = yield* Config.Service
-  const swe = SwePruner.enabled(yield* config.get())
+  const cfg = yield* config.get()
+  const swe = SwePruner.enabled(cfg)
+  const permissionOrigins = cfg.permission_origins
   // kilocode_change end
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
@@ -73,6 +71,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         permission,
         agents,
         sessions,
+        origins: permissionOrigins,
         agent: input.agent,
         session: input.session,
         request: {
@@ -80,7 +79,12 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           sessionID: input.session.id,
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
         },
-      }).pipe(Effect.orDie),
+      }).pipe(
+        // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
+        Effect.tap((approval) => input.processor.metadata(options.toolCallId, { metadata: { approval } })),
+        Effect.asVoid,
+        Effect.orDie,
+      ),
   })
   // kilocode_change end
 

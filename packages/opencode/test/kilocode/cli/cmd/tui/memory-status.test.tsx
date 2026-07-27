@@ -3,20 +3,10 @@ import { expect, spyOn, test } from "bun:test"
 import { RGBA } from "@opentui/core"
 import { testRender } from "@opentui/solid"
 import type { TuiPluginApi } from "@kilocode/plugin/tui"
-import type { Event, GlobalEvent, Message, Part, Session } from "@kilocode/sdk/v2"
+import type { Event, Message, Part, Session } from "@kilocode/sdk/v2"
 import { createSignal } from "solid-js"
-import { ArgsProvider } from "@/cli/cmd/tui/context/args"
-import { createExit, ExitProvider } from "@/cli/cmd/tui/context/exit"
-import { KVProvider } from "@/cli/cmd/tui/context/kv"
-import { ProjectProvider } from "@/cli/cmd/tui/context/project"
-import { SDKProvider } from "@/cli/cmd/tui/context/sdk"
-import { SyncProvider } from "@/cli/cmd/tui/context/sync"
-import { ToastProvider } from "@/cli/cmd/tui/ui/toast"
 import { MemorySidebar } from "@/kilocode/cli/cmd/tui/component/memory-status"
-import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
-import { Global } from "@opencode-ai/core/global"
-import { createEventSource, createFetch, directory, json } from "../../../../fixture/tui-sdk"
-import { tmpdir } from "../../../../fixture/fixture"
+import { directory } from "../../../../fixture/tui-sdk"
 
 const id = "ses_memory_status"
 
@@ -47,10 +37,6 @@ function event(sessionID?: string, count?: number): Extract<Event, { type: "memo
   }
 }
 
-function global(payload: Event): GlobalEvent {
-  return { directory, project: "proj_test", payload }
-}
-
 async function wait(fn: () => boolean, timeout = 2_000) {
   const start = Date.now()
   while (!fn()) {
@@ -58,113 +44,6 @@ async function wait(fn: () => boolean, timeout = 2_000) {
     await Bun.sleep(10)
   }
 }
-
-function Probe(props: { sessionID: string }) {
-  const verbose = MemorySessionTui.verbose({ sessionID: () => props.sessionID })
-  return <text>{verbose() ? "verbose" : "quiet"}</text>
-}
-
-test("session memory status refetches live and ignores other sessions", async () => {
-  await using tmp = await tmpdir()
-  const prior = Global.Path.state
-  Global.Path.state = tmp.path
-  await Bun.write(`${tmp.path}/kv.json`, "{}")
-  const events = createEventSource()
-  const state = { verbose: false }
-  const calls = { count: 0 }
-  const fetch = createFetch((url) => {
-    if (url.pathname === "/session") return json([session])
-    if (url.pathname !== "/memory/status") return
-    calls.count += 1
-    return json({ state: { verbose: state.verbose } })
-  })
-  try {
-    const app = await testRender(() => (
-      <ArgsProvider>
-        <ExitProvider exit={createExit(async () => {})}>
-          <KVProvider>
-            <ToastProvider>
-              <SDKProvider url="http://test" directory={directory} fetch={fetch.fetch} events={events.source}>
-                <ProjectProvider>
-                  <SyncProvider>
-                    <Probe sessionID={id} />
-                  </SyncProvider>
-                </ProjectProvider>
-              </SDKProvider>
-            </ToastProvider>
-          </KVProvider>
-        </ExitProvider>
-      </ArgsProvider>
-    ))
-    try {
-      await wait(() => calls.count === 1 && app.captureCharFrame().includes("quiet"))
-      events.emit(global(event("ses_other")))
-      await Bun.sleep(30)
-      expect(calls.count).toBe(1)
-
-      state.verbose = true
-      events.emit(global(event(id)))
-      await wait(() => calls.count === 2 && app.captureCharFrame().includes("verbose"))
-    } finally {
-      app.renderer.destroy()
-    }
-  } finally {
-    Global.Path.state = prior
-  }
-})
-
-test("message memory metadata reacts to verbose changes and bounds snippets", async () => {
-  const [verbose, setVerbose] = createSignal(false)
-  const [parts, setParts] = createSignal<Part[]>([])
-  const first = "a".repeat(100)
-  const part = {
-    id: "part_memory_recall",
-    sessionID: id,
-    messageID: "msg_memory_recall",
-    type: "text",
-    text: "",
-    metadata: { kiloMemory: { type: "recall", count: 3, items: [first, "second", "third"] } },
-  } satisfies Part
-  setParts([part])
-  const app = await testRender(
-    () => (
-      <text>
-        <MemoryMessageMeta parts={parts()} color={RGBA.fromHex("#ffffff")} verbose={verbose} />
-      </text>
-    ),
-    { width: 200, height: 3 },
-  )
-
-  try {
-    await app.renderOnce()
-    expect(app.captureCharFrame()).toContain("memory · recalled 3")
-    expect(app.captureCharFrame()).not.toContain("second")
-
-    setVerbose(true)
-    await app.renderOnce()
-    expect(app.captureCharFrame()).toContain("a".repeat(80))
-    expect(app.captureCharFrame()).not.toContain("a".repeat(81))
-    expect(app.captureCharFrame()).toContain("second")
-    expect(app.captureCharFrame()).not.toContain("third")
-
-    setVerbose(false)
-    await app.renderOnce()
-    expect(app.captureCharFrame()).not.toContain("second")
-
-    setParts([
-      {
-        ...part,
-        id: "part_memory_startup",
-        metadata: { kiloMemory: { type: "startup", count: 2, tokens: 40 } },
-      },
-    ])
-    await app.renderOnce()
-    expect(app.captureCharFrame()).toContain("memory · Startup Context")
-    expect(app.captureCharFrame()).not.toContain("recalled")
-  } finally {
-    app.renderer.destroy()
-  }
-})
 
 type Handler = (event: Event) => void
 
@@ -183,7 +62,7 @@ function bus() {
   }
 }
 
-test("sidebar refetches status and scopes recall and save flashes", async () => {
+test("sidebar refetches status and scopes save activity", async () => {
   const [parts, setParts] = createSignal<Part[]>([])
   const events = bus()
   const calls = { count: 0 }
@@ -200,7 +79,7 @@ test("sidebar refetches status and scopes recall and save flashes", async () => 
       memory: {
         status: async () => {
           calls.count += 1
-          return { data: { state: { enabled: true, verbose: true } } }
+          return { data: { state: { enabled: true } } }
         },
       },
     },
@@ -229,16 +108,15 @@ test("sidebar refetches status and scopes recall and save flashes", async () => 
         metadata: { kiloMemory: { type: "recall", count: 2 } },
       },
     ])
-    await wait(() => app.captureCharFrame().includes("recalled 2"))
-    await Bun.sleep(5_100)
+    await app.renderOnce()
     expect(app.captureCharFrame()).not.toContain("recalled 2")
 
     events.emit(event("ses_other", 4))
     await wait(() => calls.count === 2)
-    expect(app.captureCharFrame()).not.toContain("saved 4")
 
     events.emit(event(id, 3))
-    await wait(() => calls.count === 3 && app.captureCharFrame().includes("saved 3"))
+    await wait(() => calls.count === 3)
+    expect(app.captureCharFrame()).not.toContain("saved 3")
     const before = clear.mock.calls.length
     app.renderer.destroy()
     expect(clear.mock.calls.length).toBeGreaterThan(before)

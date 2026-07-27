@@ -5,7 +5,7 @@ import { Global } from "@opencode-ai/core/global"
 import * as Log from "@opencode-ai/core/util/log"
 import { Agent } from "../../src/agent/agent"
 import { GlobalBus } from "../../src/bus/global"
-import { TuiEvent } from "../../src/cli/cmd/tui/event"
+import { TuiEvent } from "../../src/server/tui-event"
 import { Identifier } from "../../src/id/id"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -13,6 +13,7 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { EventV2 } from "@opencode-ai/core/event"
 import { formatTodos, generateHandover, PlanFollowup, PlanFollowupRuntime } from "../../src/kilocode/plan-followup"
 import { Instance } from "../../src/kilocode/instance"
+import * as KiloInstance from "../../src/kilocode/instance"
 import { Provider } from "../../src/provider/provider"
 import { Question } from "../../src/question"
 import { Session } from "../../src/session/session"
@@ -23,7 +24,7 @@ import { SessionStatus } from "../../src/session/status"
 import { Todo } from "../../src/session/todo"
 import path from "path"
 import fs from "fs/promises"
-import { provideTestInstance, tmpdir } from "../fixture/fixture"
+import { provideTestInstance, tmpdir, withTestInstance } from "../fixture/fixture"
 
 Log.init({ print: false })
 process.env.KILO_CLIENT = "cli"
@@ -68,16 +69,11 @@ const todo = {
 
 const session = makeRuntime(Session.Service, Session.defaultLayer)
 const store = {
-  create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    session.runPromise((svc) => svc.create(input)),
-  get: (id: SessionID) =>
-    session.runPromise((svc) => svc.get(id)),
-  messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    session.runPromise((svc) => svc.messages(input)),
-  updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    session.runPromise((svc) => svc.updateMessage(msg)),
-  updatePart: <T extends MessageV2.Part>(part: T) =>
-    session.runPromise((svc) => svc.updatePart(part)),
+  create: (input?: Parameters<Session.Interface["create"]>[0]) => session.runPromise((svc) => svc.create(input)),
+  get: (id: SessionID) => session.runPromise((svc) => svc.get(id)),
+  messages: (input: Parameters<Session.Interface["messages"]>[0]) => session.runPromise((svc) => svc.messages(input)),
+  updateMessage: <T extends MessageV2.Info>(msg: T) => session.runPromise((svc) => svc.updateMessage(msg)),
+  updatePart: <T extends MessageV2.Part>(part: T) => session.runPromise((svc) => svc.updatePart(part)),
 }
 
 const model = {
@@ -106,6 +102,14 @@ const savedKey = `${saved.providerID}/${saved.modelID}`
 async function withInstance(fn: () => Promise<void>) {
   await using tmp = await tmpdir({ git: true })
   await fs.rm(statePath, { force: true }).catch(() => {})
+  const provide = spyOn(KiloInstance, "provide").mockImplementation((input) =>
+    withTestInstance({ directory: input.directory, fn: input.fn }),
+  )
+  using _provide = {
+    [Symbol.dispose]() {
+      provide.mockRestore()
+    },
+  }
   await provideTestInstance({
     directory: tmp.path,
     fn: async () => {
@@ -901,7 +905,9 @@ describe("plan follow-up", () => {
 
   test("ask - falls back to configured code model when saved CLI code model is unavailable", () =>
     withInstance(async () => {
-      await writeState({ model: { code: { providerID: ProviderV2.ID.make("missing"), modelID: ModelV2.ID.make("ghost") } } })
+      await writeState({
+        model: { code: { providerID: ProviderV2.ID.make("missing"), modelID: ModelV2.ID.make("ghost") } },
+      })
       const get = spyOn(PlanFollowupRuntime, "agent").mockImplementation(async (name: string) => {
         if (name === "code") {
           return {

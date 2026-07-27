@@ -767,14 +767,14 @@ describe("LocalVectorStore", () => {
       )
     })
 
-    test("should handle paths with backslashes safely", async () => {
-      const windowsPath = "C:\\Users\\test\\file.ts"
+    test("should handle relative paths with backslashes safely", async () => {
+      const windowsPath = "dir\\file.ts"
       mockTable.delete.mockResolvedValue(undefined)
 
       await store.deletePointsByFilePath(windowsPath)
 
       // Backslashes should be preserved, only quotes escaped
-      expect(mockTable.delete).toHaveBeenCalledWith(`\`filePath\` IN ('C:\\Users\\test\\file.ts')`)
+      expect(mockTable.delete).toHaveBeenCalledWith(`\`filePath\` IN ('dir\\file.ts')`)
     })
   })
 })

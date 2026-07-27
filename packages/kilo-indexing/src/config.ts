@@ -238,10 +238,8 @@ export const IndexingSchema = Schema.Struct({
   }),
   fileExtensions: Schema.optional(
     Schema.mutable(
-      Schema.Array(Schema.String.check(Schema.isPattern(/^\s*\.?[A-Za-z0-9][A-Za-z0-9_+-]*\s*$/))).check(
-        Schema.isMinLength(1),
-      ),
-    ),
+      Schema.Array(Schema.String.check(Schema.isPattern(/^\s*\.?[A-Za-z0-9][A-Za-z0-9_+-]*\s*$/))),
+    ).check(Schema.isMinLength(1)),
   ).annotate({
     description: "File extension allowlist for codebase indexing (uses built-in defaults if omitted)",
   }),

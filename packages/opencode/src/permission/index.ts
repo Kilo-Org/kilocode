@@ -1,7 +1,7 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { ConfigPermissionV1 } from "@opencode-ai/core/v1/config/permission"
 import * as Config from "@/config/config" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
-import * as Log from "@opencode-ai/core/util/log"
 import { Wildcard } from "@opencode-ai/core/util/wildcard"
 import { Deferred, Effect, Layer, Context } from "effect"
 import os from "os"
@@ -20,8 +20,6 @@ import { ReadPermission } from "@/kilocode/permission/read"
 import { AgentManagerPermission } from "@/kilocode/permission/agent-manager" // kilocode_change
 import { ExternalDirectoryPermission } from "@/kilocode/permission/external-directory"
 // kilocode_change end
-
-const log = Log.create({ service: "permission" })
 
 export const Event = {
   Asked: EventV2.define({ type: "permission.asked", schema: PermissionV1.Request.fields }),
@@ -75,8 +73,17 @@ export const AllowEverythingInput = z.object({
 })
 // kilocode_change end
 
+// kilocode_change start - describe why a call was allowed so clients can explain auto-approval
+export interface AskOutcome {
+  /** true when the user was prompted and replied; false when a rule auto-approved. */
+  manual: boolean
+  /** The winning rule (carries an optional `source` marker set at ruleset-build time). */
+  rule?: Rule
+}
+// kilocode_change end
+
 export interface Interface {
-  readonly ask: (input: AskInput) => Effect.Effect<void, Error>
+  readonly ask: (input: AskInput) => Effect.Effect<AskOutcome, Error> // kilocode_change - was Effect<void>; returns the decision
   readonly reply: (input: ReplyInput) => Effect.Effect<void, NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
   // kilocode_change start
@@ -193,6 +200,7 @@ export const layer = Layer.effect(
       const local = s.session[request.sessionID] ?? []
       // kilocode_change end
       let needsAsk = false
+      let approvedRule: Rule | undefined // kilocode_change - remember the rule that auto-approved
 
       // kilocode_change start - protect config access while honoring explicit global skill trust
       const isProtected = ConfigProtection.isRequest(request)
@@ -214,9 +222,9 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       for (const pattern of request.patterns) {
-        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change - include session-scoped rules
-        log.info("evaluated", { permission: request.permission, pattern, action: rule })
-        // kilocode_change start - saved/session approvals cannot override hard Ask/Plan denials
+        const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
+        yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
+        // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
         if (veto(request.permission, pattern, hardRuleset)) {
           return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
         }
@@ -227,12 +235,15 @@ export const layer = Layer.effect(
           })
         }
         // kilocode_change start - override "allow" to "ask" for protected config paths
-        if (rule.action === "allow" && (!isProtected || trusted)) continue
+        if (rule.action === "allow" && (!isProtected || trusted)) {
+          approvedRule = rule // remember the winning rule so callers can explain the auto-approval
+          continue
+        }
         // kilocode_change end
         needsAsk = true
       }
 
-      if (!needsAsk) return
+      if (!needsAsk) return { manual: false, rule: approvedRule } // kilocode_change - report auto-approval
 
       // kilocode_change start - headless subagent asks fail instead of queuing for a reply that never comes (#11903)
       if (yield* KiloHeadless.denies(request.sessionID).pipe(Effect.provideService(Database.Service, database))) {
@@ -258,17 +269,20 @@ export const layer = Layer.effect(
         always: skill ? [skill] : request.always, // kilocode_change - persist only the exact global skill subtree
         tool: request.tool,
       }
-      log.info("asking", { id, permission: info.permission, patterns: info.patterns })
+      yield* Effect.logInfo("asking", { id, permission: info.permission, patterns: info.patterns })
 
       const deferred = yield* Deferred.make<void, RejectedError | CorrectedError>()
       pending.set(id, { info, ruleset, hardRuleset, deferred }) // kilocode_change
       yield* events.publish(Event.Asked, info) // kilocode_change - was bus.publish
-      return yield* Effect.ensuring(
+      // kilocode_change start - was `return yield* Effect.ensuring(...)`; report the manual decision to callers
+      yield* Effect.ensuring(
         Deferred.await(deferred),
         Effect.sync(() => {
           pending.delete(id)
         }),
       )
+      return { manual: true } // the user was prompted and replied
+      // kilocode_change end
     })
 
     const reply = Effect.fn("Permission.reply")(function* (input: PermissionV1.ReplyInput) {
@@ -519,5 +533,7 @@ export function toConfig(rules: Ruleset): ConfigPermissionV1.Info {
   return result
 }
 // kilocode_change end
+
+export const node = LayerNode.make(layer, [EventV2Bridge.node, Config.node, Database.node]) // kilocode_change
 
 export * as Permission from "."

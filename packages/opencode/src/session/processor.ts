@@ -1,3 +1,4 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Image } from "@/image/image"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
@@ -21,12 +22,13 @@ import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 // kilocode_change start
 import { KiloSessionProcessor, type ReviewTelemetry } from "@/kilocode/session/processor"
+import { PermissionProvenance } from "@/kilocode/permission/provenance" // kilocode_change
 import { KiloSessionOverflow } from "@/kilocode/session/overflow"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model"
+import { KiloResponseMetadata } from "@/kilocode/session/response-metadata"
 import { Suggestion } from "@/kilocode/suggestion"
 // kilocode_change end
 import { errorMessage } from "@/util/error"
-import { Log } from "@opencode-ai/core/util/log"
 import { isRecord } from "@/util/record"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Database } from "@opencode-ai/core/database/database"
@@ -36,12 +38,9 @@ import { ModelV2 } from "@opencode-ai/core/model"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import * as DateTime from "effect/DateTime"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { toolFileSourceFromUri, Usage, type LLMEvent } from "@opencode-ai/llm"
-import { ToolOutput } from "@opencode-ai/core/tool-output"
+import { ToolOutput, Usage, type LLMEvent } from "@opencode-ai/llm"
 
 const DOOM_LOOP_THRESHOLD = 3
-const log = Log.create({ service: "session.processor" })
-
 export type Result = "compact" | "stop" | "continue"
 
 export interface Handle {
@@ -106,6 +105,7 @@ interface ProcessorContext extends Input {
   reasoningMap: Record<string, SessionV1.ReasoningPart>
   // kilocode_change start
   stepStart: number
+  stepStartDate: number | undefined
   step: { reasoning: boolean; text: boolean; tool: boolean }
   // kilocode_change end
   v2AssistantMessageID: SessionMessage.ID | undefined
@@ -161,6 +161,7 @@ export const layer = Layer.effect(
         // kilocode_change start
         telemetry: input.telemetry,
         stepStart: 0,
+        stepStartDate: undefined,
         step: { reasoning: false, text: false, tool: false },
         // kilocode_change end
         v2AssistantMessageID: undefined,
@@ -168,7 +169,6 @@ export const layer = Layer.effect(
       const mirrorAssistant = flags.experimentalEventSystem && !input.assistantMessage.summary
       let aborted = false
       const ac = new AbortController() // kilocode_change — abort controller for offline handler
-      const slog = log.clone().tag("session.id", input.sessionID).tag("messageID", input.assistantMessage.id)
       let attempt = KiloSessionProcessor.attempt() // kilocode_change
 
       // kilocode_change start
@@ -273,10 +273,13 @@ export const layer = Layer.effect(
         input: { title?: string; metadata?: Record<string, any> },
       ) {
         const match = yield* readToolCall(toolCallID)
+        // approval provenance is written once during ask() and must survive later tool metadata writes
         if (!match || match.part.state.status !== "running") {
+          const prev = ctx.toolmeta[toolCallID]
           ctx.toolmeta[toolCallID] = {
-            ...ctx.toolmeta[toolCallID],
+            ...prev,
             ...input,
+            metadata: PermissionProvenance.carryApproval(prev?.metadata, input.metadata),
           }
           return
         }
@@ -287,7 +290,7 @@ export const layer = Layer.effect(
             state: {
               ...part.state,
               title: input.title ?? part.state.title,
-              metadata: input.metadata ?? part.state.metadata,
+              metadata: PermissionProvenance.carryApproval(part.state.metadata, input.metadata) ?? part.state.metadata,
             },
           }
         })
@@ -305,13 +308,17 @@ export const layer = Layer.effect(
       ) {
         const match = yield* readToolCall(toolCallID)
         if (!match || match.part.state.status !== "running") return
+        // kilocode_change start - preserve approval provenance recorded during permission checks
+        const prior = isRecord(match.part.state.metadata) ? match.part.state.metadata : undefined
+        const metadata = PermissionProvenance.carryApproval(prior, output.metadata) ?? output.metadata
+        // kilocode_change end
         yield* session.updatePart({
           ...match.part,
           state: {
             status: "completed",
             input: match.part.state.input,
             output: output.output,
-            metadata: output.metadata,
+            metadata, // kilocode_change - merged to keep approval
             title: output.title,
             time: { start: match.part.state.time.start, end: Date.now() },
             attachments: output.attachments,
@@ -542,9 +549,12 @@ export const layer = Layer.effect(
             yield* ensureToolCall(value)
             return
 
+          // kilocode_change start
           case "tool-input-delta":
             {
-              const toolCall = yield* ensureToolCall(value)
+              const toolCall = yield* readToolCall(value.id)
+              if (!toolCall) return
+              // kilocode_change end
               const assistantMessageID = mirrorAssistant ? yield* requireV2AssistantMessage(toolCall.call) : undefined
               if (assistantMessageID) {
                 yield* events.publish(SessionEvent.Tool.Input.Delta, {
@@ -559,8 +569,11 @@ export const layer = Layer.effect(
             }
             return
 
+          // kilocode_change start
           case "tool-input-end": {
-            const toolCall = yield* ensureToolCall(value)
+            const toolCall = yield* readToolCall(value.id)
+            if (!toolCall) return
+            // kilocode_change end
             // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
             if (mirrorAssistant) {
               const assistantMessageID = yield* requireV2AssistantMessage(toolCall.call)
@@ -718,20 +731,21 @@ export const layer = Layer.effect(
             if (mirrorAssistant) {
               const assistantMessageID = yield* requireV2AssistantMessage(toolCall?.call)
               const content = [
-                ToolOutput.text({ type: "text", text: output.output }),
-                ...(output.attachments?.map((item: SessionV1.FilePart) =>
-                  ToolOutput.file({
-                    type: "file",
-                    source: toolFileSourceFromUri(item.url),
-                    mime: item.mime,
-                    name: item.filename,
-                  }),
+                { type: "text" as const, text: output.output },
+                ...(output.attachments?.map(
+                  (item: SessionV1.FilePart) =>
+                    ({
+                      type: "file",
+                      uri: item.url,
+                      mime: item.mime,
+                      name: item.filename,
+                    }) as const,
                 ) ?? []),
               ]
-              const unsupported = content.find((item) => item.type === "file" && item.source.type !== "data")
+              const unsupported = content.find((item) => item.type === "file" && !item.uri.startsWith("data:"))
               if (unsupported?.type === "file") {
                 const error = new Error(
-                  `Tool attachment source "${unsupported.source.type}" must be materialized before durable V2 settlement`,
+                  `Tool attachment URI "${unsupported.uri}" must be materialized before durable V2 settlement`,
                 )
                 yield* events.publish(SessionEvent.Tool.Failed, {
                   sessionID: ctx.sessionID,
@@ -803,6 +817,7 @@ export const layer = Layer.effect(
           case "step-start":
             // kilocode_change start
             ctx.stepStart = performance.now()
+            ctx.stepStartDate = Date.now()
             ctx.step = { reasoning: false, text: false, tool: false }
             if (!ctx.snapshot)
               ctx.snapshot = yield* snapshot.track({
@@ -823,6 +838,7 @@ export const layer = Layer.effect(
               sessionID: ctx.sessionID,
               snapshot: ctx.snapshot,
               type: "step-start",
+              time: { start: ctx.stepStartDate }, // kilocode_change
             })
             return
 
@@ -838,7 +854,9 @@ export const layer = Layer.effect(
                 usage: attempt.usage,
               })
             )
-              return yield* Effect.fail(new KiloSessionProcessor.IncompleteResponseError())
+              return yield* Effect.fail(
+                new KiloSessionProcessor.IncompleteResponseError(KiloResponseMetadata.read(value.providerMetadata)),
+              )
             // kilocode_change end
             // kilocode_change start - pass turn context for slow-snapshot UI/policy handling
             const completedSnapshot = yield* snapshot.track({
@@ -859,16 +877,28 @@ export const layer = Layer.effect(
               modelID: ctx.model.id,
               selected: ctx.assistantMessage.modelID,
             })
+            const generationID = KiloSessionProcessor.generationID(value.providerMetadata)
+            const vercelID = KiloResponseMetadata.read(value.providerMetadata)
             // kilocode_change end
             // kilocode_change start - guard against finish-step without start-step:
             // ctx.stepStart is 0 until `start-step` fires, which would feed a
             // huge bogus `elapsed` into telemetry. Fall back to now().
+            const endDate = Date.now()
+            const elapsedMs = Math.round(
+              performance.now() - (ctx.stepStart || performance.now()),
+            )
+            const startDate = ctx.stepStartDate ?? (Number.isFinite(elapsedMs) ? endDate - elapsedMs : endDate)
+            const metrics = KiloSessionProcessor.computeMetrics({
+              providerMetadata: value.providerMetadata,
+              tokens: usage.tokens,
+              elapsedMs,
+            })
             KiloSessionProcessor.trackStep({
               sessionID: ctx.sessionID,
               model: ctx.model,
               tokens: usage.tokens,
               cost: usage.cost,
-              elapsed: Math.round(performance.now() - (ctx.stepStart || performance.now())),
+              elapsed: elapsedMs,
               telemetry: ctx.telemetry,
             })
             // kilocode_change end
@@ -900,7 +930,11 @@ export const layer = Layer.effect(
               messageID: ctx.assistantMessage.id,
               sessionID: ctx.assistantMessage.sessionID,
               type: "step-finish",
+              time: { start: startDate, end: endDate, elapsed: elapsedMs }, // kilocode_change
               ...(model ? { model } : {}), // kilocode_change
+              ...(generationID ? { generationID } : {}), // kilocode_change
+              ...(vercelID ? { vercelID } : {}), // kilocode_change
+              ...(metrics ? { metrics } : {}), // kilocode_change
               tokens: usage.tokens,
               cost: usage.cost,
             })
@@ -1147,7 +1181,12 @@ export const layer = Layer.effect(
           return
         }
         // kilocode_change end
-        slog.error("process", { error: errorMessage(e), stack: e instanceof Error ? e.stack : undefined })
+        yield* Effect.logError("process", {
+          "session.id": input.sessionID,
+          messageID: input.assistantMessage.id,
+          error: errorMessage(e),
+          stack: e instanceof Error ? e.stack : undefined,
+        })
         const error = parse(e)
         // kilocode_change start
         if (e instanceof KiloSessionProcessor.IncompleteResponseError) ctx.assistantMessage.finish = "unknown"
@@ -1196,7 +1235,10 @@ export const layer = Layer.effect(
       // kilocode_change end
 
       const process = Effect.fn("SessionProcessor.process")(function* (streamInput: LLM.StreamInput) {
-        slog.info("process")
+        yield* Effect.logInfo("process", {
+          "session.id": input.sessionID,
+          messageID: input.assistantMessage.id,
+        })
         // kilocode_change start - a deleted session cannot accept EventV2 writes under core FK enforcement
         const exists = yield* session.get(ctx.sessionID).pipe(
           Effect.as(true),
@@ -1385,5 +1427,21 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(EventV2Bridge.defaultLayer),
   ),
 )
+
+export const node = LayerNode.make(layer, [
+  Session.node,
+  Config.node,
+  Snapshot.node,
+  Agent.node,
+  LLM.node,
+  Permission.node,
+  Plugin.node,
+  SessionSummary.node,
+  SessionStatus.node,
+  Image.node,
+  EventV2Bridge.node,
+  RuntimeFlags.node,
+  Database.node,
+])
 
 export * as SessionProcessor from "./processor"

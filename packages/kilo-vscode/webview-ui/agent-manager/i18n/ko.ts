@@ -122,6 +122,8 @@ export const dict = {
   "agentManager.dialog.compareModels.tooltip": "서로 다른 모델에서 에이전트를 병렬로 실행하여 결과를 비교합니다",
   "agentManager.dialog.compareModels.searchModels": "모델 검색...",
   "agentManager.dialog.compareModels.selectModels": "모델 선택...",
+  "agentManager.dialog.compareModels.effort": "추론 노력",
+  "agentManager.dialog.compareModels.effortDefault": "기본",
   "agentManager.dialog.creating": "생성 중...",
   "agentManager.dialog.createWorktree": "워크트리 생성",
   "agentManager.dialog.removeImage": "이미지 제거",

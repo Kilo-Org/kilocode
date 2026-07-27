@@ -442,7 +442,7 @@ export class QdrantVectorStore implements IVectorStore {
     try {
       const processedPoints = points.map((point) => {
         if (point.payload?.filePath) {
-          const segments = point.payload.filePath.split(path.sep).filter(Boolean)
+          const segments = point.payload.filePath.split(/[\\/]+/).filter(Boolean)
           const pathSegments = segments.reduce((acc: Record<string, string>, segment: string, index: number) => {
             acc[index.toString()] = segment
             return acc
@@ -594,7 +594,7 @@ export class QdrantVectorStore implements IVectorStore {
         const normalizedRelativePath = path.normalize(relativePath)
 
         // Split the path into segments like we do in upsertPoints
-        const segments = normalizedRelativePath.split(path.sep).filter(Boolean)
+        const segments = normalizedRelativePath.split(/[\\/]+/).filter(Boolean)
 
         // Create a filter that matches all segments of the path
         // This ensures we only delete points that match the exact file path

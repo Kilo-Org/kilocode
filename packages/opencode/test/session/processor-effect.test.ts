@@ -1,6 +1,6 @@
-import { NodeFileSystem } from "@effect/platform-node"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { Database } from "@opencode-ai/core/database/database"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { expect } from "bun:test"
 import { tool } from "ai"
@@ -8,11 +8,6 @@ import { Cause, Effect, Exit, Fiber, Layer, Stream } from "effect"
 import path from "path"
 import z from "zod"
 import type { Agent } from "../../src/agent/agent"
-import { Agent as AgentSvc } from "../../src/agent/agent"
-import { Config } from "@/config/config"
-import { Image } from "@/image/image"
-import { Permission } from "../../src/permission"
-import { Plugin } from "../../src/plugin"
 import { Provider } from "@/provider/provider"
 
 import { Session } from "@/session/session"
@@ -22,8 +17,6 @@ import { SessionProcessor } from "../../src/session/processor"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
-import { Snapshot } from "../../src/snapshot"
-import * as Log from "@opencode-ai/core/util/log"
 import { SessionNetwork } from "../../src/session/network" // kilocode_change
 import { Bus } from "../../src/bus" // kilocode_change
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
@@ -34,9 +27,8 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionEvent } from "@opencode-ai/core/session/event"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { LLMEvent } from "@opencode-ai/llm"
-
-void Log.init({ print: false })
 
 const summary = Layer.succeed(
   SessionSummary.Service,
@@ -176,43 +168,34 @@ const assistant = Effect.fn("TestSession.assistant")(function* (
   return msg
 })
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(EventV2Bridge.defaultLayer))
-const infra = Layer.mergeAll(NodeFileSystem.layer, CrossSpawnSpawner.defaultLayer)
-const deps = Layer.mergeAll(
-  Session.defaultLayer,
-  Snapshot.defaultLayer,
-  AgentSvc.defaultLayer,
-  Permission.defaultLayer,
-  Plugin.defaultLayer,
-  Config.defaultLayer,
-  LLM.defaultLayer,
-  Provider.defaultLayer,
-  status,
-  Database.defaultLayer,
-  EventV2Bridge.defaultLayer,
-).pipe(Layer.provideMerge(infra))
-const env = Layer.mergeAll(
-  TestLLMServer.layer,
-  SessionProcessor.layer.pipe(
-    Layer.provide(summary),
-    Layer.provide(Image.defaultLayer),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-  ),
-)
+const root = LayerNode.group([
+  SessionProcessor.node,
+  Session.node,
+  SessionProjector.node,
+  Provider.node,
+  Database.node,
+  EventV2Bridge.node,
+  SessionStatus.node,
+  CrossSpawnSpawner.node,
+])
+const replacements = [
+  LayerNode.replace(SessionSummary.node, summary),
+  LayerNode.replace(RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })),
+]
+const env = LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMServer.layer, [])]), { replacements })
 
 const it = testEffect(env)
 // kilocode_change start - exercise non-default output token ceilings in the processor
 const capped = testEffect(
-  Layer.mergeAll(
-    TestLLMServer.layer,
-    SessionProcessor.layer.pipe(
-      Layer.provide(summary),
-      Layer.provide(Image.defaultLayer),
-      Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 })),
-      Layer.provideMerge(deps),
-    ),
-  ),
+  LayerNode.buildLayer(LayerNode.group([root, LayerNode.make(TestLLMServer.layer, [])]), {
+    replacements: [
+      LayerNode.replace(SessionSummary.node, summary),
+      LayerNode.replace(
+        RuntimeFlags.node,
+        RuntimeFlags.layer({ experimentalEventSystem: true, outputTokenMax: 8_000 }),
+      ),
+    ],
+  }),
 )
 // kilocode_change end
 
@@ -236,14 +219,40 @@ const providerErrorLLM = Layer.succeed(
       ),
   }),
 )
-const providerErrorEnv = SessionProcessor.layer.pipe(
-  Layer.provide(summary),
-  Layer.provide(Image.defaultLayer),
-  Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-  Layer.provide(providerErrorLLM),
-  Layer.provideMerge(deps),
-)
+const providerErrorEnv = LayerNode.buildLayer(root, {
+  replacements: [...replacements, LayerNode.replace(LLM.node, providerErrorLLM)],
+})
 const itProviderError = testEffect(providerErrorEnv)
+
+// kilocode_change start
+const lateToolInputLLM = Layer.succeed(
+  LLM.Service,
+  LLM.Service.of({
+    stream: () =>
+      Stream.make(
+        LLMEvent.stepStart({ index: 0 }),
+        LLMEvent.toolInputStart({ id: "call-1", name: "read" }),
+        LLMEvent.toolInputDelta({ id: "call-1", name: "read", text: '{"filePath":"package.json"}' }),
+        LLMEvent.toolInputEnd({ id: "call-1", name: "read" }),
+        LLMEvent.toolCall({ id: "call-1", name: "read", input: { filePath: "package.json" }, providerExecuted: true }),
+        LLMEvent.toolResult({
+          id: "call-1",
+          name: "read",
+          result: { type: "text", value: "contents" },
+          providerExecuted: true,
+        }),
+        LLMEvent.toolInputDelta({ id: "call-1", name: "unknown", text: "" }),
+        LLMEvent.toolInputEnd({ id: "call-1", name: "unknown" }),
+        LLMEvent.stepFinish({ index: 0, reason: "tool-calls" }),
+        LLMEvent.finish({ reason: "tool-calls" }),
+      ),
+  }),
+)
+const lateToolInputEnv = LayerNode.buildLayer(root, {
+  replacements: [...replacements, LayerNode.replace(LLM.node, lateToolInputLLM)],
+})
+const itLateToolInput = testEffect(lateToolInputEnv)
+// kilocode_change end
 
 const fragmentFailureLLM = Layer.succeed(
   LLM.Service,
@@ -259,13 +268,9 @@ const fragmentFailureLLM = Layer.succeed(
       ),
   }),
 )
-const fragmentFailureEnv = SessionProcessor.layer.pipe(
-  Layer.provide(summary),
-  Layer.provide(Image.defaultLayer),
-  Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-  Layer.provide(fragmentFailureLLM),
-  Layer.provideMerge(deps),
-)
+const fragmentFailureEnv = LayerNode.buildLayer(root, {
+  replacements: [...replacements, LayerNode.replace(LLM.node, fragmentFailureLLM)],
+})
 const itFragmentFailure = testEffect(fragmentFailureEnv)
 
 const boot = Effect.fn("test.boot")(function* () {
@@ -1106,7 +1111,49 @@ itProviderError.live("session.processor effect tests fail provider-executed erro
       }),
     { config: cfg },
   ),
+) // kilocode_change
+
+// kilocode_change start
+itLateToolInput.live("session.processor effect tests ignore tool input after the call settles", () =>
+  provideTmpdirInstance(
+    (dir) =>
+      Effect.gen(function* () {
+        const { processors, session, provider } = yield* boot()
+        const chat = yield* session.create({})
+        const parent = yield* user(chat.id, "read a file")
+        const msg = yield* assistant(chat.id, parent.id, path.resolve(dir))
+        const mdl = yield* provider.getModel(ref.providerID, ref.modelID)
+        const handle = yield* processors.create({ assistantMessage: msg, sessionID: chat.id, model: mdl })
+
+        yield* handle.process({
+          user: {
+            id: parent.id,
+            sessionID: chat.id,
+            role: "user",
+            time: parent.time,
+            agent: parent.agent,
+            model: { providerID: ref.providerID, modelID: ref.modelID },
+          } satisfies SessionV1.User,
+          sessionID: chat.id,
+          model: mdl,
+          agent: agent(),
+          system: [],
+          messages: [{ role: "user", content: "read a file" }],
+          tools: {},
+        })
+
+        const calls = (yield* MessageV2.parts(msg.id)).filter(
+          (part): part is SessionV1.ToolPart => part.type === "tool",
+        )
+        expect(calls).toHaveLength(1)
+        expect(calls[0]?.callID).toBe("call-1")
+        expect(calls[0]?.tool).toBe("read")
+        expect(calls[0]?.state.status).toBe("completed")
+      }),
+    { config: cfg },
+  ),
 )
+// kilocode_change end
 
 itFragmentFailure.live("session.processor effect tests flush partial v2 fragments before step failure", () =>
   provideTmpdirInstance(

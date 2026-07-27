@@ -4,7 +4,7 @@ import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // ki
 import { Telemetry } from "@kilocode/kilo-telemetry" // kilocode_change
 import { Instance } from "../kilocode/instance" // kilocode_change
 import { EventV2Bridge } from "@/event-v2-bridge" // kilocode_change
-import { TuiEvent } from "../cli/cmd/tui/event" // kilocode_change
+import { TuiEvent } from "@/server/tui-event" // kilocode_change
 import DESCRIPTION from "./warpgrep.txt"
 
 // FREE_PERIOD_TODO: Remove KILO_WARPGREP_PROXY_URL constant and the proxy

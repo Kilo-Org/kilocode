@@ -453,42 +453,50 @@ setInterval(() => {}, 1_000)
     }),
   )
 
-  it.live("shares one persistent process manager across project directories", () =>
-    Effect.promise(async () => {
-      await using tmp = await tmpdir({ git: true })
-      const nested = path.join(tmp.path, "nested")
-      await fs.mkdir(nested)
-      const sessionID = SessionID.descending()
-      const command = await script(
-        tmp.path,
-        "shared.mjs",
-        `console.log("ready")
+  it.live(
+    "shares one persistent process manager across project directories",
+    () =>
+      Effect.promise(async () => {
+        await using tmp = await tmpdir({ git: true })
+        const nested = path.join(tmp.path, "nested")
+        await fs.mkdir(nested)
+        const sessionID = SessionID.descending()
+        const command = await script(
+          tmp.path,
+          "shared.mjs",
+          `console.log("ready")
 setInterval(() => {}, 1_000)
 `,
-      )
-      const info = await provideTestInstance({
-        directory: tmp.path,
-        fn: () =>
-          BackgroundProcess.start({
-            sessionID,
-            command,
-            cwd: tmp.path,
-            lifetime: "persistent",
-            ready: { pattern: "ready", timeout: 15_000 },
-          }),
-      })
+        )
+        const info = await provideTestInstance({
+          directory: tmp.path,
+          fn: () =>
+            BackgroundProcess.start({
+              sessionID,
+              command,
+              cwd: tmp.path,
+              lifetime: "persistent",
+              ready: { pattern: "ready", timeout: 15_000 },
+            }),
+        })
 
-      try {
-        const shared = await provideTestInstance({ directory: nested, fn: () => BackgroundProcess.get(info.id) })
-        expect(shared?.pid).toBe(info.pid)
-        const restarted = await provideTestInstance({ directory: nested, fn: () => BackgroundProcess.restart(info.id) })
-        expect(restarted?.pid).not.toBe(info.pid)
-        const current = await provideTestInstance({ directory: tmp.path, fn: () => BackgroundProcess.get(info.id) })
-        expect(current?.pid).toBe(restarted?.pid)
-      } finally {
-        await provideTestInstance({ directory: tmp.path, fn: () => BackgroundProcess.stop(info.id) })
-      }
-    }),
+        try {
+          const shared = await provideTestInstance({ directory: nested, fn: () => BackgroundProcess.get(info.id) })
+          expect(shared?.pid).toBe(info.pid)
+          const restarted = await provideTestInstance({
+            directory: nested,
+            fn: () => BackgroundProcess.restart(info.id),
+          })
+          expect(restarted?.pid).not.toBe(info.pid)
+          const current = await provideTestInstance({ directory: tmp.path, fn: () => BackgroundProcess.get(info.id) })
+          expect(current?.pid).toBe(restarted?.pid)
+        } finally {
+          await provideTestInstance({ directory: tmp.path, fn: () => BackgroundProcess.stop(info.id) })
+        }
+      }),
+    // Windows verifies each persistent launch and stop through PowerShell/CIM.
+    // This test performs two complete lifecycles, so allow both probe budgets.
+    process.platform === "win32" ? 35_000 : 15_000,
   )
 
   it.instance(

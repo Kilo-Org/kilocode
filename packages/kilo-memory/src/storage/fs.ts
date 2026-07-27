@@ -109,6 +109,15 @@ export namespace MemoryFs {
     return readFile(file, "utf8")
   }
 
+  export async function remove(file: string) {
+    await parents(path.dirname(file))
+    const info = await guard(file)
+    if (!info) return false
+    if (!info.isFile()) throw new Error(`memory path is not a file: ${file}`)
+    await rm(file, { force: true })
+    return true
+  }
+
   export async function json(file: string) {
     const text = await read(file)
     return text === undefined ? undefined : JSON.parse(text)

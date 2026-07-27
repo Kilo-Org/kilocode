@@ -1,16 +1,15 @@
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@opencode-ai/core/v1/session"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { Config } from "@/config/config" // kilocode_change
 import { Snapshot } from "../snapshot"
 import { Storage } from "@/storage/storage"
-import { Log } from "@opencode-ai/core/util/log"
 import { Session } from "./session"
 import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionRunState } from "./run-state"
 import { SessionSummary } from "./summary"
-
-const log = Log.create({ service: "session.revert" })
 
 export const RevertInput = Schema.Struct({
   sessionID: SessionID,
@@ -36,6 +35,7 @@ export const layer = Layer.effect(
     const events = yield* EventV2Bridge.Service
     const summary = yield* SessionSummary.Service
     const state = yield* SessionRunState.Service
+    const config = yield* Config.Service // kilocode_change
 
     const revert = Effect.fn("SessionRevert.revert")(function* (input: RevertInput) {
       yield* state.assertNotBusy(input.sessionID)
@@ -69,12 +69,22 @@ export const layer = Layer.effect(
 
       if (!rev) return session
 
+      // kilocode_change start
+      // A fresh snapshot only preserves the state needed for redo. File restoration
+      // is possible only when the historical turn retained checkpoint data.
+      const range = all.filter((msg) => msg.info.id >= rev.messageID)
+      const checkpoint = patches.length > 0
+      rev.workspace = checkpoint
+        ? "restored"
+        : (yield* config.get()).snapshot === false
+          ? "snapshots-disabled"
+          : "unavailable"
+      // kilocode_change end
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
       if (session.revert?.snapshot) yield* snap.restore(session.revert.snapshot)
 
       // kilocode_change start - compute diffs BEFORE reverting files so the diff
       // reflects changes being undone (files on disk still have AI modifications)
-      const range = all.filter((msg) => msg.info.id >= rev.messageID)
       const diffs = yield* summary.computeDiff({ messages: range })
       // kilocode_change end
 
@@ -104,7 +114,7 @@ export const layer = Layer.effect(
     })
 
     const unrevert = Effect.fn("SessionRevert.unrevert")(function* (input: { sessionID: SessionID }) {
-      log.info("unreverting", input)
+      yield* Effect.logInfo("unreverting", { sessionID: input.sessionID })
       yield* state.assertNotBusy(input.sessionID)
       const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (!session.revert) return session
@@ -167,7 +177,18 @@ export const defaultLayer = Layer.suspend(() =>
     Layer.provide(Storage.defaultLayer),
     Layer.provide(EventV2Bridge.defaultLayer),
     Layer.provide(SessionSummary.defaultLayer),
+    Layer.provide(Config.defaultLayer), // kilocode_change
   ),
 )
+
+export const node = LayerNode.make(layer, [
+  Session.node,
+  Snapshot.node,
+  Storage.node,
+  EventV2Bridge.node,
+  SessionSummary.node,
+  SessionRunState.node,
+  Config.node, // kilocode_change
+])
 
 export * as SessionRevert from "./revert"

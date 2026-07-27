@@ -38,13 +38,13 @@ const BACKGROUND_DESCRIPTION = [
 ].join(" ")
 const BACKGROUND_STARTED = [
   "The task is working in the background. You will be notified automatically when it finishes.",
-  "Do not poll for progress, ask the task for status, or duplicate this task's work — avoid working with the same files or topics it is using.",
+  "DO NOT sleep, poll for progress, ask the task for status, or duplicate this task's work — avoid working with the same files or topics it is using.",
   "Work on non-overlapping tasks, or briefly tell the user what you launched and end your response.",
 ].join("\n")
 const BACKGROUND_UPDATED = [
   "Additional context sent to the running background task.",
   "The task is still working in the background. You will be notified automatically when it finishes.",
-  "Do not poll for progress, ask the task for status, or duplicate this task's work — avoid working with the same files or topics it is using.",
+  "DO NOT sleep, poll for progress, ask the task for status, or duplicate this task's work — avoid working with the same files or topics it is using.",
   "Work on non-overlapping tasks, or briefly tell the user what you sent and end your response.",
 ].join("\n")
 
@@ -64,7 +64,8 @@ const BaseParameters = Schema.Struct(BaseParameterFields)
 export const Parameters = Schema.Struct({
   ...BaseParameterFields,
   background: Schema.optional(Schema.Boolean).annotate({
-    description: "Run the agent in the background. You will be notified when it completes.",
+    description:
+      "Run the agent in the background. You will be notified when it completes. DO NOT sleep, poll, or proactively check on its progress",
   }),
 })
 
@@ -152,26 +153,27 @@ export const TaskTool = Tool.define(
         ) // kilocode_change - prevent cross-session task resume
       }
       const parent = yield* sessions.get(ctx.sessionID)
-      const parentAgent = parent.agent
-        ? yield* agent.get(parent.agent).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
-        : undefined
       // kilocode_change start — inherit edit/bash/MCP restrictions from calling agent
       const caller = yield* agent.get(ctx.agent)
       const rules = KiloTask.inherited({ caller, session: parent, mcp: cfg.mcp })
+      const childPermission = KiloTask.merge(
+        deriveSubagentSessionPermission({
+          parentSessionPermission: parent.permission ?? [],
+          subagent: next,
+        }),
+        cfg.experimental?.primary_tools?.map((permission) => ({
+          permission,
+          pattern: "*",
+          action: "deny" as const,
+        })) ?? [],
+        KiloTask.permissions(rules),
+      )
       // kilocode_change end
       // kilocode_change start - refresh current parent restrictions when resuming an existing task session
       const fallback = SandboxPolicy.fallback(cfg)
       if (session) {
         yield* SandboxPolicy.inherit(ctx.sessionID, session.id, fallback)
-        const permission = KiloTask.merge(
-          session.permission ?? [],
-          deriveSubagentSessionPermission({
-            parentSessionPermission: parent.permission ?? [],
-            parentAgent,
-            subagent: next,
-          }),
-          KiloTask.permissions(rules),
-        )
+        const permission = KiloTask.merge(session.permission ?? [], childPermission)
         session.permission = permission
         yield* sessions.setPermission({ sessionID: session.id, permission })
       }
@@ -185,21 +187,7 @@ export const TaskTool = Tool.define(
           title: params.description + ` (@${next.name} subagent)`,
           agent: next.name,
           platform, // kilocode_change
-          // kilocode_change start - dedupe inherited restrictions before child prompt toggles persist
-          permission: KiloTask.merge(
-            deriveSubagentSessionPermission({
-              parentSessionPermission: parent.permission ?? [],
-              parentAgent,
-              subagent: next,
-            }),
-            cfg.experimental?.primary_tools?.map((item) => ({
-              pattern: "*",
-              action: "allow" as const,
-              permission: item,
-            })) ?? [],
-            KiloTask.permissions(rules),
-          ),
-          // kilocode_change end
+          permission: childPermission, // kilocode_change - persist inherited Kilo ceilings and upstream child denies
         }))
       // kilocode_change end
       // kilocode_change start - rebuild in-memory ancestry and inherit confinement after creation/resume
@@ -246,37 +234,38 @@ export const TaskTool = Tool.define(
       const ops = ctx.extra?.promptOps as TaskPromptOps
       if (!ops) return yield* Effect.fail(new Error("TaskTool requires promptOps in ctx.extra"))
 
-      const runTask = Effect.fn("TaskTool.runTask")(function* () {
-        const parts = yield* ops.resolvePromptParts(params.prompt)
-        KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
-        const result = yield* ops.prompt({
-          messageID: MessageID.ascending(),
-          sessionID: nextSession.id,
-          model: {
-            modelID: model.modelID,
-            providerID: model.providerID,
-          },
-          variant, // kilocode_change
-          agent: next.name,
-          tools: {
-            question: false, // kilocode_change - subagents cannot prompt the user directly
-            interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
-            ...(canTodo ? {} : { todowrite: false }),
-            ...(canTask ? {} : { task: false }),
-            ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
-          },
-          parts,
-        })
-        // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
-        // including the resumable task_id so the parent agent can continue the subagent (#11620)
-        if (result.info.role === "assistant" && result.info.error) {
-          return yield* Effect.fail(
-            new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`),
-          )
-        }
-        // kilocode_change end
-        return result.parts.findLast((item) => item.type === "text")?.text ?? ""
-      }, Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id))) // kilocode_change - transfer inherited processes when the child run ends
+      const runTask = Effect.fn("TaskTool.runTask")(
+        function* () {
+          const parts = yield* ops.resolvePromptParts(params.prompt)
+          KiloSessionProcessor.markReviewTelemetry(parts, params.command) // kilocode_change - carry review command into child session telemetry
+          const result = yield* ops.prompt({
+            messageID: MessageID.ascending(),
+            sessionID: nextSession.id,
+            model: {
+              modelID: model.modelID,
+              providerID: model.providerID,
+            },
+            variant, // kilocode_change
+            agent: next.name,
+            tools: {
+              question: false, // kilocode_change - subagents cannot prompt the user directly
+              interactive_terminal: false, // kilocode_change - subagents cannot take over the user's terminal
+              ...(canTodo ? {} : { todowrite: false }),
+              ...(canTask ? {} : { task: false }),
+              ...Object.fromEntries((cfg.experimental?.primary_tools ?? []).map((item) => [item, false])),
+            },
+            parts,
+          })
+          // kilocode_change start - expose terminal child assistant errors through the task tool boundary,
+          // including the resumable task_id so the parent agent can continue the subagent (#11620)
+          if (result.info.role === "assistant" && result.info.error) {
+            return yield* Effect.fail(new Error(`${errorMessage(result.info.error)}\n${resumeHint(nextSession.id)}`))
+          }
+          // kilocode_change end
+          return result.parts.findLast((item) => item.type === "text")?.text ?? ""
+        },
+        Effect.ensuring(KiloTaskBackgroundProcess.finish(nextSession.id)),
+      ) // kilocode_change - transfer inherited processes when the child run ends
 
       // kilocode_change start - inject completed background task results into the parent session
       const inject = Effect.fn("TaskTool.injectBackgroundResult")(function* (

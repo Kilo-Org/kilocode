@@ -8,7 +8,7 @@
 import { createEffect, createMemo, on, onCleanup } from "solid-js"
 import { useKeyboard, useRenderer } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
-import * as Clipboard from "@tui/util/clipboard"
+import * as Clipboard from "@tui/clipboard"
 import { useBindings } from "@tui/keymap"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
@@ -34,6 +34,7 @@ export { KiloTerminalTitle } from "./terminal-title"
 // Hot reload TUI-local settings (keybinds/theme/ui) when changed from the Kilo Console.
 // Called from the App body (below SDKProvider and the TuiConfig provider).
 export { useTuiConfigHotReload } from "@/kilocode/cli/cmd/tui/context/tui-config-hot-reload"
+export { KiloTuiConfig } from "@/kilocode/cli/cmd/tui/context/tui-config"
 
 // ---------------------------------------------------------------------------
 // Constants

@@ -56,7 +56,8 @@ export namespace BackgroundProcessRunner {
       !source || path.basename(script ?? "") === "index.ts"
         ? self.args
         : [path.resolve(import.meta.dirname, "../../index.ts")]
-    return [self.command, ...args, MARKER, input.token, encode(input)]
+    const cwd = source && self.cwd ? ["--cwd", self.cwd] : []
+    return [self.command, ...cwd, ...args, MARKER, input.token, encode(input)]
   }
 
   async function writer(input: Input) {
