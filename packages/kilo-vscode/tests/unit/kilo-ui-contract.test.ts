@@ -19,6 +19,7 @@ import path from "node:path"
 
 const MONOREPO_ROOT = path.resolve(import.meta.dir, "../../../..")
 const KILO_UI_DIR = path.join(MONOREPO_ROOT, "packages/kilo-ui")
+const WORKER_URL = path.join(MONOREPO_ROOT, "packages/kilo-vscode/tests/setup/worker-url.ts")
 const BASIC_TOOL_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/basic-tool.tsx")
 const DATA_CONTEXT_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/context/data.tsx")
 const MESSAGE_PART_FILE = path.join(MONOREPO_ROOT, "packages/ui/src/components/message-part.tsx")
@@ -44,7 +45,7 @@ const TRANSCRIPT_PARTS_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/web
 const CHAT_LAYOUT_FILE = path.join(MONOREPO_ROOT, "packages/kilo-vscode/webview-ui/src/styles/chat-layout.css")
 
 function check(code: string): { ok: boolean; output: string } {
-  const result = Bun.spawnSync(["bun", "--conditions=browser", "-e", code], {
+  const result = Bun.spawnSync(["bun", "--preload", WORKER_URL, "--conditions=browser", "-e", code], {
     cwd: KILO_UI_DIR,
     stdout: "pipe",
     stderr: "pipe",

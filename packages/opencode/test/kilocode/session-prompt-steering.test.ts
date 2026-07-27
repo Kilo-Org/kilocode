@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import os from "os"
 import { Effect } from "effect"
 import { Flag } from "@opencode-ai/core/flag/flag"
+import { AppRuntime } from "../../src/effect/app-runtime"
 import { MessageV2 } from "../../src/session/message-v2"
 import { Session } from "../../src/session/session"
 import { SessionPrompt } from "../../src/session/prompt"
@@ -26,6 +27,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await AppRuntime.dispose()
   await disposeTestRuntime()
   Flag.KILO_DB = previous
   await Promise.all([dbfile, `${dbfile}-wal`, `${dbfile}-shm`].map(cleanup))
