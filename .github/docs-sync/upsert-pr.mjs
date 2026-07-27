@@ -121,8 +121,8 @@ async function main() {
     return
   }
 
-  git(["config", "user.name", "github-actions[bot]"])
-  git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"])
+  // Git identity is configured once in docs-sync.yml (Configure git identity)
+  // before any commit-creating step, including prepare-branch's merge.
   git(["add", DOCS_PATH])
   git(["commit", "-m", `docs: sync with merged PRs (${date})`])
 
