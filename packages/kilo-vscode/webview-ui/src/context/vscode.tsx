@@ -55,6 +55,10 @@ export const VSCodeProvider: ParentComponent = (props) => {
   }
 
   window.addEventListener("message", messageListener)
+  const reportFocus = () => api.postMessage({ type: "webviewFocusChanged", focused: document.hasFocus() })
+  window.addEventListener("focus", reportFocus)
+  window.addEventListener("blur", reportFocus)
+  reportFocus()
   handlers.add((message) => {
     if (message?.type === "modelSelectorExpandedLoaded") setExpanded(message.value)
   })
@@ -62,6 +66,8 @@ export const VSCodeProvider: ParentComponent = (props) => {
 
   onCleanup(() => {
     window.removeEventListener("message", messageListener)
+    window.removeEventListener("focus", reportFocus)
+    window.removeEventListener("blur", reportFocus)
     handlers.clear()
   })
 
