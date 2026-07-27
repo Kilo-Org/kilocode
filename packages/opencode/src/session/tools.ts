@@ -51,7 +51,9 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const truncate = yield* Truncate.Service
   // kilocode_change start - SWE-Pruner (experimental)
   const config = yield* Config.Service
-  const swe = SwePruner.enabled(yield* config.get())
+  const cfg = yield* config.get()
+  const swe = SwePruner.enabled(cfg)
+  const permissionOrigins = cfg.permission_origins
   // kilocode_change end
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
@@ -69,6 +71,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         permission,
         agents,
         sessions,
+        origins: permissionOrigins,
         agent: input.agent,
         session: input.session,
         request: {
@@ -76,7 +79,12 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           sessionID: input.session.id,
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
         },
-      }).pipe(Effect.orDie),
+      }).pipe(
+        // record why the call was allowed onto the tool part, then discard the outcome for the tool-facing ask
+        Effect.tap((approval) => input.processor.metadata(options.toolCallId, { metadata: { approval } })),
+        Effect.asVoid,
+        Effect.orDie,
+      ),
   })
   // kilocode_change end
 

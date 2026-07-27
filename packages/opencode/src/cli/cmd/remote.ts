@@ -2,33 +2,13 @@
 import { cmd } from "./cmd"
 import { bootstrap } from "../bootstrap"
 import { KiloSessions } from "@/kilo-sessions/kilo-sessions"
+import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { context } from "@/project/instance-context"
 import { InstanceRuntime } from "@/project/instance-runtime"
 import { Instance } from "@/kilocode/instance"
-import { InstallationVersion } from "@opencode-ai/core/installation/version"
-import os from "node:os"
-import path from "node:path"
 
-function truncate(value: string, max: number) {
-  return value.length > max ? value.slice(0, max) : value
-}
-
-// kilocode_change start - K1 W1: extracted so the advertisement payload shape
-// is unit-testable as real behavior, rather than only through a source-text/
-// regex assertion on this file (the handler itself can't be driven end-to-end
-// — see the doc comment on `handler` below).
-export function buildInstanceAdvertisement(directory: string): {
-  name: string
-  projectName: string
-  version: string
-} {
-  return {
-    name: truncate(os.hostname(), 64),
-    projectName: truncate(path.basename(directory) || directory, 64),
-    version: truncate(InstallationVersion, 32),
-  }
-}
-// kilocode_change end
+// Re-export so existing unit tests that import from this module keep working.
+export { buildInstanceAdvertisement }
 
 export const RemoteCommand = cmd({
   command: "remote",
@@ -41,6 +21,8 @@ export const RemoteCommand = cmd({
       // The process-wide `KILO_REMOTE_ATTACH_SESSION` guard was removed in K1
       // (in-process sessions only; no spawned children), so this is always
       // advertised for the explicit `kilo remote` command path.
+      // enableRemote() also ensures a default advertisement; this explicit call
+      // remains a legitimate replace (or no-op when identical) per the contract.
       KiloSessions.setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
 
       await KiloSessions.enableRemote()

@@ -36,4 +36,15 @@ describe("session response metadata", () => {
   test("does not add metadata when the header is absent", () => {
     expect(KiloResponseMetadata.write(undefined, { server: "vercel" })).toBeUndefined()
   })
+
+  test("normalizes valid Vercel IDs", () => {
+    const metadata = KiloResponseMetadata.write(undefined, { "x-vercel-id": "  fra1::abc-123_test  " })
+    expect(KiloResponseMetadata.read(metadata)).toBe("fra1::abc-123_test")
+  })
+
+  test("rejects unsafe or oversized Vercel IDs", () => {
+    expect(KiloResponseMetadata.write(undefined, { "x-vercel-id": "fra1::<script>" })).toBeUndefined()
+    expect(KiloResponseMetadata.write(undefined, { "x-vercel-id": "x".repeat(201) })).toBeUndefined()
+    expect(KiloResponseMetadata.read({ kilo: { vercelID: "fra1::abc\nsecret" } })).toBeUndefined()
+  })
 })

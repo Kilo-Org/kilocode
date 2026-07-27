@@ -153,6 +153,11 @@ export type Info = ConfigV1.Info & {
   // kilocode_change start - derived provenance for markdown paths selected by config
   instruction_origins?: Record<string, KilocodeMarkdown.Source>
   skill_path_origins?: Record<string, KilocodeMarkdown.Source>
+  // derived provenance for permission patterns: which config scope (global XDG vs local project)
+  // last set each permission + pattern. Keyed per pattern (not just per key) because global and
+  // project config can contribute different patterns under the same key. Lets the runtime explain
+  // why a tool call was auto-approved.
+  permission_origins?: Record<string, Record<string, "global" | "local">>
   // kilocode_change end
 }
 
@@ -241,6 +246,7 @@ function writable(info: Info) {
     plugin_origins: _plugin_origins,
     instruction_origins: _instruction_origins,
     skill_path_origins: _skill_path_origins,
+    permission_origins: _permission_origins,
     ...next
   } = info
   // kilocode_change end
@@ -541,6 +547,23 @@ export const layer = Layer.effect(
           }
           if (next.skills?.paths?.length) {
             result.skill_path_origins = origins(result.skill_path_origins, next.skills.paths, trusted, source)
+          }
+          // record which scope last set each permission + pattern. A scalar value (e.g. bash: "allow")
+          // maps to pattern "*"; an object records each of its patterns. Global and project config can
+          // contribute different patterns under one key, so track per pattern; later merges win.
+          if (scoped.permission && typeof scoped.permission === "object") {
+            const map = { ...result.permission_origins }
+            for (const [key, value] of Object.entries(scoped.permission)) {
+              if (value === null) continue
+              const patterns = typeof value === "string" ? { "*": value } : value
+              const inner = { ...map[key] }
+              for (const [pattern, action] of Object.entries(patterns)) {
+                if (action === null) continue
+                inner[pattern] = scope
+              }
+              map[key] = inner
+            }
+            result.permission_origins = map
           }
           return yield* mergePluginOrigins(source, scoped.plugin, scope)
         })

@@ -103,6 +103,7 @@ const permission = Layer.mock(Permission.Service)({
   ask: (input) =>
     Effect.sync(() => {
       approvals.push(input)
+      return { manual: false } as const
     }),
 })
 const plugin = Layer.mock(Plugin.Service)({
