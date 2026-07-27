@@ -104,12 +104,13 @@
 
 ## [7.0.12-rc.2] - 2026-07-27
 
+### Added
+
 ### Fixed
-- fix(jetbrains): use file signing inputs for bundled publish by @kirillk in https://github.com/Kilo-Org/kilocode/pull/12578
+
+- Fix the GitHub-hosted bundled JetBrains plugin build so signing uses certificate and private-key files during verification.
 
 ### Changed
-- release(jetbrains): v7.0.12-rc.1 by @kilo-maintainer[bot] in https://github.com/Kilo-Org/kilocode/pull/12577
-
 
 ## [7.0.12-rc.1] - 2026-07-27
 
