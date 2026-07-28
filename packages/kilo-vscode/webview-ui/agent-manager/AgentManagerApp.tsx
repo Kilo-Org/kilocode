@@ -1592,14 +1592,15 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.revertWorktreeFileResult") revertCtl.onResult(msg as never)
 
       applyProjectSelection(msg, {
-        active: (projectId) => activeProjectId() === projectId && currentProjectId() === projectId,
+        // The catalog push is synchronous, so activeProjectId is current when
+        // the ack arrives; currentProjectId may still be catching up after an
+        // async project reactivation, so it must not be part of the guard.
+        active: (projectId) => activeProjectId() === projectId,
         managed: (projectId) => projectLive.sessions()[projectId] ?? projectStates()[projectId]?.sessions ?? [],
         local: () => selectLocal(),
-        // Act on the worktree only when the applied state already knows it,
-        // otherwise the ack raced ahead of that project's state push.
-        worktree: (projectId, worktreeId) => {
-          if (projectStates()[projectId]?.worktrees.some((wt) => wt.id === worktreeId)) selectWorktree(worktreeId)
-        },
+        // The active guard above already scopes by project; apply the worktree
+        // optimistically and let the arriving state reconcile.
+        worktree: (projectId, worktreeId) => selectWorktree(worktreeId),
         session: session.selectSession,
         managedSession: focusManagedSession,
       })

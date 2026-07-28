@@ -39,7 +39,7 @@ describe("applyProjectSelection", () => {
     expect(result.calls).toEqual([])
   })
 
-  it("applies acknowledgements for the current project", () => {
+  it("applies acknowledgements for the catalog-active project", () => {
     const result = deps("prj-a")
     applyProjectSelection(
       { type: "agentManager.selectionActivated", target: { projectId: "prj-a", kind: "local" } } as never,
@@ -54,5 +54,21 @@ describe("applyProjectSelection", () => {
     )
 
     expect(result.calls).toEqual(["local:prj-a", "worktree:prj-a:wt-a"])
+  })
+
+  it("applies a worktree ack optimistically even before the state push arrives", () => {
+    // Regression: reactivation pushes state asynchronously, so the ack can
+    // arrive first. The catalog push is synchronous, so the project is already
+    // active and the ack must not be dropped.
+    const result = deps("prj-a")
+    applyProjectSelection(
+      {
+        type: "agentManager.selectionActivated",
+        target: { projectId: "prj-a", kind: "worktree", worktreeId: "wt-a" },
+      } as never,
+      result.value,
+    )
+
+    expect(result.calls).toEqual(["worktree:prj-a:wt-a"])
   })
 })
