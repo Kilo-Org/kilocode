@@ -2515,6 +2515,13 @@ body.am-wt-dragging-active * {
   min-width: 250px;
 }
 
+/* Fixed-width slot so menu items with and without a check mark align. */
+.am-menu-check {
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+}
+
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
 }
@@ -4533,6 +4540,75 @@ body.vscode-high-contrast-light {
   opacity: 1;
   pointer-events: auto;
   z-index: 1;
+}
+
+/* Side terminal panel — lives inside .am-diff-panel-wrapper next to the
+   diff and PR panels. Header reuses .am-diff-header metrics so the
+   chrome does not shift when switching inspector modes. Visibility is
+   opacity-only: the xterm render loop dies if the subtree leaves the
+   paint tree. */
+.am-side-terminal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  /* Force a dedicated compositor layer so opacity flips do not
+     re-lay-out the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-side-terminal-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-side-terminal-layer {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.am-side-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-side-terminal-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+.am-side-terminal-empty {
+  color: var(--text-weak);
+}
+
+/* Hidden-but-alive side panel host: taken out of the flow so the chat
+   reclaims the width, but kept painted so hidden side terminals keep
+   streaming. Anchored to .am-detail-stack (position: relative). */
+.am-side-host-hidden {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .am-terminal-host {
