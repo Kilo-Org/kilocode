@@ -198,8 +198,6 @@ const AgentBehaviourTab: Component = () => {
     ))
   }
 
-  const removableModes = createMemo(() => session.allAgents().filter((a) => !a.native))
-
   const confirmRemoveMode = (agent: AgentInfo) => {
     dialog.show(() => (
       <Dialog title={language.t("settings.agentBehaviour.removeAgent.title")} fit>

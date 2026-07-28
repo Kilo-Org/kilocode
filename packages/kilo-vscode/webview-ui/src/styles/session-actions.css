@@ -270,40 +270,6 @@
   opacity: 0;
 }
 
-/* Diff stats badge styles retained for the inline move button stats */
-.session-diff-badge {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--vscode-descriptionForeground);
-  font-family: var(--vscode-editor-font-family), monospace;
-  font-size: var(--kilo-font-size-11);
-  font-variant-numeric: tabular-nums;
-  cursor: pointer;
-  white-space: nowrap;
-  position: relative;
-}
-
-.session-diff-badge--empty {
-  opacity: 0.5;
-}
-
-.session-diff-badge:hover {
-  background: var(--vscode-toolbar-hoverBackground);
-}
-
-.session-diff-badge [data-component="icon"] {
-  opacity: 0.7;
-  position: relative;
-  flex-shrink: 0;
-}
-
 .session-diff-add {
   color: #34d399;
 }
