@@ -5,16 +5,25 @@
 // shell permission scanner collected zero patterns and the command executed
 // with no permission evaluation at all, bypassing every bash rule including
 // `"git *": "deny"` and `"*": "deny"`. The scanner now fails closed: failed
-// command text is recovered from ERROR nodes, and a non-empty command that
-// produced no command nodes falls back to its raw text.
+// command text is recovered from ERROR nodes, and any parse with errors that
+// recovered nothing falls back to the raw command text (also covering ERROR
+// chunks without a command_name descendant, such as backtick escapes).
 
 import { describe, expect, test } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Cause, Effect, Exit, Layer } from "effect"
+import path from "path"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { FSUtil } from "@opencode-ai/core/fs-util"
 import type { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Permission } from "../../../src/permission"
 import { ShellPermission } from "../../../src/tool/shell"
+import { ShellTool } from "../../../src/tool/shell"
+import { Shell } from "../../../src/shell/shell"
+import { Config } from "../../../src/config/config"
+import { Agent } from "../../../src/agent/agent"
+import { Plugin } from "../../../src/plugin"
+import { Truncate } from "../../../src/tool/truncate"
+import { RuntimeFlags } from "../../../src/effect/runtime-flags"
 import { SessionID, MessageID } from "../../../src/session/schema"
 import { disposeAllInstances, provideInstance, testInstanceStoreLayer, tmpdir } from "../../fixture/fixture"
 import { afterEach } from "bun:test"
@@ -126,4 +135,98 @@ describe("shell permission scanner fails closed on unparsed commands", () => {
     expect(found).toEqual(["git checkout -- file"])
     expect(found.map(action)).toContain("deny")
   })
+
+  test("pwsh: runnable text in an ERROR node without command_name falls back to the raw check", async () => {
+    await using tmp = await tmpdir()
+    // PowerShell interprets `n as a newline escape, so this input executes
+    // `git checkout -- file`, but the grammar drops that segment into an ERROR
+    // node with no command_name descendant while `echo ok` parses cleanly.
+    const found = patterns(await scan(tmp.path, "echo ok; `ngit checkout -- file", "pwsh"))
+    expect(found).toContain("echo ok; `ngit checkout -- file")
+    expect(found.map(action)).toContain("ask")
+  })
+
+  test("pwsh: partially parsed pipelines still fail closed with the raw text", async () => {
+    await using tmp = await tmpdir()
+    const found = patterns(await scan(tmp.path, "git checkout -- file | cat", "pwsh"))
+    expect(found).toContain("git checkout -- file | cat")
+    expect(found.map(action)).toContain("deny")
+  })
+})
+
+const execLayer = Layer.mergeAll(
+  CrossSpawnSpawner.defaultLayer,
+  FSUtil.defaultLayer,
+  Plugin.defaultLayer,
+  Truncate.defaultLayer,
+  Config.defaultLayer,
+  Agent.defaultLayer,
+  RuntimeFlags.defaultLayer,
+  testInstanceStoreLayer,
+)
+
+const powershells =
+  process.platform === "win32"
+    ? [Bun.which("pwsh"), Bun.which("powershell")].filter((shell): shell is string => Boolean(shell))
+    : []
+
+async function withShell<R>(shell: string, fn: () => Promise<R>) {
+  const prev = process.env.SHELL
+  process.env.SHELL = shell
+  Shell.acceptable.reset()
+  Shell.preferred.reset()
+  try {
+    return await fn()
+  } finally {
+    if (prev === undefined) delete process.env.SHELL
+    if (prev !== undefined) process.env.SHELL = prev
+    Shell.acceptable.reset()
+    Shell.preferred.reset()
+  }
+}
+
+// End-to-end coverage through the real shell tool and a real PowerShell binary.
+// Runs only on the Windows CI runners, where pwsh/powershell exist.
+describe("full tool execution through real powershell (windows only)", () => {
+  for (const shell of powershells) {
+    test(`asks for permission on a bare double dash command [${path.basename(shell, ".exe")}]`, async () => {
+      await using tmp = await tmpdir()
+      const requests: ScanRequest[] = []
+      const stop = new Error("stop after permission")
+      await withShell(shell, () =>
+        Effect.runPromise(
+          provideInstance(tmp.path)(
+            Effect.gen(function* () {
+              const info = yield* ShellTool
+              const tool = yield* info.init()
+              const exit = yield* tool
+                .execute(
+                  { command: "git checkout -- file", description: "Restore a file from git" },
+                  {
+                    sessionID: SessionID.make("ses_test"),
+                    messageID: MessageID.make("msg_test"),
+                    callID: "",
+                    agent: "code",
+                    abort: AbortSignal.any([]),
+                    messages: [],
+                    metadata: () => Effect.void,
+                    ask: (req: ScanRequest) =>
+                      Effect.sync(() => {
+                        requests.push(req)
+                        throw stop
+                      }),
+                  },
+                )
+                .pipe(Effect.exit)
+              const err = Exit.isFailure(exit) ? Cause.squash(exit.cause) : undefined
+              expect(err instanceof Error && err.message).toBe(stop.message)
+            }),
+          ).pipe(Effect.provide(execLayer)),
+        ),
+      )
+      const req = requests.find((r) => r.permission === "bash")
+      expect(req).toBeDefined()
+      expect(req!.patterns).toContain("git checkout -- file")
+    })
+  }
 })
