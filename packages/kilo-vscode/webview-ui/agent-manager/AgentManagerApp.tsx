@@ -1592,6 +1592,7 @@ const AgentManagerContent: Component = () => {
       if (msg.type === "agentManager.revertWorktreeFileResult") revertCtl.onResult(msg as never)
 
       applyProjectSelection(msg, {
+        active: (projectId) => activeProjectId() === projectId && currentProjectId() === projectId,
         managed: (projectId) => projectLive.sessions()[projectId] ?? projectStates()[projectId]?.sessions ?? [],
         local: () => selectLocal(),
         // Act on the worktree only when the applied state already knows it,

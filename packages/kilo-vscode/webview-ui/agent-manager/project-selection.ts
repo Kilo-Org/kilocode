@@ -3,6 +3,7 @@ import type { ExtensionMessage, ManagedSessionState } from "../src/types/message
 export function applyProjectSelection(
   msg: ExtensionMessage,
   deps: {
+    active: (projectId: string) => boolean
     managed: (projectId: string) => ManagedSessionState[]
     local: (projectId: string) => void
     worktree: (projectId: string, worktreeId: string) => void
@@ -12,6 +13,9 @@ export function applyProjectSelection(
 ): boolean {
   if (msg.type !== "agentManager.selectionActivated") return false
   const target = msg.target
+  // A selection acknowledgement can arrive after the user switched again.
+  // Ignore it unless this project's catalog entry and state are both active.
+  if (!deps.active(target.projectId)) return true
   // Scope by project like the session branch: a selection ack must never act on
   // another project's data if it lands before that project's state push.
   if (target.kind === "local") deps.local(target.projectId)
