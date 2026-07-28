@@ -66,6 +66,12 @@ export const dict = {
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
   "agentManager.terminal.connectionError": "помилка з'єднання термінала",
+  "agentManager.terminal.kill": "Завершити термінал",
+  "agentManager.terminal.empty": "Тут ще немає термінала",
+  "agentManager.terminal.start": "Запустити термінал",
+  "agentManager.terminal.destination": "Виберіть, що відкриватиме кнопка термінала",
+  "agentManager.terminal.openInVscode": "Термінал VS Code",
+  "agentManager.terminal.openInPanel": "Панель Agent Manager",
   "agentManager.terminal.errorTitle": "Помилка термінала",
 
   "agentManager.setup.failed": "Налаштування робочого дерева не вдалося",

@@ -32,7 +32,9 @@ import type {
   ReviewComment,
   RunStatus,
   SectionState,
+  TerminalDestination,
   TerminalFont,
+  TerminalPlacement,
   WorktreeErrorCode,
   WorktreeFileDiff,
   WorktreeGitStats,
@@ -686,6 +688,7 @@ export interface AgentManagerStateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  terminalDestination?: TerminalDestination
 }
 
 // ---------------------------------------------------------------------------
@@ -694,6 +697,11 @@ export interface AgentManagerStateMessage {
 
 export interface AgentManagerTerminalCreatedMessage {
   type: "agentManager.terminal.created"
+  /** Correlates with the create request; lets the webview spot stale
+   *  creates. Deliberately not named `requestId`: that field name is the
+   *  generic webview request/response correlation channel. */
+  createId: string
+  placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
   terminalId: string
@@ -715,7 +723,14 @@ export interface AgentManagerTerminalClosedMessage {
 export interface AgentManagerTerminalErrorMessage {
   type: "agentManager.terminal.error"
   terminalId?: string
+  /** Set when the error answers a specific create request. */
+  createId?: string
   message: string
+}
+
+export interface AgentManagerTerminalDestinationChangedMessage {
+  type: "agentManager.terminal.destinationChanged"
+  destination: TerminalDestination
 }
 
 export interface AgentManagerRunStatusMessage extends RunStatus {
@@ -1222,6 +1237,7 @@ export type ExtensionMessage =
   | AgentManagerTerminalFontChangedMessage
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
+  | AgentManagerTerminalDestinationChangedMessage
   // legacy-migration start
   | MigrationStateMessage
   | MigrationDataMessage

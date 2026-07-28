@@ -38,6 +38,14 @@ interface Props {
    *  an xterm re-paint when the slot transitions back to visible after
    *  sitting behind an occluding layer. */
   active: boolean
+  /** Serial of the latest explicit focus request for this terminal
+   *  (`state.focusRequest()`), consumed so re-requesting focus on an
+   *  already-visible terminal still re-focuses it. */
+  focusSerial?: number
+  /** Reports DOM focus entering or leaving the xterm host. The state
+   *  layer tracks this as `focusedId` so `Cmd+W` can target the
+   *  terminal that actually has the cursor. */
+  onFocusChange?: (focused: boolean) => void
 }
 
 /** How long the ResizeObserver waits after the last size change before
@@ -188,6 +196,17 @@ export const TerminalTab: Component<Props> = (props) => {
     // ⌘T / ⌘W / ⌘⌥← etc. still work while the terminal is focused.
     term.attachCustomKeyEventHandler((event) => !isAgentManagerShortcut(event))
 
+    // Track DOM focus so the state layer knows which terminal holds the
+    // cursor (drives Cmd+W targeting). focusout is ignored when focus
+    // moves within the same host (xterm shuffles inner nodes).
+    const onFocusIn = () => props.onFocusChange?.(true)
+    const onFocusOut = (event: FocusEvent) => {
+      if (event.relatedTarget instanceof Node && host.contains(event.relatedTarget)) return
+      props.onFocusChange?.(false)
+    }
+    host.addEventListener("focusin", onFocusIn)
+    host.addEventListener("focusout", onFocusOut)
+
     const ws = new WebSocket(props.wsUrl)
     ws.binaryType = "arraybuffer"
     let closed = false
@@ -260,7 +279,12 @@ export const TerminalTab: Component<Props> = (props) => {
     // — historically "press Enter to wake it up". Forcing a
     // `fit + refresh(0, rows-1)` once per activation reclaims the paint
     // priority; from then on the browser keeps the canvas live.
+    //
+    // Focus is opt-in per repaint (`shouldFocus`): repaints triggered by
+    // resizes or font changes must not yank the cursor out of the chat
+    // input, only explicit activation / focus requests may.
     let pendingFrame: number | null = null
+    let shouldFocus = false
     const isRenderable = () => {
       if (!host.isConnected) return false
       const rect = host.getBoundingClientRect()
@@ -278,9 +302,11 @@ export const TerminalTab: Component<Props> = (props) => {
         log("repaint fit() threw", err)
       }
       term.refresh(0, Math.max(0, term.rows - 1))
-      if (document.hasFocus()) term.focus()
+      if (shouldFocus && document.hasFocus()) term.focus()
+      shouldFocus = false
     }
-    const scheduleRepaint = () => {
+    const scheduleRepaint = (focus = false) => {
+      shouldFocus ||= focus
       if (pendingFrame !== null) return
       pendingFrame = requestAnimationFrame(runRepaint)
     }
@@ -309,26 +335,37 @@ export const TerminalTab: Component<Props> = (props) => {
       scheduleRepaint()
     })
 
-    let wasActive = props.active
+    // Activation and explicit focus requests focus the terminal;
+    // deactivation blurs it so keystrokes never land in a hidden xterm.
+    // `wasActive` starts false so a terminal mounted already-active (the
+    // create-and-activate flow) still gets its initial focus repaint.
+    let wasActive = false
+    let focusSerial = -1
     createEffect(() => {
       const now = props.active
-      if (now && !wasActive) scheduleRepaint()
+      const serial = props.focusSerial ?? 0
+      if (now && (!wasActive || serial !== focusSerial)) scheduleRepaint(true)
+      if (!now && wasActive) term.blur()
       wasActive = now
+      focusSerial = serial
     })
 
     // Also recover when the user returns from an external window or the
     // OS-level window manager (alt-tab, browser → VS Code, etc.) — the
     // browser often suspends canvas paint while the window is in the
     // background, and the Solid `active` prop alone doesn't see that.
-    // Gated on `props.active` so inactive tabs don't do needless work.
+    // Gated on `props.active` so inactive tabs don't do needless work,
+    // and on the terminal already owning focus so returning to the
+    // window never steals the cursor back from the chat input.
+    const ownsFocus = () => host.contains(document.activeElement)
     const onVisibilityChange = () => {
       if (document.hidden) return
-      if (!props.active) return
-      scheduleRepaint()
+      if (!props.active || !ownsFocus()) return
+      scheduleRepaint(true)
     }
     const onWindowFocus = () => {
-      if (!props.active) return
-      scheduleRepaint()
+      if (!props.active || !ownsFocus()) return
+      scheduleRepaint(true)
     }
     document.addEventListener("visibilitychange", onVisibilityChange)
     window.addEventListener("focus", onWindowFocus)
@@ -350,6 +387,8 @@ export const TerminalTab: Component<Props> = (props) => {
       if (pendingFrame !== null) cancelAnimationFrame(pendingFrame)
       document.removeEventListener("visibilitychange", onVisibilityChange)
       window.removeEventListener("focus", onWindowFocus)
+      host.removeEventListener("focusin", onFocusIn)
+      host.removeEventListener("focusout", onFocusOut)
       fontSub()
       themeObserver.disconnect()
       clearTimeout(resizeTimer)
