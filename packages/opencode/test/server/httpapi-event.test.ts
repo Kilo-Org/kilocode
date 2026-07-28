@@ -5,8 +5,6 @@ import { EventPaths } from "../../src/server/routes/instance/httpapi/groups/even
 // kilocode_change start - verify transformed EventV2 values at the legacy SSE boundary
 import { Catalog } from "@opencode-ai/core/catalog"
 import { EventV2 } from "@opencode-ai/core/event"
-import { ModelV2 } from "@opencode-ai/core/model"
-import { ProviderV2 } from "@opencode-ai/core/provider"
 import { SessionEvent } from "@opencode-ai/core/session/event"
 import { Prompt } from "@opencode-ai/core/session/prompt"
 import { DateTime, Fiber } from "effect"
@@ -199,26 +197,21 @@ describe("event HttpApi", () => {
         expect(yield* readGlobal(reader)).toMatchObject({ payload: { type: "server.connected", properties: {} } })
         yield* ready(count)
         const events = yield* EventV2Bridge.Service
-        const released = DateTime.makeUnsafe(1_750_000_000_123)
-        const model = new ModelV2.Info({
-          ...ModelV2.Info.empty(ProviderV2.ID.make("test"), ModelV2.ID.make("model")),
-          time: { released },
-        })
         const catalogID = EventV2.ID.create()
         const catalog = yield* readGlobalUntil(reader, (event) => event.payload.id === catalogID).pipe(
           Effect.forkChild({ startImmediately: true }),
         )
-        const catalogDomain = yield* events.publish(Catalog.Event.ModelUpdated, { model }, { id: catalogID })
+        const catalogDomain = yield* events.publish(Catalog.Event.Updated, {}, { id: catalogID })
 
-        expect(DateTime.isDateTime(catalogDomain.data.model.time.released)).toBe(true)
-        expect(properties(yield* Fiber.join(catalog)).model.time.released).toBe(1_750_000_000_123)
+        expect(catalogDomain.data).toEqual({})
+        expect(properties(yield* Fiber.join(catalog))).toEqual({})
 
         const globalID = EventV2.ID.create()
         const global = yield* readGlobalUntil(reader, (event) => event.payload.id === globalID).pipe(
           Effect.forkChild({ startImmediately: true }),
         )
         yield* events
-          .publish(Catalog.Event.ModelUpdated, { model }, { id: globalID })
+          .publish(Catalog.Event.Updated, {}, { id: globalID })
           .pipe(Effect.provideService(InstanceRef, undefined))
         expect((yield* Fiber.join(global)).directory).toBe("global")
 

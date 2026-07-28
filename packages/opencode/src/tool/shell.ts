@@ -12,7 +12,7 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
@@ -20,6 +20,7 @@ import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
 import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
+import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -403,6 +404,14 @@ export const ShellPermission = Effect.gen(function* () {
         scan.always.add(BashArity.prefix(tokens).join(" ") + " *")
       }
     }
+
+    // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
+    const lost = unparsed(root, nodes.length)
+    if (lost.length > 0) scan.access = "unknown"
+    for (const pattern of lost) {
+      scan.patterns.add(pattern)
+    }
+    // kilocode_change end
 
     return scan
   })
