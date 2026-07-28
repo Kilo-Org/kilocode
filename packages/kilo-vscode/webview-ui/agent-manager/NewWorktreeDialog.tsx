@@ -119,7 +119,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const [sandboxReason, setSandboxReason] = createSignal<string | undefined>()
   const [sandboxRevision, setSandboxRevision] = createSignal(-1)
   const sandboxRequestID = crypto.randomUUID()
-  const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true
+  const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled !== false
   const speech = useSpeechToText(vscode, server, { t })
   const canUseSpeech = () => canUseSpeechToText(config(), provider.authStates())
   const speechModel = () => selectedSpeechToTextModel(config())

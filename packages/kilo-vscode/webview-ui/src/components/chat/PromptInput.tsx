@@ -243,7 +243,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   }
   const sandboxVisible = () =>
     features().sandboxControls &&
-    globalConfig().sandbox?.enabled === true &&
+    globalConfig().sandbox?.enabled !== false &&
     !session.currentSessionID()?.startsWith("cloud:")
   const sandbox = () => {
     const id = sandboxID()
