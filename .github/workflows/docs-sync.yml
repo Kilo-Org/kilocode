@@ -5,9 +5,13 @@ name: docs-sync
 # triages them for docs relevance, runs Kilo CLI headless to update
 # packages/kilo-docs, and maintains one rolling PR for human review.
 #
-# Security posture: scheduled/manual only, checks out main, never executes
-# code from PR branches. State is derived from the bot's own PRs (watermark
-# marker in the PR body), so missed or failed runs self-heal on the next run.
+# Security posture: scheduled/manual runs check out the dispatched ref and may
+# push/comment with write permissions and org secrets. PR runs (paths-limited to
+# this workflow and .github/docs-sync/**) execute branch code only in a
+# read-only, secretless `selftest` job that never pushes, comments, or calls an
+# LLM. `pull_request` (not `pull_request_target`) keeps fork tokens read-only.
+# State is derived from the bot's own PRs (watermark marker in the PR body), so
+# missed or failed runs self-heal on the next run.
 
 on:
   schedule:
@@ -22,6 +26,10 @@ on:
         description: "Collect + triage only, no edits, no PR"
         type: boolean
         default: false
+  pull_request:
+    paths:
+      - ".github/docs-sync/**"
+      - ".github/workflows/docs-sync.yml"
 
 permissions:
   contents: write # push the rolling branch, create the auto-docs label
@@ -29,7 +37,7 @@ permissions:
   issues: write # comment on the rolling PR
 
 concurrency:
-  group: docs-sync
+  group: ${{ github.event_name == 'pull_request' && format('docs-sync-pr-{0}', github.event.pull_request.number) || 'docs-sync' }}
   cancel-in-progress: false
 
 env:
@@ -37,9 +45,28 @@ env:
   EDIT_MODEL: ${{ vars.DOCS_SYNC_EDIT_MODEL || 'kilo/moonshotai/kimi-k3' }}
 
 jobs:
-  sync:
+  selftest:
     if: github.repository == 'Kilo-Org/kilocode'
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+
+      - name: Run docs-sync selftest
+        run: node .github/docs-sync/selftest.mjs
+
+  sync:
+    if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # Budget: 3 setup/collect + 35 triage + 50 edit + 2 verify + 10 fix + 2 upsert = 102 min, 18-minute reserve.
     timeout-minutes: 120
     env:
       # Both are required: without KILO_ORG_ID the gateway bills the key
@@ -52,11 +79,19 @@ jobs:
         with:
           fetch-depth: 0 # prepare-branch merges main into the rolling branch
 
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: "24"
           package-manager-cache: false
+
+      - name: Run docs-sync selftest
+        run: node .github/docs-sync/selftest.mjs
 
       - name: Install Kilo CLI
         run: |
@@ -79,6 +114,8 @@ jobs:
       - name: Triage merged PRs (LLM, chunked)
         id: triage
         if: steps.collect.outputs.count != '0'
+        env:
+          SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
         run: node .github/docs-sync/triage.mjs
 
       - name: Filter docs-worthy PRs
@@ -104,8 +141,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node .github/docs-sync/prepare-branch.mjs
 
+      # After prepare-branch checks out the rolling branch and merges main, the
+      # worktree holds main's scripts. Restore the dispatched ref's copies so a
+      # branch-dispatch AC9 run actually exercises the fixed code. git restore
+      # (not checkout) leaves them unstaged so upsert-pr's bare commit won't
+      # include them in the docs PR.
+      - name: Restore docs-sync scripts from the dispatched ref
+        if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        run: git restore --source=${{ github.sha }} -- .github/docs-sync
+
       - name: Update docs (Kilo CLI, batched)
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
+        continue-on-error: true
         run: node .github/docs-sync/edit.mjs
 
       - name: Verify docs build and tests
@@ -122,6 +169,7 @@ jobs:
         id: fix
         if: steps.verify.outcome == 'failure'
         continue-on-error: true
+        timeout-minutes: 10
         env:
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
@@ -150,6 +198,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           PROCESSED_THROUGH: ${{ steps.wm.outputs.now }}
           SINCE: ${{ steps.wm.outputs.since }}
+          SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
           BRANCH: ${{ steps.prep.outputs.branch }}
           PREP_MODE: ${{ steps.prep.outputs.mode }}
           PR_NUMBER: ${{ steps.prep.outputs.pr_number }}
