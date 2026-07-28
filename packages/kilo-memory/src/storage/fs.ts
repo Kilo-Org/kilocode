@@ -40,7 +40,7 @@ export namespace MemoryFs {
   }
 
   export function trusted(file: string, platform = process.platform) {
-    const resolved = path.resolve(file)
+    const resolved = platform === "linux" || platform === "darwin" ? path.posix.resolve(file) : path.resolve(file)
     if (platform === "darwin") return resolved === "/var" || resolved === "/tmp" || resolved === "/etc"
     if (platform === "linux") return resolved === "/home"
     return false
