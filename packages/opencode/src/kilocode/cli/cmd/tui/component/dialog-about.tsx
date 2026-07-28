@@ -112,7 +112,6 @@ export function DialogAbout() {
           </text>
           <Row theme={theme} label="Version" value={InstallationVersion} />
           <Row theme={theme} label="Channel" value={InstallationChannel} />
-          <Row theme={theme} label="License" value="MIT" muted />
         </box>
 
         <box gap={0}>
