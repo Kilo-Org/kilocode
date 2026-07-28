@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.ui.header
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Reasoning
 import ai.kilocode.client.session.model.StepFinish
 import ai.kilocode.client.session.model.Tool
@@ -120,6 +121,28 @@ class SessionHeaderPanelTest : SessionControllerTestBase() {
         panel.compactButton().doClick()
         flush()
         assertEquals(1, rpc.compacts.size)
+    }
+
+    fun `test branch diff button invokes callback when configured`() {
+        val c = promptedHeader()
+        var opened = 0
+        val panel = SessionHeaderPanel(c, parent) { opened++ }
+        val button = panel.branchDiffButton()
+
+        assertTrue(button.isVisible)
+        assertEquals(KiloBundle.message("diff.editor.branch.tooltip"), button.toolTipText)
+        assertEquals(KiloBundle.message("diff.editor.branch.tooltip"), button.accessibleContext.accessibleName)
+
+        button.doClick()
+
+        assertEquals(1, opened)
+    }
+
+    fun `test branch diff button is hidden without callback`() {
+        val c = promptedHeader()
+        val panel = SessionHeaderPanel(c, parent)
+
+        assertFalse(panel.branchDiffButton().isVisible)
     }
 
     fun `test todo list starts collapsed and toggles independently`() {

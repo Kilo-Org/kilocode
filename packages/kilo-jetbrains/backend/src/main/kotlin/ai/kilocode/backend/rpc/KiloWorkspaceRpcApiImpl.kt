@@ -15,6 +15,7 @@ import ai.kilocode.jetbrains.api.model.Agent
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.isManagedWorktreeStorage
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -55,6 +56,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
+import kotlin.io.path.fileSize
+import kotlin.io.path.isRegularFile
+import kotlin.io.path.readBytes
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
@@ -76,6 +80,7 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         private val GLOBAL = MODERN + LEGACY + "config.json"
         private val LOCAL_DIRS = listOf(".kilo", ".kilocode", ".opencode")
         private const val DIFF_CAP = 200_000
+        private const val LARGE_FILE = 2 * 1024 * 1024L
         private val JSON = Json { ignoreUnknownKeys = true }
         private val CONFIG = """{
   "${'$'}schema": "$SCHEMA"
@@ -248,6 +253,21 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         text.takeIf { it.isNotBlank() }?.take(DIFF_CAP)
     }
 
+    override suspend fun branchDiff(directory: String): List<DiffFileDto> = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext emptyList()
+        if (!gitAvailable(base)) return@withContext emptyList()
+        val ref = defaultBranch(base)
+        val anc = ref?.let { git(base, "merge-base", it, "HEAD").trim().ifBlank { null } } ?: "HEAD"
+        val numstat = git(base, "-c", "core.quotepath=false", "diff", "--numstat", "--no-color", "--no-renames", anc)
+        val patch = git(base, "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--no-renames", "--unified=2147483647", anc)
+        val untracked = git(base, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
+            .lineSequence()
+            .filter { it.isNotBlank() }
+            .map { untracked(base, it) }
+            .toList()
+        buildBranchDiff(numstat, patch, untracked, DIFF_CAP)
+    }
+
     override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false
@@ -368,6 +388,25 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         return runWorkspaceGit(base, *args)
     }
 
+    private fun defaultBranch(base: Path): String? = listOf("main", "master").firstOrNull { ref ->
+        git(base, "rev-parse", "--verify", ref).isNotBlank()
+    }
+
+    private fun untracked(base: Path, rel: String): DiffFileDto {
+        return runCatching {
+            val path = base.resolve(rel).normalize()
+            if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > LARGE_FILE) return@runCatching DiffFileDto(rel, 0, 0, "")
+            val bytes = path.readBytes()
+            if (bytes.any { it == 0.toByte() }) return@runCatching DiffFileDto(rel, 0, 0, "")
+            val text = bytes.toString(StandardCharsets.UTF_8)
+            val additions = lines(text).size
+            DiffFileDto(rel, additions, 0, untrackedPatch(rel, text, additions))
+        }.getOrElse { err ->
+            LOG.debug { "Failed to read untracked file for branch diff: $rel (${err.message})" }
+            DiffFileDto(rel, 0, 0, "")
+        }
+    }
+
     private fun agent(a: Agent) = AgentInfo(
         name = a.name,
         displayName = a.displayName,
@@ -425,6 +464,98 @@ internal fun resolveProjectDirectoryHint(hint: String, bases: List<String>): Str
     if (match != null) return match
     if (hint.isNotBlank()) return hint
     return bases.firstOrNull() ?: hint
+}
+
+internal fun buildBranchDiff(
+    numstat: String,
+    patch: String,
+    untracked: List<DiffFileDto> = emptyList(),
+    cap: Int = 200_000,
+): List<DiffFileDto> {
+    val stats = parseNumstat(numstat)
+    if (stats.isEmpty() && untracked.isEmpty()) return emptyList()
+    val patches = splitGitPatch(patch, stats.map { it.path })
+    var used = 0
+    val tracked = stats.map { stat ->
+        val text = patches[stat.path].orEmpty()
+        val next = if (text.isNotBlank() && used + text.length <= cap) {
+            used += text.length
+            text
+        } else {
+            ""
+        }
+        DiffFileDto(
+            file = stat.path,
+            additions = stat.additions,
+            deletions = stat.deletions,
+            patch = next,
+        )
+    }
+    return tracked + untracked.map { file ->
+        val text = file.patch.orEmpty()
+        val next = if (text.isNotBlank() && used + text.length <= cap) {
+            used += text.length
+            text
+        } else {
+            ""
+        }
+        file.copy(patch = next)
+    }
+}
+
+private fun untrackedPatch(path: String, text: String, additions: Int): String = buildString {
+    appendLine("diff --git a/$path b/$path")
+    appendLine("new file mode 100644")
+    appendLine("--- /dev/null")
+    appendLine("+++ b/$path")
+    appendLine("@@ -0,0 +1,$additions @@")
+    lines(text).forEach { line -> appendLine("+$line") }
+    if (text.isNotEmpty() && !text.endsWith("\n")) appendLine("\\ No newline at end of file")
+}.removeSuffix("\n")
+
+private fun lines(text: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    return text.removeSuffix("\n").split('\n')
+}
+
+private data class DiffStat(val path: String, val additions: Int, val deletions: Int)
+
+private fun parseNumstat(text: String): List<DiffStat> = text.lineSequence()
+    .mapNotNull { line ->
+        val parts = line.split('\t')
+        if (parts.size < 3) return@mapNotNull null
+        val path = parts.drop(2).joinToString("\t").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        DiffStat(path, parts[0].toIntOrNull() ?: 0, parts[1].toIntOrNull() ?: 0)
+    }
+    .toList()
+
+private fun splitGitPatch(text: String, paths: List<String>): Map<String, String> {
+    val ordered = paths.sortedByDescending { it.length }
+    val map = linkedMapOf<String, String>()
+    var current: String? = null
+    val lines = mutableListOf<String>()
+    fun flush() {
+        val path = current
+        if (path != null && lines.isNotEmpty()) map[path] = lines.joinToString("\n")
+        current = null
+        lines.clear()
+    }
+    fun match(header: String): String? {
+        for (path in ordered) {
+            if (header.endsWith(" b/$path") && header.contains(" a/$path ")) return path
+            if (header.endsWith(" \"b/$path\"") && header.contains(" \"a/$path\" ")) return path
+        }
+        return null
+    }
+    for (line in text.split('\n')) {
+        if (line.startsWith("diff --git ")) {
+            flush()
+            current = match(line)
+        }
+        if (current != null) lines.add(line)
+    }
+    flush()
+    return map
 }
 
 internal fun workspaceGitAvailable(base: Path, cache: ConcurrentHashMap<String, Boolean> = ConcurrentHashMap()): Boolean {

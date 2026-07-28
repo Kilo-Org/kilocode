@@ -4,6 +4,7 @@ package ai.kilocode.client.app
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -156,6 +157,17 @@ class KiloWorkspaceService internal constructor(
         } catch (e: Exception) {
             LOG.warn("git changes lookup failed for directory=$directory", e)
             null
+        }
+    }
+
+    suspend fun branchDiff(directory: String): List<DiffFileDto> {
+        return try {
+            call { branchDiff(directory) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("branch diff lookup failed for directory=$directory", e)
+            emptyList()
         }
     }
 

@@ -40,6 +40,7 @@ import javax.swing.SwingUtilities
 class SessionHeaderPanel(
     private val controller: SessionController,
     parent: Disposable,
+    onOpenBranchDiff: (() -> Unit)? = null,
 ) : BorderLayoutPanel(), SessionEditorStyleTarget {
 
     companion object {
@@ -64,6 +65,14 @@ class SessionHeaderPanel(
         toolTipText = KiloBundle.message("session.header.compact.description")
         accessibleContext.accessibleName = KiloBundle.message("session.header.compact")
         addActionListener { controller.compact() }
+    }
+    private val branch = HoverIcon().apply {
+        icon = AllIcons.Actions.Diff
+        cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
+        toolTipText = KiloBundle.message("diff.editor.branch.tooltip")
+        accessibleContext.accessibleName = KiloBundle.message("diff.editor.branch.tooltip")
+        isVisible = onOpenBranchDiff != null
+        addActionListener { onOpenBranchDiff?.invoke() }
     }
     private val expand = JBLabel().apply {
         cursor = java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.HAND_CURSOR)
@@ -109,6 +118,8 @@ class SessionHeaderPanel(
         .next(cost)
         .gap(UiStyle.Gap.xl())
         .next(context)
+        .gap(UiStyle.Gap.sm())
+        .next(branch)
         .gap(UiStyle.Gap.sm())
         .next(compact)
     private val tokens = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
@@ -339,6 +350,8 @@ class SessionHeaderPanel(
     internal fun todoListPanel() = todoList
 
     internal fun compactButton() = compact
+
+    internal fun branchDiffButton() = branch
 
     internal fun expandButton() = expand
 

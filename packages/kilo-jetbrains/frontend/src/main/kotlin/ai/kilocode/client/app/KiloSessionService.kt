@@ -8,6 +8,7 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -213,6 +214,15 @@ class KiloSessionService internal constructor(
     suspend fun messages(id: String, dir: String): List<MessageWithPartsDto> =
         call { messages(id, dir) }
             .also { log.debug { "${ChatLogSummary.sid(id)} ${ChatLogSummary.history(it)} ${ChatLogSummary.dir(dir)}" } }
+
+    suspend fun diff(id: String, dir: String): List<DiffFileDto> = try {
+        call { diff(id, dir) }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        log.warn("${ChatLogSummary.sid(id)} kind=session-diff ${ChatLogSummary.dir(dir)} failed message=${e.message}", e)
+        emptyList()
+    }
 
     suspend fun attachmentPart(id: String, dir: String, message: String, part: String, key: String?): PartDto? =
         call { attachmentPart(id, dir, message, part, key) }

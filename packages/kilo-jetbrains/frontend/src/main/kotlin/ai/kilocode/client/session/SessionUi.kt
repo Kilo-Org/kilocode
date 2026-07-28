@@ -4,6 +4,9 @@ import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
+import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.diffParams
+import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.migration.KiloMigrationService
 import ai.kilocode.client.migration.MigrationUiController
 import ai.kilocode.client.migration.MigrationUiState
@@ -372,7 +375,14 @@ class SessionUi(
         ).also {
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this)
+        header = SessionHeaderPanel(controller, this) {
+            ensureDiffEditorKind()
+            project.service<KiloVfsManager>().open(
+                KiloDiffEditorKind.ID,
+                diffParams("branch", workspace.directory, null, KiloBundle.message("diff.editor.branch.title")),
+            )
+            Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+        }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         scroll.onScroll = {

@@ -2,6 +2,7 @@ package ai.kilocode.client.testing
 
 import ai.kilocode.rpc.KiloWorkspaceRpcApi
 import ai.kilocode.rpc.dto.ConfigTargetDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.FileSearchResultDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStateDto
 import ai.kilocode.rpc.dto.KiloWorkspaceStatusDto
@@ -34,6 +35,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var searchResult = FileSearchResultDto()
     var search: ((String) -> FileSearchResultDto)? = null
     var gitChanges: String? = null
+    val branchDiffs = mutableListOf<DiffFileDto>()
     var openResult = true
     var localConfigPath = "/test/.kilo/kilo.jsonc"
     var globalConfigPath = "/config/kilo.jsonc"
@@ -92,6 +94,11 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     override suspend fun gitChanges(directory: String): String? {
         assertNotEdt("gitChanges")
         return gitChanges
+    }
+
+    override suspend fun branchDiff(directory: String): List<DiffFileDto> {
+        assertNotEdt("branchDiff")
+        return branchDiffs.toList()
     }
 
     override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {

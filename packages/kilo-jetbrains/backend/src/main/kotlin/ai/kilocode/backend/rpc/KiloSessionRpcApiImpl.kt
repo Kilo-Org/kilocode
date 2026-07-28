@@ -11,6 +11,7 @@ import ai.kilocode.rpc.KiloSessionRpcApi
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionListDto
 import ai.kilocode.rpc.dto.ConfigUpdateDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.ModelSelectionDto
 import ai.kilocode.rpc.dto.PermissionAlwaysRulesDto
@@ -140,6 +141,9 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun messages(id: String, directory: String): List<MessageWithPartsDto> =
         ready { chat.messages(id, directory) }
+
+    override suspend fun diff(id: String, directory: String): List<DiffFileDto> =
+        ready { chat.messages(id, directory).flatMap { it.info.summary?.diffs.orEmpty() } }
 
     override suspend fun attachmentPart(id: String, directory: String, messageId: String, partId: String, attachmentKey: String?): PartDto? =
         ready { chat.attachmentPart(id, directory, messageId, partId, attachmentKey) }
