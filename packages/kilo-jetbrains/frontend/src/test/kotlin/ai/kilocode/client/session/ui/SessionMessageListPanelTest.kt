@@ -28,6 +28,7 @@ import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
@@ -127,6 +128,32 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP),
             second.y - first.bounds.maxY.toInt(),
         )
+    }
+
+    fun `test queued turn shows badge and remove action`() {
+        var deleted: String? = null
+        Disposer.dispose(parent)
+        parent = Disposer.newDisposable("test-queued")
+        model = SessionModel()
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, deleteQueued = { deleted = it })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "first"))
+        model.upsertMessage(msg("u2", "user"))
+        model.updateContent("u2", part("p2", "u2", "text", text = "second"))
+
+        model.setQueued(setOf("u2"))
+
+        val u1 = panel.findMessage("u1")!!
+        val u2 = panel.findMessage("u2")!!
+        assertFalse(components(u1).filterIsInstance<JBLabel>().any { it.text == KiloBundle.message("session.queued") })
+        assertTrue(components(u2).filterIsInstance<JBLabel>().any { it.text == KiloBundle.message("session.queued") })
+
+        val remove = components(u2).filterIsInstance<HoverIcon>().single()
+        assertEquals(KiloBundle.message("session.queued.remove"), remove.toolTipText)
+        assertEquals(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR), remove.cursor)
+        remove.doClick()
+
+        assertEquals("u2", deleted)
     }
 
     // ------ TurnAdded ------

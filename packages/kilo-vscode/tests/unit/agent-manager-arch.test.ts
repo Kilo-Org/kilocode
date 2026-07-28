@@ -493,6 +493,19 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("removeWorktree")
   })
 
+  it("multi-version creation registers each session after publishing its worktree mapping", () => {
+    const text = body("onCreateMultiVersion")
+    const ready = text.indexOf("this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)")
+    const register = text.indexOf("this.panel?.sessions.registerSession(session)")
+    const initial = text.indexOf("agentManager.sendInitialMessage")
+
+    expect(ready, "multi-version path must publish ready state").toBeGreaterThan(-1)
+    expect(register, "multi-version path must register the created session").toBeGreaterThan(-1)
+    expect(register, "sessionCreated must follow the worktree mapping").toBeGreaterThan(ready)
+    expect(initial, "initial prompt phase must exist").toBeGreaterThan(-1)
+    expect(register, "session must be registered before the initial prompt").toBeLessThan(initial)
+  })
+
   // -- onPromoteSession invariants -------------------------------------------
 
   /**
