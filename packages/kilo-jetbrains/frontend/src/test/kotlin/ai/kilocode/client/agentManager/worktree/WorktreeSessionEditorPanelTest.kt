@@ -179,6 +179,30 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(false), manager.focuses)
     }
 
+    fun `test modified row click preserves multi selection`() {
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(400, 100)
+            list.doLayout()
+            list.selectedIndices = intArrayOf(0, 1)
+            val bounds = list.getCellBounds(1, 1)
+            val x = bounds.x + 8
+            val y = bounds.y + bounds.height / 2
+            fire(list, MouseEvent(list, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), InputEvent.SHIFT_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1))
+            assertEquals(listOf(0, 1), list.selectedIndices.toList())
+            fire(list, MouseEvent(list, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), InputEvent.META_DOWN_MASK, x, y, 1, false, MouseEvent.BUTTON1))
+            assertEquals(listOf(0, 1), list.selectedIndices.toList())
+        }
+
+        assertTrue(manager.refs.isEmpty())
+        assertTrue(manager.focuses.isEmpty())
+    }
+
     fun `test row click ignores deleting session`() {
         manager.deletingIds += "ses_1"
         rpc.listed += session("ses_1", 1.0)
@@ -245,6 +269,21 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         pump()
 
         assertEquals(listOf("ses_2", "ses_1"), manager.deleted)
+    }
+
+    fun `test multi select hides row delete cells`() {
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt { panel.selectSessions(listOf("ses_1")) }
+        assertEquals(listOf(DELETE_CELL), row("ses_1").cells.map { it.id })
+
+        edt { panel.selectSessions(listOf("ses_1", "ses_2")) }
+
+        assertTrue(row("ses_1").cells.isEmpty())
+        assertTrue(row("ses_2").cells.isEmpty())
     }
 
     fun `test delete action skips deleting selected sessions`() {
@@ -386,5 +425,6 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     private companion object {
         const val DIR = "/repo/.kilo/worktrees/feature-x"
+        const val DELETE_CELL = "delete"
     }
 }

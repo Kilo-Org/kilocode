@@ -24,6 +24,8 @@ import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -58,6 +60,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace(DIR)
+        useInactiveDisposeTimeout()
     }
 
     override fun tearDown() {
@@ -159,6 +162,25 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(listOf(first.id to DIR), rpc.deletes.toList())
     }
 
+    fun `test deleting middle shown session falls back to next visible session`() {
+        val top = session("ses_top", updated = 3.0)
+        val mid = session("ses_mid", updated = 2.0)
+        val bottom = session("ses_bottom", updated = 1.0)
+        rpc.listed += top
+        rpc.listed += mid
+        rpc.listed += bottom
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+        edt { manager.openSession(SessionRef.Local(mid), focus = false) }
+
+        edt { manager.deleteSessions(listOf(mid.id)) }
+        pump()
+        flush()
+
+        assertEquals(listOf(DIR to top.id, DIR to mid.id, DIR to bottom.id), created)
+    }
+
     fun `test delete marks session deleting then removes on success`() {
         val gate = CompletableDeferred<Unit>()
         rpc.deleteGate = gate
@@ -251,6 +273,24 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(edt(block))
     }
 
+    private fun useInactiveDisposeTimeout() {
+        Registry.mutateContributedKeys {
+            it + (TIMEOUT to RegistryKeyDescriptor(
+                TIMEOUT,
+                "Milliseconds before hidden session UI is disposed after switching away.",
+                "180000",
+                false,
+                false,
+                null,
+                null,
+            ))
+        }
+        Disposer.register(testRootDisposable) {
+            Registry.mutateContributedKeys { it - TIMEOUT }
+        }
+        Registry.get(TIMEOUT).setValue(60_000, testRootDisposable)
+    }
+
     private fun pump() {
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
             UIUtil.dispatchAllInvocationEvents()
@@ -266,6 +306,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
 
     private companion object {
         const val DIR = "/repo/.kilo/worktrees/feature-x"
+        const val TIMEOUT = "kilo.session.inactive.disposeTimeoutMs"
     }
 }
 

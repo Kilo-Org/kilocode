@@ -28,6 +28,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import javax.swing.ListSelectionModel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
 import javax.swing.event.ListSelectionEvent
@@ -101,12 +102,14 @@ internal class ActiveListView(
                 if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_PRESSED, true)) return
                 list.requestFocusInWindow()
                 press = null
+                if (selection(e)) return
                 val hit = hit(e) ?: return
                 press = Press(hit.item.key, hit.id ?: return)
             }
 
             override fun mouseClicked(e: MouseEvent) {
                 if (e.clickCount == 1 && UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) {
+                    if (selection(e)) return
                     val hit = hit(e, enabled = false) ?: return
                     if (hit.id != null) return
                     if (hit.item.deleting) return
@@ -126,6 +129,10 @@ internal class ActiveListView(
 
             override fun mouseReleased(e: MouseEvent) {
                 if (!UIUtil.isActionClick(e, MouseEvent.MOUSE_RELEASED, true)) return
+                if (selection(e)) {
+                    press = null
+                    return
+                }
                 val down = press ?: return
                 press = null
                 val hit = hit(e) ?: return
@@ -446,6 +453,11 @@ internal class ActiveListView(
     }
 
     private fun enter(): Boolean = AdvancedSettings.getBoolean(ENTER_FOCUS)
+
+    private fun selection(e: MouseEvent): Boolean {
+        if (list.selectionMode == ListSelectionModel.SINGLE_SELECTION) return false
+        return e.isShiftDown || e.isMetaDown || e.isControlDown
+    }
 
     override fun getScrollableTracksViewportWidth() = true
 

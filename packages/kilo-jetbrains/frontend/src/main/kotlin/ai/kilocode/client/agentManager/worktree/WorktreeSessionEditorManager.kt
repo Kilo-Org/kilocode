@@ -11,6 +11,8 @@ import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.SessionUi
 import ai.kilocode.client.session.SessionUiFactory
+import ai.kilocode.client.session.history.HistoryTime
+import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.util.UiTimerSource
 import ai.kilocode.client.util.UiTimers
 import ai.kilocode.rpc.dto.SessionDto
@@ -118,6 +120,7 @@ open class WorktreeSessionEditorManager(
         val key = currentKey()
         val names = active.associateWith(::title)
         deleting.addAll(active)
+        val target = if (key in active) next(key) else null
         onListChanged?.invoke()
         active.forEach { id ->
             val name = names[id] ?: title(id)
@@ -130,8 +133,7 @@ open class WorktreeSessionEditorManager(
         }
         active.forEach(::forceSession)
         if (key in active) {
-            val next = latest()
-            if (next != null) openSession(SessionRef.Local(next)) else newSession()
+            if (target != null) openSession(SessionRef.Local(target)) else newSession()
         }
     }
 
@@ -156,6 +158,16 @@ open class WorktreeSessionEditorManager(
             .map { list.model.getElementAt(it) }
             .filter { it.id !in deleting }
             .maxByOrNull { it.time.updated }
+    }
+
+    @RequiresEdt
+    private fun next(key: String?): SessionDto? {
+        val rows = HistoryTime.sorted((0 until list.model.size).map { LocalHistoryItem(list.model.getElementAt(it)) })
+            .map { it.session }
+        val idx = rows.indexOfFirst { it.id == key }
+        if (idx < 0) return rows.firstOrNull { it.id !in deleting }
+        return rows.drop(idx + 1).firstOrNull { it.id !in deleting }
+            ?: rows.take(idx).asReversed().firstOrNull { it.id !in deleting }
     }
 
     @RequiresEdt

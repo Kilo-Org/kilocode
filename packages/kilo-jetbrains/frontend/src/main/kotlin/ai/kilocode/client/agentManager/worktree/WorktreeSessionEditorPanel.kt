@@ -258,7 +258,7 @@ class WorktreeSessionEditorPanel(
         override val section: String get() = HistoryTime.title(HistorySection.TODAY)
     }
 
-    private data class SessionRow(
+    private inner class SessionRow(
         val session: SessionDto,
         val kind: SessionActivityKind?,
         override val deleting: Boolean = false,
@@ -272,12 +272,15 @@ class WorktreeSessionEditorPanel(
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
         override val cells: List<ActiveListCell>
-            get() = listOf(ActiveListCell(
-                DELETE_CELL,
-                KiloBundle.message("worktree.session.delete.action"),
-                icon = AllIcons.Actions.GC,
-                iconOnly = true,
-            ))
+            get() {
+                if (selectedKeys().size != 1) return emptyList()
+                return listOf(ActiveListCell(
+                    DELETE_CELL,
+                    KiloBundle.message("worktree.session.delete.action"),
+                    icon = AllIcons.Actions.GC,
+                    iconOnly = true,
+                ))
+            }
     }
 
     private companion object {
