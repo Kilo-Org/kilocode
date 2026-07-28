@@ -10,9 +10,30 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 const SESSION_ID = "ses_0196aabbccddeeff001122334455"
 
 describe("websearch provider", () => {
-  test("selects a stable provider per session", () => {
-    expect(selectWebSearchProvider(SESSION_ID)).toBe(selectWebSearchProvider(SESSION_ID))
+  // kilocode_change start - default to Exa
+  test("defaults to Exa when nothing is configured", () => {
+    expect(selectWebSearchProvider(SESSION_ID)).toBe("exa")
   })
+  // kilocode_change end
+
+  // kilocode_change start - agent-selectable provider, but flags are a kill-switch
+  test("flags kill-switch overrules agent and env", () => {
+    const original = process.env.KILO_WEBSEARCH_PROVIDER
+    try {
+      process.env.KILO_WEBSEARCH_PROVIDER = "parallel"
+      expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: true }, "exa")).toBe("parallel")
+      expect(selectWebSearchProvider(SESSION_ID, { exa: true, parallel: false }, "parallel")).toBe("exa")
+    } finally {
+      if (original === undefined) delete process.env.KILO_WEBSEARCH_PROVIDER
+      else process.env.KILO_WEBSEARCH_PROVIDER = original
+    }
+  })
+
+  test("agent choice wins when no kill-switch flag is set", () => {
+    expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: false }, "parallel")).toBe("parallel")
+    expect(selectWebSearchProvider(SESSION_ID, { exa: false, parallel: false }, "exa")).toBe("exa")
+  })
+  // kilocode_change end
 
   test("supports an operational override", () => {
     const original = process.env.KILO_WEBSEARCH_PROVIDER

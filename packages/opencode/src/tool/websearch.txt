@@ -12,3 +12,9 @@ Usage notes:
 
 The current year is {{year}}. You MUST use this year when searching for recent information or current events
 - Example: If the current year is 2026 and the user asks for "latest AI news", search for "AI news 2026", NOT "AI news 2025"
+
+Picking a backend (`provider` parameter):
+- Prefer Exa for primary-source research. When the question is "what is X", "how does X work", or "what does vendor Y say", Exa surfaces canonical sources (vendor research pages, arXiv papers, official model cards) and extracts them deeply, so one call is usually enough to read.
+- Prefer Parallel for specific facts and rankings. When the question is "what does X cost", "which models support Y today", or any comparison/leaderboard question, Parallel returns sharper, more current answers and can decompose compound questions via multi-query fan-out.
+- If the answer is one or two facts (a price, a name, a date) -> Parallel. If you need to actually understand a topic by reading a primary source -> Exa. If the question has multiple sub-questions -> Parallel. If you need citation-worthy primary references -> Exa.
+- Default is Exa.
