@@ -10,6 +10,7 @@ import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionRunState } from "./run-state"
 import { SessionSummary } from "./summary"
+import { KiloSessionRevert } from "@/kilocode/session/revert" // kilocode_change
 
 export const RevertInput = Schema.Struct({
   sessionID: SessionID,
@@ -81,14 +82,19 @@ export const layer = Layer.effect(
           : "unavailable"
       // kilocode_change end
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
-      if (session.revert?.snapshot) yield* snap.restore(session.revert.snapshot)
+      // kilocode_change start - do not mutate files without a durable compensation snapshot
+      if (patches.some((patch) => patch.files.length > 0) && !rev.snapshot) {
+        return yield* Effect.die(new Error("Cannot rewind files because the current workspace snapshot is unavailable"))
+      }
+      if (session.revert?.snapshot) yield* KiloSessionRevert.restore(snap, session.revert.snapshot)
+      // kilocode_change end
 
       // kilocode_change start - compute diffs BEFORE reverting files so the diff
       // reflects changes being undone (files on disk still have AI modifications)
       const diffs = yield* summary.computeDiff({ messages: range })
       // kilocode_change end
 
-      yield* snap.revert(patches)
+      yield* KiloSessionRevert.apply(snap, patches, rev.snapshot) // kilocode_change
       if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot)
       yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
       yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
@@ -118,7 +124,7 @@ export const layer = Layer.effect(
       yield* state.assertNotBusy(input.sessionID)
       const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (!session.revert) return session
-      if (session.revert.snapshot) yield* snap.restore(session.revert.snapshot)
+      if (session.revert.snapshot) yield* KiloSessionRevert.restore(snap, session.revert.snapshot) // kilocode_change
       yield* sessions.clearRevert(input.sessionID)
       return yield* sessions.get(input.sessionID).pipe(Effect.orDie)
     })
