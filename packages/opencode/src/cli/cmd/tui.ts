@@ -283,6 +283,9 @@ export const TuiThreadCommand = cmd({
       }
       process.once("SIGHUP", () => shutdownAndExit({ reason: "signal", signal: "SIGHUP", code: 129 }))
       process.once("SIGTERM", () => shutdownAndExit({ reason: "signal", signal: "SIGTERM", code: 143 }))
+      // kilocode_change - external kill -INT takes the same graceful path as SIGHUP/SIGTERM.
+      // Interactive Ctrl-C in the TUI is a raw-mode keypress, not a signal.
+      process.once("SIGINT", () => shutdownAndExit({ reason: "signal", signal: "SIGINT", code: 130 }))
       // In some terminal/tab-close paths the parent shell is terminated without
       // forwarding a signal to this process, leaving the TUI orphaned. Detect
       // parent PID re-parenting and exit explicitly.

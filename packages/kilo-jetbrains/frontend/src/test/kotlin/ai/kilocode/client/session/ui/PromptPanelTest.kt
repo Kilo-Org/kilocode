@@ -1056,7 +1056,7 @@ class PromptPanelTest : BasePlatformTestCase() {
         assertTrue(resource("/icons/send_dark.svg").contains("fill=\"#0A7BD8\""))
     }
 
-    fun `test busy disables send button`() {
+    fun `test busy allows sending draft`() {
         val panel = PromptPanel(project = project, onSend = { _, _ -> }, onAbort = {}, onEnhance = { _, _ -> })
         panel.setReady(true)
         ApplicationManager.getApplication().invokeAndWait { panel.setText("hello") }
@@ -1065,8 +1065,9 @@ class PromptPanelTest : BasePlatformTestCase() {
 
         panel.setBusy(true)
 
-        assertFalse(panel.isSendEnabled)
+        assertTrue(panel.isSendEnabled)
         assertTrue(panel.isStopEnabled)
+        assertNotSame(AllIcons.Actions.Suspend, panel.buttonForTest().icon)
     }
 
     fun `test auto approve button toggles and updates tooltip`() {

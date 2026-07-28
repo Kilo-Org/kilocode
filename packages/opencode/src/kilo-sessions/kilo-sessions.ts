@@ -13,6 +13,7 @@ import * as Log from "@opencode-ai/core/util/log"
 import { Auth } from "@/auth"
 import { makeRuntime } from "@/effect/run-service"
 import { IngestQueue } from "@/kilo-sessions/ingest-queue"
+import { IngestDrain } from "@/kilo-sessions/ingest-drain"
 import { clearInFlightCache, withInFlightCache } from "@/kilo-sessions/inflight-cache"
 import type * as SDK from "@kilocode/sdk/v2"
 import z from "zod"
@@ -26,6 +27,7 @@ import simpleGit from "simple-git"
 import { RemoteWS } from "@/kilo-sessions/remote-ws"
 import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
+import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { AttachedState } from "@/kilo-sessions/attached-state"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
@@ -221,6 +223,18 @@ export namespace KiloSessions {
     },
   })
 
+  // Process-level once-guard: overlapping shutdown paths must not double-POST.
+  // Do not call from per-directory instance finalizers — wrong granularity.
+  // Never-reject: serve/worker await this unguarded before dispose/stop.
+  const drainIngest = IngestDrain.create(
+    () => ingest.drain(),
+    (err) => log.warn("ingest drain failed", { err }),
+  )
+
+  export async function drainIngestForShutdown() {
+    await drainIngest()
+  }
+
   const remoteEnabled = process.env["KILO_REMOTE"] === "1"
   let remote: { conn: RemoteWS.Connection; sender: RemoteSender.Sender } | undefined
   let enabling: Promise<void> | undefined
@@ -246,7 +260,25 @@ export namespace KiloSessions {
   const statusSyncs = new Map<string, { running: boolean; dirty: boolean }>()
   const STATUS_TIMEOUT_MS = 3_000
 
-  async function deriveStatus(sessionID: string): Promise<"idle" | "busy" | "question" | "permission" | "retry"> {
+  // Shared attention/status resolution for ingest sync and the remote heartbeat.
+  // Precedence: permission > question > SessionStatus (offline maps to retry).
+  type DerivedSessionStatus = "idle" | "busy" | "question" | "permission" | "retry"
+
+  function resolveDerivedSessionStatus(input: {
+    hasPermission: boolean
+    hasQuestion: boolean
+    statusType: SessionStatus.Info["type"] | undefined
+  }): DerivedSessionStatus {
+    if (input.hasPermission) return "permission"
+    if (input.hasQuestion) return "question"
+    if (input.statusType === "offline") return "retry"
+    if (input.statusType === "busy" || input.statusType === "retry" || input.statusType === "idle") {
+      return input.statusType
+    }
+    return "idle"
+  }
+
+  async function deriveStatus(sessionID: string): Promise<DerivedSessionStatus> {
     const { AppRuntime } = await import("@/effect/app-runtime")
     const permissions = (await AppRuntime.runPromise(Permission.Service.use((svc) => svc.list()))).filter(
       (p) => p.sessionID === sessionID,
@@ -259,8 +291,11 @@ export namespace KiloSessions {
     if (questions.length > 0) return "question"
 
     const status = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.get(SessionID.make(sessionID))))
-    if (status.type === "offline") return "retry"
-    return status.type
+    return resolveDerivedSessionStatus({
+      hasPermission: false,
+      hasQuestion: false,
+      statusType: status.type,
+    })
   }
 
   async function deriveAndSyncStatus(sessionID: string) {
@@ -456,9 +491,22 @@ export namespace KiloSessions {
 
   export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
 
+  // kilocode_change - DEF-1: default advertisement for every successful
+  // enableRemote() entry (covers `/remote` after auto-enable already connected).
+  // No-op when an advertisement is already set — must not re-set or fire an
+  // extra heartbeat. Explicit setInstanceAdvertisement keeps replace semantics.
+  function ensureDefaultInstanceAdvertisement() {
+    if (instanceAdvertisement) return
+    setInstanceAdvertisement(buildInstanceAdvertisement(Instance.directory))
+  }
+
   export async function enableRemote() {
-    if (remote) return
+    // ingestDisabled must not advertise. Every other successful entry — including
+    // already-connected and coalescing early returns — must ensure advertisement
+    // before returning, otherwise `/remote` after auto-enable never registers.
     if (ingestDisabled) return
+    ensureDefaultInstanceAdvertisement()
+    if (remote) return
     if (enabling) return enabling
     const seq = ++remoteSeq
     void Bus.publish(Instance.current, Event.RemoteStatusChanged, { enabled: true, connected: false })
@@ -496,8 +544,16 @@ export namespace KiloSessions {
           branch().catch(() => undefined),
         ])
         const { AppRuntime } = await import("@/effect/app-runtime")
-        const statusMap = await AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list()))
+        // Batch SessionStatus + attention lists once per heartbeat (not per session).
+        // Permission/Question list() feeds the same precedence as deriveStatus().
+        const [statusMap, permissions, questions] = await Promise.all([
+          AppRuntime.runPromise(SessionStatus.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(Permission.Service.use((svc) => svc.list())),
+          AppRuntime.runPromise(Question.Service.use((svc) => svc.list())),
+        ])
         const statuses: Record<string, SessionStatus.Info> = Object.fromEntries(statusMap)
+        const permissionSessions = new Set(permissions.map((p) => p.sessionID as string))
+        const questionSessions = new Set(questions.map((q) => q.sessionID as string))
         // Advertise both presence-owned and pending-created ids so the relay learns about new
         // sessions before the next periodic heartbeat and the create_session response can be sent.
         const ids = new Set(Object.keys(statuses))
@@ -509,7 +565,11 @@ export namespace KiloSessions {
                 svc.get(SessionID.make(id)).pipe(
                   Effect.map((session) => ({
                     id,
-                    status: statuses[id]?.type ?? ("idle" as const),
+                    status: resolveDerivedSessionStatus({
+                      hasPermission: permissionSessions.has(id),
+                      hasQuestion: questionSessions.has(id),
+                      statusType: statuses[id]?.type,
+                    }),
                     title: session.title,
                     parentSessionId: session.parentID,
                     gitUrl,

@@ -77,7 +77,6 @@ function createMockHost(): Host {
     openFolder: vi.fn(),
     createOutput: () => ({ appendLine: vi.fn(), dispose: vi.fn() }) as OutputHandle,
     extensionKeybindings: () => [],
-    serverPort: () => undefined,
     capture: vi.fn(),
     dispose: vi.fn(),
   }

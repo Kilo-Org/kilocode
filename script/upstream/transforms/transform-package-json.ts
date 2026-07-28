@@ -8,7 +8,7 @@
  * 3. Injecting Kilo-specific dependencies
  * 4. Preserving Kilo's version number
  * 5. Preserving overrides and patchedDependencies
- * 6. Preserving Kilo's repository configuration
+ * 6. Preserving Kilo's repository metadata
  * 7. Using "newest wins" strategy for dependency versions
  */
 
@@ -133,6 +133,19 @@ export function fixPackageManager(
   const prior = typeof pkg.packageManager === "string" ? pkg.packageManager : "missing or invalid"
   changes.push(`packageManager: ${prior} -> ${next} (preserved Kilo pin)`)
   pkg.packageManager = next
+}
+
+export function fixRepository(
+  pkg: Record<string, unknown>,
+  ours: Record<string, unknown> | null,
+  changes: string[],
+): void {
+  if (!ours) return
+  for (const key of ["repository", "homepage", "bugs"] as const) {
+    if (ours[key] === undefined || JSON.stringify(pkg[key]) === JSON.stringify(ours[key])) continue
+    pkg[key] = ours[key]
+    changes.push(`${key}: preserved Kilo metadata`)
+  }
 }
 
 export function assertBunPackageManager(current: unknown, base: unknown, upstream: unknown): void {
@@ -549,12 +562,8 @@ export async function transformPackageJson(file: string, options: PackageJsonOpt
         }
       }
 
-      // 6. Preserve repository (Kilo-specific, upstream doesn't have this)
-      const ourRepo = ourPkg.repository
-      if (ourRepo && JSON.stringify(pkg.repository) !== JSON.stringify(ourRepo)) {
-        pkg.repository = ourRepo
-        changes.push(`repository: preserved Kilo's repository configuration`)
-      }
+      // 6. Preserve repository metadata so published packages keep Kilo links
+      fixRepository(pkg, ourPkg, changes)
 
       fixMetadata(pkg, relativePath, ourPkg, changes)
 
