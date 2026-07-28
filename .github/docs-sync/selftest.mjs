@@ -132,6 +132,21 @@ if (mode === "mixed-triage") {
   process.stdout.write(JSON.stringify(entries) + "\\n");
   process.exit(0);
 }
+if (mode === "triage-embed-env-secret") {
+  // Valid triage JSON with a secret env value embedded in a string field
+  // (stdout is persisted to triage-raw-*.txt; must be redacted at capture).
+  const secret = process.env.KILO_API_KEY || "missing-secret";
+  const entries = chunk.map((d) => ({
+    pr: d.number,
+    url: d.url,
+    docs_worthy: true,
+    reason: "needs docs; diagnostic=" + secret,
+    target_sections: ["overview"],
+    priority: "high",
+  }));
+  process.stdout.write(JSON.stringify(entries) + "\\n");
+  process.exit(0);
+}
 process.stderr.write("unknown stub mode\\n");
 process.exit(1);
 `
@@ -610,13 +625,122 @@ function case2d_redactEnvSecrets() {
   assert.ok(fs.existsSync(logPath), `expected ${logPath}`)
   const logBody = fs.readFileSync(logPath, "utf8")
   assert.ok(!logBody.includes(secret), `persisted stderr must not contain secret; got: ${logBody}`)
-  assert.ok(logBody.includes("***"), `persisted stderr must contain redaction marker; got: ${logBody}`)
+  assert.ok(
+    logBody.includes("leak before *** after"),
+    `persisted stderr must redact to exact line; got: ${logBody}`,
+  )
 
   // Console stderr-tail region must also be redacted (not only the artifact file).
   const tailIdx = result.output.indexOf("stderr tail:")
   assert.ok(tailIdx >= 0, `expected stderr tail: in output; got: ${result.output}`)
   const tailRegion = result.output.slice(tailIdx)
   assert.ok(!tailRegion.includes(secret), `console stderr tail must not contain secret; got: ${tailRegion}`)
+}
+
+// ---------------------------------------------------------------------------
+// Case 2e — longer secret first when a shorter env value is a prefix
+// ---------------------------------------------------------------------------
+function case2e_prefixSecretOrdering() {
+  console.log("case 2e: prefix-secret ordering (longer value redacted first)")
+
+  const prs = [1, 2, 3, 4, 5].map((n) => samplePr(n))
+  const worthy = prs
+  const triage = prs.map((p) => ({
+    pr: p.number,
+    url: p.url,
+    docs_worthy: true,
+    reason: "needs docs",
+    target_sections: ["overview"],
+    priority: "high",
+  }))
+  const cwd = setupEditCwd(worthy, triage)
+  const shortSecret = "abcdefgh"
+  const longSecret = "abcdefghIJKL-tail"
+  const stderrText = `leak: ${longSecret} end`
+  const kiloDir = makeStubKiloDir({ mode: "stderr-exit0", stderrText })
+
+  const result = runNodeScript(EDIT_SCRIPT, {
+    cwd,
+    kiloDir,
+    env: {
+      EDIT_MODEL: "test/model",
+      DOCS_SYNC_BACKOFF_MS: "0",
+      EDIT_BUDGET_MINUTES: "5",
+      EDIT_BATCH_TIMEOUT_MINUTES: "1",
+      A_KEY: shortSecret,
+      B_TOKEN: longSecret,
+    },
+  })
+  assert.equal(result.status, 0, `edit.mjs exit: ${result.output}`)
+
+  const logName = kiloStderrLogName("edit batch 0 attempt 1")
+  const logPath = path.join(cwd, "docs-sync-out", logName)
+  assert.ok(fs.existsSync(logPath), `expected ${logPath}`)
+  const logBody = fs.readFileSync(logPath, "utf8")
+  assert.ok(!logBody.includes("IJKL-tail"), `must not leak prefix remainder; got: ${logBody}`)
+  assert.ok(logBody.includes("leak: *** end"), `expected full long secret redacted; got: ${logBody}`)
+}
+
+// ---------------------------------------------------------------------------
+// Case 2f — redact secret values from captured kilo stdout (triage-raw artifact)
+// ---------------------------------------------------------------------------
+function case2f_redactStdout() {
+  console.log("case 2f: redact env secrets from kilo stdout (triage-raw)")
+
+  const digest = [samplePr(501), samplePr(502)]
+  const cwd = setupTriageCwd(digest)
+  const secret = "selftest-stdout-secret-99999"
+  const kiloDir = makeStubKiloDir({ mode: "triage-embed-env-secret" })
+  const summaryFile = path.join(cwd, "step-summary.md")
+  fs.writeFileSync(summaryFile, "")
+
+  const result = runNodeScript(TRIAGE_SCRIPT, {
+    cwd,
+    kiloDir,
+    env: {
+      TRIAGE_MODEL: "test/model",
+      DOCS_SYNC_BACKOFF_MS: "0",
+      TRIAGE_BUDGET_MINUTES: "30",
+      GITHUB_STEP_SUMMARY: summaryFile,
+      KILO_API_KEY: secret,
+    },
+  })
+  assert.equal(result.status, 0, `triage.mjs exit: ${result.output}`)
+
+  const rawFiles = fs.readdirSync(path.join(cwd, "docs-sync-out")).filter((f) => f.startsWith("triage-raw-"))
+  assert.ok(rawFiles.length > 0, "expected triage-raw-*.txt artifact")
+  for (const f of rawFiles) {
+    const body = fs.readFileSync(path.join(cwd, "docs-sync-out", f), "utf8")
+    assert.ok(!body.includes(secret), `triage-raw must not contain secret; ${f}: ${body}`)
+  }
+
+  const triage = JSON.parse(fs.readFileSync(path.join(cwd, "docs-sync-out", "triage.json"), "utf8"))
+  assert.ok(triage.length >= 1, "triage must still parse after redaction")
+  assert.ok(
+    triage.some((e) => e.docs_worthy === true || e.pending === true || e.docs_worthy === false),
+    "triage entries must be structured",
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Case 2g — redact-stream.mjs line-wise filter (including partial last line)
+// ---------------------------------------------------------------------------
+function case2g_redactStream() {
+  console.log("case 2g: redact-stream.mjs stdin filter")
+
+  const secret = "stream-secret-value-xyz"
+  const filterPath = path.join(HERE, "redact-stream.mjs")
+  assert.ok(fs.existsSync(filterPath), `expected ${filterPath}`)
+
+  const input = `leak ${secret} after\npartial-${secret}`
+  const result = spawnSync(process.execPath, [filterPath], {
+    env: { ...process.env, KILO_API_KEY: secret },
+    input,
+    encoding: "utf8",
+    timeout: 10_000,
+  })
+  assert.equal(result.status, 0, `redact-stream exit: ${result.stderr || result.error}`)
+  assert.equal(result.stdout, "leak *** after\npartial-***")
 }
 
 // ---------------------------------------------------------------------------
@@ -1184,6 +1308,9 @@ function main() {
     case2b_autoFlag,
     case2c_stderrLogAlways,
     case2d_redactEnvSecrets,
+    case2e_prefixSecretOrdering,
+    case2f_redactStdout,
+    case2g_redactStream,
     case3_watermark,
     case4_routing,
     case5_recollection,

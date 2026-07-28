@@ -177,13 +177,24 @@ function tailText(text, { lines = STDERR_TAIL_LINES, chars = STDERR_TAIL_CHARS }
 /**
  * Artifact files are raw: GitHub masks secret values in log streams only, and the runner
  * env holds long-lived secrets (KILO_API_KEY), so exact values of secret-looking env vars
- * are redacted before stderr is persisted or printed.
+ * are redacted before stdout/stderr is persisted or printed.
+ * Matching is exact-substring and case-sensitive on values — JSON-escaped, base64'd, or
+ * line-wrapped renderings and values shorter than 8 chars survive (same limitation as
+ * GitHub's own log masking); this is defense-in-depth, not a guarantee the logs are clean.
  */
 export function redactEnvSecrets(text) {
   let out = String(text ?? "")
+  // Also match CREDENTIAL/PASSWORD/ORG_ID/_PAT (e.g. KILO_ORG_ID, GH_PAT) beyond KEY|TOKEN|SECRET.
+  const nameRe = /KEY|TOKEN|SECRET|CREDENTIAL|PASSWORD|ORG_ID|_PAT$/i
+  const candidates = []
   for (const [name, value] of Object.entries(process.env)) {
-    if (!/KEY|TOKEN|SECRET/i.test(name)) continue
+    if (!nameRe.test(name)) continue
     if (typeof value !== "string" || value.length < 8) continue
+    candidates.push(value)
+  }
+  // Longer values first so a shorter secret that is a prefix of a longer one cannot leave a remainder.
+  candidates.sort((a, b) => b.length - a.length)
+  for (const value of candidates) {
     if (!out.includes(value)) continue
     out = out.split(value).join("***")
   }
@@ -219,7 +230,7 @@ export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" 
   const stderrRaw = String(result.stderr ?? "")
   const stderrSafe = redactEnvSecrets(stderrRaw)
   const stderrTail = tailText(stderrSafe)
-  const stdout = streamStdout ? "" : String(result.stdout ?? "")
+  const stdoutSafe = streamStdout ? "" : redactEnvSecrets(String(result.stdout ?? ""))
   // ok is "process finished without OS-level failure". Callers still treat a
   // missing summary / unparseable output as failure even when ok is true —
   // exit 0 is not success for the docs-sync bot.
@@ -241,5 +252,5 @@ export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" 
     console.warn(`${label}: spawn error: ${result.error.message}`)
   }
 
-  return { ok, stdout, stderrTail, exitCode, timedOut }
+  return { ok, stdout: stdoutSafe, stderrTail, exitCode, timedOut }
 }
