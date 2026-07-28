@@ -25,6 +25,7 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useWorkStyle } from "../../context/work-style"
 import { useServer } from "../../context/server"
 import { useAgentRequirements } from "../../context/agent-requirements"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
@@ -49,6 +50,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
+  const work = useWorkStyle()
   const server = useServer()
   const tabs = useLocalTabs()
   const requirements = useAgentRequirements()
@@ -96,6 +98,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   const dock = () => !props.readonly || !!permissionRequest()
+  const showClaudeContext = createMemo(() => claude().visible && !work.shouldShowOnboarding())
+  const requestClaudeContext = () => {
+    if (props.readonly || work.shouldShowOnboarding()) return
+    vscode.postMessage({ type: "requestClaudeContext" })
+  }
 
   onMount(() => {
     if (props.readonly) return
@@ -106,13 +113,18 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     }
     document.addEventListener("keydown", handler)
     onCleanup(() => document.removeEventListener("keydown", handler))
-    vscode.postMessage({ type: "requestClaudeContext" })
+    requestClaudeContext()
   })
+
+  createEffect(requestClaudeContext)
 
   {
     const cleanup = vscode.onMessage((msg) => {
-      if (msg.type !== "claudeContextLoaded") return
-      setClaude(msg)
+      if (msg.type === "extensionDataReady") {
+        requestClaudeContext()
+        return
+      }
+      if (msg.type === "claudeContextLoaded") setClaude(msg)
     })
     onCleanup(cleanup)
   }
@@ -380,11 +392,12 @@ export const ChatView: Component<ChatViewProps> = (props) => {
             <Show when={server.connectionState() === "error" && server.errorMessage()}>
               <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
             </Show>
-            <Show when={claude().visible}>
+            <Show when={showClaudeContext()}>
               <div class="claude-context-banner">
                 <div class="claude-context-banner__content">
                   <strong>{language.t("claudeContext.banner.title")}</strong>
                   <span>{language.t("claudeContext.banner.description")}</span>
+                  <span>{language.t("claudeContext.banner.hint")}</span>
                   <div class="claude-context-banner__toggles">
                     <Show when={claude().present.skills || claude().present.commands}>
                       <Switch
@@ -406,6 +419,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                 </div>
                 <div class="claude-context-banner__actions">
                   <Button
+                    variant="primary"
                     size="small"
                     onClick={() =>
                       vscode.postMessage({
@@ -419,7 +433,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
                   >
                     {language.t("common.apply")}
                   </Button>
-                  <Button size="small" variant="secondary" onClick={() => vscode.postMessage({ type: "dismissClaudeContext" })}>
+                  <Button size="small" variant="ghost" onClick={() => vscode.postMessage({ type: "dismissClaudeContext" })}>
                     {language.t("claudeContext.banner.dismiss")}
                   </Button>
                 </div>

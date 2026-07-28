@@ -228,6 +228,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  box-sizing: border-box;
   margin-bottom: 8px;
   padding: 10px 12px;
   border: 1px solid var(--vscode-panel-border);
@@ -254,4 +255,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.claude-context-banner__actions {
+  align-items: center;
+  justify-content: flex-end;
 }

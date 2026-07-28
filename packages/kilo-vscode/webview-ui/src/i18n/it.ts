@@ -747,6 +747,7 @@ export const dict = {
   "claudeContext.banner.title": "Claude context detected",
   "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
   "claudeContext.banner.dismiss": "Don't ask again",
+  "claudeContext.banner.hint": "You can always change this in Agent settings > Integrations.",
 
   "settings.agentBehaviour.defaultAgent.title": "Agente predefinito",
   "settings.agentBehaviour.defaultAgent.description": "Agente da usare quando non ne viene specificato uno",
