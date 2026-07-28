@@ -236,10 +236,14 @@ describe("ProviderTransform.variants - Claude Opus 4.7 / 4.8", () => {
     expect(Object.keys(result)).toEqual(["low", "medium", "high", "xhigh", "max"])
   })
 
-  test("opus-5 on bedrock returns adaptive reasoningConfig with xhigh", () => {
+  test.each([
+    "anthropic.claude-opus-5",
+    "us.anthropic.claude-opus-5-v1:0",
+    "global.anthropic.claude-opus-5",
+  ])("opus-5 on bedrock returns adaptive reasoningConfig with xhigh for %s", (id) => {
     const model = mockModel({
       api: {
-        id: "anthropic.claude-opus-5",
+        id,
         url: "https://bedrock.amazonaws.com",
         npm: "@ai-sdk/amazon-bedrock",
       },
@@ -301,5 +305,18 @@ describe("ProviderTransform.variants - Claude Opus 4.7 / 4.8", () => {
     })
     const result = ProviderTransform.variants(model)
     expect(Object.keys(result)).toEqual(["low", "medium", "high", "max"])
+  })
+
+  test("opus-4 release date is not treated as a modern adaptive version", () => {
+    const model = mockModel({
+      api: {
+        id: "claude-opus-4-20250514",
+        url: "https://api.anthropic.com",
+        npm: "@ai-sdk/anthropic",
+      },
+    })
+    const result = ProviderTransform.variants(model)
+    expect(Object.keys(result)).toEqual(["high", "max"])
+    expect(result.high).toEqual({ thinking: { type: "enabled", budgetTokens: 16000 } })
   })
 })

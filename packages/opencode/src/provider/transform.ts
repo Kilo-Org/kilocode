@@ -606,31 +606,21 @@ function openaiCompatibleReasoningEfforts(id: string) {
   return gpt5CodexReasoningEfforts(apiId) ?? versionedGpt5ReasoningEfforts(apiId) ?? OPENAI_EFFORTS
 }
 
-function anthropicOpus47OrLater(apiId: string) {
-  // Matches "opus-4.7" (Anthropic/Bedrock/Vertex) and "claude-4.7-opus" (SAP AI Core inverted).
-  // Greedy \d+ correctly extends to multi-digit majors (e.g. "claude-10.0-opus") for forward compatibility.
-  const version = /opus-(\d+)[.-](\d+)(?:[.@-]|$)|claude-(\d+)[.-](\d+)-opus(?:[.@-]|$)/i.exec(apiId)
-  if (!version) return false
-  const major = Number(version[1] ?? version[3])
-  const minor = Number(version[2] ?? version[4])
+function anthropicUsesModernAdaptiveThinking(apiId: string) {
+  if (!apiId.toLowerCase().includes("claude-")) return false
+  // Covers family-first IDs such as claude-opus-4.7 and version-first IDs such as claude-4.7-opus.
+  // Limit minors to two digits so release dates in IDs such as claude-opus-4-20250514 are not versions.
+  const version = /claude-(?:[a-z]+-)?(\d+)(?:[.-](\d{1,2}))?(?:[.@-]|$)/i.exec(apiId)
+  if (!version) return true
+  const major = Number(version[1])
+  const minor = Number(version[2] ?? 0)
   return major > 4 || (major === 4 && minor >= 7)
 }
 
-// kilocode_change start - Claude 5+ models are adaptive thinking models like opus-4.7/4.8
-function anthropicClaude5(apiId: string) {
-  const id = apiId.toLowerCase()
-  if (id.includes("fable")) return true
-  const version = /(?:opus|sonnet)[.-](\d+)(?:[.@-]|$)|claude-(\d+)(?:[.-]\d+)?-(?:opus|sonnet)(?:[.@-]|$)/.exec(id)
-  return Number(version?.[1] ?? version?.[2]) >= 5
-}
-// kilocode_change end
-
 function anthropicAdaptiveEfforts(apiId: string): string[] | null {
-  // kilocode_change start - include Claude 5+ models
-  if (anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId)) {
+  if (anthropicUsesModernAdaptiveThinking(apiId)) {
     return ["low", "medium", "high", "xhigh", "max"]
   }
-  // kilocode_change end
   if (
     ["opus-4-6", "opus-4.6", "4-6-opus", "4.6-opus", "sonnet-4-6", "sonnet-4.6", "4-6-sonnet", "4.6-sonnet"].some((v) =>
       apiId.includes(v),
@@ -642,7 +632,7 @@ function anthropicAdaptiveEfforts(apiId: string): string[] | null {
 }
 
 function anthropicOmitsThinking(apiId: string) {
-  return anthropicOpus47OrLater(apiId) || anthropicClaude5(apiId) // kilocode_change - include Kilo's Claude 5 aliases
+  return anthropicUsesModernAdaptiveThinking(apiId)
 }
 
 function googleThinkingLevelEfforts(apiId: string) {
@@ -982,7 +972,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
           if (
             model.api.id.includes("opus-4.7") ||
             model.api.id.includes("opus-4.8") ||
-            anthropicClaude5(model.api.id)
+            anthropicUsesModernAdaptiveThinking(model.api.id)
           ) {
             efforts = ["medium"]
           }
