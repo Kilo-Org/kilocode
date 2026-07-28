@@ -7,9 +7,7 @@ description: Use when the user asks to visualize data with charts, graphs, or pl
 
 The `chart` tool is ALWAYS available in this environment. When the user asks to visualize data (charts, graphs, plots), you MUST call the `chart` tool. Never output the config as text, never say the tool is unavailable, never suggest external renderers. Always use the tool call — it is the only correct response for data visualization requests. Do NOT repeat or echo the config JSON in your text response.
 
-Use the `chart` tool when:
-- The user asks for a chart, graph, or plot of data (bar, line, scatter, pie, time series, etc.)
-- Presenting numerical data that would be clearer visually than as a table or prose (trends, comparisons, distributions)
+Use the `chart` tool only when the user explicitly asks for a chart, graph, or plot. Only use these supported Chart.js v4 types: `area`, `bar`, `bubble`, `pie`, `doughnut`, `line`, `mixed`, `polarArea`, `radar`, `scatter`. Do not use it for any other type.
 
 Use mermaid fenced code blocks (` ```mermaid `) when:
 - The user asks for a diagram, flowchart, sequence diagram, ER diagram, or architecture diagram
@@ -33,6 +31,17 @@ Bar chart:
   "data": {
     "labels": ["A", "B", "C"],
     "datasets": [{ "label": "Value", "data": [10, 20, 15] }]
+  }
+}
+```
+
+Area chart (line with fill):
+```json
+{
+  "type": "line",
+  "data": {
+    "labels": ["Jan", "Feb", "Mar", "Apr"],
+    "datasets": [{ "label": "Value", "data": [10, 28, 19, 45], "fill": true }]
   }
 }
 ```
@@ -79,6 +88,66 @@ Pie chart:
   "data": {
     "labels": ["A", "B", "C"],
     "datasets": [{ "data": [30, 50, 20] }]
+  }
+}
+```
+
+Doughnut chart:
+```json
+{
+  "type": "doughnut",
+  "data": {
+    "labels": ["A", "B", "C"],
+    "datasets": [{ "data": [30, 50, 20] }]
+  }
+}
+```
+
+Radar chart:
+```json
+{
+  "type": "radar",
+  "data": {
+    "labels": ["Speed", "Power", "Agility", "Stamina"],
+    "datasets": [{ "label": "Player", "data": [80, 60, 90, 70] }]
+  }
+}
+```
+
+Bubble chart:
+```json
+{
+  "type": "bubble",
+  "data": {
+    "datasets": [{
+      "label": "Group A",
+      "data": [{ "x": 10, "y": 20, "r": 8 }, { "x": 15, "y": 10, "r": 5 }]
+    }]
+  }
+}
+```
+
+Polar area chart:
+```json
+{
+  "type": "polarArea",
+  "data": {
+    "labels": ["A", "B", "C", "D"],
+    "datasets": [{ "data": [11, 16, 7, 14] }]
+  }
+}
+```
+
+Mixed chart (bar + line):
+```json
+{
+  "type": "bar",
+  "data": {
+    "labels": ["Jan", "Feb", "Mar"],
+    "datasets": [
+      { "type": "bar", "label": "Revenue", "data": [100, 120, 90] },
+      { "type": "line", "label": "Trend", "data": [95, 115, 100] }
+    ]
   }
 }
 ```

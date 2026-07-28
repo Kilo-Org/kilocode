@@ -1,7 +1,8 @@
 /** @jsxImportSource solid-js */
-import { createSignal, onCleanup, onMount } from "solid-js"
+import { createEffect, createSignal, onCleanup } from "solid-js"
 import { BasicTool } from "./basic-tool"
 import type { ToolProps } from "./message-part"
+import { busy } from "./tool-utils"
 
 function getThemeColors() {
   const style = getComputedStyle(document.documentElement)
@@ -21,7 +22,7 @@ type ChartConfig = {
     labels?: string[]
     datasets: {
       label?: string
-      data: number[] | { x: number | string; y: number }[]
+      data: number[] | { x: number | string; y: number; r?: number }[]
       backgroundColor?: string | string[]
       borderColor?: string | string[]
       [key: string]: unknown
@@ -31,55 +32,57 @@ type ChartConfig = {
 }
 
 export function ChartTool(props: ToolProps) {
-  let canvas: HTMLCanvasElement | undefined
+  const [canvas, setCanvas] = createSignal<HTMLCanvasElement>()
   const [error, setError] = createSignal<string>()
 
-  onMount(async () => {
-    if (!canvas) return
+  let rendered = false
+
+  createEffect(() => {
+    const el = canvas()
+    const raw = props.output
+    if (!el || !raw || busy(props.status) || rendered) return
 
     let config: ChartConfig
     try {
-      config = JSON.parse(props.output ?? "{}")
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== "object" || !parsed.type || !parsed.data) {
+        setError("Invalid chart config — must include type and data")
+        return
+      }
+      config = parsed
     } catch {
-      setError("Could not parse chart config")
+      // not valid JSON (e.g. mermaid or error string) — skip silently
       return
     }
 
-    if (!config || typeof config !== "object" || !config.type || !config.data) {
-      setError("Invalid chart config — must include type and data")
-      return
-    }
+    rendered = true
 
-    try {
-      const { Chart, registerables } = await import("chart.js")
-      Chart.register(...registerables)
+    const colors = getThemeColors()
+    const isPolar = config.type === "pie" || config.type === "doughnut" || config.type === "polarArea"
 
-      const colors = getThemeColors()
-
-      const isPolar = config.type === "pie" || config.type === "doughnut" || config.type === "polarArea"
-
-      // apply kilo series colors to datasets that don't have their own colors
-      config.data.datasets = config.data.datasets.map((dataset, i) => {
-        if (dataset.backgroundColor) return dataset
-        // pie/doughnut need one color per slice
-        if (isPolar) {
-          const data = dataset.data as unknown[]
-          return {
-            ...dataset,
-            backgroundColor: data.map((_, j) => colors.series[j % colors.series.length]),
-            borderColor: data.map((_, j) => colors.series[j % colors.series.length]),
-          }
-        }
+    const datasets = config.data.datasets.map((dataset, i) => {
+      if (dataset.backgroundColor) return dataset
+      if (isPolar) {
+        const data = dataset.data as unknown[]
         return {
-          backgroundColor: colors.series[i % colors.series.length],
-          borderColor: colors.series[i % colors.series.length],
           ...dataset,
+          backgroundColor: data.map((_, j) => colors.series[j % colors.series.length]),
+          borderColor: data.map((_, j) => colors.series[j % colors.series.length]),
         }
-      })
+      }
+      return {
+        backgroundColor: colors.series[i % colors.series.length],
+        borderColor: colors.series[i % colors.series.length],
+        ...dataset,
+      }
+    })
 
-      const chart = new Chart(canvas!, {
+    import("chart.js").then(({ Chart, registerables }) => {
+      if (!el.isConnected) return
+      Chart.register(...registerables)
+      const chart = new Chart(el, {
         type: config.type as any,
-        data: config.data as any,
+        data: { ...config.data, datasets } as any,
         options: {
           responsive: true,
           maintainAspectRatio: true,
@@ -103,11 +106,10 @@ export function ChartTool(props: ToolProps) {
           ...config.options,
         },
       })
-
       onCleanup(() => chart.destroy())
-    } catch (e) {
+    }).catch((e: unknown) => {
       setError(e instanceof Error ? e.message : "Failed to render chart")
-    }
+    })
   })
 
   return (
@@ -122,7 +124,7 @@ export function ChartTool(props: ToolProps) {
       defaultOpen={props.defaultOpen ?? true}
     >
       <div data-component="chart-container">
-        {error() ? <div data-slot="chart-error">{error()}</div> : <canvas ref={canvas} data-slot="chart-render" />}
+        {error() ? <div data-slot="chart-error">{error()}</div> : <canvas ref={setCanvas} data-slot="chart-render" />}
       </div>
     </BasicTool>
   )
