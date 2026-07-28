@@ -715,8 +715,8 @@ if (process.platform === "win32") setTimeout(() => {}, 5_000)
           })
         }
       }),
-    // Windows process-tree ownership uses PowerShell/CIM probes and intentionally
-    // keeps the leader alive for five seconds, so it needs a larger outer budget.
+    // Windows intentionally keeps the leader alive for five seconds and may
+    // use compatibility process probes, so it needs a larger outer budget.
     process.platform === "win32" ? 60_000 : 30_000,
   )
 
