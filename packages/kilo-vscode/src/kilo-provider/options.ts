@@ -1,4 +1,6 @@
 export type KiloProviderOptions = {
+  /** Context key updated from focus events reported by this provider's webview. */
+  focusContext?: string
   projectDirectory?: string | null
   platform?: string
   snapshotInitialization?: "wait"

@@ -83,7 +83,8 @@ export namespace IngestQueue {
     // To avoid spamming the server, we coalesce updates and flush at most once per ~1s per session.
     //
     // `due` is the earliest time we should flush; it is also used to respect backoff when retries are
-    // active. A later `due` always wins over an earlier one.
+    // active. A later `due` always wins over an earlier one for non-terminal batches. Terminal batches
+    // (`session_close`) may pull the flush earlier.
     const queue = new Map<string, { timeout: Timer; due: number; data: Map<string, Data> }>()
 
     // Per-session retry state.
@@ -93,6 +94,18 @@ export namespace IngestQueue {
     // - Use exponential backoff with a small max budget to prevent infinite loops/log spam
     // - Store `until` so sync() can avoid scheduling a flush before backoff expires
     const retry = new Map<string, { count: number; until: number }>()
+
+    // In-flight flush promises. flush() deletes the queue entry before I/O, so an empty queue is not
+    // quiescence — drain must join these too.
+    const inflight = new Set<Promise<void>>()
+
+    // Last successfully resolved client and per-session share. Drain falls back to these when
+    // getClient/getShare fail during teardown (e.g. authValid HTTP check).
+    let cached: Client | undefined
+    const shares = new Map<string, Share>()
+
+    // Shutdown mode: one attempt per item, no re-enqueue, use cached client/share on resolution failure.
+    let shutting = false
 
     const now = options.now ?? (() => Date.now())
     const set = options.setTimeout ?? ((fn, ms) => setTimeout(fn, ms))
@@ -154,12 +167,12 @@ export namespace IngestQueue {
       return models.length > 0 ? `model:${models}` : ulid()
     }
 
-    function schedule(sessionId: string, due: number, data: Map<string, Data>) {
+    function schedule(sessionId: string, due: number, data: Map<string, Data>, terminal = false) {
       const existing = queue.get(sessionId)
       if (existing) {
-        // Don't reschedule if an earlier flush is already planned.
-        // We only move the flush later (e.g., to respect backoff).
-        if (existing.due >= due) return
+        // Non-terminal: only move the flush later (e.g., to respect backoff).
+        // Terminal (`session_close`): may pull the flush earlier so the tail is not left behind.
+        if (!terminal && existing.due >= due) return
         clear(existing.timeout)
       }
 
@@ -170,7 +183,7 @@ export namespace IngestQueue {
       queue.set(sessionId, { timeout, due, data })
     }
 
-    function enqueue(sessionId: string, items: Data[], mode: "overwrite" | "fill", due: number) {
+    function enqueue(sessionId: string, items: Data[], mode: "overwrite" | "fill", due: number, terminal = false) {
       const existing = queue.get(sessionId)
       if (existing) {
         for (const item of items) {
@@ -180,7 +193,7 @@ export namespace IngestQueue {
           if (mode === "fill" && existing.data.has(k)) continue
           existing.data.set(k, item)
         }
-        schedule(sessionId, due, existing.data)
+        schedule(sessionId, due, existing.data, terminal)
         return
       }
 
@@ -189,7 +202,12 @@ export namespace IngestQueue {
         data.set(key(item), item)
       }
 
-      schedule(sessionId, due, data)
+      schedule(sessionId, due, data, terminal)
+    }
+
+    function requeue(sessionId: string, items: Data[], delay: number) {
+      if (shutting) return
+      enqueue(sessionId, items, "fill", now() + delay)
     }
 
     async function flush(sessionId: string) {
@@ -204,13 +222,49 @@ export namespace IngestQueue {
       queue.delete(sessionId)
 
       const items = Array.from(queued.data.values())
-
+      const done = run(sessionId, items)
+      inflight.add(done)
       try {
-        const share = await options.getShare(sessionId).catch(() => undefined)
-        if (!share) return
+        await done
+      } finally {
+        inflight.delete(done)
+      }
+    }
 
-        const client = await options.getClient()
-        if (!client) return
+    async function resolveShare(sessionId: string) {
+      const fresh = await options.getShare(sessionId).catch(() => undefined)
+      if (fresh) shares.set(sessionId, fresh)
+      return fresh ?? (shutting ? shares.get(sessionId) : undefined)
+    }
+
+    async function resolveClient() {
+      // Preserve normal-path throw → outer catch logging; only swallow during shutdown so the
+      // cached client can be used.
+      const fresh = await options.getClient().catch((error) => {
+        if (!shutting) throw error
+        return undefined
+      })
+      if (fresh) cached = fresh
+      return fresh ?? (shutting ? cached : undefined)
+    }
+
+    async function run(sessionId: string, items: Data[]) {
+      try {
+        const share = await resolveShare(sessionId)
+        if (!share) {
+          if (shutting) {
+            options.log.error("ingest drain skipped", { sessionId, reason: "no share" })
+          }
+          return
+        }
+
+        const client = await resolveClient()
+        if (!client) {
+          if (shutting) {
+            options.log.error("ingest drain skipped", { sessionId, reason: "no client" })
+          }
+          return
+        }
 
         if (options.log.info) {
           const types = items.map((d) => d.type).join(",")
@@ -233,6 +287,12 @@ export namespace IngestQueue {
 
         if (!response) {
           // Network failures are assumed transient; retry with backoff and a small budget.
+          // Shutdown: one attempt only — log and drop so the process can exit.
+          if (shutting) {
+            options.log.error("share sync failed", { sessionId, error: "network", shutdown: true })
+            return
+          }
+
           const count = (retry.get(sessionId)?.count ?? 0) + 1
           if (count > 6) {
             options.log.error("share sync failed", { sessionId, error: "retry budget exceeded" })
@@ -243,7 +303,7 @@ export namespace IngestQueue {
           const delay = backoff(count)
           retry.set(sessionId, { count, until: now() + delay })
           options.log.error("share sync failed", { sessionId, error: "network", attempt: count, retryInMs: delay })
-          enqueue(sessionId, items, "fill", now() + delay)
+          requeue(sessionId, items, delay)
           return
         }
 
@@ -276,6 +336,16 @@ export namespace IngestQueue {
           return
         }
 
+        if (shutting) {
+          options.log.error("share sync failed", {
+            sessionId,
+            status: response.status,
+            statusText: response.statusText,
+            shutdown: true,
+          })
+          return
+        }
+
         const current = retry.get(sessionId)
         const count = (current?.count ?? 0) + 1
         if (count > 6) {
@@ -293,7 +363,7 @@ export namespace IngestQueue {
           attempt: count,
           retryInMs: delay,
         })
-        enqueue(sessionId, items, "fill", now() + delay)
+        requeue(sessionId, items, delay)
       } catch (error) {
         options.log.error("share sync failed", { sessionId, error })
       }
@@ -305,6 +375,7 @@ export namespace IngestQueue {
       // - Otherwise, merge into the pending queue entry.
       //   The next flush is scheduled ~1s after the first queued event (throttled), but never earlier
       //   than the current backoff window (if retries are active).
+      // - A batch containing session_close is terminal: flush ASAP (respecting backoff only).
       const client = await options.getClient()
       if (!client) return
 
@@ -313,15 +384,54 @@ export namespace IngestQueue {
         options.log.info("ingest sync", { sessionId, types })
       }
 
+      const terminal = data.some((item) => item.type === "session_close")
       const until = retry.get(sessionId)?.until ?? 0
-      const base = queue.get(sessionId)?.due ?? now() + 1000
+      // Terminal batches do not inherit the open debounce window — only backoff.
+      const base = terminal ? now() : (queue.get(sessionId)?.due ?? now() + 1000)
       const due = Math.max(base, until)
-      enqueue(sessionId, data, "overwrite", due)
+      enqueue(sessionId, data, "overwrite", due, terminal)
+    }
+
+    async function drain(bound = 3_000) {
+      // Shutdown drain: one bounded attempt per pending session, join in-flight flushes, no re-enqueue.
+      shutting = true
+      const deadline = now() + bound
+
+      for (const sessionId of Array.from(queue.keys())) {
+        void flush(sessionId)
+      }
+
+      while (queue.size > 0 || inflight.size > 0) {
+        for (const sessionId of Array.from(queue.keys())) {
+          void flush(sessionId)
+        }
+
+        if (now() >= deadline) {
+          options.log.error("ingest drain timed out", {
+            queue: queue.size,
+            inflight: inflight.size,
+            bound,
+          })
+          return
+        }
+
+        if (inflight.size === 0) continue
+
+        const pending = Array.from(inflight)
+        const left = Math.max(0, deadline - now())
+        let timer: Timer | undefined
+        const timeout = new Promise<void>((resolve) => {
+          timer = set(() => resolve(), left)
+        })
+        await Promise.race([Promise.allSettled(pending), timeout])
+        if (timer !== undefined) clear(timer)
+      }
     }
 
     return {
       sync,
       flush,
+      drain,
     } as const
   }
 }
