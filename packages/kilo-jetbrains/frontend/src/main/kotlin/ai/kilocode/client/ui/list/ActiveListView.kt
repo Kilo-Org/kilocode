@@ -109,6 +109,7 @@ internal class ActiveListView(
                 if (e.clickCount == 1 && UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) {
                     val hit = hit(e, enabled = false) ?: return
                     if (hit.id != null) return
+                    if (hit.item.deleting) return
                     val action = onOpen
                     if (action != null) action(hit.item, false) else onClick?.invoke(hit.item) ?: return
                     e.consume()
@@ -117,6 +118,7 @@ internal class ActiveListView(
                 if (e.clickCount != 2 || !UIUtil.isActionClick(e, MouseEvent.MOUSE_CLICKED, true)) return
                 val hit = hit(e, enabled = false) ?: return
                 if (hit.id != null) return
+                if (hit.item.deleting) return
                 val action = onOpen
                 if (action != null) action(hit.item, true) else activate(hit.item)
                 e.consume()
@@ -128,6 +130,7 @@ internal class ActiveListView(
                 press = null
                 val hit = hit(e) ?: return
                 if (hit.item.key != down.key || hit.id != down.id) return
+                if (hit.item.deleting) return
                 onCell(hit.item.key, down.id)
                 e.consume()
             }
@@ -368,6 +371,7 @@ internal class ActiveListView(
 
     private fun open(focus: Boolean) {
         val item = list.selectedValue ?: return
+        if (item.deleting) return
         val action = onOpen
         if (action != null) {
             action(item, focus)
@@ -378,6 +382,7 @@ internal class ActiveListView(
 
     private fun source() {
         val item = list.selectedValue ?: return
+        if (item.deleting) return
         onOpen?.invoke(item, true)
     }
 
@@ -388,6 +393,7 @@ internal class ActiveListView(
      * action is destructive (e.g. delete) does nothing on double-click.
      */
     private fun activate(item: ActiveListItem) {
+        if (item.deleting) return
         val action = onActivate
         if (action != null) {
             action(item)
@@ -403,6 +409,7 @@ internal class ActiveListView(
     }
 
     private fun primary(item: ActiveListItem) {
+        if (item.deleting) return
         val cells = activeListVisibleCells(item, true)
         val cell = cells.firstOrNull { it.enabled && it.primary }
         if (cell != null) {

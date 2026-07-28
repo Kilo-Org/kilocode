@@ -1,5 +1,6 @@
 package ai.kilocode.client.ui.list
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.PickerRow
 import ai.kilocode.client.ui.FilledBadgeIcon
 import ai.kilocode.client.ui.UiStyle
@@ -84,7 +85,7 @@ internal class ActiveListRenderer(
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = if (active) fg else UiStyle.Colors.weak()
-        val titleFg = if (value.muted) weak else fg
+        val titleFg = if (value.deleting) weak else fg
         val section = activeListSectionTitle(model.items, index)
 
         background = list.background
@@ -93,7 +94,11 @@ internal class ActiveListRenderer(
         sep.caption = section
         sep.setHideLine(index == 0)
         top.isVisible = section != null
-        top.setPreferredSize(section?.let { Dimension(0, sep.getFontMetrics(sep.font).height + insets.top + insets.bottom) })
+        top.setPreferredSize(section?.let {
+            val height = sep.preferredSize.height
+                .coerceAtLeast(sep.getFontMetrics(sep.font).height + insets.top + insets.bottom)
+            Dimension(0, height + JBUI.scale(2))
+        })
 
         title.clear()
         title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
@@ -112,7 +117,7 @@ internal class ActiveListRenderer(
             JBUI.Borders.empty()
         }
         desc.foreground = weak
-        val end = value.trailing.orEmpty()
+        val end = if (value.deleting) KiloBundle.message("common.deleting") else value.trailing.orEmpty()
         trail.text = end
         trail.isVisible = end.isNotBlank()
         trail.foreground = weak
@@ -149,7 +154,7 @@ internal class ActiveListRenderer(
     }
 
     private fun syncBadges(item: ActiveListItem) {
-        val items = item.badges
+        val items = if (item.deleting) emptyList() else item.badges
         while (badges.componentCount > items.size) badges.remove(badges.componentCount - 1)
         while (badges.componentCount < items.size) {
             badges.add(JBLabel().apply {

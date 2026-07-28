@@ -13,6 +13,7 @@ import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
+import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
@@ -31,6 +32,7 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
@@ -47,6 +49,7 @@ class WorktreeSessionEditorPanel(
     private val manager: WorktreeSessionEditorManager,
     private val controller: WorktreeSessionListController,
     private val worktree: ai.kilocode.client.app.Workspace,
+    private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val add = NewAction()
     private val delete = DeleteAction()
@@ -58,7 +61,7 @@ class WorktreeSessionEditorPanel(
             selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
         ),
         showSearch = false,
-        onCell = { key, id -> if (id == DELETE_CELL) manager.deleteSessions(listOf(key)) },
+        onCell = { key, id -> if (id == DELETE_CELL) confirmDelete(listOf(key), DELETE_CELL) },
         onOpen = { row, focus -> open(row, focus) },
         onSelect = { updateActions() },
     )
@@ -100,7 +103,26 @@ class WorktreeSessionEditorPanel(
 
     @RequiresEdt
     fun deleteSelected() {
-        manager.deleteSessions(selectedKeys())
+        confirmDelete(selectedKeys())
+    }
+
+    @RequiresEdt
+    private fun confirmDelete(ids: List<String>, cell: String? = null) {
+        val active = ids.filter { it != SessionHost.NEW && it !in manager.deleting() }.distinct()
+        if (active.isEmpty()) return
+        val msg = if (active.size == 1) {
+            KiloBundle.message("worktree.session.delete.confirm.message", title(active[0]))
+        } else {
+            KiloBundle.message("worktree.session.delete.confirm.message.multiple", active.size)
+        }
+        val opts = ActiveListDeleteOptions(
+            message = msg,
+            detail = KiloBundle.message("worktree.session.delete.confirm.detail"),
+        )
+        val handler = confirm ?: { anchor: RelativePoint, options: ActiveListDeleteOptions, run: () -> Unit ->
+            list.confirmDelete(anchor, options) { run() }
+        }
+        handler(list.point(active[0], cell), opts) { manager.deleteSessions(active) }
     }
 
     @RequiresEdt
@@ -124,7 +146,6 @@ class WorktreeSessionEditorPanel(
 
     @RequiresEdt
     private fun open(row: ActiveListItem, focus: Boolean) {
-        if (row.key in manager.deleting()) return
         if (row.key == SessionHost.NEW) {
             manager.newSession()
             return
@@ -159,6 +180,11 @@ class WorktreeSessionEditorPanel(
         return (0 until controller.model.size)
             .map { controller.model.getElementAt(it) }
             .firstOrNull { it.id == key }
+    }
+
+    @RequiresEdt
+    private fun title(key: String): String {
+        return item(key)?.title?.takeIf { it.isNotBlank() } ?: KiloBundle.message("worktree.session.untitled")
     }
 
     @RequiresEdt
@@ -235,20 +261,18 @@ class WorktreeSessionEditorPanel(
     private data class SessionRow(
         val session: SessionDto,
         val kind: SessionActivityKind?,
-        val deleting: Boolean = false,
+        override val deleting: Boolean = false,
     ) : ActiveListItem {
         private val item = LocalHistoryItem(session)
         override val key: String get() = session.id
         override val title: String get() = session.title.takeIf { it.isNotBlank() }
             ?: KiloBundle.message("worktree.session.untitled")
         override val tooltip: String get() = title
-        override val badges: List<ActiveListBadge> get() = if (deleting) emptyList() else listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
-        override val trailing: String get() = if (deleting) KiloBundle.message("worktree.session.deleting") else HistoryTime.relative(item)
+        override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
-        override val muted: Boolean get() = deleting
         override val cells: List<ActiveListCell>
-            get() = if (deleting) emptyList() else listOf(ActiveListCell(
+            get() = listOf(ActiveListCell(
                 DELETE_CELL,
                 KiloBundle.message("worktree.session.delete.action"),
                 icon = AllIcons.Actions.GC,

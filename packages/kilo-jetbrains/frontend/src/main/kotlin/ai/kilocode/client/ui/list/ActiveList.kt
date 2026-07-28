@@ -84,6 +84,11 @@ internal class ActiveList(
     fun trackBalloon(balloon: Balloon) = view.trackBalloon(balloon)
 
     @RequiresEdt
+    fun confirmDelete(anchor: RelativePoint, opts: ActiveListDeleteOptions, confirm: (Boolean) -> Unit) {
+        trackBalloon(showActiveListDeletePopup(anchor, opts, confirm))
+    }
+
+    @RequiresEdt
     fun setBusy(value: Boolean) {
         search?.isEnabled = !value
         search?.textEditor?.isEnabled = !value

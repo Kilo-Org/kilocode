@@ -64,7 +64,7 @@ internal interface ActiveListItem {
     val trailing: String? get() = null
     val cells: List<ActiveListCell> get() = emptyList()
     val disabled: Boolean get() = false
-    val muted: Boolean get() = false
+    val deleting: Boolean get() = false
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
 }
@@ -77,6 +77,7 @@ internal fun activeListSectionTitle(items: List<ActiveListItem>, index: Int): St
 
 internal fun activeListVisibleCells(item: ActiveListItem, active: Boolean): List<ActiveListCell> {
     if (item.disabled) return emptyList()
+    if (item.deleting) return emptyList()
     return item.cells.filter { active || it.alwaysVisible }
 }
 

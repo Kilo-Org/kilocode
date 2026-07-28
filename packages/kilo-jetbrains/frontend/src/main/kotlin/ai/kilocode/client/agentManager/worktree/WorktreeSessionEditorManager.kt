@@ -19,7 +19,6 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.wm.IdeFocusManager
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -43,9 +42,6 @@ open class WorktreeSessionEditorManager(
         ApplicationManager.getApplication().invokeLater({
             IdeFocusManager.getInstance(project).requestFocusInProject(focus, project)
         }, ModalityState.defaultModalityState())
-    },
-    private val confirm: (JComponent, String, String) -> Boolean = { parent, msg, title ->
-        Messages.showYesNoDialog(parent, msg, title, Messages.getWarningIcon()) == Messages.YES
     },
     private val notify: (String, String?) -> Unit = { title, content -> KiloNotifications.error(project, title, content) },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
@@ -119,11 +115,6 @@ open class WorktreeSessionEditorManager(
     open fun deleteSessions(ids: List<String>) {
         val active = ids.filter { it != NEW && it !in deleting }.distinct()
         if (active.isEmpty()) return
-        val msg = if (active.size == 1)
-            KiloBundle.message("worktree.session.delete.confirm.message", title(active[0]))
-        else
-            KiloBundle.message("worktree.session.delete.confirm.message.multiple", active.size)
-        if (!confirm(right, msg, KiloBundle.message("worktree.session.delete.confirm.title"))) return
         val key = currentKey()
         val names = active.associateWith(::title)
         deleting.addAll(active)

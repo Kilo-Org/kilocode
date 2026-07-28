@@ -8,6 +8,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Collections
 
 /**
  * Owns the worktree list model and drives the [KiloWorktreeService] off the EDT. Model mutations
@@ -21,6 +22,7 @@ class WorktreeController(
 ) {
     val model = CollectionListModel<WorktreeDto>()
     private val pending = LinkedHashMap<String, WorktreeDto>()
+    private val deleting = Collections.synchronizedSet(LinkedHashSet<String>())
     var onSelect: ((String) -> Unit)? = null
     var onCreateFailure: ((String?) -> Unit)? = null
     var onRemoveSuccess: ((WorktreeDto) -> Unit)? = null
@@ -40,6 +42,8 @@ class WorktreeController(
     private var known: Set<String> = emptySet()
 
     fun isPending(id: String): Boolean = id in pending
+
+    fun isDeleting(id: String): Boolean = id in deleting
 
     fun reload() {
         cs.launch {
@@ -103,10 +107,13 @@ class WorktreeController(
         onSuccess: () -> Unit = {},
         onFailure: (RemoveWorktreeResultDto) -> Unit = {},
     ) {
+        if (!deleting.add(dto.id)) return
+        edt { refresh(dto) }
         cs.launch {
             val result = service.remove(directory, dto.path, dto.branch, force)
             if (result.ok) {
                 edt {
+                    deleting.remove(dto.id)
                     model.remove(dto)
                     onRemoveSuccess?.invoke(dto)
                     onSuccess()
@@ -117,6 +124,8 @@ class WorktreeController(
             // Removal failed: git still tracks the worktree. Keep the row and reconcile with
             // ground truth so a stale optimistic delete can't make the entry reappear later.
             edt {
+                deleting.remove(dto.id)
+                refresh(dto)
                 telemetry(
                     "Worktree Delete Failed",
                     mapOf("branch" to dto.branch, "force" to force.toString(), "locked" to result.locked.toString()),
@@ -125,6 +134,11 @@ class WorktreeController(
             }
             reload()
         }
+    }
+
+    private fun refresh(dto: WorktreeDto) {
+        val idx = model.getElementIndex(dto)
+        if (idx >= 0) model.setElementAt(dto, idx)
     }
 }
 

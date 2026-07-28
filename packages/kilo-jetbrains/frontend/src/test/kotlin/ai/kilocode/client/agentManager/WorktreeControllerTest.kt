@@ -118,6 +118,27 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(listOf(item), removed)
     }
 
+    fun `test remove marks the row deleting until it resolves`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val gate = CompletableDeferred<Unit>()
+        rpc.listed += item
+        rpc.beforeRemove = { gate.await() }
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        controller.remove(controller.model.getElementAt(0))
+
+        assertTrue(controller.isDeleting(item.id))
+        assertEquals(1, controller.model.size)
+
+        gate.complete(Unit)
+        flush()
+
+        assertFalse(controller.isDeleting(item.id))
+        assertEquals(0, controller.model.size)
+    }
+
     fun `test failed remove keeps the row and invokes the failure callback`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         rpc.listed += item
@@ -133,6 +154,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         // git rejected the removal, so the entry must remain instead of vanishing optimistically.
         assertEquals(1, controller.model.size)
         assertEquals("feature/x", controller.model.getElementAt(0).branch)
+        assertFalse(controller.isDeleting(item.id))
         assertEquals(1, failures.size)
         assertTrue(failures.first().locked)
     }

@@ -44,7 +44,6 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private val requested = mutableListOf<JComponent>()
     private val notified = mutableListOf<Pair<String, String?>>()
     private val ui = mutableListOf<SessionUi>()
-    private var confirms = 0
 
     override fun setUp() {
         super.setUp()
@@ -155,7 +154,6 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         pump()
         flush()
 
-        assertEquals(1, confirms)
         assertEquals(listOf(DIR to "ses_1", DIR to "ses_2"), created)
         waitUntil { manager.deleting().isEmpty() }
         assertEquals(listOf(first.id to DIR), rpc.deletes.toList())
@@ -230,7 +228,6 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             status = { sessions.activity() },
             timers = timers,
             request = { requested += it },
-            confirm = { _, _, _ -> confirms++; true },
             notify = { title, content -> notified += title to content },
         ).also { it.startFocus = focus }
     }

@@ -6,12 +6,12 @@ import ai.kilocode.client.agentManager.worktree.WorktreeController
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
-import ai.kilocode.client.agentManager.worktree.showWorktreeDeletePopup
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListCell
+import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.vfs.KiloVfsManager
@@ -53,7 +53,7 @@ class AgentManagerPanel(
         onCell = { key, id ->
             if (id != DELETE_CELL) return@ActiveList
             val item = item(key) ?: return@ActiveList
-            if (worktreeDeletable(item, controller.isPending(item.id))) showDeletePopup(item, id)
+            if (deletable(item)) showDeletePopup(item, id)
         },
         onOpen = { row, focus ->
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
@@ -70,7 +70,7 @@ class AgentManagerPanel(
         bindTheme()
         controller.onSelect = { key ->
             // Focus the list so the freshly created worktree renders as an active selection rather
-            // than the muted, inactive highlight it would get while focus stays on the toolbar.
+            // than the inactive highlight it would get while focus stays on the toolbar.
             if (list.select(key)) list.focusList()
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
@@ -111,7 +111,12 @@ class AgentManagerPanel(
 
     private fun showDeletePopup(item: WorktreeDto, cell: String? = null) {
         val idx = list.selectedIndex().takeIf { it >= 0 } ?: controller.model.getElementIndex(item)
-        val balloon = showWorktreeDeletePopup(list.point(item.id, cell), item) { force ->
+        val opts = ActiveListDeleteOptions(
+            message = KiloBundle.message("worktree.delete.confirm.message", item.name),
+            detail = KiloBundle.message("worktree.delete.confirm.detail"),
+            gate = if (item.locked) KiloBundle.message("worktree.delete.locked.confirm") else null,
+        )
+        list.confirmDelete(list.point(item.id, cell), opts) { force ->
             controller.remove(
                 item,
                 force,
@@ -119,7 +124,11 @@ class AgentManagerPanel(
                 onFailure = { result -> notifyFailed(item, result, force) },
             )
         }
-        list.trackBalloon(balloon)
+    }
+
+    private fun deletable(item: WorktreeDto?): Boolean {
+        if (!worktreeDeletable(item, item?.id?.let(controller::isPending) == true)) return false
+        return item?.id?.let(controller::isDeleting) != true
     }
 
     /**
@@ -177,7 +186,7 @@ class AgentManagerPanel(
         list.update(
             (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
-                WorktreeRow(item, controller.isPending(item.id))
+                WorktreeRow(item, controller.isPending(item.id), controller.isDeleting(item.id))
             },
             ActiveListSelection.PreserveNoScroll,
         )
@@ -202,17 +211,17 @@ class AgentManagerPanel(
 
         override fun canDeleteElement(dataContext: DataContext): Boolean {
             val row = selectedRow()
-            return worktreeDeletable(row?.dto, row?.pending == true)
+            return deletable(row?.dto)
         }
 
         override fun deleteElement(dataContext: DataContext) {
             val row = selectedRow() ?: return
-            if (!worktreeDeletable(row.dto, row.pending)) return
+            if (!deletable(row.dto)) return
             showDeletePopup(row.dto)
         }
     }
 
-    private data class WorktreeRow(val dto: WorktreeDto, val pending: Boolean) : ActiveListItem {
+    private data class WorktreeRow(val dto: WorktreeDto, val pending: Boolean, override val deleting: Boolean) : ActiveListItem {
         override val key: String get() = dto.id
         override val title: String get() = dto.name
         override val description: String get() = dto.path.trimEnd('/').substringAfterLast('/')

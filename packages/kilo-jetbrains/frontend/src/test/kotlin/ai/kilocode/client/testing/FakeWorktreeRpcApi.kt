@@ -21,6 +21,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val removes = CopyOnWriteArrayList<Triple<String, String, String?>>()
     val removeForces = CopyOnWriteArrayList<Boolean>()
     var beforeCreate: suspend () -> Unit = {}
+    var beforeRemove: suspend () -> Unit = {}
     var createResult: (CreateWorktreeRequestDto) -> CreateWorktreeResultDto = { req ->
         CreateWorktreeResultDto(WorktreeDto(req.branch, req.branch, req.branch, req.branch))
     }
@@ -47,6 +48,7 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         assertNotEdt("remove")
         removes.add(Triple(directory, path, branch))
         removeForces.add(force)
+        beforeRemove()
         return removeResult(path, branch, force)
     }
 }

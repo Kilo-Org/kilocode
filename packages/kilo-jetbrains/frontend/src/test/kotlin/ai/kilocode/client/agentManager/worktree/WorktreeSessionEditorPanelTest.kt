@@ -56,7 +56,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         sessions = KiloSessionService(project, coroutines.scope, rpc)
         controller = WorktreeSessionListController(sessions, DIR, coroutines.scope)
         manager = FakeManager()
-        panel = edt { WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace) }
+        panel = edt { WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, confirm = { _, _, run -> run() }) }
     }
 
     override fun tearDown() {
@@ -119,7 +119,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertNull(row.icon)
         assertNull(row.description)
         assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style())), row.badges)
-        assertEquals(HistoryTime.relative(LocalHistoryItem(session)), row.trailing)
+        assertNull(row.trailing)
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
     }
 
@@ -132,10 +132,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
         val row = row("ses_1")
 
-        assertEquals("Deleting…", row.trailing)
-        assertTrue(row.cells.isEmpty())
-        assertTrue(row.badges.isEmpty())
-        assertTrue(row.muted)
+        assertTrue(row.deleting)
     }
 
     fun `test pending new session groups under today`() {
@@ -341,7 +338,6 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         controller,
         create = { _, _, _, _, _ -> error("unused") },
         request = {},
-        confirm = { _, _, _ -> true },
     ) {
         var newCount = 0
         var pending = false
