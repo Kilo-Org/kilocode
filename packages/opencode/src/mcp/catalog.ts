@@ -65,13 +65,20 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
           onprogress: () => {},
         },
       )
+      // kilocode_change start - tolerate unknown MCP error content shape
+      const content = Array.isArray(result.content) ? result.content : []
       if (result.isError)
         throw new Error(
-          result.content
-            .flatMap((item) => (item.type === "text" ? [item.text] : []))
+          content
+            .flatMap((item): string[] => {
+              if (typeof item !== "object" || item === null) return []
+              const part = item as { type?: unknown; text?: unknown }
+              return part.type === "text" && typeof part.text === "string" ? [part.text] : []
+            })
             .filter((text) => text.trim())
             .join("\n\n") || "MCP tool returned an error",
         )
+      // kilocode_change end
       if (result.structuredContent === undefined || result.structuredContent === null) return result
       return {
         ...result,
