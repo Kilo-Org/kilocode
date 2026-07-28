@@ -8,10 +8,12 @@ import { Bus } from "../../src/bus"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
 import { KiloCostPropagation } from "../../src/kilocode/session/cost-propagation"
 import { Instance } from "../../src/kilocode/instance"
-import { ProviderID, ModelID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { Session } from "../../src/session/session"
 import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID } from "../../src/session/schema"
+import { Database } from "@opencode-ai/core/database/database"
 import * as Log from "@opencode-ai/core/util/log"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
@@ -23,11 +25,13 @@ afterEach(async () => {
 })
 
 const ref = {
-  providerID: ProviderID.make("test"),
-  modelID: ModelID.make("test-model"),
+  providerID: ProviderV2.ID.make("test"),
+  modelID: ModelV2.ID.make("test-model"),
 }
 
-const it = testEffect(Layer.mergeAll(Session.defaultLayer, Bus.layer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(
+  Layer.mergeAll(Session.defaultLayer, Bus.layer, Database.defaultLayer, CrossSpawnSpawner.defaultLayer),
+)
 
 const seed = Effect.fn("CostPropagationTest.seed")(function* () {
   const sessions = yield* Session.Service

@@ -52,63 +52,6 @@ const kilo = { id: "kilo" } as Provider.Info
 const fallback = 3 + 1.5
 
 describe("KiloSession.providerCost — Anthropic Messages / OpenAI Responses", () => {
-  test("uses provider usage cost_details for Anthropic Messages via OpenRouter", () => {
-    const result = SessionNs.getUsage({
-      model: model(),
-      provider: kilo,
-      usage: new Usage({
-        inputTokens: baseUsage.inputTokens,
-        outputTokens: baseUsage.outputTokens,
-        totalTokens: baseUsage.totalTokens,
-        providerMetadata: {
-          anthropic: {
-            input_tokens: 1,
-            output_tokens: 1121,
-            cache_creation_input_tokens: 5385,
-            cache_read_input_tokens: 106831,
-            cost: 0.0057550875,
-            is_byok: true,
-            cost_details: {
-              upstream_inference_cost: 0.11510175,
-            },
-          },
-        },
-      }),
-    })
-
-    expect(result.cost).toBe(0.11510175)
-  })
-
-  test("uses provider usage cost_details for OpenAI Responses via OpenRouter", () => {
-    const result = SessionNs.getUsage({
-      model: model(),
-      provider: kilo,
-      usage: new Usage({
-        inputTokens: baseUsage.inputTokens,
-        outputTokens: baseUsage.outputTokens,
-        totalTokens: baseUsage.totalTokens,
-        providerMetadata: {
-          openai: {
-            input_tokens: 622051,
-            input_tokens_details: { cached_tokens: 594944 },
-            output_tokens: 304,
-            output_tokens_details: { reasoning_tokens: 0 },
-            total_tokens: 622355,
-            cost: 0.0439847,
-            is_byok: true,
-            cost_details: {
-              upstream_inference_cost: 0.879694,
-              upstream_inference_input_cost: 0.866014,
-              upstream_inference_output_cost: 0.01368,
-            },
-          },
-        },
-      }),
-    })
-
-    expect(result.cost).toBe(0.879694)
-  })
-
   test("uses preserved AI SDK raw usage cost_details", () => {
     const result = SessionNs.getUsage({
       model: model(),
@@ -137,7 +80,7 @@ describe("KiloSession.providerCost — Anthropic Messages / OpenAI Responses", (
         inputTokens: baseUsage.inputTokens,
         outputTokens: baseUsage.outputTokens,
         totalTokens: baseUsage.totalTokens,
-        providerMetadata: { anthropic: { cost: 0.5 } },
+        providerMetadata: { aiSdk: { cost: 0.5 } },
       }),
     })
 

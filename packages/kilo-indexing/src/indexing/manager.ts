@@ -18,6 +18,7 @@ import { WorktreeOverlay } from "./worktree-overlay"
 const log = Log.create({ service: "indexing-manager" })
 const BASELINE_CHECK_INTERVAL = 1_000
 const BASELINE_SIGNATURE_INTERVAL = 30_000
+const BASELINE_PENDING = "Waiting for the primary worktree index to become available."
 
 type Baseline = {
   store?: IVectorStore
@@ -129,6 +130,12 @@ export class CodeIndexManager {
     this.clearRetryTimer()
   }
 
+  private waiting(): boolean {
+    if (!this.baselinePath || this._baselineStore) return false
+    this._stateManager.setSystemState("Standby", BASELINE_PENDING)
+    return true
+  }
+
   private async waitForRetry(delay: number): Promise<void> {
     await new Promise<void>((resolve) => {
       this._retryResolve = resolve
@@ -191,6 +198,11 @@ export class CodeIndexManager {
     try {
       await this._recreateServices()
       if (this._disposed) return
+      if (this.waiting()) {
+        this.resetRetryState()
+        this._isRecoveringFromError = false
+        return
+      }
       this.emitStart(trigger)
       await this._orchestrator!.startIndexing(trigger)
       if (this._disposed) return
@@ -344,6 +356,8 @@ export class CodeIndexManager {
       }
     }
 
+    if (this.waiting()) return { requiresRestart }
+
     const shouldStartOrRestart =
       requiresRestart || (needsServiceRecreation && (!this._orchestrator || this._orchestrator.state !== "Indexing"))
 
@@ -364,6 +378,9 @@ export class CodeIndexManager {
   public async startIndexing(): Promise<void> {
     if (this._disposed) return
     if (!this.isFeatureEnabled) return
+
+    await this.refreshBaseline()
+    if (this.waiting()) return
 
     log.info("manual indexing start requested", { workspacePath: this.workspacePath })
 
@@ -453,8 +470,9 @@ export class CodeIndexManager {
 
   public async searchIndex(query: string, directoryPrefix?: string): Promise<VectorStoreSearchResult[]> {
     if (!this.isFeatureEnabled) return []
-    this.assertInitialized()
     await this.refreshBaseline()
+    if (this.waiting()) return []
+    this.assertInitialized()
     return this._searchService!.searchIndex(query, directoryPrefix)
   }
 
@@ -483,6 +501,7 @@ export class CodeIndexManager {
       this._baselineSigned = now
       if (!baseline?.store) {
         if (!this._baselineStore) this._baselineSignature = signature
+        this.waiting()
         return
       }
 
@@ -528,7 +547,7 @@ export class CodeIndexManager {
       }
     } catch (err) {
       await store.close?.()
-      log.warn("shared indexing baseline is unavailable; using an independent worktree index", {
+      log.info("shared indexing baseline is unavailable; waiting for the primary worktree index", {
         workspacePath: this.workspacePath,
         baselinePath: this.baselinePath,
         err,
@@ -586,7 +605,6 @@ export class CodeIndexManager {
       fileWatcher,
       (event) => this.handleTelemetry(event),
       baseline?.overlay,
-      Boolean(this.baselinePath && !baseline?.store),
     )
     const search = new CodeIndexSearchService(
       this._configManager!,

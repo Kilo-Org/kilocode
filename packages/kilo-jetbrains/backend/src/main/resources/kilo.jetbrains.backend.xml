@@ -16,6 +16,8 @@
     </extensions>
 
     <applicationListeners>
+        <listener class="ai.kilocode.backend.plugin.KiloBackendAppLifecycleListener"
+                  topic="com.intellij.ide.AppLifecycleListener"/>
         <listener class="ai.kilocode.backend.plugin.KiloBackendDynamicPluginListener"
                   topic="com.intellij.ide.plugins.DynamicPluginListener"/>
     </applicationListeners>

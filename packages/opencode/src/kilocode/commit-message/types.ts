@@ -7,6 +7,8 @@ export interface CommitMessageRequest {
   previousMessage?: string
   /** Optional custom system prompt — overrides the default conventional commits prompt */
   prompt?: string
+  /** Target language for the generated commit message (e.g. "zh", "en"). Falls back to English. */
+  language?: string
 }
 
 export interface CommitMessageResponse {

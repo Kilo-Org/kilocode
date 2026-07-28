@@ -12,7 +12,6 @@ export const KiloClawNav: NavSection[] = [
         href: "/kiloclaw/control-ui/overview",
         children: "Control UI",
         subLinks: [
-          { href: "/kiloclaw/control-ui/overview", children: "Overview" },
           { href: "/kiloclaw/control-ui/changing-models", children: "Changing Models" },
           { href: "/kiloclaw/control-ui/exec-approvals", children: "Exec Approvals" },
           { href: "/kiloclaw/control-ui/version-pinning", children: "Version Pinning" },
@@ -22,7 +21,6 @@ export const KiloClawNav: NavSection[] = [
         href: "/kiloclaw/chat-platforms",
         children: "Chat Platforms",
         subLinks: [
-          { href: "/kiloclaw/chat-platforms", children: "Overview" },
           { href: "/kiloclaw/chat-platforms/telegram", children: "Telegram" },
           { href: "/kiloclaw/chat-platforms/discord", children: "Discord" },
           { href: "/kiloclaw/chat-platforms/slack", children: "Slack" },
@@ -32,7 +30,6 @@ export const KiloClawNav: NavSection[] = [
         href: "/kiloclaw/development-tools",
         children: "Integrations",
         subLinks: [
-          { href: "/kiloclaw/development-tools", children: "Overview" },
           { href: "/kiloclaw/development-tools/github", children: "GitHub" },
           { href: "/kiloclaw/development-tools/google", children: "Google Workspace" },
           { href: "/kiloclaw/development-tools/linear", children: "Linear" },
@@ -47,7 +44,6 @@ export const KiloClawNav: NavSection[] = [
         href: "/kiloclaw/triggers",
         children: "Triggers",
         subLinks: [
-          { href: "/kiloclaw/triggers", children: "Overview" },
           { href: "/kiloclaw/triggers/webhooks", children: "Webhooks" },
           { href: "/kiloclaw/triggers/scheduled", children: "Scheduled" },
         ],

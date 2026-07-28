@@ -134,18 +134,20 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         id: String? = null,
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
+        revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         open: (SessionRef) -> Unit = {},
         log: KiloLog? = null,
     ): SessionController {
-        return controller(id, flushMs, true, displayMs = displayMs, open = open, log = log)
+        return controller(id, flushMs, true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs, open = open, log = log)
     }
 
     protected fun controller(
         ref: SessionRef,
         flushMs: Long = Long.MAX_VALUE,
         displayMs: Long = Long.MAX_VALUE,
+        revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
     ): SessionController {
-        return controller(ref = ref, flushMs = flushMs, condense = true, displayMs = displayMs)
+        return controller(ref = ref, flushMs = flushMs, condense = true, displayMs = displayMs, revertTimeoutMs = revertTimeoutMs)
     }
 
     protected fun controller(
@@ -153,6 +155,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
         flushMs: Long,
         condense: Boolean,
         displayMs: Long = Long.MAX_VALUE,
+        revertTimeoutMs: Long = SessionController.REVERT_TIMEOUT_MS,
         session: SessionDto? = null,
         beforeUpdate: () -> Boolean = { false },
         afterUpdate: (Boolean) -> Unit = {},
@@ -172,6 +175,7 @@ abstract class SessionControllerTestBase : BasePlatformTestCase() {
             flushMs = flushMs,
             condense = condense,
             displayMs = displayMs,
+            revertTimeoutMs = revertTimeoutMs,
             open = open,
             beforeUpdate = beforeUpdate,
             afterUpdate = afterUpdate,

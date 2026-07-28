@@ -1,13 +1,18 @@
 import { describe, expect, test } from "bun:test"
 import type { KiloClient } from "@kilocode/sdk/v2"
+import { memoryRow } from "@/kilocode/cli/cmd/tui/component/memory-status"
 import { runMemoryCommand } from "@/kilocode/cli/cmd/tui/memory-command"
 import { MemoryTuiEvents } from "@/kilocode/cli/cmd/tui/memory-events"
+import { MemoryTuiState } from "@/kilocode/cli/cmd/tui/memory-state"
 
-type Handler = (event: { properties: { sessionID?: string; detail?: unknown } }) => void
+type Handler = (event: {
+  properties: { sessionID?: string; detail?: unknown; reason?: string }
+}) => void | Promise<void>
 
 describe("memory TUI command parser", () => {
   test("manual mutation toasts match server event wording", async () => {
     const shown: string[] = []
+    const calls: unknown[] = []
     const result = {
       data: {
         operationCount: 1,
@@ -17,9 +22,18 @@ describe("memory TUI command parser", () => {
     }
     const client = {
       memory: {
-        remember: async () => result,
-        correct: async () => result,
-        forget: async () => result,
+        remember: async (input: unknown) => {
+          calls.push(input)
+          return result
+        },
+        correct: async (input: unknown) => {
+          calls.push(input)
+          return result
+        },
+        forget: async (input: unknown) => {
+          calls.push(input)
+          return result
+        },
       },
     } as unknown as KiloClient
     const base = {
@@ -32,6 +46,7 @@ describe("memory TUI command parser", () => {
       show() {},
       status() {},
       usage() {},
+      sessionID: "ses_tui_memory",
     }
 
     await runMemoryCommand({ ...base, text: "/memory remember tests run from packages/opencode" })
@@ -41,6 +56,11 @@ describe("memory TUI command parser", () => {
     expect(shown).toEqual(["Memory saved · 1 change", "Correction saved · 1 change", "Memory updated · 1 removed"])
     expect(shown.join("\n")).not.toContain("1,234")
     expect(shown.join("\n")).not.toContain("memory tokens")
+    expect(calls).toEqual([
+      { sessionID: "ses_tui_memory", text: "tests run from packages/opencode" },
+      { sessionID: "ses_tui_memory", text: "old test command is wrong" },
+      { sessionID: "ses_tui_memory", query: "old test command" },
+    ])
   })
 
   test("auto-save and purge commands call explicit endpoints", async () => {
@@ -110,6 +130,31 @@ describe("memory TUI command parser", () => {
     expect(shown).toEqual([])
   })
 
+  test("inspect reveals the memory folder", async () => {
+    const opened: string[] = []
+    const shown: string[] = []
+    const client = {
+      memory: {
+        status: async () => ({ data: { root: "/tmp/kilo-memory", state: { enabled: true } } }),
+      },
+    } as unknown as KiloClient
+
+    await runMemoryCommand({
+      text: "/memory inspect",
+      client,
+      toast: { show: (input) => shown.push(input.message) },
+      inspect(root) {
+        opened.push(root)
+      },
+      show() {},
+      status() {},
+      usage() {},
+    })
+
+    expect(opened).toEqual(["/tmp/kilo-memory"])
+    expect(shown).toEqual(["Memory folder: /tmp/kilo-memory"])
+  })
+
   test("bare memory command opens help", async () => {
     const calls: unknown[] = []
     const client = { memory: {} } as unknown as KiloClient
@@ -175,7 +220,7 @@ describe("memory TUI command parser", () => {
     })
 
     expect(calls).toEqual(["enable", "disable"])
-    expect(shown[0]).toContain("Memory enabled")
+    expect(shown[0]).toBe("Memory enabled")
     expect(shown[1]).toBe("Memory disabled")
   })
 
@@ -214,7 +259,24 @@ describe("memory TUI command parser", () => {
 })
 
 describe("memory TUI events", () => {
-  test("dedupes repeated recall toasts for the same recalled files", () => {
+  test("subscribes only to memory errors", () => {
+    const handlers: Record<string, Handler[]> = {}
+    MemoryTuiEvents.attach({
+      sessionID: "ses_tui_memory",
+      event: {
+        on(type, fn) {
+          handlers[type] = [...(handlers[type] ?? []), fn]
+        },
+      },
+      toast: {
+        show() {},
+      },
+    })
+
+    expect(handlers).toEqual({ "memory.error": [expect.any(Function)] })
+  })
+
+  test("keeps generic and detailed errors visible", async () => {
     const shown: string[] = []
     const handlers: Record<string, Handler[]> = {}
     MemoryTuiEvents.attach({
@@ -231,17 +293,53 @@ describe("memory TUI events", () => {
       },
     })
 
-    const emit = (detail: unknown) => {
-      for (const fn of handlers["memory.status"] ?? []) {
-        fn({ properties: { sessionID: "ses_tui_memory", detail } })
-      }
-    }
-    emit({ type: "recalled", message: "Memory recalled · 1 item", files: ["project.md"] })
-    emit({ type: "recalled", message: "Memory recalled · 1 item", files: ["project.md"] })
-    emit({ type: "recalled", message: "Memory recalled · 2 items", files: ["project.md", "environment.md"] })
-    emit({ type: "skipped", message: "Memory checked · no new items" })
-    emit({ type: "saved", message: "Memory saved · project.md" })
+    await Promise.all(
+      (handlers["memory.error"] ?? []).map((fn) =>
+        fn({ properties: { sessionID: "ses_tui_memory", reason: "model failed" } }),
+      ),
+    )
+    await Promise.all(
+      (handlers["memory.error"] ?? []).map((fn) =>
+        fn({ properties: { sessionID: "ses_tui_memory", detail: { message: "Memory save failed" } } }),
+      ),
+    )
 
-    expect(shown).toEqual(["Memory recalled · 1 item", "Memory recalled · 2 items", "Memory saved · project.md"])
+    expect(shown).toEqual(["Memory error · model failed", "Memory save failed"])
+  })
+})
+
+describe("memory TUI state", () => {
+  test("tracks active memory", () => {
+    expect(MemoryTuiState.active({ markers: 1, saved: false })).toBe(true)
+    expect(MemoryTuiState.active({ markers: 0, saved: true })).toBe(true)
+    expect(MemoryTuiState.active({ markers: 0, saved: false })).toBe(false)
+  })
+})
+
+describe("memory sidebar row", () => {
+  test("shows loading, unavailable, and disabled states", () => {
+    expect(memoryRow({ loading: true, active: false })).toEqual({
+      label: "Loading",
+      tone: "muted",
+    })
+    expect(memoryRow({ active: false })).toEqual({
+      label: "Unavailable",
+      tone: "error",
+    })
+    expect(memoryRow({ enabled: false, active: true })).toEqual({
+      label: "Disabled",
+      tone: "muted",
+    })
+  })
+
+  test("uses muted and green dots for inactive and active sessions", () => {
+    expect(memoryRow({ enabled: true, active: false })).toEqual({
+      label: "Enabled",
+      tone: "muted",
+    })
+    expect(memoryRow({ enabled: true, active: true })).toEqual({
+      label: "Enabled",
+      tone: "success",
+    })
   })
 })

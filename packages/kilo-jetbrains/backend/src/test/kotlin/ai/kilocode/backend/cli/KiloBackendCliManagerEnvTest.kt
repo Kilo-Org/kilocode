@@ -64,10 +64,11 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `isolation disabled - default CLI config asks for edit and bash permissions`() {
+    fun `isolation disabled - default CLI config asks for edit permissions without forcing bash`() {
         val env = manager.buildEnv("pwd123", emptyMap())
 
-        assertEquals("""{"permission":{"edit":"ask","bash":"ask"}}""", env["KILO_CONFIG_CONTENT"])
+        assertEquals("""{"permission":{"edit":"ask"}}""", env["KILO_CONFIG_CONTENT"])
+        assertFalse(env["KILO_CONFIG_CONTENT"]?.contains("bash") == true)
     }
 
     @Test
@@ -77,6 +78,15 @@ class KiloBackendCliManagerEnvTest {
         val env = manager.buildEnv("pwd123", mapOf("KILO_CONFIG_CONTENT" to cfg))
 
         assertEquals(cfg, env["KILO_CONFIG_CONTENT"])
+    }
+
+    @Test
+    fun `isolation disabled - base PATH is preserved`() {
+        val path = "/opt/homebrew/bin:/usr/bin"
+
+        val env = manager.buildEnv("pwd123", mapOf("PATH" to path))
+
+        assertEquals(path, env["PATH"])
     }
 
     @Test

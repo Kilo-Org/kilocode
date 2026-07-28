@@ -86,6 +86,11 @@ if [[ ! -d "$plugin" ]]; then
   exit 1
 fi
 
+if grep -Eq '^[[:space:]]*kilo\.cli\.pinned[[:space:]]*=[[:space:]]*false[[:space:]]*$' "$plugin/gradle.properties"; then
+  echo "kilo.cli.pinned=false is a dev-only mode and cannot be released. Set kilo.cli.pinned=true before building a version." >&2
+  exit 1
+fi
+
 if [[ "$sign" == "1" ]]; then
   for file in "$chain" "$key" "$pass"; do
     if [[ ! -s "$file" ]]; then

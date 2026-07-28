@@ -1,11 +1,10 @@
 import type { Provider } from "@/provider/provider"
-import { ProviderID } from "@/provider/schema"
-
+import { ProviderV2 } from "@opencode-ai/core/provider"
 export function filterPromptTrainingModels(providers: Record<string, Provider.Info>, hide: boolean) {
   if (!hide) return providers
   return Object.fromEntries(
     Object.entries(providers).map(([id, provider]) => {
-      if (id !== ProviderID.kilo) return [id, provider]
+      if (id !== ProviderV2.ID.kilo) return [id, provider]
       const models = Object.fromEntries(
         Object.entries(provider.models).filter(([, model]) => model.mayTrainOnYourPrompts !== true),
       )

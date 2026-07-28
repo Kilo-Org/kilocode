@@ -98,7 +98,7 @@ export const base = `(version 1)
 (allow user-preference-read)
 
 ; system services required by common command-line runtimes
-(allow system-socket)
+(allow system-socket (require-all (socket-domain AF_SYSTEM) (socket-protocol 2)))
 (allow mach-lookup
   (global-name "com.apple.bsd.dirhelper")
   (global-name "com.apple.system.opendirectoryd.membership")

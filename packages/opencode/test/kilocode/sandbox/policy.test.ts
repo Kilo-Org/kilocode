@@ -8,7 +8,7 @@ import { profile } from "@/kilocode/sandbox/policy"
 import { SandboxPreference } from "@/kilocode/sandbox/preference"
 import { SandboxStore } from "@/kilocode/sandbox/store"
 import type { InstanceContext } from "@/project/instance-context"
-import { ProjectID } from "@/project/schema"
+import { ProjectV2 } from "@opencode-ai/core/project"
 import { tmpdir } from "../../fixture/fixture"
 
 const kilo = [
@@ -74,7 +74,7 @@ function context(directory: string, worktree: string, dirs: Dirs): InstanceConte
     directory,
     worktree,
     project: {
-      id: ProjectID.make("sandbox-policy-test"),
+      id: ProjectV2.ID.make("sandbox-policy-test"),
       worktree: dirs.main,
       vcs: "git",
       time: { created: 0, updated: 0 },
@@ -191,8 +191,15 @@ describe("sandbox policy", () => {
     expect(policy.filesystem.denyWrite).toEqual([
       { path: SandboxStore.root, kind: "subtree" },
       { path: SandboxPreference.root, kind: "subtree" },
+      { path: Global.Path.config, kind: "subtree" },
     ])
-    expect(policy.environment.deny).toEqual(["KILO_SERVER_PASSWORD", "KILO_SERVER_USERNAME"])
+    expect(policy.environment.deny).toEqual([
+      "KILO_CONFIG",
+      "KILO_CONFIG_CONTENT",
+      "KILO_CONFIG_DIR",
+      "KILO_SERVER_PASSWORD",
+      "KILO_SERVER_USERNAME",
+    ])
     expect(Exit.isFailure(storeWrite)).toBe(true)
     expect(Exit.isFailure(prefWrite)).toBe(true)
   })

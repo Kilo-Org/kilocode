@@ -6,21 +6,13 @@
  * hints and context actions regardless of tab kind.
  */
 
-declare module "solid-js" {
-  namespace JSX {
-    interface Directives {
-      sortable: true
-    }
-  }
-}
-
-import { Component, Show } from "solid-js"
-import { createSortable } from "@thisbeyond/solid-dnd"
+import { Component, Show, type JSX } from "solid-js"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
 import { ContextMenu } from "@kilocode/kilo-ui/context-menu"
 import { useLanguage } from "../../src/context/language"
+import { SortableTabContainer } from "../../src/components/chat/TabDnd"
 import { parseBindingTokens } from "../keybind-tokens"
 
 export const SortableTerminalTab: Component<{
@@ -30,42 +22,46 @@ export const SortableTerminalTab: Component<{
   keybind?: string
   closeKeybind?: string
   active: boolean
+  role?: "tab"
+  selected?: boolean
+  tabIndex?: number
+  onKeyDown?: JSX.EventHandlerUnion<HTMLDivElement, KeyboardEvent>
   onSelect: () => void
   onMiddleClick: (e: MouseEvent) => void
   onClose: (e: MouseEvent) => void
   onCloseOthers: () => void
 }> = (props) => {
   const { t } = useLanguage()
-  const sortable = createSortable(props.id)
-  void sortable
   return (
-    <div
-      use:sortable
-      class={`am-tab-sortable ${sortable.isActiveDraggable ? "am-tab-dragging" : ""}`}
-      data-tab-id={props.id}
-    >
+    <SortableTabContainer id={props.id}>
       <ContextMenu>
         <ContextMenu.Trigger as="div" style={{ display: "contents" }}>
-          <div
-            class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}
-            onClick={props.onSelect}
-            onMouseDown={props.onMiddleClick}
-          >
-            <TooltipKeybind
-              title={props.tooltip}
-              keybind={props.keybind ?? ""}
-              placement="bottom"
-              gutter={8}
-              class="am-tab-tooltip"
-              openDelay={0}
+          <div class={`am-tab am-tab-terminal ${props.active ? "am-tab-active" : ""}`}>
+            <div
+              class="am-tab-target"
+              role={props.role}
+              aria-selected={props.selected}
+              tabIndex={props.tabIndex}
+              onClick={props.onSelect}
+              onMouseDown={props.onMiddleClick}
+              onKeyDown={props.onKeyDown}
             >
-              <span class="am-tab-title">
-                <span class="am-tab-icon">
-                  <Icon name="console" size="small" />
+              <TooltipKeybind
+                title={props.tooltip}
+                keybind={props.keybind ?? ""}
+                placement="bottom"
+                gutter={8}
+                class="am-tab-tooltip"
+                openDelay={0}
+              >
+                <span class="am-tab-title">
+                  <span class="am-tab-icon">
+                    <Icon name="console" size="small" />
+                  </span>
+                  <span class="am-tab-label">{props.label}</span>
                 </span>
-                <span class="am-tab-label">{props.label}</span>
-              </span>
-            </TooltipKeybind>
+              </TooltipKeybind>
+            </div>
             <TooltipKeybind
               title={t("agentManager.tab.close")}
               keybind={props.closeKeybind ?? ""}
@@ -78,7 +74,8 @@ export const SortableTerminalTab: Component<{
                 icon="close-small"
                 size="small"
                 variant="ghost"
-                label={t("agentManager.tab.closeTab")}
+                aria-label={t("agentManager.tab.closeTab")}
+                tabIndex={props.active ? 0 : -1}
                 class="am-tab-close"
                 onClick={props.onClose}
               />
@@ -107,6 +104,6 @@ export const SortableTerminalTab: Component<{
           </ContextMenu.Content>
         </ContextMenu.Portal>
       </ContextMenu>
-    </div>
+    </SortableTabContainer>
   )
 }

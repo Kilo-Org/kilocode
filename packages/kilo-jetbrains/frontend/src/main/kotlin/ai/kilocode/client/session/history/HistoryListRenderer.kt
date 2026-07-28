@@ -13,7 +13,6 @@ import com.intellij.util.ui.EmptyIcon
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
-import java.awt.FlowLayout
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.Component
@@ -68,11 +67,11 @@ internal open class HistoryRenderer<T : HistoryItem>(
         verticalAlignment = SwingConstants.CENTER
         border = JBUI.Borders.emptyLeft(JBUI.CurrentTheme.ActionsList.elementIconGap())
     }
-    private val head = JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
-        add(title)
-        add(badge)
+    private val head = JPanel(BorderLayout(UiStyle.Gap.xs(), 0)).apply {
+        add(title, BorderLayout.CENTER)
+        add(badge, BorderLayout.EAST)
     }
-    private val main = JPanel(BorderLayout()).apply {
+    private val main = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
         add(head, BorderLayout.CENTER)
         add(time, BorderLayout.EAST)
     }
@@ -86,7 +85,12 @@ internal open class HistoryRenderer<T : HistoryItem>(
     init {
         isOpaque = true
         top.isOpaque = true
-        row.border = JBUI.Borders.empty(UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg(), UiStyle.Gap.lg())
+        row.border = JBUI.Borders.empty(
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.lg(),
+            UiStyle.Gap.lg(),
+        )
         UiStyle.Components.transparent(row, main, head, title, badge, time, del)
         wrap.setContent(row)
         add(top, BorderLayout.NORTH)

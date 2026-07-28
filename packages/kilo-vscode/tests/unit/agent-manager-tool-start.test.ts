@@ -1,7 +1,17 @@
-import { describe, expect, it, mock } from "bun:test"
+import { afterEach, describe, expect, it, mock } from "bun:test"
 import { parseToolRequest, startFromTool, type ToolDeps, type ToolRequest } from "../../src/agent-manager/tool-start"
 import type { CreateWorktreeResult } from "../../src/agent-manager/WorktreeManager"
 import type { Session } from "@kilocode/sdk/v2/client"
+
+const platform = Object.getOwnPropertyDescriptor(process, "platform")
+
+function setPlatform(value: string) {
+  Object.defineProperty(process, "platform", { value, configurable: true })
+}
+
+afterEach(() => {
+  if (platform) Object.defineProperty(process, "platform", platform)
+})
 
 function session(id: string): Session {
   return { id, title: id, createdAt: "", updatedAt: "" } as Session
@@ -134,6 +144,66 @@ describe("agent manager tool start", () => {
     )
   })
 
+  it("passes sandbox inheritance token to local sessions", async () => {
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const c = deps({ getClient: () => client as never })
+
+    await startFromTool(c, {
+      requestID: "am-local-source",
+      sessionID: "s-parent",
+      sandboxInheritanceToken: "si-token",
+      mode: "local",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(client.session.create).toHaveBeenCalledWith(
+      expect.objectContaining({ sandboxInheritanceToken: "si-token" }),
+      { throwOnError: true },
+    )
+  })
+
+  it("starts local sessions when Windows drive-letter casing differs", async () => {
+    setPlatform("win32")
+    const client = {
+      session: {
+        create: mock(async () => ({ data: session("s-local") })),
+        promptAsync: mock(async () => ({})),
+      },
+    }
+    const state = {
+      addSession: mock(() => {}),
+      findWorktreeByPath: mock(() => undefined),
+    }
+    const c = deps({
+      getClient: () => client as never,
+      getRoot: () => "c:\\Users\\dev\\repo",
+      getState: () => state as never,
+    })
+
+    await startFromTool(c, {
+      requestID: "am-windows-dir",
+      mode: "local",
+      directory: "C:\\Users\\dev\\repo",
+      tasks: [{ prompt: "Do work" }],
+    })
+
+    expect(client.session.create).toHaveBeenCalledWith(expect.objectContaining({ directory: "c:\\Users\\dev\\repo" }), {
+      throwOnError: true,
+    })
+    expect(client.session.promptAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ directory: "c:\\Users\\dev\\repo" }),
+      { throwOnError: true },
+    )
+    expect(state.addSession).toHaveBeenCalledWith("s-local", null)
+    expect(state.findWorktreeByPath).not.toHaveBeenCalled()
+    expect(c.error).not.toHaveBeenCalled()
+  })
+
   it("starts worktree sessions through existing hooks", async () => {
     const client = {
       session: {
@@ -144,6 +214,8 @@ describe("agent manager tool start", () => {
     const c = deps({ getClient: () => client as never })
     await startFromTool(c, {
       requestID: "am-2",
+      sessionID: "s-parent",
+      sandboxInheritanceToken: "si-token",
       mode: "worktree",
       tasks: [
         {
@@ -159,7 +231,9 @@ describe("agent manager tool start", () => {
       expect.objectContaining({ branchName: "fix-one", name: "fix-one", label: "one" }),
     )
     expect(c.setup).toHaveBeenCalled()
-    expect(c.createSessionInWorktree).toHaveBeenCalled()
+    expect(c.createSessionInWorktree).toHaveBeenCalledWith("/repo/.kilo/worktrees/wt-1", "kilo/test", "wt-1", {
+      sandboxInheritanceToken: "si-token",
+    })
     expect(c.registerWorktreeSession).toHaveBeenCalledWith("s-wt", "/repo/.kilo/worktrees/wt-1")
     expect(c.notifyReady).toHaveBeenCalled()
     expect(client.session.promptAsync).toHaveBeenCalledWith(

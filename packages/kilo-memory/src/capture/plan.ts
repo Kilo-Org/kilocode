@@ -13,7 +13,8 @@ export function capturePlan(input: {
   reason?: CaptureReason
   summary: string
   echo: boolean
-  durable: boolean
+  substantial: boolean
+  edited: boolean
   priorTime: number
   now: number
   minIntervalMs: number
@@ -27,19 +28,19 @@ export function capturePlan(input: {
   const session = base && !input.echo
   // Typed capture trusts the prompt as the content filter and remains bounded by the interval throttle.
   const typedSession = base
-  const trivial = Boolean(input.summary) && !input.durable && input.summary.length < 80
+  const trivial = Boolean(input.summary) && !input.edited && input.summary.length < 80
   const digestDue =
     session &&
     !trivial &&
     (!input.priorTime ||
       !Number.isFinite(input.priorTime) ||
       input.now - input.priorTime >= input.minIntervalMs ||
-      input.durable)
+      input.substantial)
   const interval = Boolean(
     !input.bypassInterval &&
       input.lastTypedConsolidationAt &&
       input.now - input.lastTypedConsolidationAt < input.minIntervalMs &&
-      !input.durable,
+      !input.substantial,
   )
   const typed = typedCapture({ reason: input.reason, interval })
   const typedCall = input.autoConsolidate && typed.call && typedSession

@@ -1,5 +1,4 @@
 import { Effect } from "effect"
-import { Server } from "../../server/server"
 import { UI } from "../ui"
 import { effectCmd } from "../effect-cmd"
 import { withNetworkOptions, resolveNetworkOptions } from "../network"
@@ -15,6 +14,7 @@ export const WebCommand = effectCmd({
   // ambient project InstanceContext needed at startup.
   instance: false, // kilocode_change
   handler: Effect.fn("Cli.web")(function* (args) {
+    const { Server } = yield* Effect.promise(() => import("../../server/server"))
     if (!Flag.KILO_SERVER_PASSWORD) {
       UI.println(UI.Style.TEXT_WARNING_BOLD + "!  KILO_SERVER_PASSWORD is not set; server is unsecured.")
     }

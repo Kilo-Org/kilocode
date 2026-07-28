@@ -127,6 +127,7 @@ export const dict: Record<string, string> = {
 
   "ui.tool.read": "Read",
   "ui.tool.loaded": "Loaded",
+  "ui.tool.swePruned": "SWE-Pruner · kept {{kept}} of {{total}} lines", // kilocode_change
   "ui.tool.list": "List",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -168,6 +169,7 @@ export const dict: Record<string, string> = {
   "ui.message.collapse": "Collapse message",
   "ui.message.copy": "Copy",
   "ui.message.copyMessage": "Copy message",
+  "ui.message.deleteQueued": "Delete queued message", // kilocode_change
   "ui.message.forkMessage": "Fork to new session",
   "ui.message.revertMessage": "Revert to here",
   "ui.message.copyResponse": "Copy response",
@@ -184,7 +186,9 @@ export const dict: Record<string, string> = {
   "ui.patch.action.patched": "Patched",
 
   "ui.question.subtitle.answered": "{{count}} answered",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(no answer)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(not answered)",
   "ui.question.multiHint": "Select all answers that apply",
   "ui.question.singleHint": "Select one answer",

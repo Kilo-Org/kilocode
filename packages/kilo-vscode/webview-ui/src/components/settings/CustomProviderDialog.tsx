@@ -25,6 +25,8 @@ import { ModelCard } from "./CustomProviderModelCard"
 import type {
   ChatTemplateArgsValue,
   EnableThinkingValue,
+  Modalities,
+  Modality,
   ModelEntry,
   OutputEffortValue,
   ReasoningEffortValue,
@@ -54,7 +56,35 @@ function fuzzy(query: string, target: string) {
 }
 
 type FetchedModel = { id: string; name: string }
-type RawModel = { name?: string; reasoning?: boolean; variants?: Record<string, Record<string, unknown>> }
+type RawModel = {
+  name?: string
+  reasoning?: boolean
+  modalities?: { input?: unknown; output?: unknown }
+  variants?: Record<string, Record<string, unknown>>
+}
+
+// Keep this aligned with the CLI provider schema; the UI only exposes image.
+const MODES = new Set<Modality>(["text", "audio", "image", "video", "pdf"])
+
+function list(raw: unknown): Modality[] | undefined {
+  if (!Array.isArray(raw)) return
+  const set = new Set<Modality>()
+  raw.forEach((item) => {
+    if (typeof item === "string" && MODES.has(item as Modality)) set.add(item as Modality)
+  })
+  return set.size ? [...set] : undefined
+}
+
+function modes(raw: unknown): Modalities {
+  if (!raw || typeof raw !== "object") return {}
+  const obj = raw as { input?: unknown; output?: unknown }
+  const input = list(obj.input)
+  const output = list(obj.output)
+  return {
+    ...(input ? { input } : {}),
+    ...(output ? { output } : {}),
+  }
+}
 
 function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEntry {
   return {
@@ -76,15 +106,20 @@ function parseVariant([name, cfg]: [string, Record<string, unknown>]): VariantEn
 }
 
 function initModels(cfg: ProviderConfig | undefined): ModelEntry[] {
-  if (!cfg?.models || typeof cfg.models !== "object") return [{ id: "", name: "", reasoning: false, variants: [] }]
+  const empty = { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] }
+  if (!cfg?.models || typeof cfg.models !== "object") return [{ ...empty }]
   const entries = Object.entries(cfg.models)
-  if (entries.length === 0) return [{ id: "", name: "", reasoning: false, variants: [] }]
+  if (entries.length === 0) return [{ ...empty }]
   return entries.map(([id, model]) => {
     const raw = model as RawModel
+    const modalities = modes(raw.modalities)
+    const input = modalities.input ?? []
     return {
       id,
       name: raw.name ?? id,
       reasoning: raw.reasoning ?? false,
+      supportsImages: input.includes("image"),
+      modalities,
       variants: Object.entries(raw.variants ?? {}).map(parseVariant),
     }
   })
@@ -327,7 +362,6 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
     // Replace the single empty row or append
     const row = form.models[0]
     const empty = form.models.length === 1 && !!row && !row.id.trim() && !row.name.trim()
-
     // Dedup against models already in the form (trimmed, case-insensitive). The
     // picker is built from a fetch-time snapshot, so a model the user typed
     // manually after fetching hasn't been filtered out yet.
@@ -341,7 +375,13 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
       return true
     })
 
-    const defaults = (m: FetchedModel): ModelEntry => ({ ...m, reasoning: false, variants: [] })
+    const defaults = (m: FetchedModel): ModelEntry => ({
+      ...m,
+      reasoning: false,
+      supportsImages: false,
+      modalities: {},
+      variants: [],
+    })
     const merged = empty ? toAdd.map(defaults) : [...form.models, ...toAdd.map(defaults)]
 
     if (toAdd.length > 0) {
@@ -396,7 +436,10 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
   }
 
   function addModel() {
-    setForm("models", (v) => [...v, { id: "", name: "", reasoning: false, variants: [] }])
+    setForm("models", (v) => [
+      ...v,
+      { id: "", name: "", reasoning: false, supportsImages: false, modalities: {}, variants: [] },
+    ])
     setErrors("models", (v) => [...v, { variants: [] }])
   }
 
@@ -637,6 +680,7 @@ const CustomProviderDialog = (props: CustomProviderDialogProps) => {
                   onChangeId={(v) => setForm("models", i(), "id", v)}
                   onChangeName={(v) => setForm("models", i(), "name", v)}
                   onChangeReasoning={(v) => setForm("models", i(), "reasoning", v)}
+                  onChangeSupportsImages={(v) => setForm("models", i(), "supportsImages", v)}
                   onRemove={() => removeModel(i())}
                   onAddVariant={() => addVariant(i())}
                   onRemoveVariant={(vi) => removeVariant(i(), vi)}

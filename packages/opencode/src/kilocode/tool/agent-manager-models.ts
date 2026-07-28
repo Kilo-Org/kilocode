@@ -1,5 +1,5 @@
 import { Provider } from "@/provider/provider"
-import type { ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Tool } from "@/tool/tool"
 import { Effect, Schema } from "effect"
 import { matchesQuery } from "./model-search"
@@ -30,7 +30,7 @@ type Entry = {
 // Group models by display name so the agent picks a model, not a provider.
 // The same model is often offered by several providers under different IDs;
 // agent_manager resolves which provider to actually use at launch time.
-function entries(providers: Record<ProviderID, Provider.Info>): Entry[] {
+function entries(providers: Record<ProviderV2.ID, Provider.Info>): Entry[] {
   const byName = new Map<string, Entry>()
   for (const provider of Object.values(providers)) {
     for (const model of Object.values(provider.models)) {
@@ -89,7 +89,7 @@ export const AgentManagerModelsTool = Tool.define<
               offset,
               total: matches.length,
               nextOffset,
-              hint: "Pass a model name (or one of its providers/IDs) as the agent_manager task `model`. Agent Manager picks the provider, preferring the one you use by default.",
+              hint: "Pass a model name (or one of its providers/IDs) as the agent_manager task `model`. Agent Manager picks the provider, preferring the one used by the current turn.",
             }),
             metadata: { count: models.length, total: matches.length },
           }

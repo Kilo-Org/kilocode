@@ -17,6 +17,7 @@ class FakeMigrationUiController : MigrationUiController {
     val checks = mutableListOf<Unit>()
     val starts = mutableListOf<MigrationUiSelections>()
     val skips = mutableListOf<Unit>()
+    val laters = mutableListOf<Unit>()
     val finishes = mutableListOf<Unit>()
 
     override fun check() {
@@ -29,6 +30,10 @@ class FakeMigrationUiController : MigrationUiController {
 
     override fun skip() {
         skips.add(Unit)
+    }
+
+    override fun later() {
+        laters.add(Unit)
     }
 
     override fun finish() {

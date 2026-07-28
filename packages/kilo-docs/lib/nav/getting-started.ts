@@ -2,28 +2,22 @@ import { NavSection } from "../types"
 
 export const GettingStartedNav: NavSection[] = [
   {
-    title: "Introduction",
+    title: "Get Started",
     links: [
       { href: "/getting-started", children: "Overview" },
       { href: "/getting-started/installing", children: "Installation" },
-      { href: "/getting-started/quickstart", children: "Quickstart" },
+      { href: "/getting-started/setup-authentication", children: "Authentication" },
+      { href: "/getting-started/quickstart", children: "Your First Task" },
     ],
   },
   {
     title: "Configuration",
     links: [
       {
-        href: "/getting-started/setup-authentication",
-        children: "Setup & Authentication",
-      },
-      {
         href: "/getting-started/using-kilo-for-free",
         children: "Using Kilo for Free",
       },
-      {
-        href: "/getting-started/byok",
-        children: "Bring Your Own Key (BYOK)",
-      },
+      { href: "/getting-started/byok", children: "Bring Your Own Key (BYOK)" },
       { href: "/ai-providers", children: "AI Providers" },
       {
         href: "/getting-started/settings",
@@ -34,7 +28,10 @@ export const GettingStartedNav: NavSection[] = [
         ],
       },
       { href: "/getting-started/adding-credits", children: "Adding Credits" },
-      { href: "/getting-started/rate-limits-and-costs", children: "Cost Efficiency & Model Selection" },
+      {
+        href: "/getting-started/rate-limits-and-costs",
+        children: "Cost Efficiency & Model Selection",
+      },
       { href: "/getting-started/cost-controls-and-usage-safeguards", children: "Cost Controls and Usage Safeguards" },
     ],
   },

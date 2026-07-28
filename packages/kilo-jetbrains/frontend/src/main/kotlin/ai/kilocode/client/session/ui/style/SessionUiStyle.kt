@@ -5,7 +5,6 @@ import com.intellij.ui.JBColor
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import java.awt.Color
-import java.awt.Insets
 
 /** Static style tokens owned by the chat session UI. */
 object SessionUiStyle {
@@ -16,8 +15,15 @@ object SessionUiStyle {
     /** Geometry for the transcript list and its scroll behavior. */
     object SessionLayout {
         const val GAP = 3
-        val InnerInsets = Insets(UiStyle.Gap.md(), UiStyle.Gap.md(), UiStyle.Gap.sm(), UiStyle.Gap.sm())
+        const val USER_PROMPT_GAP = 10
         const val TRANSCRIPT_SCROLLBAR_PADDING = 10
+
+        // Unscaled base transcript insets. Base 6 == UiStyle.Gap.md, base 4 == UiStyle.Gap.sm.
+        // Left and right reserve scrollbar allowance to match the previous symmetric padding.
+        const val INNER_TOP = 6
+        const val INNER_BOTTOM = 4
+        const val INNER_HORIZONTAL = 4 + TRANSCRIPT_SCROLLBAR_PADDING
+
         const val USER_PROMPT_INDENT = 100
         const val SCROLL_INCREMENT = 48
     }
@@ -29,6 +35,12 @@ object SessionUiStyle {
             const val VERTICAL_PADDING = 7
             const val HORIZONTAL_PADDING = 12
             const val BODY_EXTRA_HEIGHT = 16
+        }
+
+        object Popup {
+            const val MAX_WIDTH = 350
+            const val WIDE_MAX_WIDTH = MAX_WIDTH * 2
+            const val MAX_HEIGHT = 450
         }
 
         internal const val BORDER_DELTA = 80
@@ -63,7 +75,7 @@ object SessionUiStyle {
 
         /** Prompt input dimensions and chrome inside the session view. */
         object Prompt {
-            const val EDITOR_LINES = 3
+            const val EDITOR_LINES = 1
             const val EDITOR_CHROME = 16
             const val SEND_BUTTON_SIZE = 24
             const val CORNER_ARC = 6
@@ -73,6 +85,8 @@ object SessionUiStyle {
             const val CONTROL_GAP = 4
             const val SHELL_VERTICAL_PADDING = 6
             const val SHELL_HORIZONTAL_PADDING = 8
+            // Horizontal editor inset intentionally matches vertical shell padding to balance text and chrome.
+            const val EDITOR_HORIZONTAL_INSET = SHELL_VERTICAL_PADDING
 
             fun separator(): Color = JBColor.namedColor(
                 "EditorTabs.underTabsBorderColor",
@@ -144,17 +158,12 @@ object SessionUiStyle {
             const val MIN_ROWS = 1
             const val BORDER_WIDTH = 1
             const val VIEWPORT_TOP_PADDING = 6
-            const val VIEWPORT_HORIZONTAL_PADDING = 8
+            const val VIEWPORT_HORIZONTAL_PADDING = Layout.HORIZONTAL_PADDING
             const val VIEWPORT_BOTTOM_PADDING = 6
             const val SCROLLBAR_HEIGHT = 12
             const val WIDTH_PADDING = 16
 
-            fun topPadding(): Int = VIEWPORT_TOP_PADDING
-        }
-
-        object Popup {
-            const val MAX_LINES = 15
-            const val MAX_WIDTH = 520
+            fun topPadding(): Int = VIEWPORT_TOP_PADDING + UiStyle.Gap.lg()
         }
 
         /** Permission session-view command preview limits. */
@@ -166,6 +175,7 @@ object SessionUiStyle {
         object Tool {
             const val BODY_LINES = 15
             const val TASK_LINES = 10
+            const val DIFF_LINES = 20
             const val PREVIEW_LIMIT = 20_000
 
             fun pending(): Color = UiStyle.Colors.weak()

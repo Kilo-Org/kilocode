@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode"
-import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import type { Host, PanelContext, OutputHandle, SessionProvider } from "./host"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
@@ -96,6 +96,7 @@ export class VscodeHost implements Host {
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
+      disableViewedRegistration: true,
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)
@@ -114,11 +115,14 @@ export class VscodeHost implements Host {
       setSessionDirectory: (id, dir) => provider.setSessionDirectory(id, dir),
       clearSessionDirectory: (id) => provider.clearSessionDirectory(id),
       getSessionDirectories: () => provider.getSessionDirectories(),
+      getSessionInfo: (id) => provider.getSessionInfo(id),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
       registerSession: (s) => provider.registerSession(s),
       recoverPendingPrompts: () => provider.recoverPendingPrompts(),
       onFollowupAdopted: (cb) => provider.onFollowupAdopted(cb),
+      acknowledgeDraft: (draftID, sessionID) => provider.acknowledgeDraft(draftID, sessionID),
+      abortSessions: (ids) => provider.abortSessions(ids),
       showMemory: (id) => provider.showMemory(id),
       toggleMemory: (id) => provider.toggleMemory(id),
       dispose: () => provider.dispose(),
@@ -210,10 +214,6 @@ export class VscodeHost implements Host {
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
-  }
-
-  serverPort(): number | undefined {
-    return this.connectionService.getServerInfo()?.port
   }
 
   copyToClipboard(text: string): void {

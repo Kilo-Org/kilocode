@@ -1,5 +1,22 @@
 import type { Message } from "../types/messages"
 
+export function cycleAgent(input: {
+  agents: Array<{ name: string; mode?: string; hidden?: boolean }>
+  scope?: string
+  direction: 1 | -1
+  selected: (scope?: string) => string
+  select: (name: string, scope?: string) => void
+}) {
+  const available = input.agents.filter((agent) => agent.mode !== "subagent" && !agent.hidden)
+  if (available.length <= 1) return
+  const index = available.findIndex((agent) => agent.name === input.selected(input.scope))
+  const raw = index + input.direction
+  const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
+  const name = available[next]?.name
+  if (name) input.select(name, input.scope)
+  return name
+}
+
 export function resolveSessionAgent(messages: Message[], names: Set<string>): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const name = messages[i]?.agent?.trim()

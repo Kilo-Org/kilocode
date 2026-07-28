@@ -183,12 +183,30 @@ class KiloSessionService internal constructor(
 
     /** Abort ongoing processing for a session. */
     suspend fun abort(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=abort ${ChatLogSummary.dir(dir)}")
         call { abort(id, dir) }
+        log.info("${ChatLogSummary.sid(id)} kind=abort ok=true")
     }
 
     /** Summarize/compact a session. */
     suspend fun compact(id: String, dir: String, model: ModelSelectionDto) {
         call { compact(id, dir, model) }
+    }
+
+    suspend fun revert(id: String, dir: String, message: String, part: String?) {
+        log.info(
+            "${ChatLogSummary.sid(id)} kind=revert ${ChatLogSummary.dir(dir)} " +
+                "message=$message part=${part ?: "none"}",
+        )
+        call { revert(id, dir, message, part) }
+        log.info("${ChatLogSummary.sid(id)} kind=revert ok=true")
+    }
+
+    suspend fun deleteMessage(id: String, dir: String, message: String): Boolean =
+        call { deleteMessage(id, dir, message) }
+
+    suspend fun unrevert(id: String, dir: String) {
+        call { unrevert(id, dir) }
     }
 
     /** Load message history for a session. */

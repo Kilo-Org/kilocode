@@ -121,6 +121,7 @@ export const dict = {
 
   "ui.tool.read": "Ler",
   "ui.tool.loaded": "Carregado",
+  "ui.tool.swePruned": "SWE-Pruner · {{kept}} de {{total}} linhas mantidas", // kilocode_change
   "ui.tool.list": "Listar",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -156,6 +157,7 @@ export const dict = {
   "ui.message.collapse": "Recolher mensagem",
   "ui.message.copy": "Copiar",
   "ui.message.copyMessage": "Copiar mensagem",
+  "ui.message.deleteQueued": "Excluir mensagem na fila", // kilocode_change
   "ui.message.forkMessage": "Bifurcar para nova sessão",
   "ui.message.revertMessage": "Redefinir para este ponto",
   "ui.message.copyResponse": "Copiar resposta",
@@ -171,7 +173,9 @@ export const dict = {
   "ui.patch.action.patched": "Patch aplicado",
 
   "ui.question.subtitle.answered": "{{count}} respondidas",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(sem resposta)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(não respondida)",
   "ui.question.multiHint": "Selecione todas que se aplicam",
   "ui.question.singleHint": "Selecione uma resposta",

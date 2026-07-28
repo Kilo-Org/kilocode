@@ -17,6 +17,12 @@ interface CliServer {
     fun exited(proc: Process)
     fun stop()
     fun dispose()
+
+    /**
+     * Fast teardown for IDE app close. Implementations must not block the caller — it is often the
+     * EDT during the IDE shutdown sequence. Defaults to [dispose] for test doubles.
+     */
+    fun closeForShutdown() = dispose()
 }
 
 data class CliDownload(

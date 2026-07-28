@@ -20,7 +20,6 @@ import { MessageList } from "../components/chat/MessageList"
 import { VscodeUserMessage } from "../components/chat/VscodeUserMessage"
 import { TurnOutcome } from "../components/shared/TurnOutcome"
 import { SessionContext } from "../context/session"
-import { MemoryContext, type MemoryContextValue } from "../context/memory"
 import { ProviderContext } from "../context/provider"
 import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
@@ -983,52 +982,6 @@ export const TaskHeaderWithTodosAllDone: Story = {
           <div style={{ width: "380px" }}>
             <TaskHeader />
           </div>
-        </SessionContext.Provider>
-      </StoryProviders>
-    )
-  },
-}
-
-const mockMemory: MemoryContextValue = {
-  status: () => ({}) as any,
-  show: () => undefined,
-  loading: () => false,
-  pending: () => false,
-  error: () => undefined,
-  enabled: () => true,
-  sessionTokens: () => 533,
-  totalTokens: () => 12_400,
-  refresh: () => {},
-  showMemory: () => {},
-  enable: () => {},
-  disable: () => {},
-  auto: () => {},
-  rebuild: () => {},
-  remember: () => {},
-  forget: () => {},
-}
-
-export const TaskHeaderWithMemory: Story = {
-  name: "TaskHeader — with memory enabled",
-  render: () => {
-    const session = {
-      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
-      messages: () => [{ id: "msg-001" }] as any[],
-      currentSession: () => ({
-        id: SESSION_ID,
-        title: "Integrate project memory",
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }),
-    }
-    return (
-      <StoryProviders sessionID={SESSION_ID} status="idle" noPadding>
-        <SessionContext.Provider value={session as any}>
-          <MemoryContext.Provider value={mockMemory}>
-            <div style={{ width: "380px" }}>
-              <TaskHeader />
-            </div>
-          </MemoryContext.Provider>
         </SessionContext.Provider>
       </StoryProviders>
     )

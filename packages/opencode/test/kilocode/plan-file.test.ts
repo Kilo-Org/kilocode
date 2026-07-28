@@ -7,7 +7,8 @@ import { Instance } from "../../src/kilocode/instance"
 import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
 import { MessageID, PartID } from "../../src/session/schema"
-import { ProviderID, ModelID } from "../../src/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { PlanExitTool } from "../../src/tool/plan"
 import { Tool } from "../../src/tool/tool"
 import { Truncate } from "../../src/tool/truncate"
@@ -138,7 +139,7 @@ describe("PlanFile", () => {
                 sessionID: info.id,
                 time: { created: Date.now() },
                 agent: "plan",
-                model: { providerID: ProviderID.make("anthropic"), modelID: ModelID.make("claude-sonnet-5") },
+                model: { providerID: ProviderV2.ID.make("anthropic"), modelID: ModelV2.ID.make("claude-sonnet-5") },
               })
               yield* svc.updatePart({
                 id: PartID.ascending(),
@@ -231,7 +232,7 @@ describe("PlanFile", () => {
                 sessionID: info.id,
                 time: { created: Date.now() },
                 agent: "sr-architect",
-                model: { providerID: ProviderID.make("anthropic"), modelID: ModelID.make("claude-sonnet-5") },
+                model: { providerID: ProviderV2.ID.make("anthropic"), modelID: ModelV2.ID.make("claude-sonnet-5") },
               })
               yield* svc.updatePart({
                 id: PartID.ascending(),
@@ -293,7 +294,7 @@ describe("PlanFile", () => {
                 sessionID: info.id,
                 time: { created: Date.now() },
                 agent: "code",
-                model: { providerID: ProviderID.make("anthropic"), modelID: ModelID.make("claude-sonnet-5") },
+                model: { providerID: ProviderV2.ID.make("anthropic"), modelID: ModelV2.ID.make("claude-sonnet-5") },
               })
               yield* svc.updatePart({
                 id: PartID.ascending(),

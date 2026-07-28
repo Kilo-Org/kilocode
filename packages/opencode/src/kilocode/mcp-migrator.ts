@@ -1,7 +1,7 @@
 import * as fs from "fs/promises"
 import * as path from "path"
 import { Config } from "../config/config"
-import { ConfigMCP } from "../config/mcp"
+import { ConfigMCPV1 as ConfigMCP } from "@opencode-ai/core/v1/config/mcp"
 import * as Log from "@opencode-ai/core/util/log"
 import { Filesystem } from "../util/filesystem"
 import { KilocodePaths } from "./paths"

@@ -1,11 +1,12 @@
 import { Effect, Layer } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
-import { assertNetwork, networkHttpLayer } from "@kilocode/sandbox"
-import { opaque } from "./network-tools"
+import { assertNetwork, assertSandbox, networkHttpLayer } from "@kilocode/sandbox"
+import { host, opaque } from "./network-tools"
 
 const Builtin = Symbol("kilo.sandbox.builtinTool")
 const Remote = Symbol("kilo.sandbox.remoteMcp")
 const indirect = new Set<string>(opaque.map((item) => item.id))
+const external = new Set<string>(host.map((item) => item.id))
 
 export const httpLayer = networkHttpLayer.pipe(Layer.provide(FetchHttpClient.layer))
 
@@ -27,11 +28,13 @@ export function tool<A, E, R>(value: { id: string }, effect: Effect.Effect<A, E,
   if (!(Builtin in value)) {
     return assertNetwork(`custom tool:${value.id}`, "executeTool").pipe(Effect.andThen(effect))
   }
+  if (external.has(value.id)) return assertSandbox(`tool:${value.id}`, "executeTool").pipe(Effect.andThen(effect))
   if (!indirect.has(value.id)) return effect
   return assertNetwork(`tool:${value.id}`, "executeTool").pipe(Effect.andThen(effect))
 }
 
 export function mcp<A, E, R>(value: object, effect: Effect.Effect<A, E, R>) {
-  if (!(Remote in value)) return effect
-  return assertNetwork("remote MCP delegated authority", "executeMcp").pipe(Effect.andThen(effect))
+  return assertNetwork(Remote in value ? "remote MCP delegated authority" : "local MCP delegated authority", "executeMcp").pipe(
+    Effect.andThen(effect),
+  )
 }

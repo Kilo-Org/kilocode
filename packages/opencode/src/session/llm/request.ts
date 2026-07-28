@@ -1,4 +1,6 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import type { Auth } from "@/auth"
+import { SessionV1 } from "@opencode-ai/core/v1/session"
 import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceState } from "@/effect/instance-state"
 import { Permission } from "@/permission"
@@ -28,12 +30,12 @@ import { stripInternalOptions } from "@/kilocode/agent/options"
 // kilocode_change end
 
 type PrepareInput = {
-  readonly user: MessageV2.User
+  readonly user: SessionV1.User
   readonly sessionID: string
   readonly parentSessionID?: string
   readonly model: Provider.Model
   readonly agent: Agent.Info
-  readonly permission?: Permission.Ruleset
+  readonly permission?: PermissionV1.Ruleset
   readonly system: string[]
   readonly messages: ModelMessage[]
   readonly small?: boolean
@@ -106,11 +108,18 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
   const agentOptions = stripInternalOptions(input.agent.options)
   const options = mergeOptions(mergeOptions(mergeOptions(base, input.model.options), agentOptions), variant)
   // kilocode_change end
-  if (isOpenaiOauth) {
-    // kilocode_change start - prepend soul to instructions
-    options.instructions = SystemPrompt.soul() + "\n" + system.join("\n")
-    // kilocode_change end
+  if (
+    input.model.api.npm === "@ai-sdk/azure" &&
+    (input.provider.options.useCompletionUrls || input.model.options.useCompletionUrls || options.useCompletionUrls)
+  ) {
+    delete options.reasoningSummary
+    delete options.include
   }
+  if (isOpenaiOauth) {
+  // kilocode_change start - prepend soul to instructions
+  options.instructions = SystemPrompt.soul() + "\n" + system.join("\n")
+  // kilocode_change end
+}
 
   const messages =
     isOpenaiOauth || input.isWorkflow
@@ -220,6 +229,7 @@ export const prepare = Effect.fn("LLMRequestPrep.prepare")(function* (input: Pre
           }
         : {
             "x-session-affinity": input.sessionID,
+            "X-Session-Id": input.sessionID,
             ...(input.parentSessionID ? { "x-parent-session-id": input.parentSessionID } : {}),
             "User-Agent": USER_AGENT,
             ...(input.model.providerID !== "anthropic" ? DEFAULT_HEADERS : undefined), // kilocode_change

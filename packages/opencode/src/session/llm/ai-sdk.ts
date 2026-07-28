@@ -3,6 +3,7 @@ import { Effect, Schema } from "effect"
 import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
+import { KiloResponseMetadata } from "@/kilocode/session/response-metadata" // kilocode_change
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -15,6 +16,7 @@ export function adapterState() {
     currentTextID: undefined as string | undefined,
     currentReasoningID: undefined as string | undefined,
     toolNames: {} as Record<string, string>,
+    copilotTotalNanoAiu: undefined as number | undefined,
   }
 }
 
@@ -25,6 +27,20 @@ function finishReason(value: string | undefined): FinishReason {
 function providerMetadata(value: unknown): ProviderMetadata | undefined {
   if (value == null) return undefined
   return Schema.is(ProviderMetadata)(value) ? value : undefined
+}
+
+// Temporary AI SDK bridge: Copilot billing survives only in raw provider chunks here.
+// Move this extraction into @opencode-ai/llm when Copilot is handled by the native runtime.
+function copilotTotalNanoAiu(value: unknown) {
+  if (!value || typeof value !== "object") return
+  const raw = value as Record<string, unknown>
+  const response =
+    raw.response && typeof raw.response === "object" ? (raw.response as Record<string, unknown>) : undefined
+  const usage = raw.copilot_usage ?? response?.copilot_usage
+  if (!usage || typeof usage !== "object") return
+  const total = (usage as Record<string, unknown>).total_nano_aiu
+  if (typeof total !== "number" || !Number.isFinite(total) || total < 0) return
+  return total
 }
 
 function usage(value: unknown) {
@@ -73,14 +89,33 @@ export function toLLMEvents(
       return Effect.succeed([LLMEvent.stepStart({ index: state.step })])
 
     case "finish-step":
-      return Effect.sync(() => [
-        LLMEvent.stepFinish({
-          index: state.step++,
-          reason: finishReason(event.finishReason),
-          usage: usage(event.usage),
-          providerMetadata: KiloRoutedModel.write(providerMetadata(event.providerMetadata), event.response?.modelId), // kilocode_change
-        }),
-      ])
+      return Effect.sync(() => {
+        const original = providerMetadata(event.providerMetadata)
+        const metadata =
+          state.copilotTotalNanoAiu === undefined
+            ? original
+            : {
+                ...original,
+                copilot: {
+                  ...original?.copilot,
+                  totalNanoAiu: state.copilotTotalNanoAiu,
+                },
+              }
+        state.copilotTotalNanoAiu = undefined
+        return [
+          LLMEvent.stepFinish({
+            index: state.step++,
+            reason: finishReason(event.finishReason),
+            usage: usage(event.usage),
+            // kilocode_change start
+            providerMetadata: KiloResponseMetadata.write(
+              KiloRoutedModel.write(metadata, event.response?.modelId),
+              event.response?.headers,
+            ),
+            // kilocode_change end
+          }),
+        ]
+      })
 
     case "finish":
       return Effect.sync(() => {
@@ -241,10 +276,15 @@ export function toLLMEvents(
     case "abort":
     case "source":
     case "file":
-    case "raw":
     case "tool-output-denied":
     case "tool-approval-request":
       return Effect.succeed([])
+
+    case "raw":
+      return Effect.sync(() => {
+        state.copilotTotalNanoAiu = copilotTotalNanoAiu(event.rawValue) ?? state.copilotTotalNanoAiu
+        return []
+      })
 
     default: {
       const _exhaustive: never = event

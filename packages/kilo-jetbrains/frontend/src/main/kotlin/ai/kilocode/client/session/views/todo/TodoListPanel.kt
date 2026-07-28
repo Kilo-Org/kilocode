@@ -22,7 +22,7 @@ class TodoListPanel(
     todos: List<TodoDto> = emptyList(),
     private var before: Int = 0,
     private var after: Int = 0,
-) : Stack(StackAxis.VERTICAL) {
+) : Stack(StackAxis.VERTICAL, JBUI.scale(SessionUiStyle.View.Layout.GAP)) {
 
     private var items = todos
     private var style = SessionEditorStyle.current()

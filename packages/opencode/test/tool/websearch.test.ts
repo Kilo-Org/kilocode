@@ -2,9 +2,10 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { parseResponse } from "../../src/tool/mcp-websearch"
 import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel } from "../../src/tool/websearch"
-import { ProviderID } from "../../src/provider/schema"
+
 import { webSearchEnabled } from "../../src/tool/registry"
 import { it } from "../lib/effect"
+import { ProviderV2 } from "@opencode-ai/core/provider"
 
 const SESSION_ID = "ses_0196aabbccddeeff001122334455"
 
@@ -38,11 +39,11 @@ describe("websearch provider", () => {
 
   test("is only enabled for kilo or explicit websearch provider flags", () => {
     // kilocode_change
-    expect(webSearchEnabled(ProviderID.kilo, { exa: false, parallel: false })).toBe(true) // kilocode_change
-    expect(webSearchEnabled(ProviderID.opencode, { exa: false, parallel: false })).toBe(false) // kilocode_change
-    expect(webSearchEnabled(ProviderID.openai, { exa: false, parallel: false })).toBe(false)
-    expect(webSearchEnabled(ProviderID.openai, { exa: true, parallel: false })).toBe(true)
-    expect(webSearchEnabled(ProviderID.openai, { exa: false, parallel: true })).toBe(true)
+    expect(webSearchEnabled(ProviderV2.ID.kilo, { exa: false, parallel: false })).toBe(true) // kilocode_change
+    expect(webSearchEnabled(ProviderV2.ID.opencode, { exa: false, parallel: false })).toBe(false) // kilocode_change
+    expect(webSearchEnabled(ProviderV2.ID.openai, { exa: false, parallel: false })).toBe(false)
+    expect(webSearchEnabled(ProviderV2.ID.openai, { exa: true, parallel: false })).toBe(true)
+    expect(webSearchEnabled(ProviderV2.ID.openai, { exa: false, parallel: true })).toBe(true)
   })
 
   test("uses branded labels", () => {

@@ -10,7 +10,7 @@ on:
 jobs:
   typecheck-js:
     name: typecheck-js
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-4vcpu-ubuntu-2404 # kilocode_change
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6 # kilocode_change

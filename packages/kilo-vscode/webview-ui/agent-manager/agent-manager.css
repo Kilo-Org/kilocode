@@ -1251,6 +1251,19 @@ button.am-section-toggle:hover .am-section-label {
   background: color-mix(in srgb, var(--surface-interactive-base) 10%, transparent);
 }
 
+.am-tab-target {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 100%;
+  flex: 1;
+}
+
+.am-tab:has(.am-tab-target:focus-visible) {
+  background: var(--button-ghost-hover, var(--surface-base-hover, rgba(128, 128, 128, 0.2)));
+  color: var(--text-base);
+}
+
 .am-tab-icon {
   display: inline-flex;
   align-items: center;
@@ -1286,8 +1299,6 @@ button.am-section-toggle:hover .am-section-label {
   min-width: 0;
   height: 100%;
   flex: 1;
-  padding-right: 27px;
-  margin-right: -27px;
 }
 
 .am-tab-close-wrap {
@@ -1432,56 +1443,16 @@ body.am-wt-dragging-active * {
   padding-right: 4px;
   border-left: 1px solid var(--border-weak-base);
 }
-.am-sidebar-search-trigger {
-  display: inline-flex;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-weak);
-  cursor: pointer;
-}
-
-.am-sidebar-search-trigger:hover,
-.am-sidebar-search-trigger[data-expanded] {
-  background: var(--surface-inset-base-hover);
-  color: var(--text-base);
-}
-
 .am-sidebar-search-popover[data-component="popover-content"] {
-  width: min(360px, calc(100vw - 24px));
   max-height: min(480px, calc(100vh - 64px));
-  padding: 0;
-  overflow: hidden;
-}
-
-.am-sidebar-search-popover [data-slot="popover-body"] {
-  padding: 0;
 }
 
 .am-sidebar-search [data-component="list"] {
   max-height: min(440px, calc(100vh - 88px));
-  gap: 0;
-  padding: 8px 0 0;
-}
-
-.am-sidebar-search [data-slot="list-search-wrapper"] {
-  margin: 0 0 4px;
-  padding: 0 8px;
-}
-
-.am-sidebar-search [data-slot="list-search"] {
-  background: var(--surface-inset-base);
 }
 
 .am-sidebar-search [data-slot="list-scroll"] {
   max-height: 360px;
-  gap: 2px;
   padding: 0 4px;
 }
 
@@ -1502,65 +1473,11 @@ body.am-wt-dragging-active * {
   padding: 6px 8px;
 }
 
-.am-sidebar-search [data-slot="list-item"][data-active="true"],
-.am-sidebar-search [data-slot="list-item"][data-selected="true"] {
-  background: color-mix(in srgb, var(--text-base) 10%, transparent);
-}
-
-.am-sidebar-search-result {
-  display: flex;
-  width: 100%;
-  min-width: 0;
-  align-items: center;
-  gap: 8px;
-}
-
-.am-sidebar-search-icon {
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-weak);
-}
-
-.am-sidebar-search-spinner {
-  width: 14px;
-  height: 14px;
-}
-
-.am-sidebar-search-copy {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 1px;
-  text-align: left;
-}
-
-.am-sidebar-search-title,
-.am-sidebar-search-meta {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.am-sidebar-search-title {
-  color: var(--text-base);
-  font-size: var(--kilo-font-size-12);
-  font-weight: 500;
-  line-height: 1.35;
-}
-
 .am-sidebar-search-meta {
   display: flex;
   align-items: center;
   gap: 5px;
   color: var(--text-base);
-  font-size: var(--kilo-font-size-10);
-  font-weight: 400;
-  line-height: 1.35;
 }
 
 .am-sidebar-search-swatch {
@@ -1568,16 +1485,6 @@ body.am-wt-dragging-active * {
   height: 6px;
   flex-shrink: 0;
   border-radius: 50%;
-}
-
-.am-sidebar-search-status,
-.am-sidebar-search-count,
-.am-sidebar-search-time {
-  flex-shrink: 0;
-  margin-left: auto;
-  color: var(--text-base);
-  font-size: var(--kilo-font-size-10);
-  font-weight: 400;
 }
 
 .am-sidebar-search-status {
@@ -2608,6 +2515,13 @@ body.am-wt-dragging-active * {
   min-width: 250px;
 }
 
+/* Fixed-width slot so menu items with and without a check mark align. */
+.am-menu-check {
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+}
+
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
 }
@@ -2647,10 +2561,13 @@ body.am-wt-dragging-active * {
   min-height: 0;
 }
 
-/* Allow portal-based dropdowns to escape the dialog bounds */
+/* Allow portal-based dropdowns to escape the dialog bounds.
+   Wider than the kilo-ui default so the prompt stays readable for long input. */
 [data-component="dialog"]:has(.am-nv-dialog) [data-slot="dialog-content"] {
   overflow: visible;
   max-height: 85vh;
+  width: 640px;
+  max-width: 92vw;
 }
 
 /* Scrollable form content area — keeps submit button always visible */
@@ -2691,7 +2608,10 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-placeholderForeground, var(--text-weaker));
 }
 
-/* Dialog overrides for prompt-input-container — resizable from bottom edge */
+/* Dialog overrides for prompt-input-container — resizable from bottom edge.
+   The container is the only element that changes size (auto-grow + manual
+   resize); the textarea always fills it and is the only element that scrolls,
+   so long prompts never produce nested scrollbars. */
 .am-nv-dialog .am-prompt-input-container {
   margin: 0;
   resize: vertical;
@@ -2705,8 +2625,7 @@ body.am-wt-dragging-active * {
 .am-nv-dialog .am-prompt-input-wrapper {
   flex: 1;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 /* While any inline (non-portaled) selector popover is open, let it escape the
@@ -2729,8 +2648,9 @@ body.am-wt-dragging-active * {
   color: var(--vscode-input-foreground, var(--text-base));
   resize: none;
   width: 100%;
-  min-height: 100%;
+  height: 100%;
   max-height: none;
+  overflow-y: auto;
 }
 
 .am-nv-config-label {
@@ -2907,6 +2827,7 @@ body.am-wt-dragging-active * {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 6px;
   padding: 4px 10px;
   min-height: 30px;
   transition: background 80ms;
@@ -3001,6 +2922,11 @@ body.am-wt-dragging-active * {
 
 .am-mm-count-select:focus {
   border-color: var(--border-focus);
+}
+
+.am-mm-variant-select {
+  max-width: 110px;
+  text-overflow: ellipsis;
 }
 
 .am-nv-spinner {
@@ -4614,6 +4540,75 @@ body.vscode-high-contrast-light {
   opacity: 1;
   pointer-events: auto;
   z-index: 1;
+}
+
+/* Side terminal panel — lives inside .am-diff-panel-wrapper next to the
+   diff and PR panels. Header reuses .am-diff-header metrics so the
+   chrome does not shift when switching inspector modes. Visibility is
+   opacity-only: the xterm render loop dies if the subtree leaves the
+   paint tree. */
+.am-side-terminal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  /* Force a dedicated compositor layer so opacity flips do not
+     re-lay-out the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-side-terminal-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-side-terminal-layer {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.am-side-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-side-terminal-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+.am-side-terminal-empty {
+  color: var(--text-weak);
+}
+
+/* Hidden-but-alive side panel host: taken out of the flow so the chat
+   reclaims the width, but kept painted so hidden side terminals keep
+   streaming. Anchored to .am-detail-stack (position: relative). */
+.am-side-host-hidden {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .am-terminal-host {

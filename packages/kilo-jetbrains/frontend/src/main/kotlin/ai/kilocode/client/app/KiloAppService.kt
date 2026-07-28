@@ -50,10 +50,19 @@ class KiloAppService internal constructor(
     /** Core version and platform from the backend, or null if unknown. */
     @Volatile
     private var info: CoreInfo? = null
+    private val coreLock = Any()
+    private val coreDone = mutableListOf<(CoreInfo?) -> Unit>()
+    private var coreJob: Job? = null
 
     val core: CoreInfo? get() = info
 
     val version: String? get() = info?.version
+
+    /**
+     * App-lifetime scope for fire-and-forget work that must outlive transient UIs such as the
+     * settings dialog (whose own scope is cancelled the moment it closes on OK).
+     */
+    internal val scope: CoroutineScope get() = cs
 
     internal val _state = MutableStateFlow(init)
     val state: StateFlow<KiloAppStateDto> = _state.asStateFlow()
@@ -151,18 +160,37 @@ class KiloAppService internal constructor(
 
     /** Fetch the pinned Core version and platform and cache it. */
     fun fetchCoreInfoAsync(done: (CoreInfo?) -> Unit = {}) {
-        info?.let {
-            done(it)
+        val cached = info
+        if (cached != null) {
+            done(cached)
             return
         }
-        cs.launch {
-            LOG.info("fetchCoreInfo: requesting Core version and platform")
-            val next = coreInfo()
-            if (next == null) {
-                done(null)
-                return@launch
+
+        synchronized(coreLock) {
+            val current = info
+            if (current != null) {
+                done(current)
+                return
             }
-            done(next)
+            coreDone.add(done)
+            if (coreJob != null) return
+            coreJob = cs.launch {
+                fetchCoreInfo()
+            }
+        }
+    }
+
+    private suspend fun fetchCoreInfo() {
+        LOG.info("fetchCoreInfo: requesting Core version and platform")
+        val next = coreInfo()
+        val list = synchronized(coreLock) {
+            val items = coreDone.toList()
+            coreDone.clear()
+            coreJob = null
+            items
+        }
+        list.forEach { it(next) }
+        if (next != null) {
             LOG.info("fetchCoreInfo: Core version is ${next.version} (${next.platform})")
         }
     }
@@ -344,5 +372,6 @@ data class CoreInfo(val version: String, val platform: String)
 
 private fun summary(patch: ConfigPatchDto): String {
     val values = patch.values.keys.sorted().joinToString(",").ifEmpty { "none" }
-    return "values=$values agents=${patch.agents.size}"
+    val permission = if (patch.permission != null) " permission" else ""
+    return "values=$values agents=${patch.agents.size}$permission"
 }

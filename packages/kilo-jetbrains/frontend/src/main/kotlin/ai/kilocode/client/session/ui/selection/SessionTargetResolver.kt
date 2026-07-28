@@ -64,11 +64,13 @@ internal object SessionTargetResolver {
     @RequiresEdt
     private fun copy(root: JComponent, comp: Component): SessionCopyTarget? {
         var current: Component? = comp
-        var target: SessionCopyTarget? = null
+        val targets = mutableListOf<SessionCopyTarget>()
         while (current != null && inside(root, current)) {
-            if (current is SessionCopyTarget) target = current
+            if (current is SessionCopyTarget && current.copyEligible) targets.add(current)
             current = current.parent
         }
-        return target
+        val toolbar = targets.indexOfFirst { it.copyToolbar != null }
+        if (toolbar > 0) return targets.take(toolbar).firstOrNull { it.copyToolbar == null }
+        return targets.lastOrNull()
     }
 }

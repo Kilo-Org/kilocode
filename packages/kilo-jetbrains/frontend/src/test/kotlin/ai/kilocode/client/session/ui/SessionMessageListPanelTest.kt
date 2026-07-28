@@ -9,39 +9,56 @@ import ai.kilocode.client.session.model.QuestionOption
 import ai.kilocode.client.session.model.SessionModel
 import ai.kilocode.client.session.model.SessionState
 import ai.kilocode.client.session.model.ToolCallRef
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.LoginRequiredView
 import ai.kilocode.client.session.views.PlanExitView
+import ai.kilocode.client.session.views.base.BaseQuestionView
 import ai.kilocode.client.session.views.permission.PermissionView
 import ai.kilocode.client.session.views.question.QuestionResultView
 import ai.kilocode.client.session.views.question.QuestionView
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.views.MessageToolbar
 import ai.kilocode.client.session.views.MessageView
 import ai.kilocode.client.session.views.TextView
+import ai.kilocode.client.session.views.TurnView
 import ai.kilocode.client.session.views.base.PartView
 import ai.kilocode.client.session.views.tool.TaskToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.session.views.todo.TodoWriteView
+import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.ui.HoverIcon
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import ai.kilocode.rpc.dto.MessageWithPartsDto
 import ai.kilocode.rpc.dto.PartDto
+import ai.kilocode.rpc.dto.SessionRevertDto
 import ai.kilocode.rpc.dto.TodoDto
+import com.intellij.ide.ui.laf.darcula.ui.DarculaButtonUI
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.ActionLink
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
-import java.awt.BorderLayout
+import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import java.awt.Color
 import java.awt.Component
 import java.awt.Container
+import java.awt.Cursor
 import java.awt.Point
 import java.awt.event.MouseEvent
 import java.awt.image.BufferedImage
+import javax.swing.JButton
+import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.RepaintManager
 import javax.swing.SwingUtilities
 import javax.swing.border.Border
 
@@ -82,6 +99,63 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertEquals("", panel.dump())
     }
 
+    fun `test transcript content has symmetric side padding`() {
+        model.upsertMessage(msg("a1", "assistant"))
+
+        panel.setSize(600, 400)
+        panel.doLayout()
+        val turn = panel.components.first { it is TurnView }
+        val left = turn.x
+        val right = panel.width - turn.x - turn.width
+
+        assertEquals(right, left)
+    }
+
+    fun `test top level user turns use prompt gap after previous turn`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "first"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p2", "a1", "text", text = "answer"))
+        model.upsertMessage(msg("u2", "user"))
+        model.updateContent("u2", part("p3", "u2", "text", text = "second"))
+
+        panel.setSize(600, 1000)
+        layout(panel)
+        val first = panel.findTurn("u1")!!
+        val second = panel.findTurn("u2")!!
+
+        assertEquals(
+            JBUI.scale(SessionUiStyle.SessionLayout.USER_PROMPT_GAP),
+            second.y - first.bounds.maxY.toInt(),
+        )
+    }
+
+    fun `test queued turn shows badge and remove action`() {
+        var deleted: String? = null
+        Disposer.dispose(parent)
+        parent = Disposer.newDisposable("test-queued")
+        model = SessionModel()
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, deleteQueued = { deleted = it })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "first"))
+        model.upsertMessage(msg("u2", "user"))
+        model.updateContent("u2", part("p2", "u2", "text", text = "second"))
+
+        model.setQueued(setOf("u2"))
+
+        val u1 = panel.findMessage("u1")!!
+        val u2 = panel.findMessage("u2")!!
+        assertFalse(components(u1).filterIsInstance<JBLabel>().any { it.text == KiloBundle.message("session.queued") })
+        assertTrue(components(u2).filterIsInstance<JBLabel>().any { it.text == KiloBundle.message("session.queued") })
+
+        val remove = components(u2).filterIsInstance<HoverIcon>().single()
+        assertEquals(KiloBundle.message("session.queued.remove"), remove.toolTipText)
+        assertEquals(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR), remove.cursor)
+        remove.doClick()
+
+        assertEquals("u2", deleted)
+    }
+
     // ------ TurnAdded ------
 
     fun `test user message creates turn and is findable by message id`() {
@@ -115,6 +189,32 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             turn#u1: user#u1, assistant#a1
             turn#u2: user#u2, assistant#a2
         """.trimIndent().trim(), panel.dump())
+    }
+
+    fun `test turn view hides when all messages are reverted`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant"))
+
+        model.setRevert(SessionRevertDto("u2"))
+
+        assertTrue(panel.findTurn("u1")!!.isVisible)
+        assertTrue(panel.findMessage("u1")!!.isVisible)
+        assertFalse(panel.findTurn("u2")!!.isVisible)
+        assertFalse(panel.findMessage("u2")!!.isVisible)
+        assertFalse(panel.findMessage("a2")!!.isVisible)
+    }
+
+    fun `test turn view shows again when revert clears`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setRevert(SessionRevertDto("u2"))
+
+        model.setRevert(null)
+
+        assertTrue(panel.findTurn("u2")!!.isVisible)
+        assertTrue(panel.findMessage("u2")!!.isVisible)
     }
 
     // ------ TurnRemoved ------
@@ -189,18 +289,64 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         val view = panel.findMessage("u1")!!.part("p1") as TextView
         val message = panel.findMessage("u1")!!
-        assertNotNull(find<MessageToolbar>(message))
+        val target = components(message).filterIsInstance<SessionCopyTarget>().single { it.copyToolbar != null }
+        val toolbar = target.copyToolbar as MessageToolbar
+        val placeholder = target.copyAnchor
+
+        assertFalse(components(message).filterIsInstance<MessageToolbar>().any { it === toolbar })
+        assertNull(toolbar.parent)
         assertFalse(view.hasCopyToolbar())
-        assertEquals(BorderLayout.LINE_END, message.promptToolbarAlignment())
-        assertFalse(message.paintsPromptToolbar())
+        assertTrue(message.promptToolbarActive())
+        assertEquals(toolbar.preferredSize.width, placeholder.preferredSize.width)
+        assertTrue(placeholder.preferredSize.height > toolbar.preferredSize.height)
+    }
 
-        message.setPromptHovered(true)
+    fun `test user prompt toolbar omits rollback when revert handler is absent`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
 
-        assertTrue(message.paintsPromptToolbar())
+        val message = panel.findMessage("u1")!!
+        val toolbar = components(message).filterIsInstance<SessionCopyTarget>().single { it.copyToolbar != null }.copyToolbar as MessageToolbar
 
-        message.setPromptHovered(false)
+        assertFalse(components(toolbar).filterIsInstance<JButton>().any { it.toolTipText == KiloBundle.message("revert.message.rollback") })
+    }
 
-        assertFalse(message.paintsPromptToolbar())
+    fun `test user prompt toolbar shows rollback when revert handler is present`() {
+        var called: String? = null
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = { called = it })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+
+        val message = panel.findMessage("u1")!!
+        val toolbar = components(message).filterIsInstance<SessionCopyTarget>().single { it.copyToolbar != null }.copyToolbar as MessageToolbar
+        val rollback = components(toolbar)
+            .filterIsInstance<JButton>()
+            .first { it.toolTipText == KiloBundle.message("revert.message.rollback") }
+        rollback.doClick()
+
+        assertEquals(Cursor.HAND_CURSOR, rollback.cursor.type)
+        assertEquals("u1", called)
+    }
+
+    fun `test rollback state shows inline prompt progress and suppresses toolbar`() {
+        var cancelled = false
+        panel = SessionMessageListPanel(model, parent, openFile = openFile, revert = {}, cancelRevert = { cancelled = true })
+        model.upsertMessage(msg("u1", "user"))
+        model.updateContent("u1", part("p1", "u1", "text", text = "hello"))
+        val message = panel.findMessage("u1")!!
+        val target = components(message).filterIsInstance<SessionCopyTarget>().single { it.copyToolbar != null }
+
+        model.setState(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+
+        val progress = components(message).filterIsInstance<RevertProgress>().single()
+        assertNull(target.copyToolbar)
+        components(progress).filterIsInstance<ActionLink>().single().doClick()
+        assertTrue(cancelled)
+
+        model.setState(SessionState.Idle)
+
+        assertTrue(components(message).filterIsInstance<RevertProgress>().isEmpty())
+        assertNotNull(target.copyToolbar)
     }
 
     fun `test latest non blank assistant text part gets copy toolbar`() {
@@ -284,6 +430,151 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
 
         val tv = panel.findMessage("a1")!!.part("p1") as TextView
         assertEquals("hello world", tv.markdown())
+    }
+
+    fun `test empty ContentDelta does not refresh panel`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+        val mv = panel.findMessage("a1")!!
+        val tv = mv.part("p1") as TextView
+        val repaint = TrackingRepaintManager(setOf(panel, mv, tv))
+        val old = RepaintManager.currentManager(panel)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            model.appendDelta("a1", "p1", "")
+
+            assertEquals("hello", tv.markdown())
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    fun `test identical ContentUpdated does not refresh panel`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+        val mv = panel.findMessage("a1")!!
+        val tv = mv.part("p1") as TextView
+        val comp = tv.md.component
+        val repaint = TrackingRepaintManager(setOf(panel, mv, tv))
+        val old = RepaintManager.currentManager(panel)
+
+        try {
+            RepaintManager.setCurrentManager(repaint)
+
+            model.updateContent("a1", part("p1", "a1", "text", text = "hello"))
+
+            assertSame(tv, mv.part("p1"))
+            assertSame(comp, tv.md.component)
+            assertTrue(repaint.dirty.isEmpty())
+            assertTrue(repaint.invalid.isEmpty())
+        } finally {
+            RepaintManager.setCurrentManager(old)
+        }
+    }
+
+    // ------ settled turns / validate roots (B) ------
+
+    fun `test turns are validate roots when idle`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+
+        assertTrue(panel.findTurn("u1")!!.isValidateRoot())
+        assertTrue(panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test streaming turn is not a validate root while busy`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant"))
+
+        model.setState(SessionState.Busy("thinking"))
+
+        assertTrue("prior turn stays a validate root", panel.findTurn("u1")!!.isValidateRoot())
+        assertFalse("streaming turn must not be a validate root", panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test turns settle again when idle`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setState(SessionState.Busy("thinking"))
+
+        model.setState(SessionState.Idle)
+
+        assertTrue(panel.findTurn("u1")!!.isValidateRoot())
+        assertTrue(panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test turn added while busy becomes the active non-root turn`() {
+        model.upsertMessage(msg("u1", "user"))
+        model.setState(SessionState.Busy("thinking"))
+        assertFalse(panel.findTurn("u1")!!.isValidateRoot())
+
+        model.upsertMessage(msg("u2", "user"))
+
+        assertTrue("previous turn settles once a newer turn is active", panel.findTurn("u1")!!.isValidateRoot())
+        assertFalse("newest turn is the active streaming turn", panel.findTurn("u2")!!.isValidateRoot())
+    }
+
+    fun `test validate roots flag disables turn isolation`() {
+        disableValidateRoots()
+        model.upsertMessage(msg("u1", "user"))
+
+        assertFalse(panel.findTurn("u1")!!.isValidateRoot())
+    }
+
+    fun `test settled turns still follow panel width top down`() {
+        model.upsertMessage(msg("a1", "assistant"))
+        model.updateContent("a1", part("p1", "a1", "text", text = "answer"))
+        val turn = panel.findTurn("a1")!!
+        assertTrue("idle turn is a validate root", turn.isValidateRoot())
+
+        panel.setSize(600, 2000)
+        layout(panel)
+        val wide = turn.width
+
+        panel.setSize(500, 2000)
+        layout(panel)
+
+        assertTrue("validate-root turns must still relayout top-down", turn.width < wide)
+        assertTrue(turn.isValidateRoot())
+    }
+
+    // ------ streaming stress / teardown ------
+
+    fun `test many streamed turns stay bounded and fully tear down`() {
+        val empty = count(panel)
+
+        repeat(40) { i ->
+            model.upsertMessage(msg("u$i", "user"))
+            model.updateContent("u$i", part("up$i", "u$i", "text", text = "q$i"))
+            model.upsertMessage(msg("a$i", "assistant"))
+            model.updateContent("a$i", part("ap$i", "a$i", "text", text = "```kotlin\nval x = $i\n```"))
+            repeat(20) { j -> model.appendDelta("a$i", "ap$i", " tok$j") }
+        }
+        assertEquals(40, panel.turnCount())
+
+        // Retained instances stay identical while streaming into an earlier message,
+        // and streaming deltas must not grow the component tree.
+        val tv = panel.findMessage("a0")!!.part("ap0") as TextView
+        val comp = tv.md.component
+        val count = count(panel)
+        repeat(50) { model.appendDelta("a0", "ap0", " x$it") }
+
+        assertSame(tv, panel.findMessage("a0")!!.part("ap0"))
+        assertSame(comp, tv.md.component)
+        assertEquals(count, count(panel))
+
+        model.clear()
+
+        assertEquals(0, panel.turnCount())
+        assertTrue("transcript turns must be removed on clear", panel.components.none { it is TurnView })
+        assertEquals("clear must return the transcript to its empty component tree", empty, count(panel))
     }
 
     fun `test ContentDelta preserves TextView and markdown component`() {
@@ -602,6 +893,157 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         assertTrue(called)
     }
 
+    fun `test rollback banner is anchored inside transcript before progress footer`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        val item = SessionMessageListPanel(model, parent, openFile = openFile, banner = banner)
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+
+        model.setRevert(SessionRevertDto("u1"))
+
+        val comps = item.components.toList()
+        val turn = comps.first { it is TurnView }
+
+        assertTrue(banner.isVisible)
+        assertTrue(comps.indexOf(turn) < comps.indexOf(banner))
+        assertTrue(comps.indexOf(banner) < comps.indexOf(item.progress))
+        assertSame(item.progress, comps.last())
+    }
+
+    fun `test rollback banner uses session dialog card with standard actions`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1"))
+        banner.update()
+
+        assertNotNull(find<BaseQuestionView>(banner))
+
+        val buttons = components(banner).filterIsInstance<JButton>()
+        assertEquals(
+            listOf(KiloBundle.message("revert.banner.redo"), KiloBundle.message("revert.banner.redo.all")),
+            buttons.map { it.text },
+        )
+        assertEquals(listOf(KiloBundle.message("revert.banner.redo")), buttons.filter { it.isVisible }.map { it.text })
+        assertTrue(buttons.all { it.getClientProperty(DarculaButtonUI.DEFAULT_STYLE_KEY) == null })
+
+        val hint = components(banner)
+            .filterIsInstance<JBLabel>()
+            .first { it.text == KiloBundle.message("revert.banner.hint") }
+        assertEquals(UIUtil.getLabelForeground().rgb, hint.foreground.rgb)
+    }
+
+    fun `test rollback banner reuses file rows across updates`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1"))
+        model.setDiff(listOf(DiffFileDto("src/A.kt", 1, 0), DiffFileDto("src/B.kt", 2, 1)))
+        banner.update()
+        val rows = components(banner).filterIsInstance<Stack>().filter { stack ->
+            stack.components.any { it is DiffStatBadge }
+        }
+        val count = components(banner).filterIsInstance<DiffStatBadge>().size
+
+        model.setDiff(listOf(DiffFileDto("src/B.kt", 4, 2), DiffFileDto("src/A.kt", 3, 2)))
+        banner.update()
+        val next = components(banner).filterIsInstance<Stack>().filter { stack ->
+            stack.components.any { it is DiffStatBadge }
+        }
+
+        assertSame(rows[1], next[0])
+        assertSame(rows[0], next[1])
+        assertEquals(count, components(banner).filterIsInstance<DiffStatBadge>().size)
+        val badges = components(banner).filterIsInstance<DiffStatBadge>()
+        assertEquals("+4", badges[0].addedLabelForTest().text)
+        assertEquals("-2", badges[0].removedLabelForTest().text)
+        assertEquals("+3", badges[1].addedLabelForTest().text)
+        assertEquals("-2", badges[1].removedLabelForTest().text)
+    }
+
+    fun `test rollback banner shows redo all only for multiple reverted messages`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.upsertMessage(msg("a2", "assistant"))
+
+        model.setRevert(SessionRevertDto("u1"))
+        banner.update()
+
+        assertTrue(components(banner).filterIsInstance<JButton>().first { it.text == KiloBundle.message("revert.banner.redo.all") }.isVisible)
+
+        model.setRevert(SessionRevertDto("u2"))
+        banner.update()
+
+        assertFalse(components(banner).filterIsInstance<JButton>().first { it.text == KiloBundle.message("revert.banner.redo.all") }.isVisible)
+    }
+
+    fun `test rollback banner buttons invoke actions`() {
+        var redo = 0
+        var all = 0
+        val banner = RevertBanner(model, { redo++ }, { all++ }, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setRevert(SessionRevertDto("u1"))
+        banner.update()
+
+        components(banner).filterIsInstance<JButton>().first { it.text == KiloBundle.message("revert.banner.redo") }.doClick()
+        components(banner).filterIsInstance<JButton>().first { it.text == KiloBundle.message("revert.banner.redo.all") }.doClick()
+
+        assertEquals(1, redo)
+        assertEquals(1, all)
+    }
+
+    fun `test rollback state disables banner actions and shows inline progress`() {
+        var cancelled = false
+        val banner = RevertBanner(model, {}, {}, { cancelled = true })
+        model.upsertMessage(msg("u1", "user"))
+        model.upsertMessage(msg("a1", "assistant"))
+        model.upsertMessage(msg("u2", "user"))
+        model.setRevert(SessionRevertDto("u1"))
+        banner.update()
+
+        banner.setReverting(SessionState.Reverting("Rolling back...", SessionState.Reverting.Kind.ROLLBACK, "u1"))
+
+        val buttons = components(banner).filterIsInstance<JButton>()
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo") }.all { !it.isEnabled })
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo.all") }.all { !it.isEnabled })
+        val progress = components(banner).filterIsInstance<RevertProgress>().single()
+        components(progress).filterIsInstance<ActionLink>().single().doClick()
+        assertTrue(cancelled)
+
+        banner.setReverting(SessionState.Idle)
+
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo") }.all { it.isEnabled })
+        assertTrue(buttons.filter { it.text == KiloBundle.message("revert.banner.redo.all") }.all { it.isEnabled })
+        assertTrue(components(banner).filterIsInstance<RevertProgress>().isEmpty())
+    }
+
+    fun `test rollback banner explains snapshotless history only revert`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = null))
+        banner.update()
+
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .first { it.text == KiloBundle.message("revert.banner.filesNotRestored") }
+
+        assertTrue(notice.isVisible)
+        assertTrue(components(banner).filterIsInstance<DiffStatBadge>().isEmpty())
+    }
+
+    fun `test rollback banner hides snapshotless notice when snapshot exists`() {
+        val banner = RevertBanner(model, {}, {}, {})
+        model.upsertMessage(msg("u1", "user"))
+        model.setRevert(SessionRevertDto("u1", snapshot = "snap1"))
+        banner.update()
+
+        val notice = components(banner).filterIsInstance<JBLabel>()
+            .first { it.text == KiloBundle.message("revert.banner.filesNotRestored") }
+
+        assertFalse(notice.isVisible)
+    }
+
     // ------ question tool suppression ------
 
     fun `test active linked question hides matching running question tool`() {
@@ -771,7 +1213,7 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             reject = { _ -> },
         )
         val p = PermissionView(
-            reply = { _, _ -> },
+            reply = { _, _, _ -> },
         )
         val l = LoginRequiredView(openProfile = {}, dismiss = {})
         return SessionMessageListPanel(model, parent, q, p, l, openFile)
@@ -886,6 +1328,18 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
         for (child in root.components) if (child is Container) layout(child)
     }
 
+    /** The plugin's `<registryKey>` extensions are not loaded in tests, so contribute the key here. */
+    private fun disableValidateRoots() {
+        val key = "kilo.session.validateRoots"
+        Registry.mutateContributedKeys {
+            it + (key to RegistryKeyDescriptor(key, "test", "true", false, false, null, null))
+        }
+        Disposer.register(testRootDisposable) {
+            Registry.mutateContributedKeys { it - key }
+        }
+        Registry.get(key).setValue(false, testRootDisposable)
+    }
+
     private fun promptBox(root: MessageView): Component {
         return components(root).first { it.parent != root && it is JPanel && it.componentCount == 1 && it.components.single() is TextView }
     }
@@ -907,6 +1361,21 @@ class SessionMessageListPanelTest : BasePlatformTestCase() {
             components(row).filterIsInstance<JBLabel>()
                 .mapNotNull { label -> label.text.takeIf { it.isNotBlank() } }
                 .joinToString(" ")
+        }
+    }
+
+    private class TrackingRepaintManager(private val watched: Set<JComponent>) : RepaintManager() {
+        val dirty = mutableListOf<JComponent>()
+        val invalid = mutableListOf<JComponent>()
+
+        override fun addDirtyRegion(c: JComponent, x: Int, y: Int, w: Int, h: Int) {
+            if (c in watched) dirty.add(c)
+            super.addDirtyRegion(c, x, y, w, h)
+        }
+
+        override fun addInvalidComponent(invalidComponent: JComponent) {
+            if (invalidComponent in watched) invalid.add(invalidComponent)
+            super.addInvalidComponent(invalidComponent)
         }
     }
 }

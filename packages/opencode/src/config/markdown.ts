@@ -1,7 +1,6 @@
-import { NamedError } from "@opencode-ai/core/util/error"
 import matter from "gray-matter"
-import { Schema } from "effect"
 import { Filesystem } from "@/util/filesystem"
+import { FrontmatterError } from "@opencode-ai/core/v1/config/error"
 import { KilocodeMarkdown } from "../kilocode/config/markdown" // kilocode_change
 
 export const FILE_REGEX = /(?<![\w`])@(\.?[^\s`,.]*(?:\.[^\s`,.]+)*)/g
@@ -68,18 +67,22 @@ export function fallbackSanitization(content: string): string {
   return content.replace(frontmatter, () => processed)
 }
 
-export async function parse(filePath: string) {
-  const template = await Filesystem.readText(filePath)
+// kilocode_change start - accept source trust and confine untrusted markdown source reads
+export async function parse(filePath: string, options: KilocodeMarkdown.Options) {
+  const template = options.trusted
+    ? await Filesystem.readText(filePath)
+    : await KilocodeMarkdown.read(filePath, options)
+  // kilocode_change end
 
   // kilocode_change start - substitute content and retry invalid frontmatter with permissive sanitization
   try {
     const md = matter(template)
-    md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
+    md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
     return md
   } catch {
     try {
       const md = matter(fallbackSanitization(template))
-      md.content = await KilocodeMarkdown.substitute(md.content, filePath) // kilocode_change
+      md.content = await KilocodeMarkdown.substitute(md.content, filePath, options) // kilocode_change
       return md
     } catch (err) {
       throw new FrontmatterError(
@@ -94,13 +97,6 @@ export async function parse(filePath: string) {
   // kilocode_change end
 }
 
-// kilocode_change start - export structured frontmatter parse errors
-export const FrontmatterError = NamedError.create("ConfigFrontmatterError", {
-  path: Schema.String,
-  message: Schema.String,
-})
-// kilocode_change end
-
 // kilocode_change start - export helpers as namespace object
 export const ConfigMarkdown = {
   FILE_REGEX,
@@ -109,6 +105,5 @@ export const ConfigMarkdown = {
   shell,
   fallbackSanitization,
   parse,
-  FrontmatterError,
 }
 // kilocode_change end

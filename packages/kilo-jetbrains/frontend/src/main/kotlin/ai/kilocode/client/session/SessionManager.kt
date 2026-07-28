@@ -22,6 +22,8 @@ interface SessionManager {
 
     fun activityChanged() {}
 
+    fun focusPrompt() {}
+
     fun openSession(session: SessionDto) {
         openSession(SessionRef.Local(session))
     }

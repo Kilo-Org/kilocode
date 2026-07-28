@@ -211,7 +211,7 @@ test.describe("Permission Dock Dropdown — external directory", () => {
     await page.waitForSelector("#storybook-root *", { state: "attached" })
     await openDropdown(page)
 
-    const text = "Read External Directory /Users/developer/projects/kilo-bench/dashboard/app/routes/*"
+    const text = "Access External Directory /Users/developer/projects/kilo-bench/dashboard/app/routes/*"
     const hint = page.locator('[data-slot="permission-hint"]')
     await expect(hint).toHaveText(text)
     await expect(hint).toHaveAttribute("title", text)

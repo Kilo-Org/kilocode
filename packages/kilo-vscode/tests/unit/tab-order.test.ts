@@ -6,6 +6,7 @@ import {
   replaceInTabOrder,
   insertInTabOrderAfter,
 } from "../../webview-ui/agent-manager/tab-order"
+import { moveTab } from "../../webview-ui/src/utils/tab-order"
 
 describe("reorderTabs", () => {
   const tabs = ["a", "b", "c", "d"]
@@ -79,6 +80,15 @@ describe("reorderTabs", () => {
     const moved = reorderTabs(tabs, "a", "c")!
     const restored = reorderTabs(moved, "a", "b")!
     expect(restored).toEqual(["a", "b", "c", "d"])
+  })
+})
+
+describe("moveTab", () => {
+  it("moves one position without wrapping", () => {
+    expect(moveTab(["a", "b", "c"], "b", -1)).toEqual(["b", "a", "c"])
+    expect(moveTab(["a", "b", "c"], "b", 1)).toEqual(["a", "c", "b"])
+    expect(moveTab(["a", "b", "c"], "a", -1)).toBeUndefined()
+    expect(moveTab(["a", "b", "c"], "c", 1)).toBeUndefined()
   })
 })
 

@@ -35,6 +35,7 @@ import { LanguageContext } from "../context/language"
 import { IndexingProvider } from "../context/indexing"
 import { KiloEmbeddingModelsProvider } from "../context/kilo-embedding-models"
 import { MemoryProvider } from "../context/memory"
+import { TranscriptSearchProvider } from "../context/transcript-search"
 import { dict as uiEn } from "@kilocode/kilo-ui/i18n/en"
 import { dict as appEn } from "../i18n/en"
 import { dict as amEn } from "../../agent-manager/i18n/en"
@@ -225,7 +226,6 @@ export function mockSessionValue(overrides?: {
     costBreakdown: () => [],
     contextUsage: () => undefined,
     modelUsage: () => undefined,
-    refreshModelUsage: noop,
     agents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     allAgents: () => [{ name: "code", description: "Code mode", mode: "primary" as const }],
     skills: () => [],
@@ -235,7 +235,6 @@ export function mockSessionValue(overrides?: {
     selectedAgent: () => "code",
     selectAgent: noop,
     getSessionAgent: () => "code",
-    getSessionModel: () => ({ providerID: "kilo", modelID: "anthropic/claude-sonnet-4-6" }),
     setSessionModel: noop,
     setSessionAgent: noop,
     setSessionVariant: noop,
@@ -453,11 +452,13 @@ export const StoryProviders: ParentComponent<StoryProvidersProps> = (props) => {
                                       <CodeComponentProvider component={Code}>
                                         <FileComponentProvider component={File}>
                                           <MarkedProvider>
-                                            {props.noPadding ? (
-                                              props.children
-                                            ) : (
-                                              <div style={{ padding: "12px" }}>{props.children}</div>
-                                            )}
+                                            <TranscriptSearchProvider>
+                                              {props.noPadding ? (
+                                                props.children
+                                              ) : (
+                                                <div style={{ padding: "12px" }}>{props.children}</div>
+                                              )}
+                                            </TranscriptSearchProvider>
                                           </MarkedProvider>
                                         </FileComponentProvider>
                                       </CodeComponentProvider>

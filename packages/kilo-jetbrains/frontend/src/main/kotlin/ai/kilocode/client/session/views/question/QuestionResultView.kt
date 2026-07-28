@@ -216,6 +216,7 @@ class QuestionResultView(tool: Tool, private val selection: SessionSelection? = 
 
             val qText = makeText(q, UiStyle.Colors.weak(), false)
             qText.alignmentX = Component.LEFT_ALIGNMENT
+            qText.border = JBUI.Borders.emptyBottom(UiStyle.Gap.xs())
             row.add(qText)
 
             val joined = result.answers.getOrNull(i)?.joinToString(", ").orEmpty()

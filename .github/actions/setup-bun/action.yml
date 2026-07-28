@@ -33,7 +33,10 @@ runs:
       shell: bash
       run: echo "dir=$(bun pm cache)" >> "$GITHUB_OUTPUT"
 
+    # Restoring and extracting the ~1 GB cache took 2m23s on Windows, while a # kilocode_change
+    # fresh install took 1m27s. Keep Windows off this cache until that reverses. # kilocode_change
     - name: Restore Bun dependencies
+      if: runner.os != 'Windows' # kilocode_change
       id: bun-cache
       uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
@@ -84,16 +87,24 @@ runs:
 
         # Workaround for patched peer variants
         # e.g. ./patches/ for standard-openapi
-        # https://github.com/oven-sh/bun/issues/28147
+        # https://github.com/oven-sh/bun/issues/28147 # kilocode_change
         if [ "$RUNNER_OS" = "Windows" ]; then
-          bun install --linker hoisted ${{ inputs.install-flags }}
+          # kilocode_change start
+          if ! bun install --frozen-lockfile --linker hoisted ${{ inputs.install-flags }}; then
+            echo "::warning::Bun install failed on Windows; retrying with conservative extraction"
+            sleep 5
+            BUN_FEATURE_FLAG_DISABLE_STREAMING_INSTALL=1 \
+              bun install --frozen-lockfile --linker hoisted --network-concurrency 16 ${{ inputs.install-flags }}
+          fi
+          # kilocode_change end
         else
-          bun install ${{ inputs.install-flags }}
+          bun install --frozen-lockfile ${{ inputs.install-flags }} # kilocode_change
         fi
       shell: bash
 
+    # Do not upload a Windows cache that Windows jobs intentionally never restore. # kilocode_change
     - name: Save Bun dependencies
-      if: steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+      if: runner.os != 'Windows' && steps.bun-cache.outputs.cache-hit != 'true' && github.event_name != 'pull_request' && github.event_name != 'pull_request_target' # kilocode_change
       uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: ${{ steps.cache.outputs.dir }}

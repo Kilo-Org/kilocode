@@ -18,6 +18,7 @@ import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeSessionRpcApi
 import ai.kilocode.client.testing.TestUiTimers
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
+import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.rpc.dto.ChatEventDto
 import ai.kilocode.rpc.dto.CloudSessionDto
 import ai.kilocode.rpc.dto.KiloAppStateDto
@@ -36,9 +37,6 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.util.registry.RegistryKeyDescriptor
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import javax.swing.JLabel
 import javax.swing.JComponent
@@ -46,7 +44,7 @@ import javax.swing.JPanel
 
 @Suppress("UnstableApiUsage")
 class SessionSidePanelManagerTest : BasePlatformTestCase() {
-    private lateinit var scope: CoroutineScope
+    private lateinit var coroutines: TestCoroutines
     private lateinit var rpc: FakeSessionRpcApi
     private lateinit var workspaces: KiloWorkspaceService
     private lateinit var workspace: Workspace
@@ -61,13 +59,13 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     override fun setUp() {
         super.setUp()
         timers = TestUiTimers()
-        scope = CoroutineScope(SupervisorJob())
+        coroutines = TestCoroutines()
         rpc = FakeSessionRpcApi()
-        sessions = KiloSessionService(project, scope, rpc)
-        app = KiloAppService(scope, FakeAppRpcApi().also {
+        sessions = KiloSessionService(project, coroutines.scope, rpc)
+        app = KiloAppService(coroutines.scope, FakeAppRpcApi().also {
             it.state.value = KiloAppStateDto(KiloAppStatusDto.READY)
         })
-        workspaces = KiloWorkspaceService(scope, FakeWorkspaceRpcApi().also {
+        workspaces = KiloWorkspaceService(coroutines.scope, FakeWorkspaceRpcApi().also {
             it.state.value = KiloWorkspaceStateDto(KiloWorkspaceStatusDto.READY)
         })
         workspace = workspaces.workspace("/test")
@@ -76,7 +74,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
     override fun tearDown() {
         try {
             managers.forEach { Disposer.dispose(it) }
-            scope.cancel()
+            coroutines.close(::pump)
         } finally {
             super.tearDown()
         }
@@ -287,7 +285,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         useLongInactiveDisposeTimeout()
         lateinit var history: HistoryPanel
         val manager = manager(history = { parent, _, _ ->
-            val controller = HistoryController(sessions, workspace, scope)
+            val controller = HistoryController(sessions, workspace, coroutines.scope, io = coroutines.dispatcher)
             controller.local.replace(listOf(LocalHistoryItem(session("ses_1", "/test", "Stored"))))
             HistoryPanel(parent, controller, manager = parent as SessionManager).also { history = it }
         })
@@ -319,7 +317,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         useLongInactiveDisposeTimeout()
         lateinit var history: HistoryPanel
         val manager = manager(history = { parent, _, _ ->
-            val controller = HistoryController(sessions, workspace, scope)
+            val controller = HistoryController(sessions, workspace, coroutines.scope, io = coroutines.dispatcher)
             controller.local.replace(listOf(LocalHistoryItem(session("ses_1", "/test", "Stored"))))
             HistoryPanel(parent, controller, manager = parent as SessionManager).also { history = it }
         })
@@ -449,6 +447,21 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         val active = active(manager) as SessionUi
 
         assertSame(active.defaultFocusedComponent, requests.single())
+    }
+
+    fun `test focus prompt requests active prompt even when modal content has focus`() {
+        val requests = mutableListOf<JComponent>()
+        val manager = manager(request = { requests.add(it) })
+
+        manager.newSession()
+        val active = active(manager) as SessionUi
+        val modal = JLabel("modal")
+        active.setModalContent(modal) { modal }
+        requests.clear()
+        manager.focusPrompt()
+
+        assertSame(active.promptFocusedComponent, requests.single())
+        assertNotSame(active.defaultFocusedComponent, requests.single())
     }
 
     fun `test opening cloud history item shows session ui before import`() {
@@ -675,7 +688,7 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
                     workspace,
                     sessions,
                     app,
-                    scope,
+                    coroutines.scope,
                     ref = ref,
                     manager = owner,
                     workspaces = workspaces,
@@ -750,12 +763,11 @@ class SessionSidePanelManagerTest : BasePlatformTestCase() {
         timers.advanceBy(10)
     }
 
-    private fun settle() = kotlinx.coroutines.runBlocking {
-        repeat(5) {
-            kotlinx.coroutines.delay(100)
-            com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
-                com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
-            }
+    private fun settle() = coroutines.drain(::pump)
+
+    private fun pump() {
+        com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {
+            com.intellij.util.ui.UIUtil.dispatchAllInvocationEvents()
         }
     }
 

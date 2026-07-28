@@ -87,6 +87,7 @@ export interface TabRenderDeps {
   sessionMiddleClick: (id: string, e: MouseEvent) => void
   sessionClose: (id: string) => void
   sessionFork: (id: string) => void
+  onTabKey: (id: string, event: KeyboardEvent) => void
   reviewLabel: string
   reviewTooltip: string
 }
@@ -114,6 +115,10 @@ export function renderTab(id: string, deps: TabRenderDeps): JSX.Element {
       onMiddleClick: deps.terminalMiddleClick,
       onClose: deps.closeTerminal,
       onCloseOthers: (target) => closeOthers(target, deps),
+      role: "tab",
+      selected: deps.visibleTabId() === id,
+      tabIndex: deps.visibleTabId() === id ? 0 : -1,
+      onKeyDown: (event) => deps.onTabKey(id, event),
     })
   }
   if (id === deps.REVIEW_TAB_ID) return renderReviewTab(deps)
@@ -140,6 +145,10 @@ function renderReviewTab(deps: TabRenderDeps): JSX.Element {
       keybind={keybind}
       closeKeybind={deps.kb().closeTab ?? ""}
       active={deps.reviewActive() && !deps.terms.activeId()}
+      role="tab"
+      selected={deps.visibleTabId() === deps.REVIEW_TAB_ID}
+      tabIndex={deps.visibleTabId() === deps.REVIEW_TAB_ID ? 0 : -1}
+      onKeyDown={(event) => deps.onTabKey(deps.REVIEW_TAB_ID, event)}
       onSelect={() => {
         deps.deactivateTerminal()
         deps.selectReviewTab()
@@ -173,6 +182,10 @@ function renderSessionTab(s: SessionInfo, deps: TabRenderDeps): JSX.Element {
       tab={s}
       active={active() && !deps.reviewActive()}
       busy={deps.isBusy(s.id)}
+      role="tab"
+      selected={deps.visibleTabId() === s.id}
+      tabIndex={deps.visibleTabId() === s.id ? 0 : -1}
+      onKeyDown={(event) => deps.onTabKey(s.id, event)}
       keybind={keybind()}
       closeKeybind={deps.kb().closeTab ?? ""}
       onSelect={() => {

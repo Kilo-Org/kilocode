@@ -174,16 +174,19 @@ export class SessionTerminalManager {
     return true
   }
 
-  /**
-   * Check if a session has an active terminal.
-   */
-  hasTerminal(sessionId: string): boolean {
-    const entry = this.terminals.get(sessionId)
-    return entry !== undefined && entry.terminal.exitStatus === undefined
+  activeSession(): string | undefined {
+    const active = this.host.activeTerminal()
+    if (!active) return undefined
+    for (const [id, entry] of this.terminals) {
+      if (entry.terminal === active && entry.terminal.exitStatus === undefined) return id
+    }
+    return undefined
   }
 
-  hasActiveTerminal(): boolean {
-    return this.host.activeTerminal() !== undefined
+  prepareContext(sessionId: string): boolean {
+    if (this.showExisting(sessionId)) return true
+    const active = this.activeSession()
+    return !active || active === sessionId
   }
 
   dispose(): void {

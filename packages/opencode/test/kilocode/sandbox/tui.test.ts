@@ -26,7 +26,7 @@ describe("sandbox TUI", () => {
     expect(content).toContain("await ensureSession(api)")
     expect(content).toContain("api.client.session.create")
     expect(content).toContain('api.route.navigate("session", { sessionID })')
-    expect(content).toContain("props.api.state.config.experimental?.sandbox")
+    expect(content).toContain("props.api.state.config.sandbox?.enabled")
     expect(content).toContain("void props.load(props.sessionID, true)")
     expect(content).toContain('api.event.on("sandbox.status.changed"')
   })

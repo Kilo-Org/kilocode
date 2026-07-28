@@ -18,6 +18,7 @@ import type {
   ChatToken,
   ContentBlock,
   ConversationActivityEvent,
+  ConversationLeftEvent,
   ConversationListItem,
   ConversationRenamedEvent,
   ConversationStatusEvent,
@@ -29,7 +30,7 @@ import type {
   TypingMember,
 } from "./types"
 import { KiloChatClient } from "./kilo-chat-client"
-import { EventServiceClient } from "./event-service-client"
+import { EventServiceClient } from "@/kilocode/event-service/client"
 import * as Log from "@opencode-ai/core/util/log"
 
 const log = Log.create({ service: "claw-chat" })
@@ -282,7 +283,7 @@ export async function connect(input: ConnectInput): Promise<ClawChatClient> {
     emit(conversationsListeners, conversations)
   })
 
-  events.on("conversation.left", (ctx, e) => {
+  events.on("conversation.left", (ctx, e: ConversationLeftEvent) => {
     if (ctx !== sandboxCtx) return
     conversations = conversations.filter((c) => c.conversationId !== e.conversationId)
     emit(conversationsListeners, conversations)

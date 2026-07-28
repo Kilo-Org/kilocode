@@ -1,6 +1,6 @@
 import { Effect } from "effect"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import * as Log from "@opencode-ai/core/util/log"
 import { KiloSnapshotMaterialize } from "./materialize"
 
@@ -24,7 +24,7 @@ export namespace KiloSnapshotSeed {
     readonly gitdir: string
     readonly limit: number
     readonly git: Git
-    readonly fs: AppFileSystem.Interface
+    readonly fs: FSUtil.Interface
   }
 
   export interface Source {

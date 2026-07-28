@@ -10,6 +10,7 @@ import { buildKiloHeaders, getDefaultHeaders } from "./headers.js"
 import { ANONYMOUS_API_KEY } from "./api/constants.js"
 import { resolveKiloOpenRouterBaseUrl } from "./api/url.js"
 import { transformRequestBody } from "./responses.js"
+import * as GatewayMetadata from "./gateway-metadata.js"
 
 export function buildRequestHeaders(defaultHeaders: Record<string, string>, requestHeaders?: HeadersInit): Headers {
   const headers = new Headers(defaultHeaders)
@@ -100,13 +101,13 @@ export function createKilo(options: KiloProviderOptions = {}): KiloProvider {
       return alibaba(modelId)
     },
     anthropic(modelId) {
-      return anthropic(modelId)
+      return GatewayMetadata.wrap(anthropic(modelId))
     },
     mistral(modelId) {
       return mistral(modelId)
     },
     openai(modelId) {
-      return openai(modelId)
+      return GatewayMetadata.wrap(openai(modelId))
     },
     openaiCompatible(modelId) {
       return openaiCompatible(modelId)

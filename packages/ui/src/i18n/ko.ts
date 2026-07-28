@@ -121,6 +121,7 @@ export const dict = {
 
   "ui.tool.read": "읽기",
   "ui.tool.loaded": "로드됨",
+  "ui.tool.swePruned": "SWE-Pruner · {{total}}줄 중 {{kept}}줄 유지", // kilocode_change
   "ui.tool.list": "목록",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -156,6 +157,7 @@ export const dict = {
   "ui.message.collapse": "메시지 접기",
   "ui.message.copy": "복사",
   "ui.message.copyMessage": "메시지 복사",
+  "ui.message.deleteQueued": "대기 중인 메시지 삭제", // kilocode_change
   "ui.message.forkMessage": "새 세션으로 분기",
   "ui.message.revertMessage": "이 시점으로 초기화",
   "ui.message.copyResponse": "응답 복사",
@@ -171,7 +173,9 @@ export const dict = {
   "ui.patch.action.patched": "패치됨",
 
   "ui.question.subtitle.answered": "{{count}}개 답변됨",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(답변 없음)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(답변되지 않음)",
   "ui.question.multiHint": "해당하는 항목 모두 선택",
   "ui.question.singleHint": "하나의 답변을 선택",

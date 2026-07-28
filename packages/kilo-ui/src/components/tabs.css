@@ -45,11 +45,11 @@
     cursor: pointer;
   }
 
-  &[data-variant="settings"] {
+  &[data-orientation="vertical"][data-variant="settings"] {
     container-type: inline-size;
 
     [data-slot="tabs-list"] {
-      width: 180px;
+      width: auto;
       min-width: 180px;
     }
 

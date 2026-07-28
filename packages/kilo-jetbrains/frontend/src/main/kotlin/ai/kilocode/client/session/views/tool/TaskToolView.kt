@@ -16,7 +16,6 @@ import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBDimension
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Dimension
@@ -307,7 +306,8 @@ private class TaskRows : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()), Scrollable
         direction: Int,
     ) = visibleRect.height
 
-    override fun getMaximumSize() = JBDimension(Int.MAX_VALUE, super.getMaximumSize().height)
+    // super height is already scaled px; a JBDimension would scale it again under IDE zoom.
+    override fun getMaximumSize() = Dimension(Int.MAX_VALUE, super.getMaximumSize().height)
 }
 
 private fun rowTitleColor(tool: Tool) = if (tool.state == ToolExecState.ERROR) {

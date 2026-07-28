@@ -9,7 +9,7 @@
 // outside the scanned directories. Runtime enforcement remains in @kilocode/sandbox.
 
 import path from "node:path"
-import { opaque } from "../packages/opencode/src/kilocode/sandbox/network-tools"
+import { host, opaque } from "../packages/opencode/src/kilocode/sandbox/network-tools"
 
 const root = path.resolve(import.meta.dir, "..")
 const source = path.join(root, "packages", "opencode", "src")
@@ -84,10 +84,10 @@ const clients = [...allow.entries()].flatMap(([key, entry]) => {
 })
 const tools = (
   await Promise.all(
-    opaque.map(async (item) => {
+    [...opaque, ...host].map(async (item) => {
       const text = await Bun.file(path.join(source, item.file)).text()
       const id = item.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-      if (new RegExp(`Tool\\.define\\(\\s*["']${id}["']`).test(text)) return []
+      if (new RegExp(`Tool\\.define(?:<[\\s\\S]{0,500}?>)?\\(\\s*["']${id}["']`).test(text)) return []
       return [`  packages/opencode/src/${item.file}: opaque classification must match Tool.define("${item.id}")`]
     }),
   )
@@ -99,9 +99,12 @@ const registry = await Bun.file(path.join(source, "tool", "registry.ts")).text()
 const session = await Bun.file(path.join(source, "session", "tools.ts")).text()
 const mcp = await Bun.file(path.join(source, "mcp", "index.ts")).text()
 const structure = [
-  ...(!network.includes('import { opaque } from "./network-tools"') ||
+  ...(!network.includes('import { host, opaque } from "./network-tools"') ||
   !network.includes("opaque.map((item) => item.id)")
     ? ["  kilocode/sandbox/network.ts must derive runtime opaque tool IDs from network-tools.ts"]
+    : []),
+  ...(!network.includes("host.map((item) => item.id)")
+    ? ["  kilocode/sandbox/network.ts must derive host-executed tool IDs from network-tools.ts"]
     : []),
   ...(!registry.includes("Layer.provide(ToolNetwork.httpLayer)")
     ? ["  tool/registry.ts must provide the policy-aware ToolNetwork HTTP layer"]

@@ -40,6 +40,7 @@ import javax.swing.JPanel
  */
 class BaseQuestionView(
     private val selection: SessionSelection? = null,
+    private val focus: (() -> Unit)? = null,
 ) : RoundedContentPanel(
     UiStyle.Gap.pad(),
     UiStyle.Gap.pad(),
@@ -76,7 +77,7 @@ class BaseQuestionView(
 
     private val text = Stack.vertical()
 
-    private val header = object : JPanel(BorderLayout(UiStyle.Gap.sm(), 0)) {
+    private val header = object : JPanel(BorderLayout(UiStyle.Gap.md(), 0)) {
         override fun getMaximumSize(): Dimension {
             val size = preferredSize
             return Dimension(Int.MAX_VALUE, size.height)
@@ -398,7 +399,10 @@ class BaseQuestionView(
                 background = SessionUiStyle.View.Surface.bgColor()
             }
         }
-        btn.addActionListener { actionHandlers[id]?.invoke() }
+        btn.addActionListener {
+            actionHandlers[id]?.invoke()
+            focus?.invoke()
+        }
         return btn
     }
 }

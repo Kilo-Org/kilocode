@@ -1,4 +1,3 @@
-import type { Ignore } from "ignore"
 import { stat, readFile } from "fs/promises"
 import path from "path"
 import { glob } from "glob"
@@ -28,6 +27,8 @@ import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
 import type { IndexingTelemetryMeta, IndexingTelemetryMode, IndexingTelemetryReporter } from "../interfaces/telemetry"
+import type { IgnoreMatcher } from "../shared/load-ignore"
+import { isBinary } from "../shared/is-binary"
 
 const log = Log.create({ service: "indexing-scanner" })
 
@@ -35,20 +36,23 @@ export class DirectoryScanner implements IDirectoryScanner {
   private _cancelled = false
   private batchSegmentThreshold: number
   private maxBatchRetries: number
+  private readonly extensions: ReadonlySet<string>
 
   constructor(
     private readonly embedder: IEmbedder,
     private readonly vectorStore: IVectorStore,
     private readonly codeParser: ICodeParser,
     private readonly cacheManager: CacheManager,
-    private readonly ignoreInstance: Ignore,
+    private readonly ignoreInstance: IgnoreMatcher,
     batchSegmentThreshold?: number,
     maxBatchRetries?: number,
     private readonly onTelemetry?: IndexingTelemetryReporter,
     private readonly telemetryMeta?: IndexingTelemetryMeta,
+    extensions: readonly string[] = scannerExtensions,
   ) {
     this.batchSegmentThreshold = batchSegmentThreshold ?? BATCH_SEGMENT_THRESHOLD
     this.maxBatchRetries = maxBatchRetries ?? MAX_BATCH_RETRIES
+    this.extensions = new Set(extensions)
   }
 
   private emitFileCount(mode: IndexingTelemetryMode, discovered: number, candidate: number): void {
@@ -166,7 +170,7 @@ export class DirectoryScanner implements IDirectoryScanner {
         return false
       }
 
-      return scannerExtensions.includes(ext) && !this.ignoreInstance.ignores(relativeFilePath)
+      return this.extensions.has(ext) && !this.ignoreInstance.ignores(relativeFilePath)
     })
     log.info("discovered candidate files for indexing", {
       workspacePath: scanWorkspace,
@@ -265,7 +269,12 @@ export class DirectoryScanner implements IDirectoryScanner {
           }
 
           // Read file content using fs/promises
-          const content = await readFile(filePath, "utf-8")
+          const bytes = await readFile(filePath)
+          if (isBinary(bytes)) {
+            skippedCount++
+            return
+          }
+          const content = bytes.toString("utf-8")
 
           if (this._cancelled) {
             return

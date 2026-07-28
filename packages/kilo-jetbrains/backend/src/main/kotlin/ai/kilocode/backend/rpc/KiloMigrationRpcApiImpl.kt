@@ -9,6 +9,7 @@ import ai.kilocode.backend.migration.LegacyMigrationSink
 import ai.kilocode.backend.migration.LegacyMigrationStatus
 import ai.kilocode.backend.migration.MigrationItemCategory
 import ai.kilocode.backend.migration.MigrationItemStatus
+import ai.kilocode.backend.migration.materializeLegacyMigrationSource
 import ai.kilocode.rpc.KiloMigrationRpcApi
 import ai.kilocode.rpc.dto.LegacyCleanupReportDto
 import ai.kilocode.rpc.dto.LegacyCleanupTargetsDto
@@ -41,16 +42,23 @@ class KiloMigrationRpcApiImpl : KiloMigrationRpcApi {
     }
 
     override suspend fun status(): LegacyMigrationStatusDto? {
-        val store = storeService.store()
-        val status = withContext(Dispatchers.IO) { store.status() } ?: return null
+        val status = withContext(Dispatchers.IO) { storeService.status() } ?: return null
         LOG.info("Migration RPC status: status=$status")
         return MigrationRpcMapper.toDto(status)
+    }
+
+    override suspend fun resetStatus(): Boolean {
+        val ok = withContext(Dispatchers.IO) { storeService.resetStatus() }
+        if (ok) app.resetMigrationOfferForRerun()
+        LOG.info("Migration RPC resetStatus: ok=$ok")
+        return ok
     }
 
     override suspend fun detect(): LegacyMigrationDetectionDto {
         LOG.info("Migration RPC detect: started")
         val mgr = manager()
-        val store = storeService.store()
+        val source = storeService.resolveSource(includeFile = app.forceMigrationRequested())
+        val store = source.store
         val detection = withContext(Dispatchers.IO) { mgr.detect(store) }
         LOG.info("Migration RPC detect: completed hasData=${detection.hasData} providers=${detection.providers.size} mcp=${detection.mcpServers.size} modes=${detection.customModes.size} sessions=${detection.sessions.size}")
         return MigrationRpcMapper.toDto(detection)
@@ -60,9 +68,11 @@ class KiloMigrationRpcApiImpl : KiloMigrationRpcApi {
         LOG.info("Migration RPC migrate: starting ${selectionSummary(selections)}")
         val mgr = manager()
         val domainSelections = MigrationRpcMapper.fromDto(selections)
-        val store = storeService.store()
+        val source = withContext(Dispatchers.IO) { storeService.resolveSource(includeFile = app.forceMigrationRequested()) }
         return channelFlow {
             withContext(Dispatchers.IO) {
+                val ids = domainSelections.sessions.map { it.id }.toSet()
+                val store = materializeLegacyMigrationSource(source, LOG, ids)
                 val sink = object : LegacyMigrationSink {
                     override fun item(progress: ai.kilocode.backend.migration.LegacyMigrationItemProgress) {
                         LOG.info("Migration RPC item: item=${progress.item} status=${progress.status} message=${progress.message}")
@@ -95,18 +105,24 @@ class KiloMigrationRpcApiImpl : KiloMigrationRpcApi {
 
     override suspend fun skip() {
         LOG.info("Migration RPC skip: marking skipped")
-        val store = storeService.store()
-        withContext(Dispatchers.IO) { store.mark(LegacyMigrationStatus.Skipped) }
+        withContext(Dispatchers.IO) {
+            storeService.markStatus(LegacyMigrationStatus.Skipped)
+        }
         app.resumeAfterMigration()
         LOG.info("Migration RPC skip: resumed app load")
     }
 
+    override suspend fun resume() {
+        LOG.info("Migration RPC resume: resuming app load without marking migration completed")
+        app.resumeAfterMigration()
+        LOG.info("Migration RPC resume: resumed app load")
+    }
+
     override suspend fun finalize(status: LegacyMigrationStatusDto) {
         LOG.info("Migration RPC finalize: status=$status")
-        val store = storeService.store()
         val domain = MigrationRpcMapper.fromDto(status)
         if (domain != LegacyMigrationStatus.Skipped) {
-            withContext(Dispatchers.IO) { store.mark(domain) }
+            withContext(Dispatchers.IO) { storeService.markStatus(domain) }
         }
         app.resumeAfterMigration()
         LOG.info("Migration RPC finalize: resumed app load")

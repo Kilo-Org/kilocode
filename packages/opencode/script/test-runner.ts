@@ -8,6 +8,9 @@ import os from "os"
 import path from "path"
 import fs from "fs/promises"
 import { TestProfile } from "./kilocode/test-profile"
+import { TestShard } from "./kilocode/test-shard"
+import { TestCli } from "./kilocode/test-cli"
+import { remove } from "../test/kilocode/cleanup"
 
 const root = path.resolve(import.meta.dir, "..")
 const argv = process.argv.slice(2)
@@ -31,6 +34,7 @@ if (argv.includes("--help") || argv.includes("-h")) {
       "  --file-timeout <ms>  Per-file process timeout (default: 300000)",
       "  --retries <N>        Extra attempts for failing files (default: 1)",
       "  --profile <name>     Run a curated test profile (env: KILO_TEST_PROFILE)",
+      "  --shard <N/M>        Run one balanced file shard (env: KILO_TEST_SHARD)",
       "  --bail               Stop on first failure",
       "  --dots               Show compact dot progress",
       "  --verbose            Show full output for every file",
@@ -80,8 +84,20 @@ if (flag && env && flag !== env) {
   process.exit(2)
 }
 const profile = flag ?? env
+const shardFlag = text("shard")
+const shardEnv = process.env.KILO_TEST_SHARD?.trim() || undefined
+if (shardFlag && shardEnv && shardFlag !== shardEnv) {
+  console.error(`Conflicting test shards: --shard=${shardFlag}, KILO_TEST_SHARD=${shardEnv}`)
+  process.exit(2)
+}
+const parsed = TestShard.parse(shardFlag ?? shardEnv)
+if (!parsed.ok) {
+  console.error(parsed.error)
+  process.exit(2)
+}
+const shard = parsed.value
 
-const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile"])
+const valued = new Set(["--concurrency", "--timeout", "--file-timeout", "--retries", "--profile", "--shard"])
 const patterns = argv.filter((arg, i) => {
   if (arg.startsWith("-")) return false
   if (i > 0 && valued.has(argv[i - 1])) return false
@@ -135,7 +151,13 @@ const matched =
         patterns.some((pattern) => file.includes(pattern) || path.join("test", file).includes(pattern)),
       )
     : selected
-const files = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
+const candidates = patterns.length > 0 && !profile ? matched : matched.filter((file) => !skipped.has(file)) // kilocode_change
+if (shard && shard.total > candidates.length) {
+  console.error(`Test shard count ${shard.total} exceeds selected file count ${candidates.length}`)
+  process.exit(2)
+}
+const weight = (file: string) => Bun.file(path.join(root, "test", file)).size
+const files = shard ? TestShard.split(candidates, weight, shard.total)[shard.index - 1] : candidates
 
 if (files.length === 0) {
   console.log("No test files found")
@@ -157,16 +179,41 @@ type Result = {
   attempts: number
 }
 
+type Proc = ReturnType<typeof Bun.spawn>
+
 // ---------------------------------------------------------------------------
 // Setup
 // ---------------------------------------------------------------------------
 
 const xmldir = ci ? path.join(os.tmpdir(), `opencode-junit-${process.pid}`) : ""
 if (ci) await fs.mkdir(xmldir, { recursive: true })
+const supplied = process.env[TestCli.ENV]
+const binprefix = path.join(root, ".artifacts", "test-cli-")
+const built = supplied
+  ? { binary: supplied, dir: undefined }
+  : await (async () => {
+      await fs.mkdir(path.dirname(binprefix), { recursive: true })
+      const dir = await fs.mkdtemp(binprefix)
+      return { binary: await TestCli.build(root, dir), dir }
+    })()
+
+async function cleanBinary() {
+  if (!built.dir) return
+  const expected = path.dirname(binprefix)
+  const valid =
+    path.dirname(built.dir) === expected && path.basename(built.dir).startsWith(path.basename(binprefix))
+  if (!valid) throw new Error(`Refusing to remove unexpected test CLI directory: ${built.dir}`)
+  // The generated directory contains the bundle, emitted assets, and copied migrations.
+  await fs.rm(built.dir, { recursive: true, force: true })
+}
 
 const counter = { done: 0 }
 const pad = String(files.length).length
 const progress = { width: 80 }
+const active = new Map<number, ReturnType<typeof Bun.spawn>>()
+const pending = new Map<number, Promise<void>>()
+const stopping = { promise: undefined as Promise<void> | undefined }
+const stopped = { value: false }
 const marks = {
   pass: ".",
   retry: "R",
@@ -174,6 +221,74 @@ const marks = {
   timeout: "T",
 } as const
 const legend = `Legend: ${marks.pass}=pass ${marks.retry}=pass-after-retry ${marks.fail}=fail ${marks.timeout}=timeout`
+
+function drain(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  const promise = (async () => {
+    let text = ""
+    while (true) {
+      const chunk = await reader.read()
+      if (chunk.done) return text + decoder.decode()
+      text += decoder.decode(chunk.value, { stream: true })
+    }
+  })()
+  return {
+    promise,
+    close: () => reader.cancel().catch(() => undefined),
+  }
+}
+
+async function signal(proc: Proc, sig: "SIGTERM" | "SIGKILL") {
+  if (process.platform === "win32") {
+    const args = ["/pid", String(proc.pid), "/T"]
+    if (sig === "SIGKILL") args.push("/F")
+    const kill = Bun.spawn(["taskkill", ...args], {
+      stdout: "ignore",
+      stderr: "ignore",
+      windowsHide: true,
+    })
+    await kill.exited
+    return
+  }
+
+  const tree = Bun.spawn(["ps", "-axo", "pid=,ppid="], {
+    stdout: "pipe",
+    stderr: "ignore",
+  })
+  const [code, text] = await Promise.all([tree.exited, new Response(tree.stdout).text()])
+  const rows = code === 0 ? text.trim().split("\n") : []
+  const children = new Map<number, number[]>()
+  for (const row of rows) {
+    const [pid, parent] = row.trim().split(/\s+/).map(Number)
+    if (!Number.isSafeInteger(pid) || !Number.isSafeInteger(parent)) continue
+    const list = children.get(parent) ?? []
+    list.push(pid)
+    children.set(parent, list)
+  }
+  const collect = (pid: number): number[] => (children.get(pid) ?? []).flatMap((child) => [...collect(child), child])
+  for (const pid of [...collect(proc.pid), proc.pid]) {
+    for (const target of [-pid, pid]) {
+      try {
+        process.kill(target, sig)
+      } catch (error) {
+        if (typeof error === "object" && error !== null && "code" in error && error.code === "ESRCH") continue
+        // A kill failure (e.g. EPERM in a sandboxed runner) must not take down the whole run.
+        console.error(`warn: failed to signal ${target} with ${sig}:`, error)
+      }
+    }
+  }
+}
+
+async function terminate(proc: Proc) {
+  if (proc.exitCode !== null) return
+  await signal(proc, "SIGTERM")
+  const exited = Symbol("exited")
+  const result = await Promise.race([proc.exited.then(() => exited), Bun.sleep(2_000)])
+  if (result === exited) return
+  await signal(proc, "SIGKILL")
+  await Promise.race([proc.exited, Bun.sleep(2_000)])
+}
 
 // ---------------------------------------------------------------------------
 // Run a single test file
@@ -193,34 +308,79 @@ async function run(file: string): Promise<Result> {
 
   const proc = Bun.spawn(cmd, {
     cwd: root,
+    env: { ...process.env, [TestCli.ENV]: built.binary },
     stdout: "pipe",
     stderr: "pipe",
+    windowsHide: true,
+    detached: process.platform !== "win32",
   })
+  active.set(proc.pid, proc)
 
-  const timer = setTimeout(() => {
-    killed.value = true
-    proc.kill()
-  }, deadline)
-
-  const [stdout, stderr, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ])
-
-  clearTimeout(timer)
+  const stdout = drain(proc.stdout)
+  const stderr = drain(proc.stderr)
+  const code = await Promise.race([
+    proc.exited.then((value) => ({ timedout: false, value })),
+    Bun.sleep(deadline).then(() => ({ timedout: true, value: -1 })),
+  ]).then(async (result) => {
+    if (result.timedout) {
+      killed.value = true
+      await terminate(proc)
+    }
+    await finish(proc)
+    return result.timedout ? (proc.exitCode ?? result.value) : result.value
+  })
+  const output = await Promise.race([
+    Promise.all([stdout.promise, stderr.promise]).then((value) => ({ closed: true, value })),
+    Bun.sleep(2_000).then(() => ({ closed: false, value: ["", ""] as [string, string] })),
+  ]).then(async (result) => {
+    if (result.closed) return result.value
+    await signal(proc, "SIGKILL")
+    await Promise.all([stdout.close(), stderr.close()])
+    return Promise.all([stdout.promise, stderr.promise])
+  })
 
   return {
     file,
     passed: code === 0,
     code,
-    stdout,
-    stderr,
+    stdout: output[0],
+    stderr: output[1],
     duration: performance.now() - start,
     timedout: killed.value,
     attempts: 1,
   }
 }
+
+function finish(proc: ReturnType<typeof Bun.spawn>) {
+  const found = pending.get(proc.pid)
+  if (found) return found
+
+  const promise = (async () => {
+    await Promise.race([proc.exited, Bun.sleep(2_000)])
+    await cleanup(proc.pid)
+  })().finally(() => {
+    active.delete(proc.pid)
+    pending.delete(proc.pid)
+  })
+  pending.set(proc.pid, promise)
+  return promise
+}
+
+function shutdown(code: number) {
+  if (stopping.promise) return stopping.promise
+  stopping.promise = (async () => {
+    stopped.value = true
+    const children = [...active.values()]
+    await Promise.all(children.map(terminate))
+    await Promise.all(children.map(finish))
+    await cleanBinary()
+    process.exit(code)
+  })()
+  return stopping.promise
+}
+
+process.once("SIGINT", () => void shutdown(130))
+process.once("SIGTERM", () => void shutdown(143))
 
 // ---------------------------------------------------------------------------
 // Report a single result
@@ -274,13 +434,13 @@ function report(result: Result) {
 // ---------------------------------------------------------------------------
 
 console.log(`\nRunning ${bold(String(files.length))} test files with concurrency ${bold(String(concurrency))}`)
+if (shard) console.log(`Using balanced test shard ${shard.index}/${shard.total}`)
 if (dots) console.log(dim(legend))
 console.log()
 
 const start = performance.now()
 const results: Result[] = []
-const queue = [...files]
-const stopped = { value: false }
+const queue = TestShard.order(files, weight)
 
 const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
   while (queue.length > 0 && !stopped.value) {
@@ -391,6 +551,8 @@ if (ci) {
   })
 }
 
+await cleanBinary()
+
 process.exit(failures.length > 0 ? 1 : 0)
 
 // ---------------------------------------------------------------------------
@@ -457,6 +619,13 @@ async function merge() {
   ].join("\n")
 
   await Bun.write(path.join(dir, "junit.xml"), body)
+}
+
+async function cleanup(pid: number) {
+  const dir = path.join(os.tmpdir(), `opencode-test-data-${pid}`)
+  await remove(dir).catch((err) => {
+    console.error(`cleanup failed for ${dir}:`, err)
+  })
 }
 
 // Grab everything between the outer <testsuites ...> and </testsuites> of a

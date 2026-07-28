@@ -32,6 +32,8 @@ const instances = new Map<string, Instance>()
 
 const maxRespawns = 3
 
+export const enabled = false
+
 export const init = (opts: {
   agentVersion: string
   dbPath: string

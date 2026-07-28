@@ -7,9 +7,11 @@ import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PrimarySessionPartView
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.TodoDto
 import ai.kilocode.rpc.dto.TodoViewDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Color
 import javax.swing.JPanel
@@ -97,6 +99,23 @@ class TodoWriteViewTest : BasePlatformTestCase() {
         assertEquals(UiStyle.Gap.pad(), ins.left)
         assertEquals(UiStyle.Gap.lg(), ins.bottom)
         assertEquals(UiStyle.Gap.pad(), ins.right)
+    }
+
+    fun `test todo rows use session view gap`() {
+        val view = TodoWriteView(tool("todowrite", ToolExecState.COMPLETED).also {
+            it.todos = listOf(
+                TodoDto("First", "pending", "medium"),
+                TodoDto("Second", "pending", "medium"),
+            )
+        })
+        val body = view.components.filterIsInstance<TodoListPanel>().single()
+
+        body.setSize(300, body.preferredSize.height)
+        body.doLayout()
+
+        val rows = body.components.filterIsInstance<Stack>().filter { it.isVisible }
+        val gap = rows[1].y - (rows[0].y + rows[0].height)
+        assertEquals(JBUI.scale(SessionUiStyle.View.Layout.GAP), gap)
     }
 
     fun `test compact view renders hidden labels and visible rows`() {

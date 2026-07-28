@@ -47,6 +47,7 @@ function matches(request: Request, result: Result) {
 export interface Interface {
   readonly request: (input: Input) => Effect.Effect<Result, HostError>
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
+  readonly cancelSession: (sessionID: Request["sessionID"]) => Effect.Effect<void>
   readonly reply: (input: {
     requestID: RequestID
     result: Result
@@ -121,6 +122,14 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         return Array.from((yield* InstanceState.get(state)).pending.values(), (entry) => entry.info)
       })
 
+      const cancelSession: Interface["cancelSession"] = Effect.fn("Notebook.cancelSession")(function* (sessionID) {
+        const pending = (yield* InstanceState.get(state)).pending
+        const ids = Array.from(pending.values())
+          .filter((entry) => entry.info.sessionID === sessionID)
+          .map((entry) => entry.info.id)
+        yield* Effect.forEach(ids, (id) => cancel(id, "cancelled"), { discard: true })
+      })
+
       const reply: Interface["reply"] = Effect.fn("Notebook.reply")(function* (input) {
         const pending = (yield* InstanceState.get(state)).pending
         const entry = pending.get(input.requestID)
@@ -153,7 +162,7 @@ export function layer(timeout: Duration.Input = "10 minutes") {
         )
       })
 
-      return Service.of({ request, list, reply, reject })
+      return Service.of({ request, list, cancelSession, reply, reject })
     }),
   )
 }

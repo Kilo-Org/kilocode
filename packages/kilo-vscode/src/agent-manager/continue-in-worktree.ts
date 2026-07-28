@@ -9,7 +9,7 @@ import { recordForkHandoff } from "./fork-handoff"
 export interface ContinueContext {
   root: string
   getClient: () => KiloClient
-  createWorktreeOnDisk: (opts: { baseBranch: string }) => Promise<{
+  createWorktreeOnDisk: (opts: { baseBranch: string; baseRef: string }) => Promise<{
     worktree: { id: string }
     result: CreateWorktreeResult
   } | null>
@@ -53,8 +53,9 @@ export async function captureState(ctx: ContinueContext): Promise<StepResult<Git
 export async function prepareWorktree(
   ctx: ContinueContext,
   branch: string,
+  head: string,
 ): Promise<StepResult<{ worktreeId: string; result: CreateWorktreeResult }>> {
-  const created = await ctx.createWorktreeOnDisk({ baseBranch: branch })
+  const created = await ctx.createWorktreeOnDisk({ baseBranch: branch, baseRef: head })
   if (!created) return { ok: false, error: "Failed to create worktree" }
   await ctx.runSetupScript(created.result.path, created.result.branch, created.worktree.id)
   return { ok: true, value: { worktreeId: created.worktree.id, result: created.result } }
@@ -150,7 +151,7 @@ export async function continueInWorktree(
   if (!captured.ok) return progress("error", undefined, captured.error)
 
   progress("creating", "Creating worktree...")
-  const prepared = await prepareWorktree(ctx, captured.value.branch)
+  const prepared = await prepareWorktree(ctx, captured.value.branch, captured.value.head)
   if (!prepared.ok) return progress("error", undefined, prepared.error)
 
   progress("transferring", "Transferring changes...")

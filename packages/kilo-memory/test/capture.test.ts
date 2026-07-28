@@ -5,7 +5,8 @@ import {
   duplicateOps,
   fallbackDigest,
   guardReason,
-  hasDurableDiff,
+  hasSubstantialDiff,
+  hasUserEdit,
   mergeOps,
   notice,
   parseJson,
@@ -303,7 +304,8 @@ describe("memory capture parsing", () => {
     const base = {
       summary: "User: continue implementing digest robustness Result: updated capture and storage behavior",
       echo: false,
-      durable: false,
+      substantial: false,
+      edited: false,
       priorTime: 0,
       now: 1_000,
       minIntervalMs: 500,
@@ -332,13 +334,13 @@ describe("memory capture parsing", () => {
         expected: { session: false, digestDue: false, typedCall: true, typedWork: true, skipReason: undefined },
       },
       {
-        name: "expected work: recall-assisted durable answer is modeled as non-echo by caller",
-        input: { ...base, durable: true },
+        name: "expected work: recall-assisted substantial answer is modeled as non-echo by caller",
+        input: { ...base, substantial: true },
         expected: { session: true, digestDue: true, typedCall: true, skipReason: undefined },
       },
       {
         name: "expected skip: interrupted turn still schedules a non-LLM fallback digest",
-        input: { ...base, reason: "interrupted" as const, durable: true },
+        input: { ...base, reason: "interrupted" as const, substantial: true },
         expected: {
           completed: false,
           session: false,
@@ -375,6 +377,16 @@ describe("memory capture parsing", () => {
         input: { ...base, summary: "User: test Result: ok", lastTypedConsolidationAt: 900 },
         expected: { digestDue: false, typedCall: false, fallbackDigest: false, skipReason: "trivial" },
       },
+      {
+        name: "expected skip: short edited turn is interval-gated instead of trivial",
+        input: { ...base, summary: "User: test Result: ok", edited: true, priorTime: 900, lastTypedConsolidationAt: 900 },
+        expected: { digestDue: false, typedCall: false, fallbackDigest: false, skipReason: "interval" },
+      },
+      {
+        name: "expected skip: short unedited turn is trivial",
+        input: { ...base, summary: "User: test Result: ok", edited: false, lastTypedConsolidationAt: 900 },
+        expected: { digestDue: false, typedCall: false, fallbackDigest: false, skipReason: "trivial" },
+      },
     ]
 
     for (const item of cases) {
@@ -388,22 +400,26 @@ describe("memory capture parsing", () => {
       { file: "README.md", status: "modified", additions: 1, deletions: 0 },
     ]
 
-    expect(hasDurableDiff(diffs)).toBe(true)
-    expect(hasDurableDiff([{ file: "docs/setup.md", additions: 1, deletions: 0 }])).toBe(true)
-    expect(hasDurableDiff([{ file: ".kilo/rules.md", additions: 1, deletions: 0 }])).toBe(true)
-    expect(hasDurableDiff([{ file: "src/plain.ts", additions: 1, deletions: 0 }])).toBe(false)
-    // P1.5: a substantial edit is durable regardless of language — no JS/TS extension allowlist.
-    expect(hasDurableDiff([{ file: "src/service.py", additions: 20, deletions: 0 }])).toBe(true)
-    // Generated output never counts, even with heavy churn or a durable-looking basename...
-    expect(hasDurableDiff([{ file: "dist/service.py", additions: 200, deletions: 0 }])).toBe(false)
-    expect(hasDurableDiff([{ file: "src/generated/client.ts", additions: 200, deletions: 0 }])).toBe(false)
-    expect(hasDurableDiff([{ file: "sdk/src/gen/types.gen.ts", additions: 200, deletions: 0 }])).toBe(false)
-    expect(hasDurableDiff([{ file: "dist/package.json", additions: 1, deletions: 0 }])).toBe(false)
-    expect(hasDurableDiff([{ file: "vendor/docs/readme.md", additions: 30, deletions: 0 }])).toBe(false)
-    // ...while the durable allowlist still wins over churn size elsewhere (lockfiles are a real dep-change signal).
-    expect(hasDurableDiff([{ file: "packages/app/package.json", additions: 1, deletions: 0 }])).toBe(true)
-    expect(hasDurableDiff([{ file: "internal/server/main.go", additions: 12, deletions: 10 }])).toBe(true)
-    expect(hasDurableDiff([{ file: "src/lib.rs", additions: 5, deletions: 5 }])).toBe(false)
+    // Identical churn yields the identical verdict across every kind of path, so no ecosystem
+    // (manifest, doc, config, or source language) is treated specially.
+    for (const file of ["src/app.ts", "src/app.py", "src/app.go", "src/app.rb", "package.json", "docs/x.md", "config.yaml"]) {
+      expect(hasSubstantialDiff([{ file, additions: 1, deletions: 0 }]), `${file} small`).toBe(false)
+      expect(hasSubstantialDiff([{ file, additions: 20, deletions: 0 }]), `${file} large`).toBe(true)
+    }
+    // A split edit still counts by total churn.
+    expect(hasSubstantialDiff([{ file: "internal/server/main", additions: 12, deletions: 10 }])).toBe(true)
+    // Build output never counts, even with heavy churn.
+    expect(hasSubstantialDiff([{ file: "dist/bundle.js", additions: 200, deletions: 0 }])).toBe(false)
+    expect(hasSubstantialDiff([{ file: "src/generated/client.ts", additions: 200, deletions: 0 }])).toBe(false)
+    expect(hasSubstantialDiff([{ file: "sdk/src/gen/types.gen.ts", additions: 200, deletions: 0 }])).toBe(false)
+    // Binary edits report 0/0 churn, so they are never substantial (but still count as work below).
+    expect(hasSubstantialDiff([{ file: "assets/logo.png", additions: 0, deletions: 0 }])).toBe(false)
+    // hasUserEdit: any non-generated file changed counts as work, in any language; presence, not churn.
+    expect(hasUserEdit([])).toBe(false)
+    expect(hasUserEdit([{ additions: 1, deletions: 0 }])).toBe(false)
+    expect(hasUserEdit([{ file: "src/app.ts", additions: 1, deletions: 0 }])).toBe(true)
+    expect(hasUserEdit([{ file: "dist/bundle.js", additions: 300, deletions: 0 }])).toBe(false)
+    expect(hasUserEdit([{ file: "assets/logo.png", additions: 0, deletions: 0 }])).toBe(true)
     expect(summarizeDiffs(diffs)).toContain("modified README.md +1 -0")
     expect(fallbackDigest({ prior: "Earlier state.", summary: "New state.", max: 80 })).toContain("Latest: New state.")
     expect(parseDigest({ topic: "", summary: "User: x Result: y." }, "", 120).topic).not.toBe("User")

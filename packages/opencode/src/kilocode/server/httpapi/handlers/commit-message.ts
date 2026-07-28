@@ -3,8 +3,8 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { EffectBridge } from "@/effect/bridge"
 import { InstanceHttpApi } from "@/server/routes/instance/httpapi/api"
 import { Config } from "@/config/config"
-import { generateCommitMessage } from "@/kilocode/commit-message"
-import { CommitMessagePayload } from "../groups/commit-message"
+import { generateCommitMessage, NoChangesError } from "@/kilocode/commit-message"
+import { CommitMessageNoChangesError, CommitMessagePayload } from "../groups/commit-message"
 
 export const commitMessageHandlers = HttpApiBuilder.group(InstanceHttpApi, "commit-message", (handlers) =>
   Effect.gen(function* () {
@@ -21,6 +21,14 @@ export const commitMessageHandlers = HttpApiBuilder.group(InstanceHttpApi, "comm
           selectedFiles: ctx.payload.selectedFiles ? [...ctx.payload.selectedFiles] : undefined,
           previousMessage: ctx.payload.previousMessage,
           prompt,
+          language: ctx.payload.language,
+        }),
+      ).pipe(
+        Effect.catchDefect((defect) => {
+          if (defect instanceof NoChangesError) {
+            return Effect.fail(new CommitMessageNoChangesError({ message: defect.message }))
+          }
+          return Effect.die(defect)
         }),
       )
       return { message: result.message }

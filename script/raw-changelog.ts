@@ -37,7 +37,6 @@ const sections = {
   tui: "TUI",
   sdk: "SDK",
   plugin: "SDK",
-  "extensions/zed": "Extensions",
   "extensions/vscode": "Extensions",
   github: "Extensions",
 } as const
@@ -73,7 +72,7 @@ async function diff(base: string, head: string) {
 }
 
 function section(areas: Set<string>) {
-  const priority = ["core", "tui", "sdk", "plugin", "extensions/zed", "extensions/vscode", "github"] // kilocode_change
+  const priority = ["core", "tui", "sdk", "plugin", "extensions/vscode", "github"] // kilocode_change
   for (const area of priority) {
     if (areas.has(area)) return sections[area as keyof typeof sections]
   }
@@ -134,7 +133,6 @@ async function commits(from: string, to: string) {
       if (file.startsWith("packages/opencode/src/cli/cmd/")) areas.add("tui")
       else if (file.startsWith("packages/opencode/")) areas.add("core")
       else if (file.startsWith("packages/sdk/") || file.startsWith("packages/plugin/")) areas.add("sdk")
-      else if (file.startsWith("packages/extensions/")) areas.add("extensions/zed")
       else if (file.startsWith("github/")) areas.add("extensions/vscode")
     }
 

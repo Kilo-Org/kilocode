@@ -3,7 +3,6 @@ import { stat, readFile } from "fs/promises"
 import { createHash } from "crypto"
 import path from "path"
 import { v5 as uuidv5 } from "uuid"
-import type { Ignore } from "ignore"
 import { Emitter, type Disposable } from "../runtime"
 import {
   QDRANT_CODE_BLOCK_NAMESPACE,
@@ -15,6 +14,7 @@ import {
 import { scannerExtensions } from "../shared/supported-extensions"
 import {
   type IFileWatcher,
+  type ICodeParser,
   type FileProcessingResult,
   type IEmbedder,
   type IVectorStore,
@@ -33,6 +33,8 @@ import { FileIgnore } from "../../file/ignore"
 import { Log } from "../../util/log"
 import type { WorktreeOverlay } from "../worktree-overlay"
 import { sanitizeErrorMessage } from "../shared/validation-helpers"
+import type { IgnoreMatcher } from "../shared/load-ignore"
+import { isBinary } from "../shared/is-binary"
 
 const log = Log.create({ service: "file-watcher" })
 
@@ -43,7 +45,7 @@ const log = Log.create({ service: "file-watcher" })
  * so the watcher works outside VS Code (CLI, tests, headless).
  */
 export class FileWatcher implements IFileWatcher {
-  private ignoreInstance?: Ignore
+  private ignoreInstance?: IgnoreMatcher
   private watcher?: ChokidarFSWatcher
   private accumulatedEvents: Map<string, { path: string; type: "create" | "change" | "delete" }> = new Map()
   private batchProcessDebounceTimer?: NodeJS.Timeout
@@ -56,6 +58,7 @@ export class FileWatcher implements IFileWatcher {
   private drainTask?: Promise<void>
   private ready?: Promise<void>
   private overlay?: WorktreeOverlay
+  private readonly extensions: ReadonlySet<string>
 
   public readonly onDidStartBatchProcessing = new Emitter<string[]>()
   public readonly onBatchProgressUpdate = new Emitter<{
@@ -70,17 +73,20 @@ export class FileWatcher implements IFileWatcher {
     private readonly cacheManager: CacheManager,
     private embedder?: IEmbedder,
     private vectorStore?: IVectorStore,
-    ignoreInstance?: Ignore,
+    ignoreInstance?: IgnoreMatcher,
     batchSegmentThreshold?: number,
     maxBatchRetries?: number,
     private readonly onTelemetry?: IndexingTelemetryReporter,
     private readonly telemetryMeta?: IndexingTelemetryMeta,
+    extensions: readonly string[] = scannerExtensions,
+    private readonly parser: ICodeParser = codeParser,
   ) {
     if (ignoreInstance) {
       this.ignoreInstance = ignoreInstance
     }
     this.batchSegmentThreshold = batchSegmentThreshold ?? BATCH_SEGMENT_THRESHOLD
     this.maxBatchRetries = maxBatchRetries ?? MAX_BATCH_RETRIES
+    this.extensions = new Set(extensions)
   }
 
   private emitRetry(attempt: number, batchSize: number, err: unknown): void {
@@ -271,7 +277,7 @@ export class FileWatcher implements IFileWatcher {
     const ext = path.extname(filePath).toLowerCase()
     if (FileIgnore.match(relativeFilePath)) return false
     if (this.ignoreInstance?.ignores(relativeFilePath)) return false
-    return scannerExtensions.includes(ext) || !path.extname(filePath)
+    return this.extensions.has(ext)
   }
 
   /**
@@ -657,6 +663,14 @@ export class FileWatcher implements IFileWatcher {
    */
   async processFile(filePath: string): Promise<FileProcessingResult> {
     try {
+      if (!this.extensions.has(path.extname(filePath).toLowerCase())) {
+        return {
+          path: filePath,
+          status: "skipped" as const,
+          reason: "File extension is not configured for indexing",
+        }
+      }
+
       // Check if file is in an ignored directory
       const relativeFilePath = generateRelativeIgnorePath(filePath, this.workspacePath)
       if (!relativeFilePath) {
@@ -695,7 +709,16 @@ export class FileWatcher implements IFileWatcher {
       }
 
       // Read file content
-      const content = await readFile(filePath, "utf-8")
+      const bytes = await readFile(filePath)
+      if (isBinary(bytes)) {
+        this.cacheManager.deleteHash(filePath)
+        return {
+          path: filePath,
+          status: "skipped" as const,
+          reason: "File is binary",
+        }
+      }
+      const content = bytes.toString("utf-8")
 
       // Calculate hash
       const newHash = createHash("sha256").update(content).digest("hex")
@@ -710,7 +733,7 @@ export class FileWatcher implements IFileWatcher {
       }
 
       // Parse file
-      const blocks = await codeParser.parseFile(filePath, { content, fileHash: newHash })
+      const blocks = await this.parser.parseFile(filePath, { content, fileHash: newHash })
 
       // Prepare points for batch processing
       let pointsToUpsert: PointStruct[] = []

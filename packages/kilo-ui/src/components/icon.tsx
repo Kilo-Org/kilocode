@@ -2,6 +2,14 @@ import { Icon as Upstream, type IconProps as Props } from "@opencode-ai/ui/icon"
 import { splitProps } from "solid-js"
 
 const icons: Record<string, { path: string; viewBox: string }> = {
+  memory: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M2 7h4M2 12h4M2 17h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><rect width="16" height="20" x="4" y="2" rx="2" stroke="currentColor" stroke-width="2"/>`,
+  },
+  database: {
+    viewBox: "0 0 24 24",
+    path: `<ellipse cx="12" cy="5" rx="7" ry="3" stroke="currentColor" stroke-width="2"/><path d="M5 5v7c0 1.66 3.13 3 7 3s7-1.34 7-3V5M5 12v7c0 1.66 3.13 3 7 3s7-1.34 7-3v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>`,
+  },
   "book-open-check": {
     viewBox: "0 0 24 24",
     path: `<path d="M12 21V7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="m16 12 2 2 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6V4a1 1 0 0 0-1-1h-5a4 4 0 0 0-4 4 4 4 0 0 0-4-4H3a1 1 0 0 0-1 1v13a1 1 0 0 0 1 1h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6a1 1 0 0 0 1-1v-1.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -45,6 +53,10 @@ const icons: Record<string, { path: string; viewBox: string }> = {
   reload: {
     viewBox: "0 0 24 24",
     path: `<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21v-5h5" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  gauge: {
+    viewBox: "0 0 24 24",
+    path: `<path d="M12 14L9 10M12 14L15 10M21 15C21 18.866 17.866 22 14 22H10C6.134 22 3 18.866 3 15V9C3 5.134 6.134 2 10 2H14C17.866 2 21 5.134 21 9V15Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`,
   },
 }
 

@@ -4,7 +4,7 @@ import type { MessageLoadMode } from "./sessions"
 import type { PermissionFileDiff } from "./permissions"
 import type { ModelSelection, ProviderConfig } from "./providers"
 import type { Config } from "./config"
-import type { ModelAllocation, ReviewComment } from "./agent-manager"
+import type { ModelAllocation, ReviewComment, TerminalPlacement } from "./agent-manager"
 import type { ReviewMessageData } from "../../../../src/shared/review-comments"
 import type { WorkStyle, WorkStyleState } from "../../../../src/shared/work-style-presets"
 import type { AnacondaDesktopWebviewMessage } from "../../../../src/shared/anaconda-desktop-messages"
@@ -15,7 +15,7 @@ import type {
   SkipLegacyMigrationMessage,
   StartMigrationMessage,
 } from "./migration"
-import type { MemoryShowMessage, MemoryOperationMessage, MemoryPromptMessage, RequestMemoryMessage } from "./memory"
+import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -52,6 +52,12 @@ export interface RevertSessionRequest {
 export interface UnrevertSessionRequest {
   type: "unrevertSession"
   sessionID: string
+}
+
+export interface DeleteMessageRequest {
+  type: "deleteMessage"
+  sessionID: string
+  messageID: string
 }
 
 export interface PermissionResponseRequest {
@@ -167,6 +173,11 @@ export interface SetOrganizationRequest {
 
 export interface WebviewReadyRequest {
   type: "webviewReady"
+}
+
+export interface WebviewFocusChangedRequest {
+  type: "webviewFocusChanged"
+  focused: boolean
 }
 
 export interface SelectSourceRequest {
@@ -401,6 +412,17 @@ export interface RequestFileSearchMessage {
   sessionID?: string
 }
 
+export interface RequestSessionSearchMessage {
+  type: "requestSessionSearch"
+  requestId: string
+  sessionID?: string
+}
+
+export interface RequestFilePickerMessage {
+  type: "requestFilePicker"
+  requestId: string
+}
+
 export interface RequestTerminalContextMessage {
   type: "requestTerminalContext"
   requestId: string
@@ -426,6 +448,10 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface RequestThroughputSettingMessage {
+  type: "requestThroughputSetting"
 }
 
 export interface RequestWorkStyleMessage {
@@ -472,8 +498,16 @@ export interface RequestIndexingSettingsMessage {
   type: "requestIndexingSettings"
 }
 
+export interface RequestChatSettingsMessage {
+  type: "requestChatSettings"
+}
+
 export interface RequestKiloEmbeddingModelsMessage {
   type: "requestKiloEmbeddingModels"
+}
+
+export interface RequestImageModelsMessage {
+  type: "requestImageModels"
 }
 
 export interface OpenSettingsTabRequest {
@@ -597,7 +631,7 @@ export interface SidebarForkSessionRequest {
   messageId?: string
 }
 
-// Close (remove) a session from its worktree
+// Stop and remove a Local or worktree session from Agent Manager
 export interface CloseSessionRequest {
   type: "agentManager.closeSession"
   sessionId: string
@@ -607,6 +641,7 @@ export interface CloseSessionRequest {
 export interface PersistSessionRequest {
   type: "agentManager.persistSession"
   sessionId: string
+  draftID?: string
 }
 
 /** Remove a non-worktree session from agent-manager.json. */
@@ -668,7 +703,8 @@ export interface OpenWorktreeRequest {
 
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
-  type: "agentManager.copyToClipboard"
+  type: "copyToClipboard"
+  id: string
   text: string
 }
 
@@ -677,9 +713,12 @@ export interface ShowExistingLocalTerminalRequest {
   type: "agentManager.showExistingLocalTerminal"
 }
 
-// Create a new xterm terminal tab in the given worktree context (null = local)
+// Create a new xterm terminal in the given worktree context (null = workspace root)
 export interface AgentManagerTerminalCreateRequest {
   type: "agentManager.terminal.create"
+  /** Webview-generated correlation id, echoed back in created/error. */
+  createId: string
+  placement: TerminalPlacement
   worktreeId: string | null
 }
 
@@ -769,10 +808,6 @@ export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
 
-export interface RequestExternalWorktreesMessage {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 export interface ImportFromBranchRequest {
   type: "agentManager.importFromBranch"
   branch: string
@@ -781,16 +816,6 @@ export interface ImportFromBranchRequest {
 export interface ImportFromPRRequest {
   type: "agentManager.importFromPR"
   url: string
-}
-
-export interface ImportExternalWorktreeRequest {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-export interface ImportAllExternalWorktreesRequest {
-  type: "agentManager.importAllExternalWorktrees"
 }
 
 // Agent Manager: Request one-shot diff fetch (webview → extension)
@@ -963,6 +988,17 @@ export interface SetDefaultBaseBranchRequest {
 export interface AgentManagerOpenSessionsMessage {
   type: "agentManager.openSessions"
   sessionIDs: string[]
+}
+
+// Report open local sidebar/editor-tab session IDs without creating new provider connections.
+export interface SidebarOpenSessionsMessage {
+  type: "sidebar.openSessions"
+  sessionIDs: string[]
+}
+
+export interface AgentManagerVisibleSessionMessage {
+  type: "agentManager.visibleSession"
+  sessionID: string | null
 }
 
 export interface RequestAutoApproveStateMessage {
@@ -1191,6 +1227,7 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | DeleteMessageRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -1215,6 +1252,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | WebviewFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
@@ -1246,11 +1284,14 @@ export type WebviewMessage =
   | SpeechToTextStopMessage
   | SpeechToTextCancelMessage
   | RequestFileSearchMessage
+  | RequestSessionSearchMessage
+  | RequestFilePickerMessage
   | RequestTerminalContextMessage
   | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestThroughputSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage
@@ -1261,6 +1302,7 @@ export type WebviewMessage =
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
   | RequestIndexingSettingsMessage
+  | RequestChatSettingsMessage
   | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
@@ -1310,11 +1352,8 @@ export type WebviewMessage =
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage
-  | RequestExternalWorktreesMessage
   | ImportFromBranchRequest
   | ImportFromPRRequest
-  | ImportExternalWorktreeRequest
-  | ImportAllExternalWorktreesRequest
   | RequestWorktreeDiffMessage
   | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage
@@ -1349,6 +1388,8 @@ export type WebviewMessage =
   | SaveImageRequest
   | SetDefaultBaseBranchRequest
   | AgentManagerOpenSessionsMessage
+  | SidebarOpenSessionsMessage
+  | AgentManagerVisibleSessionMessage
   | RequestAutoApproveStateMessage
   | ToggleAutoApproveMessage
   | RequestSandboxStatusMessage
@@ -1383,7 +1424,6 @@ export type WebviewMessage =
   | RequestMemoryMessage
   | MemoryShowMessage
   | MemoryOperationMessage
-  | MemoryPromptMessage
   | CreateSectionRequest
   | RenameSectionRequest
   | DeleteSectionRequest
@@ -1395,6 +1435,7 @@ export type WebviewMessage =
   | AgentManagerTerminalCreateRequest
   | AgentManagerTerminalCloseRequest
   | AgentManagerTerminalResizeRequest
+  | RequestImageModelsMessage
 
 // ============================================
 // VS Code API type

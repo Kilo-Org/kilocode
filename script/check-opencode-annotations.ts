@@ -5,8 +5,9 @@
  * is annotated with a kilocode_change marker.
  *
  * Usage:
- *   bun run script/check-opencode-annotations.ts                  # diff against origin/main
- *   bun run script/check-opencode-annotations.ts --base <ref>     # diff against <ref>
+ *   bun run script/check-opencode-annotations.ts                  # diff origin/main...HEAD
+ *   bun run script/check-opencode-annotations.ts --base <ref>     # diff <ref>...HEAD
+ *   bun run script/check-opencode-annotations.ts --worktree       # diff HEAD..worktree plus untracked files
  *
  * A line is "covered" if it:
  *   - contains a kilocode_change marker comment           (inline annotation)
@@ -54,8 +55,24 @@ const EXEMPT_SCOPES = [
 ]
 
 const args = process.argv.slice(2)
+const unknown = args.find((arg, i) => arg !== "--base" && arg !== "--worktree" && args[i - 1] !== "--base")
+if (unknown) {
+  console.error(`Unknown argument: ${unknown}`)
+  process.exit(1)
+}
 const baseIdx = args.indexOf("--base")
-const base = baseIdx !== -1 ? args[baseIdx + 1] : "origin/main"
+const worktree = args.includes("--worktree")
+if (worktree && baseIdx !== -1) {
+  console.error("--base cannot be used with --worktree")
+  process.exit(1)
+}
+const base = (() => {
+  if (baseIdx === -1) return "origin/main"
+  const ref = args[baseIdx + 1]
+  if (ref && !ref.startsWith("--")) return ref
+  console.error("Missing value for --base")
+  process.exit(1)
+})()
 
 function run(cmd: string, args: string[]) {
   const result = spawnSync(cmd, args, { cwd: ROOT, encoding: "utf8" })
@@ -67,9 +84,21 @@ function run(cmd: string, args: string[]) {
   return result.stdout?.trim() ?? ""
 }
 
-function changedFiles() {
-  const out = run("git", ["diff", "--name-only", "--diff-filter=AMRT", `${base}...HEAD`, "--", ...SCOPES])
+const ref = worktree ? "HEAD" : `${base}...HEAD`
+
+function lines(out: string) {
   return out ? out.split("\n").filter(Boolean) : []
+}
+
+function untracked(file?: string) {
+  if (!worktree) return []
+  const pathspec = file ? [file] : SCOPES
+  return lines(run("git", ["ls-files", "--others", "--exclude-standard", "--", ...pathspec]))
+}
+
+function changedFiles() {
+  const out = run("git", ["diff", "--name-only", "--diff-filter=AMRT", ref, "--", ...SCOPES])
+  return [...new Set([...lines(out), ...untracked()])]
 }
 
 function isUpstreamMerge() {
@@ -78,7 +107,9 @@ function isUpstreamMerge() {
     const [parents = "", subject = ""] = line.split("\t")
     if (!parents.includes(" ")) return false
     const s = subject.toLowerCase()
-    return s.startsWith("merge: upstream ") || s.startsWith("resolve merge conflict")
+    return (
+      s.startsWith("merge: upstream ") || s.startsWith("merge: opencode ") || s.startsWith("resolve merge conflict")
+    )
   })
 }
 
@@ -100,8 +131,8 @@ function isSource(file: string) {
   return content(file).startsWith("#!") // kilocode_change
 }
 
-// Parses the unified=0 diff for `file` against `base` and returns:
-//   - added: every added line number on HEAD
+// Parses the unified=0 diff for `file` against the selected target and returns:
+//   - added: every added line number on the checked version
 //   - revert: true when the file's diff removes any kilocode_change marker.
 //     In that case the changes are reverting Kilo modifications back to the
 //     upstream baseline, so newly added lines (which are restoring upstream
@@ -110,8 +141,15 @@ function isSource(file: string) {
 //     hunks than the marker itself, so we use file-level detection rather
 //     than hunk-level to avoid false positives on legitimate reverts.
 function addedLines(file: string): { added: Set<number>; revert: boolean } {
-  const diff = run("git", ["diff", "--unified=0", "--diff-filter=AMRT", `${base}...HEAD`, "--", file])
   const added = new Set<number>()
+  if (untracked(file).includes(file)) {
+    const text = content(file)
+    const count = text.split(/\r?\n/).length
+    for (const n of Array.from({ length: count }, (_, i) => i + 1)) added.add(n)
+    return { added, revert: false }
+  }
+
+  const diff = run("git", ["diff", "--unified=0", "--diff-filter=AMRT", ref, "--", file])
   let revert = false
   const all = diff.split("\n")
 
@@ -206,7 +244,7 @@ function coveredLines(text: string): { lines: string[]; covered: Set<number> } {
 
 // --- main ---
 
-if (isUpstreamMerge()) {
+if (!worktree && isUpstreamMerge()) {
   console.log("Skipping shared upstream annotation check — upstream merge detected.")
   process.exit(0)
 }

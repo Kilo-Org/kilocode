@@ -1,6 +1,6 @@
 import { existsSync } from "fs"
 import path from "path"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect } from "effect"
 import { Git } from "../git"
 
@@ -9,13 +9,13 @@ export const primaryPaths = Effect.fn("PrimaryWorktree.paths")(function* (
   root: string,
   names: readonly string[],
 ) {
-  const cwd = AppFileSystem.normalizePath(path.resolve(root))
+  const cwd = FSUtil.normalizePath(path.resolve(root))
   const primary = yield* primaryWorktree(cwd)
   if (!primary || primary === cwd) return []
 
   // Mirror the active directory's path relative to the linked-worktree root into the primary checkout.
   // If the directory is outside that root, fall back to searching from the primary checkout root only.
-  const active = AppFileSystem.normalizePath(path.resolve(dir))
+  const active = FSUtil.normalizePath(path.resolve(dir))
   const rel = path.relative(cwd, active)
   const parts = rel ? rel.split(path.sep) : []
   if (path.isAbsolute(rel) || parts[0] === "..") parts.length = 0
@@ -38,14 +38,14 @@ export const primaryPaths = Effect.fn("PrimaryWorktree.paths")(function* (
 })
 
 export const primaryWorktree = Effect.fn("PrimaryWorktree.find")(function* (dir: string) {
-  const cwd = AppFileSystem.normalizePath(path.resolve(dir))
+  const cwd = FSUtil.normalizePath(path.resolve(dir))
   const git = yield* Git.Service
   const run = Effect.fnUntraced(function* (args: string[]) {
     const result = yield* git.run(args, { cwd })
     return result.exitCode === 0 ? result.text() : undefined
   })
   const resolve = (value: string) =>
-    AppFileSystem.normalizePath(path.isAbsolute(value) ? path.normalize(value) : path.resolve(cwd, value))
+    FSUtil.normalizePath(path.isAbsolute(value) ? path.normalize(value) : path.resolve(cwd, value))
   const line = (value: string | undefined) => value?.replace(/\r?\n$/, "")
 
   if (line(yield* run(["rev-parse", "--is-inside-work-tree"])) !== "true") return undefined

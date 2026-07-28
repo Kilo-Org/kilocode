@@ -5,6 +5,7 @@ import ai.kilocode.backend.cli.KiloBackendCliManager
 import ai.kilocode.backend.cli.KiloCliDataParser
 import ai.kilocode.backend.migration.KiloBackendLegacyMigrationStoreService
 import ai.kilocode.backend.migration.LegacyMigrationDetection
+import ai.kilocode.backend.migration.LegacyMigrationStatus
 import ai.kilocode.backend.telemetry.KiloBackendTelemetry
 import ai.kilocode.log.KiloLog
 import ai.kilocode.backend.workspace.KiloBackendWorkspaceManager
@@ -57,6 +58,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.ConnectException
 import java.net.SocketTimeoutException
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
@@ -117,7 +119,11 @@ class KiloBackendAppService private constructor(
     private var eventWatcher: Job? = null
     private var loader: Job? = null
     private var closed = false
+    private var migrationOffered = false
+    private var migrationSuppressed = false
+    private var migrationForceRequested = false
     private val loadLock = Any()
+    private val rev = AtomicLong()
 
     private val _appState = MutableStateFlow<KiloAppState>(KiloAppState.Disconnected)
     val appState: StateFlow<KiloAppState> = _appState.asStateFlow()
@@ -153,24 +159,47 @@ class KiloBackendAppService private constructor(
     }
 
     suspend fun restart() {
+        log.info("restart: requested — waiting for lifecycle mutex")
         mutex.withLock {
-            clear()
-            connection.restart()
+            log.info("restart: acquired lifecycle mutex")
+            try {
+                clear()
+                connection.restart()
+                log.info("restart: complete")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("restart: failed", e)
+                throw e
+            }
         }
     }
 
     suspend fun reinstall() {
+        log.info("reinstall: requested — waiting for lifecycle mutex")
         mutex.withLock {
-            clear()
-            connection.reinstall()
+            log.info("reinstall: acquired lifecycle mutex")
+            try {
+                clear()
+                connection.reinstall()
+                log.info("reinstall: complete")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                log.warn("reinstall: failed", e)
+                throw e
+            }
         }
     }
 
-    suspend fun shutdownForUnload() {
-        mutex.withLock {
-            shutdown()
-        }
-    }
+    /**
+     * Synchronous CLI teardown for plugin unload. Confirms process exit but does not wait on the
+     * lifecycle mutex, so an in-flight download/spawn cannot delay unload. Safe to call repeatedly.
+     */
+    fun shutdownForUnload() = shutdown(fast = false)
+
+    /** Best-effort CLI teardown for IDE app close. Non-blocking; safe to call repeatedly. */
+    fun shutdownForAppClose() = shutdown(fast = true)
 
     suspend fun retry() {
         mutex.withLock {
@@ -287,9 +316,20 @@ class KiloBackendAppService private constructor(
     internal suspend fun resumeAfterMigration() {
         mutex.withLock {
             if (_appState.value !is KiloAppState.MigrationRequired) return
+            migrationSuppressed = true
             load()
+            migrationForceRequested = false
         }
     }
+
+    internal fun resetMigrationOfferForRerun() {
+        migrationOffered = false
+        migrationSuppressed = false
+        migrationForceRequested = true
+        log.info("Migration check: reset in-memory offer suppression for forced rerun")
+    }
+
+    internal fun forceMigrationRequested(): Boolean = migrationForceRequested
 
     private suspend fun reconnect() {
         mutex.withLock {
@@ -338,7 +378,6 @@ class KiloBackendAppService private constructor(
     private fun load() {
         synchronized(loadLock) {
             loader?.cancel()
-            eventWatcher?.cancel()
             loader = cs.launch {
                 val start = System.currentTimeMillis()
                 log.info("Application starting — loading config, profile, notifications")
@@ -511,20 +550,34 @@ class KiloBackendAppService private constructor(
     }
 
     private suspend fun detectMigration(): LegacyMigrationDetection? = withContext(Dispatchers.IO) {
-        val http = connection.apiClient ?: run {
-            log.info("Migration check: skipped because CLI HTTP client is not connected")
-            return@withContext null
+        try {
+            val http = connection.apiClient ?: run {
+                log.info("Migration check: skipped because CLI HTTP client is not connected")
+                return@withContext null
+            }
+            log.info("Migration check: started")
+            // Status is only consulted when the in-memory flags do not already block the offer,
+            // preserving the original short-circuit order.
+            val status = if (migrationSuppressed || migrationOffered) null
+            else KiloBackendLegacyMigrationStoreService.status(log)
+            val gate = migrationGate(migrationSuppressed, migrationOffered, status)
+            if (gate != MigrationGate.Proceed) {
+                log.info("Migration check: skipped gate=$gate status=$status")
+                return@withContext null
+            }
+            val source = KiloBackendLegacyMigrationStoreService.resolveSource(log, includeFile = migrationForceRequested)
+            val store = source.store
+            val detection = KiloBackendMigrationManager(http, connection.port).detect(store)
+            log.info("Migration check: completed hasData=${detection.hasData} ${migrationSummary(detection)}")
+            if (!detection.hasData) return@withContext null
+            migrationOffered = true
+            detection
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            log.warn("Migration check failed: ${e.message}", e)
+            null
         }
-        log.info("Migration check: started")
-        val store = KiloBackendLegacyMigrationStoreService.store(log)
-        val status = store.status()
-        if (status != null) {
-            log.info("Migration check: skipped because status=$status")
-            return@withContext null
-        }
-        val detection = KiloBackendMigrationManager(http, connection.port).detect(store)
-        log.info("Migration check: completed hasData=${detection.hasData} ${migrationSummary(detection)}")
-        if (detection.hasData) detection else null
     }
 
     private fun migrationSummary(detection: LegacyMigrationDetection): String {
@@ -655,7 +708,7 @@ class KiloBackendAppService private constructor(
     private fun setAppReady(data: AppData) {
         warnings = data.warnings
         if (data.warnings.isNotEmpty()) warnAppWarnings(data.warnings)
-        _appState.value = KiloAppState.Ready(data)
+        _appState.value = KiloAppState.Ready(data, rev.incrementAndGet())
     }
 
     private fun setAppError(message: String, errors: List<LoadError>) {
@@ -767,11 +820,13 @@ class KiloBackendAppService private constructor(
                             }
                         }
                         "global.disposed" -> {
+                            logSessionDisposalRisk("global.disposed")
                             log.info("SSE global.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
                         }
                         "server.instance.disposed" -> {
+                            logSessionDisposalRisk("server.instance.disposed")
                             log.info("SSE server.instance.disposed — triggering full application reload")
                             val current = _appState.value
                             if (current is KiloAppState.Ready) load()
@@ -780,6 +835,12 @@ class KiloBackendAppService private constructor(
                 }
             }
         }
+    }
+
+    private fun logSessionDisposalRisk(event: String) {
+        val active = sessions.statuses.value.filterValues { it.type != "idle" }
+        if (active.isEmpty()) return
+        log.warn("SSE $event while sessions are active; sessions may be cancelled count=${active.size} statuses=${active.values.map { it.type }.distinct()}")
     }
 
     private suspend fun clear() {
@@ -905,17 +966,17 @@ class KiloBackendAppService private constructor(
     }
 
     override fun dispose() {
-        shutdown()
+        shutdown(fast = false)
     }
 
-    private fun shutdown() {
+    private fun shutdown(fast: Boolean) {
         if (closed) return
         closed = true
         watcher?.cancel()
         watcher = null
         clearNow()
         connection.dispose()
-        server.dispose()
+        if (fast) server.closeForShutdown() else server.dispose()
     }
 }
 
@@ -965,3 +1026,21 @@ private data class FetchResult<T>(val value: T?, val error: LoadError?) {
 
 /** Thrown when a required data fetch exhausts all retries. */
 private class LoadFailure(val error: LoadError) : Exception("Failed to load ${error.resource}")
+
+/** Why a startup migration offer is or is not made. */
+internal enum class MigrationGate { Proceed, Suppressed, AlreadyOffered, StatusSet }
+
+/**
+ * Pure startup-gating decision for the migration offer. Suppression (dismissed this startup)
+ * takes priority, then a prior offer this startup, then a persisted status.
+ */
+internal fun migrationGate(
+    suppressed: Boolean,
+    offered: Boolean,
+    status: LegacyMigrationStatus?,
+): MigrationGate = when {
+    suppressed -> MigrationGate.Suppressed
+    offered -> MigrationGate.AlreadyOffered
+    status != null -> MigrationGate.StatusSet
+    else -> MigrationGate.Proceed
+}

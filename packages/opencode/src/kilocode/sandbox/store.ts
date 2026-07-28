@@ -10,7 +10,9 @@ export namespace SandboxStore {
   /** Session confinement authority captured independently from later configuration reloads. */
   export type Snapshot = {
     enabled: boolean
-    mode: Extract<Profile["network"]["mode"], "allow" | "deny">
+    mode: Profile["network"]["mode"]
+    allowedHosts: string[]
+    writablePaths: string[]
     version: number
   }
 
@@ -28,15 +30,21 @@ export namespace SandboxStore {
     return path.join(dir(sessionID), hash(directory) + ".json")
   }
 
-  function valid(value: unknown): value is Snapshot {
+  function valid(value: unknown) {
     if (!value || typeof value !== "object") return false
     const state = value as Record<string, unknown>
-    return (
+    const base =
       typeof state.enabled === "boolean" &&
-      (state.mode === "allow" || state.mode === "deny") &&
+      (state.mode === "allow" || state.mode === "deny" || state.mode === "proxy") &&
       Number.isSafeInteger(state.version) &&
       Number(state.version) >= 0
-    )
+    if (!base) return false
+    if (state.allowedHosts !== undefined && !Array.isArray(state.allowedHosts)) return false
+    if (state.writablePaths !== undefined && !Array.isArray(state.writablePaths)) return false
+    if (Array.isArray(state.allowedHosts) && state.allowedHosts.some((value) => typeof value !== "string")) return false
+    if (Array.isArray(state.writablePaths) && state.writablePaths.some((value) => typeof value !== "string")) return false
+    if (state.mode === "proxy" && (!Array.isArray(state.allowedHosts) || state.allowedHosts.length === 0)) return false
+    return true
   }
 
   export async function read(directory: string, sessionID: SessionID) {
@@ -48,7 +56,14 @@ export namespace SandboxStore {
     if (text === undefined) return
     const value: unknown = JSON.parse(text)
     if (!valid(value)) throw new Error(`Invalid sandbox policy state at ${target}`)
-    return value
+    const state = value as Record<string, unknown>
+    return {
+      enabled: state.enabled as boolean,
+      mode: state.mode as Snapshot["mode"],
+      allowedHosts: (state.allowedHosts as string[] | undefined) ?? [],
+      writablePaths: (state.writablePaths as string[] | undefined) ?? [],
+      version: state.version as number,
+    } satisfies Snapshot
   }
 
   export async function write(directory: string, sessionID: SessionID, snapshot: Snapshot) {

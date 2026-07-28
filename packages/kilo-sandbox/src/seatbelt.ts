@@ -4,6 +4,7 @@ import type { Backend, Launch, Support } from "./backend"
 import type { PathRule, Profile } from "./profile"
 import { base } from "./seatbelt-base"
 import { networkPolicy } from "./seatbelt-network"
+import type { ProxyRuntime } from "./proxy"
 
 const executable = "/usr/bin/sandbox-exec"
 
@@ -30,7 +31,7 @@ function exclude(rule: PathRule, key: string) {
   return [`(require-not (literal (param "${key}")))`, `(require-not (subpath (param "${key}")))`]
 }
 
-function policy(profile: Profile) {
+function policy(profile: Profile, proxy?: ProxyRuntime) {
   const params: Array<Param> = []
   const allow = profile.filesystem.allowWrite.map((rule, index) => {
     const key = `ALLOW_WRITE_${index}`
@@ -50,7 +51,7 @@ function policy(profile: Profile) {
   return {
     value: [
       base,
-      networkPolicy(profile),
+      networkPolicy(profile, proxy),
       "; reads are not confined by the file-level sandbox\n(allow file-read*)",
       write,
     ].join("\n"),
@@ -58,8 +59,8 @@ function policy(profile: Profile) {
   }
 }
 
-export function generate(profile: Profile, launch: Launch): Launch {
-  const generated = policy(profile)
+export function generate(profile: Profile, launch: Launch, proxy?: ProxyRuntime): Launch {
+  const generated = policy(profile, proxy)
   const args = ["-p", generated.value, ...generated.params.map((param) => `-D${param.key}=${param.value}`)]
   const command = launch.shell ? (typeof launch.shell === "string" ? launch.shell : "/bin/sh") : launch.command
   const commandArgs = launch.shell ? ["-c", [launch.command, ...launch.args.map(quote)].join(" ")] : launch.args
@@ -77,5 +78,5 @@ const available: Support = existsSync(executable)
 
 export const seatbelt: Backend = {
   support: () => available,
-  prepare: (profile, launch) => Effect.succeed(generate(profile, launch)),
+  prepare: (profile, launch, proxy) => Effect.succeed(generate(profile, launch, proxy)),
 }

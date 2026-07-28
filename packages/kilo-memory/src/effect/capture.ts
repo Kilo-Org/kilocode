@@ -10,7 +10,8 @@ import {
   evidence,
   fallbackDigest,
   guardReason,
-  hasDurableDiff,
+  hasSubstantialDiff,
+  hasUserEdit,
   mergeOps,
   notice,
   parseDigest,
@@ -149,11 +150,12 @@ export namespace MemoryCapture {
     const summary = summarize({ user, assistant, max: state.limits.maxSessionLineChars })
     const diffs = view.diffs
     const changed = summarizeDiffs(diffs)
-    const durable = hasDurableDiff(diffs)
+    const substantial = hasSubstantialDiff(diffs)
+    const edited = hasUserEdit(diffs)
     const completed = !input.reason || input.reason === "completed"
     // Echo = short lookup answered from memory with no file changes. Long recall-assisted answers
     // (research, investigations) carry new content and must still be digested.
-    const echo = !durable && assistant.length < 1200 && view.recalledMemory
+    const echo = !edited && assistant.length < 1200 && view.recalledMemory
     // Echo gates the digest only. Typed capture is bounded by the interval throttle, and the typed
     // prompt is the language-agnostic content filter for lookup/correction turns.
     const sourced = provenance({ assistant }) && !editsInstructionDocs(diffs)
@@ -168,7 +170,8 @@ export namespace MemoryCapture {
       reason: input.reason,
       summary,
       echo,
-      durable,
+      substantial,
+      edited,
       priorTime,
       now,
       minIntervalMs: state.capture.minIntervalMs,

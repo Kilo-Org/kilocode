@@ -6,6 +6,8 @@ const path = join(__dirname, "..", "..", "webview-ui", "src", "components", "cha
 const src = readFileSync(path, "utf8")
 const cssPath = join(__dirname, "..", "..", "webview-ui", "src", "styles", "prompt-input.css")
 const css = readFileSync(cssPath, "utf8")
+const dialogPath = join(__dirname, "..", "..", "webview-ui", "agent-manager", "NewWorktreeDialog.tsx")
+const dialog = readFileSync(dialogPath, "utf8")
 
 describe("PromptInput bidirectional text support", () => {
   it("lets the textarea and visible overlay resolve text direction automatically", () => {
@@ -16,6 +18,12 @@ describe("PromptInput bidirectional text support", () => {
     expect(overlay).toContain('dir="auto"')
     expect(overlayCss).toContain("unicode-bidi: plaintext")
     expect(input).toContain('class="prompt-input"')
+    expect(input).toContain('dir="auto"')
+  })
+
+  it("lets the Agent Manager worktree prompt resolve bidirectional text automatically", () => {
+    const input = dialog.match(/<textarea[\s\S]*?class="prompt-input am-prompt-input"[\s\S]*?\n\s*\/>/)?.[0]
+
     expect(input).toContain('dir="auto"')
   })
 })

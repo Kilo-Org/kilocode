@@ -125,6 +125,19 @@ export class GitStatsPoller {
     this.lastStats = {}
   }
 
+  async snapshot(refresh = false): Promise<{ worktrees: WorktreeStats[]; local?: LocalStats }> {
+    if (refresh && !this.busy) {
+      this.busy = true
+      await Promise.all([this.fetchWorktreeStats(true), this.fetchLocalStats()]).finally(() => {
+        this.busy = false
+      })
+    }
+    return {
+      worktrees: Object.values(this.lastStats),
+      ...(this.lastLocalStats ? { local: this.lastLocalStats } : {}),
+    }
+  }
+
   private currentInterval(): number {
     return this.visible ? this.intervalMs : this.hiddenIntervalMs
   }
@@ -150,7 +163,7 @@ export class GitStatsPoller {
     await Promise.all([this.fetchWorktreeStats(), this.fetchLocalStats()])
   }
 
-  private async fetchWorktreeStats(): Promise<void> {
+  private async fetchWorktreeStats(includeSkipped = false): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
@@ -165,7 +178,7 @@ export class GitStatsPoller {
     for (const id of Object.keys(this.lastStats)) {
       if (!ids.has(id)) delete this.lastStats[id]
     }
-    const active = available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
+    const active = includeSkipped ? available : available.filter((wt) => !this.skipWorktreeIds.has(wt.id))
     if (active.length === 0) {
       if (available.length > 0) return
       if (this.lastHash === "") return

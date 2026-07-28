@@ -23,37 +23,8 @@ import pkg from "../package.json"
 import { stageBubblewrap } from "./kilocode/bubblewrap"
 import { LanceDBRuntime } from "../src/kilocode/lancedb"
 import { KiloSandboxWorker } from "./kilocode/kilo-sandbox-worker"
+import { KiloSandboxNetwork } from "./kilocode/kilo-sandbox-network"
 // kilocode_change end
-
-// Load migrations from migration directories
-const migrationDirs = (
-  await fs.promises.readdir(path.join(dir, "migration"), {
-    withFileTypes: true,
-  })
-)
-  .filter((entry) => entry.isDirectory() && /^\d{4}\d{2}\d{2}\d{2}\d{2}\d{2}/.test(entry.name))
-  .map((entry) => entry.name)
-  .sort()
-
-const migrations = await Promise.all(
-  migrationDirs.map(async (name) => {
-    const file = path.join(dir, "migration", name, "migration.sql")
-    const sql = await Bun.file(file).text()
-    const match = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(name)
-    const timestamp = match
-      ? Date.UTC(
-          Number(match[1]),
-          Number(match[2]) - 1,
-          Number(match[3]),
-          Number(match[4]),
-          Number(match[5]),
-          Number(match[6]),
-        )
-      : 0
-    return { sql, timestamp, name }
-  }),
-)
-console.log(`Loaded ${migrations.length} migrations`)
 
 const singleFlag = process.argv.includes("--single")
 const baselineFlag = process.argv.includes("--baseline")
@@ -250,12 +221,14 @@ await $`rm -rf dist`
 // kilocode_change start
 const kiloConsoleDist = await buildKiloConsole()
 const kiloSandboxWorker = await KiloSandboxWorker.bundle()
+const kiloSandboxNetwork = await KiloSandboxNetwork.bundle()
 // kilocode_change end
 
 const binaries: Record<string, string> = {}
 if (!skipInstall) {
   await $`bun install --os="*" --cpu="*" @opentui/core@${pkg.dependencies["@opentui/core"]}`
   await $`bun install --os="*" --cpu="*" @parcel/watcher@${pkg.dependencies["@parcel/watcher"]}`
+  await $`bun install --os="*" --cpu="*" @ff-labs/fff-bun@${pkg.dependencies["@ff-labs/fff-bun"]}`
 }
 for (const item of targets) {
   const name = [
@@ -281,7 +254,7 @@ for (const item of targets) {
   const localPath = path.resolve(dir, "node_modules/@opentui/core/parser.worker.js")
   const rootPath = path.resolve(dir, "../../node_modules/@opentui/core/parser.worker.js")
   const parserWorker = fs.realpathSync(fs.existsSync(localPath) ? localPath : rootPath)
-  const workerPath = "./src/cli/cmd/tui/worker.ts"
+  const workerPath = "./src/cli/tui/worker.ts"
   // kilocode_change start
   const sessionExportWorkerPath = "./src/kilocode/session-export/worker.ts"
   const indexingWorkerPath = "./src/kilocode/indexing-worker.ts"
@@ -292,7 +265,7 @@ for (const item of targets) {
   const workerRelativePath = path.relative(dir, parserWorker).replaceAll("\\", "/")
 
   await Bun.build({
-    conditions: ["browser"],
+    conditions: ["bun", "node"], // kilocode_change - port anomalyco/opencode#30873; current form from #31566
     tsconfig: "./tsconfig.json",
     plugins: [plugin],
     // kilocode_change start - skip sourcemaps for release builds (each .js.map adds ~50 MB per target → ~600 MB total)
@@ -327,8 +300,8 @@ for (const item of targets) {
     entrypoints: ["./src/index.ts", parserWorker, workerPath, sessionExportWorkerPath, indexingWorkerPath],
     // kilocode_change end
     define: {
+      FFF_LIBC: JSON.stringify(item.abi === "musl" ? "musl" : "gnu"),
       KILO_VERSION: `'${Script.version}'`,
-      KILO_MIGRATIONS: JSON.stringify(migrations),
       KILO_MODELS_DEV: generated.modelsData,
       OTUI_TREE_SITTER_WORKER_PATH: bunfsRoot + workerRelativePath,
       KILO_WORKER_PATH: workerPath,
@@ -336,6 +309,8 @@ for (const item of targets) {
       KILO_SESSION_EXPORT_WORKER_PATH: sessionExportWorkerPath,
       KILO_INDEXING_WORKER_PATH: indexingWorkerPath,
       KILO_SANDBOX_MUTATION_WORKER_PATH: JSON.stringify(KiloSandboxWorker.filename),
+      KILO_SANDBOX_NETWORK_RELAY_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.relay) : "undefined",
+      KILO_SANDBOX_SECCOMP_PATH: item.os === "linux" ? JSON.stringify(KiloSandboxNetwork.seccomp) : "undefined",
       // kilocode_change end
       KILO_CHANNEL: `'${Script.channel}'`,
       KILO_LIBC: item.os === "linux" ? `'${item.abi ?? "glibc"}'` : "",
@@ -343,6 +318,7 @@ for (const item of targets) {
       KILO_BWRAP_SHA256: bwrap ? `'${bwrap}'` : "undefined",
       KILO_BUILD_KIND: Script.release ? `'release'` : `'source'`,
       // kilocode_change end
+      ...(item.os === "linux" ? { "process.env.OPENTUI_LIBC": JSON.stringify(item.abi ?? "glibc") } : {}),
     },
   })
 
@@ -350,6 +326,9 @@ for (const item of targets) {
   await copyTreeSitterWasms(path.resolve(dir, `dist/${name}/bin`))
   await copyKiloConsole(kiloConsoleDist, path.resolve(dir, `dist/${name}/bin`))
   await KiloSandboxWorker.copy(kiloSandboxWorker, path.resolve(dir, `dist/${name}/bin`))
+  if (item.os === "linux") {
+    await KiloSandboxNetwork.copy(kiloSandboxNetwork, path.resolve(dir, `dist/${name}/bin`), item.arch)
+  }
 
   if (item.os === "linux") {
     const interpreters: Record<string, string> = {
@@ -395,13 +374,15 @@ for (const item of targets) {
 
   await $`rm -rf ./dist/${name}/bin/tui`
   // kilocode_change start
-  if (bwrap) {
-    const licenses = path.resolve(dir, `dist/${name}/bin/licenses/bubblewrap`)
+  if (item.os === "linux") {
     const content = await Promise.all([
       Bun.file(path.resolve(dir, "../../LICENSE")).text(),
-      Bun.file(path.join(licenses, "NOTICE")).text(),
-      Bun.file(path.join(licenses, "COPYING")).text(),
-      Bun.file(path.join(licenses, "MUSL-COPYRIGHT")).text(),
+      Bun.file(path.resolve(dir, `dist/${name}/bin/licenses/sandbox-runtime/LICENSE`)).text(),
+      ...(bwrap
+        ? ["NOTICE", "COPYING", "MUSL-COPYRIGHT"].map((file) =>
+            Bun.file(path.resolve(dir, `dist/${name}/bin/licenses/bubblewrap/${file}`)).text(),
+          )
+        : []),
     ])
     await Bun.write(`dist/${name}/LICENSE`, content.join("\n\n---\n\n"))
   }
@@ -411,7 +392,7 @@ for (const item of targets) {
       {
         name,
         version: Script.version,
-        license: bwrap ? "SEE LICENSE IN LICENSE" : pkg.license, // kilocode_change
+        license: item.os === "linux" ? "SEE LICENSE IN LICENSE" : pkg.license, // kilocode_change
         preferUnplugged: true,
         os: [item.os],
         cpu: [item.arch],
@@ -423,6 +404,7 @@ for (const item of targets) {
           url: "https://github.com/Kilo-Org/kilocode",
         },
         // kilocode_change end
+        ...(item.abi ? { libc: [item.abi] } : {}),
       },
       null,
       2,

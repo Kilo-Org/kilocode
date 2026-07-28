@@ -12,8 +12,8 @@ import type { MarkedExtension, TokenizerAndRendererExtension } from "marked"
 import { bundledLanguages, type BundledLanguage } from "shiki"
 import { parseFilePath } from "../file-path" // kilocode_change
 import { createSimpleContext } from "./helper"
-import { getSharedHighlighter } from "@pierre/diffs" // kilocode_change
-import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_change
+import { getSharedHighlighter, type ThemeRegistrationResolved } from "@pierre/diffs" // kilocode_change
+import { ensureKiloDiffTheme, KILO_DIFF_THEME } from "../pierre/kilo-diff-theme" // kilocode_change
 
 // kilocode_change start: the "Kilo" diff/highlight theme registration moved to
 // ../pierre/kilo-diff-theme so the diff worker pool can register it without
@@ -24,9 +24,392 @@ import { ensureKiloDiffTheme } from "../pierre/kilo-diff-theme" // kilocode_chan
 ensureKiloDiffTheme()
 // kilocode_change end
 
+// kilocode_change start: theme object consumed by the streaming Shiki worker
+// (markdown-worker.ts sends it via postMessage on worker init). Registration
+// with Pierre is handled by ensureKiloDiffTheme() above; this export only
+// provides the raw theme data to the worker.
+export const KiloTheme = {
+  name: KILO_DIFF_THEME,
+  bg: "var(--color-background-stronger)",
+  fg: "var(--text-base)",
+  colors: {
+    "editor.background": "var(--color-background-stronger)",
+    "editor.foreground": "var(--text-base)",
+    "gitDecoration.addedResourceForeground": "var(--syntax-diff-add)",
+    "gitDecoration.deletedResourceForeground": "var(--syntax-diff-delete)",
+    "gitDecoration.modifiedResourceForeground": "var(--syntax-diff-unknown)",
+    // "gitDecoration.conflictingResourceForeground": "#ffca00",
+    // "gitDecoration.modifiedResourceForeground": "#1a76d4",
+    // "gitDecoration.untrackedResourceForeground": "#00cab1",
+    // "gitDecoration.ignoredResourceForeground": "#84848A",
+    // "terminal.titleForeground": "#adadb1",
+    // "terminal.titleInactiveForeground": "#84848A",
+    // "terminal.background": "#141415",
+    // "terminal.foreground": "#adadb1",
+    // "terminal.ansiBlack": "#141415",
+    // "terminal.ansiRed": "#ff2e3f",
+    // "terminal.ansiGreen": "#0dbe4e",
+    // "terminal.ansiYellow": "#ffca00",
+    // "terminal.ansiBlue": "#008cff",
+    // "terminal.ansiMagenta": "#c635e4",
+    // "terminal.ansiCyan": "#08c0ef",
+    // "terminal.ansiWhite": "#c6c6c8",
+    // "terminal.ansiBrightBlack": "#141415",
+    // "terminal.ansiBrightRed": "#ff2e3f",
+    // "terminal.ansiBrightGreen": "#0dbe4e",
+    // "terminal.ansiBrightYellow": "#ffca00",
+    // "terminal.ansiBrightBlue": "#008cff",
+    // "terminal.ansiBrightMagenta": "#c635e4",
+    // "terminal.ansiBrightCyan": "#08c0ef",
+    // "terminal.ansiBrightWhite": "#c6c6c8",
+  },
+  tokenColors: [
+    {
+      scope: ["comment", "punctuation.definition.comment", "string.comment"],
+      settings: {
+        foreground: "var(--syntax-comment)",
+      },
+    },
+    {
+      scope: ["entity.other.attribute-name"],
+      settings: {
+        foreground: "var(--syntax-property)", // maybe attribute
+      },
+    },
+    {
+      scope: ["constant", "entity.name.constant", "variable.other.constant", "variable.language", "entity"],
+      settings: {
+        foreground: "var(--syntax-constant)",
+      },
+    },
+    {
+      scope: ["entity.name", "meta.export.default", "meta.definition.variable"],
+      settings: {
+        foreground: "var(--syntax-type)",
+      },
+    },
+    {
+      scope: ["meta.object.member"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: [
+        "variable.parameter.function",
+        "meta.jsx.children",
+        "meta.block",
+        "meta.tag.attributes",
+        "entity.name.constant",
+        "meta.embedded.expression",
+        "meta.template.expression",
+        "string.other.begin.yaml",
+        "string.other.end.yaml",
+      ],
+      settings: {
+        foreground: "var(--syntax-punctuation)",
+      },
+    },
+    {
+      scope: ["entity.name.function", "support.type.primitive"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: ["support.class.component"],
+      settings: {
+        foreground: "var(--syntax-type)",
+      },
+    },
+    {
+      scope: "keyword",
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: [
+        "keyword.operator",
+        "storage.type.function.arrow",
+        "punctuation.separator.key-value.css",
+        "entity.name.tag.yaml",
+        "punctuation.separator.key-value.mapping.yaml",
+      ],
+      settings: {
+        foreground: "var(--syntax-operator)",
+      },
+    },
+    {
+      scope: ["storage", "storage.type"],
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: ["storage.modifier.package", "storage.modifier.import", "storage.type.java"],
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: [
+        "string",
+        "punctuation.definition.string",
+        "string punctuation.section.embedded source",
+        "entity.name.tag",
+      ],
+      settings: {
+        foreground: "var(--syntax-string)",
+      },
+    },
+    {
+      scope: "support",
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: ["support.type.object.module", "variable.other.object", "support.type.property-name.css"],
+      settings: {
+        foreground: "var(--syntax-object)",
+      },
+    },
+    {
+      scope: "meta.property-name",
+      settings: {
+        foreground: "var(--syntax-property)",
+      },
+    },
+    {
+      scope: "variable",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "variable.other",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: [
+        "invalid.broken",
+        "invalid.illegal",
+        "invalid.unimplemented",
+        "invalid.deprecated",
+        "message.error",
+        "markup.deleted",
+        "meta.diff.header.from-file",
+        "punctuation.definition.deleted",
+        "brackethighlighter.unmatched",
+        "token.error-token",
+      ],
+      settings: {
+        foreground: "var(--syntax-critical)",
+      },
+    },
+    {
+      scope: "carriage-return",
+      settings: {
+        foreground: "var(--syntax-keyword)",
+      },
+    },
+    {
+      scope: "string source",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "string variable",
+      settings: {
+        foreground: "var(--syntax-constant)",
+      },
+    },
+    {
+      scope: [
+        "source.regexp",
+        "string.regexp",
+        "string.regexp.character-class",
+        "string.regexp constant.character.escape",
+        "string.regexp source.ruby.embedded",
+        "string.regexp string.regexp.arbitrary-repitition",
+        "string.regexp constant.character.escape",
+      ],
+      settings: {
+        foreground: "var(--syntax-regexp)",
+      },
+    },
+    {
+      scope: "support.constant",
+      settings: {
+        foreground: "var(--syntax-primitive)",
+      },
+    },
+    {
+      scope: "support.variable",
+      settings: {
+        foreground: "var(--syntax-variable)",
+      },
+    },
+    {
+      scope: "meta.module-reference",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "punctuation.definition.list.begin.markdown",
+      settings: {
+        foreground: "var(--syntax-punctuation)",
+      },
+    },
+    {
+      scope: ["markup.heading", "markup.heading entity.name"],
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "markup.quote",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "markup.italic",
+      settings: {
+        fontStyle: "italic",
+        // foreground: "",
+      },
+    },
+    {
+      scope: "markup.bold",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--text-strong)",
+      },
+    },
+    {
+      scope: [
+        "markup.raw",
+        "markup.inserted",
+        "meta.diff.header.to-file",
+        "punctuation.definition.inserted",
+        "markup.changed",
+        "punctuation.definition.changed",
+        "markup.ignored",
+        "markup.untracked",
+      ],
+      settings: {
+        foreground: "var(--text-base)",
+      },
+    },
+    {
+      scope: "meta.diff.range",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.diff.header",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.separator",
+      settings: {
+        fontStyle: "bold",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.output",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "meta.export.default",
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: [
+        "brackethighlighter.tag",
+        "brackethighlighter.curly",
+        "brackethighlighter.round",
+        "brackethighlighter.square",
+        "brackethighlighter.angle",
+        "brackethighlighter.quote",
+      ],
+      settings: {
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: ["constant.other.reference.link", "string.other.link"],
+      settings: {
+        fontStyle: "underline",
+        foreground: "var(--syntax-unknown)",
+      },
+    },
+    {
+      scope: "token.info-token",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+    {
+      scope: "token.warn-token",
+      settings: {
+        foreground: "var(--syntax-warning)",
+      },
+    },
+    {
+      scope: "token.debug-token",
+      settings: {
+        foreground: "var(--syntax-info)",
+      },
+    },
+  ],
+  semanticTokenColors: {
+    comment: "var(--syntax-comment)",
+    string: "var(--syntax-string)",
+    number: "var(--syntax-constant)",
+    regexp: "var(--syntax-regexp)",
+    keyword: "var(--syntax-keyword)",
+    variable: "var(--syntax-variable)",
+    parameter: "var(--syntax-variable)",
+    property: "var(--syntax-property)",
+    function: "var(--syntax-primitive)",
+    method: "var(--syntax-primitive)",
+    type: "var(--syntax-type)",
+    class: "var(--syntax-type)",
+    namespace: "var(--syntax-type)",
+    enumMember: "var(--syntax-primitive)",
+    "variable.constant": "var(--syntax-constant)",
+    "variable.defaultLibrary": "var(--syntax-unknown)",
+  },
+} as unknown as ThemeRegistrationResolved
+// kilocode_change end
+
 // kilocode_change start: double-dollar-only math rules for marked.
 const BLOCK = /^\$\$\n((?:\\[^]|[^\\])+?)\n\$\$(?:\n|$)/
 const INLINE = /^\$\$(?!\$)((?:\\.|[^\\\n])*?(?:\\.|[^\\\n$]))\$\$/
+// kilocode_change end
+
+// kilocode_change start: isolate KaTeX from the markdown root dir=auto.
+function renderKatex(text: string, options: katex.KatexOptions): string {
+  const html = katex.renderToString(text, options)
+  return `<span dir="auto">${html}</span>`
+}
 // kilocode_change end
 
 function renderMathInText(text: string): string {
@@ -36,10 +419,12 @@ function renderMathInText(text: string): string {
   const displayMathRegex = /\$\$([\s\S]*?)\$\$/g
   result = result.replace(displayMathRegex, (_, math) => {
     try {
-      return katex.renderToString(math, {
+      // kilocode_change start
+      return renderKatex(math, {
         displayMode: true,
         throwOnError: false,
       })
+      // kilocode_change end
     } catch {
       return `$$${math}$$`
     }
@@ -153,6 +538,8 @@ function replaceWithHighlighted(block: Element, html: string, sourceHash: string
   temp.innerHTML = html
   const highlighted = temp.firstElementChild
   if (!highlighted) return
+  const dir = pre.getAttribute("dir") // kilocode_change
+  if (dir) highlighted.setAttribute("dir", dir) // kilocode_change
   // Store a hash of the source code so the morphdom guard in Markdown can detect
   // mid-stream content changes without keeping the full source in the DOM.
   highlighted.setAttribute("data-source-hash", sourceHash)
@@ -264,121 +651,136 @@ export async function deferredHighlight(
 }
 // kilocode_change end
 
-export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
-  name: "Marked",
-  init: (props: { nativeParser?: NativeMarkdownParser }) => {
-    // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
-    // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
-    // Code blocks render as plain <pre><code data-lang="..."> immediately.
-    // The Markdown component calls deferredHighlight() after DOM paint.
-    const parser = marked.use(
-      {
-        renderer: {
-          link({ href, title, text }) {
-            const titleAttr = title ? ` title="${title}"` : ""
-            return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
-          },
-          // kilocode_change start
-          codespan({ text }) {
-            const file = parseFilePath(text)
-            const escaped = text
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#39;")
-            if (file) {
-              const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
-              const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
-              return `<code class="file-link" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
-            }
-            return `<code>${escaped}</code>`
-          },
-          code({ text, lang }) {
-            const escaped = text
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#39;")
-            // Normalize aliases (e.g. "c++" → "cpp") before stripping special
-            // chars, so "c++" doesn't become "c" (wrong language highlight).
-            const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
-            const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
-            const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
-            const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
-            return `<pre><code${attr}>${escaped}</code></pre>`
-          },
-          // kilocode_change end
+// kilocode_change start: expose the parser setup for Kilo markdown tests.
+export const createMarkedParser = (props: { nativeParser?: NativeMarkdownParser }) => {
+  // kilocode_change start: two-pass parser — first pass skips Shiki highlighting
+  // to avoid blocking the main thread with Oniguruma WASM regex (issue #6221).
+  // Code blocks render as plain <pre><code data-lang="..."> immediately.
+  // The Markdown component calls deferredHighlight() after DOM paint.
+  const parser = marked.use(
+    {
+      renderer: {
+        link({ href, title, text }) {
+          const titleAttr = title ? ` title="${title}"` : ""
+          return `<a href="${href}"${titleAttr} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`
+        },
+        // kilocode_change start
+        codespan({ text }) {
+          const file = parseFilePath(text)
+          const escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+          if (file) {
+            const lineAttr = file.line ? ` data-file-line="${file.line}"` : ""
+            const colAttr = file.column ? ` data-file-col="${file.column}"` : ""
+            return `<code class="file-link" dir="auto" data-file-path="${file.path}"${lineAttr}${colAttr}>${escaped}</code>`
+          }
+          return `<code dir="auto">${escaped}</code>`
+        },
+        code({ text, lang }) {
+          const escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;")
+          // Normalize aliases (e.g. "c++" → "cpp") before stripping special
+          // chars, so "c++" doesn't become "c" (wrong language highlight).
+          const normalized = lang ? (LANG_ALIASES[lang] ?? lang) : ""
+          const safe = normalized ? normalized.replace(/[^a-zA-Z0-9_-]/g, "") : ""
+          const data = safe.toLowerCase() === "mermaid" ? "mermaid" : safe
+          const attr = data ? ` class="language-${data}" data-lang="${data}"` : ' data-lang="text"'
+          return `<pre dir="auto"><code${attr}>${escaped}</code></pre>`
+        },
+        // kilocode_change end
+      },
+      // kilocode_change start: Marked accepts a tilde preceded by an opening
+      // parenthesis as the closing delimiter. It is left-flanking there, so
+      // preserve it literally instead of corrupting text such as "(~1 GB)".
+      tokenizer: {
+        del(src) {
+          const match = this.rules.inline.del.exec(src)
+          if (match?.[0].at(-2) === "(") return
+          return false
         },
       },
-      // kilocode_change start: enable only double-dollar math.
-      // Single $ is far more common as a currency symbol in agent responses
-      // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
-      // marked-katex-extension inline tokenizer because Marked falls through
-      // to later tokenizers when an override returns undefined.
-      {
-        extensions: [
-          {
-            name: "doubleKatexBlock",
-            level: "block" as const,
-            tokenizer(src) {
-              const match = src.match(BLOCK)
-              const text = match?.[1]
-              if (!match || !text) return undefined
-              return {
-                type: "doubleKatexBlock",
-                raw: match[0],
-                text: text.trim(),
-              }
-            },
-            renderer(token) {
-              return `${katex.renderToString(token.text, { displayMode: true, throwOnError: false })}\n`
-            },
-          } satisfies TokenizerAndRendererExtension,
-          {
-            name: "doubleKatexInline",
-            level: "inline" as const,
-            start(src) {
-              const index = src.indexOf("$$")
-              if (index === -1) return undefined
-              return index
-            },
-            tokenizer(src) {
-              const match = src.match(INLINE)
-              const text = match?.[1]
-              if (!match || !text) return undefined
-              return {
-                type: "doubleKatexInline",
-                raw: match[0],
-                text: text.trim(),
-              }
-            },
-            renderer(token) {
-              return katex.renderToString(token.text, { displayMode: true, throwOnError: false })
-            },
-          } satisfies TokenizerAndRendererExtension,
-        ],
-      } satisfies MarkedExtension,
       // kilocode_change end
-      // kilocode_change: markedShiki removed — the custom `code` renderer
-      // above returns plain <pre><code data-lang="..."> and markdown.tsx
-      // calls deferredHighlight() after paint. Running Shiki inside parse
-      // blocks the main thread on session switches (issue #6221).
-    )
+    },
+    // kilocode_change start: enable only double-dollar math.
+    // Single $ is far more common as a currency symbol in agent responses
+    // (e.g. $93K, $307K) than as a LaTeX delimiter. Avoid registering the
+    // marked-katex-extension inline tokenizer because Marked falls through
+    // to later tokenizers when an override returns undefined.
+    {
+      extensions: [
+        {
+          name: "doubleKatexBlock",
+          level: "block" as const,
+          tokenizer(src) {
+            const match = src.match(BLOCK)
+            const text = match?.[1]
+            if (!match || !text) return undefined
+            return {
+              type: "doubleKatexBlock",
+              raw: match[0],
+              text: text.trim(),
+            }
+          },
+          renderer(token) {
+            return `${renderKatex(token.text, { displayMode: true, throwOnError: false })}\n`
+          },
+        } satisfies TokenizerAndRendererExtension,
+        {
+          name: "doubleKatexInline",
+          level: "inline" as const,
+          start(src) {
+            const index = src.indexOf("$$")
+            if (index === -1) return undefined
+            return index
+          },
+          tokenizer(src) {
+            const match = src.match(INLINE)
+            const text = match?.[1]
+            if (!match || !text) return undefined
+            return {
+              type: "doubleKatexInline",
+              raw: match[0],
+              text: text.trim(),
+            }
+          },
+          renderer(token) {
+            return renderKatex(token.text, { displayMode: true, throwOnError: false })
+          },
+        } satisfies TokenizerAndRendererExtension,
+      ],
+    } satisfies MarkedExtension,
     // kilocode_change end
+    // kilocode_change: markedShiki removed — the custom `code` renderer
+    // above returns plain <pre><code data-lang="..."> and markdown.tsx
+    // calls deferredHighlight() after paint. Running Shiki inside parse
+    // blocks the main thread on session switches (issue #6221).
+  )
+  // kilocode_change end
 
-    if (props.nativeParser) {
-      const nativeParser = props.nativeParser
-      return {
-        async parse(markdown: string): Promise<string> {
-          const html = await nativeParser(markdown)
-          const withMath = renderMathExpressions(html)
-          return highlightCodeBlocks(withMath)
-        },
-      }
+  if (props.nativeParser) {
+    const nativeParser = props.nativeParser
+    return {
+      async parse(markdown: string): Promise<string> {
+        const html = await nativeParser(markdown)
+        const withMath = renderMathExpressions(html)
+        return highlightCodeBlocks(withMath)
+      },
     }
+  }
 
-    return parser
-  },
+  return parser
+}
+
+export const { use: useMarked, provider: MarkedProvider } = createSimpleContext({
+  name: "Marked",
+  init: createMarkedParser,
 })
+// kilocode_change end

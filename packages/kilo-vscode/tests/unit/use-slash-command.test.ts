@@ -27,6 +27,76 @@ function setup(sandbox: () => void, options: { enabled?: () => boolean; exclude?
 }
 
 describe("useSlashCommand sandbox action", () => {
+  it("opens project memory actions from the top-level command", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/mem" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+
+    expect(ctx.slash.results()).toContainEqual(
+      expect.objectContaining({ name: "memory", description: "Manage project memory", hints: ["mem"] }),
+    )
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/memory ")
+    expect(ctx.slash.results().map((command) => command.name)).toContain("memory inspect")
+    ctx.dispose()
+  })
+
+  it("offers memory actions after the parent command", () => {
+    const ctx = setup(() => {})
+
+    ctx.slash.onInput("/memory ", 8)
+
+    expect(ctx.slash.results().map((command) => command.name)).toEqual([
+      "memory status",
+      "memory show",
+      "memory on",
+      "memory off",
+      "memory inspect",
+      "memory rebuild",
+      "memory remember",
+      "memory correct",
+      "memory forget",
+      "memory auto on",
+      "memory auto off",
+      "memory purge confirm",
+    ])
+    ctx.dispose()
+  })
+
+  it("keeps nested memory actions out of root hint matching", () => {
+    const ctx = setup(() => {})
+    const nested = ctx.slash.commands().filter((command) => command.name.startsWith("memory "))
+
+    expect(nested.length).toBeGreaterThan(0)
+    expect(nested.every((command) => command.hints.length === 0)).toBe(true)
+    ctx.dispose()
+  })
+
+  it("completes nested memory actions and closes for free text", () => {
+    const ctx = setup(() => {})
+    const state = { text: "/mem rem" }
+    const textarea = {
+      value: state.text,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+
+    ctx.slash.onInput(state.text, state.text.length)
+    expect(ctx.slash.results().map((command) => command.name)).toEqual(["memory remember"])
+    ctx.slash.select(ctx.slash.results()[0]!, textarea, (text) => (state.text = text))
+    expect(state.text).toBe("/memory remember ")
+
+    ctx.slash.onInput("/memory remember durable fact", 31)
+    expect(ctx.slash.show()).toBe(false)
+    ctx.dispose()
+  })
+
   it("runs the sandbox toggle as a client command", () => {
     const state = { toggles: 0, text: "/sandbox", prevented: 0 }
     const ctx = setup(() => state.toggles++)
@@ -191,6 +261,37 @@ describe("select", () => {
     expect(textarea.value).toBe("existing text")
     expect(currentText).toBe("existing text")
     expect(actionCalls).toBe(1)
+    ctx.dispose()
+  })
+
+  it("preserves trailing text for memory commands when cursor moves", () => {
+    let currentText = ""
+    const ctx = setup(() => {})
+
+    // Type /memory rem: matches memory pattern, slashEnd set to end of text
+    const typed = "/memory rem"
+    ctx.slash.onInput(typed, typed.length)
+
+    // Simulate user moving cursor (no onInput fires for arrow keys)
+    const textarea = {
+      value: typed,
+      selectionStart: 3,
+      setSelectionRange: () => {},
+      focus: () => {},
+    } as unknown as HTMLTextAreaElement
+    const setText = (text: string) => {
+      currentText = text
+    }
+
+    // Find the memory remember command (nested, no action)
+    const remembered = ctx.slash.results().find((c) => c.name === "memory remember")
+    expect(remembered).toBeDefined()
+
+    ctx.slash.select(remembered!, textarea, setText)
+
+    // Trailing text from slashEnd (end of typed text) — empty — should be preserved correctly
+    expect(currentText).toBe("/memory remember ")
+    expect(textarea.value).toBe("/memory remember ")
     ctx.dispose()
   })
 })

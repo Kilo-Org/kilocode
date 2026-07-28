@@ -8,15 +8,15 @@ export const NvidiaPlugin = PluginV2.define({
     return {
       "catalog.transform": Effect.fn(function* (evt) {
         for (const item of evt.provider.list()) {
-          if (item.provider.endpoint.type !== "aisdk") continue
-          if (item.provider.endpoint.package !== "@ai-sdk/openai-compatible") continue
-          if (item.provider.endpoint.url !== "https://integrate.api.nvidia.com/v1") continue
+          if (item.provider.api.type !== "aisdk") continue
+          if (item.provider.api.package !== "@ai-sdk/openai-compatible") continue
+          if (item.provider.api.url !== "https://integrate.api.nvidia.com/v1") continue
           if (item.provider.id !== ProviderV2.ID.make("nvidia")) continue // kilocode_change
           evt.provider.update(item.provider.id, (provider) => {
-            provider.options.headers["HTTP-Referer"] = "https://kilo.ai/" // kilocode_change
+            provider.request.headers["HTTP-Referer"] = "https://kilo.ai/" // kilocode_change
             // kilocode_change start
-            provider.options.headers["X-Title"] = "Kilo Code"
-            provider.options.headers["X-BILLING-INVOKE-ORIGIN"] ??= "KiloCode"
+            provider.request.headers["X-Title"] = "Kilo Code"
+            provider.request.headers["X-BILLING-INVOKE-ORIGIN"] ??= "KiloCode"
             // kilocode_change end
           })
         }

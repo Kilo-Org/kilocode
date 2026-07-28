@@ -2,11 +2,12 @@ import { chmod, mkdir, readFile, rename, stat as statFile, writeFile } from "fs/
 import { createWriteStream, existsSync, statSync } from "fs"
 import { realpathSync } from "fs"
 // kilocode_change start - harden containment checks
-import { dirname, isAbsolute, join, relative, resolve as pathResolve, sep, win32 } from "path"
+import { dirname, isAbsolute, join, resolve as pathResolve, win32 } from "path"
 // kilocode_change end
 import { Readable } from "stream"
 import { pipeline } from "stream/promises"
 import { Glob } from "@opencode-ai/core/util/glob"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 
 // Fast sync version for metadata checks
@@ -176,16 +177,11 @@ export function windowsPath(p: string): string {
   )
 }
 export function overlaps(a: string, b: string) {
-  const relA = relative(a, b)
-  const relB = relative(b, a)
-  return !relA || !relA.startsWith("..") || !relB || !relB.startsWith("..")
+  return FSUtil.overlaps(a, b)
 }
 
 export function contains(parent: string, child: string) {
-  // kilocode_change start - reject cross-drive and escaped relative paths
-  const rel = relative(parent, child)
-  return rel === "" || (!isAbsolute(rel) && rel !== ".." && !rel.startsWith(`..${sep}`))
-  // kilocode_change end
+  return FSUtil.contains(parent, child)
 }
 
 export async function findUp(

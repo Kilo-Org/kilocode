@@ -48,4 +48,36 @@ describe("reasoning heading", () => {
       body: "",
     })
   })
+
+  test("treats an OpenAI placeholder comment as an empty body", () => {
+    expect(reasoningHeading("**Assessing search behavior**\n\n<!-- -->")).toEqual({
+      title: "Assessing search behavior",
+      body: "",
+    })
+  })
+
+  test("preserves visible body text around HTML comments", () => {
+    expect(reasoningHeading("**Assessing search behavior**\n\n<!-- status -->\nContinue checking results.")).toEqual({
+      title: "Assessing search behavior",
+      body: "<!-- status -->\nContinue checking results.",
+    })
+  })
+
+  test("treats an interrupted HTML comment as an empty body", () => {
+    expect(reasoningHeading("**Assessing search behavior**\n\n<!--")).toEqual({
+      title: "Assessing search behavior",
+      body: "",
+    })
+  })
+
+  test("preserves reasoning after an interrupted HTML comment", () => {
+    expect(reasoningHeading("**Assessing search behavior**\n\n<!--\nActually reconsider the alternate endpoint.")).toEqual({
+      title: "Assessing search behavior",
+      body: "Actually reconsider the alternate endpoint.",
+    })
+  })
+
+  test("treats a titleless placeholder comment as empty", () => {
+    expect(reasoningHeading("<!-- -->")).toEqual({ body: "" })
+  })
 })

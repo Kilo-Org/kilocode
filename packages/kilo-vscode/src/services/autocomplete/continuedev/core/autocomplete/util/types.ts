@@ -11,6 +11,7 @@ export interface AutocompleteInput {
   isUntitledFile: boolean
   completionId: string
   filepath: string
+  languageId?: string
   pos: Position
   recentlyVisitedRanges: AutocompleteCodeSnippet[]
   recentlyEditedRanges: RecentlyEditedRange[]

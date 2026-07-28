@@ -1,0 +1,21 @@
+# kilocode_change - new file
+name: "Setup Linux Sandbox"
+description: "Build the Linux bubblewrap helper"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup Zig
+      run: |
+        curl --fail --location --retry 3 \
+          https://ziglang.org/download/0.14.0/zig-linux-x86_64-0.14.0.tar.xz \
+          --output "$RUNNER_TEMP/zig.tar.xz"
+        echo "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982  $RUNNER_TEMP/zig.tar.xz" | sha256sum --check --status
+        tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/zig-linux-x86_64-0.14.0" >> "$GITHUB_PATH"
+      shell: bash
+
+    - name: Build bubblewrap helper
+      run: |
+        bun packages/opencode/script/kilocode/bubblewrap.ts --arch x64 --output "$RUNNER_TEMP/bwrap"
+        echo "KILO_BWRAP_PATH=$RUNNER_TEMP/bwrap" >> "$GITHUB_ENV"
+      shell: bash

@@ -1,14 +1,15 @@
 import { describe, expect, test } from "bun:test"
 import type { Model } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
-import { ModelID, ProviderID } from "@/provider/schema"
+import { ProviderV2 } from "@opencode-ai/core/provider"
+import { ModelV2 } from "@opencode-ai/core/model"
 import { SessionID } from "@/session/schema"
 import { KiloSessionPrompt } from "@/kilocode/session/prompt"
 
 function model(id: string, reasoning = true): Model {
   return {
-    id: ModelID.make(id),
-    providerID: ProviderID.make("kilo"),
+    id: ModelV2.ID.make(id),
+    providerID: ProviderV2.ID.make("kilo"),
     api: {
       id,
       url: "https://api.kilo.ai/api/openrouter",

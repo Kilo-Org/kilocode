@@ -529,10 +529,146 @@ const hintErrors: ToolPart[] = [
 
 const mockDataHintErrors = createMockData(hintErrors)
 
+// --- Question tool: answered (reference) ---
+
+const questionAnsweredPart: ToolPart = {
+  id: "part-question-answered",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-question-answered",
+  tool: "question",
+  state: {
+    status: "completed",
+    input: {
+      questions: [
+        {
+          question: "Should I continue with this approach?",
+          header: "Continue?",
+          options: [
+            { label: "Yes", description: "Proceed with the current plan" },
+            { label: "No", description: "Stop and reconsider" },
+          ],
+        },
+        {
+          question: "Which library should I use for date formatting?",
+          header: "Library",
+          options: [
+            { label: "date-fns", description: "Lightweight, tree-shakeable" },
+            { label: "luxon", description: "Full-featured DateTime library" },
+            { label: "dayjs", description: "Moment.js compatible, 2kB" },
+          ],
+        },
+      ],
+    },
+    output: 'User answered: "Should I continue?"="Yes", "Which library?"="date-fns"',
+    title: "Asked 2 questions",
+    metadata: { answers: [["Yes"], ["date-fns"]] },
+    time: { start: now - 8000, end: now - 7000 },
+  },
+}
+
+// --- Question tool: dismissed (exercises the fix) ---
+
+const questionDismissedPart: ToolPart = {
+  id: "part-question-dismissed",
+  sessionID: SESSION_ID,
+  messageID: ASST_MSG_ID,
+  type: "tool",
+  callID: "call-question-dismissed",
+  tool: "question",
+  state: {
+    status: "completed",
+    input: {
+      questions: [
+        {
+          question: "Should I continue with this approach?",
+          header: "Continue?",
+          options: [
+            { label: "Yes", description: "Proceed with the current plan" },
+            { label: "No", description: "Stop and reconsider" },
+          ],
+        },
+        {
+          question: "Which library should I use for date formatting?",
+          header: "Library",
+          options: [
+            { label: "date-fns", description: "Lightweight, tree-shakeable" },
+            { label: "luxon", description: "Full-featured DateTime library" },
+          ],
+        },
+      ],
+    },
+    output: "User dismissed the question.",
+    title: "Question dismissed",
+    metadata: { answers: [], dismissed: true },
+    time: { start: now - 8000, end: now - 7000 },
+  },
+}
+
+const mockDataQuestionAnswered = createMockData([questionAnsweredPart, textPart])
+const mockDataQuestionDismissed = createMockData([questionDismissedPart, textPart])
+
 export const ToolHintErrors: Story = {
   render: () => (
     <AllProviders data={mockDataHintErrors}>
       <AssistantParts messages={[mockAssistantMessage]} />
     </AllProviders>
   ),
+}
+
+// --- Question tool: answered (collapsed) ---
+
+export const QuestionAnswered: Story = {
+  name: "QuestionAnswered",
+  render: () => (
+    <AllProviders data={mockDataQuestionAnswered}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Question tool: answered (expanded) ---
+
+export const QuestionAnsweredExpanded: Story = {
+  name: "QuestionAnswered (expanded)",
+  render: () => (
+    <AllProviders data={mockDataQuestionAnswered}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const trigger = canvasElement
+      .querySelector('[data-slot="basic-tool-tool-title"]')
+      ?.closest("button")
+    if (trigger) trigger.click()
+  },
+}
+
+// --- Question tool: dismissed (collapsed — "2 dismissed" subtitle) ---
+
+export const QuestionDismissed: Story = {
+  name: "QuestionDismissed",
+  render: () => (
+    <AllProviders data={mockDataQuestionDismissed}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+}
+
+// --- Question tool: dismissed (expanded — shows questions with "Dismissed" labels) ---
+
+export const QuestionDismissedExpanded: Story = {
+  name: "QuestionDismissed (expanded)",
+  render: () => (
+    <AllProviders data={mockDataQuestionDismissed}>
+      <AssistantParts messages={[mockAssistantMessage]} />
+    </AllProviders>
+  ),
+  play: async ({ canvasElement }: { canvasElement: HTMLElement }) => {
+    const trigger = canvasElement
+      .querySelector('[data-slot="basic-tool-tool-title"]')
+      ?.closest("button")
+    if (trigger) trigger.click()
+  },
 }

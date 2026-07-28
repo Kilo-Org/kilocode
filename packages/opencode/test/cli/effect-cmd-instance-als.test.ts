@@ -1,5 +1,5 @@
 import { afterEach, expect } from "bun:test"
-import { AppFileSystem } from "@opencode-ai/core/filesystem"
+import { FSUtil } from "@opencode-ai/core/fs-util"
 import { Effect } from "effect"
 import { effectCmd } from "../../src/cli/effect-cmd"
 import { EffectBridge } from "../../src/effect/bridge"
@@ -8,7 +8,7 @@ import { Instance } from "../../src/kilocode/instance"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(AppFileSystem.defaultLayer)
+const it = testEffect(FSUtil.defaultLayer)
 
 afterEach(async () => {
   await disposeAllInstances()

@@ -52,6 +52,8 @@ describe("SystemPrompt.provider", () => {
       const model = ProviderTest.model({ prompt: "gemini" })
       const result = SystemPrompt.provider(model)
       expect(result).toEqual([PROMPT_GEMINI])
+      expect(PROMPT_GEMINI).toContain("filePath argument")
+      expect(PROMPT_GEMINI).not.toContain("file_path argument")
     })
 
     test("trinity prompt is selected when model.prompt is 'trinity'", () => {

@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Schema, SchemaGetter } from "effect" // kilocode_change
 import { JsonSchema, MessageRole, ProviderMetadata } from "./ids"
 import { CacheHint, CachePolicy, GenerationOptions, HttpOptions, ModelSchema, ProviderOptions } from "./options"
 import { isRecord } from "../utils/record"
@@ -39,53 +39,144 @@ export const MediaPart = Schema.Struct({
 }).annotate({ identifier: "LLM.Content.Media" })
 export type MediaPart = Schema.Schema.Type<typeof MediaPart>
 
-export const ToolResultMediaPart = Schema.Struct({
+export const ToolTextContent = Schema.Struct({
+  type: Schema.Literal("text"),
+  text: Schema.String,
+}).annotate({ identifier: "Tool.TextContent" })
+export type ToolTextContent = typeof ToolTextContent.Type
+
+export const ToolFileContent = Schema.Struct({
+  type: Schema.Literal("file"),
+  uri: Schema.String,
+  mime: Schema.String,
+  name: Schema.optional(Schema.String),
+}).annotate({ identifier: "Tool.FileContent" })
+export type ToolFileContent = typeof ToolFileContent.Type
+
+/** Ordered, provider-independent content shown to models and UIs after a tool succeeds. */
+export const ToolContent = Schema.Union([ToolTextContent, ToolFileContent]).pipe(Schema.toTaggedUnion("type"))
+export type ToolContent = Schema.Schema.Type<typeof ToolContent>
+
+// kilocode_change start - decode persisted V2 tool file shapes and legacy media results
+const LegacyToolFileContent = Schema.Struct({
+  type: Schema.Literal("file"),
+  source: Schema.Union([
+    Schema.Struct({ type: Schema.Literal("data"), data: Schema.String }),
+    Schema.Struct({ type: Schema.Literal("url"), url: Schema.String }),
+    Schema.Struct({ type: Schema.Literal("file"), uri: Schema.String }),
+  ]).pipe(Schema.toTaggedUnion("type")),
+  mime: Schema.String,
+  name: Schema.optional(Schema.String),
+})
+const LegacyToolMediaContent = Schema.Struct({
   type: Schema.Literal("media"),
   mediaType: Schema.String,
   data: Schema.String,
   filename: Schema.optional(Schema.String),
-  metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
-}).annotate({ identifier: "LLM.ToolResult.Media" })
-export type ToolResultMediaPart = Schema.Schema.Type<typeof ToolResultMediaPart>
+})
+const ToolContentInput = Schema.Union([ToolContent, LegacyToolFileContent, LegacyToolMediaContent])
 
-export const ToolResultContentPart = Schema.Union([TextPart, ToolResultMediaPart])
-export type ToolResultContentPart = Schema.Schema.Type<typeof ToolResultContentPart>
+const stored = (item: ToolContent): typeof ToolContentInput.Type => {
+  if (item.type === "text") return item
+  const data = /^data:[^;,]+;base64,(.*)$/s.exec(item.uri)?.[1]
+  const source = data
+    ? ({ type: "data", data } as const)
+    : URL.canParse(item.uri) && ["http:", "https:"].includes(new URL(item.uri).protocol)
+      ? ({ type: "url", url: item.uri } as const)
+      : ({ type: "file", uri: item.uri } as const)
+  return { type: "file", source, mime: item.mime, name: item.name }
+}
 
-// kilocode_change start - avoid circular inference rejected by Kilo's newer tsgo
+export const StoredToolContent = ToolContentInput.pipe(
+  Schema.decodeTo(ToolContent, {
+    decode: SchemaGetter.transform((item) => {
+      if (item.type === "text" || (item.type === "file" && "uri" in item)) return item
+      if (item.type === "media") {
+        return {
+          type: "file" as const,
+          uri: item.data.startsWith("data:") ? item.data : `data:${item.mediaType};base64,${item.data}`,
+          mime: item.mediaType,
+          name: item.filename,
+        }
+      }
+      const uri =
+        item.source.type === "data"
+          ? `data:${item.mime};base64,${item.source.data}`
+          : item.source.type === "url"
+            ? item.source.url
+            : item.source.uri
+      return { type: "file" as const, uri, mime: item.mime, name: item.name }
+    }),
+    encode: SchemaGetter.transform(stored),
+  }),
+)
+
 const toolResultValueSchema = Schema.Union([
-  Schema.Struct({
-    type: Schema.Literal("json"),
-    value: Schema.Unknown,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("text"),
-    value: Schema.Unknown,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("error"),
-    value: Schema.Unknown,
-  }),
-  Schema.Struct({
-    type: Schema.Literal("content"),
-    value: Schema.Array(ToolResultContentPart),
-  }),
+  Schema.Struct({ type: Schema.Literal("json"), value: Schema.Unknown }),
+  Schema.Struct({ type: Schema.Literal("text"), value: Schema.Unknown }),
+  Schema.Struct({ type: Schema.Literal("error"), value: Schema.Unknown }),
+  Schema.Struct({ type: Schema.Literal("content"), value: Schema.Array(ToolContent) }),
 ]).annotate({ identifier: "LLM.ToolResult" })
 export type ToolResultValue = Schema.Schema.Type<typeof toolResultValueSchema>
+// kilocode_change end
 
 const isToolResultValue = (value: unknown): value is ToolResultValue =>
   isRecord(value) &&
   (value.type === "text" || value.type === "json" || value.type === "error" || value.type === "content") &&
   "value" in value
 
+// kilocode_change start
 export const ToolResultValue = Object.assign(toolResultValueSchema, {
   is: isToolResultValue,
   make: (value: unknown, type: ToolResultValue["type"] = "json"): ToolResultValue => {
     if (isToolResultValue(value)) return value
     if (type === "content") return { type, value: Array.isArray(value) ? value : [] }
     return { type, value }
-  },
-})
 // kilocode_change end
+  },
+}) // kilocode_change
+
+export interface ToolOutput {
+  readonly structured: unknown
+  readonly content: ReadonlyArray<ToolContent>
+}
+
+export const ToolOutput = Object.assign(
+  Schema.Struct({
+    structured: Schema.Unknown,
+    content: Schema.Array(ToolContent),
+  }).annotate({ identifier: "LLM.ToolOutput" }),
+  {
+    make: (structured: unknown, content: ReadonlyArray<ToolContent> = []): ToolOutput => ({ structured, content }),
+    fromResultValue: (result: ToolResultValue): ToolOutput | undefined => {
+      switch (result.type) {
+        case "json":
+          return { structured: result.value, content: [] }
+        case "text":
+          return { structured: {}, content: [{ type: "text", text: toolResultText(result.value) }] }
+        case "content":
+          return { structured: {}, content: result.value }
+        case "error":
+          return undefined
+      }
+    },
+    toResultValue: (output: ToolOutput): ToolResultValue => {
+      if (output.content.length === 0) return { type: "json", value: output.structured }
+      if (output.content.length === 1 && output.content[0]?.type === "text")
+        return { type: "text", value: output.content[0].text }
+      return { type: "content", value: output.content }
+    },
+  },
+)
+
+const toolResultText = (value: unknown) => {
+  if (typeof value === "string") return value
+  try {
+    return JSON.stringify(value) ?? String(value)
+  } catch {
+    return String(value)
+  }
+}
 
 export const ToolCallPart = Object.assign(
   Schema.Struct({
@@ -158,6 +249,7 @@ export class Message extends Schema.Class<Message>("LLM.Message")({
 
 export namespace Message {
   export type ContentInput = string | ContentPart | ReadonlyArray<ContentPart>
+  export type SystemContentInput = string | TextPart | ReadonlyArray<TextPart>
   export type Input = Omit<ConstructorParameters<typeof Message>[0], "content"> & {
     readonly content: ContentInput
   }
@@ -176,6 +268,14 @@ export namespace Message {
 
   export const assistant = (content: ContentInput) => make({ role: "assistant", content })
 
+  /**
+   * Add an operator-authored instruction at this chronological point in the
+   * conversation. This is distinct from the initial `LLMRequest.system`
+   * prompt. Keep raw retrieved, tool, and web content out of privileged system
+   * updates; pass that untrusted content through ordinary user/tool channels.
+   */
+  export const system = (content: SystemContentInput) => make({ role: "system", content })
+
   export const tool = (result: ToolResultPart | Parameters<typeof ToolResultPart.make>[0]) =>
     make({ role: "tool", content: ["type" in result ? result : ToolResultPart.make(result)] })
 }
@@ -184,6 +284,7 @@ export class ToolDefinition extends Schema.Class<ToolDefinition>("LLM.ToolDefini
   name: Schema.String,
   description: Schema.String,
   inputSchema: JsonSchema,
+  outputSchema: Schema.optional(JsonSchema),
   cache: Schema.optional(CacheHint),
   metadata: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),
   native: Schema.optional(Schema.Record(Schema.String, Schema.Unknown)),

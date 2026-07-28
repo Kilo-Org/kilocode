@@ -6,7 +6,8 @@ import { Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Flag } from "@opencode-ai/core/flag/flag"
-import { assertNetwork, enabled as sandboxed } from "@kilocode/sandbox"
+import { Database } from "@opencode-ai/core/database/database"
+import { assertNetwork, assertWrite, enabled as sandboxed } from "@kilocode/sandbox"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
 import * as Network from "@/kilocode/sandbox/network"
@@ -16,7 +17,9 @@ import { SessionID } from "@/session/schema"
 import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
-const it = testEffect(Layer.mergeAll(Bus.layer, Config.defaultLayer, CrossSpawnSpawner.defaultLayer))
+const it = testEffect(
+  Layer.mergeAll(Bus.layer, Config.defaultLayer, CrossSpawnSpawner.defaultLayer, Database.defaultLayer),
+)
 const linux = process.platform === "linux" ? test : test.skip
 const posix = process.platform === "win32" ? test.skip : test
 const tool = Network.builtin({ id: "read" })
@@ -32,6 +35,7 @@ test("restores the session snapshot after a backend restart", async () => {
   const script = [
     'import { Effect, Layer } from "effect"',
     'import { Config } from "@/config/config"',
+    'import { Database } from "@opencode-ai/core/database/database"',
     'import { InstanceRef } from "@/effect/instance-ref"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SandboxStore } from "@/kilocode/sandbox/store"',
@@ -40,7 +44,7 @@ test("restores the session snapshot after a backend restart", async () => {
     'const context = { directory, worktree: directory, project: { id: "sandbox-restart", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
     "const cfg = JSON.parse(process.env.TEST_CONFIG)",
     'const id = SessionID.make("ses_sandbox_restart")',
-    "const status = await SandboxPolicy.status(id).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed(cfg) })), Effect.provideService(InstanceRef, context), Effect.runPromise)",
+    "const status = await SandboxPolicy.status(id).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed(cfg) })), Effect.provide(Database.defaultLayer), Effect.provideService(InstanceRef, context), Effect.runPromise)",
     "const state = await SandboxStore.read(directory, id)",
     "console.log(JSON.stringify({ status, state }))",
   ].join("\n")
@@ -64,14 +68,29 @@ test("restores the session snapshot after a backend restart", async () => {
     expect(result.exitCode, result.stderr.toString()).toBe(0)
     return JSON.parse(result.stdout.toString().trim().split("\n").at(-1)!) as {
       status: { enabled: boolean; available: boolean; version: number }
-      state: { enabled: boolean; mode: string; version: number }
+      state: { enabled: boolean; mode: string; allowedHosts: string[]; writablePaths: string[]; version: number }
     }
   }
 
   try {
-    const initial = run({ experimental: { sandbox: true, sandbox_restrict_network: true } })
-    expect(initial.state).toEqual({ enabled: true, mode: "deny", version: 0 })
-    const restored = run({ experimental: { sandbox: false, sandbox_restrict_network: false } })
+    const initial = run({
+      sandbox: {
+        enabled: true,
+        network: "deny",
+        allowed_hosts: ["API.GITHUB.COM."],
+        writable_paths: ["~/sandbox-output"],
+      },
+    })
+    expect(initial.state).toEqual({
+      enabled: true,
+      mode: "proxy",
+      allowedHosts: ["api.github.com:443"],
+      writablePaths: [path.join(os.homedir(), "sandbox-output")],
+      version: 0,
+    })
+    const restored = run({
+      sandbox: { enabled: false, network: "deny", allowed_hosts: ["evil.example"], writable_paths: ["/tmp/evil"] },
+    })
     expect(restored.state).toEqual(initial.state)
     expect(restored.status.enabled).toBe(restored.status.available)
   } finally {
@@ -122,16 +141,19 @@ linux("reports configured network namespace availability", async () => {
   const script = [
     'import { Effect, Layer } from "effect"',
     'import { Config } from "@/config/config"',
+    'import { Database } from "@opencode-ai/core/database/database"',
     'import { InstanceRef } from "@/effect/instance-ref"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SessionID } from "@/session/schema"',
     "const directory = process.cwd()",
     'const context = { directory, worktree: directory, project: { id: "sandbox-status", worktree: directory, vcs: "git", time: { created: 0, updated: 0 }, sandboxes: [] } }',
-    "const status = (restrict) => SandboxPolicy.status(SessionID.make(`ses_sandbox_status_${restrict}`)).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ experimental: { sandbox: true, sandbox_restrict_network: restrict } }) })), Effect.provideService(InstanceRef, context), Effect.runPromise)",
+    "const status = (restrict) => SandboxPolicy.status(SessionID.make(`ses_sandbox_status_${restrict}`)).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ sandbox: { enabled: true, network: restrict ? 'deny' : 'allow' } }) })), Effect.provide(Database.defaultLayer), Effect.provideService(InstanceRef, context), Effect.runPromise)",
     "const deny = await status(true)",
     "const allow = await status(false)",
     'if (deny.available || deny.enabled || !deny.reason?.includes("Linux network sandbox")) process.exit(2)',
     "if (!allow.available || !allow.enabled) process.exit(3)",
+    'const blocked = await SandboxPolicy.executeTool(SessionID.make("ses_sandbox_status_true"), { id: "read" }, Effect.succeed("escaped")).pipe(Effect.provide(Layer.mock(Config.Service, { get: () => Effect.succeed({ sandbox: { enabled: true, network: "deny" } }) })), Effect.provideService(InstanceRef, context), Effect.exit, Effect.runPromise)',
+    "if (blocked._tag !== 'Failure') process.exit(4)",
   ].join("\n")
 
   try {
@@ -161,10 +183,8 @@ it.instance("snapshots the primary kilo config for the session lifetime", () =>
         const file = path.join(test.directory, "kilo.json")
         const legacy = path.join(test.directory, "opencode.json")
         const config = yield* Config.Service
-        yield* Effect.promise(() =>
-          Bun.write(file, JSON.stringify({ experimental: { sandbox: true, sandbox_restrict_network: true } })),
-        )
-        yield* config.update({ experimental: { sandbox: true, sandbox_restrict_network: true } })
+        yield* Effect.promise(() => Bun.write(file, JSON.stringify({ sandbox: { enabled: true, network: "deny" } })))
+        yield* config.update({ sandbox: { enabled: true, network: "deny" } })
 
         const id = SessionID.make("ses_sandbox_config")
         const initial = yield* SandboxPolicy.status(id)
@@ -172,12 +192,10 @@ it.instance("snapshots the primary kilo config for the session lifetime", () =>
         expect(initial.version).toBe(0)
         if (!initial.available) return
 
-        yield* Effect.promise(() =>
-          Bun.write(file, JSON.stringify({ experimental: { sandbox: false, sandbox_restrict_network: false } })),
-        )
-        yield* config.update({ experimental: { sandbox: false, sandbox_restrict_network: false } })
+        yield* Effect.promise(() => Bun.write(file, JSON.stringify({ sandbox: { enabled: false, network: "allow" } })))
+        yield* config.update({ sandbox: { enabled: false, network: "allow" } })
 
-        expect((yield* config.get()).experimental?.sandbox).toBe(false)
+        expect((yield* config.get()).sandbox?.enabled).toBeUndefined()
         expect(yield* Effect.promise(() => Bun.file(legacy).exists())).toBe(false)
         expect((yield* SandboxPolicy.status(id)).enabled).toBe(true)
         expect(yield* execute(id, sandboxed)).toBe(true)
@@ -191,7 +209,7 @@ it.instance("snapshots the primary kilo config for the session lifetime", () =>
   ),
 )
 
-it.instance("does not enable authless sessions without the experimental sandbox flag", () =>
+it.instance("does not enable authless sessions without sandbox enabled", () =>
   Effect.acquireUseRelease(
     Effect.sync(() => {
       const password = Flag.KILO_SERVER_PASSWORD
@@ -215,6 +233,30 @@ it.instance("does not enable authless sessions without the experimental sandbox 
   ),
 )
 
+it.instance("applies configured writable paths during tool execution", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const outside = path.join(path.dirname(test.directory), `sandbox-writable-${path.basename(test.directory)}`)
+    yield* Effect.promise(() => fs.mkdir(outside, { recursive: true }))
+    yield* Effect.addFinalizer(() => Effect.promise(() => fs.rm(outside, { recursive: true, force: true })))
+
+    const id = SessionID.make("ses_sandbox_writable_config")
+    const result = yield* Effect.gen(function* () {
+      const status = yield* SandboxPolicy.status(id)
+      if (!status.available) return undefined
+      return yield* execute(id, assertWrite(path.join(outside, "allowed.txt")).pipe(Effect.exit))
+    }).pipe(
+      Effect.provide(
+        Layer.mock(Config.Service, {
+          get: () => Effect.succeed({ sandbox: { enabled: true, network: "allow", writable_paths: [outside] } }),
+        }),
+      ),
+    )
+    if (result === undefined) return
+    expect(Exit.isSuccess(result)).toBe(true)
+  }),
+)
+
 it.instance(
   "runs sandboxed when config is on and no override exists",
   () =>
@@ -222,9 +264,15 @@ it.instance(
       const id = SessionID.make("ses_sandbox_default_on")
       const status = yield* SandboxPolicy.status(id)
       expect(status.enabled).toBe(status.available)
-      expect(yield* execute(id, sandboxed)).toBe(status.available)
+      const result = yield* execute(id, sandboxed).pipe(Effect.exit)
+      if (!status.available) {
+        expect(Exit.isFailure(result)).toBe(true)
+        return
+      }
+      expect(Exit.isSuccess(result)).toBe(true)
+      if (Exit.isSuccess(result)) expect(result.value).toBe(true)
     }),
-  { config: { experimental: { sandbox: true } } },
+  { config: { sandbox: { enabled: true } } },
 )
 
 it.instance(
@@ -240,7 +288,7 @@ it.instance(
       expect((yield* SandboxPolicy.status(second)).enabled).toBe(false)
       expect(yield* execute(second, sandboxed)).toBe(false)
     }),
-  { config: { experimental: { sandbox: true } } },
+  { config: { sandbox: { enabled: true } } },
 )
 
 it.instance("persists an authless toggle to later sessions", () =>
@@ -271,7 +319,7 @@ it.instance(
       expect((yield* SandboxPolicy.status(third)).enabled).toBe(true)
       expect(yield* execute(third, sandboxed)).toBe(true)
     }),
-  { config: { experimental: { sandbox: true } } },
+  { config: { sandbox: { enabled: true } } },
 )
 
 it.instance("isolates concurrent session overrides and clears them", () =>
@@ -319,10 +367,48 @@ it.instance("serializes concurrent toggles for a session", () =>
   }),
 )
 
+it.instance("serializes activation with unrestricted tool start", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const id = SessionID.make("ses_sandbox_activation_tool_race")
+    if (!(yield* SandboxPolicy.status(id)).available) return
+    const entered = yield* Deferred.make<void>()
+    const release = yield* Deferred.make<void>()
+    const family = yield* Deferred.make<void>()
+    const preflight = yield* Deferred.make<void>()
+    const guard = yield* Deferred.make<void>()
+    const running = yield* execute(
+      id,
+      Effect.gen(function* () {
+        yield* Deferred.succeed(entered, undefined)
+        yield* Deferred.await(release)
+        return yield* sandboxed
+      }),
+    ).pipe(Effect.forkChild)
+    yield* Deferred.await(entered)
+    const activation = yield* SandboxPolicy.toggleGuarded(
+      id,
+      () => Deferred.succeed(guard, undefined),
+      Deferred.succeed(family, undefined).pipe(Effect.as([{ id, directory: test.directory }])),
+      () => Deferred.succeed(preflight, undefined),
+    ).pipe(Effect.forkChild)
+    yield* Deferred.await(family)
+    yield* Deferred.await(preflight)
+    expect(yield* Deferred.isDone(guard)).toBe(false)
+
+    yield* Deferred.succeed(release, undefined)
+    expect(yield* Fiber.join(running)).toBe(false)
+    expect((yield* Fiber.join(activation)).enabled).toBe(true)
+    expect(yield* Deferred.isDone(guard)).toBe(true)
+    expect(yield* execute(id, sandboxed)).toBe(true)
+  }),
+)
+
 it.instance("prevents a queued toggle from restoring a retired override", () =>
   Effect.gen(function* () {
     const test = yield* TestInstance
     const id = SessionID.make("ses_sandbox_retire_race")
+    if (!(yield* SandboxPolicy.status(id)).available) return
     const entered = yield* Deferred.make<void>()
     const release = yield* Deferred.make<void>()
     const removal = yield* SandboxPolicy.retire(
@@ -352,7 +438,12 @@ it.instance(
       const status = yield* SandboxPolicy.status(parent)
       if (!status.available) return
 
-      yield* SandboxPolicy.inherit(parent, child, { enabled: true, mode: "deny" })
+      yield* SandboxPolicy.inherit(parent, child, {
+        enabled: true,
+        mode: "deny",
+        allowedHosts: [],
+        writablePaths: [],
+      })
       yield* SandboxPolicy.toggle(parent)
       expect((yield* SandboxPolicy.status(parent)).enabled).toBe(false)
       expect((yield* SandboxPolicy.status(child)).enabled).toBe(true)
@@ -364,7 +455,42 @@ it.instance(
       expect((yield* SandboxPolicy.status(child)).enabled).toBe(true)
       expect(yield* execute(child, sandboxed)).toBe(true)
     }),
-  { config: { experimental: { sandbox: true } } },
+  { config: { sandbox: { enabled: true } } },
+)
+
+it.instance("intersects inherited network and write authority", () =>
+  Effect.gen(function* () {
+    const test = yield* TestInstance
+    const parent = SessionID.make("ses_sandbox_intersection_parent")
+    const child = SessionID.make("ses_sandbox_intersection_child")
+    yield* Effect.promise(() =>
+      SandboxStore.write(test.directory, parent, {
+        enabled: true,
+        mode: "proxy",
+        allowedHosts: ["api.github.com:443", "github.com:443"],
+        writablePaths: ["/shared", "/parent"],
+        version: 0,
+      }),
+    )
+    yield* Effect.promise(() =>
+      SandboxStore.write(test.directory, child, {
+        enabled: false,
+        mode: "proxy",
+        allowedHosts: ["api.github.com:443", "example.com:443"],
+        writablePaths: ["/child", "/shared"],
+        version: 0,
+      }),
+    )
+
+    yield* SandboxPolicy.inherit(parent, child)
+    expect(yield* SandboxPolicy.peek(test.directory, child)).toEqual({
+      enabled: true,
+      mode: "proxy",
+      allowedHosts: ["api.github.com:443"],
+      writablePaths: ["/shared"],
+      version: 1,
+    })
+  }),
 )
 
 it.instance("enforces writes only while the macOS session override is active", () =>

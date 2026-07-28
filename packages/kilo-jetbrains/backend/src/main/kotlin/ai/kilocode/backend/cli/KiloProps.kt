@@ -13,4 +13,8 @@ object KiloProps {
 
     fun cliVersion(): String = props.getProperty("cli.version")
         ?: throw IllegalStateException("cli.version missing from kilo.properties")
+
+    fun pinned(): Boolean = pinned(props)
+
+    internal fun pinned(props: Properties): Boolean = props.getProperty("cli.pinned")?.toBoolean() ?: true
 }

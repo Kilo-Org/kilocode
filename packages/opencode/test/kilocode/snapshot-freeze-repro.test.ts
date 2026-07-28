@@ -14,7 +14,7 @@
 
 import { test, expect, afterEach, mock } from "bun:test"
 import { $ } from "bun"
-import { Effect, Fiber } from "effect"
+import { Effect, Fiber, Layer } from "effect"
 import { provideTestInstance } from "../fixture/fixture"
 import { Server } from "../../src/server/server"
 import { Session } from "../../src/session/session"
@@ -22,12 +22,21 @@ import { Snapshot } from "../../src/snapshot"
 import { Filesystem } from "../../src/util/filesystem"
 import * as Log from "@opencode-ai/core/util/log"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
+import { seedProject } from "../fixture/fixture"
+import { Database } from "@opencode-ai/core/database/database"
+import { InstanceRef } from "../../src/effect/instance-ref"
+import type { InstanceContext } from "../../src/project/instance-context"
 
 void Log.init({ print: false })
 
-function run<A>(body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
+function run<A>(ctx: InstanceContext, body: (snapshot: Snapshot.Interface) => Effect.Effect<A, never, Session.Service>) {
   return Effect.runPromise(
-    Snapshot.Service.use(body).pipe(Effect.provide(Snapshot.defaultLayer), Effect.provide(Session.defaultLayer)),
+    seedProject.pipe(
+      Effect.andThen(Snapshot.Service.use(body)),
+      Effect.provide(Snapshot.defaultLayer),
+      Effect.provide(Session.defaultLayer.pipe(Layer.provideMerge(Database.defaultLayer))),
+      Effect.provideService(InstanceRef, ctx),
+    ),
   )
 }
 
@@ -54,8 +63,8 @@ test("pathological diffFull workload finishes quickly and does not block abort",
 
   await provideTestInstance({
     directory: tmp.path,
-    fn: () =>
-      run((snapshot) =>
+    fn: (ctx) =>
+      run(ctx, (snapshot) =>
         Effect.gen(function* () {
           const sessions = yield* Session.Service
           const session = yield* sessions.create({})
@@ -67,47 +76,56 @@ test("pathological diffFull workload finishes quickly and does not block abort",
           const after = yield* snapshot.track()
           expect(after).toBeTruthy()
 
+          const app = Server.Default().app
+          const headers = { "x-kilo-directory": tmp.path }
+          const warm = yield* Effect.promise(() =>
+            Promise.resolve(app.request(`/session/${session.id}/abort`, { method: "POST", headers })),
+          )
+          expect(warm.status).toBe(200)
+
           // Kick off a diffFull that exercises the freeze path.
           const diff = yield* snapshot.diffFull(before!, after!).pipe(Effect.forkChild({ startImmediately: true }))
 
           // Concurrently keep a tick counter running. If the event loop blocks we
           // will see this count fall behind wall-clock elapsed.
-          let ticks = 0
+          const ticks = { count: 0 }
           const start = Date.now()
           const timer = setInterval(() => {
-            ticks++
+            ticks.count++
           }, 25)
 
-          // Fire an abort request against the Hono app in the middle of the diff.
-          const app = Server.Default().app
-          const abortStart = Date.now()
-          const res = yield* Effect.promise(() =>
-            Promise.resolve(app.request(`/session/${session.id}/abort`, { method: "POST" })),
-          )
-          const abortLatency = Date.now() - abortStart
-          expect(res.status).toBe(200)
-          // The abort endpoint must respond well under a second even under load.
-          expect(abortLatency).toBeLessThan(2000)
+          try {
+            // Fire an abort request against the warmed Hono route in the middle of the diff.
+            const abortStart = Date.now()
+            const res = yield* Effect.promise(() =>
+              Promise.resolve(app.request(`/session/${session.id}/abort`, { method: "POST", headers })),
+            )
+            const abortLatency = Date.now() - abortStart
+            expect(res.status).toBe(200)
+            // The abort endpoint must respond well under a second even under load.
+            expect(abortLatency).toBeLessThan(2000)
 
-          const diffs = yield* Fiber.join(diff)
-          clearInterval(timer)
-          const total = Date.now() - start
+            const diffs = yield* Fiber.join(diff)
+            const total = Date.now() - start
 
-          // The freeze workload must finish in bounded time. Five seconds is
-          // generous even for a slow CI box; without the fix this hangs.
-          expect(total).toBeLessThan(5000)
-          // And we must have ticked at least a few times during the work, proving
-          // the event loop stayed responsive (ESC would actually arrive).
-          expect(ticks).toBeGreaterThan(0)
+            // The freeze workload must finish in bounded time. Five seconds is
+            // generous even for a slow CI box; without the fix this hangs.
+            expect(total).toBeLessThan(5000)
+            // And we must have ticked at least a few times during the work, proving
+            // the event loop stayed responsive (ESC would actually arrive).
+            expect(ticks.count).toBeGreaterThan(0)
 
-          // With git-based diff the patch is a real unified diff, not empty.
-          const hit = diffs.find((d) => d.file === "fat.json")
-          expect(hit).toBeDefined()
-          expect(hit!.patch).toMatch(/^diff --git /m)
-          expect(hit!.patch).toContain("-v1_line_0")
-          expect(hit!.patch).toContain("+v2_line_0")
-          expect(hit!.additions).toBeGreaterThan(0)
-          expect(hit!.deletions).toBeGreaterThan(0)
+            // With git-based diff the patch is a real unified diff, not empty.
+            const hit = diffs.find((d) => d.file === "fat.json")
+            expect(hit).toBeDefined()
+            expect(hit!.patch).toMatch(/^diff --git /m)
+            expect(hit!.patch).toContain("-v1_line_0")
+            expect(hit!.patch).toContain("+v2_line_0")
+            expect(hit!.additions).toBeGreaterThan(0)
+            expect(hit!.deletions).toBeGreaterThan(0)
+          } finally {
+            clearInterval(timer)
+          }
         }),
       ),
   })

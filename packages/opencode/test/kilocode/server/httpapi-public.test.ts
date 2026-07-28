@@ -45,6 +45,19 @@ describe("Kilo PublicApi OpenAPI contract", () => {
     expect(spec.info.description).toBe("kilo api")
   })
 
+  test("includes legacy Kilo events in the generated SDK contract", () => {
+    const spec = JSON.stringify(OpenApi.fromApi(PublicApi))
+    for (const type of [
+      "suggestion.shown",
+      "session.network.asked",
+      "background_process.updated",
+      "interactive_terminal.updated",
+      "indexing.status",
+    ]) {
+      expect(spec).toContain(type)
+    }
+  })
+
   test("constrains embedding model metadata", () => {
     const accepts = (dimension: number, scoreThreshold: number) =>
       Result.isSuccess(

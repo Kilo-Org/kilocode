@@ -121,6 +121,7 @@ export const dict = {
 
   "ui.tool.read": "قراءة",
   "ui.tool.loaded": "تم التحميل",
+  "ui.tool.swePruned": "SWE-Pruner · تم الاحتفاظ بـ {{kept}} من {{total}} سطرًا", // kilocode_change
   "ui.tool.list": "قائمة",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -156,6 +157,7 @@ export const dict = {
   "ui.message.collapse": "طي الرسالة",
   "ui.message.copy": "نسخ",
   "ui.message.copyMessage": "نسخ الرسالة",
+  "ui.message.deleteQueued": "حذف الرسالة من قائمة الانتظار", // kilocode_change
   "ui.message.forkMessage": "تشعب إلى جلسة جديدة",
   "ui.message.revertMessage": "إعادة التعيين إلى هذه النقطة",
   "ui.message.copyResponse": "نسخ الرد",
@@ -171,7 +173,9 @@ export const dict = {
   "ui.patch.action.patched": "مصحح",
 
   "ui.question.subtitle.answered": "{{count}} أجيب",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(لا توجد إجابة)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(لم يتم الرد)",
   "ui.question.multiHint": "حدد كل ما ينطبق",
   "ui.question.singleHint": "حدد إجابة واحدة",

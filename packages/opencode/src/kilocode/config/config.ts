@@ -7,12 +7,12 @@ import { mergeDeep } from "remeda"
 import * as Log from "@opencode-ai/core/util/log"
 import { Global } from "@opencode-ai/core/global"
 import { NamedError } from "@opencode-ai/core/util/error"
-import type { AppFileSystem } from "@opencode-ai/core/filesystem"
-import { Bus } from "@/bus"
+import type { FSUtil } from "@opencode-ai/core/fs-util"
+import { InstanceRef } from "@/effect/instance-ref"
 import { isRecord } from "@/util/record"
-import { ConfigError } from "../../config/error"
+import { ConfigErrorV1 as ConfigError } from "@opencode-ai/core/v1/config/error"
 import type { Config } from "../../config/config"
-import type { ConfigAgent } from "../../config/agent"
+import type { ConfigAgentV1 } from "@opencode-ai/core/v1/config/agent"
 import { ModesMigrator } from "../modes-migrator"
 import { fetchOrganizationModes } from "@kilocode/kilo-gateway"
 import { RulesMigrator } from "../rules-migrator"
@@ -65,7 +65,7 @@ export namespace KilocodeConfig {
    * `.kilo/kilo.jsonc` when no project config exists yet.
    */
   export const projectConfigUpdateTarget = Effect.fn("KilocodeConfig.projectConfigUpdateTarget")(function* (input: {
-    fs: AppFileSystem.Interface
+    fs: FSUtil.Interface
     directory: string
     worktree?: string
   }) {
@@ -80,7 +80,7 @@ export namespace KilocodeConfig {
   })
 
   export const updateProjectConfig = Effect.fn("KilocodeConfig.updateProjectConfig")(function* (input: {
-    fs: AppFileSystem.Interface
+    fs: FSUtil.Interface
     directory: string
     worktree?: string
     config: Config.Info
@@ -178,9 +178,19 @@ export namespace KilocodeConfig {
     const err = new ConfigError.InvalidError({ path: item, issues }, { cause })
     if (warnings) warnings.push({ path: item, message, detail: text || undefined })
     try {
-      const [{ Session }, { capture }] = await Promise.all([import("@/session/session"), import("@/kilocode/instance")])
+      const [{ Session }, { capture }, { AppRuntime }, { EventV2Bridge }] = await Promise.all([
+        import("@/session/session"),
+        import("@/kilocode/instance"),
+        import("@/effect/app-runtime"),
+        import("@/event-v2-bridge"),
+      ])
       const ctx = capture()
-      if (ctx) Bus.publish(ctx, Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() })
+      if (ctx)
+        await AppRuntime.runPromise(
+          EventV2Bridge.Service.use((events) =>
+            events.publish(Session.Event.Error, { error: new NamedError.Unknown({ message }).toObject() }),
+          ).pipe(Effect.provideService(InstanceRef, ctx)),
+        )
     } catch (e) {
       log.warn("could not publish session error", { message, err: e })
     }
@@ -300,7 +310,7 @@ export namespace KilocodeConfig {
    */
   export async function loadOrganizationModes(
     auth: Record<string, any>,
-  ): Promise<{ agents: Record<string, ConfigAgent.Info>; warnings: Config.Warning[] }> {
+  ): Promise<{ agents: Record<string, ConfigAgentV1.Info>; warnings: Config.Warning[] }> {
     const warnings: Config.Warning[] = []
     try {
       const kilo = auth["kilo"]
@@ -435,5 +445,63 @@ export namespace KilocodeConfig {
   /** Check whether a directory path should be treated as a config directory (for loading config files). */
   export function isConfigDir(dir: string, flagDir?: string): boolean {
     return dir.endsWith(".kilo") || dir.endsWith(".kilocode") || dir === flagDir
+  }
+
+  // ── Opencode config migration notice ─────────────────────────────────
+
+  /** Client-neutral docs page describing where Kilo reads configuration from. */
+  export const CONFIG_DOCS_URL = "https://kilo.ai/docs/getting-started/settings"
+
+  /** Stable id for the synthetic "move your opencode config" notification (used for client-side dismissal). */
+  export const OPENCODE_NOTIFICATION_ID = "kilo.local.opencode-config-detected"
+
+  /**
+   * Detect leftover opencode config directories. Kilo used to fall back to
+   * opencode configuration but no longer reads `.opencode` directories.
+   * Returns the existing `.opencode` locations (global + project), highest first.
+   */
+  export function detectOpencodeConfig(input: { directory: string; worktree?: string; scanProject: boolean }): string[] {
+    const found: string[] = []
+
+    // Global opencode config dir (sibling of the kilo global config dir, e.g. ~/.config/opencode).
+    const globalDir = path.join(path.dirname(Global.Path.config), "opencode")
+    if (existsSync(globalDir)) found.push(globalDir)
+
+    // Project `.opencode` directories, walked from the working directory up to the worktree root.
+    if (input.scanProject) {
+      let current = input.directory
+      while (true) {
+        const candidate = path.join(current, ".opencode")
+        if (existsSync(candidate) && !found.includes(candidate)) found.push(candidate)
+        if (input.worktree === current) break
+        const parent = path.dirname(current)
+        if (parent === current) break
+        current = parent
+      }
+    }
+
+    return found
+  }
+
+  /**
+   * Build the synthetic notification shown when a leftover `.opencode` config
+   * directory is found. Returns undefined when nothing needs migrating.
+   * The shape matches the gateway `Notification` schema so it can be appended
+   * to the cloud notifications list and reuse each client's dismissal path.
+   */
+  export function opencodeConfigNotification(input: { directory: string; worktree?: string; scanProject: boolean }) {
+    const found = detectOpencodeConfig(input)
+    if (found.length === 0) return undefined
+    const suffix = found.length > 1 ? ` (and ${found.length - 1} more)` : ""
+    return {
+      id: OPENCODE_NOTIFICATION_ID,
+      title: "Move your opencode configuration",
+      message:
+        `Kilo no longer falls back to opencode configuration. ` +
+        `Found opencode config at ${found[0]}${suffix}. ` +
+        `Move it into a .kilo directory (project) or ${Global.Path.config} (global).`,
+      action: { actionText: "Learn more", actionURL: CONFIG_DOCS_URL },
+      showIn: ["cli", "extension"],
+    }
   }
 }

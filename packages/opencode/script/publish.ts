@@ -3,6 +3,7 @@ import { $ } from "bun"
 import pkg from "../package.json"
 import { Script } from "@opencode-ai/script"
 import { fileURLToPath } from "url"
+import { NpmPublish } from "./kilocode/npm-publish" // kilocode_change
 
 const dir = fileURLToPath(new URL("..", import.meta.url))
 process.chdir(dir)
@@ -20,7 +21,14 @@ async function publish(dir: string, name: string, version: string) {
     return
   }
   await $`bun pm pack`.cwd(dir)
-  await $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir) // kilocode_change
+  // kilocode_change start
+  await NpmPublish.retry({
+    name,
+    version,
+    run: () => $`npm publish *.tgz --access public --tag ${Script.channel} --provenance`.cwd(dir),
+    exists: () => published(name, version),
+  })
+  // kilocode_change end
 }
 
 const binaries: Record<string, string> = {}

@@ -64,6 +64,7 @@ class EmptySessionPanelTest : BasePlatformTestCase() {
             workspace = workspace,
             app = app,
             cs = scope,
+            revertTimeoutMs = SessionController.REVERT_TIMEOUT_MS,
             open = { opened.add(it.id) },
         )
     }

@@ -616,7 +616,8 @@ class KiloBackendSessionManagerTest {
             "title": "With Summary",
             "version": "1",
             "time": {"created": 1, "updated": 1},
-            "summary": {"additions": 42, "deletions": 7, "files": 3}
+            "summary": {"additions": 42, "deletions": 7, "files": 3},
+            "revert": {"messageID":"msg_1","partID":"prt_1","snapshot":"snap_1","diff":"patch"}
         }]"""
         val app = setup()
         ready(app)
@@ -627,6 +628,8 @@ class KiloBackendSessionManagerTest {
         assertEquals(42, session.summary!!.additions)
         assertEquals(7, session.summary!!.deletions)
         assertEquals(3, session.summary!!.files)
+        assertEquals("msg_1", session.revert?.messageID)
+        assertEquals("prt_1", session.revert?.partID)
     }
 
     @Test

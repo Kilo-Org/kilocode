@@ -74,6 +74,10 @@ Use the Markdoc codicon tag format:
 
 ## Documentation Guidelines
 
+### Style Guide
+
+Before writing documentation, review `packages/kilo-docs/STYLE_GUIDE.md` for voice, tone, and formatting conventions.
+
 ### Adding New Pages
 
 1. Create your page in the appropriate directory under `pages/`

@@ -35,7 +35,9 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.version || inpu
 permissions:
   id-token: write
   contents: write
+  issues: write # kilocode_change - label automated JetBrains CLI pin bump PRs
   packages: write
+  pull-requests: write # kilocode_change - create automated JetBrains CLI pin bump PRs
 
 jobs:
   version:
@@ -256,7 +258,7 @@ jobs:
     name: Validate CLI (windows-${{ matrix.arch }})
     needs: build-cli
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 20
+    timeout-minutes: 20 # kilocode_change
     strategy:
       fail-fast: false
       matrix:

@@ -124,7 +124,9 @@ describe("Agent Manager sandbox startup", () => {
   })
 
   test("uses the persisted sandbox default for UI and only sends explicit overrides", () => {
-    expect(dialog).toContain("const sandboxVisible = () => features().sandboxControls")
+    expect(dialog).toContain(
+      "const sandboxVisible = () => features().sandboxControls && globalConfig().sandbox?.enabled === true",
+    )
     expect(dialog).toContain('vscode.postMessage({ type: "requestSandboxDefault", requestID: sandboxRequestID })')
     expect(dialog).toContain(
       'vscode.postMessage({ type: "setSandboxDefault", enabled: next, requestID: sandboxRequestID })',

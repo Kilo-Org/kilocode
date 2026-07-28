@@ -37,7 +37,6 @@ export class CodeIndexOrchestrator {
     private readonly fileWatcher: IFileWatcher,
     private readonly onTelemetry?: IndexingTelemetryReporter,
     private readonly overlay?: WorktreeOverlay,
-    private readonly independent = false,
   ) {}
 
   private getTelemetryMeta(): IndexingTelemetryMeta {
@@ -215,7 +214,7 @@ export class CodeIndexOrchestrator {
         })
       }
 
-      const hasExistingData = this.overlay || this.independent ? false : await this.vectorStore.hasIndexedData()
+      const hasExistingData = this.overlay ? false : await this.vectorStore.hasIndexedData()
       if (!this.overlay && !hasExistingData) {
         if (!collectionCreated) await this.vectorStore.clearCollection()
         await this.cacheManager.clearCacheFile()

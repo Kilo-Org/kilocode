@@ -1,6 +1,6 @@
 import { AllowEverythingPermission } from "@/kilocode/permission/allow-everything" // kilocode_change
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { Permission } from "@/permission"
-import { PermissionID } from "@/permission/schema"
 // kilocode_change start
 import { SessionID } from "@/session/schema"
 import { Effect, Schema } from "effect"
@@ -21,8 +21,8 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
     })
 
     const reply = Effect.fn("PermissionHttpApi.reply")(function* (ctx: {
-      params: { requestID: PermissionID }
-      payload: Permission.ReplyBody
+      params: { requestID: PermissionV1.ID }
+      payload: PermissionV1.ReplyBody
     }) {
       yield* svc
         .reply({
@@ -46,7 +46,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
 
     // kilocode_change start
     const saveAlwaysRules = Effect.fn("PermissionHttpApi.saveAlwaysRules")(function* (ctx: {
-      params: { requestID: PermissionID }
+      params: { requestID: PermissionV1.ID }
       payload: Schema.Schema.Type<typeof SaveAlwaysRulesBody>
     }) {
       yield* svc
@@ -73,7 +73,7 @@ export const permissionHandlers = HttpApiBuilder.group(InstanceHttpApi, "permiss
     }) {
       return yield* AllowEverythingPermission.effect({
         enable: ctx.payload.enable,
-        requestID: ctx.payload.requestID ? PermissionID.make(ctx.payload.requestID) : undefined,
+        requestID: ctx.payload.requestID ? PermissionV1.ID.make(ctx.payload.requestID) : undefined,
         sessionID: ctx.payload.sessionID ? SessionID.make(ctx.payload.sessionID) : undefined,
       })
     })

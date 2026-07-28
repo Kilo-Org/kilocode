@@ -124,6 +124,7 @@ export const dict = {
 
   "ui.tool.read": "讀取",
   "ui.tool.loaded": "已載入",
+  "ui.tool.swePruned": "SWE-Pruner · 保留 {{total}} 行中的 {{kept}} 行", // kilocode_change
   "ui.tool.list": "清單",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -159,6 +160,7 @@ export const dict = {
   "ui.message.collapse": "收合訊息",
   "ui.message.copy": "複製",
   "ui.message.copyMessage": "複製訊息",
+  "ui.message.deleteQueued": "刪除排隊中的訊息", // kilocode_change
   "ui.message.forkMessage": "分支到新工作階段",
   "ui.message.revertMessage": "重設至此點",
   "ui.message.copyResponse": "複製回覆",
@@ -174,7 +176,9 @@ export const dict = {
   "ui.patch.action.patched": "已套用修補",
 
   "ui.question.subtitle.answered": "{{count}} 已回答",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(無答案)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(未回答)",
   "ui.question.multiHint": "可多選",
   "ui.question.singleHint": "選擇一個答案",

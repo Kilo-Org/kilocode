@@ -1,0 +1,515 @@
+import { drizzle, type SQLiteBunDatabase } from "drizzle-orm/bun-sqlite"
+import type { NodeSQLiteDatabase } from "drizzle-orm/node-sqlite"
+import { Database as BunDatabase } from "bun:sqlite"
+import { Global } from "@opencode-ai/core/global"
+import { Database } from "@opencode-ai/core/database/database"
+import * as Log from "@opencode-ai/core/util/log"
+import { ProjectTable } from "@opencode-ai/core/project/sql"
+import { SessionTable, MessageTable, PartTable, TodoTable } from "@opencode-ai/core/session/sql"
+import { SessionShareTable } from "@opencode-ai/core/share/sql"
+import path from "path"
+import { existsSync } from "fs"
+import { Filesystem } from "@/util/filesystem"
+import { Glob } from "@opencode-ai/core/util/glob"
+import { EOL } from "os"
+import { Effect } from "effect"
+import { errorMessage } from "@/util/error"
+
+const log = Log.create({ service: "json-migration" })
+
+const usage = `
+  UPDATE session
+  SET
+    cost = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.cost'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_input = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.input'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_output = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.output'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_reasoning = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.reasoning'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_cache_read = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.cache.read'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0),
+    tokens_cache_write = coalesce((
+      SELECT sum(coalesce(json_extract(message.data, '$.tokens.cache.write'), 0))
+      FROM message
+      WHERE message.session_id = session.id
+        AND json_extract(message.data, '$.role') = 'assistant'
+    ), 0)
+`
+
+export type Progress = {
+  current: number
+  total: number
+  label: string
+}
+
+type Options = {
+  progress?: (event: Progress) => void
+}
+
+export async function bootstrap() {
+  const marker = Database.path()
+  if (marker === ":memory:") return
+  const pending = marker + ".json-migration"
+  if ((await Filesystem.exists(marker)) && !(await Filesystem.exists(pending))) return
+  await Filesystem.write(pending, "1")
+
+  const tty = process.stderr.isTTY
+  process.stderr.write("Performing one time database migration, may take a few minutes..." + EOL)
+  const width = 36
+  const orange = "\x1b[38;5;214m"
+  const muted = "\x1b[0;2m"
+  const reset = "\x1b[0m"
+  let last = -1
+  if (tty) process.stderr.write("\x1b[?25l")
+  try {
+    await Effect.runPromise(Database.Service.use(() => Effect.void).pipe(Effect.provide(Database.defaultLayer)))
+    const sqlite = new BunDatabase(marker)
+    try {
+      const stats = await run(drizzle({ client: sqlite }), {
+        progress: (event) => {
+          const percent = Math.floor((event.current / event.total) * 100)
+          if (percent === last && event.current !== event.total) return
+          last = percent
+          if (tty) {
+            const fill = Math.round((percent / 100) * width)
+            const bar = `${"■".repeat(fill)}${"･".repeat(width - fill)}`
+            process.stderr.write(
+              `\r${orange}${bar} ${percent.toString().padStart(3)}%${reset} ${muted}${event.label.padEnd(12)} ${event.current}/${event.total}${reset}`,
+            )
+            if (event.current === event.total) process.stderr.write(EOL)
+            return
+          }
+          process.stderr.write(`sqlite-migration:${percent}${EOL}`)
+        },
+      })
+      if (stats.errors.length > 0) {
+        process.stderr.write("Database migration incomplete; retrying on next start." + EOL)
+        return
+      }
+    } finally {
+      sqlite.close()
+    }
+  } finally {
+    if (tty) process.stderr.write("\x1b[?25h")
+    else process.stderr.write(`sqlite-migration:done${EOL}`)
+  }
+  await Bun.file(pending).delete()
+  process.stderr.write("Database migration complete." + EOL)
+}
+
+export async function run(db: SQLiteBunDatabase | NodeSQLiteDatabase, options?: Options) {
+  const storageDir = path.join(Global.Path.data, "storage")
+
+  if (!existsSync(storageDir)) {
+    log.info("storage directory does not exist, skipping migration")
+    return {
+      projects: 0,
+      sessions: 0,
+      messages: 0,
+      parts: 0,
+      todos: 0,
+      permissions: 0,
+      shares: 0,
+      errors: [] as string[],
+    }
+  }
+
+  log.info("starting json to sqlite migration", { storageDir })
+  const start = performance.now()
+
+  // const db = drizzle({ client: sqlite })
+
+  // Optimize SQLite for bulk inserts
+  db.run("PRAGMA journal_mode = WAL")
+  db.run("PRAGMA synchronous = OFF")
+  db.run("PRAGMA cache_size = 10000")
+  db.run("PRAGMA temp_store = MEMORY")
+  db.run("PRAGMA foreign_keys = ON")
+  const stats = {
+    projects: 0,
+    sessions: 0,
+    messages: 0,
+    parts: 0,
+    todos: 0,
+    permissions: 0,
+    shares: 0,
+    errors: [] as string[],
+  }
+  const orphans = {
+    sessions: 0,
+    todos: 0,
+    shares: 0,
+  }
+  const errs = stats.errors
+
+  const batchSize = 1000
+  const now = Date.now()
+
+  async function list(pattern: string) {
+    return Glob.scan(pattern, { cwd: storageDir, absolute: true })
+  }
+
+  async function read(files: string[], start: number, end: number) {
+    const count = end - start
+    // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
+    const tasks = new Array(count)
+    for (let i = 0; i < count; i++) {
+      tasks[i] = Filesystem.readJson(files[start + i])
+    }
+    const results = await Promise.allSettled(tasks)
+    // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
+    const items = new Array(count)
+    for (let i = 0; i < results.length; i++) {
+      const result = results[i]
+      if (result.status === "fulfilled") {
+        items[i] = result.value
+        continue
+      }
+      errs.push(`failed to read ${files[start + i]}: ${result.reason}`)
+    }
+    return items
+  }
+
+  function insert(values: unknown[], table: Parameters<typeof db.insert>[0], label: string) {
+    if (values.length === 0) return 0
+    try {
+      db.insert(table).values(values).onConflictDoNothing().run()
+      return values.length
+    } catch (e) {
+      errs.push(`failed to migrate ${label} batch: ${errorMessage(e)}`)
+      return 0
+    }
+  }
+
+  // Pre-scan all files upfront to avoid repeated glob operations
+  log.info("scanning files...")
+  const [projectFiles, sessionFiles, messageFiles, partFiles, todoFiles, permFiles, shareFiles] = await Promise.all([
+    list("project/*.json"),
+    list("session/*/*.json"),
+    list("message/*/*.json"),
+    list("part/*/*.json"),
+    list("todo/*.json"),
+    list("permission/*.json"),
+    list("session_share/*.json"),
+  ])
+
+  log.info("file scan complete", {
+    projects: projectFiles.length,
+    sessions: sessionFiles.length,
+    messages: messageFiles.length,
+    parts: partFiles.length,
+    todos: todoFiles.length,
+    permissions: permFiles.length,
+    shares: shareFiles.length,
+  })
+
+  const total = Math.max(
+    1,
+    projectFiles.length +
+      sessionFiles.length +
+      messageFiles.length +
+      partFiles.length +
+      todoFiles.length +
+      permFiles.length +
+      shareFiles.length,
+  )
+  const progress = options?.progress
+  let current = 0
+  const step = (label: string, count: number) => {
+    current = Math.min(total, current + count)
+    progress?.({ current, total, label })
+  }
+
+  progress?.({ current, total, label: "starting" })
+
+  db.run("BEGIN TRANSACTION")
+
+  // Migrate projects first (no FK deps)
+  // Derive all IDs from file paths, not JSON content
+  const projectIds = new Set<string>()
+  const projectValues: unknown[] = []
+  for (let i = 0; i < projectFiles.length; i += batchSize) {
+    const end = Math.min(i + batchSize, projectFiles.length)
+    const batch = await read(projectFiles, i, end)
+    projectValues.length = 0
+    for (let j = 0; j < batch.length; j++) {
+      const data = batch[j]
+      if (!data) continue
+      const id = path.basename(projectFiles[i + j], ".json")
+      projectIds.add(id)
+      projectValues.push({
+        id,
+        worktree: data.worktree ?? "/",
+        vcs: data.vcs,
+        name: data.name ?? undefined,
+        icon_url: data.icon?.url,
+        icon_url_override: data.icon?.override,
+        icon_color: data.icon?.color,
+        time_created: data.time?.created ?? now,
+        time_updated: data.time?.updated ?? now,
+        time_initialized: data.time?.initialized,
+        sandboxes: data.sandboxes ?? [],
+        commands: data.commands,
+      })
+    }
+    stats.projects += insert(projectValues, ProjectTable, "project")
+    step("projects", end - i)
+  }
+  log.info("migrated projects", { count: stats.projects, duration: Math.round(performance.now() - start) })
+
+  // Migrate sessions (depends on projects)
+  // Derive all IDs from directory/file paths, not JSON content, since earlier
+  // migrations may have moved sessions to new directories without updating the JSON
+  const sessionProjects = sessionFiles.map((file) => path.basename(path.dirname(file)))
+  const sessionIds = new Set<string>()
+  const sessionValues: unknown[] = []
+  for (let i = 0; i < sessionFiles.length; i += batchSize) {
+    const end = Math.min(i + batchSize, sessionFiles.length)
+    const batch = await read(sessionFiles, i, end)
+    sessionValues.length = 0
+    for (let j = 0; j < batch.length; j++) {
+      const data = batch[j]
+      if (!data) continue
+      const id = path.basename(sessionFiles[i + j], ".json")
+      const projectID = sessionProjects[i + j]
+      if (!projectIds.has(projectID)) {
+        orphans.sessions++
+        continue
+      }
+      sessionIds.add(id)
+      sessionValues.push({
+        id,
+        project_id: projectID,
+        parent_id: data.parentID ?? null,
+        slug: data.slug ?? "",
+        directory: data.directory ?? "",
+        path: data.path ?? null,
+        title: data.title ?? "",
+        version: data.version ?? "",
+        share_url: data.share?.url ?? null,
+        summary_additions: data.summary?.additions ?? null,
+        summary_deletions: data.summary?.deletions ?? null,
+        summary_files: data.summary?.files ?? null,
+        summary_diffs: data.summary?.diffs ?? null,
+        cost: 0,
+        tokens_input: 0,
+        tokens_output: 0,
+        tokens_reasoning: 0,
+        tokens_cache_read: 0,
+        tokens_cache_write: 0,
+        revert: data.revert ?? null,
+        permission: data.permission ?? null,
+        time_created: data.time?.created ?? now,
+        time_updated: data.time?.updated ?? now,
+        time_compacting: data.time?.compacting ?? null,
+        time_archived: data.time?.archived ?? null,
+      })
+    }
+    stats.sessions += insert(sessionValues, SessionTable, "session")
+    step("sessions", end - i)
+  }
+  log.info("migrated sessions", { count: stats.sessions })
+  if (orphans.sessions > 0) {
+    log.warn("skipped orphaned sessions", { count: orphans.sessions })
+  }
+
+  // Migrate messages using pre-scanned file map
+  const allMessageFiles = [] as string[]
+  const allMessageSessions = [] as string[]
+  const messageSessions = new Map<string, string>()
+  for (const file of messageFiles) {
+    const sessionID = path.basename(path.dirname(file))
+    if (!sessionIds.has(sessionID)) continue
+    allMessageFiles.push(file)
+    allMessageSessions.push(sessionID)
+  }
+
+  for (let i = 0; i < allMessageFiles.length; i += batchSize) {
+    const end = Math.min(i + batchSize, allMessageFiles.length)
+    const batch = await read(allMessageFiles, i, end)
+    // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
+    const values = new Array(batch.length)
+    let count = 0
+    for (let j = 0; j < batch.length; j++) {
+      const data = batch[j]
+      if (!data) continue
+      const file = allMessageFiles[i + j]
+      const id = path.basename(file, ".json")
+      const sessionID = allMessageSessions[i + j]
+      messageSessions.set(id, sessionID)
+      const rest = data
+      delete rest.id
+      delete rest.sessionID
+      values[count++] = {
+        id,
+        session_id: sessionID,
+        time_created: data.time?.created ?? now,
+        time_updated: data.time?.updated ?? now,
+        data: rest,
+      }
+    }
+    values.length = count
+    stats.messages += insert(values, MessageTable, "message")
+    step("messages", end - i)
+  }
+  log.info("migrated messages", { count: stats.messages })
+  db.run(usage)
+
+  // Migrate parts using pre-scanned file map
+  for (let i = 0; i < partFiles.length; i += batchSize) {
+    const end = Math.min(i + batchSize, partFiles.length)
+    const batch = await read(partFiles, i, end)
+    // oxlint-disable-next-line unicorn/no-new-array -- pre-allocated for index-based batch fill
+    const values = new Array(batch.length)
+    let count = 0
+    for (let j = 0; j < batch.length; j++) {
+      const data = batch[j]
+      if (!data) continue
+      const file = partFiles[i + j]
+      const id = path.basename(file, ".json")
+      const messageID = path.basename(path.dirname(file))
+      const sessionID = messageSessions.get(messageID)
+      if (!sessionID) {
+        errs.push(`part missing message session: ${file}`)
+        continue
+      }
+      if (!sessionIds.has(sessionID)) continue
+      const rest = data
+      delete rest.id
+      delete rest.messageID
+      delete rest.sessionID
+      values[count++] = {
+        id,
+        message_id: messageID,
+        session_id: sessionID,
+        time_created: data.time?.created ?? now,
+        time_updated: data.time?.updated ?? now,
+        data: rest,
+      }
+    }
+    values.length = count
+    stats.parts += insert(values, PartTable, "part")
+    step("parts", end - i)
+  }
+  log.info("migrated parts", { count: stats.parts })
+
+  // Migrate todos
+  const todoSessions = todoFiles.map((file) => path.basename(file, ".json"))
+  for (let i = 0; i < todoFiles.length; i += batchSize) {
+    const end = Math.min(i + batchSize, todoFiles.length)
+    const batch = await read(todoFiles, i, end)
+    const values: unknown[] = []
+    for (let j = 0; j < batch.length; j++) {
+      const data = batch[j]
+      if (!data) continue
+      const sessionID = todoSessions[i + j]
+      if (!sessionIds.has(sessionID)) {
+        orphans.todos++
+        continue
+      }
+      if (!Array.isArray(data)) {
+        errs.push(`todo not an array: ${todoFiles[i + j]}`)
+        continue
+      }
+      for (let position = 0; position < data.length; position++) {
+        const todo = data[position]
+        if (!todo?.content || !todo?.status || !todo?.priority) continue
+        values.push({
+          session_id: sessionID,
+          content: todo.content,
+          status: todo.status,
+          priority: todo.priority,
+          position,
+          time_created: now,
+          time_updated: now,
+        })
+      }
+    }
+    stats.todos += insert(values, TodoTable, "todo")
+    step("todos", end - i)
+  }
+  log.info("migrated todos", { count: stats.todos })
+  if (orphans.todos > 0) {
+    log.warn("skipped orphaned todos", { count: orphans.todos })
+  }
+
+  // The current permission table stores saved resource approvals, not legacy
+  // allow/ask/deny rules. Existing SQLite upgrades drop those old rules too.
+  if (permFiles.length > 0) log.info("skipped incompatible legacy permission rules", { count: permFiles.length })
+  step("permissions", permFiles.length)
+
+  // Migrate session shares
+  const shareSessions = shareFiles.map((file) => path.basename(file, ".json"))
+  const shareValues: unknown[] = []
+  for (let i = 0; i < shareFiles.length; i += batchSize) {
+    const end = Math.min(i + batchSize, shareFiles.length)
+    const batch = await read(shareFiles, i, end)
+    shareValues.length = 0
+    for (let j = 0; j < batch.length; j++) {
+      const data = batch[j]
+      if (!data) continue
+      const sessionID = shareSessions[i + j]
+      if (!sessionIds.has(sessionID)) {
+        orphans.shares++
+        continue
+      }
+      if (!data?.id || !data?.secret || !data?.url) {
+        errs.push(`session_share missing id/secret/url: ${shareFiles[i + j]}`)
+        continue
+      }
+      shareValues.push({ session_id: sessionID, id: data.id, secret: data.secret, url: data.url })
+    }
+    stats.shares += insert(shareValues, SessionShareTable, "session_share")
+    step("shares", end - i)
+  }
+  log.info("migrated session shares", { count: stats.shares })
+  if (orphans.shares > 0) {
+    log.warn("skipped orphaned session shares", { count: orphans.shares })
+  }
+
+  db.run("COMMIT")
+
+  log.info("json migration complete", {
+    projects: stats.projects,
+    sessions: stats.sessions,
+    messages: stats.messages,
+    parts: stats.parts,
+    todos: stats.todos,
+    permissions: stats.permissions,
+    shares: stats.shares,
+    errorCount: stats.errors.length,
+    duration: Math.round(performance.now() - start),
+  })
+
+  if (stats.errors.length > 0) {
+    log.warn("migration errors", { errors: stats.errors.slice(0, 20) })
+  }
+
+  progress?.({ current: total, total, label: "complete" })
+
+  return stats
+}
+
+export * as JsonMigration from "./json-migration"

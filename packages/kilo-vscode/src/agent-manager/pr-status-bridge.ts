@@ -63,6 +63,14 @@ export class PRStatusBridge {
     this.cache.forEach((msg) => this.host.postToWebview(msg))
   }
 
+  snapshot(): Map<string, PRStatus> {
+    const result = new Map<string, PRStatus>()
+    for (const [id, msg] of this.cache) {
+      if (msg.type === "agentManager.prStatus" && msg.pr) result.set(id, msg.pr)
+    }
+    return result
+  }
+
   /** Handle an incoming webview message. Returns true if handled. */
   handleMessage(m: Record<string, unknown>): boolean {
     if (m.type === "agentManager.refreshPR") {

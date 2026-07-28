@@ -33,6 +33,7 @@ object ChatLogSummary {
         is ChatEventDto.SessionStatusChanged -> event.sessionID
         is ChatEventDto.SessionUpdated -> event.sessionID
         is ChatEventDto.SessionIdle -> event.sessionID
+        is ChatEventDto.SessionQueueChanged -> event.sessionID
         is ChatEventDto.SessionCompacted -> event.sessionID
         is ChatEventDto.SessionDiffChanged -> event.sessionID
         is ChatEventDto.TodoUpdated -> event.sessionID
@@ -203,11 +204,18 @@ object ChatLogSummary {
             sid(event.sessionID),
             "evt=session.updated",
             "title=${event.session.title.length}",
+            "revert=${event.session.revert?.messageID ?: "none"}",
         )
 
         is ChatEventDto.SessionIdle -> join(
             sid(event.sessionID),
             "evt=session.idle",
+        )
+
+        is ChatEventDto.SessionQueueChanged -> join(
+            sid(event.sessionID),
+            "evt=session.queue.changed",
+            "queued=${event.queued.size}",
         )
 
         is ChatEventDto.SessionCompacted -> join(

@@ -115,6 +115,7 @@ export namespace KilocodeConfigOverlay {
     ["indexing", "searchMaxResults"],
     ["indexing", "embeddingBatchSize"],
     ["indexing", "scannerMaxBatchRetries"],
+    ["indexing", "fileExtensions"],
   ] as const
 
   const collectionPaths = ["provider", "mcp", "permission", "agent", "formatter", "lsp"] as const
@@ -199,8 +200,8 @@ export namespace KilocodeConfigOverlay {
     if (!dir) return input
     if (!existsSync(dir)) return withAgents(input, rest, trusted, root)
     const fileScope = trusted || !root ? undefined : { root, source: dir }
-    const agent = await ConfigAgent.load(dir, undefined, trusted, fileScope)
-    const mode = await ConfigAgent.loadMode(dir)
+    const agent = await ConfigAgent.load(dir, undefined, trusted, fileScope, fileScope)
+    const mode = await ConfigAgent.loadMode(dir, undefined, trusted, fileScope, fileScope)
     const next = KilocodeConfig.mergeConfig(KilocodeConfig.mergeConfig(input, { agent }), { agent: mode })
     return withAgents(next, rest, trusted, root)
   }

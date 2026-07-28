@@ -120,6 +120,7 @@ export const dict = {
 
   "ui.tool.read": "Чтение",
   "ui.tool.loaded": "Загружено",
+  "ui.tool.swePruned": "SWE-Pruner · сохранено {{kept}} из {{total}} строк", // kilocode_change
   "ui.tool.list": "Список",
   "ui.tool.glob": "Glob",
   "ui.tool.grep": "Grep",
@@ -155,6 +156,7 @@ export const dict = {
   "ui.message.collapse": "Свернуть сообщение",
   "ui.message.copy": "Копировать",
   "ui.message.copyMessage": "Копировать сообщение",
+  "ui.message.deleteQueued": "Удалить сообщение из очереди", // kilocode_change
   "ui.message.forkMessage": "Ответвить в новую сессию",
   "ui.message.revertMessage": "Сбросить до этого момента",
   "ui.message.copyResponse": "Копировать ответ",
@@ -170,7 +172,9 @@ export const dict = {
   "ui.patch.action.patched": "Изменено",
 
   "ui.question.subtitle.answered": "{{count}} отвечено",
+  "ui.question.subtitle.dismissed": "{{count}} dismissed", // kilocode_change
   "ui.question.answer.none": "(нет ответа)",
+  "ui.question.answer.dismissed": "Dismissed", // kilocode_change
   "ui.question.review.notAnswered": "(не отвечено)",
   "ui.question.multiHint": "Выберите все подходящие",
   "ui.question.singleHint": "Выберите один ответ",
