@@ -167,8 +167,18 @@ export function sleepSync(ms) {
 const STDERR_TAIL_LINES = 20
 const STDERR_TAIL_CHARS = 4_000
 
+// CSI sequences (colour, cursor moves, erases). kilo renders its TUI to stderr,
+// so an unstripped tail lands in the rolling PR's pending table as
+// "^[[0m→ ^[[0mRead packages/..." and the cause is unreadable. Stripped before
+// the line/char slice so escapes do not eat the budget. The persisted
+// docs-sync-out/kilo-stderr-*.log stays raw — that is the debugging record.
+// eslint-disable-next-line no-control-regex
+const ANSI_CSI = /\u001b\[[0-9;?]*[ -/]*[@-~]/g
+
 function tailText(text, { lines = STDERR_TAIL_LINES, chars = STDERR_TAIL_CHARS } = {}) {
-  const s = String(text ?? "").trim()
+  const s = String(text ?? "")
+    .replace(ANSI_CSI, "")
+    .trim()
   if (!s) return ""
   const lastLines = s.split("\n").slice(-lines).join("\n")
   return lastLines.length > chars ? lastLines.slice(-chars) : lastLines

@@ -160,7 +160,9 @@ function gitIn(cwd, args, env = {}) {
     env: { ...process.env, ...env },
     stdio: ["ignore", "pipe", "pipe"],
     encoding: "utf8",
-  }).toString().trim()
+  })
+    .toString()
+    .trim()
 }
 
 function makeGitRunner(cwd, env = {}) {
@@ -278,14 +280,19 @@ function case1_mergeOrFallback() {
         env: { ...process.env, ...env },
         stdio: ["ignore", "pipe", "pipe"],
         encoding: "utf8",
-      }).toString().trim()
+      })
+        .toString()
+        .trim()
 
-    assert.throws(() => mergeOrFallback({ branch: DEFAULT_BRANCH, git }), (err) => {
-      // Must throw the original merge error, not a merge --abort failure
-      const msg = String(err?.stderr ?? err?.message ?? err)
-      assert.ok(!/no merge to abort/i.test(msg), `should not reach merge --abort: ${msg}`)
-      return true
-    })
+    assert.throws(
+      () => mergeOrFallback({ branch: DEFAULT_BRANCH, git }),
+      (err) => {
+        // Must throw the original merge error, not a merge --abort failure
+        const msg = String(err?.stderr ?? err?.message ?? err)
+        assert.ok(!/no merge to abort/i.test(msg), `should not reach merge --abort: ${msg}`)
+        return true
+      },
+    )
   }
 }
 
@@ -436,10 +443,7 @@ function case2b_autoFlag() {
   for (const name of ["triage.mjs", "edit.mjs"]) {
     const src = fs.readFileSync(path.join(HERE, name), "utf8")
     const slice = extractArgsArraySlice(src)
-    assert.ok(
-      slice.includes('"--auto"'),
-      `${name} args array must contain "--auto"; got:\n${slice}`,
-    )
+    assert.ok(slice.includes('"--auto"'), `${name} args array must contain "--auto"; got:\n${slice}`)
   }
 
   // (ii) Fix verify failures step: join the run: | block and require --auto on kilo run
@@ -625,10 +629,7 @@ function case2d_redactEnvSecrets() {
   assert.ok(fs.existsSync(logPath), `expected ${logPath}`)
   const logBody = fs.readFileSync(logPath, "utf8")
   assert.ok(!logBody.includes(secret), `persisted stderr must not contain secret; got: ${logBody}`)
-  assert.ok(
-    logBody.includes("leak before *** after"),
-    `persisted stderr must redact to exact line; got: ${logBody}`,
-  )
+  assert.ok(logBody.includes("leak before *** after"), `persisted stderr must redact to exact line; got: ${logBody}`)
 
   // Console stderr-tail region must also be redacted (not only the artifact file).
   const tailIdx = result.output.indexOf("stderr tail:")
@@ -741,6 +742,100 @@ function case2g_redactStream() {
   })
   assert.equal(result.status, 0, `redact-stream exit: ${result.stderr || result.error}`)
   assert.equal(result.stdout, "leak *** after\npartial-***")
+}
+
+// ---------------------------------------------------------------------------
+// Case 2h — pending causes reach the rolling PR free of ANSI escapes
+// ---------------------------------------------------------------------------
+function case2h_pendingCauseIsReadable() {
+  console.log("case 2h: pending cause has no ANSI escapes")
+
+  const prs = [1, 2, 3, 4, 5].map((n) => samplePr(n))
+  const worthy = prs
+  const triage = prs.map((p) => ({
+    pr: p.number,
+    url: p.url,
+    docs_worthy: true,
+    reason: "needs docs",
+    target_sections: ["overview"],
+    priority: "high",
+  }))
+  const cwd = setupEditCwd(worthy, triage)
+  // Verbatim shape of a real kilo TUI stderr line (see PR #12521's pending table).
+  const ESC = "\u001b"
+  const stderrText = `${ESC}[0m→ ${ESC}[0mRead packages/kilo-docs/AGENTS.md${ESC}[2K${ESC}[1G done`
+  const kiloDir = makeStubKiloDir({ mode: "stderr-exit0", stderrText })
+
+  const result = runNodeScript(EDIT_SCRIPT, {
+    cwd,
+    kiloDir,
+    env: {
+      EDIT_MODEL: "test/model",
+      DOCS_SYNC_BACKOFF_MS: "0",
+      EDIT_BUDGET_MINUTES: "5",
+      EDIT_BATCH_TIMEOUT_MINUTES: "1",
+    },
+  })
+  assert.equal(result.status, 0, `edit.mjs exit: ${result.output}`)
+
+  const summary = JSON.parse(fs.readFileSync(path.join(cwd, ".docs-sync-summary.json"), "utf8"))
+  assert.equal(summary.length, 5)
+  for (const e of summary) {
+    assert.equal(e.action, "pending", `expected pending, got ${JSON.stringify(e)}`)
+    assert.ok(!e.reason.includes(ESC), `pending reason must not contain ANSI escapes: ${JSON.stringify(e.reason)}`)
+    // Non-vacuous: the diagnostic text itself must survive the strip.
+    assert.match(e.reason, /Read packages\/kilo-docs\/AGENTS\.md/)
+  }
+
+  // The raw artifact log keeps the escapes — it is the debugging record.
+  const rawLog = fs.readFileSync(path.join(cwd, "docs-sync-out", "kilo-stderr-edit-batch-0-attempt-1.log"), "utf8")
+  assert.ok(rawLog.includes(ESC), "persisted stderr log must stay raw")
+}
+
+// ---------------------------------------------------------------------------
+// Case 2i — wall-clock budgets can actually fit work
+// ---------------------------------------------------------------------------
+/**
+ * The pre-unit gates in triage.mjs/edit.mjs refuse to start a chunk/batch unless
+ * a whole per-unit timeout remains, so a budget below that timeout silently runs
+ * ZERO units and defers every PR. Run 30306629290 hit the weaker form of this:
+ * 8 of 11 chunks and 4 of 11 batches ran, the rest deferred untried. Assert the
+ * workflow sets both budgets and that each fits at least two units.
+ */
+function case2i_budgetsFitWork() {
+  console.log("case 2i: triage/edit budgets fit at least two units")
+
+  const yml = fs.readFileSync(path.join(HERE, "..", "workflows", "docs-sync.yml"), "utf8")
+  const readEnvNumber = (key) => {
+    const m = yml.match(new RegExp(`^\\s*${key}:\\s*"?(\\d+)"?\\s*$`, "m"))
+    assert.ok(m, `${key} must be set in docs-sync.yml (default is too small to drain a backlog)`)
+    return Number(m[1])
+  }
+
+  // Per-unit timeouts are script constants, not workflow env; read them from source.
+  const triageSrc = fs.readFileSync(path.join(HERE, "triage.mjs"), "utf8")
+  const chunkMin = Number(triageSrc.match(/CHUNK_TIMEOUT_MS = (\d+) \* 60 \* 1000/)?.[1])
+  assert.ok(Number.isFinite(chunkMin), "could not read CHUNK_TIMEOUT_MS from triage.mjs")
+
+  const editSrc = fs.readFileSync(path.join(HERE, "edit.mjs"), "utf8")
+  const batchMin = Number(editSrc.match(/EDIT_BATCH_TIMEOUT_MINUTES\) \|\| (\d+)/)?.[1])
+  assert.ok(Number.isFinite(batchMin), "could not read EDIT_BATCH_TIMEOUT_MINUTES default from edit.mjs")
+
+  const triageBudget = readEnvNumber("TRIAGE_BUDGET_MINUTES")
+  const editBudget = readEnvNumber("EDIT_BUDGET_MINUTES")
+  assert.ok(
+    triageBudget >= 2 * chunkMin,
+    `TRIAGE_BUDGET_MINUTES=${triageBudget} must be >= 2x chunk timeout (${chunkMin}m)`,
+  )
+  assert.ok(editBudget >= 2 * batchMin, `EDIT_BUDGET_MINUTES=${editBudget} must be >= 2x batch timeout (${batchMin}m)`)
+
+  // The job timeout must outlast both budgets plus the non-LLM steps.
+  const jobTimeout = Number(yml.match(/^\s*timeout-minutes:\s*(\d+)\s*$/m)?.[1])
+  assert.ok(Number.isFinite(jobTimeout), "could not read job timeout-minutes")
+  assert.ok(
+    jobTimeout > triageBudget + editBudget,
+    `job timeout-minutes=${jobTimeout} must exceed triage+edit budgets (${triageBudget}+${editBudget})`,
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -982,14 +1077,8 @@ function case4_routing() {
       triage: [],
       uncovered: [],
     })
-    assert.ok(
-      !forgedRows.skippedRows[0].includes("<!--"),
-      "clean() must strip <!-- from reasons",
-    )
-    assert.ok(
-      !forgedRows.skippedRows[0].includes("-->"),
-      "clean() must strip --> from reasons",
-    )
+    assert.ok(!forgedRows.skippedRows[0].includes("<!--"), "clean() must strip <!-- from reasons")
+    assert.ok(!forgedRows.skippedRows[0].includes("-->"), "clean() must strip --> from reasons")
     const forgedBody = renderBody({
       date: "2026-07-27",
       since: "s",
@@ -1311,6 +1400,8 @@ function main() {
     case2e_prefixSecretOrdering,
     case2f_redactStdout,
     case2g_redactStream,
+    case2h_pendingCauseIsReadable,
+    case2i_budgetsFitWork,
     case3_watermark,
     case4_routing,
     case5_recollection,
