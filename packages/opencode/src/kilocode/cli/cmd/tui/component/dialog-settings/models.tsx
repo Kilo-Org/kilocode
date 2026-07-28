@@ -80,6 +80,8 @@ export function SettingsSelect<T>(props: {
       current={props.current}
       locked={props.locked || props.busy !== undefined}
       scrollbar={props.scrollbar}
+      truncateOverflow
+      compactFooter
       onMove={props.onMove}
       onSelect={props.onSelect}
       footer={

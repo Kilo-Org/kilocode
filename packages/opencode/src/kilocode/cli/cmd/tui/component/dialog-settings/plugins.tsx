@@ -40,6 +40,8 @@ export function PluginsView(props: { ctx: SettingsState; back: () => void }) {
       title="Plugins"
       options={options()}
       locked={props.ctx.store.busy !== undefined}
+      truncateOverflow
+      compactFooter
       onSelect={async (option) => {
         const map = enabledMap()
         const current = option.value in map ? !!map[option.value] : true

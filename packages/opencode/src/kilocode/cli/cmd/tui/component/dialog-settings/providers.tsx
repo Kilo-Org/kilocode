@@ -106,6 +106,8 @@ export function ProviderView(props: {
       }
       renderFilter={false}
       locked={props.ctx.store.busy !== undefined}
+      truncateOverflow
+      compactFooter
       options={options()}
       onSelect={async (option) => {
         if (confirm()) {

@@ -1,5 +1,5 @@
 import { createStore } from "solid-js/store"
-import type { ConfigOverlayResponse, TuiConfigGetResponse, TuiConfigUpdateData } from "@kilocode/sdk/v2"
+import type { ConfigOverlayResponse, Provider, TuiConfigGetResponse, TuiConfigUpdateData } from "@kilocode/sdk/v2"
 import { useSDK } from "@tui/context/sdk"
 import { useSync } from "@tui/context/sync"
 import { useToast } from "@tui/ui/toast"
@@ -13,6 +13,7 @@ type Store = {
   overlay: ConfigOverlayResponse | undefined
   tui: TuiConfigGetResponse
   warnings: Warning[]
+  disabledProviders: Provider[]
   loading: boolean
   refreshing: boolean
   busy: string | undefined
@@ -45,6 +46,7 @@ export function createSettings(): SettingsState {
     overlay: undefined,
     tui: {},
     warnings: [],
+    disabledProviders: [],
     loading: true,
     refreshing: false,
     busy: undefined,
@@ -58,10 +60,11 @@ export function createSettings(): SettingsState {
     setStore("refreshing", true)
     setStore("error", undefined)
     pending = (async () => {
-      const [overlay, tui, warnings] = await Promise.allSettled([
+      const [overlay, tui, warnings, disabled] = await Promise.allSettled([
         deadline(sdk.client.config.overlay({ scope: "project" }), "Configuration"),
         deadline(sdk.client.tui.config.get(), "Terminal configuration"),
         deadline(sdk.client.config.warnings(), "Configuration warnings"),
+        deadline(sdk.client.disabledProviders.list(), "Disabled providers"),
       ])
       const errors: string[] = []
 
@@ -82,6 +85,14 @@ export function createSettings(): SettingsState {
 
       if (warnings.status === "fulfilled" && !warnings.value.error) {
         setStore("warnings", warnings.value.data ?? [])
+      }
+
+      if (disabled.status === "rejected") errors.push(errorMessage(disabled.reason))
+      if (disabled.status === "fulfilled" && disabled.value.error) {
+        errors.push(errorMessage(disabled.value.error))
+      }
+      if (disabled.status === "fulfilled" && !disabled.value.error) {
+        setStore("disabledProviders", disabled.value.data ?? [])
       }
 
       setStore("error", errors.length ? errors.join(" · ") : undefined)
