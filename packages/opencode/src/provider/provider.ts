@@ -41,6 +41,8 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
+  requestTimeout,
+  wrapFirstByte,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -1763,6 +1765,11 @@ export const layer = Layer.effect(
           const opts = init ?? {}
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
           const timeout = buildTimeoutSignal(options) // kilocode_change - use cancellable timeout for connection phase
+          // kilocode_change start - extend the same deadline to the first response byte
+          const firstByteMs = requestTimeout(options)
+          const firstByteCtl = firstByteMs === undefined ? undefined : new AbortController()
+          const deadline = firstByteMs === undefined ? undefined : Date.now() + firstByteMs
+          // kilocode_change end
           const headerTimeoutMs = headerTimeout === false ? undefined : headerTimeout
           const headerTimeoutCtl = typeof headerTimeoutMs === "number" ? timeoutController(headerTimeoutMs) : undefined
           const signals: AbortSignal[] = []
@@ -1771,6 +1778,7 @@ export const layer = Layer.effect(
           if (chunkAbortCtl) signals.push(chunkAbortCtl.signal)
           if (headerTimeoutCtl) signals.push(headerTimeoutCtl.signal)
           if (timeout.signal) signals.push(timeout.signal) // kilocode_change
+          if (firstByteCtl) signals.push(firstByteCtl.signal) // kilocode_change
 
           const combined = signals.length === 0 ? null : signals.length === 1 ? signals[0] : AbortSignal.any(signals)
           if (combined) opts.signal = combined
@@ -1783,8 +1791,12 @@ export const layer = Layer.effect(
               timeout: false,
             }).finally(() => headerTimeoutCtl?.clear())
             timeout.clear()
-            if (!chunkAbortCtl) return res
-            return wrapSSE(res, chunkTimeout, chunkAbortCtl)
+            // kilocode_change start - hand the remaining deadline to the first-byte guard
+            const remaining = deadline !== undefined ? deadline - Date.now() : undefined
+            const live = remaining !== undefined && firstByteCtl ? wrapFirstByte(res, Math.max(remaining, 1), firstByteCtl) : res
+            if (!chunkAbortCtl) return live
+            return wrapSSE(live, chunkTimeout, chunkAbortCtl)
+            // kilocode_change end
           } catch (err) {
             timeout.clear()
             throw err
