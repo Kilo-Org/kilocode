@@ -174,6 +174,9 @@ function tailText(text, { lines = STDERR_TAIL_LINES, chars = STDERR_TAIL_CHARS }
   return lastLines.length > chars ? lastLines.slice(-chars) : lastLines
 }
 
+/** Max bytes of child stderr persisted to docs-sync-out/ (full buffer, not the console tail). */
+const STDERR_LOG_MAX_CHARS = 8 * 1024 * 1024
+
 /**
  * Run `kilo` via spawnSync so stderr is always recoverable — including when
  * the child exits 0 after writing a diagnostic (execFileSync cannot return
@@ -181,6 +184,10 @@ function tailText(text, { lines = STDERR_TAIL_LINES, chars = STDERR_TAIL_CHARS }
  *
  * streamStdout:true → inherit fd 1 (edit live log); false → capture stdout
  * (triage parses it). stderr is always buffered.
+ *
+ * Always writes the full captured stderr to
+ * docs-sync-out/kilo-stderr-<sanitized-label>.log (unconditional — success and
+ * failure). The console return value still uses the short tailText.
  */
 export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" }) {
   const result = spawnSync("kilo", args, {
@@ -193,12 +200,25 @@ export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" 
   const timedOut = Boolean(result.error && result.error.code === "ETIMEDOUT")
   const exitCode =
     typeof result.status === "number" ? result.status : timedOut ? null : result.status === null ? null : result.status
-  const stderrTail = tailText(result.stderr)
+  const stderrRaw = String(result.stderr ?? "")
+  const stderrTail = tailText(stderrRaw)
   const stdout = streamStdout ? "" : String(result.stdout ?? "")
   // ok is "process finished without OS-level failure". Callers still treat a
   // missing summary / unparseable output as failure even when ok is true —
   // exit 0 is not success for the docs-sync bot.
   const ok = !result.error && result.status === 0
+
+  // Persist full stderr on every call (not gated on ok/exitCode/summary). Cap is
+  // generous (megabytes) so long batch dumps keep auto-rejecting lines; console
+  // still uses the short tail above.
+  try {
+    fs.mkdirSync("docs-sync-out", { recursive: true })
+    const safe = label.replace(/[^A-Za-z0-9._-]/g, "-")
+    const body = stderrRaw.length > STDERR_LOG_MAX_CHARS ? stderrRaw.slice(-STDERR_LOG_MAX_CHARS) : stderrRaw
+    fs.writeFileSync(`docs-sync-out/kilo-stderr-${safe}.log`, body)
+  } catch (err) {
+    console.warn(`${label}: failed to write kilo-stderr log: ${err.message}`)
+  }
 
   if (result.error && !timedOut) {
     console.warn(`${label}: spawn error: ${result.error.message}`)

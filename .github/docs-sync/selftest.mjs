@@ -55,7 +55,7 @@ function writeExecutable(filePath, body) {
 function makeStubKiloDir({ mode, callLog, stderrText = "event stream disconnected" }) {
   const dir = mktemp("docs-sync-kilo-")
   const kiloPath = path.join(dir, "kilo")
-  // mode: "stderr-exit0" | "record" | "partial-triage" | "mixed-triage"
+  // mode: "stderr-exit0" | "record" | "partial-triage" | "mixed-triage" | "write-edit-summary"
   const script = `#!/usr/bin/env node
 const fs = require("node:fs");
 const path = require("node:path");
@@ -80,6 +80,22 @@ const fileArg = fIdx >= 0 ? args[fIdx + 1] : null;
 let chunk = [];
 if (fileArg && fs.existsSync(fileArg)) {
   try { chunk = JSON.parse(fs.readFileSync(fileArg, "utf8")); } catch { chunk = []; }
+}
+if (mode === "write-edit-summary") {
+  // Success path: write the batch summary so edit.mjs returns true, while still
+  // emitting stderr so selftest can assert runKilo persisted it unconditionally.
+  process.stderr.write(stderrText + "\\n");
+  const m = fileArg && String(fileArg).match(/edit-batch-(\\d+)\\.json/);
+  const index = m ? m[1] : "0";
+  const summary = chunk.map((d) => ({
+    pr: d.number,
+    url: d.url,
+    action: "skipped",
+    reason: "selftest stub",
+  }));
+  fs.mkdirSync("docs-sync-out", { recursive: true });
+  fs.writeFileSync("docs-sync-out/edit-summary-" + index + ".json", JSON.stringify(summary));
+  process.exit(0);
 }
 if (mode === "partial-triage") {
   // Classify only a proper subset (first URL) of the chunk.
@@ -369,6 +385,189 @@ function case2_defectB() {
   assert.equal(uncovered.length, 5)
   for (const u of uncovered) {
     assert.ok(u.reason, "uncovered reason present")
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 2b — AC4a: every docs-sync kilo run argv carries --auto
+// ---------------------------------------------------------------------------
+/** Slice `args: [` … matching `]` from source (newlines allowed inside). */
+function extractArgsArraySlice(source) {
+  const start = source.indexOf("args: [")
+  assert.ok(start >= 0, "args: [ not found in source")
+  let i = start + "args: ".length
+  assert.equal(source[i], "[")
+  let depth = 0
+  for (; i < source.length; i++) {
+    const ch = source[i]
+    if (ch === "[") depth++
+    else if (ch === "]") {
+      depth--
+      if (depth === 0) return source.slice(start, i + 1)
+    }
+  }
+  throw new assert.AssertionError({ message: "unclosed args: [ array in source" })
+}
+
+/** Label → kilo-stderr filename rule (must match lib.mjs runKilo). */
+function kiloStderrLogName(label) {
+  return `kilo-stderr-${String(label).replace(/[^A-Za-z0-9._-]/g, "-")}.log`
+}
+
+function case2b_autoFlag() {
+  console.log("case 2b: AC4a (--auto on every docs-sync kilo run)")
+
+  // (i) region-scoped static check on triage.mjs / edit.mjs argv arrays
+  for (const name of ["triage.mjs", "edit.mjs"]) {
+    const src = fs.readFileSync(path.join(HERE, name), "utf8")
+    const slice = extractArgsArraySlice(src)
+    assert.ok(
+      slice.includes('"--auto"'),
+      `${name} args array must contain "--auto"; got:\n${slice}`,
+    )
+  }
+
+  // (ii) Fix verify failures step: join the run: | block and require --auto on kilo run
+  {
+    const yml = fs.readFileSync(path.join(HERE, "..", "workflows", "docs-sync.yml"), "utf8")
+    const stepIdx = yml.indexOf("Fix verify failures")
+    assert.ok(stepIdx >= 0, "Fix verify failures step missing")
+    const afterStep = yml.slice(stepIdx)
+    const runIdx = afterStep.indexOf("run: |")
+    assert.ok(runIdx >= 0, "run: | missing after Fix verify failures")
+    const blockStart = stepIdx + runIdx + "run: |".length
+    const rest = yml.slice(blockStart)
+    // Block ends at next unindented step key or EOF — collect indented lines
+    const lines = []
+    for (const line of rest.split("\n")) {
+      if (line === "") {
+        lines.push(line)
+        continue
+      }
+      // stop at next top-level list item under steps (two-space + "- ")
+      if (/^ {0,6}- name:/.test(line) || (/^\S/.test(line) && lines.length > 0)) break
+      lines.push(line)
+    }
+    // Join continuation backslashes then collapse whitespace for the kilo run line
+    const joined = lines
+      .map((l) => l.replace(/^\s+/, ""))
+      .join("\n")
+      .replace(/\\\n/g, " ")
+      .replace(/\s+/g, " ")
+    assert.match(joined, /kilo run\b/, `expected kilo run in Fix verify block:\n${joined}`)
+    const kiloCmd = joined.match(/kilo run\b[^|]*/)?.[0] ?? ""
+    assert.ok(
+      /\s--auto\b/.test(kiloCmd) || /kilo run\s+--auto\b/.test(kiloCmd),
+      `Fix verify kilo run must contain --auto; got: ${kiloCmd}`,
+    )
+  }
+
+  // (iii) authoritative: real stub invocations with callLog — every argv has --auto
+  {
+    const prs = [1, 2, 3, 4, 5].map((n) => samplePr(n))
+    const worthy = prs
+    const triage = prs.map((p) => ({
+      pr: p.number,
+      url: p.url,
+      docs_worthy: true,
+      reason: "needs docs",
+      target_sections: ["overview"],
+      priority: "high",
+    }))
+    const cwd = setupEditCwd(worthy, triage)
+    const callLog = path.join(cwd, "kilo-calls.log")
+    const stderrText = "event stream disconnected DIAG-AUTO"
+    const kiloDir = makeStubKiloDir({ mode: "stderr-exit0", stderrText, callLog })
+
+    const result = runNodeScript(EDIT_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        EDIT_MODEL: "test/model",
+        DOCS_SYNC_BACKOFF_MS: "0",
+        EDIT_BUDGET_MINUTES: "5",
+        EDIT_BATCH_TIMEOUT_MINUTES: "1",
+      },
+    })
+    assert.equal(result.status, 0, `edit.mjs exit: ${result.output}`)
+
+    assert.ok(fs.existsSync(callLog), "callLog must be written (stub was invoked)")
+    const lines = fs.readFileSync(callLog, "utf8").trim().split("\n").filter(Boolean)
+    assert.ok(lines.length > 0, "callCount > 0 required (vacuous empty log forbidden)")
+    for (const line of lines) {
+      const { argv } = JSON.parse(line)
+      assert.ok(
+        Array.isArray(argv) && argv.includes("--auto"),
+        `every kilo argv must include --auto; got ${JSON.stringify(argv)}`,
+      )
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Case 2c — full child stderr always written (success and failure paths)
+// ---------------------------------------------------------------------------
+function case2c_stderrLogAlways() {
+  console.log("case 2c: unconditional kilo-stderr-*.log")
+
+  const prs = [1, 2, 3, 4, 5].map((n) => samplePr(n))
+  const worthy = prs
+  const triage = prs.map((p) => ({
+    pr: p.number,
+    url: p.url,
+    docs_worthy: true,
+    reason: "needs docs",
+    target_sections: ["overview"],
+    priority: "high",
+  }))
+
+  // Failure path: stub exits 0 without summary (same mode as case 2)
+  {
+    const cwd = setupEditCwd(worthy, triage)
+    const stderrText = "FAILPATH-STDERR-MARKER"
+    const kiloDir = makeStubKiloDir({ mode: "stderr-exit0", stderrText })
+    const result = runNodeScript(EDIT_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        EDIT_MODEL: "test/model",
+        DOCS_SYNC_BACKOFF_MS: "0",
+        EDIT_BUDGET_MINUTES: "5",
+        EDIT_BATCH_TIMEOUT_MINUTES: "1",
+      },
+    })
+    assert.equal(result.status, 0, result.output)
+    const logName = kiloStderrLogName("edit batch 0 attempt 1")
+    const logPath = path.join(cwd, "docs-sync-out", logName)
+    assert.equal(logName, "kilo-stderr-edit-batch-0-attempt-1.log")
+    assert.ok(fs.existsSync(logPath), `expected ${logPath} on failure path`)
+    assert.match(fs.readFileSync(logPath, "utf8"), /FAILPATH-STDERR-MARKER/)
+  }
+
+  // Success path: stub writes summary (today's path that discarded stderr)
+  {
+    const cwd = setupEditCwd(worthy, triage)
+    const stderrText = "SUCCESSPATH-STDERR-MARKER"
+    const kiloDir = makeStubKiloDir({ mode: "write-edit-summary", stderrText })
+    const result = runNodeScript(EDIT_SCRIPT, {
+      cwd,
+      kiloDir,
+      env: {
+        EDIT_MODEL: "test/model",
+        DOCS_SYNC_BACKOFF_MS: "0",
+        EDIT_BUDGET_MINUTES: "5",
+        EDIT_BATCH_TIMEOUT_MINUTES: "1",
+      },
+    })
+    assert.equal(result.status, 0, result.output)
+    assert.ok(
+      fs.existsSync(path.join(cwd, "docs-sync-out", "edit-summary-0.json")),
+      "stub must write summary (success path)",
+    )
+    const logName = kiloStderrLogName("edit batch 0 attempt 1")
+    const logPath = path.join(cwd, "docs-sync-out", logName)
+    assert.ok(fs.existsSync(logPath), `expected ${logPath} on success path`)
+    assert.match(fs.readFileSync(logPath, "utf8"), /SUCCESSPATH-STDERR-MARKER/)
   }
 }
 
@@ -934,6 +1133,8 @@ function main() {
   const cases = [
     case1_mergeOrFallback,
     case2_defectB,
+    case2b_autoFlag,
+    case2c_stderrLogAlways,
     case3_watermark,
     case4_routing,
     case5_recollection,

@@ -71,8 +71,11 @@ function triageChunk(chunk, index, budgetDeadline) {
       break
     }
 
+    // Headless `kilo run` auto-rejects every permission ask; the runner has no
+    // user config granting bash, so without --auto the agent cannot run ordinary
+    // shell commands against the repository.
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
+      args: ["run", "--auto", prompt, "-m", model, "--dir", process.cwd(), "-f", chunkFile],
       timeoutMs: Math.min(CHUNK_TIMEOUT_MS, left),
       streamStdout: false,
       label: `triage chunk ${index} attempt ${attempt}`,

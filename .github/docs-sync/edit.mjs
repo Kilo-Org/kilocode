@@ -82,8 +82,11 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
       break
     }
 
+    // Headless `kilo run` auto-rejects every permission ask; the runner has no
+    // user config granting bash, so without --auto the agent cannot run ordinary
+    // shell commands against the repository.
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
+      args: ["run", "--auto", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
       timeoutMs: Math.min(BATCH_TIMEOUT_MS, left),
       streamStdout: true,
       label: `edit batch ${index} attempt ${attempt}`,
