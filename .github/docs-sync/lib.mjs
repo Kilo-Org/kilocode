@@ -174,6 +174,22 @@ function tailText(text, { lines = STDERR_TAIL_LINES, chars = STDERR_TAIL_CHARS }
   return lastLines.length > chars ? lastLines.slice(-chars) : lastLines
 }
 
+/**
+ * Artifact files are raw: GitHub masks secret values in log streams only, and the runner
+ * env holds long-lived secrets (KILO_API_KEY), so exact values of secret-looking env vars
+ * are redacted before stderr is persisted or printed.
+ */
+export function redactEnvSecrets(text) {
+  let out = String(text ?? "")
+  for (const [name, value] of Object.entries(process.env)) {
+    if (!/KEY|TOKEN|SECRET/i.test(name)) continue
+    if (typeof value !== "string" || value.length < 8) continue
+    if (!out.includes(value)) continue
+    out = out.split(value).join("***")
+  }
+  return out
+}
+
 /** Max bytes of child stderr persisted to docs-sync-out/ (full buffer, not the console tail). */
 const STDERR_LOG_MAX_CHARS = 8 * 1024 * 1024
 
@@ -201,7 +217,8 @@ export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" 
   const exitCode =
     typeof result.status === "number" ? result.status : timedOut ? null : result.status === null ? null : result.status
   const stderrRaw = String(result.stderr ?? "")
-  const stderrTail = tailText(stderrRaw)
+  const stderrSafe = redactEnvSecrets(stderrRaw)
+  const stderrTail = tailText(stderrSafe)
   const stdout = streamStdout ? "" : String(result.stdout ?? "")
   // ok is "process finished without OS-level failure". Callers still treat a
   // missing summary / unparseable output as failure even when ok is true —
@@ -214,7 +231,7 @@ export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" 
   try {
     fs.mkdirSync("docs-sync-out", { recursive: true })
     const safe = label.replace(/[^A-Za-z0-9._-]/g, "-")
-    const body = stderrRaw.length > STDERR_LOG_MAX_CHARS ? stderrRaw.slice(-STDERR_LOG_MAX_CHARS) : stderrRaw
+    const body = stderrSafe.length > STDERR_LOG_MAX_CHARS ? stderrSafe.slice(-STDERR_LOG_MAX_CHARS) : stderrSafe
     fs.writeFileSync(`docs-sync-out/kilo-stderr-${safe}.log`, body)
   } catch (err) {
     console.warn(`${label}: failed to write kilo-stderr log: ${err.message}`)

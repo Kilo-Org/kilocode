@@ -572,6 +572,54 @@ function case2c_stderrLogAlways() {
 }
 
 // ---------------------------------------------------------------------------
+// Case 2d — redact secret env values from captured kilo stderr (artifact-safe)
+// ---------------------------------------------------------------------------
+function case2d_redactEnvSecrets() {
+  console.log("case 2d: redact env secrets from kilo stderr capture")
+
+  const prs = [1, 2, 3, 4, 5].map((n) => samplePr(n))
+  const worthy = prs
+  const triage = prs.map((p) => ({
+    pr: p.number,
+    url: p.url,
+    docs_worthy: true,
+    reason: "needs docs",
+    target_sections: ["overview"],
+    priority: "high",
+  }))
+  const cwd = setupEditCwd(worthy, triage)
+  const secret = "selftest-secret-value-12345"
+  const stderrText = `leak before ${secret} after`
+  const kiloDir = makeStubKiloDir({ mode: "stderr-exit0", stderrText })
+
+  const result = runNodeScript(EDIT_SCRIPT, {
+    cwd,
+    kiloDir,
+    env: {
+      EDIT_MODEL: "test/model",
+      DOCS_SYNC_BACKOFF_MS: "0",
+      EDIT_BUDGET_MINUTES: "5",
+      EDIT_BATCH_TIMEOUT_MINUTES: "1",
+      KILO_API_KEY: secret,
+    },
+  })
+  assert.equal(result.status, 0, `edit.mjs exit: ${result.output}`)
+
+  const logName = kiloStderrLogName("edit batch 0 attempt 1")
+  const logPath = path.join(cwd, "docs-sync-out", logName)
+  assert.ok(fs.existsSync(logPath), `expected ${logPath}`)
+  const logBody = fs.readFileSync(logPath, "utf8")
+  assert.ok(!logBody.includes(secret), `persisted stderr must not contain secret; got: ${logBody}`)
+  assert.ok(logBody.includes("***"), `persisted stderr must contain redaction marker; got: ${logBody}`)
+
+  // Console stderr-tail region must also be redacted (not only the artifact file).
+  const tailIdx = result.output.indexOf("stderr tail:")
+  assert.ok(tailIdx >= 0, `expected stderr tail: in output; got: ${result.output}`)
+  const tailRegion = result.output.slice(tailIdx)
+  assert.ok(!tailRegion.includes(secret), `console stderr tail must not contain secret; got: ${tailRegion}`)
+}
+
+// ---------------------------------------------------------------------------
 // Case 3 — watermark invariant
 // ---------------------------------------------------------------------------
 function case3_watermark() {
@@ -1135,6 +1183,7 @@ function main() {
     case2_defectB,
     case2b_autoFlag,
     case2c_stderrLogAlways,
+    case2d_redactEnvSecrets,
     case3_watermark,
     case4_routing,
     case5_recollection,
