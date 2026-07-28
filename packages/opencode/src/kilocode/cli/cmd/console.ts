@@ -9,10 +9,12 @@ import { warnPort } from "@/kilocode/cli/port-warning"
 import { hasDisplay } from "@/kilocode/cli/cmd/tui/util/display"
 import { StopCommand } from "@/kilocode/cli/cmd/daemon"
 
-function browserUrl(state: Daemon.State) {
-  const url = new URL("/console", state.url)
-  url.username = state.username
-  url.password = state.password
+export function browserUrl(state: Daemon.State) {
+  const server = new URL(state.url)
+  server.username = state.username
+  server.password = state.password
+  const url = new URL("/console", server)
+  url.searchParams.set("server", server.toString())
   return url.toString()
 }
 
