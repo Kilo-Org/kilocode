@@ -1190,6 +1190,7 @@ export class AgentManagerProvider implements Disposable {
 
       this.registerWorktreeSession(session.id, wt.result.path)
       this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)
+      this.panel?.sessions.registerSession(session)
 
       // Set the per-version model immediately so the UI selector reflects
       // the correct model as soon as the worktree appears, before Phase 2.

@@ -30,19 +30,16 @@ describe("prompt.ts Kilo-specific invariants", () => {
     expect(content).toContain("Suggestion.dismissAll")
   })
 
-  test("dismissAll for suggestions and questions runs before enqueue, without cancelling the in-flight fiber", () => {
+  test("enqueue reserves the follow-up before dismissing blockers, without cancelling the in-flight fiber", () => {
     const content = fs.readFileSync(PROMPT_FILE, "utf-8")
-    // dismissAll for both suggestions and questions must precede the enqueue so
-    // an in-flight handle.process blocked on a pending tool prompt can return.
-    // Critically, the block must NOT call state.cancel or KiloSessionPromptQueue.reserve —
-    // either of those would abort the running streamText mid-tokens, which was
-    // the #9332 regression. Order: dismissAll(Suggestion), question.dismissAll, enqueue.
+    // Register the queued follow-up before dismissing blockers so the old turn
+    // observes hasFollowup when the question resumes. The enqueue reservation
+    // runs both dismissals before waiting for the prior queue tail.
     const block = content.match(
-      /kilocode_change start[^\n]*unblock tools[\s\S]*?Suggestion\.dismissAll[\s\S]*?question\.dismissAll[\s\S]*?KiloSessionPromptQueue\.enqueue/,
+      /kilocode_change start[^\n]*register the queued follow-up[\s\S]*?Suggestion\.dismissAll[\s\S]*?question\.dismissAll[\s\S]*?KiloSessionPromptQueue\.enqueue\([\s\S]*?dismiss/,
     )
     expect(block).not.toBeNull()
     expect(content).not.toMatch(/state\.cancel\(input\.sessionID\)/)
-    expect(content).not.toMatch(/KiloSessionPromptQueue\.reserve/)
   })
 
   test("runLoop breaks out between LLM steps when a newer prompt was enqueued", () => {
