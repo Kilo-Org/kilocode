@@ -22,6 +22,7 @@ import { useServer } from "../src/context/server"
 import { useSession } from "../src/context/session"
 import { useProvider } from "../src/context/provider"
 import { useConfig } from "../src/context/config"
+import { cycleVariant } from "../src/context/session-variant-store"
 import { ModelSelectorBase } from "../src/components/shared/ModelSelector"
 import { ModeSwitcherBase } from "../src/components/shared/ModeSwitcher"
 import { SpeechToTextButton } from "../src/components/speech-to-text/SpeechToTextButton"
@@ -79,7 +80,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   const server = useServer()
   const session = useSession()
   const provider = useProvider()
-  const { config, globalConfig, features } = useConfig()
+  const { config, globalConfig, features, settings } = useConfig()
   const metrics = tracker(vscode)
   const track = (button: string, properties?: Record<string, string | number | boolean | undefined>) =>
     metrics.track(button, "configure_worktree_dialog", properties)
@@ -245,6 +246,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
   createEffect(() => persistImages(imageAttach.images()))
 
   let textareaRef: HTMLTextAreaElement | undefined
+  let containerRef: HTMLDivElement | undefined
 
   onMount(() => {
     setBranchesLoading(true)
@@ -339,10 +341,33 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
     textareaRef.focus()
   }
 
+  const onKey = (e: KeyboardEvent) => {
+    // Shift+Tab cycles reasoning effort variants (setting: chat.shiftTabCyclesVariant).
+    // When disabled or no variants exist, fall through to default focus navigation.
+    if (e.key === "Tab" && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (settings()["chat.shiftTabCyclesVariant"] === false) return
+      const list = variants()
+      if (list.length === 0) return
+      const next = cycleVariant(effectiveVariant(), list)
+      if (!next) return
+      e.preventDefault()
+      setVariant(next)
+      return
+    }
+    undo(e)
+  }
+
   const adjustHeight = () => {
-    if (!textareaRef) return
-    textareaRef.style.height = "auto"
-    textareaRef.style.height = `${Math.min(textareaRef.scrollHeight, 200)}px`
+    const box = containerRef
+    const area = textareaRef
+    if (!box || !area) return
+    // Grow the container with the prompt (same 200px auto-grow cap as the
+    // sidebar prompt), never the textarea: it fills the container and is the
+    // only element that scrolls. A manual container resize persists until the
+    // next input re-fits the height.
+    box.style.height = "auto"
+    const chrome = box.offsetHeight - area.offsetHeight
+    box.style.height = `${Math.min(area.scrollHeight, 200) + chrome}px`
   }
 
   const insertSpeechText = (value: string) => {
@@ -491,6 +516,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
             />
             {/* Prompt input — reuses the sidebar chat-input base classes for consistent styling */}
             <div
+              ref={containerRef}
               class="prompt-input-container am-prompt-input-container"
               classList={{ "prompt-input-container--dragging": imageAttach.dragging() }}
               onDragOver={imageAttach.handleDragOver}
@@ -541,7 +567,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       persistPrompt(val)
                       adjustHeight()
                     }}
-                    onKeyDown={undo}
+                    onKeyDown={onKey}
                     onPaste={(e) => imageAttach.handlePaste(e)}
                     rows={3}
                     dir="auto"
@@ -575,6 +601,7 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                       onSelect={setVariant}
                       portal={false}
                       deferDismiss
+                      cycleHint={settings()["chat.shiftTabCyclesVariant"] !== false}
                     />
                     <Show when={overridden()}>
                       <Tooltip value={t("prompt.action.resetModel")} placement="top">
@@ -841,7 +868,9 @@ export const NewWorktreeDialog: Component<{ onClose: () => void; defaultBaseBran
                           }
                         >
                           <span class="am-selector-value">
-                            {[...modelAllocations().values()].map((e) => e.name).join(", ")}
+                            {[...modelAllocations().values()]
+                              .map((e) => (e.variant ? `${e.name} (${e.variant})` : e.name))
+                              .join(", ")}
                           </span>
                         </Show>
                       </span>

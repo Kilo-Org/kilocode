@@ -1,7 +1,6 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
-import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, MarketplaceRelevanceMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
@@ -27,7 +26,6 @@ import type {
   AgentManagerApplyWorktreeDiffStatus,
   BranchInfo,
   ContinueInWorktreeStatus,
-  ExternalWorktreeInfo,
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
@@ -168,6 +166,7 @@ export interface SessionCreatedMessage {
   type: "sessionCreated"
   session: SessionInfo
   draftID?: string
+  activate?: boolean
 }
 
 export interface SessionForkedMessage {
@@ -282,6 +281,8 @@ export interface SetChatBoxMessage {
    * mention from a truncated prefix when the real path contains a space.
    */
   paths?: string[]
+  /** Past chats referenced by the restored message, seeded the same way as paths. */
+  sessions?: SessionSearchItem[]
 }
 
 export interface AppendChatBoxMessage {
@@ -347,6 +348,13 @@ export interface IndexingSettingsLoadedMessage {
   type: "indexingSettingsLoaded"
   settings: {
     showButtonWhenDisabled: boolean
+  }
+}
+
+export interface ChatSettingsLoadedMessage {
+  type: "chatSettingsLoaded"
+  settings: {
+    shiftTabCyclesVariant: boolean
   }
 }
 
@@ -448,6 +456,18 @@ export interface FileSearchResultMessage {
   paths: string[]
   items?: FileSearchItem[]
   dir: string
+  requestId: string
+}
+
+export interface SessionSearchItem {
+  id: string
+  title: string
+  updated: number
+}
+
+export interface SessionSearchResultMessage {
+  type: "sessionSearchResult"
+  sessions: SessionSearchItem[]
   requestId: string
 }
 
@@ -583,6 +603,11 @@ export interface TimelineSettingLoadedMessage {
   visible: boolean
 }
 
+export interface ThroughputSettingLoadedMessage {
+  type: "throughputSettingLoaded"
+  visible: boolean
+}
+
 export interface WorkStyleLoadedMessage {
   type: "workStyleLoaded"
   style: WorkStyleState
@@ -603,16 +628,6 @@ export interface NotificationsLoadedMessage {
   type: "notificationsLoaded"
   notifications: KilocodeNotification[]
   dismissedIds: string[]
-}
-
-// Agent Manager worktree session metadata
-export interface AgentManagerSessionMetaMessage {
-  type: "agentManager.sessionMeta"
-  sessionId: string
-  mode: SessionMode
-  branch?: string
-  path?: string
-  parentBranch?: string
 }
 
 // Agent Manager repo info (current branch of the main workspace)
@@ -790,11 +805,6 @@ export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
   branches: BranchInfo[]
   defaultBranch: string
-}
-
-export interface AgentManagerExternalWorktreesMessage {
-  type: "agentManager.externalWorktrees"
-  worktrees: ExternalWorktreeInfo[]
 }
 
 // Agent Manager Import tab: result feedback (extension → webview)
@@ -1128,6 +1138,7 @@ export type ExtensionMessage =
   | NavigateMessage
   | IndexingStatusLoadedMessage
   | IndexingSettingsLoadedMessage
+  | ChatSettingsLoadedMessage
   | KiloEmbeddingModelsLoadedMessage
   | ImageModelsLoadedMessage
   | ProvidersLoadedMessage
@@ -1143,6 +1154,7 @@ export type ExtensionMessage =
   | SpeechToTextResultMessage
   | SpeechToTextErrorMessage
   | FileSearchResultMessage
+  | SessionSearchResultMessage
   | FilePickerResultMessage
   | TerminalContextResultMessage
   | TerminalContextErrorMessage
@@ -1164,11 +1176,11 @@ export type ExtensionMessage =
   | GlobalConfigLoadedMessage
   | NotificationSettingsLoadedMessage
   | TimelineSettingLoadedMessage
+  | ThroughputSettingLoadedMessage
   | WorkStyleLoadedMessage
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
   | NotificationsLoadedMessage
-  | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
@@ -1196,7 +1208,6 @@ export type ExtensionMessage =
   | OpenCloudSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
-  | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage

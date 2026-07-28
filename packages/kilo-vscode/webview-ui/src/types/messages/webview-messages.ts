@@ -15,7 +15,7 @@ import type {
   SkipLegacyMigrationMessage,
   StartMigrationMessage,
 } from "./migration"
-import type { MemoryShowMessage, MemoryOperationMessage, MemoryPromptMessage, RequestMemoryMessage } from "./memory"
+import type { MemoryShowMessage, MemoryOperationMessage, RequestMemoryMessage } from "./memory"
 
 // ============================================
 // Messages FROM webview TO extension
@@ -52,6 +52,12 @@ export interface RevertSessionRequest {
 export interface UnrevertSessionRequest {
   type: "unrevertSession"
   sessionID: string
+}
+
+export interface DeleteMessageRequest {
+  type: "deleteMessage"
+  sessionID: string
+  messageID: string
 }
 
 export interface PermissionResponseRequest {
@@ -167,6 +173,11 @@ export interface SetOrganizationRequest {
 
 export interface WebviewReadyRequest {
   type: "webviewReady"
+}
+
+export interface WebviewFocusChangedRequest {
+  type: "webviewFocusChanged"
+  focused: boolean
 }
 
 export interface SelectSourceRequest {
@@ -401,6 +412,12 @@ export interface RequestFileSearchMessage {
   sessionID?: string
 }
 
+export interface RequestSessionSearchMessage {
+  type: "requestSessionSearch"
+  requestId: string
+  sessionID?: string
+}
+
 export interface RequestFilePickerMessage {
   type: "requestFilePicker"
   requestId: string
@@ -431,6 +448,10 @@ export interface UpdateSettingRequest {
 
 export interface RequestTimelineSettingMessage {
   type: "requestTimelineSetting"
+}
+
+export interface RequestThroughputSettingMessage {
+  type: "requestThroughputSetting"
 }
 
 export interface RequestWorkStyleMessage {
@@ -475,6 +496,10 @@ export interface RequestIndexingStatusMessage {
 
 export interface RequestIndexingSettingsMessage {
   type: "requestIndexingSettings"
+}
+
+export interface RequestChatSettingsMessage {
+  type: "requestChatSettings"
 }
 
 export interface RequestKiloEmbeddingModelsMessage {
@@ -779,10 +804,6 @@ export interface RequestBranchesMessage {
   type: "agentManager.requestBranches"
 }
 
-export interface RequestExternalWorktreesMessage {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 export interface ImportFromBranchRequest {
   type: "agentManager.importFromBranch"
   branch: string
@@ -791,16 +812,6 @@ export interface ImportFromBranchRequest {
 export interface ImportFromPRRequest {
   type: "agentManager.importFromPR"
   url: string
-}
-
-export interface ImportExternalWorktreeRequest {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-export interface ImportAllExternalWorktreesRequest {
-  type: "agentManager.importAllExternalWorktrees"
 }
 
 // Agent Manager: Request one-shot diff fetch (webview → extension)
@@ -1212,6 +1223,7 @@ export type WebviewMessage =
   | AbortRequest
   | RevertSessionRequest
   | UnrevertSessionRequest
+  | DeleteMessageRequest
   | PermissionResponseRequest
   | CreateSessionRequest
   | ClearSessionRequest
@@ -1236,6 +1248,7 @@ export type WebviewMessage =
   | CancelLoginRequest
   | SetOrganizationRequest
   | WebviewReadyRequest
+  | WebviewFocusChangedRequest
   | SelectSourceRequest
   | RequestProvidersMessage
   | CompactRequest
@@ -1267,12 +1280,14 @@ export type WebviewMessage =
   | SpeechToTextStopMessage
   | SpeechToTextCancelMessage
   | RequestFileSearchMessage
+  | RequestSessionSearchMessage
   | RequestFilePickerMessage
   | RequestTerminalContextMessage
   | RequestGitChangesContextMessage
   | ChatCompletionAcceptedMessage
   | UpdateSettingRequest
   | RequestTimelineSettingMessage
+  | RequestThroughputSettingMessage
   | RequestWorkStyleMessage
   | SetWorkStyleMessage
   | ApplyWorkStyleMessage
@@ -1283,6 +1298,7 @@ export type WebviewMessage =
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage
   | RequestIndexingSettingsMessage
+  | RequestChatSettingsMessage
   | RequestKiloEmbeddingModelsMessage
   | UpdateConfigMessage
   | OpenSettingsTabRequest
@@ -1332,11 +1348,8 @@ export type WebviewMessage =
   | RequestCloudSessionDataMessage
   | ImportAndSendMessage
   | RequestBranchesMessage
-  | RequestExternalWorktreesMessage
   | ImportFromBranchRequest
   | ImportFromPRRequest
-  | ImportExternalWorktreeRequest
-  | ImportAllExternalWorktreesRequest
   | RequestWorktreeDiffMessage
   | RequestWorktreeDiffFileMessage
   | StartDiffWatchMessage
@@ -1407,7 +1420,6 @@ export type WebviewMessage =
   | RequestMemoryMessage
   | MemoryShowMessage
   | MemoryOperationMessage
-  | MemoryPromptMessage
   | CreateSectionRequest
   | RenameSectionRequest
   | DeleteSectionRequest

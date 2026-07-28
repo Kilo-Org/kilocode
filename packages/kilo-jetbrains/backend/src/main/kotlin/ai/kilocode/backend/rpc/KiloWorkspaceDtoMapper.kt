@@ -64,6 +64,8 @@ internal object KiloWorkspaceDtoMapper {
         name = s.name,
         description = s.description,
         location = s.location,
+        content = s.content,
+        editable = false,
     )
 
     private fun provider(p: ProviderInfo) = ProviderDto(

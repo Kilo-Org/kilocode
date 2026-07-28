@@ -255,6 +255,13 @@ sealed class ChatEventDto {
     ) : ChatEventDto()
 
     @Serializable
+    @SerialName("session.queue.changed")
+    data class SessionQueueChanged(
+        val sessionID: String,
+        val queued: List<String> = emptyList(),
+    ) : ChatEventDto()
+
+    @Serializable
     @SerialName("session.compacted")
     data class SessionCompacted(
         val sessionID: String,
@@ -299,8 +306,16 @@ data class PermissionRequestDto(
     val message: String? = null,
     val command: String? = null,
     val rules: List<String> = emptyList(),
+    val ruleDecisions: List<PermissionRuleDecisionDto> = emptyList(),
     val filePath: String? = null,
     val fileDiffs: List<PermissionFileDiffDto> = emptyList(),
+)
+
+@Serializable
+data class PermissionRuleDecisionDto(
+    val pattern: String,
+    val decision: String = "pending",
+    val defaultDecision: String = decision,
 )
 
 @Serializable

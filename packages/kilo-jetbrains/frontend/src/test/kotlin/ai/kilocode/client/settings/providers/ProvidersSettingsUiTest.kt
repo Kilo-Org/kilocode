@@ -1215,7 +1215,8 @@ class ProvidersSettingsUiTest : BasePlatformTestCase() {
 
     private fun render(renderer: SettingsListRenderer, list: JBList<ProviderListRow>, row: ProviderListRow, selected: Boolean) {
         @Suppress("UNCHECKED_CAST")
-        renderer.getListCellRendererComponent(list as JList<out SettingsListItem>, row, 0, selected, false)
+        // A selected row exposes its in-place actions only when the selection is visible (focused).
+        renderer.getListCellRendererComponent(list as JList<out SettingsListItem>, row, 0, selected, selected)
     }
 
     private fun actionTexts(renderer: SettingsListRenderer): List<String> = components(renderer)

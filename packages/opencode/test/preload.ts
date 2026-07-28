@@ -40,6 +40,7 @@ process.env["XDG_STATE_HOME"] = path.join(dir, "state")
 process.env["KILO_MODELS_PATH"] = path.join(import.meta.dir, "tool", "fixtures", "models-api.json")
 process.env["KILO_EXPERIMENTAL_EVENT_SYSTEM"] = "true"
 process.env["KILO_EXPERIMENTAL_WORKSPACES"] = "true"
+process.env["KILO_EXPERIMENTAL_DISABLE_FILEWATCHER"] ??= "true" // kilocode_change - see test.yml: per-instance watchers are too heavy/racy for unit tests; watcher tests opt back in
 
 // Set test home directory to isolate tests from user's actual home directory
 // This prevents tests from picking up real user configs/skills from ~/.claude/skills

@@ -124,6 +124,8 @@ export const dict = {
     "Exécutez des agents sur différents modèles en parallèle pour comparer les résultats",
   "agentManager.dialog.compareModels.searchModels": "Rechercher des modèles...",
   "agentManager.dialog.compareModels.selectModels": "Sélectionner des modèles...",
+  "agentManager.dialog.compareModels.effort": "Effort de raisonnement",
+  "agentManager.dialog.compareModels.effortDefault": "Par défaut",
   "agentManager.dialog.creating": "Création...",
   "agentManager.dialog.createWorktree": "Créer un worktree",
   "agentManager.dialog.removeImage": "Supprimer l'image",

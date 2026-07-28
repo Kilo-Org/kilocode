@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.base.PartView
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import javax.swing.JComponent
 
@@ -35,9 +36,11 @@ class TurnView(
     private val repo: String? = null,
     private val hover: ((PartView, Boolean) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
+    private val deleteQueued: ((String) -> Unit)? = null,
 ) : SessionLayoutPanel(SessionUiStyle.SessionLayout.GAP), Disposable, SessionEditorStyleTarget, SessionView {
 
     private val messages = LinkedHashMap<String, MessageView>()
+    private var settled = true
 
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -46,6 +49,17 @@ class TurnView(
 
     init {
         isOpaque = false
+    }
+
+    @RequiresEdt
+    fun setSettled(value: Boolean) {
+        if (settled == value) return
+        settled = value
+        revalidate()
+    }
+
+    override fun isValidateRoot(): Boolean {
+        return Registry.`is`("kilo.session.validateRoots", true) && settled
     }
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
@@ -58,13 +72,25 @@ class TurnView(
         return view
     }
 
+    @RequiresEdt
+    fun setQueued(active: Boolean, onDelete: (String) -> Unit) {
+        val anchor = messages.values.firstOrNull { it.role == SessionUiStyle.View.Message.USER_ROLE } ?: return
+        anchor.setQueued(active) { onDelete(id) }
+    }
+
     /** Remove the [MessageView] for [msgId] if present. */
     fun removeMessage(msgId: String) {
-        val view = messages.remove(msgId) ?: return
+        removeMessageChanged(msgId)
+    }
+
+    @RequiresEdt
+    fun removeMessageChanged(msgId: String): Boolean {
+        val view = messages.remove(msgId) ?: return false
         remove(view)
         Disposer.dispose(view)
         syncCopyToolbars()
         revalidate()
+        return true
     }
 
     @RequiresEdt

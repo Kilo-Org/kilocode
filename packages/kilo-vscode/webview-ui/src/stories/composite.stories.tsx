@@ -1199,6 +1199,7 @@ print(f"Entries with audio_file set: {found_audio}")
 print(f"Missing audio_file: {len(expected) - found_audio}")
 EOF`,
     rules: ["python3 *"],
+    heredoc: true,
   },
   tool: { messageID: ASST_MSG_ID, callID: "call-heredoc-001" },
 }

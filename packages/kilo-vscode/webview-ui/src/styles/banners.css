@@ -130,6 +130,19 @@
   text-align: left;
 }
 
+.revert-banner-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--vscode-editorWarning-foreground, #cca700);
+  background: var(--vscode-editorWarning-background, rgba(204, 167, 0, 0.1));
+  color: var(--text-base, var(--vscode-foreground));
+  font-weight: 500;
+}
+
 .revert-banner-hint {
   margin-top: 6px;
   color: var(--text-muted, var(--vscode-descriptionForeground));

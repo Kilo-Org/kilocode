@@ -93,7 +93,7 @@ import { KiloErrorBlock } from "@/kilocode/components/kilo-error-display"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { RoutedModelMeta } from "@/kilocode/cli/cmd/tui/routes/session/routed-model-meta"
 import { submitFeedback } from "@/kilocode/cli/cmd/tui/feedback"
-import { MemoryMessageMeta, MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
+import { MemorySessionTui } from "@/kilocode/cli/cmd/tui/routes/session/memory"
 import { formatMarkdownTables } from "../../util/markdown"
 // kilocode_change end
 
@@ -105,6 +105,8 @@ const GO_UPSELL_ACCOUNT_RATE_LIMIT_LAST_SEEN_AT = "go_upsell_account_rate_limit_
 const GO_UPSELL_ACCOUNT_RATE_LIMIT_DONT_SHOW = "go_upsell_account_rate_limit_dont_show"
 const GO_UPSELL_WINDOW = 86_400_000 // 24 hrs
 const GO_UPSELL_PROVIDERS = new Set(["opencode", "opencode-go"])
+
+export const alwaysSeparate = new WeakSet<BoxRenderable>()
 
 type RetryAction = Extract<SessionStatus, { type: "retry" }>["action"]
 
@@ -179,7 +181,6 @@ const context = createContext<{
   showTimestamps: () => boolean
   showDetails: () => boolean
   showGenericToolOutput: () => boolean
-  userMessageIDs: () => ReadonlySet<string>
   diffWrapMode: () => "word" | "none"
   providers: () => ReadonlyMap<string, Provider>
   sync: ReturnType<typeof useSync>
@@ -225,23 +226,17 @@ export function Session() {
   })
   const messages = createMemo(() => sync.data.message[route.sessionID] ?? [])
   const foregroundTasks = createMemo(() =>
-    messages().flatMap((message) =>
-      (sync.data.part[message.id] ?? []).filter(
-        (part): part is ToolPart =>
-          part.type === "tool" &&
-          part.tool === "task" &&
-          part.state.status === "running" &&
-          part.state.metadata?.background !== true,
-      ),
-    ),
-  )
-  const userMessageIDs = createMemo(
-    () =>
-      new Set(
-        messages()
-          .filter((message) => message.role === "user")
-          .map((message) => message.id),
-      ),
+    sync.data.capabilities.experimentalBackgroundSubagents
+      ? messages().flatMap((message) =>
+          (sync.data.part[message.id] ?? []).filter(
+            (part): part is ToolPart =>
+              part.type === "tool" &&
+              part.tool === "task" &&
+              part.state.status === "running" &&
+              part.state.metadata?.background !== true,
+          ),
+        )
+      : [],
   )
   const permissions = createMemo(() => {
     if (session()?.parentID) return []
@@ -339,7 +334,6 @@ export function Session() {
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
   const toast = useToast()
   const sdk = useSDK()
-  const memory = MemorySessionTui.verbose({ sessionID: () => route.sessionID }) // kilocode_change
   const editor = useEditorContext()
   onCleanup(MemorySessionTui.attach({ event, toast, sessionID: route.sessionID })) // kilocode_change
 
@@ -1291,7 +1285,6 @@ export function Session() {
           showTimestamps,
           showDetails,
           showGenericToolOutput,
-          userMessageIDs,
           diffWrapMode,
           providers,
           sync,
@@ -1416,7 +1409,6 @@ export function Session() {
                           last={lastAssistant()?.id === message.id}
                           message={message as AssistantMessage}
                           parts={sync.data.part[message.id] ?? []}
-                          memory={memory /* kilocode_change */}
                         />
                       </Match>
                     </Switch>
@@ -1554,6 +1546,7 @@ function UserMessage(props: {
       <Show when={text()}>
         <box
           id={props.message.id}
+          ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
           border={["left"]}
           borderColor={color()}
           customBorderChars={SplitBorder.customBorderChars}
@@ -1629,7 +1622,6 @@ function AssistantMessage(props: {
   message: AssistantMessage
   parts: Part[]
   last: boolean
-  memory(): boolean // kilocode_change
 }) {
   const ctx = use()
   const local = useLocal()
@@ -1682,13 +1674,16 @@ function AssistantMessage(props: {
             {childShortcut()}
             <span style={{ fg: theme.textMuted }}> view subagents</span>
             <Show
-              when={props.parts.some(
-                (x) =>
-                  x.type === "tool" &&
-                  x.tool === "task" &&
-                  x.state.status === "running" &&
-                  x.state.metadata?.background !== true,
-              )}
+              when={
+                sync.data.capabilities.experimentalBackgroundSubagents &&
+                props.parts.some(
+                  (x) =>
+                    x.type === "tool" &&
+                    x.tool === "task" &&
+                    x.state.status === "running" &&
+                    x.state.metadata?.background !== true,
+                )
+              }
             >
               <span style={{ fg: theme.textMuted }}> · </span>
               {backgroundShortcut()}
@@ -1703,6 +1698,7 @@ function AssistantMessage(props: {
           error={props.message.error!}
           fallback={
             <box
+              ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
               border={["left"]}
               paddingTop={1}
               paddingBottom={1}
@@ -1720,7 +1716,7 @@ function AssistantMessage(props: {
       {/* kilocode_change end */}
       <Switch>
         <Match when={props.last || final() || props.message.error?.name === "MessageAbortedError"}>
-          <box paddingLeft={3}>
+          <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3}>
             <text marginTop={1}>
               <span
                 style={{
@@ -1742,9 +1738,6 @@ function AssistantMessage(props: {
               <Show when={duration()}>
                 <span style={{ fg: theme.textMuted }}> · {Locale.duration(duration())}</span>
               </Show>
-              {/* kilocode_change start */}
-              <MemoryMessageMeta parts={props.parts} color={theme.textMuted} verbose={props.memory} />{" "}
-              {/* kilocode_change end */}
               <Show when={props.message.error?.name === "MessageAbortedError"}>
                 <span style={{ fg: theme.textMuted }}> · interrupted</span>
               </Show>
@@ -1754,7 +1747,7 @@ function AssistantMessage(props: {
       </Switch>
     </>
   )
-} // kilocode_change
+}
 
 // kilocode_change start - register rendered step-finish parts
 const PART_MAPPING = {
@@ -1765,7 +1758,7 @@ const PART_MAPPING = {
 }
 // kilocode_change end
 
-const INLINE_TOOL_ICON_WIDTH = 2 // kilocode_change
+const INLINE_TOOL_ICON_WIDTH = 2
 
 // kilocode_change start - show concrete routed models reported by gateway/provider responses
 function StepFinishPart(props: { last: boolean; part: StepFinishPart; message: AssistantMessage }) {
@@ -1821,7 +1814,13 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
 
   return (
     <Show when={content()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexDirection="column" flexShrink={0}>
+      <box
+        ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
+        paddingLeft={3}
+        marginTop={1}
+        flexDirection="column"
+        flexShrink={0}
+      >
         <box onMouseUp={toggle}>
           <ReasoningHeader
             /* kilocode_change start */
@@ -1908,7 +1907,7 @@ function TextPart(props: { last: boolean; part: TextPart; message: AssistantMess
   // kilocode_change end
   return (
     <Show when={props.part.text.trim()}>
-      <box id={"text-" + props.part.id} paddingLeft={3} marginTop={1} flexShrink={0}>
+      <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
@@ -2175,7 +2174,7 @@ function InlineTool(props: {
   pending: string
   failure?: string
   spinner?: boolean
-  subagent?: boolean
+  separate?: boolean
   children: JSX.Element
   part: ToolPart
   onClick?: () => void
@@ -2216,7 +2215,6 @@ function InlineTool(props: {
 
   return (
     <InlineToolRow
-      id={`tool-inline-${props.subagent ? "subagent-" : ""}${props.part.id}`}
       icon={props.icon}
       iconColor={props.iconColor}
       color={fg()}
@@ -2229,8 +2227,7 @@ function InlineTool(props: {
       pending={props.pending}
       failure={props.failure}
       spinner={props.spinner}
-      subagent={props.subagent}
-      separateAfter={(id) => id !== undefined && ctx.userMessageIDs().has(id)}
+      separate={props.separate}
       onMouseOver={() => clickable() && setHover(true)}
       onMouseOut={() => setHover(false)}
       onMouseUp={() => {
@@ -2248,7 +2245,6 @@ function InlineTool(props: {
 }
 
 export function InlineToolRow(props: {
-  id?: string
   icon: string
   iconColor?: RGBA
   color?: RGBA
@@ -2261,28 +2257,23 @@ export function InlineToolRow(props: {
   pending: string
   failure?: string
   spinner?: boolean
-  subagent?: boolean
+  separate?: boolean
   children: JSX.Element
-  separateAfter?: (id: string | undefined) => boolean
   onMouseOver?: () => void
   onMouseOut?: () => void
   onMouseUp?: () => void
 }) {
   return (
     <box
-      id={props.id}
       paddingLeft={3}
       onMouseOver={props.onMouseOver}
       onMouseOut={props.onMouseOut}
       onMouseUp={props.onMouseUp}
       ref={(el: BoxRenderable) => {
+        if (props.separate) alwaysSeparate.add(el)
         setPreLayoutSiblingMargin(el, (previous) => {
-          const previousInline = previous?.id.startsWith("tool-inline-") ?? false
-          const previousSubagent = previous?.id.startsWith("tool-inline-subagent-") ?? false
-          return previous?.id.startsWith("text-") ||
-            previous?.id.startsWith("tool-block-") ||
-            (previousInline && previousSubagent !== Boolean(props.subagent)) ||
-            props.separateAfter?.(previous?.id)
+          return props.separate ||
+            (previous instanceof BoxRenderable && (previous.height > 1 || alwaysSeparate.has(previous)))
             ? 1
             : 0
         })
@@ -2346,7 +2337,7 @@ function BlockTool(props: {
   const error = createMemo(() => (props.part?.state.status === "error" ? props.part.state.error : undefined))
   return (
     <box
-      id={props.part ? "tool-block-" + props.part.id : undefined}
+      ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
       border={["left"]}
       paddingTop={1}
       paddingBottom={1}
@@ -2515,8 +2506,8 @@ function Read(props: ToolProps) {
         Read {pathFormatter.format(stringValue(props.input.filePath))} {input(props.input, ["filePath"])}
       </InlineTool>
       <For each={loaded()}>
-        {(filepath, index) => (
-          <box id={`tool-inline-loaded-${props.part.id}-${index()}`} paddingLeft={3}>
+        {(filepath) => (
+          <box paddingLeft={3}>
             <text paddingLeft={3} fg={theme.textMuted}>
               ↳ Loaded {pathFormatter.format(filepath)}
             </text>
@@ -2636,7 +2627,7 @@ function Task(props: ToolProps) {
   return (
     <InlineTool
       icon={props.part.state.status === "completed" ? "✓" : "│"}
-      subagent={true}
+      separate={true}
       color={retry() ? theme.error : undefined}
       spinner={isRunning()}
       complete={stringValue(props.input.description)}

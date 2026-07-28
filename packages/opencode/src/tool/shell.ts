@@ -12,13 +12,15 @@ import { FSUtil } from "@opencode-ai/core/fs-util"
 import { fileURLToPath } from "url"
 import { Config } from "@/config/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { Shell } from "@/shell/shell"
+import { Shell } from "@opencode-ai/core/shell"
 import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { normalizeUrls } from "@/kilocode/util/url" // kilocode_change
 import { CommandTimeout } from "@/kilocode/command-timeout" // kilocode_change
+import { heredocs } from "@/kilocode/tool/shell-heredoc" // kilocode_change
+import { unparsed } from "@/kilocode/tool/shell-unparsed" // kilocode_change
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -282,6 +284,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
   ctx: Tool.Context,
   scan: Scan,
   command: string,
+  metadata: ReturnType<typeof heredocs>, // kilocode_change
   description?: string, // kilocode_change
 ) {
   // kilocode_change
@@ -302,6 +305,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
         directories,
         patterns: globs,
         ...(scan.access === "read" ? { access: "read" as const } : {}),
+        ...metadata,
       },
       // kilocode_change end
     })
@@ -312,7 +316,7 @@ const ask = Effect.fn("ShellTool.ask")(function* (
     permission: ShellID.ToolID,
     patterns: Array.from(scan.patterns),
     always: Array.from(scan.always),
-    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}) }, // kilocode_change
+    metadata: { command: normalizeUrls(command), ...(description ? { description } : {}), ...metadata }, // kilocode_change
   })
 })
 
@@ -401,6 +405,14 @@ export const ShellPermission = Effect.gen(function* () {
       }
     }
 
+    // kilocode_change start - fail closed on commands the grammar failed to parse (#12326)
+    const lost = unparsed(root, nodes.length)
+    if (lost.length > 0) scan.access = "unknown"
+    for (const pattern of lost) {
+      scan.patterns.add(pattern)
+    }
+    // kilocode_change end
+
     return scan
   })
 
@@ -411,11 +423,12 @@ export const ShellPermission = Effect.gen(function* () {
       Effect.gen(function* () {
         const tree = yield* Effect.acquireRelease(parse(input.command, ps), (tree) => Effect.sync(() => tree.delete()))
         const scan = yield* collect(tree.rootNode, input.cwd, ps, input.shell, instance)
+        const metadata = heredocs(tree.rootNode, ShellID.toKind(Shell.name(input.shell))) // kilocode_change
         if (!containsPath(input.cwd, instance)) {
           scan.dirs.add(input.cwd)
           scan.access = "unknown"
         }
-        yield* ask(ctx, scan, input.command, input.description)
+        yield* ask(ctx, scan, input.command, metadata, input.description) // kilocode_change
       }),
     )
   })

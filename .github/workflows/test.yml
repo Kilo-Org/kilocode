@@ -160,7 +160,7 @@ jobs:
         if: matrix.settings.run
         run: bun turbo test:ci --output-logs=errors-only --log-order=grouped --log-prefix=task --filter='@kilocode/cli'
         env:
-          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - was Windows-only; the CLI now starts a watcher per instance, too heavy/racy for unit tests. Watcher tests opt back in.
           KILO_TEST_PROFILE: ${{ matrix.settings.os == 'macos' && 'darwin' || '' }}
           KILO_TEST_SHARD: ${{ format('{0}/{1}', matrix.settings.index, matrix.settings.total) }}
       # kilocode_change end
@@ -224,6 +224,8 @@ jobs:
 
       - name: Run HttpApi exerciser gates
         run: bun turbo test:httpapi --filter='@kilocode/cli'
+        env:
+          KILO_EXPERIMENTAL_DISABLE_FILEWATCHER: "true" # kilocode_change - same rationale as the CLI unit step: a watcher per scenario instance is too heavy for the exerciser
   # kilocode_change end
 
   # kilocode_change start

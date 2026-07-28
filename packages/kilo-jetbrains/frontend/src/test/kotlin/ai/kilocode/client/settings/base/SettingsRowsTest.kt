@@ -6,6 +6,7 @@ import com.intellij.ui.SeparatorComponent
 import com.intellij.ui.components.JBLabel
 import java.awt.Color
 import java.awt.Container
+import java.awt.BorderLayout
 import java.awt.Rectangle
 import java.awt.image.BufferedImage
 import javax.swing.AbstractButton
@@ -132,6 +133,17 @@ class SettingsRowsTest : BasePlatformTestCase() {
         assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, scroll.horizontalScrollBarPolicy)
         assertTrue(view is Scrollable)
         assertTrue((view as Scrollable).getScrollableTracksViewportWidth())
+    }
+
+    fun `test settings panel header gets right inset outside scroll`() {
+        val panel = SettingsPanel()
+        val field = javax.swing.JTextField()
+
+        panel.setHeader(field)
+
+        val header = (panel.content.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as JComponent
+        assertEquals(UiStyle.Gap.xl(), header.insets.right)
+        assertTrue(components(header).any { it === field })
     }
 
     fun `test settings progress overlay is centered near top`() {

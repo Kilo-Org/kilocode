@@ -2,7 +2,7 @@ export * as PluginBoot from "./boot"
 
 import { Context, Deferred, Effect, Layer } from "effect"
 import { Credential } from "../credential"
-import { Connector } from "../connector"
+import { Integration } from "../integration"
 import { AgentV2 } from "../agent"
 import { Catalog } from "../catalog"
 import { CommandV2 } from "../command"
@@ -21,7 +21,6 @@ import { PluginV2 } from "../plugin"
 import { AgentPlugin } from "./agent"
 import { CommandPlugin } from "./command"
 import { ConfigProviderPlugin } from "../config/plugin/provider"
-import { EnvPlugin } from "./env"
 import { ModelsDevPlugin } from "./models-dev"
 import { ProviderPlugins } from "./provider"
 import { SkillV2 } from "../skill"
@@ -33,7 +32,7 @@ type Plugin = {
     | Catalog.Service
     | CommandV2.Service
     | Credential.Service
-    | Connector.Service
+    | Integration.Service
     | AgentV2.Service
     | Npm.Service
     | EventV2.Service
@@ -61,7 +60,7 @@ export const layer = Layer.effect(
     const commands = yield* CommandV2.Service
     const plugin = yield* PluginV2.Service
     const credentials = yield* Credential.Service
-    const connectors = yield* Connector.Service
+    const integrations = yield* Integration.Service
     const agents = yield* AgentV2.Service
     const config = yield* Config.Service
     const location = yield* Location.Service
@@ -81,7 +80,7 @@ export const layer = Layer.effect(
           Effect.provideService(Catalog.Service, catalog),
           Effect.provideService(CommandV2.Service, commands),
           Effect.provideService(Credential.Service, credentials),
-          Effect.provideService(Connector.Service, connectors),
+          Effect.provideService(Integration.Service, integrations),
           Effect.provideService(AgentV2.Service, agents),
           Effect.provideService(Config.Service, config),
           Effect.provideService(Location.Service, location),
@@ -98,7 +97,6 @@ export const layer = Layer.effect(
     })
 
     const boot = Effect.gen(function* () {
-      yield* add(EnvPlugin)
       yield* add(AgentPlugin.Plugin)
       yield* add(CommandPlugin.Plugin)
       // kilocode_change - Kilo's CLI registry supplies `kilo-config`; do not register the redundant opencode skill.
@@ -126,7 +124,7 @@ export const layer = Layer.effect(
 )
 
 export const locationLayer = layer.pipe(
-  Layer.provideMerge(Connector.locationLayer),
+  Layer.provideMerge(Integration.locationLayer),
   Layer.provideMerge(Catalog.locationLayer),
   Layer.provideMerge(CommandV2.locationLayer),
   Layer.provideMerge(Config.locationLayer),

@@ -41,6 +41,8 @@ import {
   patchKiloProviderPrivacy,
   kiloSmallModelPriority,
   buildTimeoutSignal,
+  requestTimeout,
+  wrapFirstByte,
 } from "@/kilocode/provider/provider"
 import * as ModelsRefresh from "@/kilocode/provider/models-refresh"
 // kilocode_change end
@@ -473,7 +475,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
             "X-Source": "kilo", // kilocode_change
           },
@@ -484,7 +486,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -494,7 +496,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
             "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
           },
@@ -505,7 +507,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://kilo.ai/", // kilocode_change
+            "http-referer": "https://kilo.ai/",
             "x-title": "Kilo Code", // kilocode_change
           },
         },
@@ -611,7 +613,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -811,7 +813,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       if (!apiToken) {
         throw new Error(
           "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.", // kilocode_change
+            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.",
         )
       }
 
@@ -844,7 +846,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         apiKey: apiToken,
         ...(Object.values(opts).some((v) => v !== undefined) ? { options: opts } : {}),
       })
-      const unified = createUnified()
+      const unified = createUnified({ apiKey: apiToken })
 
       return {
         autoload: true,
@@ -869,7 +871,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -881,17 +883,23 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       const account =
         env["SNOWFLAKE_ACCOUNT"] ??
         (auth?.type === "api" ? auth.metadata?.account : undefined) ??
+        (auth?.type === "oauth" ? auth.accountId : undefined) ??
         input.options?.account
 
-      const pat = env["SNOWFLAKE_CORTEX_PAT"] ?? (auth?.type === "api" ? auth.key : undefined) ?? input.options?.apiKey
+      const envToken = env["SNOWFLAKE_CORTEX_TOKEN"] ?? env["SNOWFLAKE_CORTEX_PAT"]
+      const apiKeyToken = auth?.type === "api" ? auth.key : undefined
+      const oauthToken = auth?.type === "oauth" ? auth.access : undefined
+      const configToken = input.options?.token ?? input.options?.apiKey
 
-      if (!account || !pat) {
-        const missing = [!account && "SNOWFLAKE_ACCOUNT", !pat && "SNOWFLAKE_CORTEX_PAT"].filter(Boolean).join(", ")
+      const token = envToken ?? apiKeyToken ?? oauthToken ?? configToken
+
+      if (!account || !token) {
+        const missing = [!account && "SNOWFLAKE_ACCOUNT", !token && "SNOWFLAKE_CORTEX_TOKEN"].filter(Boolean).join(", ")
         return {
           autoload: false,
           async getModel() {
             throw new Error(
-              `Snowflake Cortex: missing credentials (${missing}). Set via env var, kilo auth, or provider options.`, // kilocode_change
+              `Snowflake Cortex: missing credentials (${missing}). Provide a bearer token (OAuth, JWT, or PAT) via env var, Kilo auth, or provider options.`, // kilocode_change
             )
           },
         }
@@ -899,12 +907,17 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
 
       const baseURL = `https://${account}.snowflakecomputing.com/api/v2/cortex/v1`
 
-      return {
-        autoload: input.source === "config",
-        options: {
-          baseURL,
-          apiKey: pat,
-          fetch: async (url: RequestInfo | URL, init?: RequestInit) => {
+      const options: Record<string, any> = { baseURL, apiKey: token }
+
+      // Only skip provider-level fetch when the token is from OAuth with no override.
+      // For OAuth tokens, the plugin auth loader's combined fetch handles
+      // OAuth refresh + snowflake transformations in one place.
+      // For env/config/API-key tokens, the provider fetch applies snowflake
+      // transformations directly.
+      const useOAuthHandler =
+        oauthToken !== undefined && envToken === undefined && apiKeyToken === undefined && configToken === undefined
+      if (!useOAuthHandler) {
+        options.fetch = async (url: RequestInfo | URL, init?: RequestInit) => {
             if (init?.body && typeof init.body === "string") {
               try {
                 const body = JSON.parse(init.body)
@@ -957,8 +970,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
             }
 
             return response
-          },
-        },
+        }
+      }
+
+      return {
+        autoload: input.source === "config",
+        options,
       }
     }),
   }
@@ -1062,7 +1079,7 @@ export const Info = Schema.Struct({
   description: optionalOmitUndefined(Schema.String), // kilocode_change
   source: Schema.Literals(["env", "config", "custom", "api"]),
   env: Schema.Array(Schema.String),
-  key: optionalOmitUndefined(Schema.String), // kilocode_change
+  key: optionalOmitUndefined(Schema.String),
   metadata: optionalOmitUndefined(ProviderMetadata), // kilocode_change
   options: Schema.Record(Schema.String, Schema.Any),
   models: Schema.Record(Schema.String, Model),
@@ -1748,6 +1765,11 @@ export const layer = Layer.effect(
           const opts = init ?? {}
           const chunkAbortCtl = typeof chunkTimeout === "number" && chunkTimeout > 0 ? new AbortController() : undefined
           const timeout = buildTimeoutSignal(options) // kilocode_change - use cancellable timeout for connection phase
+          // kilocode_change start - extend the same deadline to the first response byte
+          const firstByteMs = requestTimeout(options)
+          const firstByteCtl = firstByteMs === undefined ? undefined : new AbortController()
+          const deadline = firstByteMs === undefined ? undefined : Date.now() + firstByteMs
+          // kilocode_change end
           const headerTimeoutMs = headerTimeout === false ? undefined : headerTimeout
           const headerTimeoutCtl = typeof headerTimeoutMs === "number" ? timeoutController(headerTimeoutMs) : undefined
           const signals: AbortSignal[] = []
@@ -1756,6 +1778,7 @@ export const layer = Layer.effect(
           if (chunkAbortCtl) signals.push(chunkAbortCtl.signal)
           if (headerTimeoutCtl) signals.push(headerTimeoutCtl.signal)
           if (timeout.signal) signals.push(timeout.signal) // kilocode_change
+          if (firstByteCtl) signals.push(firstByteCtl.signal) // kilocode_change
 
           const combined = signals.length === 0 ? null : signals.length === 1 ? signals[0] : AbortSignal.any(signals)
           if (combined) opts.signal = combined
@@ -1768,8 +1791,12 @@ export const layer = Layer.effect(
               timeout: false,
             }).finally(() => headerTimeoutCtl?.clear())
             timeout.clear()
-            if (!chunkAbortCtl) return res
-            return wrapSSE(res, chunkTimeout, chunkAbortCtl)
+            // kilocode_change start - hand the remaining deadline to the first-byte guard
+            const remaining = deadline !== undefined ? deadline - Date.now() : undefined
+            const live = remaining !== undefined && firstByteCtl ? wrapFirstByte(res, Math.max(remaining, 1), firstByteCtl) : res
+            if (!chunkAbortCtl) return live
+            return wrapSSE(live, chunkTimeout, chunkAbortCtl)
+            // kilocode_change end
           } catch (err) {
             timeout.clear()
             throw err

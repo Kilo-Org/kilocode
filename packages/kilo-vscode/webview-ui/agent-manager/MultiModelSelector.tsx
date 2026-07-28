@@ -18,6 +18,7 @@ import {
   totalAllocations,
   toggleModel,
   setAllocationCount,
+  setAllocationVariant,
   maxAllocationCount,
 } from "./multi-model-utils"
 
@@ -96,6 +97,7 @@ export const MultiModelSelector: Component<{
                   const checked = () => props.allocations.has(key())
                   const entry = () => props.allocations.get(key())
                   const disabled = () => !checked() && totalAllocations(props.allocations) >= MAX_MULTI_VERSIONS
+                  const efforts = () => Object.keys(model.variants ?? {})
 
                   return (
                     <div
@@ -135,6 +137,27 @@ export const MultiModelSelector: Component<{
                         </Show>
                       </label>
                       <Show when={checked()}>
+                        <Show when={efforts().length > 0}>
+                          <select
+                            class="am-mm-count-select am-mm-variant-select"
+                            value={entry()?.variant ?? ""}
+                            title={t("agentManager.dialog.compareModels.effort")}
+                            aria-label={t("agentManager.dialog.compareModels.effort")}
+                            onChange={(e) =>
+                              props.onChange(
+                                setAllocationVariant(
+                                  props.allocations,
+                                  model.providerID,
+                                  model.id,
+                                  e.currentTarget.value || undefined,
+                                ),
+                              )
+                            }
+                          >
+                            <option value="">{t("agentManager.dialog.compareModels.effortDefault")}</option>
+                            <For each={efforts()}>{(v) => <option value={v}>{v}</option>}</For>
+                          </select>
+                        </Show>
                         <select
                           class="am-mm-count-select"
                           value={entry()?.count ?? 1}

@@ -117,12 +117,6 @@ export interface BranchInfo {
   isCheckedOut?: boolean
 }
 
-// Agent Manager Import tab: external worktrees (extension → webview)
-export interface ExternalWorktreeInfo {
-  path: string
-  branch: string
-}
-
 export type DiffImageError = "too-large" | "unreadable"
 
 export interface DiffImageSide {
@@ -195,6 +189,7 @@ export interface ModelAllocation {
   providerID: string
   modelID: string
   count: number
+  variant?: string
 }
 
 export type ContinueInWorktreeStatus =

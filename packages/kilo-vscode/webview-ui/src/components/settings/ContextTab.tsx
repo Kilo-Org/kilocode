@@ -56,10 +56,9 @@ const ContextTab: Component = () => {
     const status = memory.status()
     if (!status) return language.t("settings.context.memory.status.notLoaded")
     if (!status.state.enabled) return language.t("settings.context.memory.status.disabled")
+    if (status.index.estimatedTokens === 0) return language.t("chat.memory.project.empty")
     const tokens = status.index.estimatedTokens.toLocaleString(language.locale())
-    const session = memory.sessionTokens().toLocaleString(language.locale())
-    const ops = status.state.stats.lastOperationCount.toLocaleString(language.locale())
-    return language.t("settings.context.memory.status.enabledTokensOps", { session, tokens, ops })
+    return language.t("settings.context.memory.status.enabledTokens", { tokens })
   }
 
   return (
@@ -90,27 +89,23 @@ const ContextTab: Component = () => {
           </Switch>
         </SettingsRow>
         <SettingsRow
-          title={language.t("settings.context.memory.index.title")}
+          title={language.t("settings.context.memory.storage.title")}
           description={
             memory.enabled()
-              ? language.t("settings.context.memory.index.path", { path: memory.status()!.root })
-              : language.t("settings.context.memory.index.enable")
+              ? language.t("settings.context.memory.storage.path", { path: memory.status()!.root })
+              : language.t("settings.context.memory.storage.enable")
           }
           last
         >
-          <div style={{ display: "flex", gap: "6px", "align-items": "center" }}>
-            <Button variant="secondary" size="small" icon="eye" onClick={() => memory.showMemory()}>
-              {language.t("settings.context.memory.inspect")}
-            </Button>
-            <IconButton
-              size="small"
-              variant="ghost"
-              icon="reset"
-              disabled={memory.pending()}
-              onClick={() => memory.rebuild()}
-              aria-label={language.t("settings.context.memory.rebuild")}
-            />
-          </div>
+          <Button
+            variant="secondary"
+            size="small"
+            icon="eye"
+            disabled={memory.loading() || memory.pending() || !memory.enabled() || memory.totalTokens() === 0}
+            onClick={() => memory.inspect()}
+          >
+            {language.t("settings.context.memory.inspect")}
+          </Button>
         </SettingsRow>
         <Show when={memory.error()}>
           {(err) => (

@@ -61,8 +61,11 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 // kilocode_change start
 import { ProjectV2 } from "@opencode-ai/core/project"
 import { ProjectCopy } from "@opencode-ai/core/project/copy"
+import { ProjectDirectories } from "@opencode-ai/core/project/directories"
 import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
 import { PtyTicket } from "@opencode-ai/core/pty/ticket"
+import { EventV2 } from "@opencode-ai/core/event"
+import { Git as GitV2 } from "@opencode-ai/core/git"
 // kilocode_change end
 
 const CoreLayer = Layer.mergeAll( // kilocode_change
@@ -120,7 +123,14 @@ const FeatureLayer = Layer.mergeAll( // kilocode_change
   Project.defaultLayer,
   // kilocode_change start
   ProjectV2.defaultLayer,
-  ProjectCopy.defaultLayer,
+  EventV2.defaultLayer,
+  ProjectCopy.layer.pipe(
+    Layer.provide(Database.defaultLayer),
+    Layer.provide(FSUtil.defaultLayer),
+    Layer.provide(GitV2.defaultLayer),
+    Layer.provide(EventV2.defaultLayer),
+    Layer.provide(ProjectDirectories.defaultLayer),
+  ),
   MoveSession.defaultLayer,
   PtyTicket.defaultLayer,
   // kilocode_change end

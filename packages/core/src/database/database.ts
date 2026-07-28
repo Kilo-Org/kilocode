@@ -7,6 +7,7 @@ import { Global } from "../global"
 import { Flag } from "../flag/flag"
 import { isAbsolute, join } from "path"
 import { existsSync } from "fs" // kilocode_change
+import { DbPreflight } from "../kilocode/db-preflight" // kilocode_change
 import { DatabaseMigration } from "./migration"
 import { InstallationChannel } from "../installation/version"
 import { LayerNode } from "../effect/layer-node"
@@ -38,6 +39,7 @@ export const layer = Layer.effect(
 )
 
 export function layerFromPath(filename: string) {
+  DbPreflight.assertWritable(filename) // kilocode_change - actionable error (and self-heal for kilo-owned files) instead of an opaque wal_checkpoint crash on read-only db files
   return layer.pipe(Layer.provide(sqliteLayer({ filename })))
 }
 
@@ -67,4 +69,5 @@ export const defaultLayer = Layer.unwrap(
   }),
 ).pipe(Layer.provide(Global.defaultLayer))
 
-export const node = LayerNode.make(layerFromPath(path()), [])
+// kilocode_change - resolve the database path when the layer builds, not at module evaluation, so KILO_DB overrides set after import (tests, embedded hosts) take effect
+export const node = LayerNode.make(Layer.unwrap(Effect.sync(() => layerFromPath(path()))), [])
