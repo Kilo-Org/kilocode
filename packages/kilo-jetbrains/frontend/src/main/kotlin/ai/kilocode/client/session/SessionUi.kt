@@ -367,6 +367,7 @@ class SessionUi(
             resize = { anchor, fn -> scroll.preserve(anchor, fn) },
             revert = ::revert,
             cancelRevert = ::cancelRevert,
+            deleteQueued = { id -> controller.deleteQueuedMessage(id) },
             banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
@@ -542,6 +543,8 @@ class SessionUi(
                 is SessionModelEvent.SessionUpdated -> onSessionUpdated()
 
                 is SessionModelEvent.RevertChanged -> onRevertChanged(event.revert)
+
+                is SessionModelEvent.QueueChanged -> Unit
 
                 is SessionModelEvent.TurnAdded,
                 is SessionModelEvent.TurnUpdated,
