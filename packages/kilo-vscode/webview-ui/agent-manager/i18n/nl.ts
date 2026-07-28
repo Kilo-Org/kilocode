@@ -65,6 +65,12 @@ export const dict = {
   "agentManager.terminal.new": "Nieuw terminaltabblad",
   "agentManager.terminal.ended": "terminal beëindigd — sluit tabblad om te negeren",
   "agentManager.terminal.connectionError": "terminalverbindingsfout",
+  "agentManager.terminal.kill": "Terminal beëindigen",
+  "agentManager.terminal.empty": "Hier is nog geen terminal",
+  "agentManager.terminal.start": "Terminal starten",
+  "agentManager.terminal.destination": "Kies wat de terminalknop opent",
+  "agentManager.terminal.openInVscode": "VS Code-terminal",
+  "agentManager.terminal.openInPanel": "Agent Manager-paneel",
   "agentManager.terminal.errorTitle": "Terminalfout",
 
   "agentManager.setup.failed": "Worktree setup mislukt",

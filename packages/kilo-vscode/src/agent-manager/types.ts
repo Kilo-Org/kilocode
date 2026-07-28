@@ -16,8 +16,12 @@ import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
+import type { TerminalDestination } from "./terminal-destination"
 
 export type { TerminalFont }
+
+/** Where a terminal lives: main tab strip or right-side inspector panel. */
+export type TerminalPlacement = "tab" | "side"
 
 // ---------------------------------------------------------------------------
 // Shared payload types
@@ -140,6 +144,7 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  terminalDestination?: TerminalDestination
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +153,11 @@ interface StateMessage {
 
 interface TerminalCreatedMessage {
   type: "agentManager.terminal.created"
+  /** Correlates with the create request; lets the webview spot stale
+   *  creates. Deliberately not named `requestId`: that field name is the
+   *  generic webview request/response correlation channel. */
+  createId: string
+  placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
   terminalId: string
@@ -164,7 +174,14 @@ interface TerminalClosedMessage {
 interface TerminalErrorMessage {
   type: "agentManager.terminal.error"
   terminalId?: string
+  /** Set when the error answers a specific create request. */
+  createId?: string
   message: string
+}
+
+interface TerminalDestinationChangedMessage {
+  type: "agentManager.terminal.destinationChanged"
+  destination: TerminalDestination
 }
 
 interface TerminalFontChangedMessage {
@@ -332,6 +349,7 @@ export type AgentManagerOutMessage =
   | TerminalCreatedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
+  | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
 
 // ---------------------------------------------------------------------------
@@ -758,6 +776,9 @@ interface MoveSectionIn {
 
 interface TerminalCreateIn {
   type: "agentManager.terminal.create"
+  /** Webview-generated correlation id, echoed back in created/error. */
+  createId: string
+  placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
 }

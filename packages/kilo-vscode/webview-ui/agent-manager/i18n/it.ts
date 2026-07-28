@@ -66,6 +66,12 @@ export const dict = {
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
   "agentManager.terminal.connectionError": "errore di connessione del terminale",
+  "agentManager.terminal.kill": "Termina terminale",
+  "agentManager.terminal.empty": "Qui non c'è ancora un terminale",
+  "agentManager.terminal.start": "Avvia terminale",
+  "agentManager.terminal.destination": "Scegli cosa apre il pulsante del terminale",
+  "agentManager.terminal.openInVscode": "Terminale di VS Code",
+  "agentManager.terminal.openInPanel": "Pannello Agent Manager",
   "agentManager.terminal.errorTitle": "Errore terminale",
 
   "agentManager.setup.failed": "Setup del worktree non riuscito",

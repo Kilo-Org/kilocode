@@ -66,6 +66,12 @@ export const dict = {
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
   "agentManager.terminal.connectionError": "terminal bağlantı hatası",
+  "agentManager.terminal.kill": "Terminali sonlandır",
+  "agentManager.terminal.empty": "Burada henüz terminal yok",
+  "agentManager.terminal.start": "Terminali başlat",
+  "agentManager.terminal.destination": "Terminal düğmesinin ne açacağını seçin",
+  "agentManager.terminal.openInVscode": "VS Code terminali",
+  "agentManager.terminal.openInPanel": "Agent Manager paneli",
   "agentManager.terminal.errorTitle": "Terminal hatası",
 
   "agentManager.setup.failed": "Worktree kurulumu başarısız",

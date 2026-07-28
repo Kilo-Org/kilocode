@@ -46,6 +46,7 @@ import { pruneSubagents } from "./prune-subagents"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
+import { readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
@@ -78,6 +79,7 @@ export class AgentManagerProvider implements Disposable {
   private unsubTool: (() => void) | undefined
   private unsubStatus: (() => void) | undefined
   private unsubFont: (() => void) | undefined
+  private unsubDestination: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   // Tracks sessions owned by this panel until they are explicitly closed.
@@ -110,6 +112,9 @@ export class AgentManagerProvider implements Disposable {
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+    })
+    this.unsubDestination = watchTerminalDestination((destination) => {
+      this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -304,6 +309,7 @@ export class AgentManagerProvider implements Disposable {
         this.activeSessionId = undefined
         this.visiblePresence.clear()
         this.panel = undefined
+        void this.terminalRouter.dispose()
         this.onVisibilityChange?.(false)
       }
       ctx.sessions.dispose()
@@ -922,6 +928,7 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.toggleSectionCollapsed":
       case "agentManager.moveToSection":
       case "agentManager.moveSection":
+      case "agentManager.terminal.create":
         return true
       default:
         return false
@@ -1624,6 +1631,7 @@ export class AgentManagerProvider implements Disposable {
       sidebarCollapsed: state.getSidebarCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
+      terminalDestination: readTerminalDestination(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       ...run,
@@ -1646,6 +1654,7 @@ export class AgentManagerProvider implements Disposable {
       staleWorktreeIds: [],
       reviewDiffStyle: "unified",
       reviewMarkdownRender: getDiffMarkdownRender(),
+      terminalDestination: readTerminalDestination(),
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
@@ -1923,6 +1932,7 @@ export class AgentManagerProvider implements Disposable {
     this.unsubTool?.()
     this.unsubStatus?.()
     this.unsubFont?.()
+    this.unsubDestination?.()
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()
