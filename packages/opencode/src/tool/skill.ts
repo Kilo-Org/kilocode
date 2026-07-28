@@ -5,6 +5,11 @@ import { Ripgrep } from "@opencode-ai/core/ripgrep"
 import { Skill } from "../skill"
 import * as Tool from "./tool"
 import DESCRIPTION from "./skill.txt"
+// kilocode_change start - gate + run shell injection in skill bodies
+import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { SkillInject } from "@/kilocode/skills/inject"
+// kilocode_change end
 
 export const Parameters = Schema.Struct({
   name: Schema.String.annotate({ description: "The name of the skill from available_skills" }),
@@ -15,6 +20,8 @@ export const SkillTool = Tool.define(
   Effect.gen(function* () {
     const skill = yield* Skill.Service
     const ripgrep = yield* Ripgrep.Service
+    const flags = yield* RuntimeFlags.Service // kilocode_change
+    const spawner = yield* ChildProcessSpawner // kilocode_change
 
     return {
       description: DESCRIPTION,
@@ -32,6 +39,16 @@ export const SkillTool = Tool.define(
             metadata: {},
           })
 
+          // kilocode_change start - render `!`cmd`` shell injection, gated by trust + kill-switch + batch approval
+          const content = yield* SkillInject.render({
+            content: info.content,
+            trusted: info.trusted === true,
+            disabled: flags.disableSkillShell,
+            ctx,
+            spawner,
+          })
+          // kilocode_change end
+
           // kilocode_change start - built-in skills have no filesystem directory
           if (info.location === Skill.BUILTIN_LOCATION) {
             return {
@@ -40,7 +57,7 @@ export const SkillTool = Tool.define(
                 `<skill_content name="${info.name}">`,
                 `# Skill: ${info.name}`,
                 "",
-                info.content.trim(),
+                content.trim(), // kilocode_change
                 "</skill_content>",
               ].join("\n"),
               metadata: {
@@ -68,7 +85,7 @@ export const SkillTool = Tool.define(
               `<skill_content name="${info.name}">`,
               `# Skill: ${info.name}`,
               "",
-              info.content.trim(),
+              content.trim(), // kilocode_change
               "",
               `Base directory for this skill: ${base}`,
               "Relative paths in this skill (e.g., scripts/, reference/) are relative to this base directory.",

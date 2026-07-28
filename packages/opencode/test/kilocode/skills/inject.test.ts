@@ -1,0 +1,197 @@
+import { PermissionV1 } from "@opencode-ai/core/v1/permission"
+import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
+import { Ripgrep } from "@opencode-ai/core/ripgrep"
+import { Effect, Exit, Layer } from "effect"
+import { afterEach, describe, expect } from "bun:test"
+import fs from "fs"
+import os from "os"
+import path from "path"
+import type { Tool } from "@/tool/tool"
+import { SkillTool } from "@/tool/skill"
+import { SkillInject } from "@/kilocode/skills/inject"
+import { ToolRegistry } from "@/tool/registry"
+import { disposeAllInstances, TestInstance } from "../../fixture/fixture"
+import { SessionID, MessageID } from "@/session/schema"
+import { testEffect } from "../../lib/effect"
+
+// Global (~/.claude) skills are trusted, but Global.Service snapshots the home
+// path when its layer is built, so KILO_TEST_HOME must be set before the runtime
+// layer below is constructed — not inside a test body.
+const HOME = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "skill-inject-home-")))
+process.env.KILO_TEST_HOME = HOME
+
+const baseCtx: Omit<Tool.Context, "ask"> = {
+  sessionID: SessionID.make("ses_test"),
+  messageID: MessageID.make("msg_test"),
+  callID: "",
+  agent: "build",
+  abort: AbortSignal.any([]),
+  messages: [],
+  metadata: () => Effect.void,
+}
+
+afterEach(async () => {
+  await disposeAllInstances()
+})
+
+const it = testEffect(
+  Layer.mergeAll(ToolRegistry.defaultLayer, CrossSpawnSpawner.defaultLayer).pipe(Layer.provide(Ripgrep.defaultLayer)),
+)
+
+// Shell injection spawns real processes; skip on windows CI like the sibling suite.
+const unix = process.platform !== "win32" ? it.instance : it.instance.skip
+
+afterEach(async () => {
+  // reset discovered skills between tests by clearing the global skill dir
+  await fs.promises.rm(path.join(HOME, ".agents"), { recursive: true, force: true })
+})
+
+// Global ~/.agents skills are trusted (and, unlike ~/.claude, not gated by the
+// KILO_DISABLE_CLAUDE_CODE flag the test env sets); project .kilo skills are untrusted.
+function writeGlobalSkill(name: string, body: string) {
+  return Effect.promise(() =>
+    Bun.write(
+      path.join(HOME, ".agents", "skills", name, "SKILL.md"),
+      `---\nname: ${name}\ndescription: ${name} test skill.\n---\n\n${body}\n`,
+    ),
+  )
+}
+
+function writeProjectSkill(dir: string, name: string, body: string) {
+  return Effect.promise(() =>
+    Bun.write(
+      path.join(dir, ".kilo", "skill", name, "SKILL.md"),
+      `---\nname: ${name}\ndescription: ${name} test skill.\n---\n\n${body}\n`,
+    ),
+  )
+}
+
+function loadSkill(name: string, ask: Tool.Context["ask"]) {
+  return Effect.gen(function* () {
+    const registry = yield* ToolRegistry.Service
+    const agent = { name: "build", mode: "primary" as const, permission: [], options: {} }
+    const tool = (yield* registry.tools({
+      providerID: "opencode" as any,
+      modelID: "gpt-5" as any,
+      agent,
+    })).find((t) => t.id === SkillTool.id)
+    if (!tool) throw new Error("Skill tool not found")
+    return yield* tool.execute({ name }, { ...baseCtx, ask })
+  })
+}
+
+describe("skill shell injection", () => {
+  unix("runs the batch after a single forced approval listing every command", () =>
+    Effect.gen(function* () {
+      yield* writeGlobalSkill("trusted-shell", "A: !`printf one` B: !`printf two`")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("trusted-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("A: one B: two")
+      // one skill-load ask plus exactly one batch bash ask carrying all commands
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash.length).toBe(1)
+      expect(bash[0].metadata?.["skillShell"]).toBe(true)
+      // patterns carry the command list the prompt renders
+      expect(bash[0].patterns).toEqual(["printf one", "printf two"])
+    }),
+  )
+
+  unix("aborts the entire skill load when the batch is rejected", () =>
+    Effect.gen(function* () {
+      yield* writeGlobalSkill("denied-shell", "Secret: !`printf leaked`")
+
+      const exit = yield* loadSkill("denied-shell", (req) =>
+        // Reject the batch. Tools wrap ctx.ask with Effect.orDie, so this reaches
+        // the injector as a defect and must abort the whole skill load.
+        req.permission === "bash"
+          ? Effect.fail(new PermissionV1.RejectedError()).pipe(Effect.orDie)
+          : Effect.void,
+      ).pipe(Effect.exit)
+
+      expect(Exit.isFailure(exit)).toBe(true)
+    }),
+  )
+
+  unix("does not run shell injection for untrusted project skills", () =>
+    Effect.gen(function* () {
+      const dir = (yield* TestInstance).directory
+      yield* writeProjectSkill(dir, "untrusted-shell", "Value: !`printf shouldnotrun`")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("untrusted-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("[skill shell execution disabled for untrusted skill]")
+      expect(result.output).not.toContain("shouldnotrun")
+      // no bash permission ask because nothing was scanned or spawned
+      expect(requests.some((r) => r.permission === "bash")).toBe(false)
+    }),
+  )
+
+  unix("does not re-execute shell placeholders emitted by command output", () =>
+    Effect.gen(function* () {
+      // The command emits a literal placeholder `!<backtick>echo pwned<backtick>`
+      // built from octal escapes so the SKILL.md itself contains no nested
+      // backticks. If render re-scanned command output, `echo pwned` would run.
+      yield* writeGlobalSkill("nested-shell", "Out: !`printf '!\\140echo pwned\\140'`")
+
+      const result = yield* loadSkill("nested-shell", () => Effect.void)
+
+      expect(result.output).toContain("!`echo pwned`")
+      // "pwned" must appear only inside the inert placeholder, never executed alone.
+      expect(result.output).not.toMatch(/Out:\s*pwned\s*$/m)
+    }),
+  )
+})
+
+// The disabled (kill-switch) and untrusted branches must short-circuit before
+// asking permission or spawning. Passing an ask/spawner that throws proves
+// neither is reached.
+describe("SkillInject.render gating", () => {
+  const boom = () => {
+    throw new Error("must not be reached")
+  }
+  const spawner = new Proxy({}, { get: boom }) as any
+  const ctx = { ...baseCtx, ask: () => Effect.sync(boom) } as Tool.Context
+
+  const run = (opts: { trusted: boolean; disabled: boolean; content?: string }) =>
+    Effect.runPromise(
+      SkillInject.render({
+        content: opts.content ?? "Value: !`printf ran`",
+        trusted: opts.trusted,
+        disabled: opts.disabled,
+        ctx,
+        spawner,
+      }),
+    )
+
+  it.effect("kill-switch replaces every command without asking or running it", () =>
+    Effect.gen(function* () {
+      const out = yield* Effect.promise(() => run({ trusted: true, disabled: true }))
+      expect(out).toBe("Value: [skill shell execution disabled by policy]")
+    }),
+  )
+
+  it.effect("untrusted skills never ask or run their commands", () =>
+    Effect.gen(function* () {
+      const out = yield* Effect.promise(() => run({ trusted: false, disabled: false }))
+      expect(out).toBe("Value: [skill shell execution disabled for untrusted skill]")
+    }),
+  )
+
+  it.effect("content without placeholders is returned unchanged", () =>
+    Effect.gen(function* () {
+      const out = yield* Effect.promise(() => run({ trusted: true, disabled: false, content: "no commands here" }))
+      expect(out).toBe("no commands here")
+    }),
+  )
+})

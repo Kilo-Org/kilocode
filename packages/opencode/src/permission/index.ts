@@ -155,6 +155,7 @@ function subset(permission: string, ruleset: Ruleset) {
 
 function covered(entry: PendingEntry, approved: Ruleset, local: Ruleset) {
   if (ConfigProtection.isRequest(entry.info)) return false
+  if (entry.info.metadata?.["skillShell"] === true) return false // kilocode_change - skill batch needs an explicit reply
   return entry.info.patterns.every((pattern) => {
     if (veto(entry.info.permission, pattern, entry.hardRuleset)) return false
     return resolve(entry.info.permission, pattern, entry.ruleset, approved, local).action === "allow"
@@ -221,7 +222,19 @@ export const layer = Layer.effect(
         : false
       // kilocode_change end
 
+      // kilocode_change start - skill shell injection always prompts once, overriding every allow/deny/auto-approve rule
+      const forceAsk = request.metadata?.["skillShell"] === true
+      // kilocode_change end
       for (const pattern of request.patterns) {
+        // kilocode_change start - force a prompt over soft allow/deny rules, but never over a hard (plan-mode) veto
+        if (forceAsk) {
+          if (veto(request.permission, pattern, hardRuleset)) {
+            return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
+          }
+          needsAsk = true
+          continue
+        }
+        // kilocode_change end
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials

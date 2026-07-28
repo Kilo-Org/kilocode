@@ -35,6 +35,7 @@ export const Info = Schema.Struct({
   description: Schema.optional(Schema.String),
   location: Schema.String,
   content: Schema.String,
+  trusted: Schema.optional(Schema.Boolean), // kilocode_change - gate skill shell injection to trusted sources
 })
 export type Info = Schema.Schema.Type<typeof Info>
 
@@ -151,6 +152,7 @@ const add = Effect.fnUntraced(function* (state: State, match: Match, events: Eve
     description: md.data.description,
     location: match.path, // kilocode_change
     content: md.content,
+    trusted: match.trusted, // kilocode_change
   }
 })
 
@@ -295,6 +297,7 @@ const loadSkills = Effect.fnUntraced(function* (
       description: skill.description,
       location: BUILTIN_LOCATION,
       content: skill.content,
+      trusted: true, // kilocode_change - builtin skills ship in the binary
     }
   }
   // kilocode_change end

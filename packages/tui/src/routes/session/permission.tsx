@@ -291,6 +291,20 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
+              // kilocode_change start - skill shell batches list every command
+              if (props.request.metadata?.["skillShell"] === true) {
+                const commands = (props.request.patterns ?? []).filter((p): p is string => typeof p === "string")
+                return {
+                  icon: "#",
+                  title: "Run these skill commands?",
+                  body: (
+                    <box paddingLeft={1}>
+                      <For each={commands}>{(cmd) => <text fg={theme.text}>{"$ " + cmd}</text>}</For>
+                    </box>
+                  ),
+                }
+              }
+              // kilocode_change end
               // kilocode_change start
               const meta = props.request.metadata ?? {}
               const desc =
@@ -446,10 +460,12 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             </box>
           )
 
-          // kilocode_change start - hide "Always allow" for protected Kilo configuration access
-          const options: Record<string, string> = props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-            ? { once: "Allow once", reject: "Reject" }
-            : { once: "Allow once", always: "Allow always", reject: "Reject" }
+          // kilocode_change start - skill shell batches are never persisted: only Allow / Reject
+          const options: Record<string, string> = props.request.metadata?.["skillShell"]
+            ? { once: "Allow", reject: "Reject" }
+            : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+              ? { once: "Allow once", reject: "Reject" }
+              : { once: "Allow once", always: "Allow always", reject: "Reject" }
           // kilocode_change end
 
           const body = (
