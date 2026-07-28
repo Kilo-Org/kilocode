@@ -1,10 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1": "Kilo Gateway 為您提供一組精選的可靠優化模型，專為編碼代理設計。",
-  "provider.connect.kiloGateway.line2": "只需一個 API 金鑰，您就可以使用 Claude、GPT、Gemini、GLM 等模型。",
-  "provider.connect.kiloGateway.visit.prefix": "訪問 ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " 獲取您的 API 金鑰。",
   "provider.connect.kiloGateway.byok.prefix": "如需更多使用統計資訊，請",
   "provider.connect.kiloGateway.byok.link": "透過 Kilo's Gateway 進行 BYOK",
   "provider.connect.kiloGateway.byok.suffix": "。",
@@ -22,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "透過智慧路由統一存取 AI 模型",
 
   // Reasoning block label
-  "ui.permission.run": "執行",
   "ui.reasoning.label": "推理",
 
   // Marketplace
-  "marketplace.tab.skills": "技能",
-  "marketplace.tab.mcpServers": "MCP 伺服器",
-  "marketplace.category.all": "全部",
-  "marketplace.placeholder": "待實作",
   "marketplace.card.installed": "已安裝",
   "marketplace.card.install": "安裝",
   "marketplace.card.remove": "移除",
@@ -40,18 +30,15 @@ export const dict = {
   "marketplace.install.scope": "作用域",
   "marketplace.install.scope.project": "專案",
   "marketplace.install.scope.global": "全域",
-  "marketplace.install.scope.project.description":
-    "僅限此專案。安裝的檔案可以提交至版本控制並與你的團隊分享。",
+  "marketplace.install.scope.project.description": "僅限此專案。安裝的檔案可以提交至版本控制並與你的團隊分享。",
   "marketplace.install.scope.global.description": "此電腦上的所有專案。儲存在你的使用者設定中。",
   "marketplace.install.destination": "安裝位置",
-  "marketplace.install.about.mcp":
-    "MCP 伺服器為 Kilo 提供用於處理外部服務或本機程式的額外工具。",
+  "marketplace.install.about.mcp": "MCP 伺服器為 Kilo 提供用於處理外部服務或本機程式的額外工具。",
   "marketplace.install.about.agent": "智能體會新增一個具有專屬指示和權限的可重複使用角色。",
   "marketplace.install.about.skill": "技能會新增特定任務的指示和資源，Kilo 可在需要時載入它們。",
   "marketplace.install.mcp.warning":
     "MCP 伺服器可以執行本機命令或連線至外部服務。除非你的權限允許自動使用，否則 Kilo 會在使用其工具前請求許可。",
-  "marketplace.install.project.warning":
-    "專案檔案可能會提交至版本控制。除非設定引用了環境變數，否則請勿在此儲存密鑰。",
+  "marketplace.install.project.warning": "專案檔案可能會提交至版本控制。除非設定引用了環境變數，否則請勿在此儲存密鑰。",
   "marketplace.install.learnMore": "瞭解 Marketplace 安裝的運作方式",
   "marketplace.install.learnMcp": "深入瞭解 MCP",
   "marketplace.install.installedAt": "已安裝至 {{path}}",
@@ -68,8 +55,6 @@ export const dict = {
   "marketplace.remove.confirm": "確定要移除此 {{type}} 嗎？這會將其從你的 {{scope}} 設定中移除。",
   "marketplace.remove.cancel": "取消",
   "marketplace.remove.confirm.button": "移除",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "智能體",
   "marketplace.search": "搜尋...",
   "marketplace.filter.all": "所有項目",
   "marketplace.filter.notInstalled": "未安裝",
@@ -77,12 +62,10 @@ export const dict = {
   "marketplace.empty": "找不到項目",
   "marketplace.empty.relevant": "找不到與此工作區相關的市集項目。",
   "marketplace.badge.mcpServer": "MCP 伺服器",
-  "marketplace.badge.mode": "模式",
   "marketplace.card.by": "作者：{{author}}",
   "marketplace.install.method": "安裝方法",
   "marketplace.install.parameters": "參數",
   "marketplace.install.optional": "(選填)",
-  "marketplace.install.required": "{{name}} 是必填項",
   "marketplace.scope.project": "專案",
   "marketplace.scope.global": "全域",
   "marketplace.remove.type.mcp": "MCP 伺服器",
@@ -122,8 +105,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "在差異檢視器中開啟",
-  "ui.messagePart.shell.command": "命令",
-  "ui.messagePart.shell.output": "輸出",
   "ui.messagePart.openInEditor": "在編輯器中開啟",
 
   // Message feedback (thumbs up/down per assistant response)
