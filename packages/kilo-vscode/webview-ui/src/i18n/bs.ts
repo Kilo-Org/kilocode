@@ -801,6 +801,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "MCP serveri",
   "settings.agentBehaviour.subtab.rules": "Pravila",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "Tokovi rada",
   "settings.agentBehaviour.subtab.skills": "Vještine",
 
@@ -818,6 +819,7 @@ export const dict = {
   "settings.language.auto": "Auto (VS Code jezik)",
   "settings.language.current": "Trenutni:",
 
+  "common.apply": "Apply",
   "common.add": "Dodaj",
 
   "settings.autocomplete.autoTrigger.title": "Omogući automatsko inline dovršavanje",
@@ -893,6 +895,10 @@ export const dict = {
   "settings.experimental.remote.inactive": "Neaktivno",
   "settings.experimental.remote.hint": "Koristite /remote u chatu za prebacivanje",
   "settings.experimental.toolToggles": "Prekidači alata",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+
   "settings.agentBehaviour.defaultAgent.title": "Zadani agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent koji se koristi kada nijedan nije naveden",
   "settings.agentBehaviour.availableAgents": "Dostupni agenti",
@@ -994,9 +1000,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Dodatne datoteke uputa",
   "settings.agentBehaviour.instructionFiles.description": "Putanje do dodatnih datoteka uputa u sistemskom promptu",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code kompatibilnost",
-  "settings.agentBehaviour.claudeCompat.title": "Učitaj Claude Code datoteke",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Učitajte CLAUDE.md instrukcije i vještine iz vašeg Claude Code konfiguracijskog direktorija u sesije. Omogućite ovo ako želite da Kilo koristi vaše Claude Code instrukcije i vještine. Zahtijeva ponovno pokretanje.",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "Naredba",
   "settings.agentBehaviour.mcpDetail.args": "Argumenti",
   "settings.agentBehaviour.mcpDetail.env": "Okruženje",

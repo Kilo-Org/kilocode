@@ -24,7 +24,7 @@ class KiloBackendCliManagerEnvTest {
 
     @AfterTest
     fun tearDown() {
-        KiloClaudeCompatSettings.set(false)
+        KiloClaudeCompatSettings.set(KiloClaudeCompatSettings.Settings())
         System.clearProperty("kilo.dev.storage.isolated")
         System.clearProperty("kilo.dev.worktree.root")
         System.clearProperty("idea.plugin.in.sandbox.mode")
@@ -40,7 +40,8 @@ class KiloBackendCliManagerEnvTest {
         assertEquals("jetbrains", env["KILO_PLATFORM"])
         assertEquals("kilo-code", env["KILO_APP_NAME"])
         assertEquals("all", env["KILO_TELEMETRY_LEVEL"])
-        assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE"])
+        assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE_PROMPT"])
+        assertFalse(env.containsKey("KILO_DISABLE_CLAUDE_CODE"))
         assertEquals("jetbrains-plugin", env["KILOCODE_FEATURE"])
         assertEquals("pwd123", env["KILO_SERVER_PASSWORD"])
     }
@@ -55,12 +56,15 @@ class KiloBackendCliManagerEnvTest {
     }
 
     @Test
-    fun `claude compatibility omits disable env var`() {
-        KiloClaudeCompatSettings.set(true)
+    fun `claude compatibility uses granular disable env vars`() {
+        KiloClaudeCompatSettings.set(KiloClaudeCompatSettings.Settings(skillsCommands = false, instructions = true))
 
         val env = manager.buildEnv("pwd123", emptyMap())
 
         assertFalse(env.containsKey("KILO_DISABLE_CLAUDE_CODE"))
+        assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE_SKILLS"])
+        assertEquals("true", env["KILO_DISABLE_CLAUDE_CODE_COMMANDS"])
+        assertFalse(env.containsKey("KILO_DISABLE_CLAUDE_CODE_PROMPT"))
     }
 
     @Test

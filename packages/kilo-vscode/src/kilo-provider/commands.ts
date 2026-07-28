@@ -17,6 +17,7 @@ export async function loadCommands(client: KiloClient, dir: string): Promise<unk
       name: cmd.name,
       description: cmd.description,
       source: cmd.source,
+      origin: cmd.origin,
       hints: cmd.hints,
     })),
   }))

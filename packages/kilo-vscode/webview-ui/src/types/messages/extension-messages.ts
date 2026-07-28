@@ -555,7 +555,22 @@ export interface BrowserSettingsLoadedMessage {
 
 export interface ClaudeCompatSettingLoadedMessage {
   type: "claudeCompatSettingLoaded"
-  enabled: boolean
+  skillsCommands: boolean
+  instructions: boolean
+}
+
+export interface ClaudeContextLoadedMessage {
+  type: "claudeContextLoaded"
+  visible: boolean
+  present: {
+    instructions: boolean
+    skills: boolean
+    commands: boolean
+  }
+  settings: {
+    skillsCommands: boolean
+    instructions: boolean
+  }
 }
 
 export interface ExtensionSettings {
@@ -1192,6 +1207,7 @@ export type ExtensionMessage =
   | SuggestionErrorMessage
   | BrowserSettingsLoadedMessage
   | ClaudeCompatSettingLoadedMessage
+  | ClaudeContextLoadedMessage
   | ConfigLoadedMessage
   | ConfigUpdatedMessage
   | ConfigUpdateFailedMessage

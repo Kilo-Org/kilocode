@@ -30,6 +30,10 @@ export class Service extends ConfigService.Service<Service>()("@opencode/Runtime
     broad: bool("KILO_DISABLE_CLAUDE_CODE"),
     direct: bool("KILO_DISABLE_CLAUDE_CODE_SKILLS"),
   }).pipe(Config.map((flags) => flags.broad || flags.direct)),
+  disableClaudeCodeCommands: Config.all({ // kilocode_change
+    broad: bool("KILO_DISABLE_CLAUDE_CODE"), // kilocode_change
+    direct: bool("KILO_DISABLE_CLAUDE_CODE_COMMANDS"), // kilocode_change
+  }).pipe(Config.map((flags) => flags.broad || flags.direct)), // kilocode_change
   enableExa: Config.all({
     experimental,
     enabled: bool("KILO_ENABLE_EXA"),

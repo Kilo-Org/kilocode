@@ -639,6 +639,7 @@ object KiloCliDataParser {
                 name = obj.str("name") ?: "",
                 description = obj.str("description"),
                 source = obj.str("source"),
+                origin = obj.str("origin"),
                 hints = obj["hints"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
             )
         }
@@ -671,6 +672,7 @@ object KiloCliDataParser {
                 name = name,
                 description = obj.str("description"),
                 source = obj.str("source"),
+                origin = obj.str("origin"),
                 hints = obj["hints"].arr()?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList(),
                 template = obj.str("template"),
             )

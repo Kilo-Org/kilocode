@@ -9,6 +9,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.AgentDetailDto
+import ai.kilocode.rpc.dto.ClaudeCompatSettingsDto
 import ai.kilocode.jetbrains.api.model.AgentBuilderSaveRequest
 import ai.kilocode.rpc.dto.ConfigPatchDto
 import ai.kilocode.rpc.dto.McpConfigDto
@@ -180,10 +181,17 @@ class KiloAgentBehaviorRpcApiImpl(private val backend: KiloBackendAppService? = 
     override suspend fun mcpAuthenticate(directory: String, name: String): Boolean =
         post(directory, "/mcp/${encodePath(name)}/auth/authenticate")
 
-    override suspend fun claudeCodeCompat(): Boolean = KiloClaudeCompatSettings.get()
+    override suspend fun claudeCompatSettings(): ClaudeCompatSettingsDto = KiloClaudeCompatSettings.get().let {
+        ClaudeCompatSettingsDto(skillsCommands = it.skillsCommands, instructions = it.instructions)
+    }
 
-    override suspend fun setClaudeCodeCompat(value: Boolean): Boolean {
-        KiloClaudeCompatSettings.set(value)
+    override suspend fun setClaudeCompatSettings(value: ClaudeCompatSettingsDto): ClaudeCompatSettingsDto {
+        KiloClaudeCompatSettings.set(
+            KiloClaudeCompatSettings.Settings(
+                skillsCommands = value.skillsCommands,
+                instructions = value.instructions,
+            ),
+        )
         app.restart()
         return value
     }

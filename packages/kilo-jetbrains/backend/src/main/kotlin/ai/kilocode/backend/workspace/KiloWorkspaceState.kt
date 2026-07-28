@@ -136,6 +136,7 @@ data class CommandInfo(
     val name: String,
     val description: String?,
     val source: String?,
+    val origin: String?,
     val hints: List<String>,
 )
 

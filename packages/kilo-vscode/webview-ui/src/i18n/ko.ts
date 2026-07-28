@@ -793,6 +793,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "에이전트",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 서버",
   "settings.agentBehaviour.subtab.rules": "규칙",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "워크플로",
   "settings.agentBehaviour.subtab.skills": "스킬",
 
@@ -809,6 +810,7 @@ export const dict = {
   "settings.language.auto": "자동 (VS Code 언어)",
   "settings.language.current": "현재:",
 
+  "common.apply": "Apply",
   "common.add": "추가",
 
   "settings.autocomplete.autoTrigger.title": "자동 인라인 완성 활성화",
@@ -883,6 +885,10 @@ export const dict = {
   "settings.experimental.remote.inactive": "비활성",
   "settings.experimental.remote.hint": "채팅에서 /remote를 사용하여 전환하세요",
   "settings.experimental.toolToggles": "도구 토글",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+
   "settings.agentBehaviour.defaultAgent.title": "기본 에이전트",
   "settings.agentBehaviour.defaultAgent.description": "지정되지 않은 경우 사용할 에이전트",
   "settings.agentBehaviour.availableAgents": "사용 가능한 에이전트",
@@ -981,9 +987,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "추가 지시 파일",
   "settings.agentBehaviour.instructionFiles.description": "시스템 프롬프트에 포함되는 추가 지시 파일 경로",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 호환성",
-  "settings.agentBehaviour.claudeCompat.title": "Claude Code 파일 로드",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code 설정 디렉터리에서 세션으로 CLAUDE.md 지침 및 스킬을 로드합니다. Kilo가 Claude Code 지침 및 스킬을 사용하게 하려면 활성화하세요. 다시 시작해야 합니다.",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "명령어",
   "settings.agentBehaviour.mcpDetail.args": "인수",
   "settings.agentBehaviour.mcpDetail.env": "환경",

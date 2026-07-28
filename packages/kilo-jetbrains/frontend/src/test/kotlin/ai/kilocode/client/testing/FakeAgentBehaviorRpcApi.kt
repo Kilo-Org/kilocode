@@ -3,6 +3,7 @@ package ai.kilocode.client.testing
 import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.AgentDetailDto
+import ai.kilocode.rpc.dto.ClaudeCompatSettingsDto
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
@@ -45,8 +46,8 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
     var mcpConnectResult = true
     var mcpDisconnectResult = true
     var mcpAuthenticateResult = true
-    var claudeCodeCompat = false
-    val compatSaves = mutableListOf<Boolean>()
+    var claudeCompat = ClaudeCompatSettingsDto()
+    val compatSaves = mutableListOf<ClaudeCompatSettingsDto>()
 
     override suspend fun agents(directory: String): List<AgentDetailDto> {
         assertNotEdt("agentBehavior.agents")
@@ -163,15 +164,15 @@ class FakeAgentBehaviorRpcApi : KiloAgentBehaviorRpcApi {
         return mcpAuthenticateResult
     }
 
-    override suspend fun claudeCodeCompat(): Boolean {
-        assertNotEdt("agentBehavior.claudeCodeCompat")
-        return claudeCodeCompat
+    override suspend fun claudeCompatSettings(): ClaudeCompatSettingsDto {
+        assertNotEdt("agentBehavior.claudeCompatSettings")
+        return claudeCompat
     }
 
-    override suspend fun setClaudeCodeCompat(value: Boolean): Boolean {
-        assertNotEdt("agentBehavior.setClaudeCodeCompat")
+    override suspend fun setClaudeCompatSettings(value: ClaudeCompatSettingsDto): ClaudeCompatSettingsDto {
+        assertNotEdt("agentBehavior.setClaudeCompatSettings")
         compatSaves.add(value)
-        claudeCodeCompat = value
+        claudeCompat = value
         return value
     }
 }

@@ -236,7 +236,7 @@ class KiloPromptCompletionProvider(
     private fun server(command: CommandDto): LookupElement = LookupElementBuilder.create(command.name)
         .withPresentableText("/${command.name}")
         .withTailText(command.description?.let { "  $it" } ?: "", true)
-        .withTypeText(command.source)
+        .withTypeText(if (command.origin == "claude") "claude" else command.source)
         .withLookupStrings(command.hints)
         .withIcon(AllIcons.Nodes.Function)
         .withInsertHandler { ctx, _ -> replace(ctx, "/${command.name} ", false) }

@@ -1800,9 +1800,9 @@ class KiloCliDataParserTest {
         // ---- parseCommands ----
 
         @Test
-        fun `parseCommands - maps name, description, source, and hints`() {
+        fun `parseCommands - maps name, description, source, origin, and hints`() {
             val raw = """[
-                {"name":"init","description":"guided AGENTS.md setup","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command"},
+                {"name":"init","description":"guided AGENTS.md setup","template":"static body","hints":["${'$'}ARGUMENTS"],"source":"command","origin":"claude"},
                 {"name":"mcp-tool","template":"","hints":["${'$'}1","${'$'}2"],"source":"mcp"}
             ]"""
 
@@ -1812,6 +1812,7 @@ class KiloCliDataParserTest {
             assertEquals("init", result[0].name)
             assertEquals("guided AGENTS.md setup", result[0].description)
             assertEquals("command", result[0].source)
+            assertEquals("claude", result[0].origin)
             assertEquals(listOf("\$ARGUMENTS"), result[0].hints)
             assertEquals("mcp", result[1].source)
             assertEquals(listOf("\$1", "\$2"), result[1].hints)

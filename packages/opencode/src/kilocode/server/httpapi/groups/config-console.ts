@@ -70,6 +70,12 @@ export const ConfigRulesResponse = Schema.Struct({
   target: Schema.String,
   files: Schema.Array(ConfigRulesFile),
 }).annotate({ identifier: "ConfigRulesResponse" })
+const ClaudeContextItem = Schema.Struct({ present: Schema.Boolean })
+export const ClaudeContextResponse = Schema.Struct({
+  instructions: ClaudeContextItem,
+  skills: ClaudeContextItem,
+  commands: ClaudeContextItem,
+}).annotate({ identifier: "ClaudeContextResponse" })
 export const ConfigRulesPatch = Schema.Struct({
   scope: Schema.optional(ProjectScope),
   content: Schema.String,
@@ -134,6 +140,7 @@ export const ConfigConsolePaths = {
   effective: "/config/effective",
   overlay: "/config/overlay",
   rules: "/config/rules",
+  claudeContext: "/config/claude-context",
   modelState: "/config/model-state",
   tuiConfig: "/tui/config",
   tuiKeybinds: "/tui/keybinds",
@@ -194,6 +201,16 @@ export const ConfigConsoleApi = HttpApi.make("config-console")
             identifier: "config.rules",
             summary: "Get project rules",
             description: "List project instruction files used by Kilo and return their current contents.",
+          }),
+        ),
+        HttpApiEndpoint.get("claudeContext", ConfigConsolePaths.claudeContext, {
+          query: WorkspaceRoutingQuery,
+          success: described(ClaudeContextResponse, "Claude context presence"),
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "config.claudeContext",
+            summary: "Get Claude context presence",
+            description: "Detect Claude Code instructions, skills, and commands for the current workspace.",
           }),
         ),
         HttpApiEndpoint.put("rulesUpdate", ConfigConsolePaths.rules, {

@@ -482,6 +482,20 @@ export interface RequestClaudeCompatSettingMessage {
   type: "requestClaudeCompatSetting"
 }
 
+export interface RequestClaudeContextMessage {
+  type: "requestClaudeContext"
+}
+
+export interface UpdateClaudeContextMessage {
+  type: "updateClaudeContext"
+  skillsCommands?: boolean
+  instructions?: boolean
+}
+
+export interface DismissClaudeContextMessage {
+  type: "dismissClaudeContext"
+}
+
 export interface RequestConfigMessage {
   type: "requestConfig"
 }
@@ -1298,6 +1312,9 @@ export type WebviewMessage =
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
+  | RequestClaudeContextMessage
+  | UpdateClaudeContextMessage
+  | DismissClaudeContextMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage

@@ -57,6 +57,7 @@ internal object KiloWorkspaceDtoMapper {
         name = c.name,
         description = c.description,
         source = c.source,
+        origin = c.origin,
         hints = c.hints,
     )
 

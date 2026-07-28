@@ -653,6 +653,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "Agenti",
   "settings.agentBehaviour.subtab.mcpServers": "Server MCP",
   "settings.agentBehaviour.subtab.rules": "Regole",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "Workflow",
   "settings.agentBehaviour.subtab.skills": "Skill",
   "settings.browser.description":
@@ -667,6 +668,7 @@ export const dict = {
   "settings.language.description": 'Scegli la lingua dell\'interfaccia Kilo Code. "Auto" usa la lingua di VS Code.',
   "settings.language.auto": "Auto (lingua VS Code)",
   "settings.language.current": "Corrente:",
+  "common.apply": "Apply",
   "common.add": "Aggiungi",
   "settings.autocomplete.model.title": "Modello autocompletamento",
   "settings.autocomplete.model.description": "Seleziona il modello usato per i completamenti inline del codice",
@@ -742,6 +744,10 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inattivo",
   "settings.experimental.remote.hint": "Usa /remote in chat per attivare/disattivare",
   "settings.experimental.toolToggles": "Controlli tool",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+
   "settings.agentBehaviour.defaultAgent.title": "Agente predefinito",
   "settings.agentBehaviour.defaultAgent.description": "Agente da usare quando non ne viene specificato uno",
   "settings.agentBehaviour.availableAgents": "Agenti disponibili",
@@ -802,9 +808,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles.description":
     "Percorsi ai file istruzioni aggiuntivi inclusi nel prompt di sistema",
   "settings.agentBehaviour.claudeCompat.heading": "Compatibilità Claude Code",
-  "settings.agentBehaviour.claudeCompat.title": "Carica file Claude Code",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Carica istruzioni CLAUDE.md e skill dalla directory di configurazione Claude Code nelle sessioni. Abilitalo se vuoi che Kilo usi istruzioni e skill di Claude Code. Richiede riavvio.",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.removeMcp.title": "Rimuovi server MCP",
   "settings.agentBehaviour.removeMcp.confirm":
     'Rimuovere il server MCP "{{name}}"? Questo lo rimuoverà dalla configurazione.',

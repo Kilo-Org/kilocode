@@ -6,6 +6,7 @@ import { KilocodeConfigOverlay } from "@/kilocode/config/overlay"
 import { KilocodeConfigSources } from "@/kilocode/config/sources"
 import { KilocodeModelState } from "@/kilocode/config/model-state"
 import { ConfigRules } from "@/kilocode/server/routes/config-rules"
+import { ClaudeContext } from "@/kilocode/server/routes/claude-context"
 import { KilocodeKeybinds } from "@/kilocode/tui/keybinds"
 import { KilocodeTuiConfig } from "@/kilocode/tui/config"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
@@ -121,6 +122,13 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       )
     })
 
+    const claudeContext = Effect.fn("ConfigConsoleHttpApi.claudeContext")(function* () {
+      const instance = yield* InstanceState.context
+      return yield* Effect.promise(() =>
+        ClaudeContext.read({ directory: instance.directory, worktree: instance.worktree }),
+      )
+    })
+
     const rulesUpdate = Effect.fn("ConfigConsoleHttpApi.rulesUpdate")(function* (ctx: {
       payload: typeof ConfigRulesPatch.Type
     }) {
@@ -185,6 +193,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
       .handle("sources", sources)
       .handle("effective", effective)
       .handle("rules", rules)
+      .handle("claudeContext", claudeContext)
       .handle("rulesUpdate", rulesUpdate)
       .handle("modelState", modelState)
       .handle("modelStateUpdate", modelStateUpdate)

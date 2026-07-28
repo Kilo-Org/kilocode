@@ -21,7 +21,7 @@ import { selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
-type SubtabId = "agents" | "mcpServers" | "rules" | "workflows" | "skills"
+type SubtabId = "agents" | "mcpServers" | "rules" | "compatibility" | "workflows" | "skills"
 
 interface SubtabConfig {
   id: SubtabId
@@ -32,6 +32,7 @@ const subtabs: SubtabConfig[] = [
   { id: "agents", labelKey: "settings.agentBehaviour.subtab.agents" },
   { id: "mcpServers", labelKey: "settings.agentBehaviour.subtab.mcpServers" },
   { id: "rules", labelKey: "settings.agentBehaviour.subtab.rules" },
+  { id: "compatibility", labelKey: "settings.agentBehaviour.subtab.compatibility" },
   { id: "workflows", labelKey: "settings.agentBehaviour.subtab.workflows" },
   { id: "skills", labelKey: "settings.agentBehaviour.subtab.skills" },
 ]
@@ -58,14 +59,16 @@ const AgentBehaviourTab: Component = () => {
   const [newSkillPath, setNewSkillPath] = createSignal("")
   const [newSkillUrl, setNewSkillUrl] = createSignal("")
   const [newInstruction, setNewInstruction] = createSignal("")
-  const [claudeCompat, setClaudeCompat] = createSignal(false)
+  const [claudeSkillsCommands, setClaudeSkillsCommands] = createSignal(true)
+  const [claudeInstructions, setClaudeInstructions] = createSignal(false)
   const browse = () => vscode.postMessage({ type: "openMarketplacePanel" })
 
   // Load the VS Code setting for Claude Code compatibility
   vscode.postMessage({ type: "requestClaudeCompatSetting" })
   const unsubClaudeCompat = vscode.onMessage((msg) => {
     if (msg.type === "claudeCompatSettingLoaded") {
-      setClaudeCompat(msg.enabled)
+      setClaudeSkillsCommands(msg.skillsCommands)
+      setClaudeInstructions(msg.instructions)
     }
   })
   onCleanup(unsubClaudeCompat)
@@ -1056,25 +1059,44 @@ const AgentBehaviourTab: Component = () => {
         </For>
       </Card>
 
-      {/* Claude Code compatibility */}
-      <h4 style={{ "margin-top": "16px", "margin-bottom": "8px" }}>
+    </div>
+  )
+
+  const renderCompatibilitySubtab = () => (
+    <div>
+      <h4 style={{ "margin-top": "0", "margin-bottom": "8px" }}>
         {language.t("settings.agentBehaviour.claudeCompat.heading")}
       </h4>
       <Card>
         <SettingsRow
-          title={language.t("settings.agentBehaviour.claudeCompat.title")}
-          description={language.t("settings.agentBehaviour.claudeCompat.description")}
-          last
+          title={language.t("settings.agentBehaviour.claudeCompat.skillsCommands.title")}
+          description={language.t("settings.agentBehaviour.claudeCompat.skillsCommands.description")}
         >
           <Switch
-            checked={claudeCompat()}
+            checked={claudeSkillsCommands()}
             onChange={(checked: boolean) => {
-              setClaudeCompat(checked)
-              vscode.postMessage({ type: "updateSetting", key: "claudeCodeCompat", value: checked })
+              setClaudeSkillsCommands(checked)
+              vscode.postMessage({ type: "updateSetting", key: "claudeCodeSkillsCommands", value: checked })
             }}
             hideLabel
           >
-            {language.t("settings.agentBehaviour.claudeCompat.title")}
+            {language.t("settings.agentBehaviour.claudeCompat.skillsCommands.title")}
+          </Switch>
+        </SettingsRow>
+        <SettingsRow
+          title={language.t("settings.agentBehaviour.claudeCompat.instructions.title")}
+          description={language.t("settings.agentBehaviour.claudeCompat.instructions.description")}
+          last
+        >
+          <Switch
+            checked={claudeInstructions()}
+            onChange={(checked: boolean) => {
+              setClaudeInstructions(checked)
+              vscode.postMessage({ type: "updateSetting", key: "claudeCodeInstructions", value: checked })
+            }}
+            hideLabel
+          >
+            {language.t("settings.agentBehaviour.claudeCompat.instructions.title")}
           </Switch>
         </SettingsRow>
       </Card>
@@ -1089,6 +1111,8 @@ const AgentBehaviourTab: Component = () => {
         return renderMcpSubtab()
       case "rules":
         return renderRulesSubtab()
+      case "compatibility":
+        return renderCompatibilitySubtab()
       case "workflows":
         return <WorkflowsTab />
       case "skills":

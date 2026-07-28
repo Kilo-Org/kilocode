@@ -770,6 +770,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "代理",
   "settings.agentBehaviour.subtab.mcpServers": "MCP 服务器",
   "settings.agentBehaviour.subtab.rules": "规则",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "工作流",
   "settings.agentBehaviour.subtab.skills": "技能",
 
@@ -786,6 +787,7 @@ export const dict = {
   "settings.language.auto": "自动（VS Code 语言）",
   "settings.language.current": "当前：",
 
+  "common.apply": "Apply",
   "common.add": "添加",
 
   "settings.autocomplete.autoTrigger.title": "启用自动内联补全",
@@ -856,6 +858,10 @@ export const dict = {
   "settings.experimental.remote.inactive": "未启用",
   "settings.experimental.remote.hint": "在聊天中使用 /remote 进行切换",
   "settings.experimental.toolToggles": "工具开关",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+
   "settings.agentBehaviour.defaultAgent.title": "默认智能体",
   "settings.agentBehaviour.defaultAgent.description": "未指定时使用的智能体",
   "settings.agentBehaviour.availableAgents": "可用代理",
@@ -948,9 +954,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "附加指令文件",
   "settings.agentBehaviour.instructionFiles.description": "包含在系统提示词中的附加指令文件路径",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 兼容性",
-  "settings.agentBehaviour.claudeCompat.title": "加载 Claude Code 文件",
-  "settings.agentBehaviour.claudeCompat.description":
-    "将 Claude Code 配置目录中的 CLAUDE.md 指令和技能加载到会话中。如果您希望 Kilo 使用您的 Claude Code 指令和技能，请启用此选项。需要重启。",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "命令",
   "settings.agentBehaviour.mcpDetail.args": "参数",
   "settings.agentBehaviour.mcpDetail.env": "环境",

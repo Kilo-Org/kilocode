@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.KiloAgentBehaviorRpcApi
 import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.rpc.dto.AgentCreateDto
+import ai.kilocode.rpc.dto.ClaudeCompatSettingsDto
 import ai.kilocode.rpc.dto.CommandDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
@@ -69,9 +70,10 @@ class KiloAgentBehaviorService internal constructor(
 
     suspend fun mcpAuthenticate(directory: String, name: String): Boolean = safe(false) { call { mcpAuthenticate(directory, name) } }
 
-    suspend fun claudeCodeCompat(): Boolean = safe(false) { call { claudeCodeCompat() } }
+    suspend fun claudeCompatSettings(): ClaudeCompatSettingsDto = safe(ClaudeCompatSettingsDto()) { call { claudeCompatSettings() } }
 
-    suspend fun setClaudeCodeCompat(value: Boolean): Boolean = safe(false) { call { setClaudeCodeCompat(value) } }
+    suspend fun setClaudeCompatSettings(value: ClaudeCompatSettingsDto): ClaudeCompatSettingsDto =
+        safe(value) { call { setClaudeCompatSettings(value) } }
 
     private suspend fun <T> safe(fallback: T, block: suspend () -> T): T = try {
         block()

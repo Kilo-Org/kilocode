@@ -1,12 +1,9 @@
 package ai.kilocode.client.settings.rules
 
-import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.settings.base.SettingsListItem
-import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.settings.base.settingsListCellBounds
-import ai.kilocode.client.testing.FakeAgentBehaviorRpcApi
 import ai.kilocode.client.testing.FakeAppRpcApi
 import ai.kilocode.client.testing.FakeWorkspaceRpcApi
 import ai.kilocode.client.testing.TestCoroutines
@@ -20,28 +17,23 @@ import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
-import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
-import java.awt.BorderLayout
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.event.InputEvent
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
-import javax.swing.ScrollPaneConstants
 
 class RulesSettingsUiTest : BasePlatformTestCase() {
     private lateinit var appCoroutines: TestCoroutines
     private lateinit var uiCoroutines: TestCoroutines
     private lateinit var rpc: FakeAppRpcApi
     private lateinit var workspaceRpc: FakeWorkspaceRpcApi
-    private lateinit var agentRpc: FakeAgentBehaviorRpcApi
     private lateinit var app: KiloAppService
     private lateinit var workspaces: KiloWorkspaceService
-    private lateinit var agent: KiloAgentBehaviorService
     private val writes = mutableListOf<Pair<String, String>>()
     private var ui: RulesSettingsUi? = null
 
@@ -58,18 +50,13 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test rules list is center with claude footer south and right padding`() {
+    fun `test rules list is center`() {
         val panel = panel()
         flushUntil { rows(panel).size == 1 }
 
         edt {
             val pane = scrollFor(panel, rulesList(panel))
-            val layout = panel.content.layout as BorderLayout
-            assertSame(pane, layout.getLayoutComponent(BorderLayout.CENTER))
-            assertSame(panel.footer, layout.getLayoutComponent(BorderLayout.SOUTH))
-            assertEquals(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER, pane.horizontalScrollBarPolicy)
-            assertTrue(panel.footer.insets.right > 0)
-            assertTrue(components(panel.footer).filterIsInstance<TitledSeparator>().any { it.text == "Claude Code Compatibility" })
+            assertTrue(components(panel).contains(pane))
         }
     }
 
@@ -110,7 +97,6 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
 
         flushUntil { rpc.configPatches.isNotEmpty() && !edt { panel.modified() } }
         assertEquals(listOf("./RULES.md", "./TEAM.md"), rpc.configPatches.single().instructions)
-        assertTrue(agentRpc.compatSaves.isEmpty())
         assertTrue(writes.isEmpty())
     }
 
@@ -198,20 +184,6 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         assertFalse(edt { panel.modified() })
     }
 
-    fun `test toggling compat saves compat only`() {
-        val panel = panel()
-        flushUntil { rows(panel).size == 1 }
-
-        edt {
-            toggle(panel).doClick()
-            panel.applyDraft()
-        }
-
-        flushUntil { agentRpc.compatSaves.isNotEmpty() && !edt { panel.modified() } }
-        assertEquals(listOf(false), agentRpc.compatSaves)
-        assertTrue(rpc.configPatches.isEmpty())
-    }
-
     fun `test save survives dialog dispose on ok`() {
         val panel = panel(input = { "./TEAM.md" })
         flushUntil { rows(panel).size == 1 }
@@ -234,12 +206,10 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
 
         edt {
             panel.addFile()
-            toggle(panel).doClick()
             assertTrue(panel.modified())
             panel.resetDraft()
             assertFalse(panel.modified())
             assertEquals(listOf("./RULES.md"), rows(panel).map { it.key })
-            assertTrue(toggle(panel).isSelected)
         }
     }
 
@@ -280,7 +250,7 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
     ): RulesSettingsUi {
         install()
         val write: (String, String) -> Boolean = { path, text -> writes += path to text; true }
-        val panel = edt { RulesSettingsUi(uiCoroutines.scope, root, choose, input, read, write, editor, app, workspaces, agent) }
+        val panel = edt { RulesSettingsUi(uiCoroutines.scope, root, choose, input, read, write, editor, app, workspaces) }
         ui = panel
         return panel
     }
@@ -290,11 +260,8 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
         uiCoroutines = TestCoroutines()
         rpc = FakeAppRpcApi()
         workspaceRpc = FakeWorkspaceRpcApi()
-        agentRpc = FakeAgentBehaviorRpcApi()
-        agentRpc.claudeCodeCompat = true
         app = KiloAppService(appCoroutines.scope, rpc)
         workspaces = KiloWorkspaceService(appCoroutines.scope, workspaceRpc)
-        agent = KiloAgentBehaviorService(appCoroutines.scope, agentRpc)
         val state = KiloAppStateDto(
             KiloAppStatusDto.READY,
             config = ConfigDto(instructions = listOf("./RULES.md")),
@@ -332,8 +299,6 @@ class RulesSettingsUiTest : BasePlatformTestCase() {
     }
 
     private fun rulesList(panel: RulesSettingsUi) = components(panel).filterIsInstance<JBList<SettingsListItem>>().single()
-
-    private fun toggle(panel: RulesSettingsUi): SettingsToggle = components(panel).filterIsInstance<SettingsToggle>().single()
 
     private fun scrollFor(panel: RulesSettingsUi, list: JBList<SettingsListItem>) = components(panel)
         .filterIsInstance<JBScrollPane>()

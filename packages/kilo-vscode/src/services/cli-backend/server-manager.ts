@@ -18,6 +18,8 @@ const STARTUP_TIMEOUT_SECONDS = 30
 
 type WorkspaceFolderLike = { uri: { fsPath: string } }
 type ServerExitListener = (code: number | null) => void
+export type ClaudeRepoPreference = { decided: boolean; skillsCommands?: boolean; instructions?: boolean }
+export const CLAUDE_REPO_PREFERENCES_KEY = "kilo.claudeCompat.repoPreferences"
 
 export function resolveServerCwd(folders: readonly WorkspaceFolderLike[] | undefined, storage: string): string {
   return folders?.[0]?.uri.fsPath ?? storage
@@ -30,6 +32,36 @@ export function resolveIndexingEnv(folders: readonly WorkspaceFolderLike[] | und
 
 export function resolveManagedServerEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
   return { ...env, KILO_DISABLE_CHANNEL_DB: "true" }
+}
+
+export function resolveClaudeCodeEnv(input: { skillsCommands: boolean; instructions: boolean }): Record<string, string> {
+  return {
+    ...(!input.skillsCommands && {
+      KILO_DISABLE_CLAUDE_CODE_SKILLS: "true",
+      KILO_DISABLE_CLAUDE_CODE_COMMANDS: "true",
+    }),
+    ...(!input.instructions && { KILO_DISABLE_CLAUDE_CODE_PROMPT: "true" }),
+  }
+}
+
+export function readClaudeRepoPreference(state: vscode.Memento | undefined, dir: string): ClaudeRepoPreference | undefined {
+  return state?.get<Record<string, ClaudeRepoPreference>>(CLAUDE_REPO_PREFERENCES_KEY)?.[path.resolve(dir)]
+}
+
+function resolveClaudeCodeSettings(cfg: vscode.WorkspaceConfiguration, pref?: ClaudeRepoPreference) {
+  const legacy = cfg.inspect<boolean>("claudeCodeCompat")
+  const instructions = cfg.inspect<boolean>("claudeCodeInstructions")
+  return {
+    skillsCommands: pref?.skillsCommands ?? cfg.get<boolean>("claudeCodeSkillsCommands", true),
+    instructions:
+      pref?.instructions ??
+      instructions?.globalValue ??
+      instructions?.workspaceValue ??
+      instructions?.workspaceFolderValue ??
+      (legacy?.globalValue === true || legacy?.workspaceValue === true || legacy?.workspaceFolderValue === true
+        ? true
+        : cfg.get<boolean>("claudeCodeInstructions", false)),
+  }
 }
 
 export class ServerManager {
@@ -87,11 +119,11 @@ export class ServerManager {
     return new Promise((resolve, reject) => {
       console.log("[Kilo New] ServerManager: 🎬 Spawning CLI process:", cliPath, ["serve", "--port", "0"])
       const cfg = vscode.workspace.getConfiguration("kilo-code.new")
-      const claudeCompat = cfg.get<boolean>("claudeCodeCompat", false)
       // Pin cwd so the CLI doesn't inherit the extension host's cwd ("/" under F5 debug)
       // or "$HOME" in empty VS Code windows.
       const folders = vscode.workspace.workspaceFolders
       const spawnCwd = resolveServerCwd(folders, this.context.globalStorageUri.fsPath)
+      const claude = resolveClaudeCodeSettings(cfg, readClaudeRepoPreference(this.context.workspaceState, spawnCwd))
       fs.mkdirSync(spawnCwd, { recursive: true })
       const indexingEnv = resolveIndexingEnv(folders)
       const localCli =
@@ -147,7 +179,7 @@ export class ServerManager {
           KILO_VSCODE_VERSION: vscode.version,
           KILOCODE_VERSION: this.context.extension.packageJSON.version,
           KILOCODE_EDITOR_NAME: `${vscode.env.appName} ${vscode.version}`,
-          ...(!claudeCompat && { KILO_DISABLE_CLAUDE_CODE: "true" }),
+          ...resolveClaudeCodeEnv(claude),
           ...resolveTreeSitterEnv(this.context.extensionPath),
           ...bwrapEnv,
         },
