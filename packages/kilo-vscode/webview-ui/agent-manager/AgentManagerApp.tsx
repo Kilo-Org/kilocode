@@ -11,6 +11,7 @@ import {
   onCleanup,
   type Component,
   type JSX,
+  type Setter,
 } from "solid-js"
 import type {
   ExtensionMessage,
@@ -91,6 +92,7 @@ import { createProjectSessionsLive } from "./project/sessions-live"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
 import { createLocalSessions, persistLocalTabs } from "./project/local-tabs"
 import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
+import type { ApplyState, WorktreeBusyState } from "./project/store"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
@@ -175,17 +177,6 @@ interface SetupState {
   errorCode?: string
 }
 
-interface WorktreeBusyState {
-  reason: "setting-up" | "deleting"
-  message?: string
-  branch?: string
-}
-
-interface ApplyState {
-  status: AgentManagerApplyWorktreeDiffStatus
-  message: string
-  conflicts: AgentManagerApplyWorktreeDiffConflict[]
-}
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
 type SidePanel = "diff" | "pr" | null
@@ -231,18 +222,25 @@ const AgentManagerContent: Component = () => {
   const [kb, setKb] = createSignal<Record<string, string>>(defaultBindings)
 
   const [setup, setSetup] = createSignal<SetupState>({ active: false, message: "" })
-  const [worktrees, setWorktrees] = createSignal<WorktreeState[]>([])
-  const [managedSessions, setManagedSessions] = createSignal<ManagedSessionState[]>([])
+  const worktrees = () => registry.active().worktrees()
+  const setWorktrees = (v: Parameters<Setter<WorktreeState[]>>[0]) => registry.active().setWorktrees(v)
+  const managedSessions = () => registry.active().managedSessions()
+  const setManagedSessions = (v: Parameters<Setter<ManagedSessionState[]>>[0]) =>
+    registry.active().setManagedSessions(v)
   const [selection, setSelection] = createSignal<SidebarSelection>(LOCAL)
   const metrics = tracker(vscode)
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
-  const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
-  const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
+  const busyWorktrees = () => registry.active().busy()
+  const setBusyWorktrees: Setter<Map<string, WorktreeBusyState>> = (v) => registry.active().setBusy(v)
+  const staleWorktreeIds = () => registry.active().staleWorktreeIds()
+  const setStaleWorktreeIds: Setter<Set<string>> = (v) => registry.active().setStaleWorktreeIds(v)
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
   const [repoDetectedBranch, setRepoDetectedBranch] = createSignal<string | undefined>()
-  const [defaultBaseBranch, setDefaultBaseBranch] = createSignal<string | undefined>()
+  const defaultBaseBranch = () => registry.active().defaultBaseBranch()
+  const setDefaultBaseBranch = (v: Parameters<Setter<string | undefined>>[0]) =>
+    registry.active().setDefaultBaseBranch(v)
   const [projectList, setProjectList] = createSignal<AgentProjectSnapshot[]>([])
   const [multiProject, setMultiProject] = createSignal(false)
   const [currentProjectId, setCurrentProjectId] = createSignal<string | undefined>()
@@ -270,7 +268,9 @@ const AgentManagerContent: Component = () => {
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
   const [sidebarWidth, setSidebarWidth] = createSignal(persisted?.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH)
-  const [sessionsCollapsed, setSessionsCollapsed] = createSignal(true)
+  const sessionsCollapsed = () => registry.active().sessionsCollapsed() ?? true
+  const setSessionsCollapsed = (v: Parameters<Setter<boolean>>[0]) =>
+    registry.active().setSessionsCollapsed(typeof v === "function" ? v(sessionsCollapsed()) : v)
   const toggleSessions = () => {
     const collapsed = !sessionsCollapsed()
     setSessionsCollapsed(collapsed)
@@ -280,7 +280,8 @@ const AgentManagerContent: Component = () => {
   const sidebarCollapsed = sidebar.collapsed
   const expandSidebar = sidebar.expand
   const toggleSidebar = sidebar.toggle
-  const [sections, setSections] = createSignal<SectionState[]>([])
+  const sections = () => registry.active().sections()
+  const setSections = (v: Parameters<Setter<SectionState[]>>[0]) => registry.active().setSections(v)
 
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
@@ -303,31 +304,28 @@ const AgentManagerContent: Component = () => {
   const [reviewDiffStyle, setReviewDiffStyle] = createSignal<"unified" | "split">("unified")
   const markdown = createMarkdownRender(vscode)
   // Per-worktree git stats (diff additions/deletions, commits missing from origin)
-  const [worktreeStats, setWorktreeStats] = createSignal<Record<string, WorktreeGitStats>>({})
+  const worktreeStats = () => registry.active().worktreeStats()
 
   // Per-worktree PR status data
-  const [prStatuses, setPrStatuses] = createSignal<Record<string, PRStatus | null>>({})
+  const prStatuses = () => registry.active().prStatuses()
 
-  const [runStatuses, setRunStatuses] = createSignal<Record<string, RunStatus>>({})
-  const [runScriptConfigured, setRunScriptConfigured] = createSignal(false)
+  const runStatuses = () => registry.active().runStatuses()
+  const setRunStatuses: Setter<Record<string, RunStatus>> = (v) => registry.active().setRunStatuses(v)
+  const runScriptConfigured = () => registry.active().runScriptConfigured()
+  const setRunScriptConfigured = (v: Parameters<Setter<boolean>>[0]) => registry.active().setRunScriptConfigured(v)
 
   // Local repo git stats (branch name, diff additions/deletions, commits)
-  const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
+  const localStats = () => registry.active().localStats()
 
-  const projectLive = createProjectLive(
-    {
-      stats: setWorktreeStats,
-      local: (stats) => {
-        setLocalStats(stats)
-        setRepoBranch(stats.branch)
-      },
-      pr: (worktreeId, pr) => setPrStatuses((prev) => ({ ...prev, [worktreeId]: pr })),
-    },
-    isActivePayload,
-  )
+  const projectLive = createProjectLive({
+    ensure: (pid) => (pid ? registry.ensure(pid) : registry.active()),
+    active: isActivePayload,
+    branch: (branch) => setRepoBranch(branch),
+  })
 
   // Per-worktree apply-to-local status
-  const [applyStates, setApplyStates] = createSignal<Record<string, ApplyState>>({})
+  const applyStates = () => registry.active().applyStates()
+  const setApplyStates: Setter<Record<string, ApplyState>> = (v) => registry.active().setApplyStates(v)
   const [applyTarget, setApplyTarget] = createSignal<string | undefined>()
   const [applySelectedFiles, setApplySelectedFiles] = createSignal<string[]>([])
   const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
@@ -628,9 +626,11 @@ const AgentManagerContent: Component = () => {
 
   const releaseTabs = () => setTabWidths(false)
   // Tab ordering: context key → ordered session ID array (recovered from extension state)
-  const [worktreeTabOrder, setWorktreeTabOrder] = createSignal<Record<string, string[]>>({})
+  const worktreeTabOrder = () => registry.active().tabOrder()
+  const setWorktreeTabOrder: Setter<Record<string, string[]>> = (v) => registry.active().setTabOrder(v)
   // Sidebar worktree order (persisted to extension state)
-  const [sidebarWorktreeOrder, setSidebarWorktreeOrder] = createSignal<string[]>([])
+  const sidebarWorktreeOrder = () => registry.active().worktreeOrder()
+  const setSidebarWorktreeOrder = (v: Parameters<Setter<string[]>>[0]) => registry.active().setWorktreeOrder(v)
   const [draggingWorktree, setDraggingWorktree] = createSignal<string | undefined>()
   const [renamingSection, setRenamingSection] = createSignal<string | null>(null)
   let pendingNewSection = false

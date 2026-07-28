@@ -19,13 +19,20 @@ import type {
   WorktreeGitStats,
 } from "../../src/types/messages"
 
-export interface ProjectLiveShared {
-  stats: (map: Record<string, WorktreeGitStats>) => void
-  local: (stats: LocalGitStats) => void
-  pr: (worktreeId: string, pr: PRStatus | null) => void
+export interface ProjectLiveDeps {
+  /** Store of the message's owning project (active store when undefined). */
+  ensure: (pid: string | undefined) => {
+    setWorktreeStats: (map: Record<string, WorktreeGitStats>) => void
+    setLocalStats: (stats: LocalGitStats) => void
+    setPrStatuses: (update: (prev: Record<string, PRStatus | null>) => Record<string, PRStatus | null>) => void
+  }
+  /** Whether the tagged project currently drives the interactive body. */
+  active: (pid: string | undefined) => boolean
+  /** Branch label side-effect for the active project's local stats. */
+  branch: (branch: string | undefined) => void
 }
 
-export function createProjectLive(shared: ProjectLiveShared, active: (pid: string | undefined) => boolean) {
+export function createProjectLive(deps: ProjectLiveDeps) {
   const [stats, setStats] = createSignal<Record<string, Record<string, WorktreeGitStats>>>({})
   const [local, setLocal] = createSignal<Record<string, LocalGitStats>>({})
   const [prs, setPrs] = createSignal<Record<string, Record<string, PRStatus | null>>>({})
@@ -37,21 +44,22 @@ export function createProjectLive(shared: ProjectLiveShared, active: (pid: strin
       const ev = msg as AgentManagerWorktreeStatsMessage
       const map: Record<string, WorktreeGitStats> = {}
       for (const s of ev.stats) map[s.worktreeId] = s
+      deps.ensure(ev.projectId).setWorktreeStats(map)
       if (ev.projectId) setStats((prev) => ({ ...prev, [ev.projectId!]: map }))
-      if (active(ev.projectId)) shared.stats(map)
       return true
     }
     if (msg.type === "agentManager.localStats") {
       const ev = msg as AgentManagerLocalStatsMessage
+      deps.ensure(ev.projectId).setLocalStats(ev.stats)
       if (ev.projectId) setLocal((prev) => ({ ...prev, [ev.projectId!]: ev.stats }))
-      if (active(ev.projectId)) shared.local(ev.stats)
+      if (deps.active(ev.projectId)) deps.branch(ev.stats.branch)
       return true
     }
     if (msg.type === "agentManager.prStatus") {
       const ev = msg as AgentManagerPRStatusMessage
+      deps.ensure(ev.projectId).setPrStatuses((prev) => ({ ...prev, [ev.worktreeId]: ev.pr }))
       if (ev.projectId)
         setPrs((prev) => ({ ...prev, [ev.projectId!]: { ...prev[ev.projectId!], [ev.worktreeId]: ev.pr } }))
-      if (active(ev.projectId)) shared.pr(ev.worktreeId, ev.pr)
       return true
     }
     if (msg.type === "agentManager.projectSessions") {
