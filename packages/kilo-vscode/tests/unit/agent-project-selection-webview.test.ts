@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { applyProjectSelection } from "../../webview-ui/agent-manager/project-selection"
+import { applyProjectSelection } from "../../webview-ui/agent-manager/project/selection"
 
 function deps(active: string) {
   const calls: string[] = []

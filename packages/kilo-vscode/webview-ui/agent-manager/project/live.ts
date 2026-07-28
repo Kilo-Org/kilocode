@@ -17,7 +17,7 @@ import type {
   PRStatus,
   ProjectSessionInfo,
   WorktreeGitStats,
-} from "../src/types/messages"
+} from "../../src/types/messages"
 
 export interface ProjectLiveShared {
   stats: (map: Record<string, WorktreeGitStats>) => void

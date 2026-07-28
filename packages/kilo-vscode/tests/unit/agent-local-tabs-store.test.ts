@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import { createRoot } from "solid-js"
-import { createLocalTabs } from "../../webview-ui/agent-manager/local-tabs-store"
+import { createLocalTabs } from "../../webview-ui/agent-manager/project/local-tabs"
 
 const pending = (id: string) => id.startsWith("pending-")
 

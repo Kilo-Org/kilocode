@@ -1,7 +1,7 @@
 import { createMemo } from "solid-js"
-import type { ManagedSessionState } from "../src/types/messages/agent-manager"
-import type { ProjectSessionInfo, SessionInfo } from "../src/types/messages/sessions"
-import { isKnownRootSession } from "./navigate"
+import type { ManagedSessionState } from "../../src/types/messages/agent-manager"
+import type { ProjectSessionInfo, SessionInfo } from "../../src/types/messages/sessions"
+import { isKnownRootSession } from "../navigate"
 
 /**
  * Sidebar session lists per project. Background projects use the pushed

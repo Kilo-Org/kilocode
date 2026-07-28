@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { rememberTarget, restoreProjectTarget, type RestoreDeps } from "../../webview-ui/agent-manager/project-restore"
+import { rememberTarget, restoreProjectTarget, type RestoreDeps } from "../../webview-ui/agent-manager/project/restore"
 import type { AgentManagerStateMessage } from "../../webview-ui/src/types/messages"
 
 function state(over: Partial<AgentManagerStateMessage>): AgentManagerStateMessage {

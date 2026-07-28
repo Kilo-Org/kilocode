@@ -86,11 +86,12 @@ import { NewWorktreeDialog } from "./NewWorktreeDialog"
 import { ProjectList } from "./ProjectList"
 import { SidebarBody } from "./SidebarBody"
 import { TabBar } from "./TabBar"
-import { createProjectLive } from "./project-live"
-import { createProjectSessionsLive } from "./project-sessions-live"
-import { applyProjectSelection } from "./project-selection"
-import { createLocalSessions, createLocalTabs, persistLocalTabs, type PersistedLocalTabs } from "./local-tabs-store"
-import { rememberTarget, restoreProjectTarget } from "./project-restore"
+import { createProjectLive } from "./project/live"
+import { createProjectSessionsLive } from "./project/sessions-live"
+import { applyProjectSelection, createTargetRememberer } from "./project/selection"
+import { createLocalSessions, createLocalTabs, persistLocalTabs, type PersistedLocalTabs } from "./project/local-tabs"
+import { rememberTarget, restoreProjectTarget } from "./project/restore"
+import { createProjectStateRouter } from "./project/state"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
 import { DataBridge, MermaidDownloadBridge } from "../src/App"
 import { LanguageBridge } from "../src/context/language-bridge"
@@ -1097,6 +1098,12 @@ const AgentManagerContent: Component = () => {
     setRunStatuses(map)
   }
 
+  const router = createProjectStateRouter({
+    catalog: projectList,
+    apply: (state) => applyActiveState(state),
+    pruneLive: (ids) => projectLive.prune(ids),
+  })
+
   /** Store the project catalog pushed by the extension and drop states of removed projects. */
   const applyProjects = (msg: ExtensionMessage) => {
     if (msg.type !== "agentManager.projects") return
@@ -1105,18 +1112,8 @@ const AgentManagerContent: Component = () => {
     setProjectList(ev.projects)
     const ids = new Set(ev.projects.map((p) => p.id))
     setProjectStates((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
-    projectLive.prune(ids)
-    for (const id of [...pendingState.keys()]) if (!ids.has(id)) pendingState.delete(id)
-    const active = ev.projects.find((p) => p.active)?.id
-    const pending = active ? pendingState.get(active) : undefined
-    if (pending) {
-      pendingState.delete(active!)
-      applyActiveState(pending)
-    }
+    router.routeCatalog(ev.projects)
   }
-
-  /** States waiting for their project to become catalog-active before applying. */
-  const pendingState = new Map<string, AgentManagerStateMessage>()
 
   /** Apply one project state payload. Background payloads only feed their accordion summary. */
   const applyState = (msg: ExtensionMessage) => {
@@ -1124,15 +1121,9 @@ const AgentManagerContent: Component = () => {
     const state = msg as AgentManagerStateMessage
     const pid = state.projectId
     if (pid) setProjectStates((prev) => ({ ...prev, [pid]: state }))
-    // Background project payloads feed only their accordion summary; the
-    // shared signals below belong to the active project alone. On activation
-    // the state push can arrive before the catalog push, so defer it instead
-    // of dropping it.
-    if (!isActivePayload(pid)) {
-      if (pid) pendingState.set(pid, state)
-      return
-    }
-    applyActiveState(state)
+    // Background payloads feed only their accordion summary; on activation the
+    // state push can arrive before the catalog push, so the router defers it.
+    router.routeState(state)
   }
 
   /** Apply a state payload to the shared signals of the active project. */
@@ -1218,17 +1209,14 @@ const AgentManagerContent: Component = () => {
     if (switched && localSessionIDs().length === 0) addPendingTab()
   }
 
-  /** Persist the current selection per project so switching back restores it. */
-  createEffect(() => {
-    const pid = activeProjectId()
-    if (!pid || !multiProject()) return
-    // activeProjectId flips with the catalog push, before the new project's
-    // state is applied. In that window selection() still belongs to the
-    // previous project, so persisting it would poison this project's target.
-    if (currentProjectId() !== pid) return
-    const sel = selection()
-    if (sel && sel !== LOCAL && !worktrees().some((wt) => wt.id === sel)) return
-    rememberTarget(vscode.postMessage, pid, sel, session.currentSessionID())
+  createTargetRememberer({
+    pid: activeProjectId,
+    enabled: multiProject,
+    applied: currentProjectId,
+    selection,
+    owns: (sel) => worktrees().some((wt) => wt.id === sel),
+    sessionId: session.currentSessionID,
+    post: vscode.postMessage,
   })
 
   onMount(() => {

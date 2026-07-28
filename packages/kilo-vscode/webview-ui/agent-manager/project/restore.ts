@@ -8,8 +8,12 @@
  * to Local with a fresh "New Session" draft.
  */
 
-import type { AgentManagerStateMessage, AgentManagerSidebarTarget, RememberTargetMessage } from "../src/types/messages"
-import { LOCAL } from "./navigate"
+import type {
+  AgentManagerStateMessage,
+  AgentManagerSidebarTarget,
+  RememberTargetMessage,
+} from "../../src/types/messages"
+import { LOCAL } from "../navigate"
 
 export interface RestoreDeps {
   selectLocal: () => void

@@ -1,4 +1,7 @@
-import type { ExtensionMessage, ManagedSessionState } from "../src/types/messages"
+import { createEffect } from "solid-js"
+import type { ExtensionMessage, ManagedSessionState } from "../../src/types/messages"
+import { LOCAL } from "../navigate"
+import { rememberTarget } from "./restore"
 
 export function applyProjectSelection(
   msg: ExtensionMessage,
@@ -33,4 +36,31 @@ export function applyProjectSelection(
     }
   }
   return true
+}
+
+/**
+ * Persist the current selection for the applied project so switching back
+ * restores it. Skips while the catalog and applied project disagree (the
+ * switch window), and never persists a selection the project does not own.
+ */
+export function createTargetRememberer(opts: {
+  pid: () => string | undefined
+  enabled: () => boolean
+  applied: () => string | undefined
+  selection: () => string | null
+  owns: (sel: string) => boolean
+  sessionId: () => string | undefined
+  post: Parameters<typeof rememberTarget>[0]
+}): void {
+  createEffect(() => {
+    const pid = opts.pid()
+    if (!pid || !opts.enabled()) return
+    // pid flips with the catalog push, before the new project's state is
+    // applied. In that window selection() still belongs to the previous
+    // project, so persisting it would poison this project's target.
+    if (opts.applied() !== pid) return
+    const sel = opts.selection()
+    if (sel && sel !== LOCAL && !opts.owns(sel)) return
+    rememberTarget(opts.post, pid, sel, opts.sessionId())
+  })
 }

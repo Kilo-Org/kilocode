@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
-import type { SessionInfo } from "../src/types/messages/sessions"
+import type { SessionInfo } from "../../src/types/messages/sessions"
 
 const EMPTY: string[] = []
 
