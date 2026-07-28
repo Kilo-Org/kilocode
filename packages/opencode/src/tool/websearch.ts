@@ -24,12 +24,15 @@ export const Parameters = Schema.Struct({
   }),
 })
 
-const WebSearchProviderSchema = Schema.Literals(["exa", "parallel"])
+// kilocode_change start - add `"native"` as a provider-hosted alternative to
+// Exa/Parallel. When selected, web search is executed at the model provider
+// (Anthropic server-side web_search) instead of egressing to Exa/Parallel.
+const WebSearchProviderSchema = Schema.Literals(["exa", "parallel", "native"]) // kilocode_change
 export type WebSearchProvider = Schema.Schema.Type<typeof WebSearchProviderSchema>
 
 export function selectWebSearchProvider(sessionID: string, flags = { exa: false, parallel: false }): WebSearchProvider {
   const override = process.env.KILO_WEBSEARCH_PROVIDER
-  if (override === "exa" || override === "parallel") return override
+  if (override === "exa" || override === "parallel" || override === "native") return override // kilocode_change
   if (flags.parallel) return "parallel"
   if (flags.exa) return "exa"
 
@@ -39,6 +42,9 @@ export function selectWebSearchProvider(sessionID: string, flags = { exa: false,
 export function webSearchProviderLabel(provider: unknown) {
   if (provider === "parallel") return "Parallel Web Search"
   if (provider === "exa") return "Exa Web Search"
+  // kilocode_change start
+  if (provider === "native") return "Anthropic Web Search"
+  // kilocode_change end
   return "Web Search"
 }
 
@@ -141,3 +147,58 @@ export const WebSearchTool = Tool.define(
     }
   }),
 )
+
+// kilocode_change start - provider-hosted (Anthropic-native) web search tool.
+//
+// When `KILO_WEBSEARCH_PROVIDER=native` is selected for a supported Claude
+// model, the session builds this ToolDefinition instead of the local Exa/
+// Parallel tool. It carries the Anthropic server-tool descriptor in
+// `native.anthropic`; the @opencode-ai/llm Anthropic Messages protocol lowers
+// it into the request `tools` array as `{ type: "web_search_20250305", ... }`,
+// and Claude executes the search server-side. The result round-trips through
+// the existing `server_tool_use` + `web_search_tool_result` parser.
+//
+// `nativeWebSearchEnabled(model)` decides whether hosted search applies: only
+// @ai-sdk/anthropic-backed Claude models can use Anthropic's server web_search.
+import type { ToolDefinition } from "@opencode-ai/llm" // kilocode_change
+
+export interface AnthropicWebSearchOptions {
+  readonly variant?: "web_search_20250305" | "web_search_20260209"
+  readonly maxUses?: number
+  readonly allowedDomains?: ReadonlyArray<string>
+  readonly blockedDomains?: ReadonlyArray<string>
+  readonly userLocation?: {
+    readonly type: "approximate"
+    readonly city?: string
+    readonly region?: string
+    readonly country?: string
+    readonly timezone?: string
+  }
+}
+
+const anthropicWebSearchNative = (opts: AnthropicWebSearchOptions) => {
+  const anthropic: Record<string, unknown> = {
+    type: opts.variant ?? "web_search_20250305",
+    name: "web_search",
+  }
+  if (opts.maxUses !== undefined) anthropic.max_uses = opts.maxUses
+  if (opts.allowedDomains) anthropic.allowed_domains = [...opts.allowedDomains]
+  if (opts.blockedDomains) anthropic.blocked_domains = [...opts.blockedDomains]
+  if (opts.userLocation) anthropic.user_location = opts.userLocation
+  return { anthropic }
+}
+
+export function nativeAnthropicWebSearchTool(opts: AnthropicWebSearchOptions = {}): ToolDefinition.Input {
+  return {
+    name: "web_search",
+    description: "Search the web using Anthropic's hosted web_search server tool.",
+    inputSchema: { type: "object", properties: { query: { type: "string" } }, required: ["query"] },
+    native: anthropicWebSearchNative(opts),
+  }
+}
+
+/** Hosted (provider-native) web search is only available on @ai-sdk/anthropic Claude models. */
+export function nativeWebSearchEnabled(modelNpm: string | undefined): boolean {
+  return modelNpm === "@ai-sdk/anthropic" || modelNpm === "@ai-sdk/google-vertex/anthropic"
+}
+// kilocode_change end
