@@ -149,17 +149,10 @@ export const WebSearchTool = Tool.define(
 )
 
 // kilocode_change start - provider-hosted (Anthropic-native) web search tool.
-//
-// When `KILO_WEBSEARCH_PROVIDER=native` is selected for a supported Claude
-// model, the session builds this ToolDefinition instead of the local Exa/
-// Parallel tool. It carries the Anthropic server-tool descriptor in
-// `native.anthropic`; the @opencode-ai/llm Anthropic Messages protocol lowers
-// it into the request `tools` array as `{ type: "web_search_20250305", ... }`,
-// and Claude executes the search server-side. The result round-trips through
-// the existing `server_tool_use` + `web_search_tool_result` parser.
-//
-// `nativeWebSearchEnabled(model)` decides whether hosted search applies: only
-// @ai-sdk/anthropic-backed Claude models can use Anthropic's server web_search.
+// `nativeAnthropicWebSearchTool` builds a ToolDefinition whose `native.anthropic`
+// descriptor the @opencode-ai/llm Anthropic protocol lowers to
+// `{ type: "web_search_20250305", ... }`; Claude runs the search server-side and
+// results round-trip through the existing parser. Only @ai-sdk/anthropic Claude.
 import type { ToolDefinition } from "@opencode-ai/llm" // kilocode_change
 
 export interface AnthropicWebSearchOptions {
@@ -200,5 +193,15 @@ export function nativeAnthropicWebSearchTool(opts: AnthropicWebSearchOptions = {
 /** Hosted (provider-native) web search is only available on @ai-sdk/anthropic Claude models. */
 export function nativeWebSearchEnabled(modelNpm: string | undefined): boolean {
   return modelNpm === "@ai-sdk/anthropic" || modelNpm === "@ai-sdk/google-vertex/anthropic"
+}
+
+/**
+ * Registry-only gate: true when the native hosted override is selected AND the
+ * model supports it. Unlike `selectWebSearchProvider`, this is session-agnostic
+ * (the 50/50 exa/parallel fallback is resolved later inside WebSearchTool with
+ * the real sessionID).
+ */
+export function nativeWebSearchSelected(modelNpm: string | undefined): boolean {
+  return process.env.KILO_WEBSEARCH_PROVIDER === "native" && nativeWebSearchEnabled(modelNpm)
 }
 // kilocode_change end

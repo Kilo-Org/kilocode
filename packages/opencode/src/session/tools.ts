@@ -146,17 +146,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
     })
   }
 
-  // kilocode_change start - register Anthropic's hosted (provider-executed)
-  // web_search server tool when KILO_WEBSEARCH_PROVIDER=native is selected and
-  // the active model is an @ai-sdk/anthropic Claude model. The local Exa/
-  // Parallel tool is hidden upstream by ToolRegistry in that case, so the model
-  // sees only Anthropic's server-side web_search here. The AI SDK owns execution;
-  // it emits tool-call/tool-result parts with providerExecuted=true, which
-  // LLMAISDK.toLLMEvents forwards to the session processor unchanged.
-  //
-  // We read KILO_WEBSEARCH_PROVIDER directly to avoid introducing a RuntimeFlags
-  // service requirement into SessionTools.resolve's Effect environment; the
-  // registry gate reads the same env via selectWebSearchProvider for parity.
+  // kilocode_change start - register Anthropic's hosted web_search server tool
+  // on the AI SDK runtime when KILO_WEBSEARCH_PROVIDER=native + a Claude model.
+  // Registry hides the local Exa/Parallel tool; the AI SDK owns execution and
+  // emits providerExecuted tool parts. Env (not RuntimeFlags) keeps this
+  // Effect's environment unchanged.
   const webSearchNative = process.env.KILO_WEBSEARCH_PROVIDER === "native" && nativeWebSearchEnabled(input.model.api.npm)
   if (webSearchNative) {
     const anthropic = yield* Effect.promise(() => import("@ai-sdk/anthropic").then((m) => m.createAnthropic()))

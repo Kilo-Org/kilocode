@@ -28,7 +28,7 @@ import z from "zod"
 import { Plugin } from "../plugin"
 import { Provider } from "@/provider/provider"
 
-import { WebSearchTool, nativeWebSearchEnabled, selectWebSearchProvider } from "./websearch" // kilocode_change - add native helpers
+import { WebSearchTool, nativeWebSearchSelected } from "./websearch" // kilocode_change - native hosted web search gate
 import { KiloToolRegistry } from "../kilocode/tool/registry" // kilocode_change
 import { Notebook } from "@/kilocode/notebook/service" // kilocode_change
 import { AgentManager } from "@/kilocode/agent-manager/service" // kilocode_change
@@ -338,14 +338,10 @@ export const layer = Layer.effect(
       const filtered = (yield* all()).filter((tool) => {
         if (!KiloToolRegistry.available(tool, input.agent)) return false // kilocode_change
         if (tool.id === WebSearchTool.id) {
-          // kilocode_change start - hide the local Exa/Parallel tool when native
-          // hosted search is selected AND the active model supports it (Anthropic
-          // Claude). On non-Anthropic models, fall back to local Exa/Parallel.
-          const provider = selectWebSearchProvider(input.modelID, {
-            exa: flags.enableExa,
-            parallel: flags.enableParallel,
-          })
-          if (provider === "native" && nativeWebSearchEnabled(input.apiNpm)) return false
+          // kilocode_change start - hide local Exa/Parallel when native hosted
+          // search is selected AND the model supports it (Anthropic Claude);
+          // otherwise fall back to the local tool's session-keyed selection.
+          if (nativeWebSearchSelected(input.apiNpm)) return false
           return webSearchEnabled(input.providerID, { exa: flags.enableExa, parallel: flags.enableParallel })
         }
 

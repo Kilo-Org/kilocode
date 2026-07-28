@@ -145,11 +145,10 @@ const AnthropicTool = Schema.Struct({
 })
 type AnthropicTool = Schema.Schema.Type<typeof AnthropicTool>
 
-// kilocode_change start - Anthropic server (provider-hosted) tools are declared
-// in the `tools` array using a typed body that differs from the client tool
-// shape: a `type` discriminator (e.g. "web_search_20250305"), the `name` field
-// Claude surfaces, and tool-specific configuration knobs. There is no
-// `description` or `input_schema`; the provider owns execution.
+// kilocode_change start - Anthropic server (provider-hosted) tools use a typed
+// body distinct from client tools: a `type` discriminator (e.g.
+// "web_search_20250305"), the `name` Claude surfaces, and tool-specific config.
+// No `description`/`input_schema`; the provider owns execution.
 const AnthropicHostedWebSearch = Schema.Struct({
   type: Schema.Literals(["web_search_20250305", "web_search_20260209"]),
   name: Schema.String,
