@@ -25,7 +25,7 @@ export const ChartTool = Tool.define(
   Effect.gen(function* () {
     return {
       description:
-        "Render a data visualization chart using a Chart.js v4 config. Use this when the user asks to visualize data as a chart, graph, or plot. The config is rendered inline in the session.",
+        "Render a data visualization chart using a Chart.js v4 config. Use this when the user asks to visualize data as a chart, graph, or plot (bar, line, scatter, pie, etc.). Do NOT use this for diagrams, flowcharts, sequence diagrams, or any mermaid content — write those as mermaid fenced code blocks in your text response instead.",
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
