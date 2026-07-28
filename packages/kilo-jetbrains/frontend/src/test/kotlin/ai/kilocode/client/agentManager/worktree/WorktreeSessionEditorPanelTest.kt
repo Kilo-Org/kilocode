@@ -5,6 +5,7 @@ import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.testing.FakeSessionRpcApi
@@ -12,6 +13,7 @@ import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListSectionTitle
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.actionSystem.DataKey
@@ -119,6 +121,21 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(ActiveListBadge(SessionActivityKind.RUNNING.label(), SessionActivityKind.RUNNING.style())), row.badges)
         assertEquals(HistoryTime.relative(LocalHistoryItem(session)), row.trailing)
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
+    }
+
+    fun `test pending new session groups under today`() {
+        manager.pending = true
+        rpc.listed += session("ses_today", nowSeconds())
+        edt { controller.reload() }
+        flush()
+
+        val items = rows()
+        assertEquals("new", items[0].key)
+        assertEquals(HistoryTime.title(HistorySection.TODAY), items[0].section)
+        // The Today header renders above the pending row (index 0), and the following today session
+        // shares its section, so the placeholder sits inside Today rather than detached above it.
+        assertEquals(HistoryTime.title(HistorySection.TODAY), activeListSectionTitle(items, 0))
+        assertNull(activeListSectionTitle(items, 1))
     }
 
     fun `test sessions sort by updated desc with new row pinned`() {

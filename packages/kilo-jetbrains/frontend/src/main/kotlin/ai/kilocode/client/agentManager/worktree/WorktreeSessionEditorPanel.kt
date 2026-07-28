@@ -5,6 +5,7 @@ import ai.kilocode.client.session.SessionActivityKind
 import ai.kilocode.client.session.SessionHost
 import ai.kilocode.client.session.SessionManager
 import ai.kilocode.client.session.SessionRef
+import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
 import ai.kilocode.client.ui.UiStyle
@@ -224,6 +225,9 @@ class WorktreeSessionEditorPanel(
     private object NewRow : ActiveListItem {
         override val key: String get() = SessionHost.NEW
         override val title: String get() = KiloBundle.message("worktree.session.new")
+        // Group the pending session under Today so it appears inside the list right away instead of
+        // as a detached row pinned above the first section header.
+        override val section: String get() = HistoryTime.title(HistorySection.TODAY)
     }
 
     private data class SessionRow(val session: SessionDto, val kind: SessionActivityKind?) : ActiveListItem {
