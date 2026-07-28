@@ -8,6 +8,14 @@
  * diff exceeds the file cap or verification failed. The PR body carries
  * marker-delimited sections so later runs can append rows, plus a
  * machine-readable processed-through watermark.
+ *
+ * Watermark invariant: processed-through never moves past a PR that has no
+ * terminal outcome. Terminal := action !== "pending" (a deliberate agent
+ * "skipped" IS terminal). Uncovered PRs hold the marker at earliest
+ * merged_at − 1 ms so collect's merged:>=since re-collects them next run.
+ * Three review rounds found four independent defects in a queue-based
+ * alternative (unreachable gate, empty-PR creation, cap-overflow loss,
+ * draft-state corruption); a held-back watermark has none of those modes.
  */
 
 import { execFileSync } from "node:child_process"
@@ -17,6 +25,7 @@ import { pathToFileURL } from "node:url"
 const BRANCH = process.env.BRANCH || "docs/auto-sync"
 const FILE_CAP = 15
 const ROW_CAP = 150
+const PENDING_DISPLAY_CAP = 60
 const SUMMARY_FILE = ".docs-sync-summary.json"
 const DOCS_PATH = "packages/kilo-docs"
 
@@ -42,6 +51,11 @@ function skippedRow(e) {
   return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
 }
 
+function pendingRow(e) {
+  const reason = clean(e.reason ?? e.cause ?? "").replaceAll("|", "\\|").replaceAll("\n", " ")
+  return `| [${shortRef(e.url)}](${clean(e.url)}) | ${reason} |`
+}
+
 export function extractSectionRows(body, name) {
   const m = String(body ?? "").match(
     new RegExp(`<!--\\s*docs-sync:${name}:start\\s*-->([\\s\\S]*?)<!--\\s*docs-sync:${name}:end\\s*-->`),
@@ -50,7 +64,14 @@ export function extractSectionRows(body, name) {
   return m[1]
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => l.startsWith("|") && !l.startsWith("| ---") && !/^\|\s*Docs change/.test(l) && !/^\|\s*PR\s*\|/.test(l))
+    .filter(
+      (l) =>
+        l.startsWith("|") &&
+        !l.startsWith("| ---") &&
+        !/^\|\s*Docs change/.test(l) &&
+        !/^\|\s*PR\s*\|/.test(l) &&
+        !/^\|\s*Why\s*\|/.test(l),
+    )
 }
 
 function section(name, header, rows) {
@@ -58,7 +79,12 @@ function section(name, header, rows) {
   return `<!-- docs-sync:${name}:start -->\n${body}\n<!-- docs-sync:${name}:end -->`
 }
 
-export function renderBody({ date, since, through, changesRows, skippedRows, verified, draftReasons, note }) {
+export function renderBody({ date, since, through, changesRows, pendingRows, skippedRows, verified, draftReasons, note }) {
+  const pendingDisplay =
+    pendingRows.length > PENDING_DISPLAY_CAP
+      ? [...pendingRows.slice(0, PENDING_DISPLAY_CAP), `| +${pendingRows.length - PENDING_DISPLAY_CAP} more | |`]
+      : pendingRows
+
   return `## Automated docs sync — ${date}
 
 This PR keeps kilo.ai/docs in sync with features merged to [Kilo-Org/cloud](https://github.com/Kilo-Org/cloud) and [Kilo-Org/kilocode](https://github.com/Kilo-Org/kilocode). Every change below links to the merged PR it documents.
@@ -69,6 +95,10 @@ ${note ? `- ${note}\n` : ""}${draftReasons.length > 0 ? `- Draft because: ${draf
 ### Changes
 
 ${section("changes", "| Docs change | Source |", changesRows)}
+
+### Pending — will retry
+
+${section("pending", "| PR | Why |", pendingDisplay)}
 
 ### Considered, no docs change needed
 
@@ -100,31 +130,221 @@ function readJson(path, fallback) {
   }
 }
 
+/**
+ * Uncovered = (worthy URLs with no summary row) ∪ (summary action "pending")
+ * ∪ (triage entries with pending: true). A worthy PR is covered iff it has a
+ * summary row whose action !== "pending" and carries no triage pending flag.
+ */
+export function computeUncovered({ worthy, summary, triage }) {
+  const worthyList = Array.isArray(worthy) ? worthy : []
+  const summaryList = Array.isArray(summary) ? summary : []
+  const triageList = Array.isArray(triage) ? triage : []
+
+  const summaryByUrl = new Map()
+  for (const e of summaryList) {
+    if (e?.url) summaryByUrl.set(e.url, e)
+  }
+
+  const triagePendingByUrl = new Map()
+  for (const e of triageList) {
+    if (e?.url && e.pending === true) triagePendingByUrl.set(e.url, e)
+  }
+
+  /** @type {Map<string, { url: string, pr?: number, reason: string }>} */
+  const out = new Map()
+
+  for (const w of worthyList) {
+    const url = w?.url
+    if (!url) continue
+    const row = summaryByUrl.get(url)
+    if (!row) {
+      out.set(url, {
+        url,
+        pr: w.number ?? w.pr,
+        reason: "no edit summary row (edit pass did not cover this PR)",
+      })
+      continue
+    }
+    if (row.action === "pending") {
+      out.set(url, {
+        url,
+        pr: row.pr ?? w.number ?? w.pr,
+        reason: row.reason || "edit pass pending",
+      })
+    }
+  }
+
+  // Summary pending rows for URLs not in worthy (defensive).
+  for (const row of summaryList) {
+    if (row?.action === "pending" && row.url && !out.has(row.url)) {
+      out.set(row.url, {
+        url: row.url,
+        pr: row.pr,
+        reason: row.reason || "edit pass pending",
+      })
+    }
+  }
+
+  for (const [url, e] of triagePendingByUrl) {
+    if (out.has(url)) continue
+    out.set(url, {
+      url,
+      pr: e.pr,
+      reason: e.reason || "triage pending",
+    })
+  }
+
+  return [...out.values()]
+}
+
+/**
+ * processed-through = now when uncovered is empty; otherwise earliest
+ * merged_at among uncovered PRs minus 1 ms (from digest-full.json).
+ * When uncovered is non-empty but no merged_at resolves, hold at
+ * `fallback` (the run's window start / SINCE): every uncovered PR was
+ * collected via merged:>=since, so holding there re-collects all of them.
+ * Never advance past unresolved uncovered PRs (Defect-B permanent-loss).
+ */
+export function computeProcessedThrough({ uncovered, digest, now, fallback }) {
+  const nowIso = typeof now === "string" ? now : new Date(now).toISOString()
+  if (!uncovered || uncovered.length === 0) return nowIso
+
+  const digestList = Array.isArray(digest) ? digest : []
+  const byUrl = new Map(digestList.filter((d) => d?.url).map((d) => [d.url, d]))
+
+  let earliest = null
+  for (const u of uncovered) {
+    const d = byUrl.get(u.url)
+    const mergedAt = d?.merged_at
+    if (!mergedAt) continue
+    const t = Date.parse(mergedAt)
+    if (!Number.isFinite(t)) continue
+    if (earliest === null || t < earliest) earliest = t
+  }
+
+  if (earliest === null) {
+    // digest-full missing/corrupt while uncovered is non-empty: hold at
+    // window start so collect's merged:>=since re-collects every PR.
+    // Never use now−1ms — that strands uncovered PRs permanently.
+    const fallbackMs = fallback == null ? NaN : Date.parse(fallback)
+    if (!Number.isFinite(fallbackMs)) {
+      throw new Error(
+        `docs-sync: cannot resolve merged_at for ${uncovered.length} uncovered PR(s) and fallback/SINCE is missing or unparseable; refusing to advance processed-through`,
+      )
+    }
+    const fallbackIso = new Date(fallbackMs).toISOString()
+    console.warn(
+      `::warning::docs-sync: merge times for ${uncovered.length} uncovered PR(s) could not be resolved; holding watermark at window start ${fallbackIso}`,
+    )
+    return fallbackIso
+  }
+
+  return new Date(earliest - 1).toISOString()
+}
+
+/**
+ * Route summary + triage into the three body sections.
+ * changesRows = action neither skipped nor pending
+ * pendingRows = uncovered from computeUncovered
+ * skippedRows = action === "skipped" ∪ triage docs_worthy false && !pending
+ */
+export function routeRows({ summary, triage, uncovered }) {
+  const summaryList = Array.isArray(summary) ? summary : []
+  const triageList = Array.isArray(triage) ? triage : []
+  const uncoveredList = Array.isArray(uncovered) ? uncovered : []
+
+  const changesEntries = summaryList.filter((e) => e.action !== "skipped" && e.action !== "pending")
+  const skippedEntries = [
+    ...triageList.filter((e) => e.docs_worthy === false && e.pending !== true),
+    ...summaryList.filter((e) => e.action === "skipped"),
+  ]
+
+  return {
+    changesRows: changesEntries.map(changeRow),
+    pendingRows: uncoveredList.map(pendingRow),
+    skippedRows: skippedEntries.map(skippedRow),
+  }
+}
+
+/**
+ * Drop pre-existing Considered rows whose reason contains any of the three
+ * legacy failure literals (substring match — live rows carry longer strings).
+ * Genuine no-doc-needed rows are untouched.
+ */
+export function dropLegacySkipped(rows) {
+  const list = Array.isArray(rows) ? rows : []
+  const needles = ["edit pass failed or timed out", "triage failed to classify", "not classified by triage"]
+  return list.filter((row) => {
+    const s = String(row ?? "")
+    return !needles.some((n) => s.includes(n))
+  })
+}
+
+/**
+ * No-diff early-return report. Returns summary markdown and an optional
+ * replay warning. Warns IFF sinceOverride && uncovered non-empty (no commit
+ * happened — that is the caller's situation).
+ */
+export function noDiffReport({ uncovered, sinceOverride }) {
+  const list = Array.isArray(uncovered) ? uncovered : []
+  const lines =
+    list.length === 0
+      ? ["The agent found nothing worth documenting in this window."]
+      : [
+          `No packages/kilo-docs diff was produced, but ${list.length} PR(s) remain uncovered and will be re-collected on the next scheduled run:`,
+          "",
+          ...list.map((u) => `- [${u.url}] ${u.reason || "uncovered"}`),
+        ]
+
+  const summary = `### docs-sync: no docs changes\n\n${lines.join("\n")}`
+
+  let warning = null
+  if (sinceOverride && list.length > 0) {
+    warning =
+      "docs-sync since-override replay left uncovered PRs and wrote no PR body (no docs commit); re-run the override — the watermark was not held back in the body"
+  }
+
+  return { summary, warning }
+}
+
 async function main() {
   const { api, appendOutput, appendSummary, repo } = await import("./lib.mjs")
 
-  const through = process.env.PROCESSED_THROUGH ?? new Date().toISOString()
+  const now = process.env.PROCESSED_THROUGH ?? new Date().toISOString()
   const since = process.env.SINCE ?? "unknown"
+  const sinceOverride = process.env.SINCE_OVERRIDE === "true"
   const mode = ["update", "conflict"].includes(process.env.PREP_MODE) ? process.env.PREP_MODE : "fresh"
   const existingPr = process.env.PR_NUMBER || ""
   const verified = process.env.VERIFIED === "true"
-  const date = through.slice(0, 10)
+  const date = now.slice(0, 10)
 
   // The agent's run summary is consumed here and never committed.
   const agentSummary = readJson(SUMMARY_FILE, [])
   fs.rmSync(SUMMARY_FILE, { force: true })
   const triage = readJson("docs-sync-out/triage.json", [])
+  const worthy = readJson("docs-sync-out/worthy.json", [])
+  const digest = readJson("docs-sync-out/digest-full.json", [])
+
+  // Order matters: compute uncovered BEFORE the no-diff early return so
+  // noDiffReport can name every held-back PR.
+  const uncovered = computeUncovered({ worthy, summary: agentSummary, triage })
 
   if (git(["status", "--porcelain", "--", DOCS_PATH]) === "") {
     console.log("no packages/kilo-docs changes produced; nothing to commit")
-    appendSummary("### docs-sync: no docs changes\n\nThe agent found nothing worth documenting in this window.")
+    const { summary, warning } = noDiffReport({ uncovered, sinceOverride })
+    appendSummary(summary)
+    if (warning) console.warn(`::warning::${warning}`)
     return
   }
 
-  git(["config", "user.name", "github-actions[bot]"])
-  git(["config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"])
+  // Git identity is configured once in docs-sync.yml (Configure git identity)
+  // before any commit-creating step, including prepare-branch's merge.
   git(["add", DOCS_PATH])
   git(["commit", "-m", `docs: sync with merged PRs (${date})`])
+
+  // Watermark: now when fully covered; else earliest uncovered merged_at − 1ms.
+  // Pass SINCE as fallback so missing digest-full cannot strand uncovered PRs.
+  const through = computeProcessedThrough({ uncovered, digest, now, fallback: since })
 
   // The draft cap bounds the cumulative PR diff, not just this run's commit.
   const changedFiles = git(["diff", "--name-only", "origin/main...HEAD", "--", DOCS_PATH])
@@ -151,25 +371,33 @@ async function main() {
 
   git(mode === "update" ? ["push", "origin", `HEAD:${BRANCH}`] : ["push", "--force-with-lease", "origin", `HEAD:${BRANCH}`])
 
-  const changesNew = agentSummary.filter((e) => e.action !== "skipped").map(changeRow)
-  const skippedNew = [
-    ...triage.filter((e) => e.docs_worthy === false),
-    ...agentSummary.filter((e) => e.action === "skipped"),
-  ].map(skippedRow)
+  const { changesRows: changesNew, pendingRows: pendingNew, skippedRows: skippedNew } = routeRows({
+    summary: agentSummary,
+    triage,
+    uncovered,
+  })
 
   let oldChanges = []
   let oldSkipped = []
+  let oldPending = []
   if (mode === "update" && existingPr) {
     const pr = await api(`/repos/${repo()}/pulls/${existingPr}`)
     oldChanges = extractSectionRows(pr.body, "changes")
-    oldSkipped = extractSectionRows(pr.body, "skipped")
+    oldSkipped = dropLegacySkipped(extractSectionRows(pr.body, "skipped"))
+    oldPending = extractSectionRows(pr.body, "pending")
   }
+
+  // Pending is replaced each run (informational only); do not merge legacy
+  // pending rows — uncovered is recomputed fresh. oldPending is read only so
+  // extractSectionRows stays exercised; discarded deliberately.
+  void oldPending
 
   const body = renderBody({
     date,
     since,
     through,
     changesRows: mergeRows(oldChanges, changesNew),
+    pendingRows: pendingNew,
     skippedRows: mergeRows(oldSkipped, skippedNew),
     verified,
     draftReasons,
@@ -228,8 +456,10 @@ async function main() {
   }
 
   appendOutput("pr_url", prUrl)
-  appendSummary(`### docs-sync PR\n\n- ${prUrl}\n- changed files: ${changedFiles.length}\n- draft: ${draft}\n`)
-  console.log(`PR ${prNumber}: ${prUrl} (draft=${draft}, files=${changedFiles.length})`)
+  appendSummary(
+    `### docs-sync PR\n\n- ${prUrl}\n- changed files: ${changedFiles.length}\n- draft: ${draft}\n- uncovered: ${uncovered.length}\n- processed-through: ${through}\n`,
+  )
+  console.log(`PR ${prNumber}: ${prUrl} (draft=${draft}, files=${changedFiles.length}, uncovered=${uncovered.length}, through=${through})`)
 }
 
 const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
