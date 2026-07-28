@@ -167,14 +167,7 @@ jobs:
             -Pkilo.channel="$CHANNEL"
             -Pkilo.cli.bundled=true
           )
-
-          # signPlugin and verifyPluginSignature run as separate Gradle invocations (see #12567)
-          # so the JETBRAINS_CERTIFICATE_CHAIN_FILE / JETBRAINS_PRIVATE_KEY_FILE env vars set in
-          # the previous step (rather than raw multiline secret content) must be present for both.
-          ./gradlew clean buildPlugin "${args[@]}"
-          ./gradlew signPlugin "${args[@]}"
-          ./gradlew verifyPluginSignature "${args[@]}"
-          ./gradlew verifyPlugin "${args[@]}"
+          ./gradlew clean buildPlugin signPlugin verifyPluginSignature verifyPlugin "${args[@]}"
         env:
           GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}

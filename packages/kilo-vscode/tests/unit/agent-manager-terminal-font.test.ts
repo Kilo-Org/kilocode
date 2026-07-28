@@ -61,7 +61,14 @@ describe("Agent Manager terminal font", () => {
         getTerminalFont: () => font,
       })
 
-      expect(router.handle({ type: "agentManager.terminal.create", worktreeId: null })).toBe(true)
+      expect(
+        router.handle({
+          type: "agentManager.terminal.create",
+          createId: "font-1",
+          placement: "tab",
+          worktreeId: null,
+        }),
+      ).toBe(true)
     })
 
     const created = await message
@@ -82,9 +89,12 @@ describe("Agent Manager terminal font", () => {
         saveTabMemory: () => undefined,
         setSelection: () => undefined,
         showError: () => undefined,
+        postMessage: () => undefined,
       })
       const message = {
         type: "agentManager.terminal.created",
+        createId: "font-2",
+        placement: "tab",
         worktreeId: null,
         terminalId: "terminal-1",
         title: "Terminal 1",

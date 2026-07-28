@@ -60,6 +60,7 @@ class SessionMessageListPanel(
     private val resize: ((JComponent, () -> Unit) -> Unit)? = null,
     private val revert: ((String) -> Unit)? = null,
     private val cancelRevert: (() -> Unit)? = null,
+    private val deleteQueued: ((String) -> Unit)? = null,
     private val banner: RevertBanner? = null,
 ) : SessionLayoutPanel(
     SessionUiStyle.SessionLayout.GAP,
@@ -148,6 +149,12 @@ class SessionMessageListPanel(
                     refresh()
                 }
 
+                is SessionModelEvent.QueueChanged -> {
+                    syncQueued()
+                    syncSettled()
+                    refresh()
+                }
+
                 // Message events: structural changes are handled via turn events above.
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageRemoved,
@@ -220,7 +227,7 @@ class SessionMessageListPanel(
     // ------ private event handlers ------
 
     private fun onTurnAdded(turn: ai.kilocode.client.session.model.Turn) {
-        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert)
+        val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued)
         turnViews[turn.id] = tv
         for (msgId in turn.messageIds) {
             val msg = model.message(msgId) ?: continue
@@ -229,6 +236,7 @@ class SessionMessageListPanel(
         }
         tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
+        syncQueued(tv)
         syncReverted()
         add(tv)
         syncSettled()
@@ -257,6 +265,7 @@ class SessionMessageListPanel(
         }
         tv.setDiffs(diffsOf(turn))
         tv.syncCopyToolbars()
+        syncQueued(tv)
         syncReverted()
         syncSettled()
 
@@ -285,7 +294,7 @@ class SessionMessageListPanel(
         removeAll()
 
         for (turn in model.turns()) {
-            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert)
+            val tv = TurnView(turn.id, openFile, style, openUrl, selection, openAttachment, resize, repo, ::hover, revert, deleteQueued)
             turnViews[turn.id] = tv
             for (msgId in turn.messageIds) {
                 val msg = model.message(msgId) ?: continue
@@ -294,11 +303,13 @@ class SessionMessageListPanel(
             }
             tv.setDiffs(diffsOf(turn))
             tv.syncCopyToolbars()
+            syncQueued(tv)
             add(tv)
         }
 
         syncActive(model.state)
         syncSettled(model.state)
+        syncQueued()
         syncReverted()
         syncReverting(model.state)
         banner?.update()
@@ -328,6 +339,7 @@ class SessionMessageListPanel(
         removeAll()
         syncActive(model.state)
         syncSettled(model.state)
+        syncQueued()
         syncReverting(model.state)
         banner?.update()
         anchorFooter()
@@ -391,8 +403,16 @@ class SessionMessageListPanel(
     }
 
     private fun syncSettled(state: SessionState = model.state) {
-        val active = if (state.isBusy()) turnViews.values.lastOrNull() else null
+        val active = if (state.isBusy()) turnViews.values.lastOrNull { !model.isQueued(it.id) } else null
         for (view in turnViews.values) view.setSettled(view !== active)
+    }
+
+    private fun syncQueued() {
+        for (view in turnViews.values) syncQueued(view)
+    }
+
+    private fun syncQueued(view: TurnView) {
+        view.setQueued(model.isQueued(view.id)) { id -> deleteQueued?.invoke(id) }
     }
 
     /**
