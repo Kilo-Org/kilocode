@@ -24,6 +24,24 @@ import { KiloLog } from "@/kilocode/log"
 
 const log = Log.create({ service: "kilocode.cli" })
 
+// Process-level ingest drain for non-TUI commands (`kilo run`, etc.).
+// KiloCli.shutdown() runs KiloShutdown before disposeAllInstances — preserve that order.
+// Registered at setup load time (not inside shutdown()) so the task is always present.
+// Dynamic import keeps setup.ts's own static import graph unchanged: consumers that load
+// setup.ts under partial module mocks (e.g. cli-shutdown tests whose @/auth mock omits
+// OAUTH_DUMMY_KEY) would otherwise fail to link the provider/plugin chain. Dynamic import
+// returns the same in-process module singleton, so the drained queue is the one that
+// received events. Task try/catch covers dynamic-import failure outside the shared drain
+// guard; the drain itself never rejects.
+KiloShutdown.register(async () => {
+  try {
+    const { KiloSessions } = await import("@/kilo-sessions/kilo-sessions")
+    await KiloSessions.drainIngestForShutdown()
+  } catch (err) {
+    log.warn("ingest drain failed", { err })
+  }
+})
+
 // All Kilo-specific CLI customization lives here so the shared upstream entrypoint
 // (src/index.ts) only needs a handful of thin call-sites behind kilocode_change markers.
 // This keeps index.ts close to upstream and reduces merge conflicts on every sync.

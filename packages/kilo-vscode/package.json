@@ -804,13 +804,13 @@
         "command": "kilo-code.new.cycleAgentMode",
         "key": "ctrl+.",
         "mac": "cmd+.",
-        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.cyclePreviousAgentMode",
         "key": "ctrl+shift+.",
         "mac": "cmd+shift+.",
-        "when": "sideBarFocus && kilo-code.new.sidebarVisible || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+        "when": "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
       },
       {
         "command": "kilo-code.new.autocomplete.cancelSuggestions",
@@ -1015,6 +1015,20 @@
           "default": "",
           "scope": "application",
           "description": "Prefix for automatically named Agent Manager branches, for example 'marius/' or 'feature/'. Explicit branch names are unchanged."
+        },
+        "kilo-code.new.agentManager.terminalButtonDestination": {
+          "type": "string",
+          "scope": "application",
+          "default": "vscode",
+          "enum": [
+            "vscode",
+            "agentManager"
+          ],
+          "enumDescriptions": [
+            "Open or focus the VS Code integrated terminal.",
+            "Open or focus an embedded terminal in the Agent Manager side panel."
+          ],
+          "description": "Choose where the Agent Manager terminal button and Focus Terminal keyboard shortcut open a terminal."
         },
         "kilo-code.new.indexing.showButtonWhenDisabled": {
           "type": "boolean",

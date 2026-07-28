@@ -4,6 +4,7 @@ import {
   fixCatalog,
   fixMetadata,
   fixPackageManager,
+  fixRepository,
   fixScripts,
   fixTrustedDependencies,
   mergeWithNewestVersions,
@@ -30,6 +31,31 @@ test("fixScripts preserves Kilo-only root scripts from base", () => {
   expect(scripts.extension).toBe(ours.scripts.extension)
   expect(changes.some((c) => c.includes("postinstall"))).toBe(true)
   expect(changes.some((c) => c.includes("dev-setup"))).toBe(true)
+})
+
+test("fixRepository preserves Kilo package links", () => {
+  const ours = {
+    repository: { url: "https://github.com/Kilo-Org/kilocode.git" },
+    homepage: "https://github.com/Kilo-Org/kilocode/tree/main/packages/example",
+    bugs: "https://github.com/Kilo-Org/kilocode/issues",
+  }
+  const pkg: Record<string, unknown> = {
+    repository: { url: "https://example.com/upstream.git" },
+    homepage: "https://example.com/upstream/packages/example",
+    bugs: "https://example.com/upstream/issues",
+  }
+  const changes: string[] = []
+
+  fixRepository(pkg, ours, changes)
+
+  expect(pkg.repository).toEqual(ours.repository)
+  expect(pkg.homepage).toBe(ours.homepage)
+  expect(pkg.bugs).toBe(ours.bugs)
+  expect(changes).toEqual([
+    "repository: preserved Kilo metadata",
+    "homepage: preserved Kilo metadata",
+    "bugs: preserved Kilo metadata",
+  ])
 })
 
 test("fixScripts removes upstream-only dead scripts from root", () => {

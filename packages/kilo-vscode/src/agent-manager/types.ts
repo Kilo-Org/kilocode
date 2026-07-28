@@ -13,17 +13,18 @@ import type { Worktree, ManagedSession, Section } from "./WorktreeStateManager"
 import type { WorktreeStats, LocalStats } from "./GitStatsPoller"
 import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
-import type { ExternalWorktreeItem } from "./WorktreeManager"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
+import type { TerminalDestination } from "./terminal-destination"
 
 export type { TerminalFont }
+
+/** Where a terminal lives: main tab strip or right-side inspector panel. */
+export type TerminalPlacement = "tab" | "side"
 
 // ---------------------------------------------------------------------------
 // Shared payload types
 // ---------------------------------------------------------------------------
-
-type SessionMode = "worktree" | "local"
 
 export type ApplyDiffStatus = "checking" | "applying" | "success" | "conflict" | "error"
 
@@ -114,15 +115,6 @@ interface WorktreeSetupMessage {
   errorCode?: WorktreeSetupErrorCode
 }
 
-interface SessionMetaMessage {
-  type: "agentManager.sessionMeta"
-  sessionId: string
-  mode: SessionMode
-  branch?: string
-  path?: string
-  parentBranch?: string
-}
-
 interface StateMessage {
   type: "agentManager.state"
   worktrees: Worktree[]
@@ -140,6 +132,7 @@ interface StateMessage {
   runStatuses?: RunStatus[]
   runScriptConfigured?: boolean
   runScriptPath?: string
+  terminalDestination?: TerminalDestination
 }
 
 // ---------------------------------------------------------------------------
@@ -148,6 +141,11 @@ interface StateMessage {
 
 interface TerminalCreatedMessage {
   type: "agentManager.terminal.created"
+  /** Correlates with the create request; lets the webview spot stale
+   *  creates. Deliberately not named `requestId`: that field name is the
+   *  generic webview request/response correlation channel. */
+  createId: string
+  placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
   terminalId: string
@@ -164,7 +162,14 @@ interface TerminalClosedMessage {
 interface TerminalErrorMessage {
   type: "agentManager.terminal.error"
   terminalId?: string
+  /** Set when the error answers a specific create request. */
+  createId?: string
   message: string
+}
+
+interface TerminalDestinationChangedMessage {
+  type: "agentManager.terminal.destinationChanged"
+  destination: TerminalDestination
 }
 
 interface TerminalFontChangedMessage {
@@ -226,11 +231,6 @@ interface BranchesMessage {
   type: "agentManager.branches"
   branches: (BranchListItem & { isCheckedOut?: boolean })[]
   defaultBranch: string
-}
-
-interface ExternalWorktreesMessage {
-  type: "agentManager.externalWorktrees"
-  worktrees: ExternalWorktreeItem[]
 }
 
 interface ImportResultMessage {
@@ -307,7 +307,6 @@ export type AgentManagerOutMessage =
   | WorktreeStatsMessage
   | LocalStatsMessage
   | WorktreeSetupMessage
-  | SessionMetaMessage
   | StateMessage
   | ErrorOutMessage
   | SessionAddedMessage
@@ -317,7 +316,6 @@ export type AgentManagerOutMessage =
   | SetSessionModelMessage
   | SendInitialMessage
   | BranchesMessage
-  | ExternalWorktreesMessage
   | ImportResultMessage
   | KeybindingsMessage
   | RepoInfoMessage
@@ -332,6 +330,7 @@ export type AgentManagerOutMessage =
   | TerminalCreatedMessage
   | TerminalClosedMessage
   | TerminalErrorMessage
+  | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
 
 // ---------------------------------------------------------------------------
@@ -500,10 +499,6 @@ interface SetDefaultBaseBranchIn {
   branch?: string
 }
 
-interface RequestExternalWorktreesIn {
-  type: "agentManager.requestExternalWorktrees"
-}
-
 interface ImportFromBranchIn {
   type: "agentManager.importFromBranch"
   branch: string
@@ -512,16 +507,6 @@ interface ImportFromBranchIn {
 interface ImportFromPRIn {
   type: "agentManager.importFromPR"
   url: string
-}
-
-interface ImportExternalWorktreeIn {
-  type: "agentManager.importExternalWorktree"
-  path: string
-  branch: string
-}
-
-interface ImportAllExternalWorktreesIn {
-  type: "agentManager.importAllExternalWorktrees"
 }
 
 interface RequestWorktreeDiffIn {
@@ -758,6 +743,9 @@ interface MoveSectionIn {
 
 interface TerminalCreateIn {
   type: "agentManager.terminal.create"
+  /** Webview-generated correlation id, echoed back in created/error. */
+  createId: string
+  placement: TerminalPlacement
   /** null for LOCAL, worktree id otherwise */
   worktreeId: string | null
 }
@@ -807,11 +795,8 @@ export type AgentManagerInMessage =
   | SetReviewDiffStyleIn
   | SetReviewMarkdownRenderIn
   | SetDefaultBaseBranchIn
-  | RequestExternalWorktreesIn
   | ImportFromBranchIn
   | ImportFromPRIn
-  | ImportExternalWorktreeIn
-  | ImportAllExternalWorktreesIn
   | RequestWorktreeDiffIn
   | RequestWorktreeDiffFileIn
   | ApplyWorktreeDiffIn
