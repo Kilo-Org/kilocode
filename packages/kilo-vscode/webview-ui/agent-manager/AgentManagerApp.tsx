@@ -89,7 +89,8 @@ import { TabBar } from "./TabBar"
 import { createProjectLive } from "./project/live"
 import { createProjectSessionsLive } from "./project/sessions-live"
 import { applyProjectSelection, createTargetRememberer } from "./project/selection"
-import { createLocalSessions, createLocalTabs, persistLocalTabs, type PersistedLocalTabs } from "./project/local-tabs"
+import { createLocalSessions, persistLocalTabs } from "./project/local-tabs"
+import { createProjectRegistry, type PersistedProjectTabs } from "./project/registry"
 import { rememberTarget, restoreProjectTarget } from "./project/restore"
 import { createProjectStateRouter } from "./project/state"
 import { selectLocalAction, selectWorktreeAction } from "./selection-actions"
@@ -258,12 +259,13 @@ const AgentManagerContent: Component = () => {
   const MAX_SIDEBAR_WIDTH_RATIO = 0.4
 
   // Recover persisted local session IDs from webview state
-  const persisted = vscode.getState<PersistedLocalTabs & { sidebarWidth?: number }>()
-  /** Bucket key for the project whose state is currently applied. */
-  const tabKey = () => currentProjectId() ?? projectList().find((p) => p.active)?.id ?? "single"
-  const tabs = createLocalTabs(persisted, tabKey)
-  const localSessionIDs = tabs.ids
-  const setLocalSessionIDs = tabs.set
+  const persisted = vscode.getState<PersistedProjectTabs & { sidebarWidth?: number }>()
+  const registry = createProjectRegistry({
+    persisted: persisted ?? {},
+    activeId: () => currentProjectId() ?? "single",
+  })
+  const localSessionIDs = () => registry.active().tabs.ids()
+  const setLocalSessionIDs = (next: string[] | ((prev: string[]) => string[])) => registry.active().tabs.set(next)
   /** Remove a session ID from the local tab (no-op if absent). */
   const evictLocal = (sid: string) =>
     setLocalSessionIDs((prev) => (prev.includes(sid) ? prev.filter((id) => id !== sid) : prev))
@@ -334,15 +336,15 @@ const AgentManagerContent: Component = () => {
   const closedDrafts = new Set<string>()
   const [activePendingId, setActivePendingId] = createSignal<string | undefined>()
 
-  /** Per-project memory key so worktree/local ids from different projects never collide. */
-  const memKey = (sel: string) => `${activeProjectId() ?? "single"}:${sel}`
+  /** Namespace key so worktree/local ids from different projects never collide. */
+  const nsKey = (sel: string) => `${currentProjectId() ?? "single"}:${sel}`
 
   // Per-sidebar-context terminal state. `terms.activeId` holds the id of the focused
   // terminal tab, if any — takes precedence over session/pending/review when deriving
   // the visible tab. Contexts are project-keyed: every project reuses LOCAL and ids like "0".
   const terms = createTerminalState(() => {
     const sel = selection()
-    return sel === null ? null : memKey(sel)
+    return sel === null ? null : nsKey(sel)
   })
 
   // Inline delete confirmation: tracks which worktree is awaiting a second click/press
@@ -356,8 +358,9 @@ const AgentManagerContent: Component = () => {
   createEffect(on(selection, () => clearReviewComposer(reviewComposer), { defer: true }))
   onCleanup(() => clearTimeout(pendingDeleteTimer))
 
-  // Per-context tab memory: maps sidebar selection key -> last active session/pending ID
-  const [tabMemory, setTabMemory] = createSignal<Record<string, string>>({})
+  // Per-context tab memory lives in the active project's store: maps sidebar
+  // selection ("local" or a worktree id) -> last active session/pending ID
+  const tabMemory = () => registry.active().tabMemory.all()
 
   const reviewOpen = createMemo(() => {
     const sel = selection()
@@ -647,7 +650,7 @@ const AgentManagerContent: Component = () => {
     sessions: session.sessions,
     managedSessions,
     reviewOpenByContext,
-    terminalIdsFor: (key) => terms.forSelection(memKey(key)).map((t) => t.id),
+    terminalIdsFor: (key) => terms.forSelection(nsKey(key)).map((t) => t.id),
   })
   const appendToTabOrder = tabOrderSync.append
 
@@ -674,8 +677,11 @@ const AgentManagerContent: Component = () => {
   }
 
   persistLocalTabs({
-    tabs: () => tabs.durable(isPending),
-    key: tabKey,
+    tabs: () => {
+      registry.version()
+      return Object.fromEntries(registry.all().map((store) => [store.id, store.tabs.durable(isPending)]))
+    },
+    key: () => registry.active().id,
     width: sidebarWidth,
     get: () => vscode.getState<Record<string, unknown>>(),
     set: (value) => vscode.setState(value),
@@ -685,9 +691,8 @@ const AgentManagerContent: Component = () => {
   const saveTabMemory = () => {
     const sel = selection()
     if (sel === null) return
-    const key = memKey(sel === LOCAL ? LOCAL : sel)
     const active = visibleTabId()
-    if (active) setTabMemory((prev) => (prev[key] === active ? prev : { ...prev, [key]: active }))
+    if (active) registry.active().tabMemory.set(sel === LOCAL ? LOCAL : sel, active)
   }
 
   // Invalidate local session IDs if they no longer exist (preserve pending tabs)
@@ -1012,7 +1017,6 @@ const AgentManagerContent: Component = () => {
     setSelection,
     post: (msg: unknown) => vscode.postMessage(msg as never),
     tabMemory,
-    memKey,
     terms,
     activateTerminal: (id: string) => termHandlers.activate(id),
     setActivePendingId,

@@ -23,7 +23,6 @@ export interface SelectionActionDeps<T extends SessionLike> {
   setSelection: (id: string) => void
   post: (msg: unknown) => void
   tabMemory: () => Record<string, string>
-  memKey: (sel: string) => string
   terms: TermState
   activateTerminal: (id: string) => void
   setActivePendingId: (id: string | undefined) => void
@@ -40,7 +39,7 @@ export function selectLocalAction<T extends SessionLike>(deps: SelectionActionDe
   deps.setReviewActive(false)
   deps.setSelection(LOCAL)
   deps.post({ type: "agentManager.requestRepoInfo" })
-  const remembered = deps.tabMemory()[deps.memKey(LOCAL)]
+  const remembered = deps.tabMemory()[LOCAL]
   if (deps.terms.hasRemembered(LOCAL, remembered)) return deps.activateTerminal(remembered!)
   deps.terms.setActiveId(undefined)
   const target = remembered ? locals.find((s) => s.id === remembered) : undefined
@@ -64,7 +63,7 @@ export function selectWorktreeAction<T extends SessionLike>(
 ): void {
   deps.saveTabMemory()
   deps.setSelection(worktreeId)
-  const remembered = deps.tabMemory()[deps.memKey(worktreeId)]
+  const remembered = deps.tabMemory()[worktreeId]
   if (deps.terms.hasRemembered(worktreeId, remembered)) return deps.activateTerminal(remembered!)
   deps.terms.setActiveId(undefined)
   const target = remembered ? sessions.find((s) => s.id === remembered) : undefined

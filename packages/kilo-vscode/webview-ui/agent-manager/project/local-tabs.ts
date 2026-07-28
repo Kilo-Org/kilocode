@@ -1,39 +1,5 @@
-import { createEffect, createMemo, createSignal, onCleanup } from "solid-js"
+import { createEffect, createMemo, onCleanup } from "solid-js"
 import type { SessionInfo } from "../../src/types/messages/sessions"
-
-const EMPTY: string[] = []
-
-export interface PersistedLocalTabs {
-  /** Legacy single-project list, migrated into the "single" bucket. */
-  localSessionIDs?: string[]
-  localTabs?: Record<string, string[]>
-}
-
-/**
- * Open LOCAL session tabs, bucketed per project.
- *
- * Every project uses the same LOCAL context, so one shared list would surface
- * the sessions opened in one project under every other project after a switch.
- * Keying by project keeps each project's open tabs to itself while the accessor
- * and setter behave like a plain signal for the active project.
- */
-export function createLocalTabs(persisted: PersistedLocalTabs | undefined, key: () => string) {
-  const [tabs, setTabs] = createSignal<Record<string, string[]>>(
-    persisted?.localTabs ?? (persisted?.localSessionIDs?.length ? { single: persisted.localSessionIDs } : {}),
-  )
-  const ids = () => tabs()[key()] ?? EMPTY
-  const set = (next: string[] | ((prev: string[]) => string[])) =>
-    setTabs((prev) => {
-      const bucket = key()
-      const cur = prev[bucket] ?? EMPTY
-      const value = typeof next === "function" ? next(cur) : next
-      return value === cur ? prev : { ...prev, [bucket]: value }
-    })
-  /** All buckets with ephemeral tabs removed, ready to persist. */
-  const durable = (pending: (id: string) => boolean) =>
-    Object.fromEntries(Object.entries(tabs()).map(([bucket, list]) => [bucket, list.filter((id) => !pending(id))]))
-  return { ids, set, durable }
-}
 
 /**
  * Persist open tabs and the sidebar width to webview state for recovery.
