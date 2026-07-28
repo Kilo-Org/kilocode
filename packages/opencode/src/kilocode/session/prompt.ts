@@ -1,7 +1,6 @@
 // kilocode_change - new file
 import path from "path"
 import fs from "fs/promises"
-import { StringDecoder } from "string_decoder"
 import { Cause, Effect, Exit, Fiber, Scope } from "effect"
 import { SessionID, PartID } from "@/session/schema"
 import { MessageV2 } from "@/session/message-v2"
@@ -378,25 +377,6 @@ export namespace KiloSessionPrompt {
   }
 
   /**
-   * Creates StringDecoder-based helpers for shell stdout/stderr that correctly
-   * handle multi-byte UTF-8 characters split across chunks.
-   */
-  export function createShellDecoders() {
-    const stdout = new StringDecoder("utf8")
-    const stderr = new StringDecoder("utf8")
-    return {
-      /** Decode a chunk from the given stream. */
-      write(stream: "stdout" | "stderr", chunk: Buffer) {
-        return stream === "stdout" ? stdout.write(chunk) : stderr.write(chunk)
-      },
-      /** Flush any trailing buffered bytes from both decoders. */
-      flush() {
-        return stdout.end() + stderr.end()
-      },
-    }
-  }
-
-  /**
    * Ensures the plan file directory exists. Pre-checks with `Filesystem.isDir`
    * because `fs.mkdir(recursive: true)` still throws `EEXIST` on Windows
    * OneDrive ReparsePoint directories in some Node versions (kilocode#9755).
@@ -454,12 +434,6 @@ export namespace KiloSessionPrompt {
     ].join("\n")
     add(`<system-reminder>\n${body}\n</system-reminder>`)
   }
-
-  /**
-   * Returns the CODE_SWITCH prompt text (plan-to-code transition).
-   * Used when switching from plan agent to code agent.
-   */
-  export const CODE_SWITCH_TEXT = CODE_SWITCH
 
   /**
    * Determines the close reason for a session turn.
