@@ -108,6 +108,16 @@ export const ConfigProvider: ParentComponent = (props) => {
       })
       return
     }
+    if (message.type === "throughputSettingLoaded") {
+      // Seed settings() so the DisplayTab Switch reflects persisted state on
+      // first open. DisplayProvider also reads this message to drive
+      // throughputVisible() for the per-message badge; both signals update
+      // from the same backend message without conflict.
+      mergeSettings({
+        showTokenThroughput: message.visible,
+      })
+      return
+    }
     if (message.type === "configLoaded") {
       // Skip if a save is in-flight — a stale configLoaded must not overwrite
       // the optimistically-updated state while the write is being confirmed.

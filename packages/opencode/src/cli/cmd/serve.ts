@@ -4,6 +4,7 @@ import { withNetworkOptions, resolveNetworkOptions } from "../network"
 import { Flag } from "@opencode-ai/core/flag/flag"
 import { InstanceRuntime } from "../../project/instance-runtime" // kilocode_change
 import { startParentWatchdog } from "../../kilocode/parent-watchdog" // kilocode_change
+import { KiloSessions } from "@/kilo-sessions/kilo-sessions" // kilocode_change
 
 export const ServeCommand = effectCmd({
   command: "serve",
@@ -38,6 +39,7 @@ export const ServeCommand = effectCmd({
           const shutdown = async () => {
             stopWatchdog()
             try {
+              await KiloSessions.drainIngestForShutdown() // kilocode_change
               await InstanceRuntime.disposeAllInstances()
               await server.stop(true)
             } finally {

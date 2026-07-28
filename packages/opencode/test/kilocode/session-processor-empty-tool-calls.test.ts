@@ -575,11 +575,19 @@ describe("session processor empty tool-calls", () => {
             LLMEvent.stepStart({ index: 0 }),
             LLMEvent.stepFinish({
               index: 0,
-              reason: "stop",
+              reason: "other",
               usage: usage(),
-              providerMetadata: { kilocode: { routedModelID: "openai/gpt-5.5-20260423" } },
+              providerMetadata: {
+                kilocode: { routedModelID: "openai/gpt-5.5-20260423" },
+                kilo: { vercelID: "fra1::test" },
+                gateway: {
+                  generationId: "gen_test",
+                  routing: { finalProvider: "openai" },
+                  marketCost: "0.1",
+                },
+              },
             }),
-            LLMEvent.finish({ reason: "stop", usage: usage() }),
+            LLMEvent.finish({ reason: "other", usage: usage() }),
           )
 
           const chat = yield* session.create({})
@@ -632,6 +640,10 @@ describe("session processor empty tool-calls", () => {
             providerID: selection.providerID,
             modelID: ModelV2.ID.make("openai/gpt-5.5-20260423"),
           })
+          expect(part?.generationID).toBe("gen_test")
+          expect(part?.vercelID).toBe("fra1::test")
+          expect(part).not.toHaveProperty("providerMetadata")
+          expect(part).not.toHaveProperty("gateway")
         }),
       { git: true },
     ),

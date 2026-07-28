@@ -92,6 +92,19 @@ const DisplayTab: Component = () => {
         </SettingsRow>
 
         <SettingsRow
+          title={language.t("settings.display.tokenThroughput.title")}
+          description={language.t("settings.display.tokenThroughput.description")}
+        >
+          <Switch
+            checked={Boolean(settings()["showTokenThroughput"] ?? false)}
+            onChange={(checked: boolean) => updateSetting("showTokenThroughput", checked)}
+            hideLabel
+          >
+            {language.t("settings.display.tokenThroughput.title")}
+          </Switch>
+        </SettingsRow>
+
+        <SettingsRow
           title={language.t("settings.display.terminalCommand.title")}
           description={language.t("settings.display.terminalCommand.description")}
         >
