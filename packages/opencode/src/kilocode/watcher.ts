@@ -15,7 +15,7 @@ export namespace KilocodeWatcher {
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Watcher") {}
 
-  export function eager(client = process.env["KILO_CLIENT"]) {
+  export function eager(client = Flag.KILO_CLIENT) {
     return client !== "vscode"
   }
 
