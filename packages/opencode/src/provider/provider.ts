@@ -475,7 +475,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
             "X-Source": "kilo", // kilocode_change
           },
@@ -486,7 +486,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -496,7 +496,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: provider.source === "config",
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
             "X-BILLING-INVOKE-ORIGIN": "KiloCode", // kilocode_change
           },
@@ -507,7 +507,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "http-referer": "https://kilo.ai/", // kilocode_change
+            "http-referer": "https://kilo.ai/",
             "x-title": "Kilo Code", // kilocode_change
           },
         },
@@ -613,7 +613,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -813,7 +813,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
       if (!apiToken) {
         throw new Error(
           "CLOUDFLARE_API_TOKEN (or CF_AIG_TOKEN) is required for Cloudflare AI Gateway. " +
-            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.", // kilocode_change
+            "Set it via environment variable or run `kilo auth cloudflare-ai-gateway`.",
         )
       }
 
@@ -846,7 +846,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         apiKey: apiToken,
         ...(Object.values(opts).some((v) => v !== undefined) ? { options: opts } : {}),
       })
-      const unified = createUnified()
+      const unified = createUnified({ apiKey: apiToken })
 
       return {
         autoload: true,
@@ -871,7 +871,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         autoload: false,
         options: {
           headers: {
-            "HTTP-Referer": "https://kilo.ai/", // kilocode_change
+            "HTTP-Referer": "https://kilo.ai/",
             "X-Title": "Kilo Code", // kilocode_change
           },
         },
@@ -1079,7 +1079,7 @@ export const Info = Schema.Struct({
   description: optionalOmitUndefined(Schema.String), // kilocode_change
   source: Schema.Literals(["env", "config", "custom", "api"]),
   env: Schema.Array(Schema.String),
-  key: optionalOmitUndefined(Schema.String), // kilocode_change
+  key: optionalOmitUndefined(Schema.String),
   metadata: optionalOmitUndefined(ProviderMetadata), // kilocode_change
   options: Schema.Record(Schema.String, Schema.Any),
   models: Schema.Record(Schema.String, Model),

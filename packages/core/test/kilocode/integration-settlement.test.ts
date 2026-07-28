@@ -65,7 +65,7 @@ describe("Integration settlement guards", () => {
       yield* integrations.update((editor) =>
         editor.method.update({
           integrationID,
-          method: new Integration.OAuthMethod({ id: methodID, type: "oauth", label: "Browser" }),
+          method: { id: methodID, type: "oauth", label: "Browser" },
           authorize: () =>
             Effect.succeed({
               mode: "auto" as const,
@@ -78,7 +78,7 @@ describe("Integration settlement guards", () => {
         }),
       )
 
-      const attempt = yield* integrations.connect.oauth({ integrationID, methodID, inputs: {} })
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
       yield* Effect.yieldNow
       expect(yield* integrations.attempt.status(attempt.attemptID)).toMatchObject({
         status: "failed",
@@ -104,7 +104,7 @@ describe("Integration settlement guards", () => {
       yield* integrations.update((editor) =>
         editor.method.update({
           integrationID,
-          method: new Integration.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
           authorize: () =>
             Effect.succeed({
               mode: "code" as const,
@@ -118,10 +118,10 @@ describe("Integration settlement guards", () => {
         }),
       )
 
-      const attempt = yield* integrations.connect.oauth({ integrationID, methodID, inputs: {} })
-      const exit = yield* integrations.attempt.complete({ attemptID: attempt.attemptID, code: "1234" }).pipe(
-        Effect.exit,
-      )
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
+      const exit = yield* integrations.attempt
+        .complete({ attemptID: attempt.attemptID, code: "1234" })
+        .pipe(Effect.exit)
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain("database unavailable")
       expect(yield* integrations.attempt.status(attempt.attemptID)).toMatchObject({
@@ -165,7 +165,7 @@ describe("Integration settlement guards", () => {
         yield* integrations.update((editor) =>
           editor.method.update({
             integrationID,
-            method: new Integration.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+            method: { id: methodID, type: "oauth", label: "ChatGPT" },
             authorize: () =>
               Effect.succeed({
                 mode: "code" as const,
@@ -179,7 +179,7 @@ describe("Integration settlement guards", () => {
           }),
         )
 
-        const attempt = yield* integrations.connect.oauth({ integrationID, methodID, inputs: {} })
+        const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
         const fiber = yield* integrations.attempt
           .complete({ attemptID: attempt.attemptID, code: "1234" })
           .pipe(Effect.forkScoped)
@@ -212,7 +212,7 @@ describe("Integration settlement guards", () => {
       yield* integrations.update((editor) =>
         editor.method.update({
           integrationID,
-          method: new Integration.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
           authorize: () =>
             Effect.succeed({
               mode: "code" as const,
@@ -229,7 +229,7 @@ describe("Integration settlement guards", () => {
         }),
       )
 
-      const attempt = yield* integrations.connect.oauth({ integrationID, methodID, inputs: {} })
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
       const fiber = yield* integrations.attempt
         .complete({ attemptID: attempt.attemptID, code: "1234" })
         .pipe(Effect.forkScoped)
@@ -253,7 +253,7 @@ describe("Integration settlement guards", () => {
       yield* integrations.update((editor) =>
         editor.method.update({
           integrationID,
-          method: new Integration.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+          method: { id: methodID, type: "oauth", label: "ChatGPT" },
           authorize: () =>
             Effect.addFinalizer(() => Effect.sync(() => (state.closed = true))).pipe(
               Effect.as({
@@ -266,7 +266,7 @@ describe("Integration settlement guards", () => {
         }),
       )
 
-      const attempt = yield* integrations.connect.oauth({ integrationID, methodID, inputs: {} })
+      const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
       const fiber = yield* integrations.attempt
         .complete({ attemptID: attempt.attemptID, code: "1234" })
         .pipe(Effect.exit, Effect.forkScoped)
@@ -301,7 +301,7 @@ describe("Integration settlement guards", () => {
         yield* integrations.update((editor) =>
           editor.method.update({
             integrationID,
-            method: new Integration.OAuthMethod({ id: methodID, type: "oauth", label: "ChatGPT" }),
+            method: { id: methodID, type: "oauth", label: "ChatGPT" },
             authorize: () =>
               Effect.addFinalizer(() => Effect.sync(() => (closed = true))).pipe(
                 Effect.as({
@@ -310,14 +310,20 @@ describe("Integration settlement guards", () => {
                   instructions: "Paste the code",
                   callback: () =>
                     Effect.succeed(
-                      new Credential.OAuth({ type: "oauth", methodID, access: "access", refresh: "refresh", expires: 1 }),
+                      new Credential.OAuth({
+                        type: "oauth",
+                        methodID,
+                        access: "access",
+                        refresh: "refresh",
+                        expires: 1,
+                      }),
                     ),
                 }),
               ),
           }),
         )
 
-        const attempt = yield* integrations.connect.oauth({ integrationID, methodID, inputs: {} })
+        const attempt = yield* integrations.connection.oauth({ integrationID, methodID, inputs: {} })
         const fiber = yield* integrations.attempt
           .complete({ attemptID: attempt.attemptID, code: "1234" })
           .pipe(Effect.exit, Effect.forkScoped)
