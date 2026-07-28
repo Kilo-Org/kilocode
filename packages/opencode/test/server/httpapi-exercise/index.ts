@@ -1673,9 +1673,9 @@ const main = Effect.gen(function* () {
   // kilocode_change start - dispose final non-mutating instances so shared test scopes can close
   yield* Effect.addFinalizer(() =>
     Effect.gen(function* () {
-      yield* Effect.promise(() => disposeApps())
       const modules = yield* Effect.promise(() => runtime())
       yield* Effect.promise(() => modules.disposeAllInstances())
+      yield* Effect.promise(() => disposeApps())
       yield* cleanupExercisePaths
     }),
   )
