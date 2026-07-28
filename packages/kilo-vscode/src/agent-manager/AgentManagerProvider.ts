@@ -661,24 +661,12 @@ export class AgentManagerProvider implements Disposable {
       void this.importer.branches()
       return null
     }
-    if (m.type === "agentManager.requestExternalWorktrees") {
-      void this.importer.external()
-      return null
-    }
     if (m.type === "agentManager.importFromBranch") {
       void this.importer.branch(m.branch)
       return null
     }
     if (m.type === "agentManager.importFromPR") {
       void this.importer.pr(m.url)
-      return null
-    }
-    if (m.type === "agentManager.importExternalWorktree") {
-      void this.importer.path(m.path, m.branch)
-      return null
-    }
-    if (m.type === "agentManager.importAllExternalWorktrees") {
-      void this.importer.all()
       return null
     }
   }
@@ -868,7 +856,7 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Send worktreeSetup.ready + sessionMeta + pushState after worktree creation. */
+  /** Send worktreeSetup.ready + pushState after worktree creation. */
   private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
@@ -878,14 +866,6 @@ export class AgentManagerProvider implements Disposable {
       sessionId,
       branch: result.branch,
       worktreeId,
-    })
-    this.postToWebview({
-      type: "agentManager.sessionMeta",
-      sessionId,
-      mode: "worktree",
-      branch: result.branch,
-      path: result.path,
-      parentBranch: result.parentBranch,
     })
   }
 
@@ -907,8 +887,6 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.requestBranches":
       case "agentManager.importFromBranch":
       case "agentManager.importFromPR":
-      case "agentManager.importExternalWorktree":
-      case "agentManager.importAllExternalWorktrees":
       case "agentManager.setTabOrder":
       case "agentManager.setWorktreeOrder":
       case "agentManager.setSessionsCollapsed":

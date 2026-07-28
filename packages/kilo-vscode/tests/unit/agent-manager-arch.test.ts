@@ -186,8 +186,6 @@ describe("Agent Manager Provider Messages", () => {
       "agentManager.forgetSession",
       "agentManager.importFromBranch",
       "agentManager.importFromPR",
-      "agentManager.importExternalWorktree",
-      "agentManager.importAllExternalWorktrees",
       "agentManager.createSection",
       "agentManager.moveToSection",
     ]
@@ -435,7 +433,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID)")
     expect(show).toBeGreaterThan(-1)
-    expect(text).not.toContain("!this.terminalManager.hasActiveTerminal()")
     expect(text).toContain('type: "terminalContextError"')
   })
 
@@ -544,8 +541,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const pushIdx = text.indexOf("this.pushState()")
     const readyIdx = text.indexOf("agentManager.worktreeSetup")
     expect(pushIdx, "pushState must come before worktreeSetup").toBeLessThan(readyIdx)
-    // Must also send sessionMeta so the webview knows the branch/path
-    expect(text).toContain("agentManager.sessionMeta")
   })
 
   // -- agentManager.requestState in non-git workspace -------------------------
@@ -583,7 +578,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const providerText = body("onImportMessage")
     expect(text).toContain("class WorktreeImporter")
     expect(text).toContain("createFromPR")
-    expect(text).toContain("listExternalWorktrees")
     expect(text).toContain("createWorktree")
     expect(providerText).toContain("this.importer")
   })

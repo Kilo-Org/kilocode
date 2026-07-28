@@ -67,11 +67,6 @@ export interface CreateWorktreeResult {
   startPointWarning?: string
 }
 
-export interface ExternalWorktreeItem {
-  path: string
-  branch: string
-}
-
 /**
  * Backward compat: split a possibly-prefixed branch like "origin/main" into
  * `{ branch: "main", remote: "origin" }`. If no slash is found, returns bare branch.
@@ -815,7 +810,7 @@ export class WorktreeManager {
 
     // 4. Derived fallback
     if (allowFallback) {
-      const fallbacks = await this.derivedFallbackBranches(branch)
+      const fallbacks = await this.derivedFallbackBranches()
       for (const fallback of fallbacks) {
         if (fallback === branch) continue // already tried
         try {
@@ -863,7 +858,7 @@ export class WorktreeManager {
     }
   }
 
-  async derivedFallbackBranches(requested: string): Promise<string[]> {
+  async derivedFallbackBranches(): Promise<string[]> {
     const defaults = []
     try {
       defaults.push(await this.defaultBranch())
@@ -1012,22 +1007,6 @@ export class WorktreeManager {
         this.log(`Failed to get current branch: ${inner}`)
       }
       return result
-    }
-  }
-
-  async listExternalWorktrees(managedPaths: Set<string>): Promise<ExternalWorktreeItem[]> {
-    try {
-      const raw = await this.git.raw(["worktree", "list", "--porcelain"])
-      const normalizedRoot = normalizePath(this.root)
-      const normalizedManaged = new Set([...managedPaths].map(normalizePath))
-      return parseWorktreeList(raw)
-        .filter(
-          (e) => !e.bare && normalizePath(e.path) !== normalizedRoot && !normalizedManaged.has(normalizePath(e.path)),
-        )
-        .map((e) => ({ path: e.path, branch: e.branch }))
-    } catch (error) {
-      this.log(`Failed to list external worktrees: ${error}`)
-      return []
     }
   }
 

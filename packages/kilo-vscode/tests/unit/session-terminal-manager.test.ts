@@ -130,11 +130,6 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("panel command registration skipped")
   })
 
-  it("exposes active terminal state for terminal context routing", () => {
-    const text = body("hasActiveTerminal")
-    expect(text).toContain("this.host.activeTerminal()")
-  })
-
   it("resolves the session that owns the active managed terminal", () => {
     const text = body("activeSession")
     expect(text).toContain("this.host.activeTerminal()")

@@ -1,7 +1,6 @@
 import type { ProviderAuthAuthorization, ProviderAuthMethod } from "@kilocode/sdk/v2/client"
 import type { DiffSourceCapabilities, DiffSourceDescriptor } from "../../../../src/diff/sources/types"
 import type { PartBatch, PartRemove, PartUpdate } from "../../../../src/shared/stream-messages"
-import type { SessionMode } from "../../context/worktree-mode"
 import type { MarketplaceItem, MarketplaceInstalledMetadata, MarketplaceRelevanceMetadata } from "../marketplace"
 import type { ConnectionState, ServerInfo, SessionStatus } from "./connection"
 import type { FileAttachment, Part } from "./parts"
@@ -27,7 +26,6 @@ import type {
   AgentManagerApplyWorktreeDiffStatus,
   BranchInfo,
   ContinueInWorktreeStatus,
-  ExternalWorktreeInfo,
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
@@ -632,16 +630,6 @@ export interface NotificationsLoadedMessage {
   dismissedIds: string[]
 }
 
-// Agent Manager worktree session metadata
-export interface AgentManagerSessionMetaMessage {
-  type: "agentManager.sessionMeta"
-  sessionId: string
-  mode: SessionMode
-  branch?: string
-  path?: string
-  parentBranch?: string
-}
-
 // Agent Manager repo info (current branch of the main workspace)
 export interface AgentManagerRepoInfoMessage {
   type: "agentManager.repoInfo"
@@ -817,11 +805,6 @@ export interface AgentManagerBranchesMessage {
   type: "agentManager.branches"
   branches: BranchInfo[]
   defaultBranch: string
-}
-
-export interface AgentManagerExternalWorktreesMessage {
-  type: "agentManager.externalWorktrees"
-  worktrees: ExternalWorktreeInfo[]
 }
 
 // Agent Manager Import tab: result feedback (extension → webview)
@@ -1198,7 +1181,6 @@ export type ExtensionMessage =
   | WorkStyleAppliedMessage
   | WorkStyleApplyFailedMessage
   | NotificationsLoadedMessage
-  | AgentManagerSessionMetaMessage
   | AgentManagerRepoInfoMessage
   | AgentManagerWorktreeSetupMessage
   | AgentManagerSessionAddedMessage
@@ -1226,7 +1208,6 @@ export type ExtensionMessage =
   | OpenCloudSessionMessage
   | SelectKiloModelMessage
   | AgentManagerBranchesMessage
-  | AgentManagerExternalWorktreesMessage
   | AgentManagerImportResultMessage
   | WorkspaceDirectoryChangedMessage
   | AgentManagerWorktreeDiffMessage
