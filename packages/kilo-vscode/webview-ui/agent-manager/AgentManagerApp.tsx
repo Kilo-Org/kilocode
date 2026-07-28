@@ -1096,12 +1096,6 @@ const AgentManagerContent: Component = () => {
     })
   }
 
-  const syncRunStatuses = (items: RunStatus[] = []) => {
-    const map: Record<string, RunStatus> = {}
-    for (const item of items) map[item.worktreeId] = item
-    setRunStatuses(map)
-  }
-
   const router = createProjectStateRouter({
     catalog: projectList,
     apply: (state) => applyActiveState(state),
@@ -1125,39 +1119,33 @@ const AgentManagerContent: Component = () => {
     const state = msg as AgentManagerStateMessage
     const pid = state.projectId
     if (pid) setProjectStates((prev) => ({ ...prev, [pid]: state }))
-    // Background payloads feed only their accordion summary; on activation the
-    // state push can arrive before the catalog push, so the router defers it.
+    const store = pid ? registry.ensure(pid) : registry.active()
+    // A freshly created section needs the previous list to detect the new id,
+    // so it is handled before the data write below replaces it.
+    if (pendingNewSection && isActivePayload(pid)) {
+      const prev = new Set(store.sections().map((s) => s.id))
+      const created = (state.sections ?? []).find((s) => !prev.has(s.id))
+      pendingNewSection = false
+      if (created) setRenamingSection(created.id)
+    }
+    // Data lands in the payload's own store unconditionally; the router
+    // handles only the active-transition effects (selection/tab restore).
+    store.applyState(state)
     router.routeState(state)
   }
 
-  /** Apply a state payload to the shared signals of the active project. */
+  /** Apply the active-transition effects of a state payload (data already landed in the store). */
   const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)
-    setWorktrees(state.worktrees)
-    setManagedSessions(state.sessions)
-    setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
     if (state.isGitRepo !== undefined) setIsGitRepo(state.isGitRepo)
     if (!worktreesLoaded()) setWorktreesLoaded(true)
     // When not a git repo, also mark sessions as loaded since the Kilo
     // server won't connect to send the sessionsLoaded message.
     if (state.isGitRepo === false && !sessionsLoaded()) setSessionsLoaded(true)
-    const prev = new Set(sections().map((s) => s.id)),
-      incoming = state.sections ?? []
-    setSections(incoming)
-    if (pendingNewSection) {
-      pendingNewSection = false
-      const c = incoming.find((s) => !prev.has(s.id))
-      if (c) setRenamingSection(c.id)
-    }
-    if (state.tabOrder) setWorktreeTabOrder(state.tabOrder)
-    if (state.worktreeOrder) setSidebarWorktreeOrder(state.worktreeOrder)
     if (state.reviewDiffStyle === "split" || state.reviewDiffStyle === "unified") {
       setReviewDiffStyle(state.reviewDiffStyle)
     }
     markdown.setRender(state.reviewMarkdownRender === true)
-    if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
-    setRunScriptConfigured(state.runScriptConfigured === true)
-    syncRunStatuses(state.runStatuses)
     const current = session.currentSessionID()
     if (current) {
       const ms = state.sessions.find((s) => s.id === current)
@@ -1183,17 +1171,8 @@ const AgentManagerContent: Component = () => {
         setActivePendingId,
       })
     }
-    // Recover sessions collapsed state from extension-persisted state
-    if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
     // Recover sidebar collapsed state and mark hydrated so transitions enable
     sidebar.hydrate(state.sidebarCollapsed)
-    // Clear busy state for worktrees that have been removed
-    const ids = new Set(state.worktrees.map((wt) => wt.id))
-    setBusyWorktrees((prev) => {
-      const next = new Map([...prev].filter(([id]) => ids.has(id)))
-      return next.size === prev.size ? prev : next
-    })
-    setRunStatuses((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id === "local" || ids.has(id))))
   }
 
   /** Track project switches; full selection restore happens via restoreProjectTarget. */

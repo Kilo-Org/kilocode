@@ -2,6 +2,7 @@ import { createSignal, type Accessor, type Setter } from "solid-js"
 import type {
   AgentManagerApplyWorktreeDiffConflict,
   AgentManagerApplyWorktreeDiffStatus,
+  AgentManagerStateMessage,
   LocalGitStats,
   ManagedSessionState,
   PRStatus,
@@ -75,9 +76,32 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
   const [applyStates, setApplyStates] = field<Record<string, ApplyState>>({})
   const [busy, setBusy] = field<Map<string, WorktreeBusyState>>(new Map())
 
+  /** Write a project state payload into this store (data fields only). */
+  const applyState = (state: AgentManagerStateMessage): void => {
+    setWorktrees(state.worktrees)
+    setManagedSessions(state.sessions)
+    setStaleWorktreeIds(new Set(state.staleWorktreeIds ?? []))
+    setSections(state.sections ?? [])
+    if (state.tabOrder) setTabOrder(state.tabOrder)
+    if (state.worktreeOrder) setWorktreeOrder(state.worktreeOrder)
+    if ("defaultBaseBranch" in state) setDefaultBaseBranch(state.defaultBaseBranch || undefined)
+    setRunScriptConfigured(state.runScriptConfigured === true)
+    if (state.sessionsCollapsed !== undefined) setSessionsCollapsed(state.sessionsCollapsed)
+    const runs: Record<string, RunStatus> = {}
+    for (const item of state.runStatuses ?? []) runs[item.worktreeId] = item
+    setRunStatuses(runs)
+    // Reconcile busy flags with the worktree list (deleted worktrees drop out).
+    const ids = new Set(state.worktrees.map((wt) => wt.id))
+    setBusy((prev) => {
+      const next = new Map([...prev].filter(([key]) => ids.has(key)))
+      return next.size === prev.size ? prev : next
+    })
+  }
+
   return {
     id,
     tabs,
+    applyState,
     tabMemory,
     worktrees,
     setWorktrees,
