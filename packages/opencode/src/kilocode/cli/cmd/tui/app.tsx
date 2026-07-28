@@ -282,7 +282,7 @@ export function init() {
             ? "Disable auto-approve mode"
             : "Enable auto-approve mode"
         },
-        desc: "Toggle auto-approve for all permission prompts in the current session",
+        desc: "Toggle auto-approve for all permission prompts, saved to global config",
         category: "System",
         slashName: "auto-approve",
         slashAliases: ["autoapprove", "approve-all", "approveall"],
