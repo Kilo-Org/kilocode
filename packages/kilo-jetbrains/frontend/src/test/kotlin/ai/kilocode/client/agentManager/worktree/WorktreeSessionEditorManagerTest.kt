@@ -26,6 +26,7 @@ import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.flow.MutableStateFlow
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -41,6 +42,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     private lateinit var timers: TestUiTimers
     private val created = mutableListOf<Pair<String, String?>>()
     private val requested = mutableListOf<JComponent>()
+    private val notified = mutableListOf<Pair<String, String?>>()
     private val ui = mutableListOf<SessionUi>()
     private var confirms = 0
 
@@ -146,15 +148,52 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         rpc.listed += first
         rpc.listed += second
         val manager = manager()
-        edt { manager.openSession(SessionRef.Local(first)) }
-        val removed = ui.single()
+        edt { manager.start() }
+        flush()
 
         edt { manager.deleteSessions(listOf(first.id)) }
         pump()
         flush()
 
         assertEquals(1, confirms)
-        assertTrue(confirms > 0)
+        assertEquals(listOf(DIR to "ses_1", DIR to "ses_2"), created)
+        waitUntil { manager.deleting().isEmpty() }
+        assertEquals(listOf(first.id to DIR), rpc.deletes.toList())
+    }
+
+    fun `test delete marks session deleting then removes on success`() {
+        val gate = CompletableDeferred<Unit>()
+        rpc.deleteGate = gate
+        val session = session("ses_1", updated = 1.0)
+        val manager = manager()
+
+        edt { manager.deleteSessions(listOf(session.id)) }
+        pump()
+
+        assertEquals(setOf(session.id), edt { manager.deleting() })
+
+        gate.complete(Unit)
+        waitUntil { manager.deleting().isEmpty() && rpc.deletes.contains(session.id to DIR) }
+
+        assertTrue(edt { manager.deleting().isEmpty() })
+        assertEquals(listOf(session.id to DIR), rpc.deletes.toList())
+        assertTrue(notified.isEmpty())
+    }
+
+    fun `test delete failure reverts row and notifies`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        rpc.deleteThrows = IllegalStateException("delete unavailable")
+        val manager = manager()
+        edt { manager.start() }
+        flush()
+
+        edt { manager.deleteSessions(listOf(session.id)) }
+        waitUntil { manager.deleting().isEmpty() }
+
+        assertTrue(edt { manager.deleting().isEmpty() })
+        assertTrue(rpc.listed.any { it.id == session.id })
+        assertEquals(listOf("Failed to delete session \"Session ses_1\"" to "delete unavailable"), notified)
     }
 
     private fun manager(focus: Boolean = false): WorktreeSessionEditorManager {
@@ -192,6 +231,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             timers = timers,
             request = { requested += it },
             confirm = { _, _, _ -> confirms++; true },
+            notify = { title, content -> notified += title to content },
         ).also { it.startFocus = focus }
     }
 
@@ -205,6 +245,14 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
     )
 
     private fun flush() = coroutines.drain(::pump)
+
+    private fun waitUntil(block: () -> Boolean) {
+        repeat(10) {
+            flush()
+            if (edt(block)) return
+        }
+        assertTrue(edt(block))
+    }
 
     private fun pump() {
         com.intellij.openapi.application.ApplicationManager.getApplication().invokeAndWait {

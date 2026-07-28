@@ -123,6 +123,21 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(HistoryTime.title(HistoryTime.section(LocalHistoryItem(session))), row.section)
     }
 
+    fun `test deleting row shows deleting state`() {
+        manager.kinds = mapOf("ses_1" to SessionActivityKind.RUNNING)
+        manager.deletingIds += "ses_1"
+        rpc.listed += session("ses_1", nowSeconds())
+        edt { controller.reload() }
+        flush()
+
+        val row = row("ses_1")
+
+        assertEquals("Deleting…", row.trailing)
+        assertTrue(row.cells.isEmpty())
+        assertTrue(row.badges.isEmpty())
+        assertTrue(row.muted)
+    }
+
     fun `test pending new session groups under today`() {
         manager.pending = true
         rpc.listed += session("ses_today", nowSeconds())
@@ -165,6 +180,24 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
         assertEquals(listOf("ses_1"), manager.refs)
         assertEquals(listOf(false), manager.focuses)
+    }
+
+    fun `test row click ignores deleting session`() {
+        manager.deletingIds += "ses_1"
+        rpc.listed += session("ses_1", 1.0)
+        edt { controller.reload() }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            list.setSize(400, 100)
+            list.doLayout()
+            val bounds = list.getCellBounds(0, 0)
+            fire(list, MouseEvent(list, MouseEvent.MOUSE_CLICKED, System.currentTimeMillis(), 0, bounds.x + 8, bounds.y + bounds.height / 2, 1, false, MouseEvent.BUTTON1))
+        }
+
+        assertTrue(manager.refs.isEmpty())
+        assertTrue(manager.focuses.isEmpty())
     }
 
     fun `test row double click opens and focuses session`() {
@@ -215,6 +248,27 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         pump()
 
         assertEquals(listOf("ses_2", "ses_1"), manager.deleted)
+    }
+
+    fun `test delete action skips deleting selected sessions`() {
+        manager.deletingIds += "ses_1"
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            panel.selectSessions(listOf("ses_1"))
+            panel.deleteSelected()
+        }
+        assertTrue(manager.deleted.isEmpty())
+
+        edt {
+            panel.selectSessions(listOf("ses_1", "ses_2"))
+            panel.deleteSelected()
+        }
+
+        assertEquals(listOf("ses_2"), manager.deleted)
     }
 
     fun `test panel provides session manager and workspace data`() {
@@ -292,6 +346,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         var newCount = 0
         var pending = false
         var kinds = emptyMap<String, SessionActivityKind>()
+        val deletingIds = mutableSetOf<String>()
         val refs = mutableListOf<String>()
         val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
@@ -299,6 +354,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         override fun hasPendingNew(): Boolean = pending
 
         override fun activity(): Map<String, SessionActivityKind> = kinds
+
+        override fun deleting(): Set<String> = deletingIds
 
         override fun newSession() {
             newCount++

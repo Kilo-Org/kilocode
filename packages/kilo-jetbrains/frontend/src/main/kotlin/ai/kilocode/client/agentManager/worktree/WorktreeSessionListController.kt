@@ -52,29 +52,24 @@ class WorktreeSessionListController(
         }
     }
 
-    fun delete(ids: List<String>, done: () -> Unit) {
-        val active = ids.distinct().filter { it.isNotBlank() }
-        if (active.isEmpty()) {
-            edt(done)
-            return
-        }
+    fun delete(id: String, done: (Boolean, String?) -> Unit) {
+        if (id.isBlank()) return edt { done(false, "Missing session id") }
         cs.launch {
-            try {
-                active.forEach { id ->
-                    service.deleteSession(id, dir)
-                    capture("Worktree Session Deleted", mapOf("sessionId" to id))
-                }
+            val result = runCatching { service.deleteSession(id, dir) }
+            if (result.isSuccess) {
                 edt {
                     val keep = (0 until model.size)
                         .map { model.getElementAt(it) }
-                        .filter { it.id !in active }
+                        .filter { it.id != id }
                     model.replaceAll(keep)
-                    done()
+                    capture("Worktree Session Deleted", mapOf("sessionId" to id))
+                    done(true, null)
                 }
-            } catch (e: Exception) {
-                LOG.warn("worktree session delete failed dir=$dir message=${e.message}", e)
-                edt { done() }
+                return@launch
             }
+            val err = result.exceptionOrNull()
+            LOG.warn("worktree session delete failed id=$id dir=$dir message=${err?.message}", err)
+            edt { done(false, err?.message) }
             reload()
         }
     }

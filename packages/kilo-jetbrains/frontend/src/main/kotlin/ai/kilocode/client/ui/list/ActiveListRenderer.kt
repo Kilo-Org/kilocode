@@ -84,6 +84,7 @@ internal class ActiveListRenderer(
         val active = selected && (focused || list.hasFocus() || (list as? ActiveListActive)?.active() == true)
         val fg = UIUtil.getListForeground(active, active || focused)
         val weak = if (active) fg else UiStyle.Colors.weak()
+        val titleFg = if (value.muted) weak else fg
         val section = activeListSectionTitle(model.items, index)
 
         background = list.background
@@ -95,7 +96,7 @@ internal class ActiveListRenderer(
         top.setPreferredSize(section?.let { Dimension(0, sep.getFontMetrics(sep.font).height + insets.top + insets.bottom) })
 
         title.clear()
-        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, fg))
+        title.append(value.title, SimpleTextAttributes(SimpleTextAttributes.STYLE_BOLD, titleFg))
         value.note?.takeIf { it.isNotBlank() }?.let {
             title.append("  $it", SimpleTextAttributes.GRAYED_ATTRIBUTES)
         }

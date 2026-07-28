@@ -64,6 +64,7 @@ internal interface ActiveListItem {
     val trailing: String? get() = null
     val cells: List<ActiveListCell> get() = emptyList()
     val disabled: Boolean get() = false
+    val muted: Boolean get() = false
     /** Extra text matched by the filter field in addition to [title]; null matches title only. */
     val search: String? get() = null
 }

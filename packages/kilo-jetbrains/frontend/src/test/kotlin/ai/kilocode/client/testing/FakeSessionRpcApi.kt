@@ -104,6 +104,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val questionRejects = mutableListOf<Pair<String, String>>()
     val deletes = java.util.concurrent.CopyOnWriteArrayList<Pair<String, String>>()
     var deleteGate: CompletableDeferred<Unit>? = null
+    var deleteThrows: Exception? = null
     val renames = mutableListOf<Triple<String, String, String>>()
     var renameThrows: Exception? = null
     val lists = mutableListOf<String>()
@@ -150,6 +151,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
 
     override suspend fun delete(id: String, directory: String) {
         assertNotEdt("delete")
+        deleteThrows?.let { throw it }
         deleteGate?.await()
         deletes.add(id to directory)
         listed.removeAll { it.id == id }

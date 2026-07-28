@@ -124,6 +124,7 @@ class WorktreeSessionEditorPanel(
 
     @RequiresEdt
     private fun open(row: ActiveListItem, focus: Boolean) {
+        if (row.key in manager.deleting()) return
         if (row.key == SessionHost.NEW) {
             manager.newSession()
             return
@@ -138,9 +139,10 @@ class WorktreeSessionEditorPanel(
         val key = manager.currentKey()
         val pending = manager.hasPendingNew()
         val kinds = manager.activity()
+        val deleting = manager.deleting()
         if (pending || key == SessionHost.NEW) rows += NewRow
         rows += HistoryTime.sorted((0 until controller.model.size).map { LocalHistoryItem(controller.model.getElementAt(it)) })
-            .map { SessionRow(it.session, kinds[it.id]) }
+            .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting) }
         list.update(rows, ActiveListSelection.PreserveNoScroll)
         select(if (pending) SessionHost.NEW else key)
         updateActions()
@@ -160,7 +162,7 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
-    private fun selectedKeys(): List<String> = list.selectedKeys().filter { it != SessionHost.NEW }
+    private fun selectedKeys(): List<String> = list.selectedKeys().filter { it != SessionHost.NEW && it !in manager.deleting() }
 
     @RequiresEdt
     private fun updateActions() {
@@ -230,18 +232,23 @@ class WorktreeSessionEditorPanel(
         override val section: String get() = HistoryTime.title(HistorySection.TODAY)
     }
 
-    private data class SessionRow(val session: SessionDto, val kind: SessionActivityKind?) : ActiveListItem {
+    private data class SessionRow(
+        val session: SessionDto,
+        val kind: SessionActivityKind?,
+        val deleting: Boolean = false,
+    ) : ActiveListItem {
         private val item = LocalHistoryItem(session)
         override val key: String get() = session.id
         override val title: String get() = session.title.takeIf { it.isNotBlank() }
             ?: KiloBundle.message("worktree.session.untitled")
         override val tooltip: String get() = title
-        override val badges: List<ActiveListBadge> get() = listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
-        override val trailing: String get() = HistoryTime.relative(item)
+        override val badges: List<ActiveListBadge> get() = if (deleting) emptyList() else listOfNotNull(kind?.let { ActiveListBadge(it.label(), it.style()) })
+        override val trailing: String get() = if (deleting) KiloBundle.message("worktree.session.deleting") else HistoryTime.relative(item)
         override val section: String get() = HistoryTime.title(HistoryTime.section(item))
         override val search: String get() = listOf(session.title, session.id, session.directory).joinToString(" ")
+        override val muted: Boolean get() = deleting
         override val cells: List<ActiveListCell>
-            get() = listOf(ActiveListCell(
+            get() = if (deleting) emptyList() else listOf(ActiveListCell(
                 DELETE_CELL,
                 KiloBundle.message("worktree.session.delete.action"),
                 icon = AllIcons.Actions.GC,

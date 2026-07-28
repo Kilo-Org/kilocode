@@ -1,5 +1,6 @@
 package ai.kilocode.client.agentManager.worktree
 
+import ai.kilocode.client.KiloNotifications
 import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
@@ -46,8 +47,10 @@ open class WorktreeSessionEditorManager(
     private val confirm: (JComponent, String, String) -> Boolean = { parent, msg, title ->
         Messages.showYesNoDialog(parent, msg, title, Messages.getWarningIcon()) == Messages.YES
     },
+    private val notify: (String, String?) -> Unit = { title, content -> KiloNotifications.error(project, title, content) },
 ) : SessionHost(project, worktree, create, resolve, status, timers, request) {
     private val right = JPanel(BorderLayout())
+    private val deleting = linkedSetOf<String>()
     private var last: String? = null
     private var pending = false
     var onPresent: ((String?) -> Unit)? = null
@@ -70,6 +73,9 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     open fun hasPendingNew(): Boolean = pending
+
+    @RequiresEdt
+    open fun deleting(): Set<String> = deleting
 
     @RequiresEdt
     override fun newSession() {
@@ -111,7 +117,7 @@ open class WorktreeSessionEditorManager(
 
     @RequiresEdt
     open fun deleteSessions(ids: List<String>) {
-        val active = ids.filter { it != NEW }.distinct()
+        val active = ids.filter { it != NEW && it !in deleting }.distinct()
         if (active.isEmpty()) return
         val msg = if (active.size == 1)
             KiloBundle.message("worktree.session.delete.confirm.message", title(active[0]))
@@ -119,16 +125,22 @@ open class WorktreeSessionEditorManager(
             KiloBundle.message("worktree.session.delete.confirm.message.multiple", active.size)
         if (!confirm(right, msg, KiloBundle.message("worktree.session.delete.confirm.title"))) return
         val key = currentKey()
-        val show = key in active
-        active.forEach(::forceSession)
-        list.delete(active) {
-            if (!show) {
+        val names = active.associateWith(::title)
+        deleting.addAll(active)
+        onListChanged?.invoke()
+        active.forEach { id ->
+            val name = names[id] ?: title(id)
+            list.delete(id) { ok, err ->
+                deleting.remove(id)
                 onListChanged?.invoke()
-                return@delete
+                if (ok) return@delete
+                notify(KiloBundle.message("worktree.session.delete.failed.title", name), err)
             }
+        }
+        active.forEach(::forceSession)
+        if (key in active) {
             val next = latest()
             if (next != null) openSession(SessionRef.Local(next)) else newSession()
-            onListChanged?.invoke()
         }
     }
 
@@ -151,6 +163,7 @@ open class WorktreeSessionEditorManager(
     private fun latest(): SessionDto? {
         return (0 until list.model.size)
             .map { list.model.getElementAt(it) }
+            .filter { it.id !in deleting }
             .maxByOrNull { it.time.updated }
     }
 

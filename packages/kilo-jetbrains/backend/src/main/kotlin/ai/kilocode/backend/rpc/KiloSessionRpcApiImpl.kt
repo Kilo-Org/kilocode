@@ -70,7 +70,9 @@ class KiloSessionRpcApiImpl internal constructor(
     override suspend fun create(directory: String): SessionDto {
         app.requireReady()
         log.info("create session: directory=$directory")
-        return workspaces.get(directory).createSession()
+        val session = workspaces.get(directory).createSession()
+        log.info("create session: id=${session.id}, directory=$directory")
+        return session
     }
 
     override suspend fun get(id: String, directory: String): SessionDto {
@@ -81,6 +83,7 @@ class KiloSessionRpcApiImpl internal constructor(
 
     override suspend fun delete(id: String, directory: String) {
         app.requireReady()
+        log.info("delete session: id=$id, directory=$directory")
         val dir = sessions.getDirectory(id, directory)
         workspaces.get(dir).deleteSession(id)
     }

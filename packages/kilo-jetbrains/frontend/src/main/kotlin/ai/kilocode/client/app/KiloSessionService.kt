@@ -112,9 +112,9 @@ class KiloSessionService internal constructor(
 
     /** Create a new session. Caller awaits the result. */
     suspend fun create(dir: String): SessionDto {
-        log.info("create: dir=$dir")
+        log.info("kind=session create=true dir=${ChatLogSummary.dir(dir)}")
         val session = call { create(dir) }
-        log.info("create: id=${session.id}")
+        log.info("${ChatLogSummary.sid(session.id)} kind=session create=true ok=true dir=${ChatLogSummary.dir(dir)}")
         refresh(dir)
         return session
     }
@@ -131,7 +131,9 @@ class KiloSessionService internal constructor(
     }
 
     suspend fun deleteSession(id: String, dir: String) {
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true dir=${ChatLogSummary.dir(dir)}")
         call { delete(id, dir) }
+        log.info("${ChatLogSummary.sid(id)} kind=session delete=true ok=true dir=${ChatLogSummary.dir(dir)}")
         list(dir)
     }
 
