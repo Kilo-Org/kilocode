@@ -479,6 +479,22 @@ function case2b_autoFlag() {
       /\s--auto\b/.test(kiloCmd) || /kilo run\s+--auto\b/.test(kiloCmd),
       `Fix verify kilo run must contain --auto; got: ${kiloCmd}`,
     )
+
+    // The step runs under `set -o pipefail` + the default `bash -e`, so an
+    // unguarded kilo pipeline aborts the block before verify2.log is written
+    // once the CLI exits nonzero on a mid-stream error. The rebuild must decide
+    // this step's outcome, not the agent's exit code.
+    // Window is the end of the kilo pipeline → the rebuild, so a comment
+    // elsewhere in the block cannot satisfy the guard assertion.
+    const teeIdx = joined.indexOf("tee -a docs-sync-out/edit-log.txt")
+    assert.ok(teeIdx >= 0, `expected the kilo pipeline to tee edit-log.txt:\n${joined}`)
+    const kiloPipeline = joined.slice(teeIdx, joined.indexOf("bun run", teeIdx))
+    assert.match(
+      kiloPipeline,
+      /\|\|\s*(echo|true)\b/,
+      `Fix verify kilo pipeline must be guarded (|| echo/true) so bash -e cannot skip the rebuild; got: ${kiloPipeline}`,
+    )
+    assert.match(joined, /verify2\.log/, "Fix verify block must still write verify2.log")
   }
 
   // (iii) authoritative: real stub invocations with callLog — every argv has --auto
