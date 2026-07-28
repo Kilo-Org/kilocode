@@ -61,7 +61,9 @@ export const ConfigOverlayPatch = Schema.Struct({
   scope: Scope,
   set: Schema.optional(UnknownRecord),
   unset: Schema.optional(Schema.Array(Schema.Array(Schema.String))),
-  expected: Schema.Struct({ path: Schema.String, revision: Schema.String }),
+  // Optional: clients that did not read a revision (anything but the settings
+  // page) still write unconditionally instead of failing the request.
+  expected: Schema.optional(Schema.Struct({ path: Schema.String, revision: Schema.String })),
 })
 export class ConfigOverlayConflictError extends Schema.ErrorClass<ConfigOverlayConflictError>(
   "ConfigOverlayConflictError",

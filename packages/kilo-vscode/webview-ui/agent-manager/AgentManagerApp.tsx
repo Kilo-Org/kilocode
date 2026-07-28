@@ -1593,8 +1593,12 @@ const AgentManagerContent: Component = () => {
 
       applyProjectSelection(msg, {
         managed: (projectId) => projectLive.sessions()[projectId] ?? projectStates()[projectId]?.sessions ?? [],
-        local: selectLocal,
-        worktree: selectWorktree,
+        local: () => selectLocal(),
+        // Act on the worktree only when the applied state already knows it,
+        // otherwise the ack raced ahead of that project's state push.
+        worktree: (projectId, worktreeId) => {
+          if (projectStates()[projectId]?.worktrees.some((wt) => wt.id === worktreeId)) selectWorktree(worktreeId)
+        },
         session: session.selectSession,
         managedSession: focusManagedSession,
       })
@@ -2369,6 +2373,7 @@ const AgentManagerContent: Component = () => {
             sessions={projectSessionsLive()}
             selectedProject={activeProjectId()}
             selection={selection() ?? undefined}
+            currentSessionID={session.currentSessionID}
             bindings={kb()}
             t={t}
             onSearchRef={(ref) => (sidebarSearchMenu = ref)}

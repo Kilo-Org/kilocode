@@ -11240,7 +11240,7 @@ export type ConfigOverlayUpdateData = {
       [key: string]: unknown
     }
     unset?: Array<Array<string>>
-    expected: {
+    expected?: {
       path: string
       revision: string
     }

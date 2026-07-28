@@ -41,15 +41,22 @@ and `configUpdateFailed` currently wipes the draft for the failed scope. Any exi
 sender without a binding (permission dock, model picker, auto-approve, onboarding)
 now fails or loses the user's unsaved edits.
 
-- Fix: absent binding id falls back to the legacy revision-less write; keep revision
-  enforcement only where a binding was actually supplied. Keep the draft for scopes
-  that did not complete.
+- Backend half is done: `expected` is optional in the overlay schema, writer, and
+  handler, so a client without a binding writes unconditionally again instead of
+  getting a 400. The webview half (draft retention on `configUpdateFailed`, and the
+  audit of every `updateConfig` sender) is still open.
 - Work: the code change is small; the real work is auditing every webview
   `updateConfig` sender and classifying it.
 - Also: this change is orthogonal to multi-project. Split it into its own commit
   (`feat(vscode): config write revision bindings`) so it can be reverted alone.
 
 ### 1.2 Indexing status read silently revokes consent — P0-3 / P0-4
+
+Partially addressed: untrusted projects are now filtered out of the consent list
+(P0-4), and config scope switching plus project-scoped `indexing.enabled` writes
+were restored after the rework had hardcoded the tab to global scope (the earlier
+P1-8 gap). The remaining blocker is the read path below.
+
 
 `fetchAndSendIndexingStatus` issues `PUT /indexing/consent` (a write) on a plain
 status refresh, defaulting to `enabled: false` for any project not in local

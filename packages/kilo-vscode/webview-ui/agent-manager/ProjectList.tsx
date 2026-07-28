@@ -29,6 +29,7 @@ interface Props {
   sessions: Record<string, ProjectSessionInfo[]>
   selectedProject?: string
   selection?: string
+  currentSessionID?: () => string | undefined
   busy?: (id: string) => boolean
   bindings: Record<string, string>
   t: LanguageContextValue["t"]
@@ -102,10 +103,21 @@ export const ProjectList: Component<Props> = (props) => {
   const current = createMemo(() => {
     const projectId = props.selectedProject
     if (!projectId) return
-    if (props.selection === LOCAL) return search().find((item) => item.key === `${projectId}:local`)
-    return search().find(
+    const worktree = search().find(
       (item) => item.projectId === projectId && item.kind === "worktree" && item.worktreeId === props.selection,
     )
+    if (worktree) return worktree
+    // On LOCAL, an open session tab is the active item when there is one, so the
+    // menu highlights the same row the sidebar does.
+    const session = props.currentSessionID?.()
+    if (session) {
+      const match = search().find(
+        (item) => item.projectId === projectId && item.kind === "session" && item.sessionId === session,
+      )
+      if (match) return match
+    }
+    if (props.selection === LOCAL) return search().find((item) => item.key === `${projectId}:local`)
+    return undefined
   })
   const selectSearch = (item: SidebarSearchItem) => {
     if (!item.projectId) return

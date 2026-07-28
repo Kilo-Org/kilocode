@@ -386,6 +386,9 @@ export class ProjectContexts {
       if (ctx.pinned) continue
       this.expanded.delete(ctx.id)
       ctx.suspend()
+      // Match remove()/syncPinned(): drop the routes too, otherwise the shared
+      // route service accumulates entries for every disabled project.
+      this.opts.remove?.(ctx.id)
     }
     return pinned
   }

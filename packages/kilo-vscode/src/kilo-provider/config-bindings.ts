@@ -32,6 +32,12 @@ export class ConfigBindings {
 
   create(input: Omit<ConfigBinding, "id">): ConfigBinding {
     const binding = { ...input, id: randomUUID() }
+    // Only the newest binding per scope+directory can still be saved against,
+    // so drop the superseded ones instead of growing forever on read-only
+    // refreshes (external config edits re-issue bindings without consuming).
+    for (const [id, existing] of this.bindings) {
+      if (existing.scope === binding.scope && existing.directory === binding.directory) this.bindings.delete(id)
+    }
     this.bindings.set(binding.id, binding)
     return binding
   }

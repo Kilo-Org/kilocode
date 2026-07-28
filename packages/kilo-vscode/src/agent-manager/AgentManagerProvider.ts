@@ -10,6 +10,7 @@ import { isAbsolutePath } from "../path-utils"
 import { WorktreeManager, type CreateWorktreeResult } from "./WorktreeManager"
 import { remoteRef, WorktreeStateManager, type Worktree } from "./WorktreeStateManager"
 import { handleSection } from "./section-handler"
+import { STATE_GATED } from "./state-gate"
 import {
   addSessionToLifecycleWorktree,
   closeLifecycleSession,
@@ -67,6 +68,7 @@ import { createProjectWiring } from "./project-wiring"
 import { ProjectScope } from "./project-scope"
 import type { AgentManagerOutMessage, AgentManagerInMessage } from "./types"
 import type { Host, PanelContext, OutputHandle, Disposable } from "./host"
+
 export class AgentManagerProvider implements Disposable {
   public static readonly viewType = "kilo-code.new.AgentManagerPanel"
   private panel: PanelContext | undefined
@@ -707,6 +709,10 @@ export class AgentManagerProvider implements Disposable {
     }
     if (m.type === "agentManager.setSessionsCollapsed") {
       this.state?.setSessionsCollapsed(m.collapsed)
+      // Multi-project bodies render collapsed purely from pushed state, so the
+      // mutation must round-trip; legacy mode is covered by its optimistic
+      // signal and the push is a no-op update.
+      this.pushState()
       return null
     }
     if (m.type === "agentManager.setSidebarCollapsed") {
@@ -966,42 +972,20 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private async waitForStateReady(context: string): Promise<void> {
+    const ctx = this.projectScope.current()
+    // A message scoped to a background project must wait for that project's
+    // own initialization; this.stateReady only tracks the active project.
+    if (ctx && ctx.id !== this.contexts.active()?.id) {
+      const result = await initContextState(ctx, (...args) => this.log(...args))
+      if (!result.ok) this.log(`${context}: project ${ctx.id} state did not load`)
+      return
+    }
     if (!this.stateReady) return
     await this.stateReady.catch((err) => this.log(`${context}: stateReady rejected, continuing:`, err))
   }
 
   private shouldWaitForState(m: AgentManagerInMessage): boolean {
-    switch (m.type) {
-      case "agentManager.deleteWorktree":
-      case "agentManager.removeStaleWorktree":
-      case "agentManager.openLocally":
-      case "agentManager.addSessionToWorktree":
-      case "agentManager.closeSession":
-      case "agentManager.persistSession":
-      case "agentManager.forgetSession":
-      case "agentManager.renameWorktree":
-      case "agentManager.requestBranches":
-      case "agentManager.importFromBranch":
-      case "agentManager.importFromPR":
-      case "agentManager.importExternalWorktree":
-      case "agentManager.importAllExternalWorktrees":
-      case "agentManager.setTabOrder":
-      case "agentManager.setWorktreeOrder":
-      case "agentManager.setSessionsCollapsed":
-      case "agentManager.setSidebarCollapsed":
-      case "agentManager.setReviewDiffStyle":
-      case "agentManager.setDefaultBaseBranch":
-      case "agentManager.createSection":
-      case "agentManager.renameSection":
-      case "agentManager.deleteSection":
-      case "agentManager.setSectionColor":
-      case "agentManager.toggleSectionCollapsed":
-      case "agentManager.moveToSection":
-      case "agentManager.moveSection":
-        return true
-      default:
-        return false
-    }
+    return STATE_GATED.has(m.type)
   }
 
   private onToolEvent(event: unknown, directory?: string): void {
@@ -1601,7 +1585,9 @@ export class AgentManagerProvider implements Disposable {
   private messageProject(m: AgentManagerInMessage): ProjectContext | undefined {
     const pid = (m as { projectId?: unknown }).projectId
     if (typeof pid !== "string") return this.contexts.active()
-    return this.contexts.get(pid)
+    // Re-check trust and enablement on every project-stamped message: a context
+    // instance can be cached before trust is confirmed, and get() checks neither.
+    return this.contexts.usable(pid)
   }
 
   private activateProject(ctx: ProjectContext): void {

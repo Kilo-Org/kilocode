@@ -1,6 +1,16 @@
 import type { WorktreeStateManager } from "./WorktreeStateManager"
 import type { AgentManagerInMessage } from "./types"
 
+const SECTION_TYPES = new Set<string>([
+  "agentManager.createSection",
+  "agentManager.renameSection",
+  "agentManager.deleteSection",
+  "agentManager.setSectionColor",
+  "agentManager.toggleSectionCollapsed",
+  "agentManager.moveToSection",
+  "agentManager.moveSection",
+])
+
 /** Handle section CRUD messages. Returns true if handled. */
 export function handleSection(
   state: WorktreeStateManager | undefined,
@@ -9,8 +19,7 @@ export function handleSection(
   log?: (...args: unknown[]) => void,
 ): boolean {
   if (!state) {
-    if (m.type.startsWith("agentManager.") && m.type.includes("ection"))
-      log?.(`handleSection: ${m.type} dropped, state missing`)
+    if (SECTION_TYPES.has(m.type)) log?.(`handleSection: ${m.type} dropped, state missing`)
     return false
   }
   if (m.type === "agentManager.createSection") state.addSection(m.name, m.color ?? null, m.worktreeIds)

@@ -11563,7 +11563,7 @@
                     "additionalProperties": false
                   }
                 },
-                "required": ["scope", "expected"],
+                "required": ["scope"],
                 "additionalProperties": false
               }
             }
@@ -26122,7 +26122,7 @@
             "type": "object",
             "properties": {
               "start": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               }
             },
@@ -26198,11 +26198,11 @@
             "type": "object",
             "properties": {
               "start": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               },
               "end": {
-                "type": "number",
+                "type": "integer",
                 "minimum": 0
               },
               "elapsed": {

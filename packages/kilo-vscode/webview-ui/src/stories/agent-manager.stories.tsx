@@ -5,7 +5,7 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { StoryProviders, defaultMockData, mockSessionValue, t } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
@@ -1117,7 +1117,6 @@ export const SidebarSearchOpen: Story = {
 // ---------------------------------------------------------------------------
 
 import { ProjectList } from "../../agent-manager/ProjectList"
-import { useLanguage } from "../context/language"
 import type {
   AgentManagerStateMessage,
   AgentProjectSnapshot,
@@ -1209,7 +1208,6 @@ const storyLocal = (branch: string, additions: number, deletions: number, ahead 
 export const MultiProjectSidebar: Story = {
   name: "Project List — two expanded projects with restored controls",
   render: () => {
-    const { t } = useLanguage()
     return (
       <StoryProviders noPadding>
         <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>

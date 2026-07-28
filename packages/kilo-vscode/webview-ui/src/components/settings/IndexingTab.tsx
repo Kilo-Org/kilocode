@@ -1,4 +1,5 @@
 import { Component, For, Show, createMemo, createSignal } from "solid-js"
+import { Button } from "@kilocode/kilo-ui/button"
 import { Card } from "@kilocode/kilo-ui/card"
 import { DEFAULT_VECTOR_STORE, isFileExtension, parseFileExtensions } from "@kilocode/kilo-indexing/config"
 import { formatKiloEmbeddingModelLabel, getKiloEmbeddingModel } from "@kilocode/kilo-indexing/embedding-models"
@@ -18,6 +19,8 @@ import SettingsRow from "./SettingsRow"
 import {
   indexingConfig,
   indexingDescription,
+  indexingEnabled,
+  indexingEnabledInherited,
   indexingInheritance,
   indexingSource,
   indexingUpdate,
@@ -91,8 +94,75 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
   return []
 }
 
+/** Config scope switcher plus the scope-derived enable switch. */
+const ScopeRows: Component<{
+  scope: IndexingScope
+  enabled: boolean
+  inherited: boolean
+  t: (key: string) => string
+  tag: () => string | undefined
+  onScope: (next: IndexingScope) => void
+  onEnabled: (next: boolean) => void
+}> = (props) => {
+  const scope = () => props.scope
+  const language = { t: props.t }
+  const enabled = () => props.enabled
+  const inherited = () => props.inherited
+  const changeScope = props.onScope
+  const saveEnabled = props.onEnabled
+  const tag = props.tag
+  return (
+    <>
+      <SettingsRow
+        title="Configuration scope"
+        description={
+          scope() === "global"
+            ? language.t("settings.indexing.globalEnable.description")
+            : language.t("settings.indexing.projectEnable.description")
+        }
+      >
+        <div style={{ display: "flex", gap: "8px" }}>
+          <Button
+            variant={scope() === "global" ? "primary" : "secondary"}
+            size="small"
+            onClick={() => changeScope("global")}
+          >
+            {language.t("settings.config.scope.global")}
+          </Button>
+          <Button
+            variant={scope() === "project" ? "primary" : "secondary"}
+            size="small"
+            onClick={() => changeScope("project")}
+          >
+            {language.t("settings.config.scope.local")}
+          </Button>
+        </div>
+      </SettingsRow>
+      <SettingsRow
+        title={
+          scope() === "global"
+            ? language.t("settings.indexing.globalEnable.title")
+            : language.t("settings.indexing.projectEnable.title")
+        }
+        description={
+          inherited()
+            ? `Inherited from global config (${enabled() ? "on" : "off"}) until a project value is saved.`
+            : language.t("settings.indexing.enable.description")
+        }
+        tag={tag}
+      >
+        <Switch checked={enabled()} onChange={saveEnabled} hideLabel>
+          {scope() === "global"
+            ? language.t("settings.indexing.globalEnable.title")
+            : language.t("settings.indexing.projectEnable.title")}
+        </Switch>
+      </SettingsRow>
+    </>
+  )
+}
+
 const IndexingTab: Component = () => {
-  const { globalConfig, projectConfig, settings, updateGlobalConfig, updateSetting } = useConfig()
+  const { globalConfig, projectConfig, settings, updateGlobalConfig, updateProjectConfig, updateSetting } = useConfig()
   const indexing = useIndexing()
   const embeds = useKiloEmbeddingModels()
   const language = useLanguage()
@@ -104,12 +174,14 @@ const IndexingTab: Component = () => {
   const [tuningDrafts, setTuningDrafts] = createSignal<Record<string, string>>({})
   const [extensionDrafts, setExtensionDrafts] = createSignal<Record<string, string>>({})
   const [extensionErrors, setExtensionErrors] = createSignal<Record<string, string>>({})
-  const scope = () => "global" as const
+  const [scope, setScope] = createSignal<IndexingScope>("global")
 
   const globalCfg = createMemo<IndexingConfig>(() => globalConfig().indexing ?? {})
   const projectCfg = createMemo<IndexingConfig>(() => projectConfig().indexing ?? {})
   const raw = createMemo<IndexingConfig>(() => (scope() === "global" ? globalCfg() : projectCfg()))
   const cfg = createMemo<IndexingConfig>(() => indexingConfig(scope(), globalCfg(), projectCfg()))
+  const enabled = createMemo(() => indexingEnabled(scope(), globalCfg(), projectCfg()))
+  const inherited = createMemo(() => indexingEnabledInherited(scope(), globalCfg(), projectCfg()))
   const consent = createMemo(() => settings()["indexing.consent"] === true)
   const projects = createMemo(() => (settings()["indexing.projects"] as Project[] | undefined) ?? [])
   const projectId = createMemo(() => settings()["indexing.projectId"] as string | undefined)
@@ -120,9 +192,20 @@ const IndexingTab: Component = () => {
     sourceLabel(indexingSource(current, globalCfg(), projectCfg(), paths)) || undefined
   const description = (value: string, paths: readonly (readonly string[])[]) =>
     indexingDescription(value, inheritance(paths))
+  const changeScope = (next: IndexingScope) => {
+    // Blur first so a pending field edit commits against the scope it was typed in.
+    const active = document.activeElement
+    if (active instanceof HTMLElement) active.blur()
+    setScope(next)
+  }
+
   const updateIndexing = (partial: IndexingConfig) => {
     const patch = { indexing: indexingUpdate(scope(), globalCfg(), projectCfg(), partial) }
-    updateGlobalConfig(patch)
+    if (scope() === "global") {
+      updateGlobalConfig(patch)
+      return
+    }
+    updateProjectConfig(patch)
   }
 
   const vectorStore = () => cfg().vectorStore ?? DEFAULT_VECTOR_STORE
@@ -158,9 +241,23 @@ const IndexingTab: Component = () => {
     updateIndexing({ provider: next, model: null, dimension: null })
   }
 
-  const saveEnabled = (enabled: boolean) => {
+  /** Machine-local consent for the selected project; never written to config. */
+  const saveConsent = (granted: boolean) => {
     const id = projectId()
-    if (id) vscode.postMessage({ type: "setIndexingConsent", projectId: id, enabled })
+    if (id) vscode.postMessage({ type: "setIndexingConsent", projectId: id, enabled: granted })
+  }
+
+  const saveEnabled = (next: boolean) => {
+    if (next && !cfg().provider && kiloAvailable()) {
+      updateIndexing({
+        enabled: next,
+        provider: "kilo",
+        model: knownKiloModel(cfg().model) ?? (kiloDefault() || null),
+        dimension: null,
+      })
+      return
+    }
+    updateIndexing({ enabled: next })
   }
 
   const saveModel = (value: string) => {
@@ -257,7 +354,7 @@ const IndexingTab: Component = () => {
     setExtensionErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([entry]) => entry !== scope())))
   }
 
-  const content = () => (
+  const content = (_scope: IndexingScope) => (
     <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
       <Card>
         <SettingsRow title="Project" description={project()?.root ?? "Select a project for indexing consent."}>
@@ -282,10 +379,19 @@ const IndexingTab: Component = () => {
           title={language.t("settings.indexing.enable.title")}
           description={language.t("settings.indexing.enable.description")}
         >
-          <Switch checked={consent()} onChange={saveEnabled} hideLabel>
+          <Switch checked={consent()} onChange={saveConsent} hideLabel>
             {language.t("settings.indexing.enable.title")}
           </Switch>
         </SettingsRow>
+        <ScopeRows
+          scope={scope()}
+          enabled={enabled()}
+          inherited={inherited()}
+          t={language.t}
+          tag={() => tag(scope(), [["enabled"]])}
+          onScope={changeScope}
+          onEnabled={saveEnabled}
+        />
         <SettingsRow
           title={language.t("settings.indexing.showButton.title")}
           description={language.t("settings.indexing.showButton.description")}
@@ -555,7 +661,11 @@ const IndexingTab: Component = () => {
     </div>
   )
 
-  return content()
+  return (
+    <Show when={scope()} keyed>
+      {content}
+    </Show>
+  )
 }
 
 export default IndexingTab

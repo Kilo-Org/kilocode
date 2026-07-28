@@ -55,16 +55,6 @@ export function projectIdFor(root: string): string {
   return `prj-${createHash("sha1").update(root).digest("hex").slice(0, 12)}`
 }
 
-/** Resolve the canonical Git top-level for a directory, or undefined when it is not inside a repository. */
-export async function resolveGitRoot(
-  dir: string,
-  revparse: (cwd: string) => Promise<string>,
-): Promise<string | undefined> {
-  const top = await revparse(dir).catch(() => undefined)
-  if (!top) return undefined
-  return canonicalizePath(top.trim())
-}
-
 /** Resolve linked worktrees to the primary checkout so project-local state is shared by the repository. */
 export async function resolveProjectRoot(
   dir: string,
@@ -74,12 +64,13 @@ export async function resolveProjectRoot(
     Promise.resolve()
       .then(() => git(dir, args))
       .catch(() => undefined)
-  const top = await run(["--path-format=absolute", "--show-toplevel"])
+  const revparse = (args: string[]) => run(["rev-parse", ...args])
+  const top = await revparse(["--path-format=absolute", "--show-toplevel"])
   if (!top) return undefined
   const root = canonicalizePath(top.trim())
   const [gitdir, common] = await Promise.all([
-    run(["--path-format=absolute", "--git-dir"]),
-    run(["--path-format=absolute", "--git-common-dir"]),
+    revparse(["--path-format=absolute", "--git-dir"]),
+    revparse(["--path-format=absolute", "--git-common-dir"]),
   ])
   if (!gitdir || !common) return root
   if (samePath(canonicalizePath(gitdir.trim()), canonicalizePath(common.trim()))) return root

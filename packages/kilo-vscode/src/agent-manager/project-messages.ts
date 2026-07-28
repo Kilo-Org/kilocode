@@ -10,7 +10,7 @@ import simpleGit from "simple-git"
 import type { AgentManagerInMessage } from "./types"
 import type { ProjectRegistry } from "./project-registry"
 import type { ProjectContext, ProjectContexts, ProjectInitResult } from "./project-context"
-import { projectIdFor, resolveGitRoot, samePath } from "./project-paths"
+import { projectIdFor, resolveProjectRoot, samePath } from "./project-paths"
 import type { SidebarTarget } from "./project-route"
 
 export interface ProjectMessageDeps {
@@ -139,7 +139,9 @@ async function addProject(deps: ProjectMessageDeps): Promise<void> {
   if (disabled(deps)) return
   const dir = await deps.pickFolder()
   if (!dir) return
-  const root = await resolveGitRoot(dir, (cwd) => simpleGit(cwd).revparse(["--show-toplevel"]))
+  // resolveProjectRoot (not resolveGitRoot) so a folder inside a linked worktree
+  // registers the primary checkout and cannot duplicate an existing project.
+  const root = await resolveProjectRoot(dir, (cwd, args) => simpleGit(cwd).raw(args))
   if (!root) {
     deps.error("The selected folder is not inside a Git repository.")
     return

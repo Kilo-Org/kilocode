@@ -14,6 +14,21 @@ import * as fs from "fs"
 import { normalizePath } from "./git-import"
 import type { SidebarTarget } from "./project-route"
 
+/** Accept a persisted sidebar target only when its shape matches a known kind. */
+function validTarget(value: unknown): SidebarTarget | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const target = value as Record<string, unknown>
+  if (typeof target.projectId !== "string") return undefined
+  if (target.kind === "local") return { projectId: target.projectId, kind: "local" }
+  if (target.kind === "worktree" && typeof target.worktreeId === "string") {
+    return { projectId: target.projectId, kind: "worktree", worktreeId: target.worktreeId }
+  }
+  if (target.kind === "session" && typeof target.sessionId === "string") {
+    return { projectId: target.projectId, kind: "session", sessionId: target.sessionId }
+  }
+  return undefined
+}
+
 export interface Worktree {
   id: string
   branch: string
@@ -739,7 +754,7 @@ export class WorktreeStateManager {
       this.reviewDiffStyle = "split"
     }
     this.defaultBase = data.defaultBaseBranch
-    this.activeTarget = data.activeTarget
+    this.activeTarget = validTarget(data.activeTarget)
     this.log(`Loaded state: ${this.worktrees.size} worktrees, ${this.sessions.size} sessions`)
     if (pruned > 0 || repaired) {
       if (pruned > 0) this.log(`Pruned ${pruned} orphaned sessions`)

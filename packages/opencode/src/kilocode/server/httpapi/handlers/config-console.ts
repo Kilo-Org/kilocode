@@ -77,7 +77,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
         set: ctx.payload.set ? { ...ctx.payload.set } : undefined,
         unset: ctx.payload.unset?.map((item) => [...item]),
       }
-      const expected = { ...body.expected }
+      const expected = body.expected ? { ...body.expected } : undefined
       const instance = yield* InstanceState.context
       const result = yield* flock
         .withLock(
@@ -89,7 +89,7 @@ export const configConsoleHandlers = HttpApiBuilder.group(InstanceHttpApi, "conf
               expected,
             }),
           ),
-          `config:${body.scope}:${expected.path}`,
+          `config:${body.scope}:${expected?.path ?? "target"}`,
         )
         .pipe(Effect.orDie)
       if (!result.ok) {

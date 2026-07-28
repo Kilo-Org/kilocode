@@ -59,7 +59,8 @@ type PluginSpec = string | [string, Record<string, unknown>]
 // Merged English dictionary (same merge order as the real LanguageProvider)
 const dict: Record<string, string> = { ...appEn, ...amEn, ...uiEn, ...kiloEn }
 
-function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
+/** Story-local translator. Usable outside the provider tree, unlike useLanguage. */
+export function t(key: string, params?: Record<string, string | number | boolean | undefined>) {
   return resolveTemplate(dict[key] ?? key, params)
 }
 

@@ -21,17 +21,18 @@ export namespace KilocodeConfigWriter {
     directory: string
     worktree?: string
     scope: KilocodeConfigOverlay.Scope
-    expected: { path: string; revision: string }
+    expected?: { path: string; revision: string }
     set?: Record<string, unknown>
     unset?: string[][]
     write?: typeof Filesystem.write
     beforeWrite?: () => Promise<void>
   }): Promise<Result> {
     const target = await KilocodeConfigOverlay.target(input)
-    if (target.path !== input.expected.path) {
+    const expected = input.expected
+    if (expected && target.path !== expected.path) {
       return { ok: false, code: "target-changed", message: "The authoritative config target changed.", target }
     }
-    if (target.revision !== input.expected.revision) {
+    if (expected && target.revision !== expected.revision) {
       return { ok: false, code: "revision-conflict", message: "The config file changed since it was read.", target }
     }
     if (!target.writable) {
@@ -48,7 +49,7 @@ export namespace KilocodeConfigWriter {
     await mkdir(path.dirname(target.path), { recursive: true })
     await input.beforeWrite?.()
     const checked = await KilocodeConfigOverlay.target(input)
-    if (checked.path !== input.expected.path || !checked.writable) {
+    if ((expected && checked.path !== expected.path) || !checked.writable) {
       return {
         ok: false,
         code: "target-not-writable",
@@ -58,8 +59,8 @@ export namespace KilocodeConfigWriter {
     }
     const before = checked.exists ? await Bun.file(checked.path).text() : "{}"
     if (
-      KilocodeConfigOverlay.revision(checked.path, checked.exists, checked.exists ? before : "") !==
-      input.expected.revision
+      expected &&
+      KilocodeConfigOverlay.revision(checked.path, checked.exists, checked.exists ? before : "") !== expected.revision
     ) {
       return {
         ok: false,

@@ -69,10 +69,21 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
   const post = (message: Record<string, unknown>) =>
     vscode.postMessage({ ...message, projectId: props.project.id } as never)
 
+  // Escape unmounts the focused rename input, which fires a synchronous blur
+  // that would re-commit the cancelled value; this flag swallows that blur.
+  let cancelled = false
   const commitRename = (worktreeId: string) => {
+    if (cancelled) {
+      cancelled = false
+      return
+    }
     const label = name().trim()
     setRenaming(undefined)
     if (label) post({ type: "agentManager.renameWorktree", worktreeId, label })
+  }
+  const cancelRename = () => {
+    cancelled = true
+    setRenaming(undefined)
   }
 
   const renderWorktree = (worktree: NonNullable<Props["state"]>["worktrees"][number]) => (
@@ -124,7 +135,7 @@ export const ProjectSidebarBody: Component<Props> = (props) => {
       }}
       onRenameInput={setName}
       onCommitRename={() => commitRename(worktree.id)}
-      onCancelRename={() => setRenaming(undefined)}
+      onCancelRename={cancelRename}
       onRemoveStale={() => post({ type: "agentManager.removeStaleWorktree", worktreeId: worktree.id })}
       onCopyPath={() => navigator.clipboard.writeText(worktree.path)}
       onOpen={() => post({ type: "agentManager.openWorktree", worktreeId: worktree.id })}

@@ -79,9 +79,9 @@ describe("project-paths", () => {
 
   it("resolveProjectRoot maps a linked worktree to the primary checkout", async () => {
     const calls = new Map([
-      ["--path-format=absolute --show-toplevel", "/repo/worktree"],
-      ["--path-format=absolute --git-dir", "/repo/.git/worktrees/feature"],
-      ["--path-format=absolute --git-common-dir", "/repo/.git"],
+      ["rev-parse --path-format=absolute --show-toplevel", "/repo/worktree"],
+      ["rev-parse --path-format=absolute --git-dir", "/repo/.git/worktrees/feature"],
+      ["rev-parse --path-format=absolute --git-common-dir", "/repo/.git"],
       ["worktree list --porcelain -z", "worktree /repo\0HEAD abc\0\0worktree /repo/worktree\0HEAD def\0"],
     ])
     const root = await resolveProjectRoot("/repo/worktree", async (_cwd, args) => calls.get(args.join(" ")) ?? "")

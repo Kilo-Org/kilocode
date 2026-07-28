@@ -4687,7 +4687,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private getWorkspaceDirectory(sessionId?: string): string {
     const routed = this.routeSessionDirectory(sessionId ?? undefined)
-    if (routed === null) throw new Error(`Session ${sessionId} is ambiguous across projects.`)
+    // Ambiguous ids degrade to the legacy resolution instead of throwing: this
+    // runs eagerly per webview message, where a throw would drop the message.
+    if (routed === null)
+      console.warn(`[Kilo New] KiloProvider: session ${sessionId} is ambiguous across projects, using workspace root`)
     if (routed) return routed
     return resolveWorkspaceDirectory({
       sessionID: sessionId,
@@ -4698,7 +4701,10 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
 
   private getSessionDirectory(sessionId: string, session?: Session): string {
     const routed = this.routeSessionDirectory(sessionId)
-    if (routed === null) throw new Error(`Session ${sessionId} is ambiguous across projects.`)
+    if (routed === null)
+      console.warn(
+        `[Kilo New] KiloProvider: session ${sessionId} is ambiguous across projects, using tracked directory`,
+      )
     if (routed) return routed
     return this.sessionDirectories.get(sessionId) ?? session?.directory ?? this.getRootDirectory()
   }
