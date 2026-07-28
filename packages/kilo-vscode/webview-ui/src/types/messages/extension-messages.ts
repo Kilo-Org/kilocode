@@ -1114,6 +1114,13 @@ export interface ValidateFilesResultMessage {
   existing: string[]
 }
 
+export interface ClipboardWriteResultMessage {
+  type: "clipboardWriteResult"
+  id: string
+  ok: boolean
+  error?: string
+}
+
 export type ExtensionMessage =
   | ReadyMessage
   | FontSizeChangedMessage
@@ -1280,6 +1287,7 @@ export type ExtensionMessage =
   | TelemetryStateMessage
   | RemoteStatusMessage
   | ValidateFilesResultMessage
+  | ClipboardWriteResultMessage
   | MemoryLoadedMessage
   | MemoryEventMessage
   | MemoryOperationResultMessage
