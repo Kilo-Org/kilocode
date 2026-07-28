@@ -392,9 +392,7 @@ const live: Layer.Layer<
         toolChoice: input.toolChoice,
         maxOutputTokens: prepared.params.maxOutputTokens,
         abortSignal: input.abort,
-        // kilocode_change: AI SDK's built-in chunk timeout is removed in favor
-        // of a Kilo-owned per-event watchdog applied to the raw fullStream
-        // before LLMAISDK.toLLMEvents normalization (see below).
+        ...KiloLLM.timeout({ options: prepared.params.options, fallback: item.options, log: l }), // kilocode_change
         headers: prepared.headers,
         maxRetries: input.retries ?? 0,
         messages: prepared.messages,
@@ -422,14 +420,7 @@ const live: Layer.Layer<
       })
       // kilocode_change end
       // kilocode_change start - capture eligible session export request completion off the stream path
-      // kilocode_change: resolve per-subscription idle watchdog so concurrent
-      // sessions each get their own timer. Computed here (not at the stream
-      // consumer) so the resolved value travels with the returned fullStream.
-      const idleMs = KiloLLM.resolveIdleMs({
-        options: prepared.params.options,
-        fallback: item.options,
-      })
-      if (!exportable) return { type: "ai-sdk" as const, result, idleMs }
+      if (!exportable) return { type: "ai-sdk" as const, result }
       return {
         type: "ai-sdk" as const,
         result: {
@@ -443,7 +434,6 @@ const live: Layer.Layer<
             retries: input.retries ?? 0,
           }),
         },
-        idleMs,
       }
       // kilocode_change end
     })
@@ -464,22 +454,10 @@ const live: Layer.Layer<
             // Adapter seam: both runtimes expose the same LLMEvent stream. Native
             // already returns one; AI SDK streams are converted here.
             const state = LLMAISDK.adapterState()
-            // kilocode_change: wrap the raw AI SDK fullStream with the Kilo
-            // idle watchdog before normalization. Per-subscription timer was
-            // resolved inside `run` and travels with the result. Pass the
-            // scoped controller so the watchdog can abort a stalled source
-            // and avoid hanging cleanup.
-            const watched = KiloLLM.watchdogAsyncIterable(
-              result.result.fullStream as AsyncIterable<import("@ai-sdk/provider").LanguageModelV2StreamPart>,
-              result.idleMs,
-              ctrl,
-            )
-            return Stream.fromAsyncIterable(watched, (e) => (e instanceof Error ? e : new Error(String(e)))).pipe(
-              // kilocode_change: the watchdog consumes raw LanguageModelV2 parts;
-              // cast back to the TextStreamPart shape LLMAISDK.toLLMEvents expects.
-              Stream.mapEffect((event) =>
-                LLMAISDK.toLLMEvents(state, event as Parameters<typeof LLMAISDK.toLLMEvents>[1]),
-              ),
+            return Stream.fromAsyncIterable(result.result.fullStream, (e) =>
+              e instanceof Error ? e : new Error(String(e)),
+            ).pipe(
+              Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
               Stream.flatMap((events) => Stream.fromIterable(events)),
             )
           }),

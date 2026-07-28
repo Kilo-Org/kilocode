@@ -42,6 +42,7 @@ import { FeedbackProvider } from "./context/feedback"
 import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
 import { ImageModelsProvider } from "./context/image-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
+import { cycleAgent as cycle } from "./context/session-agent"
 import "./styles/chat.css"
 
 type ViewType = "newTask" | "history" | "profile" | "settings" | "subAgentViewer"
@@ -202,6 +203,7 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       onOpenUrl={openUrl}
       onOpenContent={openContent}
       onValidateFiles={validateFiles}
+      onNavigateToSession={(id) => session.selectSession(id)}
     >
       {props.children}
     </DataProvider>
@@ -275,14 +277,14 @@ const AppContent: Component = () => {
   }
 
   const cycleAgent = (direction: 1 | -1) => {
-    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
-    if (available.length <= 1) return
-    const current = session.selectedAgent()
-    const idx = available.findIndex((a) => a.name === current)
-    const raw = idx + direction
-    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
-    const agent = available[next]
-    if (agent) session.selectAgent(agent.name)
+    const id = session.currentSessionID() ?? tabs?.pending() ?? session.draftSessionID()
+    cycle({
+      agents: session.agents(),
+      scope: id,
+      direction,
+      selected: session.selectedAgent,
+      select: session.selectAgent,
+    })
   }
 
   const handleForked = (message: { type?: string; sessionID?: string; forkedFromID?: string }) => {

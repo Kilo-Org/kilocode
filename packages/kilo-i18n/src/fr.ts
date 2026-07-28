@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway vous donne accès à une sélection de modèles fiables et optimisés pour les agents de codage.",
-  "provider.connect.kiloGateway.line2":
-    "Avec une seule clé API, vous aurez accès à des modèles tels que Claude, GPT, Gemini, GLM et plus encore.",
-  "provider.connect.kiloGateway.visit.prefix": "Visitez ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " pour obtenir votre clé API.",
   "provider.connect.kiloGateway.byok.prefix": "Pour plus de statistiques d'utilisation, utilisez ",
   "provider.connect.kiloGateway.byok.link": "BYOK via Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -24,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "Accès unifié aux modèles IA avec routage intelligent",
 
   // Reasoning block label
-  "ui.permission.run": "Exécuter",
   "ui.reasoning.label": "Raisonnement",
 
   // Marketplace
-  "marketplace.tab.skills": "Skills",
-  "marketplace.tab.mcpServers": "Serveurs MCP",
-  "marketplace.category.all": "Tout",
-  "marketplace.placeholder": "À implémenter",
   "marketplace.card.installed": "Installé",
   "marketplace.card.install": "Installer",
   "marketplace.card.remove": "Supprimer",
@@ -75,8 +63,6 @@ export const dict = {
     "Êtes-vous sûr de vouloir supprimer ce {{type}} ? Cela le supprimera de votre configuration {{scope}}.",
   "marketplace.remove.cancel": "Annuler",
   "marketplace.remove.confirm.button": "Supprimer",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agents",
   "marketplace.search": "Rechercher...",
   "marketplace.filter.all": "Tous les éléments",
   "marketplace.filter.notInstalled": "Non installé",
@@ -84,12 +70,10 @@ export const dict = {
   "marketplace.empty": "Aucun élément trouvé",
   "marketplace.empty.relevant": "Aucun élément pertinent du marketplace trouvé pour cet espace de travail.",
   "marketplace.badge.mcpServer": "Serveur MCP",
-  "marketplace.badge.mode": "Mode",
   "marketplace.card.by": "par {{author}}",
   "marketplace.install.method": "Méthode d'installation",
   "marketplace.install.parameters": "Paramètres",
   "marketplace.install.optional": "(facultatif)",
-  "marketplace.install.required": "{{name}} est requis",
   "marketplace.scope.project": "projet",
   "marketplace.scope.global": "global",
   "marketplace.remove.type.mcp": "serveur MCP",
@@ -131,8 +115,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Ouvrir dans le visualiseur de différences",
-  "ui.messagePart.shell.command": "Commande",
-  "ui.messagePart.shell.output": "Sortie",
   "ui.messagePart.openInEditor": "Ouvrir dans l'éditeur",
 
   // Message feedback (thumbs up/down per assistant response)

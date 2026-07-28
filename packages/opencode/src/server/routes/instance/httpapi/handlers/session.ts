@@ -1,6 +1,7 @@
 import { Image } from "@/image/image" // kilocode_change - classify user image validation defects
 import { KiloSessionHttpApi } from "@/kilocode/server/httpapi/session-fork" // kilocode_change
 import { BlockedError as AgentRequirementError } from "@/kilocode/agent-requirements" // kilocode_change
+import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue" // kilocode_change
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { Agent } from "@/agent/agent"
@@ -389,7 +390,17 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       params: { sessionID: SessionID; messageID: MessageID }
     }) {
       yield* requireSession(ctx.params.sessionID)
-      yield* SessionError.mapBusy(runState.assertNotBusy(ctx.params.sessionID))
+      // kilocode_change start - allow deleting prompts that are queued behind the active turn
+      const remove = yield* runState.assertNotBusy(ctx.params.sessionID).pipe(
+        Effect.as(true),
+        Effect.catchTag("SessionBusyError", () =>
+          KiloSessionPromptQueue.drop(ctx.params.sessionID, ctx.params.messageID),
+        ),
+      )
+      // A false result means the message is not in the waiting list. It may have
+      // already started, or the ID may be stale. Leave the message untouched.
+      if (!remove) return false
+      // kilocode_change end
       yield* session.removeMessage(ctx.params)
       return true
     })

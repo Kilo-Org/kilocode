@@ -1,11 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway는 코딩 에이전트를 위한 신뢰할 수 있는 최적화된 모델 세트를 제공합니다.",
-  "provider.connect.kiloGateway.line2": "하나의 API 키로 Claude, GPT, Gemini, GLM 등의 모델을 사용할 수 있습니다.",
-  "provider.connect.kiloGateway.visit.prefix": "",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": "를 방문하여 API 키를 받으세요.",
   "provider.connect.kiloGateway.byok.prefix": "더 많은 사용 통계를 보려면 ",
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway를 통해 BYOK",
   "provider.connect.kiloGateway.byok.suffix": "를 사용하세요.",
@@ -23,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "스마트 라우팅으로 AI 모델에 통합 액세스",
 
   // Reasoning block label
-  "ui.permission.run": "실행",
   "ui.reasoning.label": "추론",
 
   // Marketplace
-  "marketplace.tab.skills": "스킬",
-  "marketplace.tab.mcpServers": "MCP 서버",
-  "marketplace.category.all": "전체",
-  "marketplace.placeholder": "구현 예정",
   "marketplace.card.installed": "설치됨",
   "marketplace.card.install": "설치",
   "marketplace.card.remove": "제거",
@@ -43,14 +32,12 @@ export const dict = {
   "marketplace.install.scope.global": "글로벌",
   "marketplace.install.scope.project.description":
     "이 프로젝트에만 적용됩니다. 설치된 파일을 버전 관리에 추가하고 팀과 공유할 수 있습니다.",
-  "marketplace.install.scope.global.description":
-    "이 컴퓨터의 모든 프로젝트에 적용됩니다. 사용자 구성에 저장됩니다.",
+  "marketplace.install.scope.global.description": "이 컴퓨터의 모든 프로젝트에 적용됩니다. 사용자 구성에 저장됩니다.",
   "marketplace.install.destination": "설치 위치",
   "marketplace.install.about.mcp":
     "MCP 서버는 외부 서비스나 로컬 프로그램과 작업할 수 있는 추가 도구를 Kilo에 제공합니다.",
   "marketplace.install.about.agent": "에이전트는 자체 지침과 권한을 가진 재사용 가능한 역할을 추가합니다.",
-  "marketplace.install.about.skill":
-    "스킬은 필요할 때 Kilo가 불러올 수 있는 작업별 지침과 리소스를 추가합니다.",
+  "marketplace.install.about.skill": "스킬은 필요할 때 Kilo가 불러올 수 있는 작업별 지침과 리소스를 추가합니다.",
   "marketplace.install.mcp.warning":
     "MCP 서버는 로컬 명령을 실행하거나 외부 서비스에 연결할 수 있습니다. 권한 설정에서 자동으로 허용하지 않는 한 Kilo는 도구를 사용하기 전에 권한을 요청합니다.",
   "marketplace.install.project.warning":
@@ -58,8 +45,7 @@ export const dict = {
   "marketplace.install.learnMore": "Marketplace 설치 방식 알아보기",
   "marketplace.install.learnMcp": "MCP 자세히 알아보기",
   "marketplace.install.installedAt": "{{path}}에 설치됨",
-  "marketplace.intro":
-    "재사용 가능한 에이전트, 스킬 및 MCP 도구를 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
+  "marketplace.intro": "재사용 가능한 에이전트, 스킬 및 MCP 도구를 하나의 프로젝트 또는 모든 프로젝트에 설치하세요.",
   "marketplace.intro.learnMore": "Marketplace 정보",
   "marketplace.install.prerequisites": "사전 요구 사항",
   "marketplace.install.installing": "설치 중...",
@@ -72,8 +58,6 @@ export const dict = {
   "marketplace.remove.confirm": "이 {{type}}을(를) 제거하시겠습니까? {{scope}} 구성에서 제거됩니다.",
   "marketplace.remove.cancel": "취소",
   "marketplace.remove.confirm.button": "제거",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "에이전트",
   "marketplace.search": "검색...",
   "marketplace.filter.all": "모든 항목",
   "marketplace.filter.notInstalled": "설치되지 않음",
@@ -81,12 +65,10 @@ export const dict = {
   "marketplace.empty": "항목을 찾을 수 없음",
   "marketplace.empty.relevant": "이 작업 영역과 관련된 마켓플레이스 항목을 찾을 수 없습니다.",
   "marketplace.badge.mcpServer": "MCP 서버",
-  "marketplace.badge.mode": "모드",
   "marketplace.card.by": "제작: {{author}}",
   "marketplace.install.method": "설치 방법",
   "marketplace.install.parameters": "매개변수",
   "marketplace.install.optional": "(선택 사항)",
-  "marketplace.install.required": "{{name}}이(가) 필요합니다",
   "marketplace.scope.project": "프로젝트",
   "marketplace.scope.global": "글로벌",
   "marketplace.remove.type.mcp": "MCP 서버",
@@ -128,8 +110,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "차이점 뷰어에서 열기",
-  "ui.messagePart.shell.command": "명령어",
-  "ui.messagePart.shell.output": "출력",
   "ui.messagePart.openInEditor": "편집기에서 열기",
 
   // Message feedback (thumbs up/down per assistant response)
