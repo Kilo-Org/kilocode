@@ -11,7 +11,6 @@ import {
 } from "@opencode-ai/llm/providers"
 import type { ModelMessage } from "ai"
 import type { Provider } from "@/provider/provider"
-import { nativeAnthropicWebSearchTool, nativeWebSearchEnabled } from "@/tool/websearch" // kilocode_change - native hosted web search
 import { isRecord } from "@/util/record"
 
 type ToolInput = {
@@ -183,21 +182,11 @@ export const request = (input: RequestInput) => {
   const converted = messages(input.messages)
   // This is the only native adapter boundary that should construct canonical
   // @opencode-ai/llm request objects from opencode's session/AI SDK-shaped data.
-  // kilocode_change start - on the native runtime path, replace the local
-  // websearch tool with Anthropic's hosted web_search_20250305 server tool when
-  // KILO_WEBSEARCH_PROVIDER=native and the active model is Anthropic Claude.
-  const modelNpm = "model" in input ? input.model.api.npm : undefined
-  const baseTools = tools(input.tools)
-  const llmTools =
-    process.env.KILO_WEBSEARCH_PROVIDER === "native" && nativeWebSearchEnabled(modelNpm)
-      ? [...baseTools.filter((item) => item.name !== "websearch"), ToolDefinition.make(nativeAnthropicWebSearchTool({}))]
-      : baseTools
-  // kilocode_change end
   return LLM.request({
     model: model(input, input.headers),
     system: [...(input.system ?? []).map(SystemPart.make), ...converted.system],
     messages: converted.messages,
-    tools: llmTools, // kilocode_change - native hosted web search tools
+    tools: tools(input.tools),
     toolChoice: input.toolChoice,
     generation: generation(input),
     providerOptions: input.providerOptions,
