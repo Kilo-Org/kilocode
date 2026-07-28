@@ -102,6 +102,22 @@
 
 ## [Unreleased]
 
+## [7.0.12-rc.2] - 2026-07-27
+
+### Added
+
+### Fixed
+
+- Fix the GitHub-hosted bundled JetBrains plugin build so signing uses certificate and private-key files during verification.
+
+### Changed
+
+## [7.0.12-rc.1] - 2026-07-27
+
+### Added
+
+- Support sending another JetBrains prompt while a session is still running. Queued prompts now appear in the conversation and can be removed before Kilo starts processing them.
+
 ## [7.0.11] - 2026-07-27
 
 ### Added
