@@ -66,6 +66,7 @@
     "./text-strikethrough": "./src/components/text-strikethrough.tsx",
     "./context": "./src/context/index.ts",
     "./context/code": "./src/context/code.tsx",
+    "./context/clipboard": "./src/context/clipboard.tsx",
     "./context/data": "./src/context/data.tsx",
     "./context/dialog": "./src/context/dialog.tsx",
     "./context/diff": "./src/context/diff.tsx",

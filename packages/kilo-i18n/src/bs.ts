@@ -1,12 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway omogućava pristup pažljivo odabranom skupu pouzdanih modela optimizovanih za rad sa agentima za kodiranje.",
-  "provider.connect.kiloGateway.line2":
-    "Sa jednim API ključem dobijate pristup modelima kao što su Claude, GPT, Gemini, GLM i drugi.",
-  "provider.connect.kiloGateway.visit.prefix": "Posjetite ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " da preuzmete svoj API ključ.",
   "provider.connect.kiloGateway.byok.prefix": "Za više statistika korištenja, koristite ",
   "provider.connect.kiloGateway.byok.link": "BYOK putem Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -29,14 +22,9 @@ export const dict = {
   "desktop.cli.installed.message": "CLI je instaliran u {{path}}\n\nRestartuj terminal da bi koristio komandu 'kilo'.",
 
   // Reasoning block label
-  "ui.permission.run": "Pokreni",
   "ui.reasoning.label": "Rezonovanje",
 
   // Marketplace
-  "marketplace.tab.skills": "Vještine",
-  "marketplace.tab.mcpServers": "MCP Serveri",
-  "marketplace.category.all": "Sve",
-  "marketplace.placeholder": "Biće implementirano",
   "marketplace.card.installed": "Instalirano",
   "marketplace.card.install": "Instaliraj",
   "marketplace.card.remove": "Ukloni",
@@ -78,8 +66,6 @@ export const dict = {
     "Jeste li sigurni da želite ukloniti ovaj {{type}}? Ovo će ga ukloniti iz vaše {{scope}} konfiguracije.",
   "marketplace.remove.cancel": "Otkaži",
   "marketplace.remove.confirm.button": "Ukloni",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "Agenti",
   "marketplace.search": "Pretraži...",
   "marketplace.filter.all": "Sve stavke",
   "marketplace.filter.notInstalled": "Nije instalirano",
@@ -87,12 +73,10 @@ export const dict = {
   "marketplace.empty": "Nema pronađenih stavki",
   "marketplace.empty.relevant": "Nisu pronađene relevantne stavke marketplacea za ovaj radni prostor.",
   "marketplace.badge.mcpServer": "MCP Server",
-  "marketplace.badge.mode": "Režim",
   "marketplace.card.by": "od {{author}}",
   "marketplace.install.method": "Metoda instalacije",
   "marketplace.install.parameters": "Parametri",
   "marketplace.install.optional": "(opciono)",
-  "marketplace.install.required": "{{name}} je obavezno",
   "marketplace.scope.project": "projekat",
   "marketplace.scope.global": "globalno",
   "marketplace.remove.type.mcp": "MCP server",
@@ -134,8 +118,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "Otvori u pregledniku razlika",
-  "ui.messagePart.shell.command": "Naredba",
-  "ui.messagePart.shell.output": "Izlaz",
   "ui.messagePart.openInEditor": "Otvori u editoru",
 
   // Message feedback (thumbs up/down per assistant response)

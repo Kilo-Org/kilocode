@@ -1,11 +1,5 @@
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gatewayは、コーディングエージェント向けに厳選された信頼性の高い最適化モデルへのアクセスを提供します。",
-  "provider.connect.kiloGateway.line2": "1つのAPIキーで、Claude、GPT、Gemini、GLMなどのモデルにアクセスできます。",
-  "provider.connect.kiloGateway.visit.prefix": "",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " にアクセスしてAPIキーを取得してください。",
   "provider.connect.kiloGateway.byok.prefix": "詳細な使用統計については、",
   "provider.connect.kiloGateway.byok.link": "Kilo's Gateway経由でBYOK",
   "provider.connect.kiloGateway.byok.suffix": "をご利用ください。",
@@ -23,14 +17,9 @@ export const dict = {
   "settings.providers.note.vercel": "スマートルーティングによるAIモデルへの統合アクセス",
 
   // Reasoning block label
-  "ui.permission.run": "実行",
   "ui.reasoning.label": "推論",
 
   // Marketplace
-  "marketplace.tab.skills": "スキル",
-  "marketplace.tab.mcpServers": "MCPサーバー",
-  "marketplace.category.all": "すべて",
-  "marketplace.placeholder": "未実装",
   "marketplace.card.installed": "インストール済み",
   "marketplace.card.install": "インストール",
   "marketplace.card.remove": "削除",
@@ -43,14 +32,12 @@ export const dict = {
   "marketplace.install.scope.global": "グローバル",
   "marketplace.install.scope.project.description":
     "このプロジェクトのみ。インストールしたファイルはバージョン管理に追加し、チームと共有できます。",
-  "marketplace.install.scope.global.description":
-    "このマシン上のすべてのプロジェクト。ユーザー設定に保存されます。",
+  "marketplace.install.scope.global.description": "このマシン上のすべてのプロジェクト。ユーザー設定に保存されます。",
   "marketplace.install.destination": "インストール先",
   "marketplace.install.about.mcp":
     "MCPサーバーは、外部サービスやローカルプログラムを操作するための追加ツールをKiloに提供します。",
   "marketplace.install.about.agent": "エージェントは、独自の指示と権限を持つ再利用可能な役割を追加します。",
-  "marketplace.install.about.skill":
-    "スキルは、必要に応じてKiloが読み込めるタスク固有の指示とリソースを追加します。",
+  "marketplace.install.about.skill": "スキルは、必要に応じてKiloが読み込めるタスク固有の指示とリソースを追加します。",
   "marketplace.install.mcp.warning":
     "MCPサーバーはローカルコマンドを実行したり、外部サービスに接続したりできます。権限で自動的に許可されていない限り、Kiloはツールを使用する前に許可を求めます。",
   "marketplace.install.project.warning":
@@ -72,8 +59,6 @@ export const dict = {
   "marketplace.remove.confirm": "この{{type}}を削除してもよろしいですか？ これにより、{{scope}}設定から削除されます。",
   "marketplace.remove.cancel": "キャンセル",
   "marketplace.remove.confirm.button": "削除",
-  "marketplace.tab.mcp": "MCP",
-  "marketplace.tab.agents": "エージェント",
   "marketplace.search": "検索...",
   "marketplace.filter.all": "すべてのアイテム",
   "marketplace.filter.notInstalled": "未インストール",
@@ -81,12 +66,10 @@ export const dict = {
   "marketplace.empty": "アイテムが見つかりません",
   "marketplace.empty.relevant": "このワークスペースに関連するマーケットプレイスのアイテムが見つかりませんでした。",
   "marketplace.badge.mcpServer": "MCPサーバー",
-  "marketplace.badge.mode": "モード",
   "marketplace.card.by": "作成者: {{author}}",
   "marketplace.install.method": "インストール方法",
   "marketplace.install.parameters": "パラメーター",
   "marketplace.install.optional": "(任意)",
-  "marketplace.install.required": "{{name}} は必須です",
   "marketplace.scope.project": "プロジェクト",
   "marketplace.scope.global": "グローバル",
   "marketplace.remove.type.mcp": "MCPサーバー",
@@ -128,8 +111,6 @@ export const dict = {
 
   // Edit-tool header and shell-tool section labels
   "ui.messagePart.openInDiffViewer": "差分ビューアーで開く",
-  "ui.messagePart.shell.command": "コマンド",
-  "ui.messagePart.shell.output": "出力",
   "ui.messagePart.openInEditor": "エディタで開く",
 
   // Message feedback (thumbs up/down per assistant response)
