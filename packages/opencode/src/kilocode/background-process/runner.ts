@@ -143,14 +143,15 @@ export namespace BackgroundProcessRunner {
   const PROBE = 5_000
 
   function native(pid: number) {
-    const job = WindowsJob.create()
-    if (!job) return
+    let job: ReturnType<typeof WindowsJob.create> = undefined
     try {
+      job = WindowsJob.create()
+      if (!job) return
       job.assign(pid)
       return job
     } catch (err) {
-      job.close()
-      console.warn("[Kilo] Failed to assign background process to Windows Job Object; using process probes", {
+      job?.close()
+      console.warn("[Kilo] Failed to create or assign Windows Job Object; using process probes", {
         pid,
         err,
       })
@@ -181,11 +182,23 @@ export namespace BackgroundProcessRunner {
         while (true) {
           if (failure) throw failure
           if (await Bun.file(input.control).exists()) {
-            job.terminate()
+            try {
+              job.terminate()
+            } catch (err) {
+              console.warn("[Kilo] Failed to terminate Windows Job Object; using process probes", { pid, err })
+              break
+            }
             await rm(input.control, { force: true })
             return await done
           }
-          if (code !== undefined && job.members().length === 0) return code
+          if (code !== undefined) {
+            try {
+              if (job.members().length === 0) return code
+            } catch (err) {
+              console.warn("[Kilo] Failed to query Windows Job Object; using process probes", { pid, err })
+              break
+            }
+          }
           await Bun.sleep(100)
         }
       } finally {
