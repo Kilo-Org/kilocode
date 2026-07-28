@@ -68,6 +68,23 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(created.id, edt { (list.selectedValue as ActiveListItem).key })
     }
 
+    fun `test creating a worktree opens the created worktree session editor`() {
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+
+        edt { controller.create("feature/y", null) }
+        flush()
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val created = edt { controller.model.getElementAt(0) }
+        assertEquals(created.id, edt { (list.selectedValue as ActiveListItem).key })
+        val file = edt { FileEditorManager.getInstance(project).openFiles.single() as KiloVirtualFile }
+        assertEquals(WorktreeSessionEditorKind.ID, file.path.kind)
+        assertEquals(created.path, file.path.params["path"])
+        assertSame(WorktreeSessionEditorKind.fileType(file.path.params), file.fileType)
+        assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
+    }
+
     fun `test panel hides worktree search field`() {
         val controller = WorktreeController(service, "/test", coroutines.scope)
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }

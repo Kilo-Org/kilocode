@@ -72,6 +72,7 @@ class AgentManagerPanel(
             // Focus the list so the freshly created worktree renders as an active selection rather
             // than the inactive highlight it would get while focus stays on the toolbar.
             if (list.select(key)) list.focusList()
+            item(key)?.takeIf { !controller.isPending(it.id) }?.let { open(it, focus = false) }
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onRemoveSuccess = { item -> close(item) }
