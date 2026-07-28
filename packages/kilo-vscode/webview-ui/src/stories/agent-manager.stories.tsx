@@ -17,6 +17,8 @@ import { ServerContext } from "../context/server"
 import { WorktreeModeProvider } from "../context/worktree-mode"
 import { SidebarSearchMenu } from "../../agent-manager/SidebarSearchMenu"
 import { SidebarToggleButton } from "../../agent-manager/SidebarToggleButton"
+import { SideTerminalPanel, createTerminalState } from "../../agent-manager/terminal"
+import { LOCAL } from "../../agent-manager/navigate"
 import type { SidebarSearchItem } from "../../agent-manager/sidebar-search"
 import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
@@ -928,6 +930,39 @@ export const TabBarSingleTab: Story = {
       </div>
     </StoryProviders>
   ),
+}
+
+// Side terminal panel inside the real inspector host chain, empty state —
+// no live PTY, so the start affordance renders. The header reuses the
+// .am-diff-header metrics so the a11y/screenshot baseline also guards the
+// alignment against the diff panel chrome.
+export const SideTerminalPanelEmpty: Story = {
+  name: "Side terminal panel — empty",
+  render: () => {
+    const state = createTerminalState(() => LOCAL)
+    return (
+      <StoryProviders noPadding>
+        <div class="am-detail-stack" style={{ height: "420px" }}>
+          <div class="am-detail-content am-detail-split">
+            <div class="am-main-pane" style={{ padding: "24px", color: "var(--text-weak)" }}>
+              Agent session stays visible beside the terminal.
+            </div>
+            <div class="am-diff-resize" style={{ width: "320px" }}>
+              <div class="am-diff-panel-wrapper">
+                <SideTerminalPanel
+                  state={state}
+                  contextKey={() => LOCAL}
+                  visible={() => true}
+                  onClose={() => undefined}
+                  onStart={() => undefined}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
 }
 
 // ---------------------------------------------------------------------------

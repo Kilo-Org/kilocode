@@ -42,6 +42,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/render.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
@@ -794,6 +796,10 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   // Reads terminal.integrated.* and editor.font* config for xterm font settings
   "terminal-font.ts": {
     note: "vscode config reader for integrated terminal font settings",
+  },
+  // Reads + watches the terminal button destination setting
+  "terminal-destination.ts": {
+    note: "vscode config reader for the terminal destination setting",
   },
 }
 
