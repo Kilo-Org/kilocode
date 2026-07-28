@@ -1106,7 +1106,17 @@ const AgentManagerContent: Component = () => {
     const ids = new Set(ev.projects.map((p) => p.id))
     setProjectStates((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id))))
     projectLive.prune(ids)
+    for (const id of [...pendingState.keys()]) if (!ids.has(id)) pendingState.delete(id)
+    const active = ev.projects.find((p) => p.active)?.id
+    const pending = active ? pendingState.get(active) : undefined
+    if (pending) {
+      pendingState.delete(active!)
+      applyActiveState(pending)
+    }
   }
+
+  /** States waiting for their project to become catalog-active before applying. */
+  const pendingState = new Map<string, AgentManagerStateMessage>()
 
   /** Apply one project state payload. Background payloads only feed their accordion summary. */
   const applyState = (msg: ExtensionMessage) => {
@@ -1115,8 +1125,18 @@ const AgentManagerContent: Component = () => {
     const pid = state.projectId
     if (pid) setProjectStates((prev) => ({ ...prev, [pid]: state }))
     // Background project payloads feed only their accordion summary; the
-    // shared signals below belong to the active project alone.
-    if (!isActivePayload(pid)) return
+    // shared signals below belong to the active project alone. On activation
+    // the state push can arrive before the catalog push, so defer it instead
+    // of dropping it.
+    if (!isActivePayload(pid)) {
+      if (pid) pendingState.set(pid, state)
+      return
+    }
+    applyActiveState(state)
+  }
+
+  /** Apply a state payload to the shared signals of the active project. */
+  const applyActiveState = (state: AgentManagerStateMessage) => {
     const switched = applyProjectSwitch(state)
     setWorktrees(state.worktrees)
     setManagedSessions(state.sessions)
@@ -1602,6 +1622,7 @@ const AgentManagerContent: Component = () => {
         // optimistically and let the arriving state reconcile.
         worktree: (projectId, worktreeId) => selectWorktree(worktreeId),
         session: session.selectSession,
+        openTab: (id) => placeLocal(id, undefined, undefined),
         managedSession: focusManagedSession,
       })
 

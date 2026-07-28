@@ -11,6 +11,7 @@ function deps(active: string) {
       local: (projectId: string) => calls.push(`local:${projectId}`),
       worktree: (projectId: string, worktreeId: string) => calls.push(`worktree:${projectId}:${worktreeId}`),
       session: (sessionId: string) => calls.push(`session:${sessionId}`),
+      openTab: (sessionId: string) => calls.push(`openTab:${sessionId}`),
       managedSession: (worktreeId: string, sessionId: string) => calls.push(`managed:${worktreeId}:${sessionId}`),
     },
   }

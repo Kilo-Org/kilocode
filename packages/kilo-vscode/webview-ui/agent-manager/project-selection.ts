@@ -8,6 +8,7 @@ export function applyProjectSelection(
     local: (projectId: string) => void
     worktree: (projectId: string, worktreeId: string) => void
     session: (sessionId: string) => void
+    openTab: (sessionId: string) => void
     managedSession: (worktreeId: string, sessionId: string) => void
   },
 ): boolean {
@@ -24,6 +25,9 @@ export function applyProjectSelection(
     const session = deps.managed(target.projectId).find((item) => item.id === target.sessionId)
     if (session?.worktreeId) deps.managedSession(session.worktreeId, target.sessionId)
     else {
+      // An unassigned session joins the project's local tabs, mirroring what
+      // selecting it from the legacy sidebar does, before it becomes current.
+      deps.openTab(target.sessionId)
       deps.local(target.projectId)
       deps.session(target.sessionId)
     }
