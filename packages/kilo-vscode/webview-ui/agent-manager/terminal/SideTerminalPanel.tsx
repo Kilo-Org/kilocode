@@ -59,7 +59,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
               icon="trash"
               size="small"
               variant="ghost"
-              label={t("agentManager.terminal.kill")}
+              aria-label={t("agentManager.terminal.kill")}
               onClick={props.onClose}
             />
           </Tooltip>
