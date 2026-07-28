@@ -62,7 +62,7 @@ function sweepStaleDiscovery(): void {
   }
 }
 
-function writeDiscovery(instance: ServerInstance, version: string): void {
+function writeDiscovery(instance: ServerInstance, version: string, dir: string): void {
   const pid = instance.process.pid
   if (!pid) return
   sweepStaleDiscovery()
@@ -79,6 +79,11 @@ function writeDiscovery(instance: ServerInstance, version: string): void {
     version,
     startedAt: new Date().toISOString(),
     source: "vscode",
+    // Workspace this window's server is bound to. Lets discovery clients
+    // (talk.js) prefer the window matching their working directory when no
+    // KILO_SERVER_FILE self-identification is available. Superset of the
+    // daemon.json schema — drop-in compatibility is preserved.
+    directory: dir,
   }
   try {
     fs.mkdirSync(path.dirname(file), { recursive: true })
@@ -251,7 +256,7 @@ export class ServerManager {
           resolved = true
           console.log("[Kilo New] ServerManager: 🎯 Port detected:", port)
           const instance: ServerInstance = { port, password, process: serverProcess }
-          writeDiscovery(instance, this.context.extension.packageJSON.version)
+          writeDiscovery(instance, this.context.extension.packageJSON.version, spawnCwd)
           resolve(instance)
         }
       })
