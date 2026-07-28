@@ -7,7 +7,7 @@ description: Use when the user asks to visualize data with charts, graphs, or pl
 
 The `chart` tool is ALWAYS available in this environment. When the user asks to visualize data (charts, graphs, plots), you MUST call the `chart` tool. Never output the config as text, never say the tool is unavailable, never suggest external renderers. Always use the tool call — it is the only correct response for data visualization requests. Do NOT repeat or echo the config JSON in your text response.
 
-Use the `chart` tool only when the user explicitly asks for a chart, graph, or plot. Only use these supported Chart.js v4 types: `area`, `bar`, `bubble`, `pie`, `doughnut`, `line`, `mixed`, `polarArea`, `radar`, `scatter`. Do not use it for any other type.
+Use the `chart` tool only when the user explicitly asks for a chart, graph, or plot. Only use these supported Chart.js v4 types: `bar`, `bubble`, `pie`, `doughnut`, `line`, `mixed`, `polarArea`, `radar`, `scatter`. For area charts, use `line` with `fill: true` on the dataset — do NOT use `area` as a type.
 
 Use mermaid fenced code blocks (` ```mermaid `) when:
 - The user asks for a diagram, flowchart, sequence diagram, ER diagram, or architecture diagram
@@ -153,3 +153,5 @@ Mixed chart (bar + line):
 ```
 
 You may customize colors by setting `backgroundColor` and `borderColor` arrays on datasets. The renderer handles sizing — do not set width or height.
+
+Only include `scales` in `options` for cartesian chart types: `bar`, `line`, `scatter`, `bubble`. Do NOT include `scales` for `pie`, `doughnut`, `polarArea`, `radar`, or `mixed` — it will cause them to fail.

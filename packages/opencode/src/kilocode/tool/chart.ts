@@ -25,7 +25,7 @@ export const ChartTool = Tool.define(
   Effect.gen(function* () {
     return {
       description:
-        "Render a data visualization chart using a Chart.js v4 config. Use this when the user explicitly asks for a chart, graph, or plot. Supported types: area, bar, bubble, pie, doughnut, line, mixed, polarArea, radar, scatter. Do NOT use this for diagrams, flowcharts, sequence diagrams, or any mermaid content — write those as mermaid fenced code blocks in your text response instead. After calling this tool, do NOT output the JSON spec or raw data in your text response — the chart is the response.",
+        "Render a data visualization chart using a Chart.js v4 config. Use this when the user explicitly asks for a chart, graph, or plot. Supported types: bar, bubble, pie, doughnut, line (use fill:true for area charts), mixed, polarArea, radar, scatter. Do NOT use this for diagrams, flowcharts, sequence diagrams, or any mermaid content — write those as mermaid fenced code blocks in your text response instead. After calling this tool, do NOT output the JSON spec or raw data in your text response — the chart is the response.",
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context) =>
         Effect.gen(function* () {
@@ -50,6 +50,19 @@ export const ChartTool = Tool.define(
               title: params.title,
               output: `Invalid chart spec: must be a Chart.js v4 config with "type" and "data" fields. If you are trying to render a mermaid diagram, do NOT use the chart tool — write a mermaid fenced code block in your text response instead.`,
               metadata: { title: params.title, description: params.description, error: "invalid-spec" } as Meta,
+            }
+          }
+
+          // "area" is not a Chart.js type — remap to line with fill
+          if ((spec as Record<string, unknown>).type === "area") {
+            const s = spec as Record<string, unknown>
+            s.type = "line"
+            const data = s.data as Record<string, unknown> | undefined
+            if (data && Array.isArray(data.datasets)) {
+              data.datasets = (data.datasets as Record<string, unknown>[]).map((ds) => ({
+                fill: true,
+                ...ds,
+              }))
             }
           }
 
