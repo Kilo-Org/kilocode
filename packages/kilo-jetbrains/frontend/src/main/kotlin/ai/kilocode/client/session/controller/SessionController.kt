@@ -162,6 +162,7 @@ class SessionController(
     // then reconciled when the operation releases so an underlying server turn is not lost.
     private var revertDeferred: SessionState? = null
     private var creating: CompletableDeferred<String?>? = null
+    private val pending = LinkedHashMap<String, Permission>()
     private val childJobs: MutableMap<String, Job> = mutableMapOf()
     private val childIds: MutableSet<String> = mutableSetOf()
     private val childParts: MutableMap<PartKey, String> = mutableMapOf()
@@ -363,6 +364,7 @@ class SessionController(
             return
         }
         val id = sid ?: return
+        pending.clear()
         capture("Session Stop Clicked", sessionProps(id))
         cs.launch {
             try {
@@ -392,6 +394,7 @@ class SessionController(
         } else {
             emptySet()
         }
+        pending.clear()
         drainAutoApprove(skip)
     }
 
@@ -765,6 +768,12 @@ class SessionController(
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
+        pending[id]?.let { perm ->
+            pending[id] = perm.copy(
+                state = state,
+                message = message ?: perm.message,
+            )
+        }
         val current = model.state
         if (current !is SessionState.AwaitingPermission) return
         if (current.permission.id != id) return
@@ -1128,6 +1137,7 @@ class SessionController(
         childJobs.clear()
         childIds.clear()
         childParts.clear()
+        pending.clear()
     }
 
     private suspend fun recoverChildPermissions(child: String) {
@@ -1139,13 +1149,14 @@ class SessionController(
                 replyAll(permissions)
                 return
             }
-            val last = toPermission(permissions.last())
+            val items = permissions.map(::toPermission)
             runEdt {
                 if (disposed) return@runEdt
                 if (child !in childIds) return@runEdt
-                // Do not overwrite an existing root or other child AwaitingPermission state
-                if (model.state is SessionState.AwaitingPermission) return@runEdt
-                updateModel { model.setState(SessionState.AwaitingPermission(last)) }
+                items.forEach(::enqueue)
+                if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+                    updateModel { promote() }
+                }
             }
         } catch (e: Exception) {
             LOG.warn("${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child dir=${ChatLogSummary.dir(directory)} failed message=${e.message}", e)
@@ -1204,8 +1215,10 @@ class SessionController(
                 if (disposed) return@runEdt
                 if (sid != id) return@runEdt
                 updateModel {
+                    pending.entries.removeIf { it.value.sessionId == id }
                     if (permissions.isNotEmpty()) {
-                        model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
+                        permissions.map(::toPermission).forEach(::enqueue)
+                        promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (status != null) {
@@ -1315,6 +1328,7 @@ class SessionController(
                 // Keep pending questions visible for follow-up flows that arrive just before close.
                 val current = model.state
                 if (current is SessionState.AwaitingQuestion) return
+                if (current is SessionState.AwaitingPermission) return
                 val clobberOk = event.reason == "completed"
                     || current is SessionState.Busy
                     || current is SessionState.Retry
@@ -1455,14 +1469,25 @@ class SessionController(
             return
         }
         val perm = toPermission(event.request)
-        model.setState(SessionState.AwaitingPermission(perm))
+        enqueue(perm)
+        if (model.state !is SessionState.AwaitingPermission && model.state !is SessionState.AwaitingQuestion) {
+            promote()
+        }
     }
 
     private fun replied(event: ChatEventDto.PermissionReplied) {
         val current = model.state
-        if (current is SessionState.AwaitingPermission && current.permission.id == event.requestID) {
-            model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+        val front = current is SessionState.AwaitingPermission && current.permission.id == event.requestID
+        pending.remove(event.requestID)
+        // Front card resolved: advance to the next queued permission, else resume Busy.
+        if (front) {
+            model.setState(afterResolve())
+            return
         }
+        // A queued (non-front) permission or an unrelated prompt is active: leave it in place.
+        if (current is SessionState.AwaitingPermission || current is SessionState.AwaitingQuestion) return
+        // Otherwise (busy/idle/etc.) only surface a still-queued permission; never force Busy.
+        promote()
     }
 
     private fun asked(event: ChatEventDto.QuestionAsked) {
@@ -1472,15 +1497,29 @@ class SessionController(
     private fun replied(event: ChatEventDto.QuestionReplied) {
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
-            model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
+            model.setState(afterResolve())
         }
     }
 
     private fun rejected(event: ChatEventDto.QuestionRejected) {
         val current = model.state
         if (current is SessionState.AwaitingQuestion && current.question.id == event.requestID) {
-            model.setState(SessionState.Idle)
+            model.setState(afterResolve(idle = true))
         }
+    }
+
+    private fun afterResolve(idle: Boolean = false): SessionState {
+        return pending.values.firstOrNull()?.let { SessionState.AwaitingPermission(it) }
+            ?: if (idle) SessionState.Idle else SessionState.Busy(KiloBundle.message("session.status.considering"))
+    }
+
+    private fun enqueue(perm: Permission) {
+        pending[perm.id] = perm
+    }
+
+    private fun promote() {
+        val perm = pending.values.firstOrNull() ?: return
+        model.setState(SessionState.AwaitingPermission(perm))
     }
 
     private fun status(dto: SessionStatusDto) {
