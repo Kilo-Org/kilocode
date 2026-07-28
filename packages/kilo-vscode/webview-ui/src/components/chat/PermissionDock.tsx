@@ -37,6 +37,9 @@ export const PermissionDock: Component<{
   const { config } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
+  // Skill shell batches list every command and are never persisted, so they show
+  // the command list and no auto-approve rules (matching the CLI TUI).
+  const skillShell = () => props.request.args?.skillShell === true
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
@@ -69,7 +72,7 @@ export const PermissionDock: Component<{
 
   let root!: HTMLDivElement
 
-  const hasRules = () => rules().length > 0
+  const hasRules = () => rules().length > 0 && !skillShell()
 
   const toggleExpanded = () => {
     const next = !expanded()
@@ -268,32 +271,43 @@ export const PermissionDock: Component<{
           </Show>
         }
       >
-        <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
-        <Show when={command()}>
-          {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
-        </Show>
+        <Show
+          when={skillShell()}
+          fallback={
+            <>
+              <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
+              <Show when={command()}>
+                {(cmd) => <PermissionCommand command={cmd()} plain={props.request.args.heredoc === true} />}
+              </Show>
 
-        {(() => {
-          const desc = description()
-          if (!desc)
-            return !command() && toolDescription() ? <div data-slot="permission-hint">{toolDescription()}</div> : null
-          if (desc.kind === "single")
-            return (
-              <div
-                data-slot="permission-hint"
-                data-wrap={external() ? "" : undefined}
-                title={external() ? desc.text : undefined}
-              >
-                {desc.text}
-              </div>
-            )
-          return (
-            <div data-slot="permission-patterns">
-              <span data-slot="permission-patterns-title">{desc.title}</span>
-              <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
-            </div>
-          )
-        })()}
+              {(() => {
+                const desc = description()
+                if (!desc)
+                  return !command() && toolDescription() ? (
+                    <div data-slot="permission-hint">{toolDescription()}</div>
+                  ) : null
+                if (desc.kind === "single")
+                  return (
+                    <div
+                      data-slot="permission-hint"
+                      data-wrap={external() ? "" : undefined}
+                      title={external() ? desc.text : undefined}
+                    >
+                      {desc.text}
+                    </div>
+                  )
+                return (
+                  <div data-slot="permission-patterns">
+                    <span data-slot="permission-patterns-title">{desc.title}</span>
+                    <For each={desc.paths}>{(path) => <code data-slot="permission-pattern">{path}</code>}</For>
+                  </div>
+                )
+              })()}
+            </>
+          }
+        >
+          <For each={props.request.patterns}>{(cmd) => <PermissionCommand command={cmd} />}</For>
+        </Show>
 
         <Show when={diffs().length > 0}>
           <div data-slot="permission-diffs" data-count={diffs().length}>

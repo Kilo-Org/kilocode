@@ -44,6 +44,7 @@ export interface PermissionRequest {
     files?: PermissionPatchFile[]
     description?: string
     heredoc?: boolean
+    skillShell?: boolean
   }
   message?: string
   tool?: { messageID: string; callID: string }
