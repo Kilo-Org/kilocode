@@ -473,6 +473,25 @@ Use `{env:VARIABLE_NAME}` syntax in config files to reference environment variab
 `{env:VAR}` (and `{file:...}`) references are resolved **only** in trusted config: your global config (`~/.config/kilo`), a config passed via `KILO_CONFIG` / `KILO_CONFIG_CONTENT`, or organization/MDM-managed config. A project-level `kilo.json` / `opencode.json` committed to a repository **cannot** use `{env:VAR}` — the reference is ignored and a warning is logged. This prevents a malicious repository from exfiltrating your secrets to an attacker-controlled `baseURL` simply by being opened. `{file:...}` still works in project config, but only for files that resolve inside the project root — references that leave it (absolute paths outside the root, `../` traversal, and symlink escapes) are rejected.
 {% /callout %}
 
+### Model Stream Timeouts
+
+If a model stops sending data mid-response, Kilo aborts the stalled stream after 60 seconds of inactivity so the session returns control instead of hanging. The watchdog pauses while local tools run, so long-running shell commands and foreground subagents are not interrupted.
+
+Tune the window per provider with `options.chunkTimeout` (milliseconds), or set it to `false` to disable the watchdog:
+
+```json
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "chunkTimeout": 120000
+      }
+    }
+  }
+}
+```
+
 For full details on all configuration options including compaction, file watchers, plugins, and experimental features, see the [OpenCode Config documentation](https://opencode.ai/docs/config).
 
 ## Interactive Mode
