@@ -7,6 +7,7 @@
 
 import { type Component, type JSX, Show, createEffect, createMemo, createSignal, onCleanup, onMount } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
+import { Switch } from "@kilocode/kilo-ui/switch"
 import { Icon } from "@kilocode/kilo-ui/icon"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
@@ -24,6 +25,7 @@ import { useLocalTabs } from "../../context/local-tabs"
 import { useVSCode } from "../../context/vscode"
 import { useLanguage } from "../../context/language"
 import { useWorktreeMode } from "../../context/worktree-mode"
+import { useWorkStyle } from "../../context/work-style"
 import { useServer } from "../../context/server"
 import { useAgentRequirements } from "../../context/agent-requirements"
 import { TranscriptSearchProvider } from "../../context/transcript-search"
@@ -48,6 +50,7 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const vscode = useVSCode()
   const language = useLanguage()
   const worktreeMode = useWorktreeMode()
+  const work = useWorkStyle()
   const server = useServer()
   const tabs = useLocalTabs()
   const requirements = useAgentRequirements()
@@ -65,6 +68,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   const [transferring, setTransferring] = createSignal(false)
   const [transferDetail, setTransferDetail] = createSignal("")
   const [repoBranch, setRepoBranch] = createSignal<string>()
+  const [claude, setClaude] = createSignal<{
+    visible: boolean
+    present: { instructions: boolean; skills: boolean; commands: boolean }
+    settings: { skillsCommands: boolean; instructions: boolean }
+  }>({ visible: false, present: { instructions: false, skills: false, commands: false }, settings: { skillsCommands: true, instructions: false } })
   let worktreeRef: HTMLDivElement | undefined
 
   // Permissions and questions scoped to this session's family (self + subagents).
@@ -90,6 +98,11 @@ export const ChatView: Component<ChatViewProps> = (props) => {
   // Session is busy only because a question tool call is pending — prompt should behave as idle
   const questioning = () => isQuestioning(blocked(), familyQuestions().length)
   const dock = () => !props.readonly || !!permissionRequest()
+  const showClaudeContext = createMemo(() => claude().visible && !work.shouldShowOnboarding())
+  const requestClaudeContext = () => {
+    if (props.readonly || work.shouldShowOnboarding()) return
+    vscode.postMessage({ type: "requestClaudeContext" })
+  }
 
   onMount(() => {
     if (props.readonly) return
@@ -100,7 +113,21 @@ export const ChatView: Component<ChatViewProps> = (props) => {
     }
     document.addEventListener("keydown", handler)
     onCleanup(() => document.removeEventListener("keydown", handler))
+    requestClaudeContext()
   })
+
+  createEffect(requestClaudeContext)
+
+  {
+    const cleanup = vscode.onMessage((msg) => {
+      if (msg.type === "extensionDataReady") {
+        requestClaudeContext()
+        return
+      }
+      if (msg.type === "claudeContextLoaded") setClaude(msg)
+    })
+    onCleanup(cleanup)
+  }
 
   // Listen for "Continue in Worktree" progress messages
   {
@@ -364,6 +391,53 @@ export const ChatView: Component<ChatViewProps> = (props) => {
           <div class="chat-input">
             <Show when={server.connectionState() === "error" && server.errorMessage()}>
               <StartupErrorBanner errorMessage={server.errorMessage()!} errorDetails={server.errorDetails()!} />
+            </Show>
+            <Show when={showClaudeContext()}>
+              <div class="claude-context-banner">
+                <div class="claude-context-banner__content">
+                  <strong>{language.t("claudeContext.banner.title")}</strong>
+                  <span>{language.t("claudeContext.banner.description")}</span>
+                  <span>{language.t("claudeContext.banner.hint")}</span>
+                  <div class="claude-context-banner__toggles">
+                    <Show when={claude().present.skills || claude().present.commands}>
+                      <Switch
+                        checked={claude().settings.skillsCommands}
+                        onChange={(value) => setClaude((state) => ({ ...state, settings: { ...state.settings, skillsCommands: value } }))}
+                      >
+                        {language.t("settings.agentBehaviour.claudeCompat.skillsCommands.title")}
+                      </Switch>
+                    </Show>
+                    <Show when={claude().present.instructions}>
+                      <Switch
+                        checked={claude().settings.instructions}
+                        onChange={(value) => setClaude((state) => ({ ...state, settings: { ...state.settings, instructions: value } }))}
+                      >
+                        {language.t("settings.agentBehaviour.claudeCompat.instructions.title")}
+                      </Switch>
+                    </Show>
+                  </div>
+                </div>
+                <div class="claude-context-banner__actions">
+                  <Button
+                    variant="primary"
+                    size="small"
+                    onClick={() =>
+                      vscode.postMessage({
+                        type: "updateClaudeContext",
+                        ...(claude().present.skills || claude().present.commands
+                          ? { skillsCommands: claude().settings.skillsCommands }
+                          : {}),
+                        ...(claude().present.instructions ? { instructions: claude().settings.instructions } : {}),
+                      })
+                    }
+                  >
+                    {language.t("common.apply")}
+                  </Button>
+                  <Button size="small" variant="ghost" onClick={() => vscode.postMessage({ type: "dismissClaudeContext" })}>
+                    {language.t("claudeContext.banner.dismiss")}
+                  </Button>
+                </div>
+              </div>
             </Show>
             <Show when={permissionRequest()} keyed>
               {(perm) => (

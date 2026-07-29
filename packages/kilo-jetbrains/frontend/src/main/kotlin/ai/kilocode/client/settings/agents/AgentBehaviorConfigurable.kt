@@ -28,6 +28,7 @@ class AgentBehaviorConfigurable : SearchableConfigurable {
             KiloBundle.message("settings.agentBehavior.mcp.displayName") to McpConfigurable.ID,
             KiloBundle.message("settings.agentBehavior.skills.displayName") to SkillsConfigurable.ID,
             KiloBundle.message("settings.agentBehavior.rules.displayName") to RulesConfigurable.ID,
+            KiloBundle.message("settings.agentBehavior.compatibility.displayName") to CompatibilityConfigurable.ID,
         ).forEach { (label, id) ->
             panel.next(ActionLink(label) { e ->
                 val src = e.source as? JComponent ?: return@ActionLink

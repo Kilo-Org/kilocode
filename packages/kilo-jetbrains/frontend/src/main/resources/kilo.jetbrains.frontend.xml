@@ -106,6 +106,13 @@
                 bundle="messages.KiloBundle"
                 key="settings.agentBehavior.rules.displayName"/>
 
+        <applicationConfigurable
+                parentId="ai.kilocode.jetbrains.settings.agentBehavior"
+                id="ai.kilocode.jetbrains.settings.agentBehavior.compatibility"
+                instance="ai.kilocode.client.settings.agents.CompatibilityConfigurable"
+                bundle="messages.KiloBundle"
+                key="settings.agentBehavior.compatibility.displayName"/>
+
         <registryKey key="kilo.session.condense"
                      description="Enable event condensing in the session update queue (merges redundant snapshots before model delivery)."
                      defaultValue="true"

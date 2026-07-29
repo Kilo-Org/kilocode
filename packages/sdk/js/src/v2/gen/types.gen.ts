@@ -2102,6 +2102,7 @@ export type Command = {
   agent?: string
   model?: string
   source?: "command" | "mcp" | "skill"
+  origin?: string
   template: string
   subtask?: boolean
   hints: Array<string>
@@ -3033,6 +3034,18 @@ export type ConfigRulesResponse = {
     editable: boolean
     content: string
   }>
+}
+
+export type ClaudeContextResponse = {
+  instructions: {
+    present: boolean
+  }
+  skills: {
+    present: boolean
+  }
+  commands: {
+    present: boolean
+  }
 }
 
 export type ConfigModelStateResponse = {
@@ -11268,6 +11281,34 @@ export type ConfigRulesUpdateResponses = {
 }
 
 export type ConfigRulesUpdateResponse = ConfigRulesUpdateResponses[keyof ConfigRulesUpdateResponses]
+
+export type ConfigClaudeContextData = {
+  body?: never
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/config/claude-context"
+}
+
+export type ConfigClaudeContextErrors = {
+  /**
+   * Bad request
+   */
+  400: BadRequestError
+}
+
+export type ConfigClaudeContextError = ConfigClaudeContextErrors[keyof ConfigClaudeContextErrors]
+
+export type ConfigClaudeContextResponses = {
+  /**
+   * Claude context presence
+   */
+  200: ClaudeContextResponse
+}
+
+export type ConfigClaudeContextResponse = ConfigClaudeContextResponses[keyof ConfigClaudeContextResponses]
 
 export type ConfigModelStateData = {
   body?: never

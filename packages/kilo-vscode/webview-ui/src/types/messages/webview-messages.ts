@@ -482,6 +482,20 @@ export interface RequestClaudeCompatSettingMessage {
   type: "requestClaudeCompatSetting"
 }
 
+export interface RequestClaudeContextMessage {
+  type: "requestClaudeContext"
+}
+
+export interface UpdateClaudeContextMessage {
+  type: "updateClaudeContext"
+  skillsCommands?: boolean
+  instructions?: boolean
+}
+
+export interface DismissClaudeContextMessage {
+  type: "dismissClaudeContext"
+}
+
 export interface RequestConfigMessage {
   type: "requestConfig"
 }
@@ -703,7 +717,8 @@ export interface OpenWorktreeRequest {
 
 // Copy text to the system clipboard via the extension host
 export interface CopyToClipboardRequest {
-  type: "agentManager.copyToClipboard"
+  type: "copyToClipboard"
+  id: string
   text: string
 }
 
@@ -1297,6 +1312,9 @@ export type WebviewMessage =
   | StreamSessionVisibleMessage
   | RequestBrowserSettingsMessage
   | RequestClaudeCompatSettingMessage
+  | RequestClaudeContextMessage
+  | UpdateClaudeContextMessage
+  | DismissClaudeContextMessage
   | RequestConfigMessage
   | RequestGlobalConfigMessage
   | RequestIndexingStatusMessage

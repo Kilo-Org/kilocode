@@ -57,6 +57,7 @@ import { resolveProjectDirectory } from "./project-directory"
 import { seedSessionStatuses } from "./session-status"
 import { normalizeEnhancePromptErrorMessage } from "./enhance-prompt-error"
 import { retry } from "./services/cli-backend/retry"
+import { CLAUDE_REPO_PREFERENCES_KEY, readClaudeRepoPreference } from "./services/cli-backend/server-manager"
 import { normalize, type SSEPayload, type SyncPayload, type WirePayload } from "./services/cli-backend/sdk-sse-adapter"
 import { slimInfo, slimPart, slimParts } from "./kilo-provider/slim-metadata"
 import { handleSidebarWorktreeMessage } from "./kilo-provider/sidebar-worktree"
@@ -952,6 +953,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           dir: this.getWorkspaceDirectory(this.currentSession?.id),
           post: (msg) => this.postMessage(msg),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
+          copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
         })
       ) {
@@ -987,6 +989,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.handleWebviewFocusMessage(message)
       this.visibleTaskStreams.handle(message)
       if (await this.handleMemoryMessage(message)) return
+      if (await this.handleClaudeCompatMessage(message)) return
       if (this.handleLegacyMigrationMessage(message)) return
       switch (message.type) {
         case "webviewReady":
@@ -1346,9 +1349,6 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           break
         case "requestBrowserSettings":
           this.sendBrowserSettings()
-          break
-        case "requestClaudeCompatSetting":
-          this.sendClaudeCompatSetting()
           break
         case "requestNotificationSettings":
           this.sendNotificationSettings()
@@ -3754,6 +3754,86 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     const next = value === null ? undefined : value
     await config.update(leaf, next, vscode.ConfigurationTarget.Global)
     if (isWorkStyleSetting(key)) this.sendWorkStyle()
+    if (key === "claudeCodeSkillsCommands" || key === "claudeCodeInstructions") {
+      await this.promptClaudeReload()
+    }
+  }
+
+  private async handleClaudeCompatMessage(message: TypedWebviewMessage): Promise<boolean> {
+    if (message.type === "requestClaudeCompatSetting") {
+      this.sendClaudeCompatSetting()
+      return true
+    }
+    if (message.type === "requestClaudeContext") {
+      await this.fetchAndSendClaudeContext()
+      return true
+    }
+    if (message.type === "dismissClaudeContext") {
+      await this.updateClaudeRepoPreference({ decided: true })
+      await this.fetchAndSendClaudeContext()
+      return true
+    }
+    if (message.type !== "updateClaudeContext") return false
+    const data = message as TypedWebviewMessage & { skillsCommands?: boolean; instructions?: boolean }
+    await this.updateClaudeRepoPreference({
+      decided: true,
+      skillsCommands: data.skillsCommands,
+      instructions: data.instructions,
+    })
+    await this.fetchAndSendClaudeContext()
+    await this.promptClaudeReload()
+    return true
+  }
+
+  private async promptClaudeReload(): Promise<void> {
+    const choice = await vscode.window.showInformationMessage(
+      "Reload VS Code to apply Claude Code compatibility changes.",
+      "Reload Window",
+    )
+    if (choice === "Reload Window") await vscode.commands.executeCommand("workbench.action.reloadWindow")
+  }
+
+  private async updateClaudeRepoPreference(value: {
+    decided: boolean
+    skillsCommands?: boolean
+    instructions?: boolean
+  }): Promise<void> {
+    const dir = path.resolve(this.getRootDirectory())
+    const current = this.extensionContext?.workspaceState.get<
+      Record<string, { decided: boolean; skillsCommands?: boolean; instructions?: boolean }>
+    >(CLAUDE_REPO_PREFERENCES_KEY, {})
+    await this.extensionContext?.workspaceState.update(CLAUDE_REPO_PREFERENCES_KEY, { ...current, [dir]: value })
+  }
+
+  private async fetchAndSendClaudeContext(): Promise<void> {
+    if (!this.client) return
+    const dir = this.getRootDirectory()
+    const pref = readClaudeRepoPreference(this.extensionContext?.workspaceState, dir)
+    const config = vscode.workspace.getConfiguration("kilo-code.new")
+    const { data } = await retry(() => this.client!.config.claudeContext({ directory: dir }, { throwOnError: true }))
+    const skills = pref?.skillsCommands ?? config.get<boolean>("claudeCodeSkillsCommands", true)
+    const legacy = config.inspect<boolean>("claudeCodeCompat")
+    const inspected = config.inspect<boolean>("claudeCodeInstructions")
+    const instructions =
+      pref?.instructions ??
+      inspected?.globalValue ??
+      inspected?.workspaceValue ??
+      inspected?.workspaceFolderValue ??
+      (legacy?.globalValue === true || legacy?.workspaceValue === true || legacy?.workspaceFolderValue === true
+        ? true
+        : config.get<boolean>("claudeCodeInstructions", false))
+    this.postMessage({
+      type: "claudeContextLoaded",
+      visible:
+        !pref?.decided &&
+        (data.instructions.present === true || data.skills.present === true || data.commands.present === true),
+      present: {
+        instructions: data.instructions.present === true,
+        skills: data.skills.present === true,
+        commands: data.commands.present === true,
+      },
+      settings: { skillsCommands: skills, instructions },
+    })
   }
 
   /**
@@ -3831,10 +3911,19 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
    * Read the current Claude Code compatibility setting and push it to the webview.
    */
   private sendClaudeCompatSetting(): void {
-    const enabled = vscode.workspace.getConfiguration("kilo-code.new").get<boolean>("claudeCodeCompat", false)
+    const config = vscode.workspace.getConfiguration("kilo-code.new")
+    const legacy = config.inspect<boolean>("claudeCodeCompat")
+    const instructions = config.inspect<boolean>("claudeCodeInstructions")
     this.postMessage({
       type: "claudeCompatSettingLoaded",
-      enabled: enabled ?? false,
+      skillsCommands: config.get<boolean>("claudeCodeSkillsCommands", true),
+      instructions:
+        instructions?.globalValue ??
+        instructions?.workspaceValue ??
+        instructions?.workspaceFolderValue ??
+        (legacy?.globalValue === true || legacy?.workspaceValue === true || legacy?.workspaceFolderValue === true
+          ? true
+          : config.get<boolean>("claudeCodeInstructions", false)),
     })
   }
 

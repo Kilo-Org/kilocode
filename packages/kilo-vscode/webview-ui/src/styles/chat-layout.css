@@ -318,6 +318,7 @@
 }
 
 .chat-view .chat-input > .startup-error-banner,
+.chat-view .chat-input > .claude-context-banner,
 .chat-view .chat-input > [data-component="permission-shortcuts"] {
   box-sizing: border-box;
   width: min(

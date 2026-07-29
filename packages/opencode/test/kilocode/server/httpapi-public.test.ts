@@ -146,6 +146,7 @@ describe("Kilo PublicApi OpenAPI contract", () => {
       { method: "get", path: ConfigConsolePaths.sources },
       { method: "get", path: ConfigConsolePaths.effective },
       { method: "get", path: ConfigConsolePaths.rules },
+      { method: "get", path: ConfigConsolePaths.claudeContext },
       { method: "put", path: ConfigConsolePaths.rules },
       { method: "get", path: ConfigConsolePaths.modelState },
       { method: "patch", path: ConfigConsolePaths.modelState },
