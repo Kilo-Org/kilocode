@@ -181,9 +181,13 @@ function tailText(text, { lines = STDERR_TAIL_LINES, chars = STDERR_TAIL_CHARS }
  *
  * streamStdout:true → inherit fd 1 (edit live log); false → capture stdout
  * (triage parses it). stderr is always buffered.
+ *
+ * Every call runs with --auto: this bot is headless, so nobody can answer a
+ * permission prompt — without it the CLI auto-rejects asks (e.g. `git log`)
+ * and the chunk/batch burns both retries producing nothing (run 30433266378).
  */
 export function runKilo({ args, timeoutMs, streamStdout = false, label = "kilo" }) {
-  const result = spawnSync("kilo", args, {
+  const result = spawnSync("kilo", [...args, "--auto"], {
     encoding: "utf8",
     maxBuffer: 32 * 1024 * 1024,
     timeout: timeoutMs,
