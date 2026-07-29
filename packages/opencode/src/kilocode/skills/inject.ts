@@ -46,6 +46,7 @@ export namespace SkillInject {
     trusted: boolean
     disabled: boolean
     cwd: string
+    skill: string
     ctx: Tool.Context
     decompose: Decompose
   }
@@ -82,14 +83,14 @@ export namespace SkillInject {
         permission: "external_directory",
         patterns: Array.from(dirs),
         always: [],
-        metadata: { skillShell: true },
+        metadata: { skillShell: true, skill: opts.skill },
       })
     }
     yield* opts.ctx.ask({
       permission: "bash",
       patterns: Array.from(patterns),
       always: [],
-      metadata: { skillShell: true },
+      metadata: { skillShell: true, skill: opts.skill },
     })
 
     // Run each command in the instance directory, bounded by ctx.abort (ESC) and a

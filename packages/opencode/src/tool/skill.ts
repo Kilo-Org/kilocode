@@ -46,6 +46,7 @@ export const SkillTool = Tool.define(
             trusted: info.trusted === true,
             disabled: flags.disableSkillShell,
             cwd: yield* InstanceState.directory,
+            skill: info.name,
             ctx,
             decompose: permission.decompose,
           })

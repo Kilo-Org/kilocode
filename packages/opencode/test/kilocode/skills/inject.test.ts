@@ -196,6 +196,7 @@ describe("skill shell injection", () => {
         trusted: true,
         disabled: false,
         cwd: dir,
+        skill: "big-shell",
         ctx: { ...baseCtx, ask: () => Effect.void } as Tool.Context,
         decompose: ({ command }) => Effect.succeed({ patterns: [command], dirs: [] }),
       })
@@ -223,6 +224,7 @@ describe("SkillInject.render gating", () => {
         trusted: opts.trusted,
         disabled: opts.disabled,
         cwd: "/tmp",
+        skill: "test",
         ctx,
         decompose,
       }),

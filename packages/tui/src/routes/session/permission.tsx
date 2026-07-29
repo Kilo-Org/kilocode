@@ -19,6 +19,7 @@ import { ConfigProtection } from "@/kilocode/permission/config-paths"
 import { splitDiffHunks } from "@/kilocode/tui/diff"
 import { normalizeUrls } from "@/kilocode/util/url"
 import { MemoryPermissionRegistry } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
+import { displayCommand } from "@/kilocode/skills/display"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -292,15 +293,17 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
-              // kilocode_change start - skill shell batches list every command
+              // kilocode_change start - skill shell batches list every command, control-char-escaped so the
+              // displayed command cannot repaint the line to differ from what executes
               if (props.request.metadata?.["skillShell"] === true) {
                 const commands = (props.request.patterns ?? []).filter((p): p is string => typeof p === "string")
+                const skill = typeof props.request.metadata?.["skill"] === "string" ? props.request.metadata["skill"] : undefined
                 return {
                   icon: "#",
-                  title: "Run these skill commands?",
+                  title: skill ? `Run shell commands from skill "${skill}"?` : "Run these skill commands?",
                   body: (
                     <box paddingLeft={1}>
-                      <For each={commands}>{(cmd) => <text fg={theme.text}>{"$ " + cmd}</text>}</For>
+                      <For each={commands}>{(cmd) => <text fg={theme.text}>{"$ " + displayCommand(cmd)}</text>}</For>
                     </box>
                   ),
                 }
