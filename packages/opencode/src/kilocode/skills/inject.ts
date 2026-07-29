@@ -1,8 +1,6 @@
 import { Effect } from "effect"
-import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
-import type { ChildProcessSpawner as Spawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ConfigMarkdown } from "@/config/markdown"
-import { CommandTimeout } from "@/kilocode/command-timeout"
+import { Process } from "@/util/process"
 import { Shell } from "@opencode-ai/core/shell"
 import type * as Tool from "@/tool/tool"
 
@@ -30,6 +28,12 @@ import type * as Tool from "@/tool/tool"
 const DISABLED_NOTE = "[skill shell execution disabled by policy]"
 const UNTRUSTED_NOTE = "[skill shell execution disabled for untrusted skill]"
 
+// Execution bounds: model-initiated commands must not hang the load, blow up
+// context, or overrun the batch.
+const TIMEOUT_MS = 2 * 60 * 1000
+const MAX_OUTPUT_BYTES = 32 * 1024
+const MAX_COMMANDS = 32
+
 export namespace SkillInject {
   export type Decompose = (input: {
     command: string
@@ -43,7 +47,6 @@ export namespace SkillInject {
     disabled: boolean
     cwd: string
     ctx: Tool.Context
-    spawner: Spawner["Service"]
     decompose: Decompose
   }
 
@@ -56,8 +59,9 @@ export namespace SkillInject {
     if (!opts.trusted) return replace(opts.content, () => UNTRUSTED_NOTE)
 
     const shell = Shell.preferred()
-    // Deduplicate identical commands so the batch lists and runs each once.
-    const commands = Array.from(new Set(matches.map(([, cmd]) => cmd)))
+    // Deduplicate identical commands, then cap the batch so a skill can't queue
+    // an unbounded number of processes.
+    const commands = Array.from(new Set(matches.map(([, cmd]) => cmd))).slice(0, MAX_COMMANDS)
 
     // Decompose each command into sub-command patterns + out-of-project dir globs
     // via the shared bash scan, so plan-mode denies and external_directory checks
@@ -88,16 +92,37 @@ export namespace SkillInject {
       metadata: { skillShell: true },
     })
 
+    // Run each command in the instance directory, bounded by ctx.abort (ESC) and a
+    // timeout, with output truncated so it can't blow up or poison the prompt.
     const outputs = new Map<string, string>()
     for (const command of commands) {
-      outputs.set(
-        command,
-        yield* CommandTimeout.text(command, shell).pipe(Effect.provideService(ChildProcessSpawner, opts.spawner)),
-      )
+      outputs.set(command, yield* run(command, shell, opts.cwd, opts.ctx.abort))
     }
 
     return replace(opts.content, (command) => outputs.get(command) ?? "")
   })
+
+  const run = Effect.fn("SkillInject.run")(function* (command: string, shell: string, cwd: string, abort: AbortSignal) {
+    const result = yield* Effect.promise(async () => {
+      // A cleared timer bounds the run without leaking a pending 2-minute timeout
+      // per command; ESC (ctx.abort) still kills the child via the same signal.
+      const controller = new AbortController()
+      const signal = AbortSignal.any([abort, controller.signal])
+      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
+      try {
+        return await Process.text([command], { shell, cwd, abort: signal, nothrow: true }).catch(() => undefined)
+      } finally {
+        clearTimeout(timer)
+      }
+    })
+    if (!result) return abort.aborted ? "[skill shell command aborted]" : "[skill shell command timed out]"
+    return truncate(result.text)
+  })
+
+  function truncate(text: string) {
+    if (Buffer.byteLength(text) <= MAX_OUTPUT_BYTES) return text
+    return text.slice(0, MAX_OUTPUT_BYTES) + "\n[skill shell output truncated]"
+  }
 
   // Replace only the exact matches found in the ORIGINAL content. Never re-scan
   // the result, so inlined output containing `!`cmd`` stays inert.

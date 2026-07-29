@@ -102,6 +102,18 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("runs commands in the instance directory", () =>
+    Effect.gen(function* () {
+      const dir = (yield* TestInstance).directory
+      yield* writeGlobalSkill("cwd-shell", "Here: !`pwd`")
+
+      const result = yield* loadSkill("cwd-shell", () => Effect.void)
+
+      // pwd resolves to the instance dir (realpath), not the server process cwd
+      expect(result.output).toContain(path.basename(dir))
+    }),
+  )
+
   unix("decomposes a compound command into per-sub-command patterns", () =>
     Effect.gen(function* () {
       // A single placeholder with a chained command must not be asked as one glob
@@ -174,6 +186,24 @@ describe("skill shell injection", () => {
       expect(result.output).not.toMatch(/Out:\s*pwned\s*$/m)
     }),
   )
+
+  unix("truncates oversized command output before inlining", () =>
+    Effect.gen(function* () {
+      const dir = (yield* TestInstance).directory
+      // render directly (bypassing the tool's own output truncation) to assert the injector caps output
+      const rendered = yield* SkillInject.render({
+        content: "Out: !`yes x | head -c 65536`",
+        trusted: true,
+        disabled: false,
+        cwd: dir,
+        ctx: { ...baseCtx, ask: () => Effect.void } as Tool.Context,
+        decompose: ({ command }) => Effect.succeed({ patterns: [command], dirs: [] }),
+      })
+
+      expect(rendered).toContain("[skill shell output truncated]")
+      expect(rendered.length).toBeLessThan(40000)
+    }),
+  )
 })
 
 // The disabled (kill-switch) and untrusted branches must short-circuit before
@@ -183,7 +213,6 @@ describe("SkillInject.render gating", () => {
   const boom = () => {
     throw new Error("must not be reached")
   }
-  const spawner = new Proxy({}, { get: boom }) as any
   const ctx = { ...baseCtx, ask: () => Effect.sync(boom) } as Tool.Context
   const decompose = (() => Effect.sync(boom)) as unknown as SkillInject.Decompose
 
@@ -195,7 +224,6 @@ describe("SkillInject.render gating", () => {
         disabled: opts.disabled,
         cwd: "/tmp",
         ctx,
-        spawner,
         decompose,
       }),
     )
