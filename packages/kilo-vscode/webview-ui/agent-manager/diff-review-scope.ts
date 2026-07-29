@@ -116,5 +116,3 @@ export function createDiffReviewScope(opts: DiffReviewScopeOptions) {
     currentBranch,
   }
 }
-
-export type DiffReviewScope = ReturnType<typeof createDiffReviewScope>

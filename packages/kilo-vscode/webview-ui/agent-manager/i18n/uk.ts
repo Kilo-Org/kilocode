@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Перемістити вниз",
 
   "agentManager.hoverCard.branch": "ГІЛКА",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "База",
   "agentManager.hoverCard.sessions": "Сесії",
   "agentManager.hoverCard.files": "Файли",
@@ -63,7 +64,7 @@ export const dict = {
   "agentManager.terminal.new": "Нова вкладка термінала",
   "agentManager.terminal.ended": "термінал завершено — закрийте вкладку, щоб відхилити",
   "agentManager.terminal.connectionError": "помилка з'єднання термінала",
-  "agentManager.terminal.kill": "Завершити термінал",
+  "agentManager.terminal.add": "Новий термінал",
   "agentManager.terminal.empty": "Тут ще немає термінала",
   "agentManager.terminal.start": "Запустити термінал",
   "agentManager.terminal.destination": "Виберіть, що відкриватиме кнопка термінала",

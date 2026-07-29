@@ -21,6 +21,13 @@ export function composeDiffId(ctx: string, scope: DiffScope): string {
   return `${ctx}${SEP}${scope}`
 }
 
+export function parseDiffId(id: string): { ctx: string; scope: DiffScope } {
+  const idx = id.lastIndexOf(SEP)
+  const scope = id.slice(idx + SEP.length)
+  if (idx !== -1 && isDiffScope(scope)) return { ctx: id.slice(0, idx), scope }
+  return { ctx: id, scope: DEFAULT_DIFF_SCOPE }
+}
+
 export function isDiffScope(value: string): value is DiffScope {
   return value === "branch" || value === "staged" || value === "unstaged" || value === "session"
 }
