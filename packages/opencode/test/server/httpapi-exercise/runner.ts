@@ -262,7 +262,18 @@ const resetState = Effect.promise(async () => {
   Flag.KILO_SERVER_PASSWORD = original.KILO_SERVER_PASSWORD
   Flag.KILO_SERVER_USERNAME = original.KILO_SERVER_USERNAME
   await disposeApps()
-  await modules.disposeAllInstances()
+  // kilocode_change start - instance disposal can block while a reloaded instance is still
+  // bootstrapping; bound the wait so a reset can never stall the run (same race as teardown)
+  let done = false
+  await Promise.race([
+    modules.disposeAllInstances().then(() => {
+      done = true
+    }),
+    Bun.sleep(15_000).then(() => {
+      if (!done) console.warn("exerciser reset timed out waiting for disposeAllInstances; continuing")
+    }),
+  ])
+  // kilocode_change end
   // kilocode_change - each exerciser process already owns an isolated DB; unlinking it between scenarios races async Kilo callbacks
   await Bun.sleep(25)
 })

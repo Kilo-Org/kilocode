@@ -1674,7 +1674,24 @@ const main = Effect.gen(function* () {
   yield* Effect.addFinalizer(() =>
     Effect.gen(function* () {
       const modules = yield* Effect.promise(() => runtime())
-      yield* Effect.promise(() => modules.disposeAllInstances())
+      // Teardown must not wait forever on fibers that outlive the run (a reloaded instance can
+      // still be bootstrapping when the finalizer disposes it). Bound the wait with a plain
+      // Promise.race so the process always exits; racing with Effect fibers trips scope-close.
+      const bound = <A>(promise: () => Promise<A>, label: string) =>
+        Effect.promise(() => {
+          let done = false
+          return Promise.race([
+            promise().then((value) => {
+              done = true
+              return value
+            }),
+            Bun.sleep(15_000).then(() => {
+              if (!done) console.warn(`exerciser teardown timed out waiting for ${label}; continuing`)
+              return undefined as A
+            }),
+          ])
+        })
+      yield* bound(() => modules.disposeAllInstances(), "disposeAllInstances")
       yield* Effect.promise(() => disposeApps())
       yield* cleanupExercisePaths
     }),

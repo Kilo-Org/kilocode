@@ -20,12 +20,15 @@ export function call(scenario: ActiveScenario, ctx: SeededContext<unknown>, opti
 export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" | "valid" = "missing") {
   return Effect.promise(async () => {
     const controller = new AbortController()
-    return Promise.race([
-      Promise.resolve(
-        app(await runtime(), { auth: { password: "secret" } }).request(
-          toAuthProbeRequest(scenario, credentials, controller.signal),
-        ),
-      ).then((response) => capture(response, scenario.capture)),
+    // kilocode_change start - keep the request so an abandoned capture can be cancelled;
+    // otherwise a never-ending body (SSE event stream) leaks a server fiber that blocks disposeApps
+    const request = Promise.resolve(
+      app(await runtime(), { auth: { password: "secret" } }).request(
+        toAuthProbeRequest(scenario, credentials, controller.signal),
+      ),
+    )
+    const result = await Promise.race([
+      request.then((response) => capture(response, scenario.capture)),
       Bun.sleep(1_000).then(() => {
         controller.abort("auth probe timed out")
         return {
@@ -37,6 +40,9 @@ export function callAuthProbe(scenario: ActiveScenario, credentials: "missing" |
         }
       }),
     ])
+    if (result.timedOut) void request.then((response) => response.body?.cancel().catch(() => undefined))
+    return result
+    // kilocode_change end
   })
 }
 
@@ -47,7 +53,19 @@ const appCache: Partial<Record<string, CachedApp>> = {}
 export async function disposeApps() {
   const apps = Object.values(appCache)
   for (const key of Object.keys(appCache)) delete appCache[key]
-  await Promise.all(apps.flatMap((app) => (app === undefined ? [] : [app.dispose()])))
+  // kilocode_change start - Scope.close can wait forever on request fibers that outlived their
+  // probe (for example a never-ending SSE body whose capture was abandoned). Bound the wait so
+  // teardown and between-scenario resets always continue; the process exit reclaims anything left.
+  let done = false
+  await Promise.race([
+    Promise.all(apps.flatMap((app) => (app === undefined ? [] : [app.dispose()]))).then(() => {
+      done = true
+    }),
+    Bun.sleep(15_000).then(() => {
+      if (!done) console.warn("exerciser disposeApps timed out; continuing")
+    }),
+  ])
+  // kilocode_change end
 }
 
 function app(modules: Runtime, options: CallOptions) {
