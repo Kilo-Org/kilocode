@@ -3,7 +3,7 @@
  * Build the Kilo VS Code extension and launch it in a development host.
  *
  * Usage:
- *   bun script/launch.ts [options]
+ *   bun script/launch.ts [options] [workspace]
  *
  * Options:
  *   --no-build        Skip the build step (reuse last build)
@@ -44,10 +44,14 @@ const repo = resolve(root, "..", "..")
 
 function parse(argv: string[]) {
   const result: Record<string, string | boolean> = {}
+  const values: string[] = []
 
   for (let i = 0; i < argv.length; i++) {
     const item = argv[i]!
-    if (!item.startsWith("--")) continue
+    if (!item.startsWith("--")) {
+      values.push(item)
+      continue
+    }
 
     if (item.startsWith("--no-")) {
       result[item.slice(5)] = false
@@ -72,6 +76,7 @@ function parse(argv: string[]) {
     i++
   }
 
+  if (typeof result.workspace !== "string" && values[0]) result.workspace = values[0]
   return result
 }
 
