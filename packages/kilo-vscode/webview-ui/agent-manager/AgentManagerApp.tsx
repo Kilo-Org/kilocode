@@ -24,8 +24,6 @@ import type {
   AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
-  AgentManagerApplyWorktreeDiffStatus,
-  AgentManagerApplyWorktreeDiffConflict,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
@@ -134,8 +132,8 @@ import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
-import { ApplyDialog } from "./ApplyDialog"
-import { groupApplyConflicts } from "./apply-conflicts"
+import { createApplyToLocal } from "./apply-to-local"
+import { createWorktreeDiffs } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -158,7 +156,6 @@ import {
 } from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
-import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -184,12 +181,6 @@ interface WorktreeBusyState {
   reason: "setting-up" | "deleting"
   message?: string
   branch?: string
-}
-
-interface ApplyState {
-  status: AgentManagerApplyWorktreeDiffStatus
-  message: string
-  conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
@@ -286,9 +277,10 @@ const AgentManagerContent: Component = () => {
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
   const diffOpen = () => sidePanel() === "diff"
-  const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
-  const [diffLoading, setDiffLoading] = createSignal(false)
-  const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
+  const diffs = createWorktreeDiffs(vscode)
+  const diffDatas = diffs.diffDatas
+  const diffLoading = diffs.diffLoading
+  const setDiffLoading = diffs.setDiffLoading
   // The diff and terminal panels each remember their own width: a diff
   // benefits from half the window, a terminal only needs about a third.
   const TERMINAL_MIN_WIDTH = 360
@@ -334,12 +326,6 @@ const AgentManagerContent: Component = () => {
 
   // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
-
-  // Per-worktree apply-to-local status
-  const [applyStates, setApplyStates] = createSignal<Record<string, ApplyState>>({})
-  const [applyTarget, setApplyTarget] = createSignal<string | undefined>()
-  const [applySelectedFiles, setApplySelectedFiles] = createSignal<string[]>([])
-  const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
 
   const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
@@ -395,12 +381,6 @@ const AgentManagerContent: Component = () => {
     setReviewCommentsByContext((prev) => ({ ...prev, [sel]: comments }))
   }
 
-  const applyStateForSelection = createMemo(() => {
-    const sel = selection()
-    if (!sel || sel === LOCAL) return undefined
-    return applyStates()[sel]
-  })
-
   const resolveWorktreeSessionId = (worktreeId: string) => {
     const id = session.currentSessionID()
     if (id) {
@@ -410,157 +390,19 @@ const AgentManagerContent: Component = () => {
     return managedSessions().find((entry) => entry.worktreeId === worktreeId)?.id
   }
 
-  const applyTargetSessionId = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return undefined
-    return resolveWorktreeSessionId(target)
+  const apply = createApplyToLocal({
+    vscode,
+    dialog,
+    t,
+    selection,
+    local: LOCAL,
+    worktrees,
+    diffDatas,
+    diffLoading,
+    resolveWorktreeSessionId,
+    track: metrics.track,
   })
-
-  const applyDiffs = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return [] as WorktreeFileDiff[]
-    const data = diffDatas()
-    const current = applyTargetSessionId()
-    if (current && data[current]) return data[current]!
-    const ids = managedSessions()
-      .filter((entry) => entry.worktreeId === target)
-      .map((entry) => entry.id)
-    for (const id of ids) {
-      if (data[id]) return data[id]!
-    }
-    return [] as WorktreeFileDiff[]
-  })
-
-  const applyStateForTarget = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return undefined
-    return applyStates()[target]
-  })
-
-  const applyBusyForTarget = createMemo(() => {
-    const state = applyStateForTarget()
-    if (!state) return false
-    return state.status === "checking" || state.status === "applying"
-  })
-
-  const applySelectedSet = createMemo(() => new Set(applySelectedFiles()))
-
-  const applySelectionStats = createMemo(() => {
-    const set = applySelectedSet()
-    const selected = applyDiffs().filter((diff) => set.has(diff.file))
-    const additions = selected.reduce((sum, diff) => sum + diff.additions, 0)
-    const deletions = selected.reduce((sum, diff) => sum + diff.deletions, 0)
-    return {
-      total: applyDiffs().length,
-      selected: selected.length,
-      additions,
-      deletions,
-    }
-  })
-
-  const applyHasSelection = createMemo(() => applySelectionStats().selected > 0)
-
-  const applyConflictRows = createMemo(() => groupApplyConflicts(applyStateForTarget()?.conflicts ?? []))
-
-  const applyToLocal = (worktreeId: string, selectedFiles: string[]) => {
-    setApplyStates((prev) => ({
-      ...prev,
-      [worktreeId]: {
-        status: "checking",
-        message: t("agentManager.apply.checking"),
-        conflicts: [],
-      },
-    }))
-    vscode.postMessage({ type: "agentManager.applyWorktreeDiff", worktreeId, selectedFiles })
-  }
-
-  const resetApplyDialog = () => {
-    setApplyTarget(undefined)
-    setApplySelectedFiles([])
-    setApplySelectionTouched(false)
-  }
-
-  const closeApplyDialog = () => {
-    resetApplyDialog()
-    dialog.close()
-  }
-
-  const applySelectAll = () => {
-    setApplySelectionTouched(true)
-    setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
-  }
-
-  const applySelectNone = () => {
-    setApplySelectionTouched(true)
-    setApplySelectedFiles([])
-  }
-
-  const applyToggleFile = (file: string, checked: boolean) => {
-    setApplySelectionTouched(true)
-    setApplySelectedFiles((prev) => {
-      if (checked) {
-        if (prev.includes(file)) return prev
-        const set = new Set(prev)
-        set.add(file)
-        return applyDiffs()
-          .map((diff) => diff.file)
-          .filter((path) => set.has(path))
-      }
-      if (!prev.includes(file)) return prev
-      return prev.filter((path) => path !== file)
-    })
-  }
-
-  const triggerApply = () => {
-    const target = applyTarget()
-    if (!target) return
-    if (!applyHasSelection()) return
-    if (applyBusyForTarget()) return
-    metrics.track("apply_to_local", "apply_dialog", { fileCount: applySelectedFiles().length })
-    applyToLocal(target, applySelectedFiles())
-  }
-
-  const openApplyDialog = () => {
-    const sel = selection()
-    if (!sel || sel === LOCAL) return
-    setApplyStates((prev) => {
-      if (!prev[sel]) return prev
-      const next = { ...prev }
-      delete next[sel]
-      return next
-    })
-    setApplyTarget(sel)
-    setApplySelectionTouched(false)
-    setApplySelectedFiles([])
-    const sid = resolveWorktreeSessionId(sel)
-    if (sid) vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sid })
-
-    setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
-
-    dialog.show(
-      () => (
-        <ApplyDialog
-          diffs={applyDiffs()}
-          loading={diffLoading()}
-          selectedFiles={applySelectedSet()}
-          selectedCount={applySelectionStats().selected}
-          additions={applySelectionStats().additions}
-          deletions={applySelectionStats().deletions}
-          busy={applyBusyForTarget()}
-          hasSelection={applyHasSelection()}
-          status={applyStateForTarget()?.status}
-          message={applyStateForTarget()?.message}
-          conflictRows={applyConflictRows()}
-          onSelectAll={applySelectAll}
-          onSelectNone={applySelectNone}
-          onToggleFile={applyToggleFile}
-          onApply={triggerApply}
-          onClose={closeApplyDialog}
-        />
-      ),
-      resetApplyDialog,
-    )
-  }
+  const openApplyDialog = apply.openApplyDialog
 
   const openWorktreeDirectory = () => {
     const sel = selection()
@@ -591,31 +433,6 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel) runWorktree(sel)
   }
-
-  createEffect(
-    on(
-      () => [applyTarget(), applyDiffs(), applySelectionTouched()] as const,
-      ([target, diffs, touched]) => {
-        if (!target) return
-        const files = diffs.map((diff) => diff.file)
-        if (files.length === 0) {
-          if (!touched) setApplySelectedFiles([])
-          return
-        }
-
-        if (!touched) {
-          setApplySelectedFiles(files)
-          return
-        }
-
-        const current = applySelectedFiles()
-        const set = new Set(current)
-        const next = files.filter((file) => set.has(file))
-        const same = next.length === current.length && next.every((file, index) => file === current[index])
-        if (!same) setApplySelectedFiles(next)
-      },
-    ),
-  )
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
@@ -732,14 +549,6 @@ const AgentManagerContent: Component = () => {
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
-    setApplyStates((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
-      if (Object.keys(next).length === Object.keys(prev).length) return prev
-      return next
-    })
-
-    const target = applyTarget()
-    if (target && !ids.has(target)) closeApplyDialog()
   })
 
   const worktreeSessionIds = createMemo(
@@ -1508,65 +1317,19 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.worktreeDiff") {
-        const ev = msg as AgentManagerWorktreeDiffMessage
-        let staleFiles: Set<string> | undefined
-        setDiffDatas((prev) => {
-          const existing = prev[ev.sessionId]
-          const merged = existing
-            ? mergeWorktreeDiffs(existing, ev.diffs)
-            : { diffs: ev.diffs, stale: new Set<string>() }
-          staleFiles = merged.stale
-          const next = merged.diffs
-          if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
-          return { ...prev, [ev.sessionId]: next }
-        })
-        if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
+        diffs.onWorktreeDiff(msg as AgentManagerWorktreeDiffMessage)
       }
 
       if (msg.type === "agentManager.worktreeDiffFile") {
-        const ev = msg as AgentManagerWorktreeDiffFileMessage
-        if (ev.diff) {
-          setDiffDatas((prev) => {
-            const existing = prev[ev.sessionId] ?? []
-            const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
-            return { ...prev, [ev.sessionId]: next }
-          })
-          setDiffFilePending(ev.sessionId, ev.diff.file, false)
-          return
-        }
-        setDiffFilePending(ev.sessionId, ev.file, false)
+        diffs.onWorktreeDiffFile(msg as AgentManagerWorktreeDiffFileMessage)
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
-        const ev = msg as AgentManagerWorktreeDiffLoadingMessage
-        setDiffLoading(ev.loading)
+        diffs.onWorktreeDiffLoading(msg as AgentManagerWorktreeDiffLoadingMessage)
       }
 
       if (msg.type === "agentManager.applyWorktreeDiffResult") {
-        const ev = msg as AgentManagerApplyWorktreeDiffResultMessage
-        const files = new Set((ev.conflicts ?? []).map((entry) => entry.file).filter(Boolean)).size
-        const count = ev.conflicts?.length ?? 0
-        setApplyStates((prev) => ({
-          ...prev,
-          [ev.worktreeId]: {
-            status: ev.status,
-            message: ev.message,
-            conflicts: ev.conflicts ?? [],
-          },
-        }))
-
-        if (ev.status === "success") {
-          showToast({ variant: "success", title: t("agentManager.apply.success"), description: ev.message })
-          if (applyTarget() === ev.worktreeId) closeApplyDialog()
-        }
-        if (ev.status === "conflict") {
-          const summary =
-            count > 0 ? t("agentManager.apply.conflictToast", { count, files: Math.max(files, 1) }) : ev.message
-          showToast({ variant: "error", title: t("agentManager.apply.conflict"), description: summary })
-        }
-        if (ev.status === "error") {
-          showToast({ variant: "error", title: t("agentManager.apply.error"), description: ev.message })
-        }
+        apply.onApplyResult(msg as AgentManagerApplyWorktreeDiffResultMessage)
       }
 
       if (msg.type === "agentManager.revertWorktreeFileResult") revertCtl.onResult(msg as never)
@@ -1723,54 +1486,13 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
   }
 
-  const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
-    setDiffFileLoading((prev) => {
-      const session = prev[sessionId] ?? {}
-      if (value) {
-        if (session[file]) return prev
-        return {
-          ...prev,
-          [sessionId]: { ...session, [file]: true },
-        }
-      }
-
-      if (!session[file]) return prev
-      const next = { ...session }
-      delete next[file]
-      if (Object.keys(next).length === 0) {
-        const result = { ...prev }
-        delete result[sessionId]
-        return result
-      }
-      return {
-        ...prev,
-        [sessionId]: next,
-      }
-    })
-  }
-
   const requestDiffFile = (file: string) => {
     const sessionId = currentDiffSessionId()
     if (!sessionId) return
-    if (diffFileLoading()[sessionId]?.[file]) return
-    setDiffFilePending(sessionId, file, true)
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+    diffs.requestDiffFile(sessionId, file)
   }
 
-  const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
-    const loading = diffFileLoading()[sessionId] ?? {}
-    for (const file of files) {
-      if (loading[file]) continue
-      setDiffFilePending(sessionId, file, true)
-      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
-    }
-  }
-
-  const diffFileLoadingForCurrent = createMemo(() => {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return new Set<string>()
-    return new Set(Object.keys(diffFileLoading()[sessionId] ?? {}))
-  })
+  const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(currentDiffSessionId))
 
   const revertCtl = createRevertFile(currentDiffSessionId, vscode, showToast, t)
 
@@ -2763,11 +2485,7 @@ const AgentManagerContent: Component = () => {
                     const s = stats()
                     return s && (s.files > 0 || s.additions > 0 || s.deletions > 0)
                   }
-                  const applyBusy = () => {
-                    const state = applyStateForSelection()
-                    if (!state) return false
-                    return state.status === "checking" || state.status === "applying"
-                  }
+                  const applyBusy = apply.applyBusyForSelection
                   return (
                     <>
                       <Show when={isWorktree()}>
