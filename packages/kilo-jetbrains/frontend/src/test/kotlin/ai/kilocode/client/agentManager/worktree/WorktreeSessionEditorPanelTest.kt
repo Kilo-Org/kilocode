@@ -14,6 +14,7 @@ import ai.kilocode.client.testing.fire
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.activeListSectionTitle
+import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.rpc.dto.SessionDto
 import ai.kilocode.rpc.dto.SessionTimeDto
 import com.intellij.openapi.actionSystem.DataKey
@@ -30,6 +31,7 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SearchTextField
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.Container
 import java.awt.Point
@@ -37,7 +39,9 @@ import java.awt.event.ActionEvent
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 import java.awt.event.MouseEvent
+import javax.swing.JComponent
 import javax.swing.KeyStroke
+import javax.swing.SwingUtilities
 
 @Suppress("UnstableApiUsage")
 class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
@@ -80,6 +84,24 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertNotNull(UIUtil.findComponentOfType(panel, JBList::class.java))
             assertNull(UIUtil.findComponentOfType(panel, SearchTextField::class.java))
         }
+    }
+
+    fun `test list and toolbar paint tool window background`() {
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val scroll = edt { SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, list) as JBScrollPane }
+        val button = edt { components(panel).filterIsInstance<ActionButton>().single { it.presentation.text == "New session" } }
+        val toolbar = edt { button.parent }
+        val row = edt { toolbar.parent }
+
+        assertEquals(activeListToolWindowBackground(), edt { list.background })
+        assertEquals(activeListToolWindowBackground(), edt { scroll.background })
+        assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
+        assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
+        assertEquals(activeListToolWindowBackground(), edt { toolbar.background })
+        assertEquals(activeListToolWindowBackground(), edt { row.background })
+        assertEquals(0, edt { scroll.border.getBorderInsets(scroll).left })
+        assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).left })
+        assertTrue(edt { (row as JComponent).border.getBorderInsets(row).bottom > 0 })
     }
 
     fun `test editor kind delegates preferred focus to panel`() {

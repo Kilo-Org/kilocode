@@ -14,6 +14,8 @@ import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListSurface
+import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
@@ -37,6 +39,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
+import java.awt.Color
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
 import javax.swing.JComponent
@@ -55,6 +58,7 @@ class AgentManagerPanel(
     private val edit = RenameAction()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
+        surface = ActiveListSurface.ToolWindow,
         showSearch = false,
         onCell = { key, id ->
             val item = item(key) ?: return@ActiveList
@@ -71,6 +75,7 @@ class AgentManagerPanel(
 
     init {
         Disposer.register(parent, this)
+        isOpaque = true
         border = JBUI.Borders.empty(UiStyle.Gap.sm())
         addToCenter(list)
         sync()
@@ -90,6 +95,8 @@ class AgentManagerPanel(
     }
 
     val component: JComponent get() = this
+
+    override fun getBackground(): Color = activeListToolWindowBackground()
 
     fun refresh() {
         selected = activeWorktreeKey() ?: selected

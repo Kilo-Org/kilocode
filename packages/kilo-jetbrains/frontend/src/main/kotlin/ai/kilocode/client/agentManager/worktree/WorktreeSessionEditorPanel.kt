@@ -18,6 +18,8 @@ import ai.kilocode.client.ui.list.ActiveListEditOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
+import ai.kilocode.client.ui.list.ActiveListSurface
+import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.icons.AllIcons
 import com.intellij.ide.ui.LafManagerListener
@@ -32,15 +34,19 @@ import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.SideBorder
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
+import java.awt.Color
 import javax.swing.JComponent
 import javax.swing.ListSelectionModel
+import javax.swing.JPanel
 import javax.swing.SwingUtilities
 import javax.swing.event.ListDataEvent
 import javax.swing.event.ListDataListener
@@ -63,6 +69,7 @@ class WorktreeSessionEditorPanel(
             description = false,
             selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
         ),
+        surface = ActiveListSurface.ToolWindow,
         showSearch = false,
         onCell = { key, id ->
             if (id == RENAME_CELL) beginRename(key, RENAME_CELL)
@@ -76,9 +83,11 @@ class WorktreeSessionEditorPanel(
     init {
         Disposer.register(parent, this)
         border = JBUI.Borders.empty(UiStyle.Gap.sm())
-        val left = BorderLayoutPanel()
-        left.addToTop(toolbar())
-        left.addToCenter(list)
+        val left = object : JPanel(BorderLayout()) {
+            override fun getBackground(): Color = activeListToolWindowBackground()
+        }
+        left.add(toolbar(), BorderLayout.NORTH)
+        left.add(list, BorderLayout.CENTER)
         val splitter = OnePixelSplitter(false, 0.25f)
         splitter.firstComponent = left
         splitter.secondComponent = manager.component
@@ -168,8 +177,14 @@ class WorktreeSessionEditorPanel(
             true,
         )
         toolbar.targetComponent = this
+        toolbar.component.background = activeListToolWindowBackground()
         toolbar.updateActionsImmediately()
-        return toolbar.component
+        return object : JPanel(BorderLayout()) {
+            override fun getBackground(): Color = activeListToolWindowBackground()
+        }.apply {
+            border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
+            add(toolbar.component, BorderLayout.WEST)
+        }
     }
 
     @RequiresEdt

@@ -8,16 +8,27 @@ import com.intellij.ui.awt.RelativePoint
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
+import java.awt.Color
 import java.awt.event.KeyEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
 import javax.swing.ScrollPaneConstants
+import javax.swing.UIManager
 import javax.swing.event.DocumentEvent
+
+internal enum class ActiveListSurface {
+    Default,
+    ToolWindow,
+}
+
+internal fun activeListToolWindowBackground(): Color = UIManager.getColor("ToolWindow.background") ?: UIUtil.getPanelBackground()
 
 internal class ActiveList(
     emptyText: String,
     cfg: ActiveListConfig = ActiveListConfig.Equal,
+    private val surface: ActiveListSurface = ActiveListSurface.Default,
     showSearch: Boolean = true,
     placeholder: String = "",
     onCell: (String, String) -> Unit,
@@ -27,16 +38,24 @@ internal class ActiveList(
     onClick: ((ActiveListItem) -> Unit)? = null,
     onSelect: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, matcher, onOpen, onActivate, onClick, onCell)
+    private val view = ActiveListView(emptyText, cfg, surface, matcher, onOpen, onActivate, onClick, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
+    private val scroll = object : JBScrollPane(view) {
+        override fun getBackground(): Color {
+            if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+            return super.getBackground() ?: UIUtil.getPanelBackground()
+        }
+    }.apply {
+        horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
+        viewportBorder = JBUI.Borders.empty()
+        if (surface == ActiveListSurface.ToolWindow) viewport.background = activeListToolWindowBackground()
+    }
 
     init {
         view.onSelect = onSelect
         // Center the scroll pane so the list fills the panel vertically and horizontally, with the
         // search field pinned above it.
-        val scroll = JBScrollPane(view).apply {
-            horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
-        }
+        if (surface == ActiveListSurface.ToolWindow) isOpaque = true
         search?.let {
             it.textEditor.emptyText.text = placeholder
             wireActiveListSearch(it, view)
@@ -44,6 +63,11 @@ internal class ActiveList(
             scroll.border = JBUI.Borders.emptyTop(UiStyle.Gap.sm())
         } ?: run { scroll.border = JBUI.Borders.empty() }
         addToCenter(scroll)
+    }
+
+    override fun getBackground(): Color {
+        if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+        return super.getBackground() ?: UIUtil.getPanelBackground()
     }
 
     @RequiresEdt

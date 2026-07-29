@@ -18,6 +18,7 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.xml.util.XmlStringUtil
+import java.awt.Color
 import java.awt.Dimension
 import java.awt.Point
 import java.awt.Rectangle
@@ -28,6 +29,7 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import javax.swing.JComponent
 import javax.swing.KeyStroke
+import javax.swing.JViewport
 import javax.swing.ListSelectionModel
 import javax.swing.Scrollable
 import javax.swing.SwingConstants
@@ -36,6 +38,7 @@ import javax.swing.event.ListSelectionEvent
 internal class ActiveListView(
     empty: String,
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
+    private val surface: ActiveListSurface = ActiveListSurface.Default,
     private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
     private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
@@ -46,6 +49,11 @@ internal class ActiveListView(
     private val renderer = ActiveListRenderer(model, cfg)
     internal val list: JBList<ActiveListItem> = object : JBList<ActiveListItem>(model), ActiveListActive {
         override fun active(): Boolean = popups > 0
+
+        override fun getBackground(): Color {
+            if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+            return super.getBackground() ?: UIUtil.getListBackground(false, false)
+        }
 
         override fun getToolTipText(event: MouseEvent): String? {
             val tip = super.getToolTipText(event)
@@ -83,6 +91,7 @@ internal class ActiveListView(
     }
 
     init {
+        if (surface == ActiveListSurface.ToolWindow) isOpaque = true
         list.putClientProperty(AnimatedIcon.ANIMATION_IN_RENDERER_ALLOWED, true)
         list.cellRenderer = renderer
         list.registerKeyboardAction(
@@ -459,9 +468,18 @@ internal class ActiveListView(
         return e.isShiftDown || e.isMetaDown || e.isControlDown
     }
 
+    override fun getBackground(): Color {
+        if (surface == ActiveListSurface.ToolWindow) return activeListToolWindowBackground()
+        return super.getBackground() ?: UIUtil.getPanelBackground()
+    }
+
     override fun getScrollableTracksViewportWidth() = true
 
-    override fun getScrollableTracksViewportHeight() = false
+    override fun getScrollableTracksViewportHeight(): Boolean {
+        if (surface != ActiveListSurface.ToolWindow) return false
+        val view = parent as? JViewport ?: return false
+        return preferredSize.height < view.height
+    }
 
     override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
 

@@ -9,6 +9,7 @@ import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.client.testing.fire
 import ai.kilocode.client.ui.list.ActiveListItem
+import ai.kilocode.client.ui.list.activeListToolWindowBackground
 import ai.kilocode.client.vfs.KiloPath
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
@@ -20,8 +21,11 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.ui.SearchTextField
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBList
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.ui.UIUtil
 import java.awt.event.MouseEvent
+import javax.swing.JComponent
+import javax.swing.SwingUtilities
 import kotlinx.coroutines.CompletableDeferred
 
 @Suppress("UnstableApiUsage")
@@ -90,6 +94,21 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
 
         assertNull(edt { UIUtil.findComponentOfType(panel, SearchTextField::class.java) })
+    }
+
+    fun `test worktree list paints tool window background`() {
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        val scroll = edt { SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, list) as JBScrollPane }
+
+        assertEquals(activeListToolWindowBackground(), edt { panel.background })
+        assertEquals(activeListToolWindowBackground(), edt { list.background })
+        assertEquals(activeListToolWindowBackground(), edt { scroll.background })
+        assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })
+        assertEquals(activeListToolWindowBackground(), edt { (scroll.viewport.view as JComponent).background })
+        assertEquals(0, edt { scroll.viewportBorder.getBorderInsets(scroll).top })
     }
 
     fun `test clicking a worktree opens the worktree session editor`() {
