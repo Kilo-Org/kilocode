@@ -23,6 +23,44 @@
       "env": {
         "KILO_API_URL": "http://localhost:3000"
       }
+    },
+    {
+      "name": "VSCode - Run Extension (Isolated)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--disable-extensions",
+        "--user-data-dir=${workspaceFolder}/.kilo-dev/vscode/user-data",
+        "--extensions-dir=${workspaceFolder}/.kilo-dev/vscode/extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
+      "preLaunchTask": "VSCode - Compile",
+      "env": {
+        "XDG_DATA_HOME": "${workspaceFolder}/.kilo-dev/data",
+        "XDG_CONFIG_HOME": "${workspaceFolder}/.kilo-dev/config",
+        "XDG_STATE_HOME": "${workspaceFolder}/.kilo-dev/state",
+        "XDG_CACHE_HOME": "${workspaceFolder}/.kilo-dev/cache"
+      }
+    },
+    {
+      "name": "VSCode - Run Extension (Isolated Clean)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--disable-extensions",
+        "--user-data-dir=${workspaceFolder}/.kilo-dev/vscode/user-data",
+        "--extensions-dir=${workspaceFolder}/.kilo-dev/vscode/extensions",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"
+      ],
+      "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
+      "preLaunchTask": "VSCode - Compile (Clean Isolated)",
+      "env": {
+        "XDG_DATA_HOME": "${workspaceFolder}/.kilo-dev/data",
+        "XDG_CONFIG_HOME": "${workspaceFolder}/.kilo-dev/config",
+        "XDG_STATE_HOME": "${workspaceFolder}/.kilo-dev/state",
+        "XDG_CACHE_HOME": "${workspaceFolder}/.kilo-dev/cache"
+      }
     }
   ]
 }
