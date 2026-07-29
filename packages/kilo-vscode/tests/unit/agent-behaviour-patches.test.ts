@@ -8,23 +8,10 @@ import {
 } from "../../webview-ui/src/components/settings/agent-behaviour-patches"
 
 describe("mcpEnabledPatch", () => {
-  it("persists the enabled state without dropping the server configuration", () => {
-    const config = {
+  it("returns only the enabled-state patch", () => {
+    expect(mcpEnabledPatch("docs", false)).toEqual({
       mcp: {
         docs: {
-          type: "remote" as const,
-          url: "https://example.com/mcp",
-          headers: { Authorization: "Bearer token" },
-        },
-      },
-    }
-
-    expect(mcpEnabledPatch(config, "docs", false)).toEqual({
-      mcp: {
-        docs: {
-          type: "remote",
-          url: "https://example.com/mcp",
-          headers: { Authorization: "Bearer token" },
           enabled: false,
         },
       },

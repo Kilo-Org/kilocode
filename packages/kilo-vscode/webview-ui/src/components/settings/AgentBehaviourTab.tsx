@@ -676,7 +676,7 @@ const AgentBehaviourTab: Component = () => {
                             checked={isConnected(name)}
                             disabled={session.mcpLoading() === name}
                             onChange={(enabled: boolean) => {
-                              updateConfig(mcpEnabledPatch(config(), name, enabled))
+                              updateConfig(mcpEnabledPatch(name, enabled))
                               if (!enabled) {
                                 session.disconnectMcp(name)
                                 return

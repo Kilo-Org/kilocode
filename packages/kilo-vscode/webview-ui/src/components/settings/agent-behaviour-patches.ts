@@ -1,12 +1,9 @@
 import type { Config } from "../../types/messages"
 
-export function mcpEnabledPatch(config: Config, name: string, enabled: boolean): Partial<Config> {
-  const mcp = config.mcp ?? {}
+export function mcpEnabledPatch(name: string, enabled: boolean): Partial<Config> {
   return {
     mcp: {
-      ...mcp,
       [name]: {
-        ...mcp[name],
         enabled,
       },
     },
