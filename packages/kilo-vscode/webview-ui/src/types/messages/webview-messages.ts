@@ -1109,6 +1109,15 @@ export interface FetchCustomProviderModelsMessage {
   headers?: Record<string, string>
 }
 
+export interface FetchIndexingModelsMessage {
+  type: "fetchIndexingModels"
+  requestId: string
+  runtime: "ollama" | "openai-compatible"
+  baseURL: string
+  apiKey?: string
+  model?: string
+}
+
 export interface PersistRecentsRequest {
   type: "persistRecents"
   recents: ModelSelection[]
@@ -1415,6 +1424,7 @@ export type WebviewMessage =
   | AnacondaDesktopWebviewMessage
   | SaveCustomProviderMessage
   | FetchCustomProviderModelsMessage
+  | FetchIndexingModelsMessage
   | PersistRecentsRequest
   | RequestRecentsMessage
   | PersistModelSelectorExpandedRequest

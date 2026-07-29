@@ -4,6 +4,7 @@ import { routeInputToolMessage } from "../services/input-tools"
 import type { KiloConnectionService } from "../services/cli-backend/connection-service"
 import type { SuggestionContext } from "./handlers/suggestion"
 import type { KiloClient } from "@kilocode/sdk/v2/client"
+import { handleIndexingModels } from "./indexing-models"
 
 type Ctx = {
   question: SuggestionContext
@@ -17,9 +18,13 @@ type Ctx = {
 }
 
 export async function routeEarlyMessage(
-  message: { type: string; id?: unknown; text?: unknown },
+  message: { type: string; id?: unknown; text?: unknown } & Record<string, unknown>,
   ctx: Ctx,
 ): Promise<boolean> {
+  if (message.type === "fetchIndexingModels") {
+    await handleIndexingModels(message, ctx)
+    return true
+  }
   if (message.type === "copyToClipboard") {
     if (typeof message.id !== "string") return true
     if (typeof message.text !== "string") {

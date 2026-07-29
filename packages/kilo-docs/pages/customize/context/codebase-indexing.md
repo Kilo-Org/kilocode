@@ -39,6 +39,8 @@ This enables natural language queries like "user authentication logic" or "datab
 1. Open Kilo Code **Settings** → **Indexing**, or click the indexing indicator at the bottom of the prompt input panel.
 2. Turn on **Global Enable** to index every workspace, or turn on **Enable for This Project** to index only the current workspace. Both toggles are off until explicitly enabled.
 3. Pick an **Embedding Provider** and fill in its required fields.
+   - For **Ollama**, connect to the local server and select an installed model. Kilo verifies that it can create embeddings and detects its vector dimension.
+   - For **LM Studio**, select **LM Studio (local)**, start the local server in LM Studio, connect, and select a loaded embedding model.
 4. Pick a **Vector Store** (`LanceDB` or `Qdrant`) and configure it.
 5. Optionally adjust **Tuning Parameters** (search score, batch size, retries, max results).
 6. Save to start the initial scan.
@@ -65,6 +67,7 @@ You can also edit the `indexing` section in `kilo.jsonc` directly:
 |---|---|---|
 | **OpenAI** | API key | Default model: `text-embedding-3-small`. `text-embedding-3-large` for higher accuracy. |
 | **Ollama** | Local base URL | No API costs. Runs fully offline. |
+| **LM Studio** | Local base URL | Uses LM Studio's OpenAI-compatible local server and discovers loaded embedding models. |
 | **OpenAI-Compatible** | Base URL + optional API key | For self-hosted or third-party OpenAI-compatible endpoints, including unauthenticated local servers. |
 | **Gemini** | Google AI API key | Supports `gemini-embedding-001` and other Gemini embedding models. |
 | **Mistral** | API key from [La Plateforme](https://console.mistral.ai/api-keys/) | Use a standard Mistral API key. The Codestral-specific keys from the [Mistral autocomplete setup guide](/docs/code-with-ai/features/autocomplete/mistral-setup) are **not** interchangeable — those only work for completion. |
