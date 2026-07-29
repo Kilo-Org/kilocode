@@ -85,14 +85,10 @@ describe("TelemetryEvent", () => {
 })
 
 describe("Telemetry", () => {
-  test("includes immutable host OS properties", () => {
+  test("includes host OS properties", () => {
     const capture = spyOn(Client, "capture").mockImplementation(() => {})
 
-    Telemetry.track(TelemetryEvent.CLI_START, {
-      os_name: "overridden",
-      os_version: "overridden",
-      os_arch: "overridden",
-    })
+    Telemetry.track(TelemetryEvent.CLI_START)
 
     expect(capture).toHaveBeenCalledWith(
       TelemetryEvent.CLI_START,

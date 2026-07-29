@@ -127,13 +127,7 @@ export namespace Telemetry {
   }
 
   export function track(event: TelemetryEvent, properties?: Record<string, unknown>) {
-    Client.capture(event, {
-      ...props,
-      ...properties,
-      os_name: props.os_name,
-      os_version: props.os_version,
-      os_arch: props.os_arch,
-    })
+    Client.capture(event, { ...props, ...properties })
   }
 
   // CLI Lifecycle
