@@ -6,8 +6,11 @@ import { Skill } from "../skill"
 import * as Tool from "./tool"
 import DESCRIPTION from "./skill.txt"
 // kilocode_change start - gate + run shell injection in skill bodies
-import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import { Config } from "@/config/config"
+import { Shell } from "@opencode-ai/core/shell"
+import { InstanceState } from "@/effect/instance-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
+import { ShellPermission } from "./shell"
 import { SkillInject } from "@/kilocode/skills/inject"
 // kilocode_change end
 
@@ -21,7 +24,8 @@ export const SkillTool = Tool.define(
     const skill = yield* Skill.Service
     const ripgrep = yield* Ripgrep.Service
     const flags = yield* RuntimeFlags.Service // kilocode_change
-    const spawner = yield* ChildProcessSpawner // kilocode_change
+    const permission = yield* ShellPermission // kilocode_change - decompose skill commands like the bash tool
+    const config = yield* Config.Service // kilocode_change - resolve a parseable shell for injection
 
     return {
       description: DESCRIPTION,
@@ -40,12 +44,16 @@ export const SkillTool = Tool.define(
           })
 
           // kilocode_change start - render `!`cmd`` shell injection, gated by trust + kill-switch + batch approval
+          const cfg = yield* config.get()
           const content = yield* SkillInject.render({
             content: info.content,
             trusted: info.trusted === true,
             disabled: flags.disableSkillShell,
+            cwd: yield* InstanceState.directory,
+            skill: info.name,
+            shell: Shell.acceptable(cfg.shell),
             ctx,
-            spawner,
+            decompose: permission.decompose,
           })
           // kilocode_change end
 

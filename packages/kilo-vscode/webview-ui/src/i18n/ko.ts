@@ -716,6 +716,10 @@ export const dict = {
   "session.messages.scrollToBottom": "하단으로 스크롤",
   "session.messages.initializing": "초기화 중...",
   "session.messages.taskStarting": "시작 중...",
+  "session.prompts.navLabel": "프롬프트 탐색기",
+  "session.prompts.tick": "프롬프트 {{index}}/{{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "아직 응답이 없습니다",
+  "session.prompts.queued": "대기 중",
   "session.status.writingResponse": "응답 작성 중...",
   "session.status.retry": "재시도 중…",
   "session.status.working": "작업 중...",
@@ -742,7 +746,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "서버에 연결 중...",
   "prompt.placeholder.error": "연결에 실패했습니다. 출력 패널을 확인하거나 확장 프로그램을 다시 시작하세요.",
-  "prompt.placeholder.default": "메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄 바꿈)",
+  "prompt.placeholder.default": "메시지를 입력하세요, @로 파일 언급... (Enter로 전송, Shift+Enter로 줄 바꿈)",
 
   "context.usage.sessionCost": "세션 비용",
   "context.usage.olderSessions": "{{count}}개의 이전 세션",

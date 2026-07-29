@@ -715,6 +715,10 @@ export const dict = {
   "session.messages.scrollToBottom": "下にスクロール",
   "session.messages.initializing": "初期化中...",
   "session.messages.taskStarting": "開始中...",
+  "session.prompts.navLabel": "プロンプトナビゲーター",
+  "session.prompts.tick": "プロンプト {{index}}/{{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "まだ応答がありません",
+  "session.prompts.queued": "キューに追加済み",
   "session.status.writingResponse": "応答を作成中…",
   "session.status.retry": "再試行中…",
   "session.status.working": "作業中…",
@@ -742,7 +746,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "サーバーに接続中...",
   "prompt.placeholder.error": "接続に失敗しました。出力パネルを確認するか、拡張機能を再起動してください。",
-  "prompt.placeholder.default": "メッセージを入力... (Enterで送信、Shift+Enterで改行)",
+  "prompt.placeholder.default": "メッセージを入力、@ でファイルを参照... (Enterで送信、Shift+Enterで改行)",
 
   "context.usage.sessionCost": "セッションコスト",
   "context.usage.olderSessions": "{{count}} 件の古いセッション",

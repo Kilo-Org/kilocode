@@ -16,6 +16,17 @@ const permissionOptions: PermissionOption[] = [
   { optionId: "reject", kind: "reject_once", name: "Reject" },
 ]
 
+// kilocode_change start - skill shell batches list their commands and are never persisted, so no "Always allow"
+const skillShellOptions: PermissionOption[] = [
+  { optionId: "once", kind: "allow_once", name: "Allow" },
+  { optionId: "reject", kind: "reject_once", name: "Reject" },
+]
+
+function isSkillShell(metadata: PermissionEvent["properties"]["metadata"]) {
+  return (metadata as { skillShell?: unknown })?.skillShell === true
+}
+// kilocode_change end
+
 export class Handler {
   private readonly queues = new Map<string, Promise<void>>()
 
@@ -51,18 +62,19 @@ export class Handler {
       return
     }
 
+    const skillShell = isSkillShell(permission.metadata) // kilocode_change - skill batches list commands and never persist
     const result = await this.input.connection
       .requestPermission({
         sessionId: permission.sessionID,
         toolCall: {
           toolCallId: permission.tool?.callID ?? permission.id,
           status: "pending",
-          title: permission.permission,
-          rawInput: permission.metadata,
+          title: skillShell ? "Run skill shell commands" : permission.permission, // kilocode_change
+          rawInput: permission.metadata, // kilocode_change - metadata.commands carries the verbatim command list
           kind: toToolKind(permission.permission),
           locations: toLocations(permission.permission, permission.metadata),
         },
-        options: permissionOptions,
+        options: skillShell ? skillShellOptions : permissionOptions, // kilocode_change
       })
       .catch(async () => {
         await this.reply(permission.id, "reject", session.cwd)
@@ -81,14 +93,15 @@ export class Handler {
       await this.writeProposedEdit(session.id, permission.metadata).catch(() => {})
     }
 
-    await this.reply(permission.id, reply, session.cwd)
+    await this.reply(permission.id, reply, session.cwd, true) // kilocode_change - human selected via requestPermission
   }
 
-  private async reply(requestID: string, reply: Reply, directory: string) {
+  private async reply(requestID: string, reply: Reply, directory: string, interactive = false) { // kilocode_change - interactive param
     await this.input.sdk.permission.reply({
       requestID,
       reply,
       directory,
+      interactive, // kilocode_change
     })
   }
 

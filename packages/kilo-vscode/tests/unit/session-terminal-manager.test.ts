@@ -9,6 +9,7 @@ import { describe, it, expect } from "bun:test"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
 import { SessionTerminalManager, type TerminalHost } from "../../src/agent-manager/SessionTerminalManager"
+import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const FILE = path.join(ROOT, "src/agent-manager/SessionTerminalManager.ts")
@@ -130,8 +131,8 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("panel command registration skipped")
   })
 
-  it("resolves the session that owns the active managed terminal", () => {
-    const text = body("activeSession")
+  it("resolves the key that owns the active managed terminal", () => {
+    const text = body("activeKey")
     expect(text).toContain("this.host.activeTerminal()")
     expect(text).toContain("entry.terminal === active")
   })
@@ -139,7 +140,8 @@ describe("SessionTerminalManager structure", () => {
   it("rejects context capture from another managed session", () => {
     const text = body("prepareContext")
     expect(text).toContain("this.showExisting(sessionId)")
-    expect(text).toContain("this.activeSession()")
+    expect(text).toContain("this.activeKey()")
+    expect(text).toContain("SessionTerminalManager.sessionKey(sessionId)")
   })
 })
 
@@ -160,5 +162,76 @@ describe("SessionTerminalManager command restoration", () => {
 
     await expect(state.handler()).rejects.toBe(expected)
     state.manager.dispose()
+  })
+})
+
+describe("SessionTerminalManager worktree terminals", () => {
+  function scene(opts: { worktreePath?: string; repoPath?: string } = {}) {
+    const created: Array<{ cwd: string; name: string }> = []
+    const warnings: string[] = []
+    let shown = 0
+    const host: TerminalHost = {
+      createTerminal(o) {
+        created.push(o)
+        return {
+          show: () => shown++,
+          dispose() {},
+          exitStatus: undefined,
+        }
+      },
+      activeTerminal: () => undefined,
+      repoPath: () => opts.repoPath,
+      showWarning: (msg) => warnings.push(msg),
+      setContext() {},
+      onTerminalClosed: () => ({ dispose() {} }),
+      onActiveTerminalChanged: () => ({ dispose() {} }),
+      registerCommand: () => ({ dispose() {} }),
+      executeCommand: () => Promise.resolve(),
+    }
+    const state = {
+      getWorktree: (id: string) =>
+        opts.worktreePath ? { id, path: opts.worktreePath, branch: "feature/x" } : undefined,
+    } as unknown as WorktreeStateManager
+    const manager = new SessionTerminalManager(() => {}, host)
+    return { manager, state, created, warnings, shown: () => shown }
+  }
+
+  it("creates a terminal rooted at the worktree path", () => {
+    const s = scene({ worktreePath: "/repo/.kilo/worktrees/wt-1", repoPath: "/repo" })
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+    expect(s.created).toEqual([{ cwd: "/repo/.kilo/worktrees/wt-1", name: "Agent: feature/x" }])
+    expect(s.shown()).toBe(1)
+  })
+
+  it("reuses the live terminal on repeat calls", () => {
+    const s = scene({ worktreePath: "/repo/.kilo/worktrees/wt-1" })
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+    expect(s.created).toHaveLength(1)
+    expect(s.shown()).toBe(2)
+  })
+
+  it("keeps session and worktree terminal keys in separate namespaces", () => {
+    const s = scene({ worktreePath: "/repo/.kilo/worktrees/wt-1", repoPath: "/repo" })
+    s.manager.showTerminal("worktree:wt-1", undefined)
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+    expect(s.created).toEqual([
+      { cwd: "/repo", name: "Agent: local" },
+      { cwd: "/repo/.kilo/worktrees/wt-1", name: "Agent: feature/x" },
+    ])
+    expect(s.shown()).toBe(2)
+  })
+
+  it("falls back to the repo root when the worktree is unknown", () => {
+    const s = scene({ repoPath: "/repo" })
+    s.manager.showWorktreeTerminal("gone", s.state)
+    expect(s.created).toEqual([{ cwd: "/repo", name: "Agent: worktree" }])
+  })
+
+  it("warns and creates nothing when no cwd resolves", () => {
+    const s = scene({})
+    s.manager.showWorktreeTerminal("gone", s.state)
+    expect(s.created).toHaveLength(0)
+    expect(s.warnings).toHaveLength(1)
   })
 })

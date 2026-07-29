@@ -728,6 +728,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Desplazar al final",
   "session.messages.initializing": "Inicializando...",
   "session.messages.taskStarting": "Iniciando...",
+  "session.prompts.navLabel": "Navegador de prompts",
+  "session.prompts.tick": "Prompt {{index}} de {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Aún no hay respuesta",
+  "session.prompts.queued": "En cola",
   "session.status.writingResponse": "Escribiendo respuesta…",
   "session.status.retry": "Reintentando…",
   "session.status.working": "Trabajando…",
@@ -755,7 +759,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Conectando al servidor...",
   "prompt.placeholder.error": "Conexión fallida. Revisa el panel de salida o reinicia la extensión.",
-  "prompt.placeholder.default": "Escribe un mensaje... (Enter para enviar, Shift+Enter para nueva línea)",
+  "prompt.placeholder.default":
+    "Escribe un mensaje, @ para mencionar archivos... (Enter para enviar, Shift+Enter para nueva línea)",
 
   "context.usage.sessionCost": "Coste de la sesión",
   "context.usage.olderSessions": "{{count}} sesiones anteriores",

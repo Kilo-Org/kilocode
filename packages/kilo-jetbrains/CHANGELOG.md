@@ -1,5 +1,15 @@
 # Changelog
 
+## 7.5.0
+
+### Minor Changes
+
+- [#12518](https://github.com/Kilo-Org/kilocode/pull/12518) [`452d0eb`](https://github.com/Kilo-Org/kilocode/commit/452d0eb55f740e951cfd906375e22cf97250144c) - Publish a signed GitHub-hosted JetBrains plugin build with the CLI bundled for offline installation.
+
+### Patch Changes
+
+- [#12571](https://github.com/Kilo-Org/kilocode/pull/12571) [`9950739`](https://github.com/Kilo-Org/kilocode/commit/9950739e36b40a682c0a25173e62f5236e60f81a) - Allow sending prompts while a session is busy and show queued prompts with a remove action.
+
 ## 7.4.16
 
 ### Patch Changes
@@ -134,7 +144,9 @@
 ### Changed
 
 - Update the JetBrains CLI pin from Kilo Core 7.4.15 to 7.4.16.
+
 ## [7.0.10] - 2026-07-24
+
 ## [7.0.10] - 2026-07-24
 
 ### Added

@@ -709,6 +709,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Прокрутити до низу",
   "session.messages.initializing": "Ініціалізація...",
   "session.messages.taskStarting": "Запуск...",
+  "session.prompts.navLabel": "Навігатор запитів",
+  "session.prompts.tick": "Запит {{index}} з {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Відповіді ще немає",
+  "session.prompts.queued": "У черзі",
   "session.status.writingResponse": "Пишу відповідь...",
   "session.status.retry": "Повторна спроба…",
   "session.status.working": "Працює...",
@@ -735,7 +739,8 @@ export const dict = {
   "dialog.model.noProviders": "Немає провайдерів",
 
   "prompt.placeholder.connecting": "Підключення до сервера...",
-  "prompt.placeholder.default": "Напишіть повідомлення... (Enter для надсилання, Shift+Enter для нового рядка)",
+  "prompt.placeholder.default":
+    "Напишіть повідомлення, @ щоб згадати файли... (Enter для надсилання, Shift+Enter для нового рядка)",
   "prompt.placeholder.error": "Підключення не вдалося. Перевірте панель виводу або перезапустіть розширення.",
 
   "context.usage.sessionCost": "Вартість сесії",
