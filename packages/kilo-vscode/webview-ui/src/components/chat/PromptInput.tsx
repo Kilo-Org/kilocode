@@ -1472,7 +1472,6 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               onClick={() => imageInputRef?.click()}
               disabled={isDisabled()}
               aria-label="Upload images"
-              class="prompt-upload-button"
             >
               <Paperclip size={16} />
             </Button>
