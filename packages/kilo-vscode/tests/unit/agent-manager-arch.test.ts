@@ -411,6 +411,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.stopRunScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",
+      "agentManager.showWorktreeTerminal",
       "agentManager.showExistingLocalTerminal",
       "agentManager.requestRepoInfo",
       "agentManager.requestState",

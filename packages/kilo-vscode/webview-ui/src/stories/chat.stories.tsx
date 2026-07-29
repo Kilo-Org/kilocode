@@ -617,6 +617,141 @@ export const ChatViewReadable420: Story = {
   render: () => renderReadableChat("busy"),
 }
 
+// ---------------------------------------------------------------------------
+// PromptRail — the left-edge tick rail and its hover card
+// Several turns so the rail and card are populated: a long prompt, a short
+// low-signal follow-up, a tool-only answer (empty preview), and a queued one.
+// ---------------------------------------------------------------------------
+
+const railNow = 1_700_000_200_000
+const railTurn = (i: number, prompt: string, answer: string | undefined, queued = false) => {
+  const userID = `rail-user-${i}`
+  const assistantID = `rail-asst-${i}`
+  const messages: any[] = [{ id: userID, sessionID: SESSION_ID, role: "user", time: { created: railNow + i * 100 } }]
+  if (!queued) {
+    messages.push({
+      id: assistantID,
+      sessionID: SESSION_ID,
+      role: "assistant",
+      parentID: userID,
+      time: { created: railNow + i * 100 + 50 },
+      modelID: "claude-sonnet-4-20250514",
+      providerID: "anthropic",
+      mode: "default",
+      agent: "default",
+      path: { cwd: "/project", root: "/project" },
+    })
+  }
+  const parts: Record<string, any[]> = {
+    [userID]: [{ id: `rail-part-user-${i}`, sessionID: SESSION_ID, messageID: userID, type: "text", text: prompt }],
+  }
+  if (!queued) {
+    parts[assistantID] = answer
+      ? [{ id: `rail-part-asst-${i}`, sessionID: SESSION_ID, messageID: assistantID, type: "text", text: answer }]
+      : [
+          {
+            id: `rail-part-asst-${i}`,
+            sessionID: SESSION_ID,
+            messageID: assistantID,
+            type: "tool",
+            callID: `rail-call-${i}`,
+            tool: "bash",
+            state: {
+              status: "completed",
+              input: { command: "ls", description: "List files" },
+              output: "a.ts b.ts",
+              title: "ls",
+              metadata: {},
+              time: { start: railNow + i * 100 + 50, end: railNow + i * 100 + 80 },
+            },
+          },
+        ]
+  }
+  return { messages, parts }
+}
+
+const railTurns = [
+  railTurn(
+    1,
+    "Add a prompt navigator rail to the left edge of the chat that expands into a card of prompt and answer previews when I hover it, without shrinking the readable lane",
+    "Added PromptRail with a tick per prompt and a hover card; the lane width is untouched.",
+  ),
+  railTurn(2, "yes", "Confirmed — wiring it into MessageList next."),
+  railTurn(3, "run the tests", undefined),
+  railTurn(
+    4,
+    "now do the same in the Agent Manager chat",
+    "ChatView → MessageList is shared, so the rail appears there automatically; no Agent Manager specific code needed.",
+  ),
+  railTurn(5, "looks good, ship it", "", true),
+]
+const railMessages = railTurns.flatMap((turn) => turn.messages)
+const railParts = Object.assign({}, ...railTurns.map((turn) => turn.parts))
+const railData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: railMessages },
+  part: railParts,
+}
+
+const renderRailChat = (status: "idle" | "busy" = "idle") => {
+  const session = {
+    ...mockSessionValue({ id: SESSION_ID, status }),
+    messages: () => railMessages,
+    userMessages: () => railMessages.filter((msg) => msg.role === "user"),
+  }
+  return (
+    <StoryProviders data={railData} sessionID={SESSION_ID} status={status} noPadding>
+      <SessionContext.Provider value={session as any}>
+        <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+          <ChatView />
+        </div>
+      </SessionContext.Provider>
+    </StoryProviders>
+  )
+}
+
+export const PromptRailWide: Story = {
+  name: "PromptRail - wide editor tab",
+  render: () => renderRailChat(),
+}
+
+export const PromptRailSidebar: Story = {
+  name: "PromptRail - narrow sidebar",
+  render: () => renderRailChat("busy"),
+}
+
+// Long session: more prompts than fit the transcript height, so the rail and
+// the card both cap to the newest ones that fit.
+const manyTurns = Array.from({ length: 40 }, (_, i) =>
+  railTurn(100 + i, `Prompt number ${i + 1} in a long running session`, `Answer number ${i + 1}.`),
+)
+const manyMessages = manyTurns.flatMap((turn) => turn.messages)
+const manyData = {
+  ...defaultMockData,
+  message: { [SESSION_ID]: manyMessages },
+  part: Object.assign({}, ...manyTurns.map((turn) => turn.parts)),
+}
+
+export const PromptRailManyPrompts: Story = {
+  name: "PromptRail - long session caps to what fits",
+  render: () => {
+    const session = {
+      ...mockSessionValue({ id: SESSION_ID, status: "idle" }),
+      messages: () => manyMessages,
+      userMessages: () => manyMessages.filter((msg) => msg.role === "user"),
+    }
+    return (
+      <StoryProviders data={manyData} sessionID={SESSION_ID} status="idle" noPadding>
+        <SessionContext.Provider value={session as any}>
+          <div style={{ height: "100vh", display: "flex", "flex-direction": "column" }}>
+            <ChatView />
+          </div>
+        </SessionContext.Provider>
+      </StoryProviders>
+    )
+  },
+}
+
 export const MessageListToolToQueuedUserSpacing: Story = {
   name: "MessageList — queued users stay at bottom",
   render: () => {

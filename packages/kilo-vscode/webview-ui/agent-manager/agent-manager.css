@@ -426,6 +426,25 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
+/* Jump modifier held (⌘/Ctrl): reveal shortcut badges on every item, not just the
+   hovered one. Scoped via :has so items without a badge (beyond ⌘9) keep their stats.
+   The close button stays hidden so holding the modifier never exposes the delete action. */
+.am-show-shortcuts .am-wt-hover-actions:has(.am-shortcut-badge) {
+  opacity: 1;
+  visibility: visible;
+}
+.am-show-shortcuts .am-wt-hover-actions .am-worktree-close {
+  display: none;
+}
+.am-show-shortcuts .am-wt-actions-cell:has(.am-shortcut-badge) > .am-worktree-stats,
+.am-show-shortcuts .am-wt-actions-cell:has(.am-shortcut-badge) > .am-worktree-stats-skeleton {
+  opacity: 0;
+  visibility: hidden;
+}
+.am-show-shortcuts .am-local-item .am-shortcut-badge {
+  opacity: 1;
+}
+
 .am-worktree-item:has(.am-worktree-rename-input) .am-wt-row2 {
   display: none;
 }
@@ -4597,6 +4616,59 @@ body.vscode-high-contrast-light {
 
 .am-side-terminal-empty {
   color: var(--text-weak);
+}
+
+/* Side terminal tab strip — one row of tabs reusing the top bar's
+   .am-tab chrome, plus the "+" action. Height matches .am-diff-header
+   (32px: 4px padding + 24px content) so switching inspector modes does
+   not shift the panel chrome. The strip itself never scrolls; the tab
+   list does, so a narrow panel never pushes the "+" action out of view
+   (same split as .am-tab-list-wrap / .am-tab-add-wrap). */
+.am-side-terminal-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  padding: 4px 4px 0;
+  gap: 2px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+  background: var(--surface-base);
+  position: relative;
+  z-index: 20;
+}
+
+.am-side-terminal-tablist {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.am-side-terminal-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+/* Each tab shares the available width and shrinks with ellipsis.
+   touch-action unlocks pointer-based drag reordering (same as
+   .am-tab-sortable). */
+.am-side-terminal-tab {
+  display: flex;
+  flex: 0 1 140px;
+  min-width: 64px;
+  height: 100%;
+  touch-action: none;
+}
+
+.am-side-terminal-add {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
 }
 
 /* Hidden-but-alive side panel host: taken out of the flow so the chat
