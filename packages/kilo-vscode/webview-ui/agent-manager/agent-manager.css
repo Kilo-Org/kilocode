@@ -1712,6 +1712,15 @@ body.am-wt-dragging-active * {
   color: var(--text-weak);
 }
 
+.am-diff-scope {
+  display: flex;
+  align-items: center;
+  padding: 2px 4px 4px 12px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+  background: var(--surface-base);
+}
+
 .am-diff-header-main {
   display: flex;
   align-items: center;

@@ -133,6 +133,7 @@ export const dict = {
   "agentManager.diff.revertFile": "ย้อนกลับไฟล์",
   "agentManager.diff.revertSuccess": "ย้อนกลับไฟล์แล้ว",
   "agentManager.diff.revertError": "ย้อนกลับล้มเหลว",
+  "agentManager.diff.applyBranchOnly": "นำไปใช้ได้เฉพาะกับ diff ของ Branch ทั้งหมดเท่านั้น สลับไปที่ขอบเขต Branch เพื่อใช้งาน",
   "agentManager.open.button": "เปิด",
   "agentManager.open.tooltip": "เปิด Worktree นี้ใน VS Code",
   "agentManager.apply.globalButton": "นำไปใช้",

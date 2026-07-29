@@ -144,6 +144,7 @@ export const dict = {
   "agentManager.diff.revertFile": "Ripristina file",
   "agentManager.diff.revertSuccess": "File ripristinato",
   "agentManager.diff.revertError": "Ripristino non riuscito",
+  "agentManager.diff.applyBranchOnly": "Applica funziona solo sul diff completo del branch. Passa all'ambito Branch per applicare.",
   "agentManager.open.button": "Apri",
   "agentManager.open.tooltip": "Apri questo worktree in VS Code",
   "agentManager.apply.globalButton": "Applica",

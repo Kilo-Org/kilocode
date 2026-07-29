@@ -1,4 +1,4 @@
-import { type Component, createSignal, createMemo, Show, createEffect, on } from "solid-js"
+import { type Component, createSignal, createMemo, Show, createEffect, on, type JSXElement } from "solid-js"
 import type { VirtualizerHandle } from "virtua/solid"
 import { Diff } from "@kilocode/kilo-ui/diff"
 import { Accordion } from "@kilocode/kilo-ui/accordion"
@@ -86,6 +86,10 @@ interface DiffPanelProps {
   onRevertFile?: (file: string) => void
   revertingFiles?: Set<string>
   activeTerminalId?: string
+  /** Optional leading row rendered under the header (e.g. the scope selector). */
+  lead?: JSXElement
+  /** Defaults to true. Hides the per-file Revert action when false. */
+  canRevert?: boolean
 }
 
 export const DiffPanel: Component<DiffPanelProps> = (props) => {
@@ -535,6 +539,9 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
           <IconButton icon="close" size="small" variant="ghost" label={t("common.close")} onClick={props.onClose} />
         </div>
       </div>
+      <Show when={props.lead}>
+        <div class="am-diff-scope">{props.lead}</div>
+      </Show>
 
       <Show when={props.loading && props.diffs.length === 0}>
         <div class="am-diff-loading">
@@ -636,7 +643,7 @@ export const DiffPanel: Component<DiffPanelProps> = (props) => {
                                 />
                               </Tooltip>
                             </Show>
-                            <Show when={props.onRevertFile}>
+                            <Show when={props.onRevertFile && props.canRevert !== false}>
                               <Tooltip value={t("agentManager.diff.revertFile")} placement="top">
                                 <IconButton
                                   icon="discard"

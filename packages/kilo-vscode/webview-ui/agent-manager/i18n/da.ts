@@ -139,6 +139,7 @@ export const dict = {
   "agentManager.diff.revertFile": "Gendan fil",
   "agentManager.diff.revertSuccess": "Fil gendannet",
   "agentManager.diff.revertError": "Gendannelse fejlede",
+  "agentManager.diff.applyBranchOnly": "Anvend virker kun på hele Branch-diffen. Skift til Branch-området for at anvende.",
   "agentManager.open.button": "Åbn",
   "agentManager.open.tooltip": "Åbn dette Worktree i VS Code",
   "agentManager.apply.globalButton": "Anvend",

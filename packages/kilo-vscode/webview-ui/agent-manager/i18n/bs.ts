@@ -138,6 +138,7 @@ export const dict = {
   "agentManager.diff.revertFile": "Vrati datoteku",
   "agentManager.diff.revertSuccess": "Datoteka vraćena",
   "agentManager.diff.revertError": "Vraćanje neuspješno",
+  "agentManager.diff.applyBranchOnly": "Primijeni radi samo s kompletnim diffom grane. Prebacite se na opseg Branch da biste primijenili.",
   "agentManager.open.button": "Otvori",
   "agentManager.open.tooltip": "Otvori ovaj worktree u VS Code-u",
   "agentManager.apply.globalButton": "Primijeni",
