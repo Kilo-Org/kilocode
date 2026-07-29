@@ -26,6 +26,8 @@ interface ServerConfig {
 export interface TerminalRoutingDeps {
   /** Shared SDK client. Throws when the CLI backend is not connected. */
   getClient(): KiloClient
+  /** Shared SDK client, connecting the CLI backend when needed. */
+  getClientAsync(): Promise<KiloClient>
   /** Loopback URL + basic-auth password for the running `kilo serve`. */
   getServerConfig(): ServerConfig | undefined
   /** Workspace root — used as cwd fallback when no worktree is selected (LOCAL). */
@@ -119,6 +121,9 @@ export class TerminalRouter {
     }
     const title = `Terminal ${this.nextOrdinal(worktreeId)}`
     try {
+      // Join the shared backend connection instead of racing its synchronous
+      // client accessor when this is the first Kilo action in the window.
+      await this.deps.getClientAsync()
       const created = await manager.create({ worktreeId, cwd, title })
       if (generation !== this.generation) {
         await manager.close(created.terminalId)
@@ -182,6 +187,9 @@ export class TerminalRouter {
     const token = Buffer.from(`kilo:${config.password}`).toString("base64")
     const dir = encodeURIComponent(cwd)
     const auth = encodeURIComponent(token)
-    return `${base}/pty/${encodeURIComponent(ptyID)}/connect?directory=${dir}&cursor=-1&auth_token=${auth}`
+    // A new terminal has one initial attachment. Replay its retained startup
+    // bytes so xterm can answer shell capability queries emitted before the
+    // WebSocket connected; tailing from -1 can make shells wait for a timeout.
+    return `${base}/pty/${encodeURIComponent(ptyID)}/connect?directory=${dir}&cursor=0&auth_token=${auth}`
   }
 }
