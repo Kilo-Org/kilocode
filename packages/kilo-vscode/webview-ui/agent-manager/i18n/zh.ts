@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.section.moveUp": "上移",
   "agentManager.section.moveDown": "下移",
   "agentManager.hoverCard.branch": "分支",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "基础",
   "agentManager.hoverCard.sessions": "会话",
   "agentManager.hoverCard.files": "文件",

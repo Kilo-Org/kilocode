@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.section.moveUp": "Pomjeri gore",
   "agentManager.section.moveDown": "Pomjeri dolje",
   "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Baza",
   "agentManager.hoverCard.sessions": "Sesije",
   "agentManager.hoverCard.files": "Datoteke",

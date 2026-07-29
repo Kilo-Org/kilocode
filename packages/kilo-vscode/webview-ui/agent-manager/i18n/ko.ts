@@ -30,6 +30,7 @@ export const dict = {
   "agentManager.section.moveUp": "위로 이동",
   "agentManager.section.moveDown": "아래로 이동",
   "agentManager.hoverCard.branch": "브랜치",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "베이스",
   "agentManager.hoverCard.sessions": "세션",
   "agentManager.hoverCard.files": "파일",
