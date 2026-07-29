@@ -558,6 +558,10 @@
   }
 }
 
+.prompt-upload-button {
+  color: #fff !important;
+}
+
 .prompt-indexing-button--muted {
   color: var(--vscode-descriptionForeground);
 }

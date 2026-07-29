@@ -5,7 +5,6 @@
 
 import { createSignal, createEffect, on, For, Index, onCleanup, Show, untrack, type Component } from "solid-js"
 import { Button } from "@kilocode/kilo-ui/button"
-import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { FileIcon } from "@kilocode/kilo-ui/file-icon"
 import { Icon } from "@kilocode/kilo-ui/icon"
@@ -40,7 +39,7 @@ import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
 import { cycleVariant } from "../../context/session-variant-store"
-import { WandSparkles } from "@kilocode/kilo-ui/lucide"
+import { Paperclip, WandSparkles } from "@kilocode/kilo-ui/lucide"
 import {
   fileName,
   dirName,
@@ -1467,14 +1466,16 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
             tabIndex={-1}
           />
           <Tooltip value="Upload images" placement="top" openDelay={0}>
-            <IconButton
-              icon="cloud-upload"
+            <Button
               size="small"
               variant="ghost"
               onClick={() => imageInputRef?.click()}
               disabled={isDisabled()}
               aria-label="Upload images"
-            />
+              class="prompt-upload-button"
+            >
+              <Paperclip size={16} />
+            </Button>
           </Tooltip>
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
