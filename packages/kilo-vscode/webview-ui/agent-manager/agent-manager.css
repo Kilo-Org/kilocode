@@ -426,6 +426,25 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
+/* Jump modifier held (⌘/Ctrl): reveal shortcut badges on every item, not just the
+   hovered one. Scoped via :has so items without a badge (beyond ⌘9) keep their stats.
+   The close button stays hidden so holding the modifier never exposes the delete action. */
+.am-show-shortcuts .am-wt-hover-actions:has(.am-shortcut-badge) {
+  opacity: 1;
+  visibility: visible;
+}
+.am-show-shortcuts .am-wt-hover-actions .am-worktree-close {
+  display: none;
+}
+.am-show-shortcuts .am-wt-actions-cell:has(.am-shortcut-badge) > .am-worktree-stats,
+.am-show-shortcuts .am-wt-actions-cell:has(.am-shortcut-badge) > .am-worktree-stats-skeleton {
+  opacity: 0;
+  visibility: hidden;
+}
+.am-show-shortcuts .am-local-item .am-shortcut-badge {
+  opacity: 1;
+}
+
 .am-worktree-item:has(.am-worktree-rename-input) .am-wt-row2 {
   display: none;
 }

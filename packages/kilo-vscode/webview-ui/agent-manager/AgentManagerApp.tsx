@@ -241,6 +241,8 @@ const AgentManagerContent: Component = () => {
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
   const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
+  /** True while the ⌘/Ctrl jump modifier is held — reveals the ⌘1-9 badges on all sidebar items. */
+  const [held, setHeld] = createSignal(false)
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
@@ -1207,6 +1209,18 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", deleteKeyHandler)
 
+    // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
+    // Capture phase so the terminal's key handlers can't swallow them; blur resets state
+    // when the keyup is lost (e.g. Cmd+Tab away).
+    const modifier = isMac ? "Meta" : "Control"
+    const modTrack = (e: KeyboardEvent) => {
+      if (e.key === modifier) setHeld(e.type === "keydown")
+    }
+    const modReset = () => setHeld(false)
+    window.addEventListener("keydown", modTrack, true)
+    window.addEventListener("keyup", modTrack, true)
+    window.addEventListener("blur", modReset)
+
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
     // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
@@ -1578,6 +1592,9 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
+      window.removeEventListener("keydown", modTrack, true)
+      window.removeEventListener("keyup", modTrack, true)
+      window.removeEventListener("blur", modReset)
       window.removeEventListener("focus", onWindowFocus)
       window.removeEventListener("newTaskRequest", newTaskHandler, true)
       drafts.cleanup()
@@ -2269,7 +2286,7 @@ const AgentManagerContent: Component = () => {
     >
       <div
         class="am-sidebar"
-        classList={{ "am-sidebar-collapsed": sidebarCollapsed() }}
+        classList={{ "am-sidebar-collapsed": sidebarCollapsed(), "am-show-shortcuts": held() }}
         style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
         inert={sidebarCollapsed() || undefined}
       >
