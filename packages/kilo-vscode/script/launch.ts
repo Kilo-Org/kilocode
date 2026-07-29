@@ -12,6 +12,7 @@
  *   --app-path PATH   Explicit path to the VS Code executable (auto-detected if omitted)
  *   --state-dir PATH  Directory for isolated VS Code user-data/extensions (default: OS temp per repo)
  *   --kilo-storage-dir PATH  Directory for isolated Kilo XDG storage
+ *   --isolated        Shortcut for a persistent isolated instance under <repo>/.kilo-dev
  *   --insiders        Prefer VS Code Insiders over stable
  *   --wait            Block until the VS Code window is closed
  *   --clean           Wipe isolated VS Code dirs and Kilo storage before launching
@@ -83,12 +84,21 @@ function path(input: string) {
 
 const opts = parse(process.argv.slice(2))
 
+// --isolated defaults both the VS Code state and Kilo storage to <repo>/.kilo-dev
+const isolated = opts["isolated"] === true
+const dev = join(repo, ".kilo-dev")
+
 // Stable per-repo directory under OS temp — no accumulation
 const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
-const base = typeof opts["state-dir"] === "string" ? path(opts["state-dir"]) : join(tmpdir(), `kilo-vscode-dev-${hash}`)
+const base =
+  typeof opts["state-dir"] === "string"
+    ? path(opts["state-dir"])
+    : isolated
+      ? join(dev, "vscode")
+      : join(tmpdir(), `kilo-vscode-dev-${hash}`)
 const userDir = join(base, "user-data")
 const extDir = join(base, "extensions")
-const kilo = typeof opts["kilo-storage-dir"] === "string" ? path(opts["kilo-storage-dir"]) : undefined
+const kilo = typeof opts["kilo-storage-dir"] === "string" ? path(opts["kilo-storage-dir"]) : isolated ? dev : undefined
 
 const shouldBuild = opts["build"] !== false
 const mode = (opts["mode"] as string) ?? "dev"

@@ -28,28 +28,28 @@
       "name": "VSCode - Run Extension (Isolated)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bun script/launch.ts --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${workspaceFolder}\"",
+      "command": "bun script/launch.ts --isolated --workspace \"${workspaceFolder}\"",
       "cwd": "${workspaceFolder}/packages/kilo-vscode"
     },
     {
       "name": "VSCode - Run Extension (Isolated: Choose Folder)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bun script/launch.ts --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${input:kiloDevWorkspace}\"",
+      "command": "bun script/launch.ts --isolated --workspace \"${input:kiloDevWorkspace}\"",
       "cwd": "${workspaceFolder}/packages/kilo-vscode"
     },
     {
       "name": "VSCode - Run Extension (Isolated Clean)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bun script/launch.ts --clean --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${workspaceFolder}\"",
+      "command": "bun script/launch.ts --isolated --clean --workspace \"${workspaceFolder}\"",
       "cwd": "${workspaceFolder}/packages/kilo-vscode"
     },
     {
       "name": "VSCode - Run Extension (Isolated Clean: Choose Folder)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "bun script/launch.ts --clean --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${input:kiloDevWorkspace}\"",
+      "command": "bun script/launch.ts --isolated --clean --workspace \"${input:kiloDevWorkspace}\"",
       "cwd": "${workspaceFolder}/packages/kilo-vscode"
     }
   ],

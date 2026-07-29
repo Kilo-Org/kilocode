@@ -1208,7 +1208,9 @@
     "test:visual:update": "playwright test --update-snapshots",
     "snapshot:build": "bun script/dev-snapshot.ts build",
     "snapshot:install": "bun script/dev-snapshot.ts install",
-    "extension": "bun script/launch.ts"
+    "extension": "bun script/launch.ts",
+    "extension:isolated": "bun script/launch.ts --isolated",
+    "extension:isolated:clean": "bun script/launch.ts --isolated --clean"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.11.3",
