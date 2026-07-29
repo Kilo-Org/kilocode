@@ -2129,7 +2129,11 @@ const AgentManagerContent: Component = () => {
     save: (d) => vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: d }),
     openVscode: () =>
       vscode.postMessage(
-        resolveVscodeTerminalRequest(selection(), session.currentSessionID(), (wt) => sessionsForWorktree(wt)[0]?.id) as never,
+        resolveVscodeTerminalRequest(
+          selection(),
+          session.currentSessionID(),
+          (wt) => managedSessions().find((ms) => ms.worktreeId === wt)?.id,
+        ) as never,
       ),
   })
 

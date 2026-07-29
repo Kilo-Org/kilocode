@@ -578,8 +578,11 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
    * is handled by the state layer.
    */
   const closeSide = (terminalId: string): boolean => {
-    const removed = deps.state.remove(terminalId)
-    if (!removed || removed.placement !== "side") return false
+    // Validate before mutating: dropping a non-side record here would
+    // unmount its xterm while the backend PTY leaks (no close sent).
+    const term = deps.state.sides().find((t) => t.id === terminalId)
+    if (!term) return false
+    deps.state.remove(terminalId)
     deps.postMessage({ type: "agentManager.terminal.close", terminalId })
     return true
   }

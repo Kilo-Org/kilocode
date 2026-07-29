@@ -18,23 +18,16 @@
  * dies when its subtree leaves the paint tree (see `render.tsx`).
  */
 
-import type { Accessor, Component, ParentComponent } from "solid-js"
+import type { Accessor, Component } from "solid-js"
 import { For, Show, createEffect, createSignal } from "solid-js"
-import {
-  DragDropProvider,
-  DragDropSensors,
-  DragOverlay,
-  SortableProvider,
-  closestCenter,
-  createSortable,
-} from "@thisbeyond/solid-dnd"
+import { DragDropProvider, DragDropSensors, DragOverlay, SortableProvider, closestCenter } from "@thisbeyond/solid-dnd"
 import type { DragEvent } from "@thisbeyond/solid-dnd"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Button } from "@kilocode/kilo-ui/button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useLanguage } from "../../src/context/language"
-import { ConstrainDragYAxis } from "../../src/components/chat/TabDnd"
+import { ConstrainDragYAxis, SortableTabContainer } from "../../src/components/chat/TabDnd"
 import { renderSideTerminalLayer } from "./render"
 import { TerminalTabChrome } from "./SortableTerminalTab"
 import type { TerminalStateControls } from "./state"
@@ -51,22 +44,6 @@ interface Props {
   onClose: (terminalId: string) => void
   /** Create a new side terminal for this context. */
   onStart: () => void
-}
-
-/** Draggable wrapper for one side terminal tab (mirrors the top bar's
- *  SortableTabContainer, but sized by the side strip's flex layout). */
-const SortableSideTab: ParentComponent<{ id: string }> = (props) => {
-  const sortable = createSortable(props.id)
-  return (
-    <div
-      use:sortable
-      class="am-side-terminal-tab"
-      classList={{ "am-tab-dragging": sortable.isActiveDraggable }}
-      data-tab-id={props.id}
-    >
-      {props.children}
-    </div>
-  )
 }
 
 export const SideTerminalPanel: Component<Props> = (props) => {
@@ -102,7 +79,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
       aria-label={t("agentManager.tab.terminal")}
       aria-hidden={!props.visible()}
     >
-      <div class="am-side-terminal-tabs" role="tablist" aria-label={t("agentManager.tab.terminal")}>
+      <div class="am-side-terminal-tabs">
         <DragDropProvider
           onDragStart={onDragStart}
           onDragEnd={onDragEnd}
@@ -111,32 +88,42 @@ export const SideTerminalPanel: Component<Props> = (props) => {
         >
           <DragDropSensors />
           <ConstrainDragYAxis />
-          <SortableProvider ids={ids()}>
-            <For each={sides()}>
-              {(term) => (
-                <SortableSideTab id={term.id}>
-                  <TerminalTabChrome
-                    label={props.state.title(term.id) ?? term.title}
-                    tooltip={props.state.title(term.id) ?? term.title}
-                    active={props.state.sideActiveFor(props.contextKey()) === term.id}
-                    role="tab"
-                    selected={props.state.sideActiveFor(props.contextKey()) === term.id}
-                    onSelect={() => props.onSelect(term.id)}
-                    onMiddleClick={(e: MouseEvent) => {
-                      if (e.button !== 1) return
-                      e.preventDefault()
-                      e.stopPropagation()
-                      props.onClose(term.id)
-                    }}
-                    onClose={(e: MouseEvent) => {
-                      e.stopPropagation()
-                      props.onClose(term.id)
-                    }}
-                  />
-                </SortableSideTab>
-              )}
-            </For>
-          </SortableProvider>
+          {/* Scrollable tab list — mirrors the top bar's .am-tab-list split
+              so the "+" action never scrolls away. role="tablist" only
+              when tabs exist: axe aria-required-children rejects an empty
+              tablist (and non-tab children like the add button). */}
+          <div
+            class="am-side-terminal-tablist"
+            role={sides().length > 0 ? "tablist" : undefined}
+            aria-label={sides().length > 0 ? t("agentManager.tab.terminal") : undefined}
+          >
+            <SortableProvider ids={ids()}>
+              <For each={sides()}>
+                {(term) => (
+                  <SortableTabContainer id={term.id} class="am-side-terminal-tab">
+                    <TerminalTabChrome
+                      label={props.state.title(term.id) ?? term.title}
+                      tooltip={props.state.title(term.id) ?? term.title}
+                      active={props.state.sideActiveFor(props.contextKey()) === term.id}
+                      role="tab"
+                      selected={props.state.sideActiveFor(props.contextKey()) === term.id}
+                      onSelect={() => props.onSelect(term.id)}
+                      onMiddleClick={(e: MouseEvent) => {
+                        if (e.button !== 1) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        props.onClose(term.id)
+                      }}
+                      onClose={(e: MouseEvent) => {
+                        e.stopPropagation()
+                        props.onClose(term.id)
+                      }}
+                    />
+                  </SortableTabContainer>
+                )}
+              </For>
+            </SortableProvider>
+          </div>
           {/* Cursor-following clone of the dragged tab (same pattern as
               the top tab bar). The overlay is what makes the in-list
               original use solid-dnd's slot-compensated transform, so the

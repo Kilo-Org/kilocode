@@ -4621,7 +4621,9 @@ body.vscode-high-contrast-light {
 /* Side terminal tab strip — one row of tabs reusing the top bar's
    .am-tab chrome, plus the "+" action. Height matches .am-diff-header
    (32px: 4px padding + 24px content) so switching inspector modes does
-   not shift the panel chrome. */
+   not shift the panel chrome. The strip itself never scrolls; the tab
+   list does, so a narrow panel never pushes the "+" action out of view
+   (same split as .am-tab-list-wrap / .am-tab-add-wrap). */
 .am-side-terminal-tabs {
   display: flex;
   align-items: stretch;
@@ -4631,20 +4633,29 @@ body.vscode-high-contrast-light {
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-weak-base);
   background: var(--surface-base);
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
   position: relative;
   z-index: 20;
 }
 
-.am-side-terminal-tabs::-webkit-scrollbar {
+.am-side-terminal-tablist {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.am-side-terminal-tablist::-webkit-scrollbar {
   display: none;
 }
 
-/* Each tab shares the available width and shrinks with ellipsis, so a
-   narrow panel never pushes the "+" action out of view. touch-action
-   unlocks pointer-based drag reordering (same as .am-tab-sortable). */
+/* Each tab shares the available width and shrinks with ellipsis.
+   touch-action unlocks pointer-based drag reordering (same as
+   .am-tab-sortable). */
 .am-side-terminal-tab {
   display: flex;
   flex: 0 1 140px;
