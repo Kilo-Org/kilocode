@@ -303,6 +303,13 @@ export const layer = Layer.effect(
       const existing = pending.get(input.requestID)
       if (!existing) return yield* new PermissionV1.NotFoundError({ requestID: input.requestID })
 
+      // kilocode_change start - skill-shell batches must be answered by a human; ignore machine approvals
+      // (auto-approve/YOLO clients omit `interactive`) so the prompt stays pending for a real decision.
+      if (existing.info.metadata?.["skillShell"] === true && input.reply !== "reject" && input.interactive !== true) {
+        return
+      }
+      // kilocode_change end
+
       pending.delete(input.requestID)
       yield* events.publish(Event.Replied, {
         sessionID: existing.info.sessionID,

@@ -81,14 +81,15 @@ export class Handler {
       await this.writeProposedEdit(session.id, permission.metadata).catch(() => {})
     }
 
-    await this.reply(permission.id, reply, session.cwd)
+    await this.reply(permission.id, reply, session.cwd, true) // kilocode_change - human selected via requestPermission
   }
 
-  private async reply(requestID: string, reply: Reply, directory: string) {
+  private async reply(requestID: string, reply: Reply, directory: string, interactive = false) { // kilocode_change - interactive param
     await this.input.sdk.permission.reply({
       requestID,
       reply,
       directory,
+      interactive, // kilocode_change
     })
   }
 

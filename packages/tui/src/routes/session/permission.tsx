@@ -192,6 +192,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               requestID: props.request.id,
               directory: props.directory,
               workspace: project.workspace.current(),
+              interactive: true, // kilocode_change - human answered this prompt
             })
           }}
         />
@@ -499,6 +500,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                   requestID: props.request.id,
                   directory: props.directory,
                   workspace: project.workspace.current(),
+                  interactive: true, // kilocode_change - human answered this prompt
                 })
               }}
             />

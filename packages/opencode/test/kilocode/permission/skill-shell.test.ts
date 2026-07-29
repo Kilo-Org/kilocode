@@ -42,6 +42,11 @@ const rejectAll = () =>
     for (const req of yield* permission.list()) yield* permission.reply({ requestID: req.id, reply: "reject" })
   })
 
+const reply = (input: Parameters<Permission.Interface["reply"]>[0]) =>
+  Effect.gen(function* () {
+    return yield* (yield* Permission.Service).reply(input)
+  })
+
 const waitForPending = (count: number) =>
   Effect.gen(function* () {
     const permission = yield* Permission.Service
@@ -121,6 +126,51 @@ it.instance(
       // still pending: YOLO cannot silently approve a skill batch
       expect(yield* list()).toHaveLength(1)
       yield* rejectAll()
+      yield* Fiber.await(fiber)
+    }),
+  { git: true },
+)
+
+it.instance(
+  "skillShell - a machine approval (no interactive flag) is ignored and stays pending",
+  () =>
+    Effect.gen(function* () {
+      const fiber = yield* ask({
+        sessionID: SessionID.make("session_test"),
+        permission: "bash",
+        patterns: ["printf hi"],
+        metadata: { skillShell: true },
+        always: [],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+
+      const [pending] = yield* waitForPending(1)
+      // An auto-approver replies without `interactive`; the server must ignore it.
+      yield* reply({ requestID: pending.id, reply: "once" })
+      expect(yield* list()).toHaveLength(1)
+      yield* rejectAll()
+      yield* Fiber.await(fiber)
+    }),
+  { git: true },
+)
+
+it.instance(
+  "skillShell - an interactive approval resolves the request",
+  () =>
+    Effect.gen(function* () {
+      const fiber = yield* ask({
+        sessionID: SessionID.make("session_test"),
+        permission: "bash",
+        patterns: ["printf hi"],
+        metadata: { skillShell: true },
+        always: [],
+        ruleset: [],
+      }).pipe(Effect.forkScoped)
+
+      const [pending] = yield* waitForPending(1)
+      yield* reply({ requestID: pending.id, reply: "once", interactive: true })
+      // human approval clears the prompt and the ask succeeds
+      expect(yield* list()).toHaveLength(0)
       yield* Fiber.await(fiber)
     }),
   { git: true },
