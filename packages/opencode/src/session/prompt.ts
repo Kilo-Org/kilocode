@@ -2033,7 +2033,12 @@ export const layer = Layer.effect(
       }
 
       const shellMatches = ConfigMarkdown.shell(template)
-      if (shellMatches.length > 0) {
+      // kilocode_change start - untrusted skill templates must not spawn shell; mirror the skill tool's trust gate
+      const untrustedSkill = cmd.source === "skill" && cmd.trusted !== true
+      if (shellMatches.length > 0 && untrustedSkill) {
+        template = template.replace(bashRegex, () => "[skill shell execution disabled for untrusted skill]")
+      } else if (shellMatches.length > 0) {
+        // kilocode_change end
         const cfg = yield* config.get()
         const sh = Shell.preferred(cfg.shell)
         // kilocode_change start
