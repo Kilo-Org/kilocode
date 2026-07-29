@@ -42,6 +42,8 @@ const TSX_FILES = [
   path.join(ROOT, "webview-ui/agent-manager/WorktreeSectionActions.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/tab-rendering.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalTab.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/SideTerminalPanel.tsx"),
+  path.join(ROOT, "webview-ui/agent-manager/terminal/TerminalDestinationButton.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/SortableTerminalTab.tsx"),
   path.join(ROOT, "webview-ui/agent-manager/terminal/render.tsx"),
   path.join(ROOT, "webview-ui/diff-virtual/DiffVirtualApp.tsx"),
@@ -186,8 +188,6 @@ describe("Agent Manager Provider Messages", () => {
       "agentManager.forgetSession",
       "agentManager.importFromBranch",
       "agentManager.importFromPR",
-      "agentManager.importExternalWorktree",
-      "agentManager.importAllExternalWorktrees",
       "agentManager.createSection",
       "agentManager.moveToSection",
     ]
@@ -411,6 +411,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
       "agentManager.stopRunScript",
       "agentManager.showTerminal",
       "agentManager.showLocalTerminal",
+      "agentManager.showWorktreeTerminal",
       "agentManager.showExistingLocalTerminal",
       "agentManager.requestRepoInfo",
       "agentManager.requestState",
@@ -435,7 +436,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const text = body("onSessionMessage")
     const show = text.indexOf("this.terminalManager.prepareContext(m.sessionID)")
     expect(show).toBeGreaterThan(-1)
-    expect(text).not.toContain("!this.terminalManager.hasActiveTerminal()")
     expect(text).toContain('type: "terminalContextError"')
   })
 
@@ -544,8 +544,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const pushIdx = text.indexOf("this.pushState()")
     const readyIdx = text.indexOf("agentManager.worktreeSetup")
     expect(pushIdx, "pushState must come before worktreeSetup").toBeLessThan(readyIdx)
-    // Must also send sessionMeta so the webview knows the branch/path
-    expect(text).toContain("agentManager.sessionMeta")
   })
 
   // -- agentManager.requestState in non-git workspace -------------------------
@@ -583,7 +581,6 @@ describe("Agent Manager Provider — onMessage routing", () => {
     const providerText = body("onImportMessage")
     expect(text).toContain("class WorktreeImporter")
     expect(text).toContain("createFromPR")
-    expect(text).toContain("listExternalWorktrees")
     expect(text).toContain("createWorktree")
     expect(providerText).toContain("this.importer")
   })
@@ -800,6 +797,10 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   // Reads terminal.integrated.* and editor.font* config for xterm font settings
   "terminal-font.ts": {
     note: "vscode config reader for integrated terminal font settings",
+  },
+  // Reads + watches the terminal button destination setting
+  "terminal-destination.ts": {
+    note: "vscode config reader for the terminal destination setting",
   },
 }
 

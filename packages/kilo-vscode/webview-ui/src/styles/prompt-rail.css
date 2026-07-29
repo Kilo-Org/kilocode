@@ -1,0 +1,213 @@
+/* ============================================
+   Prompt Rail
+   ============================================ */
+
+.prompt-rail {
+  --prompt-rail-width: 16px;
+  --prompt-rail-gap: 8px;
+  --prompt-rail-step: 14px;
+  --prompt-rail-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: absolute;
+  inset-inline-start: max(
+    0px,
+    calc(50% - var(--chat-readable-width) / 2 - var(--prompt-rail-width) - var(--prompt-rail-gap))
+  );
+  top: 0;
+  bottom: 0;
+  width: var(--prompt-rail-width);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Guards the rail against ever painting outside its own column, whatever
+     the tick count or panel height. */
+  overflow: hidden;
+  padding: 12px 0;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.5;
+  transition: opacity 0.25s var(--prompt-rail-ease);
+}
+
+.message-list-container:hover .prompt-rail,
+.prompt-rail:focus-within {
+  opacity: 1;
+}
+
+.prompt-rail-tick {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: var(--prompt-rail-step);
+  min-height: 4px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  /* No outline box: the focus ring is drawn on the line itself, so a focused
+     tick reads as part of the rail instead of a rectangle floating over it. */
+  outline: none;
+}
+
+.prompt-rail-tick-line {
+  display: block;
+  height: 1.5px;
+  width: 9px;
+  border-radius: 1px;
+  background: var(--icon-base);
+  opacity: 0.7;
+  transition:
+    width 0.24s var(--prompt-rail-ease),
+    opacity 0.2s var(--prompt-rail-ease),
+    background-color 0.2s var(--prompt-rail-ease),
+    box-shadow 0.2s var(--prompt-rail-ease);
+}
+
+.prompt-rail-tick[data-queued] .prompt-rail-tick-line {
+  background: var(--icon-weaker);
+  opacity: 0.5;
+}
+
+/* Scroll position: subtle, always-on cue. */
+.prompt-rail-tick--active .prompt-rail-tick-line {
+  width: 13px;
+  opacity: 1;
+  background: var(--icon-strong-base);
+}
+
+/* Pointer or keyboard target: the loud state, full width. */
+.prompt-rail-tick:hover .prompt-rail-tick-line,
+.prompt-rail-tick--open .prompt-rail-tick-line {
+  width: 100%;
+  height: 2px;
+  opacity: 1;
+  background: var(--icon-strong-base);
+}
+
+.prompt-rail-tick:focus-visible .prompt-rail-tick-line {
+  width: 100%;
+  height: 2px;
+  opacity: 1;
+  background: var(--icon-strong-base);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-focusBorder) 50%, transparent);
+}
+
+/* ============================================
+   Prompt Rail card
+   ============================================ */
+
+.prompt-rail-card {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - var(--prompt-rail-width, 16px) - 40px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+  /* Reads as floating glass rather than a panel pasted over the transcript:
+     the text behind stays faintly perceptible through the blur, so the card
+     feels like it belongs to the same surface. Falls back to an opaque fill
+     where backdrop-filter is unavailable. */
+  background: color-mix(in srgb, var(--surface-float-base) 78%, transparent);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--text-strong) 7%, transparent),
+    0 2px 6px -2px rgba(0, 0, 0, 0.22),
+    0 12px 32px -8px rgba(0, 0, 0, 0.4);
+  animation: prompt-rail-in 0.22s var(--prompt-rail-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  transform-origin: left center;
+  scrollbar-width: thin;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .prompt-rail-card {
+    background: var(--surface-float-base);
+  }
+}
+
+@keyframes prompt-rail-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.prompt-rail-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: none;
+  padding: 9px 11px;
+  border-radius: 8px;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.16s var(--prompt-rail-ease, ease);
+}
+
+.prompt-rail-row--hover,
+.prompt-rail-row:hover {
+  background: color-mix(in srgb, var(--text-strong) 8%, transparent);
+}
+
+.prompt-rail-row:active {
+  background: color-mix(in srgb, var(--text-strong) 12%, transparent);
+}
+
+.prompt-rail-row-prompt {
+  font-size: var(--kilo-font-size-13);
+  line-height: var(--line-height-normal);
+  color: var(--text-strong);
+  font-weight: var(--font-weight-medium, 500);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  min-width: 0;
+  width: 100%;
+}
+
+.prompt-rail-row-prompt[data-queued] {
+  color: var(--text-weak);
+}
+
+.prompt-rail-row-status {
+  color: var(--text-weaker);
+  font-weight: 400;
+}
+
+.prompt-rail-row-answer {
+  font-size: var(--kilo-font-size-12);
+  line-height: var(--line-height-large, 1.5);
+  color: var(--text-weak);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  min-width: 0;
+  width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prompt-rail,
+  .prompt-rail-tick-line,
+  .prompt-rail-row {
+    transition: none;
+  }
+  .prompt-rail-card {
+    animation: none;
+  }
+}

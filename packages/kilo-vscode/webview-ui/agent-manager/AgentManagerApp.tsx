@@ -13,7 +13,6 @@ import {
   type JSX,
 } from "solid-js"
 import type {
-  ExtensionMessage,
   AgentManagerRepoInfoMessage,
   AgentManagerWorktreeSetupMessage,
   AgentManagerStateMessage,
@@ -70,7 +69,6 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { Popover } from "@kilocode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
@@ -120,7 +118,17 @@ import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
-import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
+import {
+  SideTerminalPanel,
+  TerminalDestinationButton,
+  isTerminalTabId,
+  createTerminalState,
+  createTerminalHandlers,
+  createTerminalMessageHandler,
+  createSideTerminal,
+  readSavedDestination,
+  resolveVscodeTerminalRequest,
+} from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
@@ -185,7 +193,7 @@ interface ApplyState {
 }
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
-type SidePanel = "diff" | "pr" | null
+type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
@@ -235,6 +243,8 @@ const AgentManagerContent: Component = () => {
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
   const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
+  /** True while the ⌘/Ctrl jump modifier is held — reveals the ⌘1-9 badges on all sidebar items. */
+  const [held, setHeld] = createSignal(false)
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
@@ -270,8 +280,8 @@ const AgentManagerContent: Component = () => {
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
-  let diffRaf: number | undefined
-  let pendingDiffWidth: number | undefined
+  let sideRaf: number | undefined
+  let pendingSideWidth: number | undefined
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
@@ -279,7 +289,33 @@ const AgentManagerContent: Component = () => {
   const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
   const [diffLoading, setDiffLoading] = createSignal(false)
   const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
+  // The diff and terminal panels each remember their own width: a diff
+  // benefits from half the window, a terminal only needs about a third.
+  const TERMINAL_MIN_WIDTH = 360
+  const TERMINAL_MAX_WIDTH = 640
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
+  const [terminalWidth, setTerminalWidth] = createSignal(
+    Math.min(TERMINAL_MAX_WIDTH, Math.max(TERMINAL_MIN_WIDTH, Math.round(window.innerWidth / 3))),
+  )
+  // The hidden-but-mounted host still fits the terminal, so pick the
+  // terminal's width whenever one is alive and no other mode is showing.
+  const widthMode = () => sidePanel() ?? (terms.sides().length > 0 ? "terminal" : null)
+  const hostWidth = () => (widthMode() === "terminal" ? terminalWidth() : diffWidth())
+  const sideMin = () => (widthMode() === "terminal" ? TERMINAL_MIN_WIDTH : 200)
+  const resizeSide = (width: number) => {
+    pendingSideWidth = Math.max(sideMin(), Math.min(width, window.innerWidth * 0.8))
+    if (sideRaf !== undefined) return
+    sideRaf = requestAnimationFrame(() => {
+      sideRaf = undefined
+      if (widthMode() === "terminal") setTerminalWidth(pendingSideWidth!)
+      else setDiffWidth(pendingSideWidth!)
+    })
+  }
+  const showSideTerminal = () => {
+    setHistory(false)
+    setReviewActive(false)
+    setSidePanel("terminal")
+  }
 
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
@@ -1104,12 +1140,7 @@ const AgentManagerContent: Component = () => {
           requestAnimationFrame(() => sidebarSearchMenu?.open())
         }
       } else if (msg.action === "showTerminal") {
-        // Cmd+/ opens the legacy VS Code integrated terminal for the
-        // active session (or local). The new xterm tab affordance has
-        // its own keybind (Cmd+Shift+T) so both coexist.
-        const id = session.currentSessionID()
-        if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
-        else if (selection() === LOCAL) vscode.postMessage({ type: "agentManager.showLocalTerminal" })
+        sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
@@ -1180,6 +1211,18 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", deleteKeyHandler)
 
+    // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
+    // Capture phase so the terminal's key handlers can't swallow them; blur resets state
+    // when the keyup is lost (e.g. Cmd+Tab away).
+    const modifier = isMac ? "Meta" : "Control"
+    const modTrack = (e: KeyboardEvent) => {
+      if (e.key === modifier) setHeld(e.type === "keydown")
+    }
+    const modReset = () => setHeld(false)
+    window.addEventListener("keydown", modTrack, true)
+    window.addEventListener("keyup", modTrack, true)
+    window.addEventListener("blur", modReset)
+
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
     // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
@@ -1249,7 +1292,14 @@ const AgentManagerContent: Component = () => {
       setSelection,
       showError: (message) =>
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
+      postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
+      onSideCreated: (contextKey, terminalId) => {
+        // Focus only when the user is still looking at this panel —
+        // a slow create landing after a mode switch must not steal it.
+        if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
+      },
+      onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
       terminalDispatch(msg)
@@ -1544,6 +1594,9 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
+      window.removeEventListener("keydown", modTrack, true)
+      window.removeEventListener("keyup", modTrack, true)
+      window.removeEventListener("blur", modReset)
       window.removeEventListener("focus", onWindowFocus)
       window.removeEventListener("newTaskRequest", newTaskHandler, true)
       drafts.cleanup()
@@ -2057,9 +2110,34 @@ const AgentManagerContent: Component = () => {
     findTab: (id) => tabLookup().get(id),
     postMessage: (msg) => vscode.postMessage(msg as never),
     onRemove: freezeTabs,
+    onShowSide: showSideTerminal,
+    onHideSide: () => {
+      if (sidePanel() === "terminal") setSidePanel(null)
+    },
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
+  })
+
+  const sideCtl = createSideTerminal({
+    handlers: termHandlers,
+    visible: () => sidePanel() === "terminal",
+    focused: () => terms.focusedId() !== undefined && terms.focusedId() === terms.side()?.id,
+    hide: () => setSidePanel(null),
+    refocus: () => window.dispatchEvent(new Event("focusPrompt")),
+    postMessage: (msg) => vscode.postMessage(msg as never),
+    track: (button, surface, properties) => metrics.track(button, surface, properties),
+    // Panel-local pick, immune to cross-window setting echoes (see side.ts).
+    saved: readSavedDestination(vscode.getState<Record<string, unknown>>()),
+    save: (d) => vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: d }),
+    openVscode: () =>
+      vscode.postMessage(
+        resolveVscodeTerminalRequest(
+          selection(),
+          session.currentSessionID(),
+          (wt) => managedSessions().find((ms) => ms.worktreeId === wt)?.id,
+        ) as never,
+      ),
   })
 
   const handleReviewTabMouseDown = (e: MouseEvent) => {
@@ -2160,6 +2238,12 @@ const AgentManagerContent: Component = () => {
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
+    // A focused side terminal owns Cmd+W while its panel is visible —
+    // closing a chat tab out from under the user's cursor would be
+    // surprising.
+    if (sidePanel() === "terminal" && terms.focusedId() && terms.focusedId() === terms.side()?.id) {
+      if (sideCtl.close()) return
+    }
     if (termHandlers.closeActive()) {
       tabFocus.restore()
       return
@@ -2210,7 +2294,7 @@ const AgentManagerContent: Component = () => {
     >
       <div
         class="am-sidebar"
-        classList={{ "am-sidebar-collapsed": sidebarCollapsed() }}
+        classList={{ "am-sidebar-collapsed": sidebarCollapsed(), "am-show-shortcuts": held() }}
         style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
         inert={sidebarCollapsed() || undefined}
       >
@@ -2815,28 +2899,17 @@ const AgentManagerContent: Component = () => {
                     />
                   </Tooltip>
                 </Show>
-                {/* Legacy VS Code integrated terminal shortcut. Coexists
-                    with the xterm terminal tabs (accessed via the `+`
-                    split-button or Cmd+Shift+T): Cmd+/ still opens the
-                    integrated terminal for the active session. */}
-                <TooltipKeybind
-                  title={t("agentManager.tab.terminal")}
-                  keybind={kb().showTerminal ?? ""}
-                  placement="bottom"
-                >
-                  <IconButton
-                    icon="console"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.tab.openTerminal")}
-                    onClick={() => {
-                      metrics.track("vscode_terminal", "tab_toolbar")
-                      const id = session.currentSessionID()
-                      if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
-                      else if (selection() === LOCAL) vscode.postMessage({ type: "agentManager.showLocalTerminal" })
-                    }}
-                  />
-                </TooltipKeybind>
+                {/* Terminal destination split button: the primary action
+                    follows the user's setting (VS Code integrated terminal
+                    or the embedded side panel), the dropdown picks which.
+                    Cmd+Shift+T still creates an xterm tab via the `+` menu. */}
+                <TerminalDestinationButton
+                  destination={sideCtl.destination}
+                  active={() => sidePanel() === "terminal"}
+                  keybind={() => kb().showTerminal ?? ""}
+                  onOpen={() => sideCtl.openPreferred("tab_toolbar")}
+                  onChoose={sideCtl.choose}
+                />
               </div>
             </div>
             <DragOverlay>
@@ -2986,24 +3059,26 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </div>
               </div>
-              <Show when={sidePanel() !== null}>
-                <div class="am-diff-resize" style={{ width: `${diffWidth()}px` }}>
-                  <ResizeHandle
-                    direction="horizontal"
-                    edge="start"
-                    size={diffWidth()}
-                    min={200}
-                    max={Math.round(window.innerWidth * 0.8)}
-                    onResize={(w) => {
-                      pendingDiffWidth = Math.max(200, Math.min(w, window.innerWidth * 0.8))
-                      if (diffRaf === undefined) {
-                        diffRaf = requestAnimationFrame(() => {
-                          diffRaf = undefined
-                          setDiffWidth(pendingDiffWidth!)
-                        })
-                      }
-                    }}
-                  />
+              {/* One inspector host for all right-side modes. It stays
+                  mounted while a side terminal is alive — hidden via
+                  .am-side-host-hidden (absolute + opacity), never
+                  unmounted, so xterm render loops keep streaming. */}
+              <Show when={sidePanel() !== null || terms.sides().length > 0}>
+                <div
+                  class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
+                  style={{ width: `${hostWidth()}px` }}
+                  inert={sidePanel() === null}
+                >
+                  <Show when={sidePanel() !== null}>
+                    <ResizeHandle
+                      direction="horizontal"
+                      edge="start"
+                      size={hostWidth()}
+                      min={sideMin()}
+                      max={Math.round(window.innerWidth * 0.8)}
+                      onResize={resizeSide}
+                    />
+                  </Show>
                   <div class="am-diff-panel-wrapper">
                     <Show when={sidePanel() === "diff"}>
                       <DiffPanel
@@ -3038,6 +3113,13 @@ const AgentManagerContent: Component = () => {
                         activeTerminalId={terms.activeId()}
                       />
                     </Show>
+                    <SideTerminalPanel
+                      state={terms}
+                      contextKey={terms.sideKey}
+                      visible={() => sidePanel() === "terminal"}
+                      onClose={() => sideCtl.close()}
+                      onStart={() => termHandlers.requestSide()}
+                    />
                   </div>
                 </div>
               </Show>

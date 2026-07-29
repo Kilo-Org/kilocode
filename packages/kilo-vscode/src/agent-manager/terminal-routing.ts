@@ -7,7 +7,7 @@
  * Owns:
  *   - the `TerminalManager` lifecycle (create / close / resize / dispose)
  *   - the per-context "Terminal N" ordinal counter
- *   - cwd resolution (worktree path → workspace root fallback)
+ *   - cwd resolution (selected worktree or workspace root)
  *   - WebSocket URL construction with loopback `auth_token` auth
  *
  * Vscode-free: all VS Code access is funnelled through the `deps`
@@ -15,7 +15,7 @@
  */
 
 import type { KiloClient } from "@kilocode/sdk/v2/client"
-import type { AgentManagerInMessage, AgentManagerOutMessage, TerminalFont } from "./types"
+import type { AgentManagerInMessage, AgentManagerOutMessage, TerminalFont, TerminalPlacement } from "./types"
 import { TerminalManager } from "./terminal-manager"
 
 interface ServerConfig {
@@ -26,6 +26,8 @@ interface ServerConfig {
 export interface TerminalRoutingDeps {
   /** Shared SDK client. Throws when the CLI backend is not connected. */
   getClient(): KiloClient
+  /** Shared SDK client, connecting the CLI backend when needed. */
+  getClientAsync(): Promise<KiloClient>
   /** Loopback URL + basic-auth password for the running `kilo serve`. */
   getServerConfig(): ServerConfig | undefined
   /** Workspace root — used as cwd fallback when no worktree is selected (LOCAL). */
@@ -52,14 +54,19 @@ function isTerminalMessage(
 }
 
 export class TerminalRouter {
-  private readonly manager: TerminalManager
+  private manager: TerminalManager
   private readonly ordinals = new Map<string, number>()
+  private generation = 0
 
   constructor(private readonly deps: TerminalRoutingDeps) {
-    this.manager = new TerminalManager({
-      getClient: () => deps.getClient(),
+    this.manager = this.createManager()
+  }
+
+  private createManager(): TerminalManager {
+    return new TerminalManager({
+      getClient: () => this.deps.getClient(),
       buildWsUrl: (ptyID, cwd) => this.buildWsUrl(ptyID, cwd),
-      log: deps.log,
+      log: this.deps.log,
     })
   }
 
@@ -71,7 +78,7 @@ export class TerminalRouter {
   handle(m: AgentManagerInMessage): boolean {
     if (!isTerminalMessage(m)) return false
     if (m.type === "agentManager.terminal.create") {
-      void this.handleCreate(m.worktreeId)
+      void this.handleCreate(m.createId, m.placement, m.worktreeId)
       return true
     }
     if (m.type === "agentManager.terminal.close") {
@@ -85,25 +92,47 @@ export class TerminalRouter {
     return true
   }
 
-  /** Tear down every live PTY. Forwards to `TerminalManager.dispose`. */
+  /**
+   * Tear down every live PTY and invalidate in-flight create requests.
+   * The router stays usable afterwards: a create landing from before the
+   * disposal is closed immediately instead of leaking a PTY the webview
+   * no longer tracks.
+   */
   dispose(): Promise<void> {
-    return this.manager.dispose()
+    this.generation++
+    const manager = this.manager
+    this.manager = this.createManager()
+    return manager.dispose()
   }
 
-  private async handleCreate(worktreeId: string | null): Promise<void> {
+  private async handleCreate(createId: string, placement: TerminalPlacement, worktreeId: string | null): Promise<void> {
+    const generation = this.generation
+    const manager = this.manager
     const cwd = this.resolveCwd(worktreeId)
     if (!cwd) {
       this.deps.post({
         type: "agentManager.terminal.error",
-        message: "Open a folder before creating a terminal",
+        createId,
+        message: worktreeId
+          ? "The selected worktree is no longer available"
+          : "Open a folder before creating a terminal",
       })
       return
     }
     const title = `Terminal ${this.nextOrdinal(worktreeId)}`
     try {
-      const created = await this.manager.create({ worktreeId, cwd, title })
+      // Join the shared backend connection instead of racing its synchronous
+      // client accessor when this is the first Kilo action in the window.
+      await this.deps.getClientAsync()
+      const created = await manager.create({ worktreeId, cwd, title })
+      if (generation !== this.generation) {
+        await manager.close(created.terminalId)
+        return
+      }
       this.deps.post({
         type: "agentManager.terminal.created",
+        createId,
+        placement,
         worktreeId: created.worktreeId,
         terminalId: created.terminalId,
         title: created.title,
@@ -111,22 +140,25 @@ export class TerminalRouter {
         font: this.deps.getTerminalFont(),
       })
     } catch (err) {
+      if (generation !== this.generation) return
       const message = err instanceof Error ? err.message : String(err)
       this.deps.log(`Terminal create failed: ${message}`)
-      this.deps.post({ type: "agentManager.terminal.error", message })
+      this.deps.post({ type: "agentManager.terminal.error", createId, message })
     }
   }
 
   /**
    * Resolve the cwd for a terminal in the given context.
    *
-   * LOCAL (null) falls back to the workspace root; a worktree id
-   * resolves to its on-disk path. Returns undefined when no folder is
-   * open — the caller surfaces this as a user-facing error.
+   * LOCAL (null) uses the workspace root; a worktree id resolves strictly
+   * to its on-disk path — silently falling back to the workspace root
+   * would run the shell in the wrong directory. Returns undefined when
+   * no folder is open or the worktree is gone; the caller surfaces this
+   * as a user-facing error.
    */
   private resolveCwd(worktreeId: string | null): string | undefined {
     if (worktreeId === null) return this.deps.getRoot()
-    return this.deps.getWorktreePath(worktreeId) ?? this.deps.getRoot()
+    return this.deps.getWorktreePath(worktreeId)
   }
 
   /** Per-context counter so default titles are "Terminal 1", "Terminal 2"…
@@ -155,6 +187,9 @@ export class TerminalRouter {
     const token = Buffer.from(`kilo:${config.password}`).toString("base64")
     const dir = encodeURIComponent(cwd)
     const auth = encodeURIComponent(token)
-    return `${base}/pty/${encodeURIComponent(ptyID)}/connect?directory=${dir}&cursor=-1&auth_token=${auth}`
+    // A new terminal has one initial attachment. Replay its retained startup
+    // bytes so xterm can answer shell capability queries emitted before the
+    // WebSocket connected; tailing from -1 can make shells wait for a timeout.
+    return `${base}/pty/${encodeURIComponent(ptyID)}/connect?directory=${dir}&cursor=0&auth_token=${auth}`
   }
 }
