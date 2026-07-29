@@ -66,18 +66,6 @@ export class SetupScriptService {
     return this.resolveScript(platform) !== undefined
   }
 
-  /** Read the setup script content. Returns null if not found or read fails. */
-  async getScript(platform: NodeJS.Platform = process.platform): Promise<string | null> {
-    const script = this.resolveScript(platform)
-    if (!script) return null
-    try {
-      return await fs.promises.readFile(script.path, "utf-8")
-    } catch (error) {
-      this.log(`Failed to read setup script: ${error}`)
-      return null
-    }
-  }
-
   /** Create a default setup script with helpful comments for the current platform. */
   async createDefaultScript(platform: NodeJS.Platform = process.platform): Promise<void> {
     if (!fs.existsSync(this.dir)) {

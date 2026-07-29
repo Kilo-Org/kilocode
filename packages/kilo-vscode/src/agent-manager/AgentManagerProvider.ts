@@ -46,6 +46,7 @@ import { pruneSubagents } from "./prune-subagents"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
+import { readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
@@ -78,6 +79,7 @@ export class AgentManagerProvider implements Disposable {
   private unsubTool: (() => void) | undefined
   private unsubStatus: (() => void) | undefined
   private unsubFont: (() => void) | undefined
+  private unsubDestination: (() => void) | undefined
   private closing: Promise<void> | undefined
   private onVisibilityChange: ((visible: boolean) => void) | undefined
   // Tracks sessions owned by this panel until they are explicitly closed.
@@ -101,6 +103,7 @@ export class AgentManagerProvider implements Disposable {
     )
     this.terminalRouter = new TerminalRouter({
       getClient: () => this.connectionService.getClient(),
+      getClientAsync: () => this.connectionService.getClientAsync(this.getRoot()),
       getServerConfig: () => this.connectionService.getServerConfig() ?? undefined,
       getRoot: () => this.getRoot(),
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
@@ -110,6 +113,9 @@ export class AgentManagerProvider implements Disposable {
     })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+    })
+    this.unsubDestination = watchTerminalDestination((destination) => {
+      this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
     this.run = new RunController({
       root: () => this.getRoot(),
@@ -304,6 +310,7 @@ export class AgentManagerProvider implements Disposable {
         this.activeSessionId = undefined
         this.visiblePresence.clear()
         this.panel = undefined
+        void this.terminalRouter.dispose()
         this.onVisibilityChange?.(false)
       }
       ctx.sessions.dispose()
@@ -587,6 +594,10 @@ export class AgentManagerProvider implements Disposable {
       this.terminalManager.showLocalTerminal()
       return null
     }
+    if (m.type === "agentManager.showWorktreeTerminal") {
+      this.terminalManager.showWorktreeTerminal(m.worktreeId, this.state)
+      return null
+    }
     if (m.type === "agentManager.openWorktree") {
       this.openWorktreeDirectory(m.worktreeId)
       return null
@@ -661,24 +672,12 @@ export class AgentManagerProvider implements Disposable {
       void this.importer.branches()
       return null
     }
-    if (m.type === "agentManager.requestExternalWorktrees") {
-      void this.importer.external()
-      return null
-    }
     if (m.type === "agentManager.importFromBranch") {
       void this.importer.branch(m.branch)
       return null
     }
     if (m.type === "agentManager.importFromPR") {
       void this.importer.pr(m.url)
-      return null
-    }
-    if (m.type === "agentManager.importExternalWorktree") {
-      void this.importer.path(m.path, m.branch)
-      return null
-    }
-    if (m.type === "agentManager.importAllExternalWorktrees") {
-      void this.importer.all()
       return null
     }
   }
@@ -726,6 +725,13 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onRequestState(): void {
+    // requestState fires from the webview's onMount, and a freshly mounted
+    // webview has no terminal records — any PTYs the router still tracks
+    // belong to a previous webview instance (reload or crash) and are
+    // unreachable orphans. Kill them here rather than leaking shells until
+    // the panel itself is disposed. In-flight creates from the dying
+    // instance are reaped by the router's generation guard.
+    void this.terminalRouter.dispose()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -868,7 +874,7 @@ export class AgentManagerProvider implements Disposable {
     }
   }
 
-  /** Send worktreeSetup.ready + sessionMeta + pushState after worktree creation. */
+  /** Send worktreeSetup.ready + pushState after worktree creation. */
   private notifyWorktreeReady(sessionId: string, result: CreateWorktreeResult, worktreeId?: string): void {
     this.pushState()
     this.postToWebview({
@@ -878,14 +884,6 @@ export class AgentManagerProvider implements Disposable {
       sessionId,
       branch: result.branch,
       worktreeId,
-    })
-    this.postToWebview({
-      type: "agentManager.sessionMeta",
-      sessionId,
-      mode: "worktree",
-      branch: result.branch,
-      path: result.path,
-      parentBranch: result.parentBranch,
     })
   }
 
@@ -907,8 +905,6 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.requestBranches":
       case "agentManager.importFromBranch":
       case "agentManager.importFromPR":
-      case "agentManager.importExternalWorktree":
-      case "agentManager.importAllExternalWorktrees":
       case "agentManager.setTabOrder":
       case "agentManager.setWorktreeOrder":
       case "agentManager.setSessionsCollapsed":
@@ -923,6 +919,8 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.moveToSection":
       case "agentManager.moveSection":
         return true
+      case "agentManager.terminal.create":
+        return m.worktreeId !== null
       default:
         return false
     }
@@ -1339,6 +1337,7 @@ export class AgentManagerProvider implements Disposable {
 
       this.registerWorktreeSession(session.id, wt.result.path)
       this.notifyWorktreeReady(session.id, wt.result, wt.worktree.id)
+      this.panel?.sessions.registerSession(session)
 
       // Set the per-version model immediately so the UI selector reflects
       // the correct model as soon as the worktree appears, before Phase 2.
@@ -1623,6 +1622,7 @@ export class AgentManagerProvider implements Disposable {
       sidebarCollapsed: state.getSidebarCollapsed(),
       reviewDiffStyle: state.getReviewDiffStyle(),
       reviewMarkdownRender: getDiffMarkdownRender(),
+      terminalDestination: readTerminalDestination(),
       isGitRepo: true,
       defaultBaseBranch: state.getDefaultBaseBranch(),
       ...run,
@@ -1645,6 +1645,7 @@ export class AgentManagerProvider implements Disposable {
       staleWorktreeIds: [],
       reviewDiffStyle: "unified",
       reviewMarkdownRender: getDiffMarkdownRender(),
+      terminalDestination: readTerminalDestination(),
       isGitRepo: false,
       runStatuses: [],
       runScriptConfigured: false,
@@ -1922,6 +1923,7 @@ export class AgentManagerProvider implements Disposable {
     this.unsubTool?.()
     this.unsubStatus?.()
     this.unsubFont?.()
+    this.unsubDestination?.()
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()

@@ -148,11 +148,12 @@ export const layer = Layer.effect(
 
         const { Server } = yield* Effect.promise(() => import("../server/server"))
 
+        const serverUrl = Server.url
         const client = createKiloClient({
-          baseUrl: "http://localhost:4096",
+          baseUrl: serverUrl?.toString() ?? "http://localhost:4096",
           directory: ctx.directory,
           headers: ServerAuth.headers(),
-          fetch: async (...args) => Server.Default().app.fetch(...args),
+          ...(serverUrl ? {} : { fetch: async (...args) => Server.Default().app.fetch(...args) }),
         })
         const cfg = yield* config.get()
         const input: PluginInput = {

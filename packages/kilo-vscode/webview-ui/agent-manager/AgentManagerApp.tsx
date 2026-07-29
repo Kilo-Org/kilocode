@@ -13,7 +13,6 @@ import {
   type JSX,
 } from "solid-js"
 import type {
-  ExtensionMessage,
   AgentManagerRepoInfoMessage,
   AgentManagerWorktreeSetupMessage,
   AgentManagerStateMessage,
@@ -25,8 +24,6 @@ import type {
   AgentManagerWorktreeDiffFileMessage,
   AgentManagerWorktreeDiffLoadingMessage,
   AgentManagerApplyWorktreeDiffResultMessage,
-  AgentManagerApplyWorktreeDiffStatus,
-  AgentManagerApplyWorktreeDiffConflict,
   AgentManagerWorktreeStatsMessage,
   AgentManagerLocalStatsMessage,
   WorktreeFileDiff,
@@ -70,7 +67,6 @@ import { Button } from "@kilocode/kilo-ui/button"
 import { IconButton } from "@kilocode/kilo-ui/icon-button"
 import { Spinner } from "@kilocode/kilo-ui/spinner"
 import { Tooltip, TooltipKeybind } from "@kilocode/kilo-ui/tooltip"
-import { Popover } from "@kilocode/kilo-ui/popover"
 import { VSCodeProvider, useVSCode } from "../src/context/vscode"
 import { ServerProvider } from "../src/context/server"
 import { ProviderProvider } from "../src/context/provider"
@@ -120,14 +116,24 @@ import { reorderTabs, applyTabOrder, firstOrderedTitle } from "./tab-order"
 import { createTabOrderSync } from "./tab-order-sync"
 import { reportRemoteSessions, reportVisibleSession, visible } from "./remote-sessions"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
-import { isTerminalTabId, createTerminalState, createTerminalHandlers, createTerminalMessageHandler } from "./terminal"
+import {
+  SideTerminalPanel,
+  TerminalDestinationButton,
+  isTerminalTabId,
+  createTerminalState,
+  createTerminalHandlers,
+  createTerminalMessageHandler,
+  createSideTerminal,
+  readSavedDestination,
+  resolveVscodeTerminalRequest,
+} from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
 import { DiffPanel } from "./DiffPanel"
 import { createRevertFile } from "./revert-file"
 import { FullScreenDiffView } from "../diff-viewer/FullScreenDiffView"
-import { ApplyDialog } from "./ApplyDialog"
-import { groupApplyConflicts } from "./apply-conflicts"
+import { createApplyToLocal } from "./apply-to-local"
+import { createWorktreeDiffs } from "./worktree-diffs"
 import type { ReviewComment } from "../diff-viewer/review-comments"
 import { clearReviewComposer, createReviewComposer } from "../diff-viewer/review-annotations"
 import type { SidebarSearchMenuRef } from "./SidebarSearchMenu"
@@ -150,7 +156,6 @@ import {
 } from "./section-helpers"
 import { sectionAwareDetector } from "./section-dnd"
 import { ConstrainDragXAxis } from "./constrain-drag-x"
-import { mergeWorktreeDiffs } from "../diff-viewer/diff-state"
 import { initialMessage, seedInitialVariant } from "./initial-message"
 import { createMarkdownRender } from "./review-preferences"
 import { createSidebarCollapse } from "./sidebar-collapse"
@@ -160,6 +165,7 @@ import { buildShortcutCategories } from "./shortcuts"
 import { tracker } from "./telemetry"
 import "./agent-manager.css"
 import "./agent-manager-review.css"
+import { cycleAgent as cycle } from "../src/context/session-agent"
 const REVIEW_TAB_ID = "review"
 
 interface SetupState {
@@ -176,15 +182,9 @@ interface WorktreeBusyState {
   message?: string
   branch?: string
 }
-
-interface ApplyState {
-  status: AgentManagerApplyWorktreeDiffStatus
-  message: string
-  conflicts: AgentManagerApplyWorktreeDiffConflict[]
-}
 /** Sidebar selection: LOCAL for local repo, worktree ID for a worktree, or null for an unassigned session. */
 type SidebarSelection = typeof LOCAL | string | null
-type SidePanel = "diff" | "pr" | null
+type SidePanel = "diff" | "pr" | "terminal" | null
 const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
 // Fallback keybindings before extension sends resolved ones
 const MAX_JUMP_INDEX = 9
@@ -234,6 +234,8 @@ const AgentManagerContent: Component = () => {
   const [repoBranch, setRepoBranch] = createSignal<string | undefined>()
   const [busyWorktrees, setBusyWorktrees] = createSignal<Map<string, WorktreeBusyState>>(new Map())
   const [staleWorktreeIds, setStaleWorktreeIds] = createSignal<Set<string>>(new Set())
+  /** True while the ⌘/Ctrl jump modifier is held — reveals the ⌘1-9 badges on all sidebar items. */
+  const [held, setHeld] = createSignal(false)
   const [worktreesLoaded, setWorktreesLoaded] = createSignal(false)
   const [sessionsLoaded, setSessionsLoaded] = createSignal(false)
   const [isGitRepo, setIsGitRepo] = createSignal(true)
@@ -269,16 +271,43 @@ const AgentManagerContent: Component = () => {
   // rAF coalescing for resize handlers — at most one signal write per frame
   let sidebarRaf: number | undefined
   let pendingSidebarWidth: number | undefined
-  let diffRaf: number | undefined
-  let pendingDiffWidth: number | undefined
+  let sideRaf: number | undefined
+  let pendingSideWidth: number | undefined
 
   const [history, setHistory] = createSignal(false)
   const [sidePanel, setSidePanel] = createSignal<SidePanel>(null)
   const diffOpen = () => sidePanel() === "diff"
-  const [diffDatas, setDiffDatas] = createSignal<Record<string, WorktreeFileDiff[]>>({})
-  const [diffLoading, setDiffLoading] = createSignal(false)
-  const [diffFileLoading, setDiffFileLoading] = createSignal<Record<string, Record<string, true>>>({})
+  const diffs = createWorktreeDiffs(vscode)
+  const diffDatas = diffs.diffDatas
+  const diffLoading = diffs.diffLoading
+  const setDiffLoading = diffs.setDiffLoading
+  // The diff and terminal panels each remember their own width: a diff
+  // benefits from half the window, a terminal only needs about a third.
+  const TERMINAL_MIN_WIDTH = 360
+  const TERMINAL_MAX_WIDTH = 640
   const [diffWidth, setDiffWidth] = createSignal(Math.round(window.innerWidth * 0.5))
+  const [terminalWidth, setTerminalWidth] = createSignal(
+    Math.min(TERMINAL_MAX_WIDTH, Math.max(TERMINAL_MIN_WIDTH, Math.round(window.innerWidth / 3))),
+  )
+  // The hidden-but-mounted host still fits the terminal, so pick the
+  // terminal's width whenever one is alive and no other mode is showing.
+  const widthMode = () => sidePanel() ?? (terms.sides().length > 0 ? "terminal" : null)
+  const hostWidth = () => (widthMode() === "terminal" ? terminalWidth() : diffWidth())
+  const sideMin = () => (widthMode() === "terminal" ? TERMINAL_MIN_WIDTH : 200)
+  const resizeSide = (width: number) => {
+    pendingSideWidth = Math.max(sideMin(), Math.min(width, window.innerWidth * 0.8))
+    if (sideRaf !== undefined) return
+    sideRaf = requestAnimationFrame(() => {
+      sideRaf = undefined
+      if (widthMode() === "terminal") setTerminalWidth(pendingSideWidth!)
+      else setDiffWidth(pendingSideWidth!)
+    })
+  }
+  const showSideTerminal = () => {
+    setHistory(false)
+    setReviewActive(false)
+    setSidePanel("terminal")
+  }
 
   const [reviewOpenByContext, setReviewOpenByContext] = createSignal<Record<string, boolean>>({})
   const [reviewCommentsByContext, setReviewCommentsByContext] = createSignal<Record<string, ReviewComment[]>>({})
@@ -297,12 +326,6 @@ const AgentManagerContent: Component = () => {
 
   // Local repo git stats (branch name, diff additions/deletions, commits)
   const [localStats, setLocalStats] = createSignal<LocalGitStats | undefined>()
-
-  // Per-worktree apply-to-local status
-  const [applyStates, setApplyStates] = createSignal<Record<string, ApplyState>>({})
-  const [applyTarget, setApplyTarget] = createSignal<string | undefined>()
-  const [applySelectedFiles, setApplySelectedFiles] = createSignal<string[]>([])
-  const [applySelectionTouched, setApplySelectionTouched] = createSignal(false)
 
   const PENDING_PREFIX = "pending:"
   const closedDrafts = new Set<string>()
@@ -358,12 +381,6 @@ const AgentManagerContent: Component = () => {
     setReviewCommentsByContext((prev) => ({ ...prev, [sel]: comments }))
   }
 
-  const applyStateForSelection = createMemo(() => {
-    const sel = selection()
-    if (!sel || sel === LOCAL) return undefined
-    return applyStates()[sel]
-  })
-
   const resolveWorktreeSessionId = (worktreeId: string) => {
     const id = session.currentSessionID()
     if (id) {
@@ -373,157 +390,19 @@ const AgentManagerContent: Component = () => {
     return managedSessions().find((entry) => entry.worktreeId === worktreeId)?.id
   }
 
-  const applyTargetSessionId = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return undefined
-    return resolveWorktreeSessionId(target)
+  const apply = createApplyToLocal({
+    vscode,
+    dialog,
+    t,
+    selection,
+    local: LOCAL,
+    worktrees,
+    diffDatas,
+    diffLoading,
+    resolveWorktreeSessionId,
+    track: metrics.track,
   })
-
-  const applyDiffs = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return [] as WorktreeFileDiff[]
-    const data = diffDatas()
-    const current = applyTargetSessionId()
-    if (current && data[current]) return data[current]!
-    const ids = managedSessions()
-      .filter((entry) => entry.worktreeId === target)
-      .map((entry) => entry.id)
-    for (const id of ids) {
-      if (data[id]) return data[id]!
-    }
-    return [] as WorktreeFileDiff[]
-  })
-
-  const applyStateForTarget = createMemo(() => {
-    const target = applyTarget()
-    if (!target) return undefined
-    return applyStates()[target]
-  })
-
-  const applyBusyForTarget = createMemo(() => {
-    const state = applyStateForTarget()
-    if (!state) return false
-    return state.status === "checking" || state.status === "applying"
-  })
-
-  const applySelectedSet = createMemo(() => new Set(applySelectedFiles()))
-
-  const applySelectionStats = createMemo(() => {
-    const set = applySelectedSet()
-    const selected = applyDiffs().filter((diff) => set.has(diff.file))
-    const additions = selected.reduce((sum, diff) => sum + diff.additions, 0)
-    const deletions = selected.reduce((sum, diff) => sum + diff.deletions, 0)
-    return {
-      total: applyDiffs().length,
-      selected: selected.length,
-      additions,
-      deletions,
-    }
-  })
-
-  const applyHasSelection = createMemo(() => applySelectionStats().selected > 0)
-
-  const applyConflictRows = createMemo(() => groupApplyConflicts(applyStateForTarget()?.conflicts ?? []))
-
-  const applyToLocal = (worktreeId: string, selectedFiles: string[]) => {
-    setApplyStates((prev) => ({
-      ...prev,
-      [worktreeId]: {
-        status: "checking",
-        message: t("agentManager.apply.checking"),
-        conflicts: [],
-      },
-    }))
-    vscode.postMessage({ type: "agentManager.applyWorktreeDiff", worktreeId, selectedFiles })
-  }
-
-  const resetApplyDialog = () => {
-    setApplyTarget(undefined)
-    setApplySelectedFiles([])
-    setApplySelectionTouched(false)
-  }
-
-  const closeApplyDialog = () => {
-    resetApplyDialog()
-    dialog.close()
-  }
-
-  const applySelectAll = () => {
-    setApplySelectionTouched(true)
-    setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
-  }
-
-  const applySelectNone = () => {
-    setApplySelectionTouched(true)
-    setApplySelectedFiles([])
-  }
-
-  const applyToggleFile = (file: string, checked: boolean) => {
-    setApplySelectionTouched(true)
-    setApplySelectedFiles((prev) => {
-      if (checked) {
-        if (prev.includes(file)) return prev
-        const set = new Set(prev)
-        set.add(file)
-        return applyDiffs()
-          .map((diff) => diff.file)
-          .filter((path) => set.has(path))
-      }
-      if (!prev.includes(file)) return prev
-      return prev.filter((path) => path !== file)
-    })
-  }
-
-  const triggerApply = () => {
-    const target = applyTarget()
-    if (!target) return
-    if (!applyHasSelection()) return
-    if (applyBusyForTarget()) return
-    metrics.track("apply_to_local", "apply_dialog", { fileCount: applySelectedFiles().length })
-    applyToLocal(target, applySelectedFiles())
-  }
-
-  const openApplyDialog = () => {
-    const sel = selection()
-    if (!sel || sel === LOCAL) return
-    setApplyStates((prev) => {
-      if (!prev[sel]) return prev
-      const next = { ...prev }
-      delete next[sel]
-      return next
-    })
-    setApplyTarget(sel)
-    setApplySelectionTouched(false)
-    setApplySelectedFiles([])
-    const sid = resolveWorktreeSessionId(sel)
-    if (sid) vscode.postMessage({ type: "agentManager.requestWorktreeDiff", sessionId: sid })
-
-    setApplySelectedFiles(applyDiffs().map((diff) => diff.file))
-
-    dialog.show(
-      () => (
-        <ApplyDialog
-          diffs={applyDiffs()}
-          loading={diffLoading()}
-          selectedFiles={applySelectedSet()}
-          selectedCount={applySelectionStats().selected}
-          additions={applySelectionStats().additions}
-          deletions={applySelectionStats().deletions}
-          busy={applyBusyForTarget()}
-          hasSelection={applyHasSelection()}
-          status={applyStateForTarget()?.status}
-          message={applyStateForTarget()?.message}
-          conflictRows={applyConflictRows()}
-          onSelectAll={applySelectAll}
-          onSelectNone={applySelectNone}
-          onToggleFile={applyToggleFile}
-          onApply={triggerApply}
-          onClose={closeApplyDialog}
-        />
-      ),
-      resetApplyDialog,
-    )
-  }
+  const openApplyDialog = apply.openApplyDialog
 
   const openWorktreeDirectory = () => {
     const sel = selection()
@@ -554,31 +433,6 @@ const AgentManagerContent: Component = () => {
     const sel = selection()
     if (sel) runWorktree(sel)
   }
-
-  createEffect(
-    on(
-      () => [applyTarget(), applyDiffs(), applySelectionTouched()] as const,
-      ([target, diffs, touched]) => {
-        if (!target) return
-        const files = diffs.map((diff) => diff.file)
-        if (files.length === 0) {
-          if (!touched) setApplySelectedFiles([])
-          return
-        }
-
-        if (!touched) {
-          setApplySelectedFiles(files)
-          return
-        }
-
-        const current = applySelectedFiles()
-        const set = new Set(current)
-        const next = files.filter((file) => set.has(file))
-        const same = next.length === current.length && next.every((file, index) => file === current[index])
-        if (!same) setApplySelectedFiles(next)
-      },
-    ),
-  )
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
   reportRemoteSessions(vscode, localSessionIDs, managedSessions, isPending)
@@ -695,14 +549,6 @@ const AgentManagerContent: Component = () => {
       if (Object.keys(next).length === Object.keys(prev).length) return prev
       return next
     })
-    setApplyStates((prev) => {
-      const next = Object.fromEntries(Object.entries(prev).filter(([id]) => ids.has(id)))
-      if (Object.keys(next).length === Object.keys(prev).length) return prev
-      return next
-    })
-
-    const target = applyTarget()
-    if (target && !ids.has(target)) closeApplyDialog()
   })
 
   const worktreeSessionIds = createMemo(
@@ -1071,14 +917,14 @@ const AgentManagerContent: Component = () => {
   }
 
   const cycleAgent = (direction: 1 | -1) => {
-    const available = session.agents().filter((a) => a.mode !== "subagent" && !a.hidden)
-    if (available.length <= 1) return
-    const current = session.selectedAgent()
-    const idx = available.findIndex((a) => a.name === current)
-    const raw = idx + direction
-    const next = raw < 0 ? available.length - 1 : raw >= available.length ? 0 : raw
-    const agent = available[next]
-    if (agent) session.selectAgent(agent.name)
+    const id = session.currentSessionID() ?? activePendingId()
+    cycle({
+      agents: session.agents(),
+      scope: id,
+      direction,
+      selected: session.selectedAgent,
+      select: session.selectAgent,
+    })
   }
 
   const syncRunStatuses = (items: RunStatus[] = []) => {
@@ -1103,12 +949,7 @@ const AgentManagerContent: Component = () => {
           requestAnimationFrame(() => sidebarSearchMenu?.open())
         }
       } else if (msg.action === "showTerminal") {
-        // Cmd+/ opens the legacy VS Code integrated terminal for the
-        // active session (or local). The new xterm tab affordance has
-        // its own keybind (Cmd+Shift+T) so both coexist.
-        const id = session.currentSessionID()
-        if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
-        else if (selection() === LOCAL) vscode.postMessage({ type: "agentManager.showLocalTerminal" })
+        sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
@@ -1179,6 +1020,18 @@ const AgentManagerContent: Component = () => {
     }
     window.addEventListener("keydown", deleteKeyHandler)
 
+    // Reveal the ⌘/Ctrl+1-9 jump badges on all sidebar items while the modifier is held.
+    // Capture phase so the terminal's key handlers can't swallow them; blur resets state
+    // when the keyup is lost (e.g. Cmd+Tab away).
+    const modifier = isMac ? "Meta" : "Control"
+    const modTrack = (e: KeyboardEvent) => {
+      if (e.key === modifier) setHeld(e.type === "keydown")
+    }
+    const modReset = () => setHeld(false)
+    window.addEventListener("keydown", modTrack, true)
+    window.addEventListener("keyup", modTrack, true)
+    window.addEventListener("blur", modReset)
+
     // When the panel regains focus (e.g. returning from terminal), focus the prompt
     // and clear any stale body styles left by Kobalte modal overlays (dropdowns/dialogs
     // set pointer-events:none and overflow:hidden on body, but cleanup never runs if
@@ -1248,7 +1101,14 @@ const AgentManagerContent: Component = () => {
       setSelection,
       showError: (message) =>
         showToast({ variant: "error", title: t("agentManager.terminal.errorTitle"), description: message }),
+      postMessage: (message) => vscode.postMessage(message as never),
       onCreated: (contextKey, terminalId) => appendToTabOrder(contextKey, terminalId),
+      onSideCreated: (contextKey, terminalId) => {
+        // Focus only when the user is still looking at this panel —
+        // a slow create landing after a mode switch must not steal it.
+        if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
+      },
+      onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
       terminalDispatch(msg)
@@ -1457,65 +1317,19 @@ const AgentManagerContent: Component = () => {
       }
 
       if (msg.type === "agentManager.worktreeDiff") {
-        const ev = msg as AgentManagerWorktreeDiffMessage
-        let staleFiles: Set<string> | undefined
-        setDiffDatas((prev) => {
-          const existing = prev[ev.sessionId]
-          const merged = existing
-            ? mergeWorktreeDiffs(existing, ev.diffs)
-            : { diffs: ev.diffs, stale: new Set<string>() }
-          staleFiles = merged.stale
-          const next = merged.diffs
-          if (existing && existing.length === next.length && existing.every((old, i) => old === next[i])) return prev
-          return { ...prev, [ev.sessionId]: next }
-        })
-        if (staleFiles) refreshStaleDiffs(ev.sessionId, staleFiles)
+        diffs.onWorktreeDiff(msg as AgentManagerWorktreeDiffMessage)
       }
 
       if (msg.type === "agentManager.worktreeDiffFile") {
-        const ev = msg as AgentManagerWorktreeDiffFileMessage
-        if (ev.diff) {
-          setDiffDatas((prev) => {
-            const existing = prev[ev.sessionId] ?? []
-            const next = existing.map((item) => (item.file === ev.diff!.file ? ev.diff! : item))
-            return { ...prev, [ev.sessionId]: next }
-          })
-          setDiffFilePending(ev.sessionId, ev.diff.file, false)
-          return
-        }
-        setDiffFilePending(ev.sessionId, ev.file, false)
+        diffs.onWorktreeDiffFile(msg as AgentManagerWorktreeDiffFileMessage)
       }
 
       if (msg.type === "agentManager.worktreeDiffLoading") {
-        const ev = msg as AgentManagerWorktreeDiffLoadingMessage
-        setDiffLoading(ev.loading)
+        diffs.onWorktreeDiffLoading(msg as AgentManagerWorktreeDiffLoadingMessage)
       }
 
       if (msg.type === "agentManager.applyWorktreeDiffResult") {
-        const ev = msg as AgentManagerApplyWorktreeDiffResultMessage
-        const files = new Set((ev.conflicts ?? []).map((entry) => entry.file).filter(Boolean)).size
-        const count = ev.conflicts?.length ?? 0
-        setApplyStates((prev) => ({
-          ...prev,
-          [ev.worktreeId]: {
-            status: ev.status,
-            message: ev.message,
-            conflicts: ev.conflicts ?? [],
-          },
-        }))
-
-        if (ev.status === "success") {
-          showToast({ variant: "success", title: t("agentManager.apply.success"), description: ev.message })
-          if (applyTarget() === ev.worktreeId) closeApplyDialog()
-        }
-        if (ev.status === "conflict") {
-          const summary =
-            count > 0 ? t("agentManager.apply.conflictToast", { count, files: Math.max(files, 1) }) : ev.message
-          showToast({ variant: "error", title: t("agentManager.apply.conflict"), description: summary })
-        }
-        if (ev.status === "error") {
-          showToast({ variant: "error", title: t("agentManager.apply.error"), description: ev.message })
-        }
+        apply.onApplyResult(msg as AgentManagerApplyWorktreeDiffResultMessage)
       }
 
       if (msg.type === "agentManager.revertWorktreeFileResult") revertCtl.onResult(msg as never)
@@ -1543,6 +1357,9 @@ const AgentManagerContent: Component = () => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
       window.removeEventListener("keydown", deleteKeyHandler)
+      window.removeEventListener("keydown", modTrack, true)
+      window.removeEventListener("keyup", modTrack, true)
+      window.removeEventListener("blur", modReset)
       window.removeEventListener("focus", onWindowFocus)
       window.removeEventListener("newTaskRequest", newTaskHandler, true)
       drafts.cleanup()
@@ -1669,54 +1486,13 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.setReviewDiffStyle", style })
   }
 
-  const setDiffFilePending = (sessionId: string, file: string, value: boolean) => {
-    setDiffFileLoading((prev) => {
-      const session = prev[sessionId] ?? {}
-      if (value) {
-        if (session[file]) return prev
-        return {
-          ...prev,
-          [sessionId]: { ...session, [file]: true },
-        }
-      }
-
-      if (!session[file]) return prev
-      const next = { ...session }
-      delete next[file]
-      if (Object.keys(next).length === 0) {
-        const result = { ...prev }
-        delete result[sessionId]
-        return result
-      }
-      return {
-        ...prev,
-        [sessionId]: next,
-      }
-    })
-  }
-
   const requestDiffFile = (file: string) => {
     const sessionId = currentDiffSessionId()
     if (!sessionId) return
-    if (diffFileLoading()[sessionId]?.[file]) return
-    setDiffFilePending(sessionId, file, true)
-    vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
+    diffs.requestDiffFile(sessionId, file)
   }
 
-  const refreshStaleDiffs = (sessionId: string, files: Set<string>) => {
-    const loading = diffFileLoading()[sessionId] ?? {}
-    for (const file of files) {
-      if (loading[file]) continue
-      setDiffFilePending(sessionId, file, true)
-      vscode.postMessage({ type: "agentManager.requestWorktreeDiffFile", sessionId, file })
-    }
-  }
-
-  const diffFileLoadingForCurrent = createMemo(() => {
-    const sessionId = currentDiffSessionId()
-    if (!sessionId) return new Set<string>()
-    return new Set(Object.keys(diffFileLoading()[sessionId] ?? {}))
-  })
+  const diffFileLoadingForCurrent = createMemo(() => diffs.diffFileLoadingFor(currentDiffSessionId))
 
   const revertCtl = createRevertFile(currentDiffSessionId, vscode, showToast, t)
 
@@ -2056,9 +1832,31 @@ const AgentManagerContent: Component = () => {
     findTab: (id) => tabLookup().get(id),
     postMessage: (msg) => vscode.postMessage(msg as never),
     onRemove: freezeTabs,
+    onShowSide: showSideTerminal,
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
+  })
+
+  const sideCtl = createSideTerminal({
+    handlers: termHandlers,
+    visible: () => sidePanel() === "terminal",
+    focusedId: () => terms.sideFocusedId(),
+    hide: () => setSidePanel(null),
+    refocus: () => window.dispatchEvent(new Event("focusPrompt")),
+    postMessage: (msg) => vscode.postMessage(msg as never),
+    track: (button, surface, properties) => metrics.track(button, surface, properties),
+    // Panel-local pick, immune to cross-window setting echoes (see side.ts).
+    saved: readSavedDestination(vscode.getState<Record<string, unknown>>()),
+    save: (d) => vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: d }),
+    openVscode: () =>
+      vscode.postMessage(
+        resolveVscodeTerminalRequest(
+          selection(),
+          session.currentSessionID(),
+          (wt) => managedSessions().find((ms) => ms.worktreeId === wt)?.id,
+        ) as never,
+      ),
   })
 
   const handleReviewTabMouseDown = (e: MouseEvent) => {
@@ -2132,8 +1930,8 @@ const AgentManagerContent: Component = () => {
     if (!id) return undefined
     if (id === REVIEW_TAB_ID) return { id, title: t("session.tab.review") }
     if (isTerminalTabId(id)) {
-      const term = terms.lookup().get(id)
-      return term ? { id, title: term.title } : undefined
+      const title = terms.title(id)
+      return title ? { id, title } : undefined
     }
     return activeTabs().find((s) => s.id === id)
   })
@@ -2159,6 +1957,12 @@ const AgentManagerContent: Component = () => {
   // Close the currently active tab via keyboard shortcut.
   // If no tabs remain, fall through to close the selected worktree.
   const closeActiveTab = () => {
+    // A focused side terminal owns Cmd+W while its panel is visible —
+    // closing a chat tab out from under the user's cursor would be
+    // surprising. Only that terminal dies; the panel keeps the rest.
+    if (sidePanel() === "terminal" && terms.sideFocusedId()) {
+      if (sideCtl.close()) return
+    }
     if (termHandlers.closeActive()) {
       tabFocus.restore()
       return
@@ -2209,7 +2013,7 @@ const AgentManagerContent: Component = () => {
     >
       <div
         class="am-sidebar"
-        classList={{ "am-sidebar-collapsed": sidebarCollapsed() }}
+        classList={{ "am-sidebar-collapsed": sidebarCollapsed(), "am-show-shortcuts": held() }}
         style={{ width: sidebarCollapsed() ? "0px" : `${sidebarWidth()}px` }}
         inert={sidebarCollapsed() || undefined}
       >
@@ -2681,11 +2485,7 @@ const AgentManagerContent: Component = () => {
                     const s = stats()
                     return s && (s.files > 0 || s.additions > 0 || s.deletions > 0)
                   }
-                  const applyBusy = () => {
-                    const state = applyStateForSelection()
-                    if (!state) return false
-                    return state.status === "checking" || state.status === "applying"
-                  }
+                  const applyBusy = apply.applyBusyForSelection
                   return (
                     <>
                       <Show when={isWorktree()}>
@@ -2814,28 +2614,17 @@ const AgentManagerContent: Component = () => {
                     />
                   </Tooltip>
                 </Show>
-                {/* Legacy VS Code integrated terminal shortcut. Coexists
-                    with the xterm terminal tabs (accessed via the `+`
-                    split-button or Cmd+Shift+T): Cmd+/ still opens the
-                    integrated terminal for the active session. */}
-                <TooltipKeybind
-                  title={t("agentManager.tab.terminal")}
-                  keybind={kb().showTerminal ?? ""}
-                  placement="bottom"
-                >
-                  <IconButton
-                    icon="console"
-                    size="small"
-                    variant="ghost"
-                    label={t("agentManager.tab.openTerminal")}
-                    onClick={() => {
-                      metrics.track("vscode_terminal", "tab_toolbar")
-                      const id = session.currentSessionID()
-                      if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
-                      else if (selection() === LOCAL) vscode.postMessage({ type: "agentManager.showLocalTerminal" })
-                    }}
-                  />
-                </TooltipKeybind>
+                {/* Terminal destination split button: the primary action
+                    follows the user's setting (VS Code integrated terminal
+                    or the embedded side panel), the dropdown picks which.
+                    Cmd+Shift+T still creates an xterm tab via the `+` menu. */}
+                <TerminalDestinationButton
+                  destination={sideCtl.destination}
+                  active={() => sidePanel() === "terminal"}
+                  keybind={() => kb().showTerminal ?? ""}
+                  onOpen={() => sideCtl.openPreferred("tab_toolbar")}
+                  onChoose={sideCtl.choose}
+                />
               </div>
             </div>
             <DragOverlay>
@@ -2985,24 +2774,26 @@ const AgentManagerContent: Component = () => {
                   </Show>
                 </div>
               </div>
-              <Show when={sidePanel() !== null}>
-                <div class="am-diff-resize" style={{ width: `${diffWidth()}px` }}>
-                  <ResizeHandle
-                    direction="horizontal"
-                    edge="start"
-                    size={diffWidth()}
-                    min={200}
-                    max={Math.round(window.innerWidth * 0.8)}
-                    onResize={(w) => {
-                      pendingDiffWidth = Math.max(200, Math.min(w, window.innerWidth * 0.8))
-                      if (diffRaf === undefined) {
-                        diffRaf = requestAnimationFrame(() => {
-                          diffRaf = undefined
-                          setDiffWidth(pendingDiffWidth!)
-                        })
-                      }
-                    }}
-                  />
+              {/* One inspector host for all right-side modes. It stays
+                  mounted while a side terminal is alive — hidden via
+                  .am-side-host-hidden (absolute + opacity), never
+                  unmounted, so xterm render loops keep streaming. */}
+              <Show when={sidePanel() !== null || terms.sides().length > 0}>
+                <div
+                  class={`am-diff-resize ${sidePanel() === null ? "am-side-host-hidden" : ""}`}
+                  style={{ width: `${hostWidth()}px` }}
+                  inert={sidePanel() === null}
+                >
+                  <Show when={sidePanel() !== null}>
+                    <ResizeHandle
+                      direction="horizontal"
+                      edge="start"
+                      size={hostWidth()}
+                      min={sideMin()}
+                      max={Math.round(window.innerWidth * 0.8)}
+                      onResize={resizeSide}
+                    />
+                  </Show>
                   <div class="am-diff-panel-wrapper">
                     <Show when={sidePanel() === "diff"}>
                       <DiffPanel
@@ -3037,6 +2828,14 @@ const AgentManagerContent: Component = () => {
                         activeTerminalId={terms.activeId()}
                       />
                     </Show>
+                    <SideTerminalPanel
+                      state={terms}
+                      contextKey={terms.sideKey}
+                      visible={() => sidePanel() === "terminal"}
+                      onSelect={(id) => termHandlers.selectSide(id)}
+                      onClose={(id) => termHandlers.closeSide(id)}
+                      onStart={() => termHandlers.addSide()}
+                    />
                   </div>
                 </div>
               </Show>

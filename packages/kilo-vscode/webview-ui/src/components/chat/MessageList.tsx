@@ -70,6 +70,8 @@ import {
   type TranscriptHold,
   type TranscriptRow,
 } from "../../context/transcript-rows"
+import { PromptRail } from "./PromptRail"
+import { capacity, promptItems, railItems, type PromptRailItem } from "./prompt-rail"
 import { onTimelineHighlight, type TimelineHighlight } from "../../utils/timeline/highlight"
 import { useTranscriptSearch, type SearchMatch } from "../../context/transcript-search"
 import { applyTranscriptHighlights, clearTranscriptHighlights } from "./transcript-search-highlight"
@@ -164,6 +166,8 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const [scrollEl, setScrollEl] = createSignal<HTMLElement>()
   const [virtualizer, setVirtualizer] = createSignal<VirtualizerHandle>()
   const [layout, setLayout] = createSignal("")
+  // Transcript height, kept reactive so the prompt rail re-caps on resize.
+  const [height, setHeight] = createSignal(0)
 
   const revert = () => session.revert() ?? undefined
   const turns = createMemo((prev: MessageTurn[] | undefined) =>
@@ -944,6 +948,21 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const keys = createMemo(() => partition().virtual.map((row) => row.key))
   const fingerprint = createMemo(() => rowFingerprint(keys()))
 
+  // Scrolls the transcript to a row by key. Virtualized rows jump through
+  // the virtualizer; direct/live/queued rows are mounted, so they use
+  // scrollIntoView. Pauses auto-follow first so the jump isn't snapped back.
+  const jump = (key: string) => {
+    autoScroll.pause()
+    const index = keys().indexOf(key)
+    if (index >= 0) {
+      virtualizer()?.scrollToIndex(index, { align: "start" })
+      return
+    }
+    const el = scrollEl()
+    const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(key)}"]`)
+    target?.scrollIntoView({ block: "start" })
+  }
+
   // Clicking a bar in the task timeline scrolls the transcript to that message.
   // Jumps land instantly (no smooth animation): while pinned at the bottom, a
   // smooth scroll's initial frames sit within createAutoScroll's near-bottom
@@ -956,18 +975,49 @@ export const MessageList: Component<MessageListProps> = (props) => {
     // actually contains the clicked part, not just the message's first chunk.
     const row = matches.find((r) => r.type === "assistant" && r.parts.some((p) => p.id === detail.partId)) ?? matches[0]
     if (!row) return
-    autoScroll.pause()
-    const index = keys().indexOf(row.key)
-    if (index >= 0) {
-      virtualizer()?.scrollToIndex(index, { align: "start" })
-      return
-    }
-    const el = scrollEl()
-    const target = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(row.key)}"]`)
-    target?.scrollIntoView({ block: "start" })
+    jump(row.key)
   }
   window.addEventListener("scrollToMessage", onScrollToMessage)
   onCleanup(() => window.removeEventListener("scrollToMessage", onScrollToMessage))
+
+  // Prompt rail: one tick per user prompt, positioned to the left of the
+  // readable lane, opening a card of prompt/answer previews on hover.
+  const items = createMemo(() => promptItems(rows()))
+  // Until the transcript is measured there is no height to cap against, and
+  // rendering every prompt would spill ticks past the rail on long sessions.
+  const shown = createMemo(() => railItems(items(), capacity(height())))
+  const [activeTurn, setActiveTurn] = createSignal<string>()
+  const railActiveKey = createMemo(() => shown().find((item) => item.turn === activeTurn())?.key)
+
+  const trackActive = () => {
+    const list = shown()
+    if (list.length === 0) return setActiveTurn(undefined)
+    const handle = virtualizer()
+    const offset = handle?.scrollOffset
+    if (handle && offset !== undefined && offset > 1) {
+      const row = partition().virtual[handle.findItemIndex(offset)]
+      if (row) return setActiveTurn(row.turn)
+    }
+    setActiveTurn(list.at(-1)?.turn)
+  }
+  let activeFrame: number | undefined
+  const scheduleActive = () => {
+    if (activeFrame !== undefined) return
+    activeFrame = requestAnimationFrame(() => {
+      activeFrame = undefined
+      trackActive()
+    })
+  }
+  onCleanup(() => {
+    if (activeFrame !== undefined) cancelAnimationFrame(activeFrame)
+  })
+  // Re-derive the active turn whenever the transcript changes so the rail
+  // reflects a newly started turn even before any scrolling happens.
+  createEffect(() => {
+    shown()
+    partition()
+    scheduleActive()
+  })
 
   // Highlights the part behind the currently hovered/focused timeline bar
   // (dispatched by TaskTimeline) so the two stay visually correlated.
@@ -1018,6 +1068,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
   const handleScroll = () => {
     autoScroll.handleScroll()
     maybeLoadOlder()
+    scheduleActive()
     if (search.active()) scheduleHighlight()
   }
 
@@ -1026,6 +1077,7 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const el = scrollEl()
     if (!el) return
     const style = getComputedStyle(el)
+    setHeight(el.clientHeight)
     setLayout(
       layoutFingerprint({
         width: Math.round(el.clientWidth),
@@ -1209,6 +1261,17 @@ export const MessageList: Component<MessageListProps> = (props) => {
           </Show>
         </div>
       </div>
+
+      <PromptRail
+        items={shown}
+        active={() => railActiveKey()}
+        onSelect={(item: PromptRailItem) => jump(item.key)}
+        onWheel={(deltaY: number) => {
+          const el = scrollEl()
+          if (el) el.scrollTop += deltaY
+        }}
+        height={height}
+      />
 
       <Show when={autoScroll.userScrolled()}>
         <button

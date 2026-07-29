@@ -1,6 +1,6 @@
 import { Layer } from "effect"
 import { FetchHttpClient, HttpMiddleware, HttpRouter, HttpServer } from "effect/unstable/http"
-import { CorsConfig, isAllowedCorsOrigin, type CorsOptions } from "@/server/cors"
+import { CorsConfig, isAllowedCorsOrigin, type CorsOptions } from "@opencode-ai/server/cors"
 import { compressionLayer } from "@/server/routes/instance/httpapi/middleware/compression"
 import { corsVaryFix } from "@/server/routes/instance/httpapi/middleware/cors-vary"
 import { errorLayer } from "@/server/routes/instance/httpapi/middleware/error"
