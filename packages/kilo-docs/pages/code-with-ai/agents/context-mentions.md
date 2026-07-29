@@ -77,6 +77,7 @@ This means the agent can explore your entire project as needed, rather than bein
 | **Mention files when helpful** | If you know the exact file, mention its path to save the agent a search step |
 | **Keep editor tabs relevant** | Open tabs are passed as context, so keep relevant files open |
 | **Trust the agent's tools** | The agent can search, read, and explore your codebase — let it do the discovery work |
+| **Reference a past chat** | Type `@` and choose **Past chats** to open a searchable picker of previous sessions in the current workspace. Selecting a session attaches its current transcript as context when you send the message. |
 
 {% /tab %}
 {% tab label="CLI" %}

@@ -721,6 +721,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Rul til bunden",
   "session.messages.initializing": "Initialiserer...",
   "session.messages.taskStarting": "Starter...",
+  "session.prompts.navLabel": "Promptnavigator",
+  "session.prompts.tick": "Prompt {{index}} af {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Intet svar endnu",
+  "session.prompts.queued": "I kø",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver igen…",
   "session.status.working": "Arbejder…",
@@ -748,7 +752,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Opretter forbindelse til server...",
   "prompt.placeholder.error": "Forbindelse mislykkedes. Tjek outputpanelet eller genstart udvidelsen.",
-  "prompt.placeholder.default": "Skriv en besked... (Enter for at sende, Shift+Enter for ny linje)",
+  "prompt.placeholder.default":
+    "Skriv en besked, @ for at nævne filer... (Enter for at sende, Shift+Enter for ny linje)",
 
   "context.usage.sessionCost": "Sessionsomkostning",
   "context.usage.olderSessions": "{{count}} ældre sessioner",
