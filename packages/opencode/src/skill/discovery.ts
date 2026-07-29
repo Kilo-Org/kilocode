@@ -1,3 +1,4 @@
+import { posix, win32 } from "node:path" // kilocode_change - pure segment/path validation helpers
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { httpClient, path } from "@opencode-ai/core/effect/layer-node-platform"
 import { NodePath } from "@effect/platform-node"
@@ -9,6 +10,45 @@ import { Global } from "@opencode-ai/core/global"
 
 const skillConcurrency = 4
 const fileConcurrency = 8
+
+// kilocode_change start - segment/relative-path validation mirrors core v2 SkillDiscovery so a remote
+// index cannot smuggle traversal, absolute paths, URLs, or null bytes into a cache write target.
+function isSafeSegment(value: string) {
+  return (
+    value.length > 0 && value !== "." && value !== ".." && !value.includes("/") && !value.includes("\\") && !value.includes("\0")
+  )
+}
+
+function isSafeRelativePath(value: string) {
+  const segments = value.split("/")
+  return (
+    value.length > 0 &&
+    !value.includes("\\") &&
+    !value.includes("\0") &&
+    !value.includes("?") &&
+    !value.includes("#") &&
+    !URL.canParse(value) &&
+    !posix.isAbsolute(value) &&
+    !win32.isAbsolute(value) &&
+    segments.every((segment) => {
+      try {
+        const decoded = decodeURIComponent(segment)
+        return (
+          decoded.length > 0 &&
+          decoded !== "." &&
+          decoded !== ".." &&
+          !decoded.includes("/") &&
+          !decoded.includes("\\") &&
+          !decoded.includes("\0")
+        )
+      } catch {
+        return false
+      }
+    })
+  )
+}
+
+// kilocode_change end
 
 class IndexSkill extends Schema.Class<IndexSkill>("IndexSkill")({
   name: Schema.String,
@@ -47,8 +87,8 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
 
     const pull = Effect.fn("Discovery.pull")(function* (url: string) {
       const base = url.endsWith("/") ? url : `${url}/`
-      const index = new URL("index.json", base).href
-      const host = base.slice(0, -1)
+      const source = new URL(base)
+      const index = new URL("index.json", source).href
 
       yield* Effect.logInfo("fetching index", { url: index })
 
@@ -63,44 +103,47 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
 
       if (!data) return []
 
-      const missing = data.skills.filter((skill) => !skill.files.includes("SKILL.md"))
-      yield* Effect.forEach(
-        missing,
-        (skill) => Effect.logWarning("skill entry missing SKILL.md", { url: index, skill: skill.name }),
-        { discard: true },
-      )
-      const list = data.skills.filter((skill) => skill.files.includes("SKILL.md"))
-
-      // kilocode_change start - remote index.json controls skill.name/file, so a crafted `../` could escape the
-      // cache and plant a SKILL.md in a trusted dir (e.g. ~/.agents/skills). Drop any skill whose paths escape it.
-      const rooted = (target: string) => {
-        const rel = path.relative(cache, target)
+      // kilocode_change start - the remote index controls skill.name and file, so validate every segment,
+      // pin file downloads to the index origin, and confine writes to the cache (mirrors core v2 SkillDiscovery)
+      const contained = (parent: string, child: string) => {
+        const rel = path.relative(parent, child)
         return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel)
       }
-      const safe: typeof list = []
-      for (const skill of list) {
+      const plan = (skill: IndexSkill) => {
+        if (!skill.files.includes("SKILL.md")) return "skill entry missing SKILL.md"
+        if (!isSafeSegment(skill.name)) return "skipping skill with unsafe name"
         const root = path.join(cache, skill.name)
-        if (rooted(root) && skill.files.every((file) => rooted(path.join(root, file)))) safe.push(skill)
-        else yield* Effect.logWarning("skipping skill with unsafe path", { url: index, skill: skill.name })
+        if (!contained(cache, root)) return "skipping skill with unsafe name"
+        const skillUrl = new URL(`${encodeURIComponent(skill.name)}/`, source)
+        const files: { url: string; dest: string }[] = []
+        for (const file of skill.files) {
+          if (!isSafeRelativePath(file)) return "skipping skill with unsafe file path"
+          const resource = URL.parse(file, skillUrl) ?? undefined
+          if (!resource || resource.origin !== source.origin) return "skipping skill with cross-origin file"
+          const dest = path.join(root, file)
+          if (!contained(root, dest)) return "skipping skill with unsafe file path"
+          files.push({ url: resource.href, dest })
+        }
+        return { root, files }
+      }
+
+      const planned: { root: string; files: { url: string; dest: string }[] }[] = []
+      for (const skill of data.skills) {
+        const result = plan(skill)
+        if (typeof result === "string") yield* Effect.logWarning(result, { url: index, skill: skill.name })
+        else planned.push(result)
       }
       // kilocode_change end
 
       const dirs = yield* Effect.forEach(
-        safe, // kilocode_change - was `list`; drop skills whose paths escape the cache
+        planned, // kilocode_change - validated, origin-pinned, cache-confined download plans
         (skill) =>
           Effect.gen(function* () {
-            const root = path.join(cache, skill.name)
-
-            yield* Effect.forEach(
-              skill.files,
-              (file) => download(new URL(file, `${host}/${skill.name}/`).href, path.join(root, file)),
-              {
-                concurrency: fileConcurrency,
-              },
-            )
-
-            const md = path.join(root, "SKILL.md")
-            return (yield* fs.exists(md).pipe(Effect.orDie)) ? root : null
+            yield* Effect.forEach(skill.files, (file) => download(file.url, file.dest), {
+              concurrency: fileConcurrency,
+            })
+            const md = path.join(skill.root, "SKILL.md")
+            return (yield* fs.exists(md).pipe(Effect.orDie)) ? skill.root : null
           }),
         { concurrency: skillConcurrency },
       )

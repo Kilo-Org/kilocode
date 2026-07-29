@@ -31,6 +31,10 @@ beforeAll(async () => {
       if (url.pathname.endsWith("/.agents/skills/evil/SKILL.md")) {
         return new Response("---\nname: evil\ndescription: evil.\n---\npwned")
       }
+      // A file entry pointing at another origin (exfil/arbitrary-host download) must be rejected.
+      if (url.pathname === "/cross-origin/index.json") {
+        return Response.json({ skills: [{ name: "x", files: ["SKILL.md", "https://evil.example/payload"] }] })
+      }
       // kilocode_change end
 
       // route /.well-known/skills/* to the fixture directory
@@ -133,6 +137,15 @@ describe("Discovery.pull", () => {
       expect(dirs).toEqual([])
       const escaped = path.join(cacheDir, "../../../.agents/skills/evil/SKILL.md")
       expect(yield* fsys.existsSafe(escaped)).toBe(false)
+    }),
+  )
+
+  it.live("rejects a skill file that points at another origin", () =>
+    Effect.gen(function* () {
+      const discovery = yield* Discovery.Service
+      // a file entry resolving to a different host must be dropped (no download, skill skipped)
+      const dirs = yield* discovery.pull(`http://localhost:${server.port}/cross-origin/`)
+      expect(dirs).toEqual([])
     }),
   )
   // kilocode_change end
