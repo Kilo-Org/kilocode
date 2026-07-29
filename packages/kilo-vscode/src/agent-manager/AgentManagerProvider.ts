@@ -103,6 +103,7 @@ export class AgentManagerProvider implements Disposable {
     )
     this.terminalRouter = new TerminalRouter({
       getClient: () => this.connectionService.getClient(),
+      getClientAsync: () => this.connectionService.getClientAsync(this.getRoot()),
       getServerConfig: () => this.connectionService.getServerConfig() ?? undefined,
       getRoot: () => this.getRoot(),
       getWorktreePath: (id) => this.getStateManager()?.getWorktree(id)?.path,
@@ -917,8 +918,9 @@ export class AgentManagerProvider implements Disposable {
       case "agentManager.toggleSectionCollapsed":
       case "agentManager.moveToSection":
       case "agentManager.moveSection":
-      case "agentManager.terminal.create":
         return true
+      case "agentManager.terminal.create":
+        return m.worktreeId !== null
       default:
         return false
     }
