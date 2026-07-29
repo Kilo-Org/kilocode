@@ -182,10 +182,21 @@ describe("session processor retry limit", () => {
             yield* session.updateMessage(msg)
 
             const mdl = model()
+            const hooks = { gate: 0, retry: 0 }
             const handle = yield* processors.create({
               assistantMessage: msg,
               sessionID: chat.id,
               model: mdl,
+              gate: (effect) =>
+                Effect.sync(() => {
+                  hooks.gate++
+                }).pipe(Effect.andThen(effect)),
+              retry: (info) =>
+                Effect.sync(() => {
+                  expect(info.error && MessageV2.APIError.isInstance(info.error)).toBe(true)
+                  if (info.error && MessageV2.APIError.isInstance(info.error)) expect(info.error.data.statusCode).toBe(429)
+                  hooks.retry++
+                }),
             })
 
             const input: LLM.StreamInput = {
@@ -205,6 +216,7 @@ describe("session processor retry limit", () => {
 
               expect(result).toBe("stop")
               expect(calls).toBe(3)
+              expect(hooks).toEqual({ gate: 3, retry: 2 })
               expect(handle.message.error).toStrictEqual(expected)
             } finally {
               delay.mockRestore()

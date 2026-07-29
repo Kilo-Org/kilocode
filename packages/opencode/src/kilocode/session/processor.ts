@@ -24,6 +24,7 @@ export type ReviewTelemetry = {
 
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
+  export type Gate = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
   export const INCOMPLETE_RESPONSE_RETRIES = 2
   export const INCOMPLETE_RESPONSE_MESSAGE =
     "The provider repeatedly ended the response before returning usable output."
@@ -46,6 +47,10 @@ export namespace KiloSessionProcessor {
     "The model hit its output limit while reasoning and produced no actionable output. Try disabling reasoning or increasing the output limit."
   export const PROVIDER_FINISH_ERROR_MESSAGE =
     "The provider ended the response with an error before returning details. Start a new message to retry; Kilo will compact the oversized conversation first if needed."
+
+  export function gated(gate: Gate | undefined) {
+    return <A, E, R>(effect: Effect.Effect<A, E, R>) => (gate ? gate(effect) : effect)
+  }
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {
     const cmd = reviewCommandName(command)
