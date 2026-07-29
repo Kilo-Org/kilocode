@@ -408,7 +408,7 @@ export type WebviewMessage =
       message: Record<string, unknown>
     }
   | { type: "sessionStatus"; sessionID: string; status: string; attempt?: number; message?: string; next?: number }
-  | { type: "sessionTurnClosed"; sessionID: string; reason: "completed" | "error" | "interrupted" }
+  | { type: "sessionTurnClosed"; sessionID: string; reason: "completed" | "error" | "interrupted" | "superseded" }
   | {
       type: "permissionRequest"
       permission: {
