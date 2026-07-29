@@ -414,6 +414,11 @@ interface ShowLocalTerminalIn {
   type: "agentManager.showLocalTerminal"
 }
 
+interface ShowWorktreeTerminalIn {
+  type: "agentManager.showWorktreeTerminal"
+  worktreeId: string
+}
+
 interface OpenWorktreeIn {
   type: "agentManager.openWorktree"
   worktreeId: string
@@ -780,6 +785,7 @@ export type AgentManagerInMessage =
   | StopRunScriptIn
   | ShowTerminalIn
   | ShowLocalTerminalIn
+  | ShowWorktreeTerminalIn
   | OpenWorktreeIn
   | CopyToClipboardIn
   | ShowExistingLocalTerminalIn

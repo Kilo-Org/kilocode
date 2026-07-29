@@ -126,6 +126,8 @@ import {
   createTerminalHandlers,
   createTerminalMessageHandler,
   createSideTerminal,
+  readSavedDestination,
+  resolveVscodeTerminalRequest,
 } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
 import { useTabScroll } from "./tab-scroll"
@@ -1283,7 +1285,7 @@ const AgentManagerContent: Component = () => {
         // a slow create landing after a mode switch must not steal it.
         if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
       },
-      onDestinationChanged: (destination) => sideCtl.setDestination(destination),
+      onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
     const unsubTerminals = vscode.onMessage((msg) => {
       terminalDispatch(msg)
@@ -2108,11 +2110,17 @@ const AgentManagerContent: Component = () => {
     refocus: () => window.dispatchEvent(new Event("focusPrompt")),
     postMessage: (msg) => vscode.postMessage(msg as never),
     track: (button, surface, properties) => metrics.track(button, surface, properties),
-    openVscode: () => {
-      const id = session.currentSessionID()
-      if (id) vscode.postMessage({ type: "agentManager.showTerminal", sessionId: id })
-      else if (selection() === LOCAL) vscode.postMessage({ type: "agentManager.showLocalTerminal" })
-    },
+    // Panel-local pick, immune to cross-window setting echoes (see side.ts).
+    saved: readSavedDestination(vscode.getState<Record<string, unknown>>()),
+    save: (d) => vscode.setState({ ...vscode.getState<Record<string, unknown>>(), terminalDestination: d }),
+    openVscode: () =>
+      vscode.postMessage(
+        resolveVscodeTerminalRequest(
+          selection(),
+          session.currentSessionID(),
+          (wt) => managedSessions().find((ms) => ms.worktreeId === wt)?.id,
+        ) as never,
+      ),
   })
 
   const handleReviewTabMouseDown = (e: MouseEvent) => {

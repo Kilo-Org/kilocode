@@ -593,6 +593,10 @@ export class AgentManagerProvider implements Disposable {
       this.terminalManager.showLocalTerminal()
       return null
     }
+    if (m.type === "agentManager.showWorktreeTerminal") {
+      this.terminalManager.showWorktreeTerminal(m.worktreeId, this.state)
+      return null
+    }
     if (m.type === "agentManager.openWorktree") {
       this.openWorktreeDirectory(m.worktreeId)
       return null
@@ -720,6 +724,13 @@ export class AgentManagerProvider implements Disposable {
   }
 
   private onRequestState(): void {
+    // requestState fires from the webview's onMount, and a freshly mounted
+    // webview has no terminal records — any PTYs the router still tracks
+    // belong to a previous webview instance (reload or crash) and are
+    // unreachable orphans. Kill them here rather than leaking shells until
+    // the panel itself is disposed. In-flight creates from the dying
+    // instance are reaped by the router's generation guard.
+    void this.terminalRouter.dispose()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
