@@ -84,6 +84,7 @@ class SendPromptActionTest : BasePlatformTestCase() {
         override val isSendEnabled: Boolean,
     ) : SendPromptContext {
         override val isStopEnabled: Boolean = false
+        override val isAutoApproveEnabled: Boolean = false
         var sent = 0
 
         override fun send() {
@@ -91,6 +92,9 @@ class SendPromptActionTest : BasePlatformTestCase() {
         }
 
         override fun stop() {
+        }
+
+        override fun toggleAutoApprove() {
         }
     }
 

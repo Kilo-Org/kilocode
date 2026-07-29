@@ -214,6 +214,14 @@
                                first-keystroke="alt S"/>
         </action>
 
+        <action id="Kilo.ToggleAutoApprove"
+                class="ai.kilocode.client.actions.ToggleAutoApproveAction"
+                text="Toggle Auto-Approve"
+                description="Toggle auto-approve mode for the current Kilo session">
+            <keyboard-shortcut keymap="$default"
+                               first-keystroke="alt A"/>
+        </action>
+
         <action id="Kilo.Session.Open"
                 class="ai.kilocode.client.actions.OpenSessionAction">
             <keyboard-shortcut keymap="$default" first-keystroke="ENTER"/>
