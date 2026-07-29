@@ -675,6 +675,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll to bottom",
   "session.messages.initializing": "Initializing...",
   "session.messages.taskStarting": "Starting...",
+  "session.prompts.navLabel": "Prompt navigator",
+  "session.prompts.tick": "Prompt {{index}} of {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "No response yet",
+  "session.prompts.queued": "Queued",
   "session.status.writingResponse": "Writing response...",
   "session.status.retry": "Retrying…",
   "session.status.working": "Working...",
@@ -724,7 +728,7 @@ export const dict = {
   "dialog.model.noProviders": "No providers",
 
   "prompt.placeholder.connecting": "Connecting to server...",
-  "prompt.placeholder.default": "Type a message... (Enter to send, Shift+Enter for new line)",
+  "prompt.placeholder.default": "Type a message, @ to mention files... (Enter to send, Shift+Enter for new line)",
   "prompt.placeholder.error": "Connection failed. Check the output panel or restart the extension.",
 
   "context.usage.sessionCost": "Session cost",

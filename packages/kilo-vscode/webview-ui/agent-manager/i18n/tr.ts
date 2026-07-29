@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Aşağı Taşı",
 
   "agentManager.hoverCard.branch": "DAL",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Temel",
   "agentManager.hoverCard.sessions": "Oturumlar",
   "agentManager.hoverCard.files": "Dosyalar",
@@ -63,7 +64,7 @@ export const dict = {
   "agentManager.terminal.new": "Yeni Terminal Sekmesi",
   "agentManager.terminal.ended": "terminal sona erdi — kapatmak için sekmeyi kapatın",
   "agentManager.terminal.connectionError": "terminal bağlantı hatası",
-  "agentManager.terminal.kill": "Terminali sonlandır",
+  "agentManager.terminal.add": "Yeni terminal",
   "agentManager.terminal.empty": "Burada henüz terminal yok",
   "agentManager.terminal.start": "Terminali başlat",
   "agentManager.terminal.destination": "Terminal düğmesinin ne açacağını seçin",

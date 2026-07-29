@@ -66,8 +66,13 @@ jobs:
   sync:
     if: github.repository == 'Kilo-Org/kilocode' && github.event_name != 'pull_request'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    # Budget: 3 setup/collect + 35 triage + 50 edit + 2 verify + 10 fix + 2 upsert = 102 min, 18-minute reserve.
-    timeout-minutes: 120
+    # Budget: 4 setup/collect + 90 triage + 120 edit + 2 verify + 10 fix + 2 upsert = 228 min, 12-minute reserve.
+    # These are ceilings, not costs: a caught-up run triages ~2 chunks and edits
+    # ~1 batch and finishes in ~25 min. The old 35/50 pair was the binding
+    # constraint on backlog drain — run 30306629290 deferred 54 PRs untriaged and
+    # 31 unedited purely on budget, with no attempt made. See the throughput note
+    # in the PR description for the arithmetic.
+    timeout-minutes: 240
     env:
       # Both are required: without KILO_ORG_ID the gateway bills the key
       # owner's personal balance (402 "Add credits") instead of the org.
@@ -116,6 +121,9 @@ jobs:
         if: steps.collect.outputs.count != '0'
         env:
           SINCE_OVERRIDE: ${{ steps.wm.outputs.since_override }}
+          # Default 35 fit only 8 of 11 chunks on a 254-PR window. Headroom for
+          # --auto making chunks slower now that the agent really runs commands.
+          TRIAGE_BUDGET_MINUTES: "90"
         run: node .github/docs-sync/triage.mjs
 
       - name: Filter docs-worthy PRs
@@ -153,6 +161,11 @@ jobs:
       - name: Update docs (Kilo CLI, batched)
         if: (steps.worthy.outputs.count || '0') != '0' && inputs.dry_run != true
         continue-on-error: true
+        env:
+          # Default 50 fit only 4 of 11 batches. A healthy --auto batch is ~8 min,
+          # and edit.mjs will not start a batch without EDIT_BATCH_TIMEOUT_MINUTES
+          # (15) left, so 120 covers 14 batches = 70 PRs against ~5 worthy/day.
+          EDIT_BUDGET_MINUTES: "120"
         run: node .github/docs-sync/edit.mjs
 
       - name: Verify docs build and tests
@@ -174,9 +187,19 @@ jobs:
           NEXT_PUBLIC_POSTHOG_KEY: ${{ secrets.POSTHOG_API_KEY }}
         run: |
           set -o pipefail
-          kilo run "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
+          # Headless kilo run auto-rejects every permission ask; the runner has no
+          # user config granting bash, so without --auto the agent cannot run ordinary
+          # shell commands against the repository.
+          kilo run --auto "The docs build or tests failed. Read the attached docs-sync-out/verify.log and fix the packages/kilo-docs changes so they pass. Do not revert doc edits; fix them. Do not modify anything outside packages/kilo-docs." \
             -m "$EDIT_MODEL" --dir "$GITHUB_WORKSPACE" -f docs-sync-out/verify.log \
-            | tee -a docs-sync-out/edit-log.txt
+            | node .github/docs-sync/redact-stream.mjs \
+            | tee -a docs-sync-out/edit-log.txt \
+            || echo "::warning::kilo fix pass exited nonzero; re-verifying anyway"
+          # The rebuild below decides this step's outcome, not the agent's exit code.
+          # Without the guard above, `set -o pipefail` + the default `bash -e` would
+          # abort here once the CLI half of this PR ships: a mid-stream session error
+          # (or an auto-rejected ask) exits 1, verify2.log is never written, and
+          # `Re-verify status` reports VERIFIED=false even when the docs build fine.
           { bun run --filter @kilocode/kilo-docs build && bun run --filter @kilocode/kilo-docs test; } 2>&1 | tee docs-sync-out/verify2.log
 
       - name: Re-verify status
