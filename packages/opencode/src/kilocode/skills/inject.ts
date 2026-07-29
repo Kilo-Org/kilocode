@@ -80,6 +80,12 @@ export namespace SkillInject {
       for (const dir of scan.dirs) dirs.add(dir)
     }
 
+    // Fail closed: an empty pattern set would make the bash ask below auto-approve
+    // (Permission.ask iterates patterns, so forceAsk/veto never run for an empty
+    // list). Each command contributes its verbatim string above, so this is
+    // unreachable — but abort rather than risk a silent, unprompted execution.
+    if (patterns.size === 0) return yield* Effect.die(new Error("skill shell produced no authorizable commands"))
+
     // Single up-front approval. `patterns` are the decomposed sub-commands used for
     // rule matching; `metadata.commands` is the verbatim per-placeholder list the
     // prompt displays, so what is shown is exactly what runs (decomposition drops

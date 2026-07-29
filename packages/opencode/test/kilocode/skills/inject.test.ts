@@ -140,6 +140,27 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("still prompts for a cd-only command (no empty-pattern auto-approve)", () =>
+    Effect.gen(function* () {
+      // `cd` decomposes to no sub-command patterns; without the verbatim command the
+      // bash ask would carry an empty pattern list and Permission.ask would silently
+      // auto-approve (forceAsk never runs on an empty list). The raw command keeps
+      // the prompt firing.
+      yield* writeGlobalSkill("cd-only", "Out: !`cd sub`")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      yield* loadSkill("cd-only", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash.length).toBe(1)
+      expect(bash[0].patterns).toContain("cd sub")
+    }),
+  )
+
   unix("aborts the entire skill load when the batch is rejected", () =>
     Effect.gen(function* () {
       yield* writeGlobalSkill("denied-shell", "Secret: !`printf leaked`")
