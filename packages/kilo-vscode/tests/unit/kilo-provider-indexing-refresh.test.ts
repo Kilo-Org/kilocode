@@ -71,7 +71,7 @@ describe("KiloProvider indexing refresh", () => {
     const internal = provider as unknown as Internals
     const sent: unknown[] = []
     provider.postMessage = (message) => void sent.push(message)
-    internal.connectionState = "connected"
+    Object.assign(internal, { connectionState: "connected", commitMessageLanguageSetting: () => "sync" })
     await internal.fetchAndSendConfig()
     await internal.fetchAndSendConfigUpdated()
     await internal.handleUpdateConfig({})
