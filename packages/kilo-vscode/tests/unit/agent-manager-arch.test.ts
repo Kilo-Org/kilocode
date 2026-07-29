@@ -892,70 +892,73 @@ describe("Agent Manager — VS Code import boundary", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Provider chain parity — sidebar App.tsx vs AgentManagerApp.tsx
-//
-// The agent manager reuses ChatView (and therefore MessageList, etc.) from the
-// sidebar. Any context provider that ChatView's tree may call useXxx() on must
-// also be present in the agent manager's provider chain. A missing provider
-// crashes the entire SolidJS component tree silently.
-//
-// Regression: PR #7473 moved KiloNotifications into MessageList. It calls
-// useNotifications(), but NotificationsProvider was only in App.tsx — the agent
-// manager rendered a blank screen.
-// ---------------------------------------------------------------------------
-
 const APP_FILE = path.join(ROOT, "webview-ui/src/App.tsx")
 const AGENT_MANAGER_APP_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
+const PROVIDER_SHELL_FILE = path.join(ROOT, "webview-ui/src/context/provider-shell.tsx")
 
-describe("Agent Manager — provider chain parity with sidebar", () => {
-  /**
-   * Extract provider component names used as JSX elements in a file.
-   * Matches `<FooProvider` and `<FooProvider>` patterns, returning the names.
-   */
-  function extractProviders(content: string): string[] {
-    const matches = [...content.matchAll(/<(\w+Provider)\b/g)]
-    return [...new Set(matches.map((m) => m[1]!))]
+describe("Shared webview provider shell", () => {
+  function ordered(source: string, names: string[]) {
+    const positions = names.map((name) => source.indexOf(`<${name}`))
+    expect(
+      positions.every((position) => position >= 0),
+      `Missing provider from ${names.join(" -> ")}`,
+    ).toBe(true)
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
   }
 
-  /**
-   * Providers that the agent manager intentionally omits because it does not
-   * use the components that depend on them. If a shared component (ChatView,
-   * MessageList, etc.) starts using one of these, the test will fail and
-   * force the developer to add the provider to AgentManagerApp.tsx.
-   */
-  const KNOWN_EXCLUSIONS: string[] = [
-    // These are wrapped by LanguageBridge and DataBridge respectively,
-    // which the agent manager already includes in its provider chain.
-    "LanguageProvider",
-    "DataProvider",
-    // Agent Manager owns its local session tabs and ChatView only reads this
-    // optional context in the standard sidebar/editor webview.
-    "LocalTabsProvider",
-    // Work-style onboarding is injected only into the sidebar empty state.
-    "WorkStyleProvider",
-  ]
+  it("owns the common provider order and bridges", () => {
+    const source = fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")
+    ordered(source, [
+      "ThemeProvider",
+      "DialogProvider",
+      "VSCodeProvider",
+      "MermaidDownloadBridge",
+      "ServerProvider",
+      "LanguageBridge",
+      "MarkedProvider",
+      "DiffComponentProvider",
+      "CodeComponentProvider",
+      "FileComponentProvider",
+      "ProviderProvider",
+      "ConfigProvider",
+      "SpeechToTextPrewarm",
+      "DisplayProvider",
+      "IndexingProvider",
+      "KiloEmbeddingModelsProvider",
+      "ImageModelsProvider",
+      "NotificationsProvider",
+      "SessionProvider",
+      "AgentRequirementsProvider",
+      "MemoryProvider",
+      "FeedbackProvider",
+    ])
+    expect(source.indexOf("<Toast.Region")).toBeGreaterThan(source.indexOf("</VSCodeProvider>"))
+  })
 
-  it("agent manager includes all context providers from sidebar App.tsx", () => {
-    const sidebar = fs.readFileSync(APP_FILE, "utf-8")
-    const agent = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+  it("keeps sidebar-only providers in the sidebar root", () => {
+    const source = fs.readFileSync(APP_FILE, "utf-8")
+    ordered(source, [
+      "ProviderShell.Root",
+      "WorkStyleProvider",
+      "ProviderShell.Session",
+      "LocalTabsProvider",
+      "ProviderShell.Chat",
+      "DataBridge",
+      "AppContent",
+    ])
+    expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toMatch(/WorkStyleProvider|LocalTabsProvider/)
+  })
 
-    const sidebarProviders = extractProviders(sidebar)
-    const agentProviders = extractProviders(agent)
-    const agentSet = new Set(agentProviders)
-    const excluded = new Set(KNOWN_EXCLUSIONS)
-
-    const missing = sidebarProviders.filter((p) => !agentSet.has(p) && !excluded.has(p))
-
-    expect(
-      missing,
-      `These providers are in App.tsx but missing from AgentManagerApp.tsx.\n` +
-        `The agent manager reuses ChatView — any provider that ChatView's component\n` +
-        `tree depends on must be present in both provider chains.\n\n` +
-        `Missing providers:\n` +
-        missing.map((p) => `  - ${p}`).join("\n") +
-        `\n\nFix: add the missing <${missing[0]}> to AgentManagerApp.tsx's provider chain,\n` +
-        `or add it to KNOWN_EXCLUSIONS with a justification if it's truly unused.`,
-    ).toEqual([])
+  it("keeps worktree mode in the Agent Manager root", () => {
+    const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+    ordered(source, [
+      "ProviderShell.Root",
+      "ProviderShell.Session",
+      "ProviderShell.Chat",
+      "WorktreeModeProvider",
+      "DataBridge",
+      "AgentManagerContent",
+    ])
+    expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toContain("WorktreeModeProvider")
   })
 })
