@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Sposta giù",
 
   "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessioni",
   "agentManager.hoverCard.files": "File",
@@ -63,7 +64,7 @@ export const dict = {
   "agentManager.terminal.new": "Nuova scheda terminale",
   "agentManager.terminal.ended": "terminale terminato - chiudi la scheda per nasconderlo",
   "agentManager.terminal.connectionError": "errore di connessione del terminale",
-  "agentManager.terminal.kill": "Termina terminale",
+  "agentManager.terminal.add": "Nuovo terminale",
   "agentManager.terminal.empty": "Qui non c'è ancora un terminale",
   "agentManager.terminal.start": "Avvia terminale",
   "agentManager.terminal.destination": "Scegli cosa apre il pulsante del terminale",
