@@ -92,6 +92,8 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val toolbar = edt { button.parent }
         val row = edt { toolbar.parent }
 
+        assertEquals(activeListToolWindowBackground(), edt { panel.background })
+        assertNull(edt { panel.border })
         assertEquals(activeListToolWindowBackground(), edt { list.background })
         assertEquals(activeListToolWindowBackground(), edt { scroll.background })
         assertEquals(activeListToolWindowBackground(), edt { scroll.viewport.background })

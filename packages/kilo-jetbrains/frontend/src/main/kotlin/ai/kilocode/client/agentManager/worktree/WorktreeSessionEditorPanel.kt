@@ -8,7 +8,6 @@ import ai.kilocode.client.session.SessionRef
 import ai.kilocode.client.session.history.HistorySection
 import ai.kilocode.client.session.history.HistoryTime
 import ai.kilocode.client.session.history.LocalHistoryItem
-import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.list.ActiveList
 import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
@@ -39,7 +38,6 @@ import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
 import com.intellij.ui.awt.RelativePoint
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.UIUtil
 import com.intellij.util.ui.components.BorderLayoutPanel
 import java.awt.BorderLayout
@@ -83,7 +81,7 @@ class WorktreeSessionEditorPanel(
 
     init {
         Disposer.register(parent, this)
-        border = JBUI.Borders.empty(UiStyle.Gap.sm())
+        isOpaque = true
         val left = object : JPanel(BorderLayout()) {
             override fun getBackground(): Color = activeListToolWindowBackground()
         }
@@ -106,6 +104,8 @@ class WorktreeSessionEditorPanel(
         sync()
         updateActions()
     }
+
+    override fun getBackground(): Color = activeListToolWindowBackground()
 
     @RequiresEdt
     fun preferredFocus(): JComponent = list.preferredFocus()
