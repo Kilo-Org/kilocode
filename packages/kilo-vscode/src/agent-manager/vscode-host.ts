@@ -6,7 +6,7 @@
  */
 
 import * as vscode from "vscode"
-import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import type { Host, PanelContext, OutputHandle, SessionProvider } from "./host"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
@@ -214,10 +214,6 @@ export class VscodeHost implements Host {
   extensionKeybindings(): Array<{ command: string; key?: string; mac?: string }> {
     const ext = vscode.extensions.getExtension("kilocode.kilo-code")
     return ext?.packageJSON?.contributes?.keybindings ?? []
-  }
-
-  serverPort(): number | undefined {
-    return this.connectionService.getServerInfo()?.port
   }
 
   copyToClipboard(text: string): void {

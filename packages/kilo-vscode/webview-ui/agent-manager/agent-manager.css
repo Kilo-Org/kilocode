@@ -426,6 +426,25 @@ button.am-section-toggle:hover .am-section-label {
   color: var(--text-weak);
 }
 
+/* Jump modifier held (⌘/Ctrl): reveal shortcut badges on every item, not just the
+   hovered one. Scoped via :has so items without a badge (beyond ⌘9) keep their stats.
+   The close button stays hidden so holding the modifier never exposes the delete action. */
+.am-show-shortcuts .am-wt-hover-actions:has(.am-shortcut-badge) {
+  opacity: 1;
+  visibility: visible;
+}
+.am-show-shortcuts .am-wt-hover-actions .am-worktree-close {
+  display: none;
+}
+.am-show-shortcuts .am-wt-actions-cell:has(.am-shortcut-badge) > .am-worktree-stats,
+.am-show-shortcuts .am-wt-actions-cell:has(.am-shortcut-badge) > .am-worktree-stats-skeleton {
+  opacity: 0;
+  visibility: hidden;
+}
+.am-show-shortcuts .am-local-item .am-shortcut-badge {
+  opacity: 1;
+}
+
 .am-worktree-item:has(.am-worktree-rename-input) .am-wt-row2 {
   display: none;
 }
@@ -2515,6 +2534,13 @@ body.am-wt-dragging-active * {
   min-width: 250px;
 }
 
+/* Fixed-width slot so menu items with and without a check mark align. */
+.am-menu-check {
+  display: flex;
+  flex-shrink: 0;
+  width: 16px;
+}
+
 .am-split-menu [data-slot="dropdown-menu-item"] {
   padding: 6px 10px;
 }
@@ -4533,6 +4559,128 @@ body.vscode-high-contrast-light {
   opacity: 1;
   pointer-events: auto;
   z-index: 1;
+}
+
+/* Side terminal panel — lives inside .am-diff-panel-wrapper next to the
+   diff and PR panels. Header reuses .am-diff-header metrics so the
+   chrome does not shift when switching inspector modes. Visibility is
+   opacity-only: the xterm render loop dies if the subtree leaves the
+   paint tree. */
+.am-side-terminal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--vscode-terminal-background, #1e1e1e);
+  /* Force a dedicated compositor layer so opacity flips do not
+     re-lay-out the xterm canvases underneath. */
+  will-change: opacity;
+}
+
+.am-side-terminal-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-side-terminal-layer {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.am-side-terminal-layer-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.am-side-terminal-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-weak);
+  font-size: var(--font-size-small);
+  background: var(--vscode-terminal-background, #1e1e1e);
+}
+
+.am-side-terminal-empty {
+  color: var(--text-weak);
+}
+
+/* Side terminal tab strip — one row of tabs reusing the top bar's
+   .am-tab chrome, plus the "+" action. Height matches .am-diff-header
+   (32px: 4px padding + 24px content) so switching inspector modes does
+   not shift the panel chrome. The strip itself never scrolls; the tab
+   list does, so a narrow panel never pushes the "+" action out of view
+   (same split as .am-tab-list-wrap / .am-tab-add-wrap). */
+.am-side-terminal-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 32px;
+  padding: 4px 4px 0;
+  gap: 2px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-weak-base);
+  background: var(--surface-base);
+  position: relative;
+  z-index: 20;
+}
+
+.am-side-terminal-tablist {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.am-side-terminal-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+/* Each tab shares the available width and shrinks with ellipsis.
+   touch-action unlocks pointer-based drag reordering (same as
+   .am-tab-sortable). */
+.am-side-terminal-tab {
+  display: flex;
+  flex: 0 1 140px;
+  min-width: 64px;
+  height: 100%;
+  touch-action: none;
+}
+
+.am-side-terminal-add {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+/* Hidden-but-alive side panel host: taken out of the flow so the chat
+   reclaims the width, but kept painted so hidden side terminals keep
+   streaming. Anchored to .am-detail-stack (position: relative). */
+.am-side-host-hidden {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .am-terminal-host {

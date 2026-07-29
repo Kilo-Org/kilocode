@@ -73,6 +73,8 @@ jobs:
       - name: Run JetBrains unit tests
         run: bun script/test-ci.ts
         working-directory: packages/kilo-jetbrains
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish JetBrains unit reports
         if: always()

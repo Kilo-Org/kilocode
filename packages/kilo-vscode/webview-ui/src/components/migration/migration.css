@@ -302,50 +302,6 @@
   margin-top: 1px;
 }
 
-.migration-wizard__error-text {
-  font-size: var(--kilo-font-size-11);
-  color: var(--vscode-errorForeground);
-  line-height: 1.4;
-  margin-top: 4px;
-}
-
-.migration-wizard__error-box {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 28%, transparent);
-  border-radius: 12px;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--vscode-errorForeground) 8%, transparent), transparent),
-    color-mix(in srgb, var(--vscode-editor-background) 92%, var(--vscode-errorForeground) 8%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 10px 24px rgba(0, 0, 0, 0.14);
-}
-
-.migration-wizard__error-box-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.migration-wizard__error-box-title {
-  font-size: var(--kilo-font-size-12);
-  font-weight: 700;
-  color: var(--vscode-foreground);
-  letter-spacing: 0.01em;
-}
-
-.migration-wizard__error-box .migration-wizard__error-text {
-  margin-top: 0;
-  font-size: var(--kilo-font-size-12);
-  line-height: 1.55;
-  color: color-mix(in srgb, var(--vscode-errorForeground) 92%, white 8%);
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .migration-session-card {
   margin-top: 12px;
   padding: 12px;
@@ -534,17 +490,10 @@
   gap: 12px;
 }
 
-.migration-session-summary__label,
-.migration-session-summary__value {
+.migration-session-summary__label {
   font-size: var(--kilo-font-size-12);
   line-height: 1.5;
   color: var(--vscode-foreground);
-}
-
-.migration-session-summary__value {
-  color: var(--vscode-descriptionForeground);
-  white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .migration-session-progress__header {
@@ -640,12 +589,6 @@
   white-space: nowrap;
 }
 
-.migration-session-progress__count {
-  flex-shrink: 0;
-  font-size: var(--kilo-font-size-11);
-  color: var(--vscode-descriptionForeground);
-}
-
 .migration-wizard__copy-btn {
   appearance: none;
   border: 1px solid var(--vscode-panel-border);
@@ -679,16 +622,6 @@
   outline-offset: 2px;
 }
 
-/* Disabled items */
-.migration-wizard__item--disabled {
-  opacity: 0.45;
-  pointer-events: none;
-}
-
-.migration-wizard__item--disabled .migration-wizard__checkmark {
-  border-color: color-mix(in srgb, var(--vscode-foreground) 8%, transparent);
-}
-
 /* Clickable item (cleanup row) — text area triggers checkbox */
 .migration-wizard__item--clickable .migration-wizard__item-text {
   cursor: pointer;
@@ -719,10 +652,6 @@
   justify-content: flex-end;
   padding: 20px 0;
   margin-top: 20px;
-}
-
-.migration-wizard__footer--space-between {
-  justify-content: space-between;
 }
 
 .migration-wizard__btn-group {
@@ -811,7 +740,6 @@ body.vscode-high-contrast-light {
     background: var(--vscode-contrastBorder, var(--vscode-panel-border));
   }
 
-  .migration-wizard__error-box,
   .migration-wizard__copy-btn {
     border-color: var(--vscode-contrastBorder, var(--vscode-errorForeground));
   }

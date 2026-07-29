@@ -90,6 +90,9 @@ interface KiloSessionRpcApi : RemoteApi<Unit> {
     /** Revert a session to a prior user message or part. */
     suspend fun revert(id: String, directory: String, messageID: String, partID: String?)
 
+    /** Delete a single message (used to remove a queued prompt). */
+    suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean
+
     /** Redo all reverted changes for a session. */
     suspend fun unrevert(id: String, directory: String)
 

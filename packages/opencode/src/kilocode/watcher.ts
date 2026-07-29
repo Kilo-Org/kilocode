@@ -15,6 +15,10 @@ export namespace KilocodeWatcher {
 
   export class Service extends Context.Service<Service, Interface>()("@kilocode/Watcher") {}
 
+  export function eager(client = Flag.KILO_CLIENT) {
+    return client !== "vscode"
+  }
+
   export const layer = Layer.effect(
     Service,
     Effect.gen(function* () {
@@ -51,10 +55,10 @@ export namespace KilocodeWatcher {
     }),
   )
 
-  // Gate the whole layer so LocationServiceMap's dependency graph is never built when the watcher is disabled.
+  // Gate the whole layer so LocationServiceMap is only warmed for clients that consume branch-update events.
   export const defaultLayer = Layer.unwrap(
     Effect.gen(function* () {
-      if (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => false)))
+      if (!eager() || (yield* Flag.KILO_EXPERIMENTAL_DISABLE_FILEWATCHER.pipe(Effect.orElseSucceed(() => false))))
         return Layer.succeed(Service, Service.of({ init: () => Effect.void }))
       return layer.pipe(Layer.provide(LocationServiceMap.layer))
     }),
