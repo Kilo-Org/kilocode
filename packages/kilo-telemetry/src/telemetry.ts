@@ -105,6 +105,8 @@ export namespace Telemetry {
   }
 
   export async function updateIdentity(token: string | null, accountId?: string): Promise<void> {
+    if (!isEnabled()) return
+
     const previousId = Identity.getDistinctId()
     await Identity.updateFromKiloAuth(token, accountId)
 
