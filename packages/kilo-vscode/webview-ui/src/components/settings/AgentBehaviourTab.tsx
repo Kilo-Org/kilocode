@@ -17,7 +17,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
-import { mcpEnabledPatch, selectedDefaultAgentValue } from "./agent-behaviour-patches"
+import { mcpConfigScope, mcpEnabledPatch, selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -50,7 +50,7 @@ type AgentView = "list" | "create" | "edit"
 
 const AgentBehaviourTab: Component = () => {
   const language = useLanguage()
-  const { config, updateConfig } = useConfig()
+  const { config, collections, updateConfig, updateGlobalConfig, updateProjectConfig } = useConfig()
   const session = useSession()
   const dialog = useDialog()
   const vscode = useVSCode()
@@ -676,7 +676,11 @@ const AgentBehaviourTab: Component = () => {
                             checked={isConnected(name)}
                             disabled={session.mcpLoading() === name}
                             onChange={(enabled: boolean) => {
-                              updateConfig(mcpEnabledPatch(name, enabled))
+                              const update =
+                                mcpConfigScope(name, collections()) === "project"
+                                  ? updateProjectConfig
+                                  : updateGlobalConfig
+                              update(mcpEnabledPatch(name, enabled))
                               if (!enabled) {
                                 session.disconnectMcp(name)
                                 return

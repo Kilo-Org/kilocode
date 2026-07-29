@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import {
+  mcpConfigScope,
   mcpEnabledPatch,
   selectedAgentNumberOverrideValue,
   selectedAgentTextOverrideValue,
@@ -16,6 +17,22 @@ describe("mcpEnabledPatch", () => {
         },
       },
     })
+  })
+
+  it("routes project-defined servers to project config", () => {
+    expect(
+      mcpConfigScope("docs", {
+        mcp: [{ key: "docs", source: "project" }],
+      }),
+    ).toBe("project")
+  })
+
+  it("routes global and unknown servers to global config", () => {
+    const collections = {
+      mcp: [{ key: "docs", source: "global" as const }],
+    }
+    expect(mcpConfigScope("docs", collections)).toBe("global")
+    expect(mcpConfigScope("unknown", collections)).toBe("global")
   })
 })
 
