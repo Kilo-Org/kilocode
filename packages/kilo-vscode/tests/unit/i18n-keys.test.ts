@@ -41,6 +41,7 @@ import { dict as appTr } from "../../webview-ui/src/i18n/tr"
 import { dict as appNl } from "../../webview-ui/src/i18n/nl"
 import { dict as appUk } from "../../webview-ui/src/i18n/uk"
 import { dict as appIt } from "../../webview-ui/src/i18n/it"
+import { dict as appFa } from "../../webview-ui/src/i18n/fa"
 
 // Layer 2: upstream UI (@opencode-ai/ui re-exported via @kilocode/kilo-ui)
 import { dict as uiEn } from "../../../ui/src/i18n/en"
@@ -114,6 +115,7 @@ import { dict as cliTr } from "../../src/services/cli-backend/i18n/tr"
 import { dict as cliNl } from "../../src/services/cli-backend/i18n/nl"
 import { dict as cliUk } from "../../src/services/cli-backend/i18n/uk"
 import { dict as cliIt } from "../../src/services/cli-backend/i18n/it"
+import { dict as cliFa } from "../../src/services/cli-backend/i18n/fa"
 
 import { dict as hostEn } from "../../src/services/i18n/en"
 import { dict as hostZh } from "../../src/services/i18n/zh"
@@ -135,6 +137,7 @@ import { dict as hostTr } from "../../src/services/i18n/tr"
 import { dict as hostNl } from "../../src/services/i18n/nl"
 import { dict as hostUk } from "../../src/services/i18n/uk"
 import { dict as hostIt } from "../../src/services/i18n/it"
+import { dict as hostFa } from "../../src/services/i18n/fa"
 
 // ── Locale maps ─────────────────────────────────────────────────────────────
 
@@ -161,6 +164,7 @@ const appLocales: Record<string, Record<string, string>> = {
   nl: appNl,
   uk: appUk,
   it: appIt,
+  fa: appFa,
 }
 
 const kiloLocales: Record<string, Record<string, string>> = {
@@ -230,6 +234,7 @@ const cliLocales: Record<string, Record<string, string>> = {
   nl: cliNl,
   uk: cliUk,
   it: cliIt,
+  fa: cliFa,
 }
 
 const hostLocales: Record<string, Record<string, string>> = {
@@ -253,6 +258,7 @@ const hostLocales: Record<string, Record<string, string>> = {
   nl: hostNl,
   uk: hostUk,
   it: hostIt,
+  fa: hostFa,
 }
 
 // Merge webview dictionaries in the same priority order as language.tsx

@@ -183,6 +183,7 @@ export namespace KiloSessionPromptQueue {
     target: MessageID,
     work: Effect.Effect<A, E>,
     cancelled: Effect.Effect<A, E>,
+    reserved: Effect.Effect<void> = Effect.void,
   ): Effect.Effect<A, E> {
     return Effect.acquireUseRelease(
       Effect.sync(() => {
@@ -205,7 +206,8 @@ export namespace KiloSessionPromptQueue {
         return { seq: mine, version: version(sessionID), target, previous, done, tail } satisfies Slot
       }),
       (slot) =>
-        Effect.promise(() => settle(slot.previous)).pipe(
+        reserved.pipe(
+          Effect.andThen(Effect.promise(() => settle(slot.previous))),
           Effect.flatMap(() => {
             if (isCancelled(sessionID, slot)) return cancelled
             // Snapshot the latest seq at the moment this slot actually starts

@@ -10,6 +10,7 @@ import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionRunState } from "./run-state"
 import { SessionSummary } from "./summary"
+import { KiloSessionRevert } from "@/kilocode/session/revert" // kilocode_change
 
 export const RevertInput = Schema.Struct({
   sessionID: SessionID,
@@ -81,35 +82,45 @@ export const layer = Layer.effect(
           : "unavailable"
       // kilocode_change end
       rev.snapshot = session.revert?.snapshot ?? (yield* snap.track())
-      if (session.revert?.snapshot) yield* snap.restore(session.revert.snapshot)
+      // kilocode_change start - keep the entire workspace transition atomic
+      const prior = session.revert ? KiloSessionRevert.files(all, session.revert) : []
+      const files = [...new Set([...prior, ...patches.flatMap((patch) => patch.files)])]
+      const baseline = session.revert?.snapshot && files.length > 0 ? yield* snap.track() : rev.snapshot
+      if (files.length > 0 && !baseline) {
+        return yield* Effect.die(new Error("Cannot rewind files because the current workspace snapshot is unavailable"))
+      }
+      yield* KiloSessionRevert.apply(
+        snap,
+        baseline,
+        files,
+        Effect.gen(function* () {
+          if (session.revert?.snapshot) yield* KiloSessionRevert.restore(snap, session.revert.snapshot, prior)
 
-      // kilocode_change start - compute diffs BEFORE reverting files so the diff
-      // reflects changes being undone (files on disk still have AI modifications)
-      const diffs = yield* summary.computeDiff({ messages: range })
+          // Compute the user-facing diff while files still contain the changes being undone.
+          const diffs = yield* summary.computeDiff({ messages: range })
+          yield* snap.revert(patches)
+          if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot)
+          yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
+          yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
+          const summaryDiffs: Snapshot.SummaryFileDiff[] = diffs.map((d) => ({
+            file: d.file,
+            additions: d.additions,
+            deletions: d.deletions,
+            status: d.status,
+          }))
+          yield* sessions.setRevert({
+            sessionID: input.sessionID,
+            revert: rev,
+            summary: {
+              additions: diffs.reduce((sum, x) => sum + x.additions, 0),
+              deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
+              files: diffs.length,
+              diffs: summaryDiffs,
+            },
+          })
+        }),
+      )
       // kilocode_change end
-
-      yield* snap.revert(patches)
-      if (rev.snapshot) rev.diff = yield* snap.diff(rev.snapshot)
-      yield* storage.write(["session_diff", input.sessionID], diffs).pipe(Effect.ignore)
-      yield* events.publish(Session.Event.Diff, { sessionID: input.sessionID, diff: diffs })
-      // kilocode_change start
-      const summaryDiffs: Snapshot.SummaryFileDiff[] = diffs.map((d) => ({
-        file: d.file,
-        additions: d.additions,
-        deletions: d.deletions,
-        status: d.status,
-      }))
-      // kilocode_change end
-      yield* sessions.setRevert({
-        sessionID: input.sessionID,
-        revert: rev,
-        summary: {
-          additions: diffs.reduce((sum, x) => sum + x.additions, 0),
-          deletions: diffs.reduce((sum, x) => sum + x.deletions, 0),
-          files: diffs.length,
-          diffs: summaryDiffs, // kilocode_change
-        },
-      })
       return yield* sessions.get(input.sessionID).pipe(Effect.orDie)
     })
 
@@ -118,8 +129,25 @@ export const layer = Layer.effect(
       yield* state.assertNotBusy(input.sessionID)
       const session = yield* sessions.get(input.sessionID).pipe(Effect.orDie)
       if (!session.revert) return session
-      if (session.revert.snapshot) yield* snap.restore(session.revert.snapshot)
-      yield* sessions.clearRevert(input.sessionID)
+      // kilocode_change start - preserve the reverted workspace if redo cannot complete
+      const all = yield* sessions.messages({ sessionID: input.sessionID }).pipe(Effect.orDie)
+      const files = KiloSessionRevert.files(all, session.revert)
+      const baseline = files.length > 0 ? yield* snap.track() : undefined
+      if (files.length > 0 && !baseline) {
+        return yield* Effect.die(
+          new Error("Cannot restore files because the current workspace snapshot is unavailable"),
+        )
+      }
+      yield* KiloSessionRevert.apply(
+        snap,
+        baseline,
+        files,
+        Effect.gen(function* () {
+          if (session.revert?.snapshot) yield* KiloSessionRevert.restore(snap, session.revert.snapshot, files)
+          yield* sessions.clearRevert(input.sessionID)
+        }),
+      )
+      // kilocode_change end
       return yield* sessions.get(input.sessionID).pipe(Effect.orDie)
     })
 

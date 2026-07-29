@@ -32,11 +32,11 @@ const headlessMethodID = Integration.MethodID.make("chatgpt-headless")
 
 export const browser = {
   integrationID: Integration.ID.make("openai"),
-  method: new Integration.OAuthMethod({
+  method: {
     id: browserMethodID,
     type: "oauth",
     label: "ChatGPT Pro/Plus (browser)",
-  }),
+  },
   authorize: () =>
     Effect.gen(function* () {
       const pkce = yield* Effect.promise(generatePKCE)
@@ -95,11 +95,11 @@ export const browser = {
 
 export const headless = {
   integrationID: Integration.ID.make("openai"),
-  method: new Integration.OAuthMethod({
+  method: {
     id: headlessMethodID,
     type: "oauth",
     label: "ChatGPT Pro/Plus (headless)",
-  }),
+  },
   authorize: () =>
     Effect.gen(function* () {
       const device = yield* request<{ device_auth_id: string; user_code: string; interval: string }>(
@@ -258,6 +258,6 @@ function claim(token: string) {
 }
 
 const successPage =
-  "<!doctype html><title>Kilo</title><h1>Authorization successful</h1><p>You can close this window.</p>" // kilocode_change
+  "<!doctype html><title>Kilo</title><h1>Authorization successful</h1><p>You can close this window.</p>"
 const errorPage = (message: string) =>
-  `<!doctype html><title>Kilo</title><h1>Authorization failed</h1><p>${message.replace(/[&<>"']/g, "")}</p>` // kilocode_change
+  `<!doctype html><title>Kilo</title><h1>Authorization failed</h1><p>${message.replace(/[&<>"']/g, "")}</p>`

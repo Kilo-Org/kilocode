@@ -46,7 +46,7 @@ export const SpeechToTextButton: Component<Props> = (props) => {
   })
 
   return (
-    <Tooltip value={label()} placement="top">
+    <Tooltip value={label()} placement="top" openDelay={0}>
       <Button
         variant="ghost"
         size="small"
