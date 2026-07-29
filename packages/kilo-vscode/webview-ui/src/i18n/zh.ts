@@ -696,6 +696,10 @@ export const dict = {
   "session.messages.scrollToBottom": "滚动到底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "启动中...",
+  "session.prompts.navLabel": "提示词导航",
+  "session.prompts.tick": "提示词 {{index}}/{{total}}：{{prompt}}",
+  "session.prompts.noAnswer": "暂无响应",
+  "session.prompts.queued": "已排队",
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",
   "session.status.working": "处理中…",
@@ -722,7 +726,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在连接服务器...",
   "prompt.placeholder.error": "连接失败。请检查输出面板或重启扩展。",
-  "prompt.placeholder.default": "输入消息... (Enter 发送，Shift+Enter 换行)",
+  "prompt.placeholder.default": "输入消息，用 @ 提及文件... (Enter 发送，Shift+Enter 换行)",
 
   "context.usage.sessionCost": "会话费用",
   "context.usage.olderSessions": "{{count}} 个较早的会话",

@@ -27,13 +27,13 @@ export const ConstrainDragYAxis: Component = () => {
   return null
 }
 
-export const SortableTabContainer: ParentComponent<{ id: string }> = (props) => {
+export const SortableTabContainer: ParentComponent<{ id: string; class?: string }> = (props) => {
   const sortable = createSortable(props.id)
   void sortable
   return (
     <div
       use:sortable
-      class="am-tab-sortable"
+      class={props.class ?? "am-tab-sortable"}
       classList={{ "am-tab-dragging": sortable.isActiveDraggable }}
       data-tab-id={props.id}
     >

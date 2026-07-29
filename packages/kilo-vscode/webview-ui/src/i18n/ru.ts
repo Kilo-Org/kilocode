@@ -720,6 +720,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Прокрутить вниз",
   "session.messages.initializing": "Инициализация...",
   "session.messages.taskStarting": "Запуск...",
+  "session.prompts.navLabel": "Навигатор промптов",
+  "session.prompts.tick": "Промпт {{index}} из {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Ответа пока нет",
+  "session.prompts.queued": "В очереди",
   "session.status.writingResponse": "Пишу ответ…",
   "session.status.retry": "Повторная попытка…",
   "session.status.working": "Работаю…",
@@ -747,7 +751,8 @@ export const dict = {
 
   "prompt.placeholder.connecting": "Подключение к серверу...",
   "prompt.placeholder.error": "Не удалось подключиться. Проверьте панель вывода или перезапустите расширение.",
-  "prompt.placeholder.default": "Введите сообщение... (Enter для отправки, Shift+Enter для новой строки)",
+  "prompt.placeholder.default":
+    "Введите сообщение, @ чтобы упомянуть файлы... (Enter для отправки, Shift+Enter для новой строки)",
 
   "context.usage.sessionCost": "Стоимость сессии",
   "context.usage.olderSessions": "{{count}} предыдущих сессий",
