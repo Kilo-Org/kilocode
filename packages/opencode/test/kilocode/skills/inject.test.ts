@@ -227,6 +227,51 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("does not execute placeholders inside fenced code blocks", () =>
+    Effect.gen(function* () {
+      // The fenced placeholder is a documentation example and must stay literal; only the
+      // live one runs.
+      yield* writeGlobalSkill("fenced-shell", "Live: !`printf LIVE`\n\n```\nExample: !`printf FENCED`\n```\n")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("fenced-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("Live: LIVE")
+      // the fenced example is left verbatim, not executed
+      expect(result.output).toContain("Example: !`printf FENCED`")
+      expect(result.output).not.toContain("Example: FENCED")
+      // only the live command is authorized
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash[0]?.patterns).toEqual(["printf LIVE"])
+    }),
+  )
+
+  unix("treats a placeholder inside a nested (```` wrapping ```) fence as inert", () =>
+    Effect.gen(function* () {
+      // The common "wrap a ``` example in a ```` fence" pattern must not execute the inner
+      // example; a shorter inner fence does not close the longer outer one.
+      const body = "Live: !`printf LIVE`\n\n````md\n```bash\nExample: !`printf FENCED`\n```\n````\n"
+      yield* writeGlobalSkill("nested-fence", body)
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("nested-fence", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      expect(result.output).toContain("Live: LIVE")
+      expect(result.output).toContain("!`printf FENCED`")
+      expect(result.output).not.toContain("Example: FENCED")
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash[0]?.patterns).toEqual(["printf LIVE"])
+    }),
+  )
+
   unix("does not re-execute shell placeholders emitted by command output", () =>
     Effect.gen(function* () {
       // The command emits a literal placeholder `!<backtick>echo pwned<backtick>`

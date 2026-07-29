@@ -29,9 +29,11 @@ const UNTRUSTED_NOTE = "[skill shell execution disabled for untrusted skill]"
 
 // Execution bounds: model-initiated commands must not hang the load, blow up
 // context, or overrun the batch.
-const TIMEOUT_MS = 2 * 60 * 1000
+const TIMEOUT_MS = 2 * 60 * 1000 // per-command
+const BUDGET_MS = 5 * 60 * 1000 // aggregate across the batch
 const MAX_OUTPUT_BYTES = 32 * 1024
 const MAX_COMMANDS = 32
+const LIMIT_NOTE = "[skill shell command limit reached]"
 
 export namespace SkillInject {
   export type Decompose = (input: {
@@ -52,12 +54,16 @@ export namespace SkillInject {
   }
 
   export const render = Effect.fn("SkillInject.render")(function* (opts: Options) {
-    const matches = ConfigMarkdown.shell(opts.content)
-    if (matches.length === 0) return opts.content
+    // Placeholders inside fenced code blocks are documentation examples, not live commands.
+    const fenced = fences(opts.content)
+    const live = ConfigMarkdown.shell(opts.content).filter((m) => !fenced(m.index))
+    if (live.length === 0) return opts.content
 
-    // Defense-in-depth ordering: policy checks first, approval gate last.
-    if (opts.disabled) return replace(opts.content, () => DISABLED_NOTE)
-    if (!opts.trusted) return replace(opts.content, () => UNTRUSTED_NOTE)
+    // Defense-in-depth ordering: policy checks first, approval gate last. `replace` only
+    // rewrites live (unfenced) placeholders; fenced ones stay as literal text.
+    const replace = (value: (command: string) => string) => rewrite(opts.content, fenced, value)
+    if (opts.disabled) return replace(() => DISABLED_NOTE)
+    if (!opts.trusted) return replace(() => UNTRUSTED_NOTE)
 
     // `shell` is resolved by the caller via Shell.acceptable(cfg.shell), which
     // rejects shells the tree-sitter bash scanner can't parse (fish/nu), keeping
@@ -65,7 +71,7 @@ export namespace SkillInject {
     const shell = opts.shell
     // Deduplicate identical commands, then cap the batch so a skill can't queue
     // an unbounded number of processes.
-    const commands = Array.from(new Set(matches.map(([, cmd]) => cmd))).slice(0, MAX_COMMANDS)
+    const commands = Array.from(new Set(live.map(([, cmd]) => cmd))).slice(0, MAX_COMMANDS)
 
     // Decompose each command into sub-command patterns + out-of-project dir globs
     // via the shared bash scan, so plan-mode denies and external_directory checks
@@ -111,41 +117,80 @@ export namespace SkillInject {
       metadata,
     })
 
-    // Run each command in the instance directory, bounded by ctx.abort (ESC) and a
-    // timeout, with output truncated so it can't blow up or poison the prompt.
+    // Run each command in the instance directory, bounded per-command by ctx.abort (ESC)
+    // and a timeout, and across the batch by an aggregate wall-clock budget, with output
+    // truncated so it can't blow up or poison the prompt.
     const outputs = new Map<string, string>()
+    const deadline = Date.now() + BUDGET_MS
     for (const command of commands) {
+      if (Date.now() >= deadline) {
+        outputs.set(command, "[skill shell batch time budget exceeded]")
+        continue
+      }
       outputs.set(command, yield* run(command, shell, opts.cwd, opts.ctx.abort))
     }
 
-    return replace(opts.content, (command) => outputs.get(command) ?? "")
+    // A placeholder that was capped out of `commands` isn't in `outputs`; mark it rather
+    // than silently inlining an empty string.
+    return replace((command) => outputs.get(command) ?? LIMIT_NOTE)
   })
 
   const run = Effect.fn("SkillInject.run")(function* (command: string, shell: string, cwd: string, abort: AbortSignal) {
-    const result = yield* Effect.promise(async () => {
-      // A cleared timer bounds the run without leaking a pending 2-minute timeout
-      // per command; ESC (ctx.abort) still kills the child via the same signal.
-      const controller = new AbortController()
-      const signal = AbortSignal.any([abort, controller.signal])
-      const timer = setTimeout(() => controller.abort(), TIMEOUT_MS)
-      try {
-        return await Process.text([command], { shell, cwd, abort: signal, nothrow: true }).catch(() => undefined)
-      } finally {
-        clearTimeout(timer)
-      }
-    })
-    if (!result) return abort.aborted ? "[skill shell command aborted]" : "[skill shell command timed out]"
+    const timeout = new AbortController()
+    // A cleared timer bounds the run without leaking a pending 2-minute timeout per command;
+    // ESC (ctx.abort) still kills the child via the same combined signal.
+    const signal = AbortSignal.any([abort, timeout.signal])
+    const timer = setTimeout(() => timeout.abort(), TIMEOUT_MS)
+    const result = yield* Effect.promise(() =>
+      Process.text([command], { shell, cwd, abort: signal, nothrow: true }).catch(() => undefined),
+    ).pipe(Effect.ensuring(Effect.sync(() => clearTimeout(timer))))
+
+    // With nothrow the promise resolves even when the child was killed, inlining partial
+    // stdout; detect the kill via the signals so an aborted/timed-out command is marked.
+    if (abort.aborted) return "[skill shell command aborted]"
+    if (timeout.signal.aborted) return "[skill shell command timed out]"
+    if (!result) return "[skill shell command failed]"
+    // A failing command with empty stdout would inline ""; surface a marker with any stderr.
+    if (result.code !== 0 && result.text.length === 0) {
+      const err = result.stderr.toString().trim()
+      return err ? "[skill shell command failed]\n" + truncate(err) : "[skill shell command failed]"
+    }
     return truncate(result.text)
   })
 
+  // Byte-accurate truncation: slice on a Buffer so a multibyte tail can't exceed the cap.
   function truncate(text: string) {
-    if (Buffer.byteLength(text) <= MAX_OUTPUT_BYTES) return text
-    return text.slice(0, MAX_OUTPUT_BYTES) + "\n[skill shell output truncated]"
+    const buf = Buffer.from(text)
+    if (buf.byteLength <= MAX_OUTPUT_BYTES) return text
+    return buf.toString("utf8", 0, MAX_OUTPUT_BYTES) + "\n[skill shell output truncated]"
   }
 
-  // Replace only the exact matches found in the ORIGINAL content. Never re-scan
-  // the result, so inlined output containing `!`cmd`` stays inert.
-  function replace(content: string, value: (command: string) => string) {
-    return content.replace(ConfigMarkdown.SHELL_REGEX, (_, command: string) => value(command))
+  // Rewrite only live (unfenced) placeholders in the ORIGINAL content, substituting once and
+  // never re-scanning the result, so inlined output containing `!`cmd`` stays inert and a
+  // fenced documentation example is left as literal text.
+  function rewrite(content: string, fenced: (index: number) => boolean, value: (command: string) => string) {
+    return content.replace(ConfigMarkdown.SHELL_REGEX, (match, command: string, index: number) =>
+      fenced(index) ? match : value(command),
+    )
+  }
+
+  // Return a predicate that reports whether a character offset falls inside a fenced code
+  // block (``` or ~~~), so placeholders in documentation examples are treated as inert.
+  function fences(content: string): (index: number) => boolean {
+    const ranges: Array<[number, number]> = []
+    const fence = /^[ \t]*(`{3,}|~{3,})[^\n]*$/gm
+    let open: { start: number; marker: string } | undefined
+    for (const m of content.matchAll(fence)) {
+      const marker = m[1]
+      // CommonMark: a closing fence uses the same char and is at least as long as the opener,
+      // so an inner shorter/different fence stays content. Keep the real opener length.
+      if (!open) open = { start: m.index, marker }
+      else if (marker[0] === open.marker[0] && marker.length >= open.marker.length) {
+        ranges.push([open.start, m.index + m[0].length])
+        open = undefined
+      }
+    }
+    if (open) ranges.push([open.start, content.length]) // unterminated fence runs to EOF
+    return (index: number) => ranges.some(([s, e]) => index >= s && index < e)
   }
 }
