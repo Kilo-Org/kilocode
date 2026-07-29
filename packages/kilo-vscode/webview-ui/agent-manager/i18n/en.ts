@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Move Down",
 
   "agentManager.hoverCard.branch": "BRANCH",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Base",
   "agentManager.hoverCard.sessions": "Sessions",
   "agentManager.hoverCard.files": "Files",

@@ -32,6 +32,7 @@ export const dict = {
   "agentManager.section.moveDown": "Aşağı Taşı",
 
   "agentManager.hoverCard.branch": "DAL",
+  "agentManager.hoverCard.worktree": "Worktree",
   "agentManager.hoverCard.base": "Temel",
   "agentManager.hoverCard.sessions": "Oturumlar",
   "agentManager.hoverCard.files": "Dosyalar",
