@@ -15,6 +15,15 @@ export interface McpConfig {
   enabled?: boolean
 }
 
+export type ConfigOrigin = "project" | "global" | "system" | "default"
+
+export interface ConfigCollectionEntry {
+  key: string
+  source: ConfigOrigin
+}
+
+export type ConfigCollections = Record<string, ConfigCollectionEntry[]>
+
 export interface CommandConfig {
   template: string
   description?: string
