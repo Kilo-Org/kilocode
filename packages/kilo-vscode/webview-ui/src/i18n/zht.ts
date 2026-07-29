@@ -252,6 +252,7 @@ export const dict = {
 
   "notification.permission.title": "需要權限",
   "notification.permission.titleSubagent": "需要權限（子代理）",
+  "notification.permission.titleSkillShell": "要執行技能「{{skill}}」的 shell 指令嗎？",
   "ui.permission.manageAutoApprove": "管理自動核准規則",
   "ui.permission.doomLoop.prompt": "偵測到 {{tool}} 工具可能陷入迴圈。是否繼續執行？",
   "ui.permission.doomLoop.rule": "繼續呼叫 {{tool}}",
