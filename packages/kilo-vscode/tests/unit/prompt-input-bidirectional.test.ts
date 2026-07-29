@@ -26,4 +26,17 @@ describe("PromptInput bidirectional text support", () => {
 
     expect(input).toContain('dir="auto"')
   })
+
+  it("keeps textarea text-layout properties in sync with the overlay", () => {
+    const inputCss = css.match(/\.prompt-input\s*\{[^}]*\}/)?.[0]
+    const overlayCss = css.match(/\.prompt-input-highlight-overlay\s*\{[^}]*\}/)?.[0]
+
+    // Both elements must agree on wrapping, whitespace, and bidi behavior so
+    // the native caret stays aligned with the visible overlay text. CJK
+    // characters are especially sensitive to mismatched line-breaking.
+    for (const prop of ["overflow-wrap: break-word", "white-space: pre-wrap", "unicode-bidi: plaintext"]) {
+      expect(inputCss).toContain(prop)
+      expect(overlayCss).toContain(prop)
+    }
+  })
 })

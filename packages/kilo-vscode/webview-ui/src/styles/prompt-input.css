@@ -329,6 +329,13 @@
   font-family: var(--vscode-font-family);
   font-size: var(--font-size-base);
   line-height: 1.4;
+  /* Mirror the overlay's text-layout properties so the native caret stays
+     aligned with the visible overlay text. Without these, CJK and mixed-width
+     text wraps at different positions in the textarea vs. the overlay, causing
+     severe caret drift. */
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  unicode-bidi: plaintext;
   resize: none;
   outline: none;
   scrollbar-gutter: stable;
@@ -376,7 +383,7 @@
   white-space: pre-wrap;
   /* Match textarea plaintext bidi behavior for each hard-newline paragraph. */
   unicode-bidi: plaintext;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
