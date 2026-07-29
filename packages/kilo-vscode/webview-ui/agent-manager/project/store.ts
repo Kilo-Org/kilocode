@@ -1,7 +1,5 @@
 import { createSignal, type Accessor, type Setter } from "solid-js"
 import type {
-  AgentManagerApplyWorktreeDiffConflict,
-  AgentManagerApplyWorktreeDiffStatus,
   AgentManagerStateMessage,
   LocalGitStats,
   ManagedSessionState,
@@ -16,12 +14,6 @@ export interface WorktreeBusyState {
   reason: "setting-up" | "deleting"
   message?: string
   branch?: string
-}
-
-export interface ApplyState {
-  status: AgentManagerApplyWorktreeDiffStatus
-  message: string
-  conflicts: AgentManagerApplyWorktreeDiffConflict[]
 }
 
 /** Local session tab ids owned by one project. */
@@ -73,7 +65,6 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
   const [runStatuses, setRunStatuses] = field<Record<string, RunStatus>>({})
   const [worktreeStats, setWorktreeStats] = field<Record<string, WorktreeGitStats>>({})
   const [localStats, setLocalStats] = field<LocalGitStats | undefined>(undefined)
-  const [applyStates, setApplyStates] = field<Record<string, ApplyState>>({})
   const [busy, setBusy] = field<Map<string, WorktreeBusyState>>(new Map())
 
   /** Write a project state payload into this store (data fields only). */
@@ -129,8 +120,6 @@ export function createProjectStore(id: string, opts: { tabs?: string[] } = {}) {
     setWorktreeStats,
     localStats,
     setLocalStats,
-    applyStates,
-    setApplyStates,
     busy,
     setBusy,
   }

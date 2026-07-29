@@ -162,6 +162,7 @@ import { AnacondaDesktopBridge } from "./anaconda-desktop/bridge"
 import { fetchOpenAIModels, FetchModelsError } from "./shared/fetch-models"
 import type { Agent } from "@kilocode/sdk/v2/client"
 import { configFeatures } from "./features"
+import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
 import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/project-route"
@@ -1018,6 +1019,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
           post: (msg) => this.postMessage(msg),
           browserSettings: () => this.sendBrowserSettings(),
           exportTranscript: (sessionID) => this.handleExportSessionTranscript(sessionID),
+          copy: (text) => vscode.env.clipboard.writeText(text),
           openSessions: (ids) => this.trackOpenSessions(ids),
         })
       ) {
@@ -2629,26 +2631,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
     }
 
     try {
-      const workspaceDir = this.settingsDirectory()
-      const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
-        retry(() => this.client!.config.get({ directory: workspaceDir }, { throwOnError: true })),
-        this.client.global.config.get({ throwOnError: true }),
-        this.client.config.overlay({ directory: workspaceDir, scope: "project" }, { throwOnError: true }),
-      ])
-      this.cachedGlobalConfig = global ?? null
-      const bindings = this.bindingsFor(workspaceDir, overlay?.targets)
-
-      const message = {
-        type: "configLoaded",
-        config,
-        globalConfig: overlay?.targets?.global.raw ?? global,
-        projectConfig: bindings.project ? overlay?.targets?.project.raw : undefined,
-        bindings,
-        settings: this.configSettings(),
-        features: configFeatures(config),
-      }
-      this.cachedConfigMessage = message
-      this.postMessage(message)
+      await this.refreshConfig("configLoaded")
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config:", error)
     }
@@ -2740,32 +2723,7 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
   private async fetchAndSendConfigUpdated(): Promise<void> {
     if (!this.client || this.connectionState !== "connected") return
     try {
-      const dir = this.settingsDirectory()
-      const [{ data: config }, { data: global }, { data: overlay }] = await Promise.all([
-        retry(() => this.client!.config.get({ directory: dir }, { throwOnError: true })),
-        this.client.global.config.get({ throwOnError: true }),
-        this.client.config.overlay({ directory: dir, scope: "project" }, { throwOnError: true }),
-      ])
-      this.cachedGlobalConfig = global ?? null
-      const bindings = this.bindingsFor(dir, overlay?.targets)
-      this.cachedConfigMessage = {
-        type: "configLoaded",
-        config,
-        globalConfig: overlay?.targets?.global.raw ?? global,
-        projectConfig: bindings.project ? overlay?.targets?.project.raw : undefined,
-        bindings,
-        settings: this.configSettings(),
-        features: configFeatures(config),
-      }
-      this.postMessage({
-        type: "configUpdated",
-        config,
-        globalConfig: overlay?.targets?.global.raw ?? global,
-        projectConfig: bindings.project ? overlay?.targets?.project.raw : undefined,
-        bindings,
-        settings: this.configSettings(),
-        features: configFeatures(config),
-      })
+      await this.refreshConfig("configUpdated")
     } catch (error) {
       console.error("[Kilo New] KiloProvider: Failed to fetch config after update:", error)
     }
@@ -3216,6 +3174,32 @@ export class KiloProvider implements vscode.WebviewViewProvider, TelemetryProper
       this.pending--
     }
   }
+  private async refreshConfig(type: "configLoaded" | "configUpdated", dir = this.settingsDirectory()) {
+    const snapshot = await fetchSnapshot(this.client!, dir, () => this.configSettings())
+    const bindings = this.bindingsFor(dir, snapshot.targets)
+    const globalConfig = (snapshot.targets?.global.raw ?? snapshot.globalConfig) as Config
+    const projectConfig = bindings.project ? (snapshot.targets?.project.raw as Config) : undefined
+    this.cachedGlobalConfig = globalConfig ?? null
+    this.cachedConfigMessage = {
+      type: "configLoaded",
+      config: snapshot.config,
+      globalConfig,
+      projectConfig,
+      bindings,
+      settings: snapshot.settings,
+      features: snapshot.features,
+    }
+    this.postMessage({
+      type,
+      config: snapshot.config,
+      globalConfig,
+      projectConfig,
+      bindings,
+      settings: snapshot.settings,
+      features: snapshot.features,
+    })
+  }
+
   private postConfigFailure(
     error: unknown,
     completed: Array<"global" | "project"> = [],

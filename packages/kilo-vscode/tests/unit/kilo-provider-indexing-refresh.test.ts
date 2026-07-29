@@ -1,5 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { Config } from "@kilocode/sdk/v2/client"
+import { fetchSnapshot } from "../../src/kilo-provider/config-snapshot"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")
@@ -17,6 +18,7 @@ type Internals = {
     projectUnset?: string[][],
   ) => Promise<void>
   fetchAndSendConfig: () => Promise<void>
+  fetchAndSendConfigUpdated: () => Promise<void>
   fetchAndSendProviders: () => Promise<void>
   fetchAndSendAgents: () => Promise<void>
   fetchAndSendSkills: () => Promise<void>
@@ -88,6 +90,7 @@ function createConnection() {
   }
 
   return {
+    client,
     drains: () => drains,
     patches: () => patches,
     service: {
@@ -100,6 +103,43 @@ function createConnection() {
 }
 
 describe("KiloProvider indexing refresh", () => {
+  it("shares snapshot payloads across load, SSE refresh, and post-save refresh", async () => {
+    const conn = createConnection()
+    const settings = () => ({ maxCost: 0, languageCommitMessage: "sync", multiProject: false })
+    const snapshot = await fetchSnapshot(conn.client as never, "/repo", settings)
+    const provider = new KiloProvider({} as never, conn.service as never)
+    const internal = provider as unknown as Internals
+    const sent: Array<Record<string, unknown>> = []
+    provider.postMessage = (message) => void sent.push(message as Record<string, unknown>)
+    Object.assign(internal, { connectionState: "connected", commitMessageLanguageSetting: () => "sync" })
+    await internal.fetchAndSendConfig()
+    await internal.fetchAndSendConfigUpdated()
+    // Save against the binding the latest config load issued, like the webview
+    // does: each load supersedes older bindings for the same scope+directory.
+    const issued = (sent[sent.length - 1]!.bindings as { global: { id: string } }).global.id
+    await internal.handleUpdateConfig({ model: "test/global" }, {}, [], [], issued)
+
+    // bindings carry fresh per-load revision state, so compare the payload
+    // without them; each message still must carry a bindings object.
+    const strip = (m: Record<string, unknown>) => {
+      const { bindings, ...rest } = m
+      expect(bindings).toMatchObject({ global: expect.anything() })
+      return rest
+    }
+    const payload = {
+      config: snapshot.config,
+      globalConfig: snapshot.targets!.global.raw,
+      projectConfig: snapshot.targets!.project.raw,
+      settings: snapshot.settings,
+      features: snapshot.features,
+    }
+    expect(sent.map(strip)).toEqual([
+      { type: "configLoaded", ...payload },
+      { type: "configUpdated", ...payload },
+      { type: "configUpdated", ...payload },
+    ])
+  })
+
   it("reloadAfterAuthChange fetches config first, then indexing status", async () => {
     const provider = new KiloProvider({} as never, {} as never)
     const internal = provider as unknown as Internals

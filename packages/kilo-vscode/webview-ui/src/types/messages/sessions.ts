@@ -3,7 +3,7 @@ import type { Part, TokenUsage } from "./parts"
 
 export type SessionModelUsage = KilocodeSessionModelUsageResponse
 
-export type SessionCloseReason = "completed" | "error" | "interrupted"
+export type SessionCloseReason = "completed" | "error" | "interrupted" | "superseded"
 
 // Message structure (simplified for webview)
 export interface Message {

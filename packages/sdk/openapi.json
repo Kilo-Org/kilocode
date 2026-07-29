@@ -35475,7 +35475,7 @@
               },
               "reason": {
                 "type": "string",
-                "enum": ["completed", "error", "interrupted"]
+                "enum": ["completed", "error", "interrupted", "superseded"]
               }
             },
             "required": ["sessionID", "reason"],

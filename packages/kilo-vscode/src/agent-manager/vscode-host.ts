@@ -298,10 +298,6 @@ export class VscodeHost implements Host {
     return ext?.packageJSON?.contributes?.keybindings ?? []
   }
 
-  serverPort(): number | undefined {
-    return this.connectionService.getServerInfo()?.port
-  }
-
   copyToClipboard(text: string): void {
     void vscode.env.clipboard.writeText(text)
   }

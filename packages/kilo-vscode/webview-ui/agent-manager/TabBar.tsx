@@ -19,6 +19,8 @@ import { LOCAL } from "./navigate"
 import { ConstrainDragYAxis } from "../src/components/chat/TabDnd"
 import type { tracker } from "./telemetry"
 import { SidebarToggleButton } from "./SidebarToggleButton"
+import { TerminalDestinationButton } from "./terminal/TerminalDestinationButton"
+import type { TerminalDestination } from "../src/types/messages/agent-manager"
 
 /** Everything the tab bar reads from the app. */
 export interface TabBarProps {
@@ -50,7 +52,11 @@ export interface TabBarProps {
   reviewActive: () => boolean
   onToggleDiff: () => void
   onToggleReview: () => void
-  onShowTerminal: () => void
+  terminalDestination: () => TerminalDestination
+  terminalDestinationActive: () => boolean
+  terminalKeybind: () => string
+  onTerminalDestinationOpen: () => void
+  onTerminalDestinationChoose: (destination: TerminalDestination) => void
   track: ReturnType<typeof tracker>["click"]
 }
 
@@ -236,23 +242,17 @@ export const TabBar: Component<TabBarProps> = (props) => (
               />
             </Tooltip>
           </Show>
-          {/* Legacy VS Code integrated terminal shortcut. Coexists with the
-              xterm terminal tabs (accessed via the `+` split-button or
-              Cmd+Shift+T): Cmd+/ still opens the integrated terminal for the
-              active session. */}
-          <TooltipKeybind
-            title={props.t("agentManager.tab.terminal")}
-            keybind={props.bindings().showTerminal ?? ""}
-            placement="bottom"
-          >
-            <IconButton
-              icon="console"
-              size="small"
-              variant="ghost"
-              label={props.t("agentManager.tab.openTerminal")}
-              onClick={props.onShowTerminal}
-            />
-          </TooltipKeybind>
+          {/* Terminal destination split button: the primary action
+              follows the user's setting (VS Code integrated terminal
+              or the embedded side panel), the dropdown picks which.
+              Cmd+Shift+T still creates an xterm tab via the `+` menu. */}
+          <TerminalDestinationButton
+            destination={props.terminalDestination}
+            active={props.terminalDestinationActive}
+            keybind={props.terminalKeybind}
+            onOpen={props.onTerminalDestinationOpen}
+            onChoose={props.onTerminalDestinationChoose}
+          />
         </div>
       </div>
       <DragOverlay>

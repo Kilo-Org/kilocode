@@ -33,6 +33,11 @@ describe("normalizeLocale", () => {
     expect(normalizeLocale("ko-KR")).toBe("ko")
   })
 
+  it("returns 'fa' for Persian", () => {
+    expect(normalizeLocale("fa")).toBe("fa")
+    expect(normalizeLocale("fa-IR")).toBe("fa")
+  })
+
   it("returns 'no' for Norwegian Bokmål", () => {
     expect(normalizeLocale("nb")).toBe("no")
     expect(normalizeLocale("nb-NO")).toBe("no")
