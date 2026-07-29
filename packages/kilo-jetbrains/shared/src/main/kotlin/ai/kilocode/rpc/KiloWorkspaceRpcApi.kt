@@ -58,6 +58,9 @@ interface KiloWorkspaceRpcApi : RemoteApi<Unit> {
     /** Committed branch changes compared with the default branch merge-base. */
     suspend fun branchDiff(directory: String): List<DiffFileDto>
 
+    /** Current git branch name for branch-scoped UI labels. */
+    suspend fun branchName(directory: String): String?
+
     /** Open an absolute backend file path in the IDE. */
     suspend fun openFile(path: String, line: Int? = null, column: Int? = null): Boolean
 

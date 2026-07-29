@@ -268,6 +268,14 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         buildBranchDiff(numstat, patch, untracked, DIFF_CAP)
     }
 
+    override suspend fun branchName(directory: String): String? = withContext(Dispatchers.IO) {
+        val base = file(clean(directory) ?: directory) ?: return@withContext null
+        if (!gitAvailable(base)) return@withContext null
+        git(base, "branch", "--show-current").trim().ifBlank {
+            git(base, "rev-parse", "--short", "HEAD").trim()
+        }.ifBlank { null }
+    }
+
     override suspend fun openFile(path: String, line: Int?, column: Int?): Boolean {
         val item = clean(path) ?: return false
         val target = file(item)?.takeIf { it.isAbsolute } ?: return false

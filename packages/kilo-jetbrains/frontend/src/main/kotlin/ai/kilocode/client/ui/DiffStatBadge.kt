@@ -6,6 +6,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBFont
 import com.intellij.util.ui.JBUI
 import java.awt.Color
+import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.GridBagLayout
@@ -15,7 +16,31 @@ import javax.swing.JPanel
 internal class DiffStatBadge(
     additions: Int,
     deletions: Int,
+    private val variant: Variant = Variant.REGULAR,
+    private val inset: Int = 0,
 ) : JPanel(GridBagLayout()) {
+    constructor(additions: Int, deletions: Int) : this(additions, deletions, Variant.REGULAR, 0)
+
+    internal enum class Variant {
+        REGULAR,
+        COMPACT;
+
+        fun height() = when (this) {
+            REGULAR -> JBUI.scale(16)
+            COMPACT -> JBUI.scale(14)
+        }
+
+        fun gap() = when (this) {
+            REGULAR -> UiStyle.Gap.sm()
+            COMPACT -> UiStyle.Gap.xs()
+        }
+
+        fun pad() = when (this) {
+            REGULAR -> UiStyle.Gap.sm()
+            COMPACT -> UiStyle.Gap.sm()
+        }
+    }
+
     private val removed = JBLabel().apply {
         foreground = UiStyle.Colors.removedForeground()
         font = JBFont.small()
@@ -27,13 +52,18 @@ internal class DiffStatBadge(
 
     init {
         isOpaque = false
-        border = JBUI.Borders.empty(0, UiStyle.Gap.sm(), 0, UiStyle.Gap.sm())
+        border = JBUI.Borders.empty(0, variant.pad(), 0, variant.pad() + inset)
         add(
-            Stack.horizontal(UiStyle.Gap.sm())
+            Stack.horizontal(variant.gap())
                 .next(removed)
                 .next(added),
         )
         update(additions, deletions)
+    }
+
+    override fun getPreferredSize(): Dimension {
+        val dim = super.getPreferredSize()
+        return Dimension(dim.width, variant.height())
     }
 
     fun update(additions: Int, deletions: Int) {
@@ -44,9 +74,12 @@ internal class DiffStatBadge(
     override fun paintComponent(g: Graphics) {
         val g2 = g.create() as Graphics2D
         try {
+            val w = maxOf(0, width - inset)
+            val h = minOf(height, variant.height())
+            val y = (height - h) / 2
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
             g2.color = backgroundColor()
-            g2.fillRoundRect(0, 0, width, height, height, height)
+            g2.fillRoundRect(0, y, w, h, h, h)
         } finally {
             g2.dispose()
         }

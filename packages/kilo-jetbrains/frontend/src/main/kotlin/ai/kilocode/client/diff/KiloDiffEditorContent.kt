@@ -14,7 +14,9 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.SideBorder
 import com.intellij.ui.SimpleColoredComponent
 import com.intellij.ui.TreeSpeedSearch
 import com.intellij.ui.components.JBScrollPane
@@ -22,15 +24,18 @@ import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
+import java.awt.Color
 import java.awt.Component
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.ScrollPaneConstants
+import javax.swing.JViewport
 import javax.swing.JTree
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.DefaultTreeModel
 import javax.swing.tree.TreeCellRenderer
+import javax.swing.tree.TreeModel
 import javax.swing.tree.TreeNode
 import javax.swing.tree.TreePath
 
@@ -63,7 +68,7 @@ private fun buildFileTree(files: List<DiffFileDto>): Tree {
     val root = DefaultMutableTreeNode(Node("", "", true, null))
     for (file in files) addFile(root, file)
     updateStats(root)
-    val tree = Tree(DefaultTreeModel(root)).apply {
+    val tree = DiffTree(DefaultTreeModel(root)).apply {
         isRootVisible = false
         showsRootHandles = true
         isOpaque = true
@@ -88,15 +93,23 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>): JComponent {
         true,
     )
     toolbar.targetComponent = tree
+    toolbar.component.background = JBUI.CurrentTheme.ToolWindow.background()
     toolbar.updateActionsImmediately()
-    val row = JPanel(BorderLayout()).apply {
+    val row = object : JPanel(BorderLayout()) {
+        override fun getBackground(): Color = JBUI.CurrentTheme.ToolWindow.background()
+    }.apply {
+        border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
         add(toolbar.component, BorderLayout.WEST)
         add(DiffStatBadge(stats.additions, stats.deletions, inset = UiStyle.Gap.pad()), BorderLayout.EAST)
     }
-    return JPanel(BorderLayout()).apply {
+    return object : JPanel(BorderLayout()) {
+        override fun getBackground(): Color = JBUI.CurrentTheme.ToolWindow.background()
+    }.apply {
         add(row, BorderLayout.NORTH)
         add(
             JBScrollPane(tree).apply {
+                border = JBUI.Borders.empty()
+                viewportBorder = JBUI.Borders.empty()
                 horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
             },
             BorderLayout.CENTER,
@@ -167,6 +180,15 @@ private data class Stats(val additions: Int, val deletions: Int)
 private class Node(val name: String, val path: String, val dir: Boolean, val file: DiffFileDto?) {
     var additions: Int = file?.additions ?: 0
     var deletions: Int = file?.deletions ?: 0
+}
+
+private class DiffTree(model: TreeModel) : Tree(model) {
+    override fun getBackground(): Color = JBUI.CurrentTheme.ToolWindow.background()
+
+    override fun getScrollableTracksViewportHeight(): Boolean {
+        val view = parent as? JViewport ?: return super.getScrollableTracksViewportHeight()
+        return preferredSize.height < view.height || super.getScrollableTracksViewportHeight()
+    }
 }
 
 private class Renderer : JPanel(BorderLayout()), TreeCellRenderer {

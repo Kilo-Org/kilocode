@@ -4,11 +4,13 @@ import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
-import com.intellij.util.ui.UIUtil
+import com.intellij.util.ui.JBUI
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
+import javax.swing.SwingUtilities
 import javax.swing.tree.DefaultMutableTreeNode
 import javax.swing.tree.TreePath
 
@@ -81,14 +83,27 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
-    fun `test tree paints standard background`() {
+    fun `test tree paints tool window background`() {
         val parent = Disposer.newDisposable()
         try {
             val view = buildDiffEditor(project, files(), parent, "feature/test")
             val tree = components(view).filterIsInstance<Tree>().single()
+            val scroll = SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, tree) as JBScrollPane
+            val row = (scroll.parent.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as Container
+            val toolbar = (row.layout as BorderLayout).getLayoutComponent(BorderLayout.WEST)
 
             assertTrue(tree.isOpaque)
-            assertEquals(UIUtil.getTreeBackground(), tree.background)
+            assertEquals(JBUI.CurrentTheme.ToolWindow.background(), tree.background)
+            assertEquals(JBUI.CurrentTheme.ToolWindow.background(), row.background)
+            assertEquals(JBUI.CurrentTheme.ToolWindow.background(), toolbar.background)
+            assertEquals(0, scroll.border.getBorderInsets(scroll).top)
+            assertEquals(0, scroll.border.getBorderInsets(scroll).left)
+            assertEquals(0, scroll.border.getBorderInsets(scroll).bottom)
+            assertEquals(0, scroll.border.getBorderInsets(scroll).right)
+            assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).top)
+            assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).left)
+            assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).bottom)
+            assertEquals(0, scroll.viewportBorder.getBorderInsets(scroll).right)
         } finally {
             Disposer.dispose(parent)
         }

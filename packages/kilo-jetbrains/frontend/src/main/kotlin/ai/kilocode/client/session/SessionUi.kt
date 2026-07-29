@@ -377,11 +377,18 @@ class SessionUi(
         }
         header = SessionHeaderPanel(controller, this) {
             ensureDiffEditorKind()
-            project.service<KiloVfsManager>().open(
-                KiloDiffEditorKind.ID,
-                diffParams("branch", workspace.directory, null, KiloBundle.message("diff.editor.branch.title")),
-            )
-            Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+            cs.launch {
+                val branch = workspaces.branchName(workspace.directory)
+                val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
+                    ?: KiloBundle.message("diff.editor.branch.title")
+                withContext(Dispatchers.Main) {
+                    project.service<KiloVfsManager>().open(
+                        KiloDiffEditorKind.ID,
+                        diffParams("branch", workspace.directory, null, title, branch),
+                    )
+                    Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+                }
+            }
         }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)

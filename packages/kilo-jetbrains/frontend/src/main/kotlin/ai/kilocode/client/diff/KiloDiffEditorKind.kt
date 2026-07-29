@@ -41,6 +41,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
 
     override fun title(params: Map<String, String>): String {
         return params["title"].takeIfPresent()
+            ?: params["branch"].takeIfPresent()?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
             ?: KiloBundle.message(if (params["source"] == "branch") "diff.editor.branch.title" else "diff.editor.session.title")
     }
 
@@ -64,7 +65,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
                     DiffEditorData.Connecting -> connecting()
                     DiffEditorData.Empty -> emptyChangesComponent()
                     is DiffEditorData.Error -> failed(data.message)
-                    is DiffEditorData.Files -> buildDiffEditor(project, data.files, parent)
+                    is DiffEditorData.Files -> buildDiffEditor(project, data.files, parent, data.branch)
                 },
                 BorderLayout.CENTER,
             )
@@ -114,12 +115,15 @@ internal class KiloDiffEditorService(
 
     private suspend fun fetch(params: Map<String, String>): DiffEditorData {
         val dir = params["directory"].takeIfPresent() ?: return DiffEditorData.Empty
+        val workspace = service<KiloWorkspaceService>()
         val files = when (params["source"]) {
-            "branch" -> service<KiloWorkspaceService>().branchDiff(dir)
+            "branch" -> workspace.branchDiff(dir)
             else -> project.service<KiloSessionService>().diff(params["sessionId"].orEmpty(), dir)
         }
         if (files.isEmpty()) return DiffEditorData.Empty
-        return DiffEditorData.Files(files)
+        val branch = params["branch"].takeIfPresent()
+            ?: if (params["source"] == "branch") workspace.branchName(dir) else null
+        return DiffEditorData.Files(files, branch)
     }
 
     private companion object {
@@ -131,16 +135,17 @@ internal sealed interface DiffEditorData {
     data object Connecting : DiffEditorData
     data object Empty : DiffEditorData
     data class Error(val message: String) : DiffEditorData
-    data class Files(val files: List<DiffFileDto>) : DiffEditorData
+    data class Files(val files: List<DiffFileDto>, val branch: String? = null) : DiffEditorData
 }
 
-internal fun diffParams(source: String, directory: String, sessionId: String?, title: String): Map<String, String> =
+internal fun diffParams(source: String, directory: String, sessionId: String?, title: String, branch: String? = null): Map<String, String> =
     linkedMapOf(
         "source" to source,
         "directory" to directory,
         "title" to title,
     ).apply {
         if (!sessionId.isNullOrBlank()) put("sessionId", sessionId)
+        if (!branch.isNullOrBlank()) put("branch", branch)
     }
 
 fun ensureDiffEditorKind() {

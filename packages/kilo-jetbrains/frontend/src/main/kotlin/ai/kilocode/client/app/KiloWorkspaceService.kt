@@ -171,6 +171,17 @@ class KiloWorkspaceService internal constructor(
         }
     }
 
+    suspend fun branchName(directory: String): String? {
+        return try {
+            call { branchName(directory) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            LOG.warn("branch name lookup failed for directory=$directory", e)
+            null
+        }
+    }
+
     suspend fun openPath(directory: String, path: String, line: Int? = null, column: Int? = null): Boolean {
         val match = files(directory, path).firstOrNull() ?: return false
         return try {
