@@ -29,10 +29,9 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--disable-extensions",
-        "--user-data-dir=${workspaceFolder}/.kilo-dev/vscode/user-data",
-        "--extensions-dir=${workspaceFolder}/.kilo-dev/vscode/extensions",
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"
+        "--profile=Kilo Dev Isolated",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode",
+        "${workspaceFolder}"
       ],
       "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
       "preLaunchTask": "VSCode - Compile",
@@ -48,10 +47,9 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--disable-extensions",
-        "--user-data-dir=${workspaceFolder}/.kilo-dev/vscode/user-data",
-        "--extensions-dir=${workspaceFolder}/.kilo-dev/vscode/extensions",
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode"
+        "--profile-temp",
+        "--extensionDevelopmentPath=${workspaceFolder}/packages/kilo-vscode",
+        "${workspaceFolder}"
       ],
       "outFiles": ["${workspaceFolder}/packages/kilo-vscode/dist/**/*.js"],
       "preLaunchTask": "VSCode - Compile (Clean Isolated)",
