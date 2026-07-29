@@ -713,6 +713,10 @@ export const dict = {
   "session.messages.scrollToBottom": "Scroll naar beneden",
   "session.messages.initializing": "Initialiseren...",
   "session.messages.taskStarting": "Starten...",
+  "session.prompts.navLabel": "Promptnavigator",
+  "session.prompts.tick": "Prompt {{index}} van {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "Nog geen reactie",
+  "session.prompts.queued": "In wachtrij",
   "session.status.writingResponse": "Antwoord schrijven...",
   "session.status.retry": "Opnieuw proberen...",
   "session.status.working": "Bezig...",
@@ -739,7 +743,8 @@ export const dict = {
   "dialog.model.noProviders": "Geen providers",
 
   "prompt.placeholder.connecting": "Verbinden met server...",
-  "prompt.placeholder.default": "Typ een bericht... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
+  "prompt.placeholder.default":
+    "Typ een bericht, @ om bestanden te vermelden... (Enter om te verzenden, Shift+Enter voor nieuwe regel)",
   "prompt.placeholder.error": "Verbinding mislukt. Controleer het uitvoerpaneel of herstart de extensie.",
 
   "context.usage.sessionCost": "Sessiekosten",

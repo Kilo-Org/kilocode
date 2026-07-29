@@ -50,11 +50,9 @@ export interface TerminalFocusRequest {
 }
 
 /** A create request for a side terminal that has not been answered yet.
- *  `cancelled` is set when the user closes the panel while the PTY is
- *  still starting; the late `created` answer is then closed again. */
+ *  Multiple creates can be in flight for the same context at once. */
 interface SideRequest {
   contextKey: string
-  cancelled: boolean
 }
 
 export interface TerminalStateControls {
@@ -75,10 +73,14 @@ export interface TerminalStateControls {
   all: Accessor<TerminalTabStateWithContext[]>
   /** Every side terminal across every context (for the side-panel layer). */
   sides: Accessor<TerminalTabStateWithContext[]>
-  /** The side terminal of the current context, if any. */
-  side: Accessor<TerminalTabStateWithContext | undefined>
-  /** The side terminal of an arbitrary context, if any. */
-  sideForContext(contextKey: string): TerminalTabStateWithContext | undefined
+  /** Every side terminal of the given context, in creation order. */
+  sidesForContext(contextKey: string): TerminalTabStateWithContext[]
+  /** Id of the active side terminal for a context. */
+  sideActiveFor(contextKey: string): string | undefined
+  /** Mark a side terminal as the visible one for its context. */
+  setSideActive(contextKey: string, terminalId: string): void
+  /** Id of the side terminal holding DOM focus in the current context, if any. */
+  sideFocusedId(): string | undefined
   /** Context key for the current sidebar selection, or `undefined` when nothing is selected. */
   currentKey: Accessor<string | undefined>
   /** Context key for the side panel: like `currentKey` but unassigned
@@ -96,6 +98,13 @@ export interface TerminalStateControls {
   requestFocus(id: string): void
   /** True when the given remembered tab id points to a live terminal for the given selection. */
   hasRemembered(selection: string | null, remembered: string | undefined): boolean
+  /** Live display title for a terminal: the OSC-provided title when the
+   *  shell/program set one, otherwise the create-time title. */
+  title(terminalId: string): string | undefined
+  /** Record an OSC title change for a terminal. Kept outside the
+   *  terminal records so `<For>` reference stability (and therefore the
+   *  mounted xterm instances) is preserved. */
+  setTitle(terminalId: string, title: string): void
   /**
    * Persist a new order for a context's terminals (webview-memory only —
    * terminals are ephemeral and never round-trip through the extension
@@ -109,12 +118,16 @@ export interface TerminalStateControls {
    * was applied, false otherwise so the caller can fall through.
    */
   reorderDrag(from: string, to: string): boolean
-  /** Request id of the in-flight side-terminal create for a context. */
-  pendingSide(contextKey: string): string | undefined
+  /**
+   * Apply a drag-over reorder within a context's side terminals (the
+   * side-panel strip). Returns true when both ends are side terminals
+   * of that context.
+   */
+  reorderSideDrag(contextKey: string, from: string, to: string): boolean
+  /** Request ids of the in-flight side-terminal creates for a context. */
+  pendingSide(contextKey: string): boolean
   /** Mark a side-terminal create as in flight for a context. */
   beginSide(contextKey: string, createId: string): void
-  /** Cancel the in-flight create; returns true when one was pending. */
-  cancelSide(contextKey: string): boolean
   /** Settle a create request; returns it so the caller can validate. */
   completeSide(createId: string): SideRequest | undefined
 }
@@ -149,10 +162,17 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
   const [activeId, setActiveId] = createSignal<string | undefined>()
   const [focusedId, setFocusedId] = createSignal<string | undefined>()
   const [focusRequest, setFocusRequest] = createSignal<TerminalFocusRequest | undefined>()
+  // OSC-provided titles, keyed by terminal id. Separate from the terminal
+  // records on purpose: replacing a record would remount its xterm via
+  // <For> reference inequality (see the module comment above).
+  const [titles, setTitles] = createSignal<Record<string, string>>({})
+  // Active side terminal per context.
+  const [actives, setActives] = createSignal<Record<string, string>>({})
   let focusSerial = 0
   // In-flight side-terminal creates, keyed both ways: per context (what
-  // the panel shows) and per request id (what the answer carries).
-  const [pending, setPending] = createSignal<Record<string, string>>({})
+  // the panel shows) and per request id (what the answer carries). A
+  // context can have several creates in flight at once.
+  const [pending, setPending] = createSignal<Record<string, string[]>>({})
   const requests = new Map<string, SideRequest>()
 
   const currentKey = (): string | undefined => {
@@ -195,8 +215,31 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     return out
   }
 
-  const sideForContext = (key: string) => terminalsByContext()[key]?.find((t) => t.placement === "side")
-  const side = () => sideForContext(sideKey())
+  const sidesForContext = (key: string) => (terminalsByContext()[key] ?? []).filter((t) => t.placement === "side")
+  const sideActiveFor = (key: string) => actives()[key]
+  const sideFocusedId = () => {
+    const id = focusedId()
+    if (!id) return undefined
+    return sidesForContext(sideKey()).some((t) => t.id === id) ? id : undefined
+  }
+
+  const setSideActive = (key: string, terminalId: string) => {
+    setActives((prev) => (prev[key] === terminalId ? prev : { ...prev, [key]: terminalId }))
+  }
+
+  const title = (terminalId: string): string | undefined => {
+    const live = titles()[terminalId]
+    if (live) return live
+    const key = contextFor(terminalId)
+    if (!key) return undefined
+    return terminalsByContext()[key]?.find((t) => t.id === terminalId)?.title
+  }
+
+  const setTitle = (terminalId: string, next: string) => {
+    const trimmed = next.trim()
+    if (!trimmed) return
+    setTitles((prev) => (prev[terminalId] === trimmed ? prev : { ...prev, [terminalId]: trimmed }))
+  }
 
   const lookup = () => new Map(current().map((t) => [t.id, t]))
 
@@ -218,9 +261,6 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     setTerminalsByContext((prev) => {
       const list = prev[key] ?? []
       if (list.some((t) => t.id === term.id)) return prev
-      // One side terminal per context; the message handler dedupes via
-      // pending requests, this guard covers stale double answers.
-      if (term.placement === "side" && list.some((t) => t.placement === "side")) return prev
       const enriched: TerminalTabStateWithContext = { ...term, contextKey: key }
       return { ...prev, [key]: [...list, enriched] }
     })
@@ -238,6 +278,24 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
       return next
     })
     if (focusedId() === terminalId) setFocusedId(undefined)
+    // A removed active side terminal hands activation to the last
+    // remaining one of its context, so the panel never shows a dead slot.
+    if (removed?.placement === "side" && actives()[key] === terminalId) {
+      const rest = sidesForContext(key)
+      setActives((prev) => {
+        const next = { ...prev }
+        if (rest.length === 0) delete next[key]
+        else next[key] = rest[rest.length - 1]!.id
+        return next
+      })
+    }
+    if (titles()[terminalId] !== undefined) {
+      setTitles((prev) => {
+        const next = { ...prev }
+        delete next[terminalId]
+        return next
+      })
+    }
     return removed
   }
 
@@ -299,24 +357,46 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     return true
   }
 
-  const pendingSide = (key: string) => pending()[key]
-
-  const beginSide = (key: string, createId: string) => {
-    requests.set(createId, { contextKey: key, cancelled: false })
-    setPending((prev) => ({ ...prev, [key]: createId }))
-  }
-
-  const cancelSide = (key: string): boolean => {
-    const id = pending()[key]
-    if (!id) return false
-    const request = requests.get(id)
-    if (request) request.cancelled = true
-    setPending((prev) => {
-      const next = { ...prev }
-      delete next[key]
-      return next
+  /**
+   * Reorder the side terminals of a context by moving `from` to `to`'s
+   * position (side-panel strip drag-and-drop). Tab terminals keep their
+   * leading positions; only the side subset is reshuffled. The order
+   * lives in the same `terminalsByContext` list, so it survives sidebar
+   * context switches for the lifetime of the webview.
+   */
+  const reorderSideDrag = (key: string, from: string, to: string): boolean => {
+    const order = sidesForContext(key).map((t) => t.id)
+    const fi = order.indexOf(from)
+    const ti = order.indexOf(to)
+    if (fi === -1 || ti === -1 || fi === ti) return false
+    const next = [...order]
+    next.splice(fi, 1)
+    next.splice(ti, 0, from)
+    setTerminalsByContext((prev) => {
+      const list = prev[key]
+      if (!list || list.length === 0) return prev
+      const tabs = list.filter((t) => t.placement === "tab")
+      const sides = list.filter((t) => t.placement === "side")
+      const byId = new Map(sides.map((t) => [t.id, t]))
+      const moved: TerminalTabStateWithContext[] = []
+      for (const id of next) {
+        const t = byId.get(id)
+        if (t) moved.push(t)
+      }
+      // Fresh terminals that appeared mid-drag keep their tail position.
+      for (const t of sides) if (!moved.includes(t)) moved.push(t)
+      const ordered = [...tabs, ...moved]
+      if (ordered.length === list.length && ordered.every((t, i) => t.id === list[i]!.id)) return prev
+      return { ...prev, [key]: ordered }
     })
     return true
+  }
+
+  const pendingSide = (key: string) => (pending()[key]?.length ?? 0) > 0
+
+  const beginSide = (key: string, createId: string) => {
+    requests.set(createId, { contextKey: key })
+    setPending((prev) => ({ ...prev, [key]: [...(prev[key] ?? []), createId] }))
   }
 
   const completeSide = (createId: string): SideRequest | undefined => {
@@ -324,9 +404,11 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     if (!request) return undefined
     requests.delete(createId)
     setPending((prev) => {
-      if (prev[request.contextKey] !== createId) return prev
+      const list = (prev[request.contextKey] ?? []).filter((id) => id !== createId)
+      if (list.length === (prev[request.contextKey]?.length ?? 0)) return prev
       const next = { ...prev }
-      delete next[request.contextKey]
+      if (list.length === 0) delete next[request.contextKey]
+      else next[request.contextKey] = list
       return next
     })
     return request
@@ -341,8 +423,10 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     current,
     all,
     sides,
-    side,
-    sideForContext,
+    sidesForContext,
+    sideActiveFor,
+    setSideActive,
+    sideFocusedId,
     currentKey,
     sideKey,
     activeId,
@@ -352,11 +436,13 @@ export function createTerminalState(selection: Accessor<string | null>): Termina
     focusRequest,
     requestFocus,
     hasRemembered,
+    title,
+    setTitle,
     reorder,
     reorderDrag,
+    reorderSideDrag,
     pendingSide,
     beginSide,
-    cancelSide,
     completeSide,
   }
 }
@@ -376,8 +462,6 @@ export interface TerminalHandlerDeps {
   onRemove?: () => void
   /** Reveal the right-side inspector in terminal mode. */
   onShowSide: (contextKey: string) => void
-  /** Leave terminal mode without killing the terminal. */
-  onHideSide: () => void
   /** Resolve the current sidebar selection for the new-terminal helper. */
   getSelection: () => string | null
   /** Sentinel value for the LOCAL sidebar selection. */
@@ -418,29 +502,40 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   }
 
   /**
-   * Reveal the side panel and create-or-focus the context's side
-   * terminal. Reuses the existing terminal when one is alive, dedupes
-   * against an in-flight create, and never touches the tab strip or
-   * the chat session.
+   * Always create a fresh side terminal for the current context (the
+   * panel's `+` action and empty state). Multiple creates may be in
+   * flight at once; each lands as its own tab in the panel strip.
    */
-  const requestSide = () => {
+  const addSide = () => {
     const key = deps.state.sideKey()
     deps.onShowSide(key)
-    const existing = deps.state.sideForContext(key)
-    if (existing) {
-      deps.state.requestFocus(existing.id)
-      return
-    }
-    if (deps.state.pendingSide(key)) return
     const id = newId()
     deps.state.beginSide(key, id)
-    const sel = deps.getSelection()
     deps.postMessage({
       type: "agentManager.terminal.create",
       createId: id,
       placement: "side",
-      worktreeId: sel === null || sel === deps.LOCAL ? null : sel,
+      worktreeId: key === deps.LOCAL ? null : key,
     })
+  }
+
+  /**
+   * Reveal the side panel and focus the context's active side terminal,
+   * creating one when the context has none. Never touches the tab strip
+   * or the chat session.
+   */
+  const requestSide = () => {
+    const key = deps.state.sideKey()
+    deps.onShowSide(key)
+    const existing = deps.state.sidesForContext(key)
+    if (existing.length > 0) {
+      const active = deps.state.sideActiveFor(key) ?? existing[existing.length - 1]!.id
+      deps.state.setSideActive(key, active)
+      deps.state.requestFocus(active)
+      return
+    }
+    if (deps.state.pendingSide(key)) return
+    addSide()
   }
 
   const closeTerminal = (terminalId: string) => {
@@ -477,17 +572,27 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
   }
 
   /**
-   * Kill the current context's side terminal and hide the panel. With
-   * a create still in flight, cancels it instead — the late answer is
-   * closed by the message handler.
+   * Kill one side terminal. The panel stays open on the remaining
+   * terminals (or the empty state when this was the last one) — hiding
+   * is the toggle's job, not the close button's. Active-tab fallback
+   * is handled by the state layer.
    */
-  const closeSide = () => {
-    const term = deps.state.side()
-    deps.onHideSide()
-    if (!term) return deps.state.cancelSide(deps.state.sideKey())
-    deps.state.remove(term.id)
-    deps.postMessage({ type: "agentManager.terminal.close", terminalId: term.id })
+  const closeSide = (terminalId: string): boolean => {
+    // Validate before mutating: dropping a non-side record here would
+    // unmount its xterm while the backend PTY leaks (no close sent).
+    const term = deps.state.sides().find((t) => t.id === terminalId)
+    if (!term) return false
+    deps.state.remove(terminalId)
+    deps.postMessage({ type: "agentManager.terminal.close", terminalId })
     return true
+  }
+
+  /** Make a side terminal the visible one in its panel and focus it. */
+  const selectSide = (terminalId: string) => {
+    const key = deps.state.contextFor(terminalId)
+    if (!key) return
+    deps.state.setSideActive(key, terminalId)
+    deps.state.requestFocus(terminalId)
   }
 
   const middleClick = (terminalId: string, e: MouseEvent) => {
@@ -504,7 +609,18 @@ export function createTerminalHandlers(deps: TerminalHandlerDeps) {
     return true
   }
 
-  return { closeTerminal, closeSide, middleClick, activate, deactivate, requestNew, requestSide, closeActive }
+  return {
+    closeTerminal,
+    closeSide,
+    selectSide,
+    middleClick,
+    activate,
+    deactivate,
+    requestNew,
+    requestSide,
+    addSide,
+    closeActive,
+  }
 }
 
 export interface TerminalMessageHandlerDeps {
@@ -545,14 +661,17 @@ function handleCreated(deps: TerminalMessageHandlerDeps, msg: CreatedMessage) {
   }
   if (msg.placement === "side") {
     // Side terminals are answered to a specific pending request. A
-    // missing, cancelled, or context-mismatched request means the user
-    // already moved on — close the PTY again instead of leaking it.
+    // missing or context-mismatched request means the webview was
+    // reloaded (or the context is gone) — close the PTY again instead
+    // of leaking it.
     const request = deps.state.completeSide(msg.createId)
-    if (!request || request.cancelled || request.contextKey !== contextKey) {
+    if (!request || request.contextKey !== contextKey) {
       deps.postMessage({ type: "agentManager.terminal.close", terminalId: msg.terminalId })
       return
     }
     deps.state.add(msg.worktreeId, term)
+    // The newest terminal becomes the visible one in its panel.
+    deps.state.setSideActive(contextKey, msg.terminalId)
     deps.onSideCreated?.(contextKey, msg.terminalId)
     return
   }
@@ -583,8 +702,6 @@ export function createTerminalMessageHandler(deps: TerminalMessageHandlerDeps) {
     }
     if (msg.type === "agentManager.terminal.error") {
       const request = msg.createId ? deps.state.completeSide(msg.createId) : undefined
-      // Errors for requests the user already cancelled are noise.
-      if (request?.cancelled) return true
       if (request) deps.onSideError?.(request.contextKey)
       deps.showError(msg.message)
       return true
