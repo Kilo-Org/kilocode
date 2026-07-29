@@ -4687,14 +4687,15 @@ body.vscode-high-contrast-light {
   flex: 1;
   min-height: 0;
   min-width: 0;
-  padding: 8px;
   background: var(--vscode-terminal-background, #1e1e1e);
 }
 
 /* Third-party xterm classes — addressed by attribute selector so the
-   agent-manager "am-* prefix" architecture test does not flag them. */
-.am-terminal-host [class="xterm"] {
+   agent-manager "am-* prefix" architecture test does not flag them.
+   FitAddon subtracts padding from xterm itself, not its parent host. */
+.am-terminal-host [class~="xterm"] {
   height: 100%;
+  padding: 8px;
 }
 
 .am-terminal-host [class~="xterm-viewport"] {
