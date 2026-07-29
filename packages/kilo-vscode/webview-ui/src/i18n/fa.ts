@@ -1069,7 +1069,7 @@ export const dict = {
   "chat.memory.project.empty": "این پروژه هنوز هیچ حافظه‌ای ندارد. پس از استفاده از Kilo نمایش داده خواهد شد.",
   "chat.memory.command.failed": "دستور حافظه ناموفق بود",
   "chat.memory.updated": "حافظه به‌روزرسانی شد",
-  "chat.memory.rebuild": "Memory index rebuilt",
+  "chat.memory.rebuild": "ایندکس حافظه بازسازی شد",
 
   "settings.commitMessage.title": "پیام Commit",
   "settings.commitMessage.override.title": "استفاده از Prompt سفارشی",
