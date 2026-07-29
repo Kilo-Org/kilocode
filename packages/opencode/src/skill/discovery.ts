@@ -87,8 +87,10 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
 
     const pull = Effect.fn("Discovery.pull")(function* (url: string) {
       const base = url.endsWith("/") ? url : `${url}/`
+      // kilocode_change start - resolve the index origin so file downloads can be pinned to it
       const source = new URL(base)
       const index = new URL("index.json", source).href
+      // kilocode_change end
 
       yield* Effect.logInfo("fetching index", { url: index })
 
@@ -135,8 +137,9 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
       }
       // kilocode_change end
 
+      // kilocode_change start - download each validated, origin-pinned, cache-confined plan
       const dirs = yield* Effect.forEach(
-        planned, // kilocode_change - validated, origin-pinned, cache-confined download plans
+        planned,
         (skill) =>
           Effect.gen(function* () {
             yield* Effect.forEach(skill.files, (file) => download(file.url, file.dest), {
@@ -147,6 +150,7 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
           }),
         { concurrency: skillConcurrency },
       )
+      // kilocode_change end
 
       return dirs.filter((dir): dir is string => dir !== null)
     })
