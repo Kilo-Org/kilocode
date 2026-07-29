@@ -46,12 +46,7 @@ KiloShutdown.register(async () => {
 // (src/index.ts) only needs a handful of thin call-sites behind kilocode_change markers.
 // This keeps index.ts close to upstream and reduces merge conflicts on every sync.
 export namespace KiloCli {
-  function informational() {
-    const args = process.argv.slice(2)
-    const end = args.indexOf("--")
-    const flags = ["--help", "-h", "--version", "-v"]
-    return args.slice(0, end === -1 ? args.length : end).some((arg) => flags.includes(arg))
-  }
+  let info = false
 
   // Register only the Kilo-specific commands. Upstream commands stay in index.ts's chain so
   // upstream merges that add or remove commands keep working without touching this file.
@@ -79,8 +74,9 @@ export namespace KiloCli {
 
   // Runs from the upstream `.middleware`, before any command handler. Env tagging is additive so
   // it never has to modify upstream's own env assignments.
-  export async function bootstrap(): Promise<void> {
-    if (informational()) return
+  export async function bootstrap(opts: { [key: string]: unknown }): Promise<void> {
+    info = opts.help === true || opts.version === true
+    if (info) return
 
     await KiloLog.init()
     if (!process.env[ENV_FEATURE]) process.env[ENV_FEATURE] = process.argv.includes("serve") ? "unknown" : "cli"
@@ -116,7 +112,7 @@ export namespace KiloCli {
 
   // Runs from the `finally` block on every exit path.
   export async function shutdown(): Promise<void> {
-    if (informational()) return
+    if (info) return
 
     const code = typeof process.exitCode === "number" ? process.exitCode : undefined
     Telemetry.trackCliExit(code)

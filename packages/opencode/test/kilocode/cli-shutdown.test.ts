@@ -206,18 +206,13 @@ describe("KiloCli.shutdown", () => {
     expect(process.exitCode).toBe(1)
   })
 
-  test("skips lifecycle work for informational flags", async () => {
+  test("skips lifecycle work for parsed informational flags", async () => {
     const { KiloCli } = await import("../../src/kilocode/cli/setup")
     await installDrain()
 
-    for (const flag of ["--help", "--version"]) {
-      process.argv.push(flag)
-      try {
-        await KiloCli.bootstrap()
-        await KiloCli.shutdown()
-      } finally {
-        process.argv.pop()
-      }
+    for (const flag of ["help", "version"] as const) {
+      await KiloCli.bootstrap({ [flag]: true })
+      await KiloCli.shutdown()
     }
 
     expect(calls).toEqual([])
