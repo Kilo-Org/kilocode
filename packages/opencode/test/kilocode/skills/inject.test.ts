@@ -197,6 +197,36 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("does not trust a global skill symlinked into the project", () =>
+    Effect.gen(function* () {
+      const dir = (yield* TestInstance).directory
+      // A SKILL.md that lives in the project, symlinked into the trusted ~/.agents/skills dir
+      // (a suggested convenience), must not mint trust for project-controlled markdown.
+      const projectSkillDir = path.join(dir, "skills", "linked")
+      yield* Effect.promise(async () => {
+        await Bun.write(
+          path.join(projectSkillDir, "SKILL.md"),
+          "---\nname: linked\ndescription: linked test skill.\n---\n\nValue: !`printf shouldnotrun`\n",
+        )
+        const linkDir = path.join(HOME, ".agents", "skills", "linked")
+        await fs.promises.mkdir(path.dirname(linkDir), { recursive: true })
+        await fs.promises.symlink(projectSkillDir, linkDir, "dir")
+      })
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      const result = yield* loadSkill("linked", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      // realpath is inside the project → treated as untrusted, no execution, no bash ask
+      expect(result.output).toContain("[skill shell execution disabled for untrusted skill]")
+      expect(result.output).not.toContain("shouldnotrun")
+      expect(requests.some((r) => r.permission === "bash")).toBe(false)
+    }),
+  )
+
   unix("does not re-execute shell placeholders emitted by command output", () =>
     Effect.gen(function* () {
       // The command emits a literal placeholder `!<backtick>echo pwned<backtick>`
