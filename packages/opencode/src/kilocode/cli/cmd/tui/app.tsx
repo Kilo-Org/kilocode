@@ -22,6 +22,7 @@ import { isKiloError, showKiloErrorToast } from "@/kilocode/kilo-errors"
 import { registerKiloCommands } from "@/kilocode/kilo-commands"
 import { initializeTUIDependencies } from "@kilocode/kilo-gateway/tui"
 import { DialogProcessList } from "@/kilocode/cli/cmd/tui/component/dialog-process-list"
+import { createSettingsDialog } from "@/kilocode/cli/cmd/tui/component/dialog-settings"
 import { useIndexingWarnings } from "@/kilocode/cli/cmd/tui/indexing-warning"
 import { KiloTerminalTitle } from "./terminal-title"
 import type { KiloTitleIcon } from "./title-icon"
@@ -232,12 +233,14 @@ export function handleSessionError(error: unknown, toast: ReturnType<typeof useT
  * - Injects TUI dependencies into kilo-gateway
  * - Registers Kilo Gateway commands (profile, teams, kiloclaw, etc.)
  * - Registers the auto-approve toggle command
+ * - Registers the settings dialog
  */
 export function init() {
   const sync = useSync()
   const sdk = useSDK()
   const toast = useToast()
   const dialog = useDialog()
+  const settings = createSettingsDialog(dialog)
 
   useIndexingWarnings()
 
@@ -296,6 +299,17 @@ export function init() {
           dialog.clear()
         },
       },
+      {
+        namespace: "palette",
+        name: "settings.show",
+        title: "Settings",
+        desc: "Manage providers, models, and TUI preferences without editing config by hand",
+        category: "Kilo",
+        slashName: "settings",
+        slashAliases: ["preferences", "prefs"],
+        run: settings,
+      },
     ],
+    bindings: [{ key: "ctrl+o", desc: "Open settings", group: "Settings", cmd: settings }],
   }))
 }
