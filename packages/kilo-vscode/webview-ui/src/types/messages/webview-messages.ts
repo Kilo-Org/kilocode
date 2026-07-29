@@ -695,6 +695,12 @@ export interface ShowLocalTerminalRequest {
   type: "agentManager.showLocalTerminal"
 }
 
+// Show a terminal rooted at a worktree directory (worktree has no session)
+export interface ShowWorktreeTerminalRequest {
+  type: "agentManager.showWorktreeTerminal"
+  worktreeId: string
+}
+
 // Open a worktree directory in VS Code
 export interface OpenWorktreeRequest {
   type: "agentManager.openWorktree"
@@ -1336,6 +1342,7 @@ export type WebviewMessage =
   | StopRunScriptRequest
   | ShowTerminalRequest
   | ShowLocalTerminalRequest
+  | ShowWorktreeTerminalRequest
   | OpenWorktreeRequest
   | CopyToClipboardRequest
   | ShowExistingLocalTerminalRequest
