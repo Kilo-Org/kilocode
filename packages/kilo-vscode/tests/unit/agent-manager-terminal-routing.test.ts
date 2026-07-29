@@ -21,6 +21,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: (id) => (id === "wt-1" ? "/workspace/wt-1" : undefined),
@@ -78,6 +79,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
@@ -126,6 +128,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
@@ -171,6 +174,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
@@ -179,9 +183,11 @@ describe("Agent Manager terminal routing", () => {
       getTerminalFont: () => font,
     })
 
-    // Two creates before either settles must not share an ordinal.
+    // Two creates before either settles must not share an ordinal. The
+    // backend-connection await defers the PTY creates to a microtask.
     router.handle({ type: "agentManager.terminal.create", createId: "a", placement: "side", worktreeId: null })
     router.handle({ type: "agentManager.terminal.create", createId: "b", placement: "side", worktreeId: null })
+    await wait()
     expect(titles).toEqual(["Terminal 1", "Terminal 2"])
     resolvers[0]?.({ data: { id: "pty-a", title: titles[0]! } })
     resolvers[1]?.({ data: { id: "pty-b", title: titles[1]! } })
@@ -207,6 +213,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
@@ -222,11 +229,55 @@ describe("Agent Manager terminal routing", () => {
     router.handle({ type: "agentManager.terminal.create", createId: "a", placement: "side", worktreeId: null })
     await router.dispose()
     router.handle({ type: "agentManager.terminal.create", createId: "b", placement: "side", worktreeId: null })
+    await wait()
     expect(titles).toEqual(["Terminal 1", "Terminal 1"])
     resolvers[0]?.({ data: { id: "pty-a", title: titles[0]! } })
     await wait()
     router.handle({ type: "agentManager.terminal.create", createId: "c", placement: "side", worktreeId: null })
+    await wait()
     expect(titles).toEqual(["Terminal 1", "Terminal 1", "Terminal 2"])
+    await router.dispose()
+  })
+
+  it("awaits the shared backend connection before creating a terminal", async () => {
+    let connected = false
+    const client = {
+      pty: {
+        create: async () => ({ data: { id: "pty-1", title: "Terminal 1" } }),
+        remove: async () => ({ data: true }),
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const messages: AgentManagerOutMessage[] = []
+    const router = new TerminalRouter({
+      getClient: () => {
+        if (!connected) throw new Error("Not connected")
+        return client
+      },
+      getClientAsync: async () => {
+        await wait()
+        connected = true
+        return client
+      },
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      getTerminalFont: () => font,
+    })
+
+    router.handle({
+      type: "agentManager.terminal.create",
+      createId: "real",
+      placement: "tab",
+      worktreeId: null,
+    })
+    expect(messages).toHaveLength(0)
+    await wait()
+    await wait()
+
+    expect(messages[0]).toMatchObject({ type: "agentManager.terminal.created", createId: "real" })
     await router.dispose()
   })
 })
