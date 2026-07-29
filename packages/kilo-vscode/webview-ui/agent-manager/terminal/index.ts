@@ -23,6 +23,6 @@ export type { TerminalTabState, TerminalStateControls, TerminalHandlerDeps } fro
 export { renderTerminalTab, renderTerminalLayer, renderSideTerminalLayer } from "./render"
 export { SideTerminalPanel } from "./SideTerminalPanel"
 export { TerminalDestinationButton } from "./TerminalDestinationButton"
-export { createSideTerminal } from "./side"
+export { createSideTerminal, readSavedDestination, resolveVscodeTerminalRequest } from "./side"
 export { TerminalTab } from "./TerminalTab"
 export { SortableTerminalTab } from "./SortableTerminalTab"
