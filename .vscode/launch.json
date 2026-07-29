@@ -32,11 +32,33 @@
       "cwd": "${workspaceFolder}/packages/kilo-vscode"
     },
     {
+      "name": "VSCode - Run Extension (Isolated: Choose Folder)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun script/launch.ts --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${input:kiloDevWorkspace}\"",
+      "cwd": "${workspaceFolder}/packages/kilo-vscode"
+    },
+    {
       "name": "VSCode - Run Extension (Isolated Clean)",
       "type": "node-terminal",
       "request": "launch",
       "command": "bun script/launch.ts --clean --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${workspaceFolder}\"",
       "cwd": "${workspaceFolder}/packages/kilo-vscode"
+    },
+    {
+      "name": "VSCode - Run Extension (Isolated Clean: Choose Folder)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "bun script/launch.ts --clean --state-dir \"${workspaceFolder}/.kilo-dev/vscode\" --kilo-storage-dir \"${workspaceFolder}/.kilo-dev\" --workspace \"${input:kiloDevWorkspace}\"",
+      "cwd": "${workspaceFolder}/packages/kilo-vscode"
+    }
+  ],
+  "inputs": [
+    {
+      "id": "kiloDevWorkspace",
+      "type": "promptString",
+      "description": "Folder to open in the isolated VS Code instance",
+      "default": "${workspaceFolder}"
     }
   ]
 }

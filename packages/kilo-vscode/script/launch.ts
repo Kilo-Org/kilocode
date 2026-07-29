@@ -74,18 +74,25 @@ function parse(argv: string[]) {
   return result
 }
 
+function path(input: string) {
+  const value = input.trim()
+  if (value === "~") return homedir()
+  if (value.startsWith(`~${process.platform === "win32" ? "\\" : "/"}`)) return join(homedir(), value.slice(2))
+  return resolve(value)
+}
+
 const opts = parse(process.argv.slice(2))
 
 // Stable per-repo directory under OS temp — no accumulation
 const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
-const base = opts["state-dir"] ? resolve(opts["state-dir"] as string) : join(tmpdir(), `kilo-vscode-dev-${hash}`)
+const base = typeof opts["state-dir"] === "string" ? path(opts["state-dir"]) : join(tmpdir(), `kilo-vscode-dev-${hash}`)
 const userDir = join(base, "user-data")
 const extDir = join(base, "extensions")
-const kilo = opts["kilo-storage-dir"] ? resolve(opts["kilo-storage-dir"] as string) : undefined
+const kilo = typeof opts["kilo-storage-dir"] === "string" ? path(opts["kilo-storage-dir"]) : undefined
 
 const shouldBuild = opts["build"] !== false
 const mode = (opts["mode"] as string) ?? "dev"
-const workspace = opts["workspace"] ? resolve(opts["workspace"] as string) : repo
+const workspace = typeof opts["workspace"] === "string" && opts["workspace"].trim() ? path(opts["workspace"]) : repo
 const insiders = opts["insiders"] === true
 const explicit = opts["app-path"] as string | undefined
 const blocking = opts["wait"] === true
