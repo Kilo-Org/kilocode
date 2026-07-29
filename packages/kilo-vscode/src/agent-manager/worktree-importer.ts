@@ -56,63 +56,14 @@ export class WorktreeImporter {
   }
 
   async branch(branch: string): Promise<void> {
-    const manager = this.host.manager()
-    const state = this.host.state()
-    if (!manager || !state) {
-      this.host.post({ type: "agentManager.importResult", success: false, message: "Not a git repository" })
-      return
-    }
-    if (this.busy()) return
-
-    this.importing = true
-    try {
-      this.host.post({
-        type: "agentManager.worktreeSetup",
-        status: "creating",
-        message: "Creating worktree from branch...",
-      })
-      const result = await manager.createWorktree({ existingBranch: branch })
-      const worktree = state.addWorktree({
-        branch: result.branch,
-        path: result.path,
-        parentBranch: result.parentBranch,
-        remote: result.remote,
-        branchOwned: false,
-      })
-      this.host.push()
-
-      try {
-        this.host.post({
-          type: "agentManager.worktreeSetup",
-          status: "creating",
-          message: "Running setup script...",
-          branch: result.branch,
-          worktreeId: worktree.id,
-        })
-        await this.host.setup(result.path, result.branch, worktree.id)
-
-        const session = await this.host.session(result.path, result.branch, worktree.id)
-        if (!session) throw new Error("Failed to create session")
-
-        state.addSession(session.id, worktree.id)
-        this.host.register(session.id, result.path)
-        this.host.ready(session.id, result, worktree.id)
-        this.host.post({ type: "agentManager.importResult", success: true, message: `Opened branch ${branch}` })
-        this.host.log(`Imported branch ${branch} as worktree ${worktree.id}`)
-      } catch (error) {
-        state.removeWorktree(worktree.id)
-        await manager.removeWorktree(result.path)
-        this.host.push()
-        throw error
-      }
-    } catch (error) {
-      this.importError(error, `Branch "${branch}" is already checked out in another worktree`)
-    } finally {
-      this.importing = false
-    }
+    await this.run({ branch })
   }
 
   async pr(url: string): Promise<void> {
+    await this.run({ url })
+  }
+
+  private async run(target: { branch: string } | { url: string }): Promise<void> {
     const manager = this.host.manager()
     const state = this.host.state()
     if (!manager || !state) {
@@ -120,11 +71,21 @@ export class WorktreeImporter {
       return
     }
     if (this.busy()) return
-
     this.importing = true
+    const branch = "branch" in target
+    const creating = branch ? "Creating worktree from branch..." : "Resolving PR..."
+    const setup = branch ? "Running setup script..." : "Setting up worktree..."
+    const duplicate = branch
+      ? `Branch "${target.branch}" is already checked out in another worktree`
+      : "This PR's branch is already checked out in another worktree"
     try {
-      this.host.post({ type: "agentManager.worktreeSetup", status: "creating", message: "Resolving PR..." })
-      const result = await manager.createFromPR(url)
+      const progress = { type: "agentManager.worktreeSetup", status: "creating" } as const
+      this.host.post({ ...progress, message: creating })
+      const result = branch
+        ? await manager.createWorktree({ existingBranch: target.branch })
+        : await manager.createFromPR(target.url)
+      const success = branch ? `Opened branch ${target.branch}` : `Opened PR branch ${result.branch}`
+      const log = branch ? `Imported branch ${target.branch}` : `Imported PR ${target.url}`
       const worktree = state.addWorktree({
         branch: result.branch,
         path: result.path,
@@ -133,29 +94,16 @@ export class WorktreeImporter {
         branchOwned: false,
       })
       this.host.push()
-
       try {
-        this.host.post({
-          type: "agentManager.worktreeSetup",
-          status: "creating",
-          message: "Setting up worktree...",
-          branch: result.branch,
-          worktreeId: worktree.id,
-        })
+        this.host.post({ ...progress, message: setup, branch: result.branch, worktreeId: worktree.id })
         await this.host.setup(result.path, result.branch, worktree.id)
-
         const session = await this.host.session(result.path, result.branch, worktree.id)
         if (!session) throw new Error("Failed to create session")
-
         state.addSession(session.id, worktree.id)
         this.host.register(session.id, result.path)
         this.host.ready(session.id, result, worktree.id)
-        this.host.post({
-          type: "agentManager.importResult",
-          success: true,
-          message: `Opened PR branch ${result.branch}`,
-        })
-        this.host.log(`Imported PR ${url} as worktree ${worktree.id}`)
+        this.host.post({ type: "agentManager.importResult", success: true, message: success })
+        this.host.log(`${log} as worktree ${worktree.id}`)
       } catch (error) {
         state.removeWorktree(worktree.id)
         await manager.removeWorktree(result.path)
@@ -163,7 +111,7 @@ export class WorktreeImporter {
         throw error
       }
     } catch (error) {
-      this.importError(error, "This PR's branch is already checked out in another worktree")
+      this.importError(error, duplicate)
     } finally {
       this.importing = false
     }
