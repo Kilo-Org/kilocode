@@ -1,6 +1,7 @@
 import { PermissionV1 } from "@opencode-ai/core/v1/permission"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Ripgrep } from "@opencode-ai/core/ripgrep"
+import { Shell } from "@opencode-ai/core/shell"
 import { Effect, Exit, Layer } from "effect"
 import { afterEach, describe, expect } from "bun:test"
 import fs from "fs"
@@ -221,6 +222,7 @@ describe("skill shell injection", () => {
         disabled: false,
         cwd: dir,
         skill: "big-shell",
+        shell: Shell.acceptable(),
         ctx: { ...baseCtx, ask: () => Effect.void } as Tool.Context,
         decompose: ({ command }) => Effect.succeed({ patterns: [command], dirs: [] }),
       })
@@ -249,6 +251,7 @@ describe("SkillInject.render gating", () => {
         disabled: opts.disabled,
         cwd: "/tmp",
         skill: "test",
+        shell: Shell.acceptable(),
         ctx,
         decompose,
       }),

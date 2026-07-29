@@ -1,7 +1,6 @@
 import { Effect } from "effect"
 import { ConfigMarkdown } from "@/config/markdown"
 import { Process } from "@/util/process"
-import { Shell } from "@opencode-ai/core/shell"
 import type * as Tool from "@/tool/tool"
 
 // Shell injection for skill bodies mirrors Claude's "dynamic context injection":
@@ -47,6 +46,7 @@ export namespace SkillInject {
     disabled: boolean
     cwd: string
     skill: string
+    shell: string
     ctx: Tool.Context
     decompose: Decompose
   }
@@ -59,7 +59,10 @@ export namespace SkillInject {
     if (opts.disabled) return replace(opts.content, () => DISABLED_NOTE)
     if (!opts.trusted) return replace(opts.content, () => UNTRUSTED_NOTE)
 
-    const shell = Shell.preferred()
+    // `shell` is resolved by the caller via Shell.acceptable(cfg.shell), which
+    // rejects shells the tree-sitter bash scanner can't parse (fish/nu), keeping
+    // the parse used for the permission decision aligned with execution.
+    const shell = opts.shell
     // Deduplicate identical commands, then cap the batch so a skill can't queue
     // an unbounded number of processes.
     const commands = Array.from(new Set(matches.map(([, cmd]) => cmd))).slice(0, MAX_COMMANDS)
