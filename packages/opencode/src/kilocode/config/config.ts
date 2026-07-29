@@ -113,14 +113,14 @@ export namespace KilocodeConfig {
   }
 
   /**
-   * Merge discovered agent markdown without silently reclassifying an earlier
-   * config-defined subagent as a primary agent. A config-only custom agent has
-   * the normal default mode of "all", even when a later markdown definition
-   * shares its name.
+   * Merge discovered agent markdown while preserving routing explicitly defined
+   * in config. Tracking config entries separately keeps normal directory
+   * precedence between markdown files intact.
    */
   export function mergeAgentMarkdown(
     existing: Record<string, ConfigAgentV1.Info>,
     incoming: Record<string, ConfigAgentV1.Info>,
+    configured: Record<string, ConfigAgentV1.Info>,
   ) {
     const result = { ...existing }
     for (const [name, agent] of Object.entries(incoming)) {
@@ -130,8 +130,9 @@ export namespace KilocodeConfig {
         continue
       }
 
-      if (agent.mode === "primary" && current.mode !== "primary") {
-        result[name] = mergeDeep(agent, { ...current, mode: current.mode ?? "all" })
+      const config = configured[name]
+      if (agent.mode === "primary" && config && config.mode !== "primary") {
+        result[name] = mergeDeep(mergeDeep(current, agent), { ...config, mode: config.mode ?? "all" })
         continue
       }
 
