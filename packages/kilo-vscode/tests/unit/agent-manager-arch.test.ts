@@ -11,6 +11,7 @@ import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
+import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -578,11 +579,61 @@ describe("Agent Manager Provider — onMessage routing", () => {
 
   it("worktree import behavior lives in the cohesive importer", () => {
     const text = importer()
-    const providerText = body("onImportMessage")
-    expect(text).toContain("class WorktreeImporter")
-    expect(text).toContain("createFromPR")
-    expect(text).toContain("createWorktree")
-    expect(providerText).toContain("this.importer")
+    for (const value of ["createFromPR", "createWorktree", "this.busy()"]) expect(text).toContain(value)
+    expect(body("onImportMessage")).toContain("this.importer")
+  })
+
+  it("preserves branch and PR import ordering and rollback", async () => {
+    const run = async (kind: "branch" | "pr", fail?: "setup" | "duplicate") => {
+      const events: string[] = []
+      const create = async () => {
+        events.push("create")
+        if (fail === "duplicate") throw new Error("already checked out")
+        return { branch: "topic", path: "/repo/topic", parentBranch: "main" }
+      }
+      const importer = new WorktreeImporter({
+        manager: () =>
+          ({ createWorktree: create, createFromPR: create, removeWorktree: async () => events.push("disk") }) as never,
+        state: () =>
+          ({
+            addWorktree: (input: { branchOwned: boolean }) => ({
+              id: events.push(`add:${input.branchOwned}`) ? "worktree" : "",
+            }),
+            addSession: () => events.push("state-session"),
+            removeWorktree: () => events.push("state-remove"),
+          }) as never,
+        post: (msg) => events.push("message" in msg ? String(msg.message) : msg.type),
+        push: () => events.push("push"),
+        setup: async () => {
+          events.push("setup")
+          if (fail === "setup") throw new Error("setup failed")
+        },
+        session: async () => (events.push("session"), { id: "session" }) as never,
+        register: () => events.push("register"),
+        ready: () => events.push("ready"),
+        log: () => events.push("log"),
+      })
+      const action = () => (kind === "branch" ? importer.branch("topic") : importer.pr("https://example.test/pull/1"))
+      await action()
+      if (fail === "setup") await action()
+      return events.join("|")
+    }
+    for (const kind of ["branch", "pr"] as const) {
+      const branch = kind === "branch"
+      const creating = branch ? "Creating worktree from branch..." : "Resolving PR..."
+      const setup = branch ? "Running setup script..." : "Setting up worktree..."
+      const success = branch ? "Opened branch topic" : "Opened PR branch topic"
+      expect(await run(kind)).toBe(
+        `${creating}|create|add:false|push|${setup}|setup|session|state-session|register|ready|${success}|log`,
+      )
+      expect(await run(kind, "setup")).toBe(
+        `${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed`,
+      )
+      const duplicate = branch
+        ? 'Branch "topic" is already checked out in another worktree'
+        : "This PR's branch is already checked out in another worktree"
+      expect(await run(kind, "duplicate")).toBe(`${creating}|create|${duplicate}|${duplicate}`)
+    }
   })
 })
 
