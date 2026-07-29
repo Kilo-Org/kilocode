@@ -123,6 +123,27 @@ export class SessionTerminalManager {
   }
 
   /**
+   * Show (or create) a terminal rooted at a worktree directory. Used when
+   * the worktree has no session to key the terminal off (e.g. all of its
+   * sessions were closed) so the shortcut never dead-ends on a sessionless
+   * worktree.
+   */
+  showWorktreeTerminal(worktreeId: string, state: WorktreeStateManager | undefined): void {
+    const key = `worktree:${worktreeId}`
+    if (this.showExisting(key, false)) return
+
+    const worktree = state?.getWorktree(worktreeId)
+    const cwd = worktree?.path ?? this.host.repoPath()
+    if (!cwd) {
+      this.log(`showWorktreeTerminal: no cwd resolved for worktree ${worktreeId}`)
+      this.host.showWarning("Open a folder that contains a git repository to use worktrees")
+      return
+    }
+
+    this.showOrCreate(key, cwd, worktree ? `Agent: ${worktree.branch}` : "Agent: worktree")
+  }
+
+  /**
    * Show the existing local terminal if one was previously created (used on context switch).
    */
   showExistingLocal(): boolean {
