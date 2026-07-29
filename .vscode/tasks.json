@@ -100,7 +100,7 @@
       "command": "bun",
       "args": [
         "-e",
-        "const fs = require('node:fs'); const dir = process.env.KILO_DEV_DIR; if (!dir) process.exit(1); fs.rmSync(dir, { recursive: true, force: true }); console.log(`Cleared ${dir}`)"
+        "const fs = require('node:fs'); const dir = process.env.KILO_DEV_DIR; if (!dir) { console.error('KILO_DEV_DIR is required to clear isolated state'); process.exit(1); } fs.rmSync(dir, { recursive: true, force: true }); console.log(`Cleared ${dir}`)"
       ],
       "presentation": {
         "reveal": "always"
