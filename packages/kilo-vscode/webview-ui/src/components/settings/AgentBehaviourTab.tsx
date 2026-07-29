@@ -676,11 +676,11 @@ const AgentBehaviourTab: Component = () => {
                             checked={isConnected(name)}
                             disabled={session.mcpLoading() === name}
                             onChange={(enabled: boolean) => {
-                              const update =
-                                mcpConfigScope(name, collections()) === "project"
-                                  ? updateProjectConfig
-                                  : updateGlobalConfig
-                              update(mcpEnabledPatch(name, enabled))
+                              const scope = mcpConfigScope(name, collections())
+                              if (scope) {
+                                const update = scope === "project" ? updateProjectConfig : updateGlobalConfig
+                                update(mcpEnabledPatch(name, enabled))
+                              }
                               if (!enabled) {
                                 session.disconnectMcp(name)
                                 return

@@ -27,12 +27,23 @@ describe("mcpEnabledPatch", () => {
     ).toBe("project")
   })
 
-  it("routes global and unknown servers to global config", () => {
+  it("routes global servers to global config", () => {
     const collections = {
       mcp: [{ key: "docs", source: "global" as const }],
     }
     expect(mcpConfigScope("docs", collections)).toBe("global")
-    expect(mcpConfigScope("unknown", collections)).toBe("global")
+  })
+
+  it("keeps system, default, and unknown servers runtime-only", () => {
+    const collections = {
+      mcp: [
+        { key: "legacy", source: "system" as const },
+        { key: "builtin", source: "default" as const },
+      ],
+    }
+    expect(mcpConfigScope("legacy", collections)).toBeUndefined()
+    expect(mcpConfigScope("builtin", collections)).toBeUndefined()
+    expect(mcpConfigScope("unknown", collections)).toBeUndefined()
   })
 })
 
