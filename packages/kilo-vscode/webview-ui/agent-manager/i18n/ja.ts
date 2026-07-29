@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.terminal.new": "新しいターミナルタブ",
   "agentManager.terminal.ended": "ターミナルが終了しました — タブを閉じて破棄",
   "agentManager.terminal.connectionError": "ターミナル接続エラー",
-  "agentManager.terminal.kill": "ターミナルを終了",
+  "agentManager.terminal.add": "新しいターミナル",
   "agentManager.terminal.empty": "ここにはまだターミナルがありません",
   "agentManager.terminal.start": "ターミナルを開始",
   "agentManager.terminal.destination": "ターミナルボタンで開く場所を選択",

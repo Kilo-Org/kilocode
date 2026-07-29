@@ -60,7 +60,7 @@ export const dict = {
   "agentManager.terminal.new": "Ny terminalfane",
   "agentManager.terminal.ended": "terminal afsluttet — luk fanen for at fjerne",
   "agentManager.terminal.connectionError": "forbindelsesfejl til terminal",
-  "agentManager.terminal.kill": "Afslut terminal",
+  "agentManager.terminal.add": "Ny terminal",
   "agentManager.terminal.empty": "Ingen terminal her endnu",
   "agentManager.terminal.start": "Start terminal",
   "agentManager.terminal.destination": "Vælg, hvad terminalknappen åbner",

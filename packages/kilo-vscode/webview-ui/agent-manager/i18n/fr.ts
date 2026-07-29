@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.terminal.new": "Nouvel onglet de terminal",
   "agentManager.terminal.ended": "terminal terminé — fermez l'onglet pour ignorer",
   "agentManager.terminal.connectionError": "erreur de connexion du terminal",
-  "agentManager.terminal.kill": "Tuer le terminal",
+  "agentManager.terminal.add": "Nouveau terminal",
   "agentManager.terminal.empty": "Aucun terminal ici pour l'instant",
   "agentManager.terminal.start": "Démarrer le terminal",
   "agentManager.terminal.destination": "Choisir ce que le bouton Terminal ouvre",

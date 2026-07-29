@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.terminal.new": "새 터미널 탭",
   "agentManager.terminal.ended": "터미널 종료됨 — 탭을 닫아 해제",
   "agentManager.terminal.connectionError": "터미널 연결 오류",
-  "agentManager.terminal.kill": "터미널 종료",
+  "agentManager.terminal.add": "새 터미널",
   "agentManager.terminal.empty": "아직 여기에 터미널이 없습니다",
   "agentManager.terminal.start": "터미널 시작",
   "agentManager.terminal.destination": "터미널 버튼으로 열 위치 선택",

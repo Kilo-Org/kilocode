@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.terminal.new": "新建终端标签页",
   "agentManager.terminal.ended": "终端已结束 — 关闭标签页以消除",
   "agentManager.terminal.connectionError": "终端连接错误",
-  "agentManager.terminal.kill": "终止终端",
+  "agentManager.terminal.add": "新建终端",
   "agentManager.terminal.empty": "此处尚无终端",
   "agentManager.terminal.start": "启动终端",
   "agentManager.terminal.destination": "选择终端按钮的打开目标",

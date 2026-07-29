@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.terminal.new": "Новая вкладка терминала",
   "agentManager.terminal.ended": "терминал завершен — закройте вкладку, чтобы скрыть",
   "agentManager.terminal.connectionError": "ошибка подключения к терминалу",
-  "agentManager.terminal.kill": "Завершить терминал",
+  "agentManager.terminal.add": "Новый терминал",
   "agentManager.terminal.empty": "Здесь пока нет терминала",
   "agentManager.terminal.start": "Запустить терминал",
   "agentManager.terminal.destination": "Выберите, где будет открываться терминал",

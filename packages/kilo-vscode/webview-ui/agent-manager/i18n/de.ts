@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.terminal.new": "Neuer Terminal-Tab",
   "agentManager.terminal.ended": "Terminal beendet — Tab schließen zum Verwerfen",
   "agentManager.terminal.connectionError": "Verbindungsfehler im Terminal",
-  "agentManager.terminal.kill": "Terminal beenden",
+  "agentManager.terminal.add": "Neues Terminal",
   "agentManager.terminal.empty": "Hier ist noch kein Terminal",
   "agentManager.terminal.start": "Terminal starten",
   "agentManager.terminal.destination": "Auswählen, was die Terminal-Schaltfläche öffnet",

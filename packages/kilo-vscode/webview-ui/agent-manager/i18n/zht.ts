@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.terminal.new": "新增終端分頁",
   "agentManager.terminal.ended": "終端已結束 — 關閉分頁以消除",
   "agentManager.terminal.connectionError": "終端連線錯誤",
-  "agentManager.terminal.kill": "終止終端機",
+  "agentManager.terminal.add": "新增終端機",
   "agentManager.terminal.empty": "此處尚無終端機",
   "agentManager.terminal.start": "啟動終端機",
   "agentManager.terminal.destination": "選擇終端機按鈕的開啟目標",

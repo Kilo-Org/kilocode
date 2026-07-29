@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.terminal.new": "Nueva pestaña de terminal",
   "agentManager.terminal.ended": "terminal finalizado — cierra la pestaña para descartar",
   "agentManager.terminal.connectionError": "error de conexión del terminal",
-  "agentManager.terminal.kill": "Terminar terminal",
+  "agentManager.terminal.add": "Nuevo terminal",
   "agentManager.terminal.empty": "Aún no hay ningún terminal aquí",
   "agentManager.terminal.start": "Iniciar terminal",
   "agentManager.terminal.destination": "Elegir qué abre el botón del terminal",
