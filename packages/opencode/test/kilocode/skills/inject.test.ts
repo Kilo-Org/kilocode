@@ -102,6 +102,29 @@ describe("skill shell injection", () => {
     }),
   )
 
+  unix("decomposes a compound command into per-sub-command patterns", () =>
+    Effect.gen(function* () {
+      // A single placeholder with a chained command must not be asked as one glob
+      // pattern (which would let e.g. `cat *` match the whole string). Each
+      // sub-command must appear separately so deny/veto rules apply per command.
+      yield* writeGlobalSkill("compound-shell", "Out: !`cat README.md; printf hi`")
+
+      const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
+      yield* loadSkill("compound-shell", (req) =>
+        Effect.sync(() => {
+          requests.push(req)
+        }),
+      )
+
+      const bash = requests.filter((r) => r.permission === "bash")
+      expect(bash.length).toBe(1)
+      // both sub-commands are present as distinct patterns, not the raw string
+      expect(bash[0].patterns).toContain("cat README.md")
+      expect(bash[0].patterns).toContain("printf hi")
+      expect(bash[0].patterns).not.toContain("cat README.md; printf hi")
+    }),
+  )
+
   unix("aborts the entire skill load when the batch is rejected", () =>
     Effect.gen(function* () {
       yield* writeGlobalSkill("denied-shell", "Secret: !`printf leaked`")
@@ -162,6 +185,7 @@ describe("SkillInject.render gating", () => {
   }
   const spawner = new Proxy({}, { get: boom }) as any
   const ctx = { ...baseCtx, ask: () => Effect.sync(boom) } as Tool.Context
+  const decompose = (() => Effect.sync(boom)) as unknown as SkillInject.Decompose
 
   const run = (opts: { trusted: boolean; disabled: boolean; content?: string }) =>
     Effect.runPromise(
@@ -169,8 +193,10 @@ describe("SkillInject.render gating", () => {
         content: opts.content ?? "Value: !`printf ran`",
         trusted: opts.trusted,
         disabled: opts.disabled,
+        cwd: "/tmp",
         ctx,
         spawner,
+        decompose,
       }),
     )
 
