@@ -1848,9 +1848,11 @@ export const layer = Layer.effect(
           // kilocode_change start — break out so a newer queued prompt can take over
           // instead of starting another LLM step for the now-superseded turn. The
           // current handle.process has fully drained (tokens + inline tool calls) by
-          // the time we get here, so nothing is cut off.
+          // the time we get here, so nothing is cut off. The close reason is
+          // "superseded", not "interrupted": this is a deliberate queue handoff,
+          // not a premature stop, so clients must not flash an interruption warning.
           if (KiloSessionPromptQueue.hasFollowup(sessionID)) {
-            closeReasons.set(sessionID, "interrupted")
+            closeReasons.set(sessionID, "superseded")
             return "break" as const
           }
           // kilocode_change end
