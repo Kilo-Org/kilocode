@@ -342,7 +342,8 @@ export namespace KilocodeConfig {
    * Existing users (those with at least one global config file or the legacy TOML
    * config) who have no explicit `permission.bash` setting get `bash: "allow"`
    * written to their highest-precedence config file. This preserves their current
-   * behavior now that the new default is `bash: "ask"`.
+   * behavior now that the new default is `bash: "ask"`. A completion marker makes
+   * the migration idempotent so subsequent user edits are not migrated again.
    */
   export async function migrateBashPermission() {
     const marker = path.join(Global.Path.config, BASH_PERMISSION_MIGRATION)
