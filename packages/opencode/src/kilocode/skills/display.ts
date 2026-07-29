@@ -1,3 +1,8 @@
+// Markers inlined in place of a `!`cmd`` placeholder when it is not executed. Shared by the
+// skill tool (inject.ts) and the slash-command path (session/prompt.ts) so both render identically.
+export const SKILL_SHELL_DISABLED = "[skill shell execution disabled by policy]"
+export const SKILL_SHELL_UNTRUSTED = "[skill shell execution disabled for untrusted skill]"
+
 // Render a skill command for a permission prompt as a single, tamper-evident line.
 // Escape control chars (CR/LF/ESC/etc.) so a command can't repaint the terminal, and
 // bidi/format controls (U+202A-202E, U+2066-2069, U+200E/F, U+2028/9) so a Trojan-Source

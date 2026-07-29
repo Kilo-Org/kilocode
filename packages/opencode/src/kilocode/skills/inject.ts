@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { ConfigMarkdown } from "@/config/markdown"
 import { Process } from "@/util/process"
+import { SKILL_SHELL_DISABLED, SKILL_SHELL_UNTRUSTED } from "@/kilocode/skills/display"
 import type * as Tool from "@/tool/tool"
 
 // Shell injection for skill bodies mirrors Claude's "dynamic context injection":
@@ -20,12 +21,13 @@ import type * as Tool from "@/tool/tool"
 //      of any allow/auto-approve rule; a deny rule or plan-mode veto on any
 //      sub-command still blocks. Approve runs the batch; reject aborts the load.
 //
+// Trust and the kill-switch also gate the slash-command path (`/skill`, session/prompt.ts),
+// which is user-initiated. Batch approval (control 3) is specific to this model-initiated
+// tool path — the slash-command path is not prompted because the user invoked it directly.
+//
 // Substitution runs exactly once. Command output is inlined as plain text and is
 // never re-scanned, so a command cannot emit a `!`cmd`` placeholder that a later
 // pass would execute (second-order injection).
-
-const DISABLED_NOTE = "[skill shell execution disabled by policy]"
-const UNTRUSTED_NOTE = "[skill shell execution disabled for untrusted skill]"
 
 // Execution bounds: model-initiated commands must not hang the load, blow up
 // context, or overrun the batch.
@@ -62,8 +64,8 @@ export namespace SkillInject {
     // Defense-in-depth ordering: policy checks first, approval gate last. `replace` only
     // rewrites live (unfenced) placeholders; fenced ones stay as literal text.
     const replace = (value: (command: string) => string) => rewrite(opts.content, fenced, value)
-    if (opts.disabled) return replace(() => DISABLED_NOTE)
-    if (!opts.trusted) return replace(() => UNTRUSTED_NOTE)
+    if (opts.disabled) return replace(() => SKILL_SHELL_DISABLED)
+    if (!opts.trusted) return replace(() => SKILL_SHELL_UNTRUSTED)
 
     // `shell` is resolved by the caller via Shell.acceptable(cfg.shell), which
     // rejects shells the tree-sitter bash scanner can't parse (fish/nu), keeping
