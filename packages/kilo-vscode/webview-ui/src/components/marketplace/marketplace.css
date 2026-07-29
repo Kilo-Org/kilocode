@@ -272,15 +272,6 @@
   border-color: var(--border-critical-base) !important;
 }
 
-/* Remove dialog actions */
-
-.marketplace-remove-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-}
-
 /* Danger button (remove confirm) */
 
 .danger-btn {

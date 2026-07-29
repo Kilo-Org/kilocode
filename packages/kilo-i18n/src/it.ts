@@ -2,13 +2,6 @@
 // Keys here will override any matching keys from upstream translations
 export const dict = {
   // Kilo Gateway provider translations
-  "provider.connect.kiloGateway.line1":
-    "Kilo Gateway ti offre una selezione curata di modelli affidabili e ottimizzati per agenti di coding.",
-  "provider.connect.kiloGateway.line2":
-    "Con una sola API key puoi accedere a modelli come Claude, GPT, Gemini, GLM e altri.",
-  "provider.connect.kiloGateway.visit.prefix": "Visita ",
-  "provider.connect.kiloGateway.visit.link": "kilo.ai",
-  "provider.connect.kiloGateway.visit.suffix": " per ottenere la tua API key.",
   "provider.connect.kiloGateway.byok.prefix": "Per ulteriori statistiche sull'utilizzo, utilizza ",
   "provider.connect.kiloGateway.byok.link": "BYOK tramite Kilo's Gateway",
   "provider.connect.kiloGateway.byok.suffix": ".",
@@ -26,15 +19,9 @@ export const dict = {
   "settings.providers.note.vercel": "Accesso unificato ai modelli IA con routing intelligente",
 
   // Reasoning block label
-  "ui.permission.run": "Esegui",
   "ui.reasoning.label": "Ragionamento",
 
   // Marketplace
-  "marketplace.tab.skills": "Skill",
-  "marketplace.tab.mcpServers": "Server MCP",
-  "marketplace.tab.agents": "Agenti",
-  "marketplace.category.all": "Tutti",
-  "marketplace.placeholder": "Da implementare",
   "marketplace.card.installed": "Installato",
   "marketplace.card.install": "Installa",
   "marketplace.card.remove": "Rimuovi",
@@ -76,7 +63,6 @@ export const dict = {
   "marketplace.remove.confirm": "Vuoi davvero rimuovere questo {{type}}? Verrà rimosso dalla configurazione {{scope}}.",
   "marketplace.remove.cancel": "Annulla",
   "marketplace.remove.confirm.button": "Rimuovi",
-  "marketplace.tab.mcp": "MCP",
   "marketplace.search": "Cerca...",
   "marketplace.filter.all": "Tutti gli elementi",
   "marketplace.filter.notInstalled": "Non installati",
@@ -84,12 +70,10 @@ export const dict = {
   "marketplace.empty": "Nessun elemento trovato",
   "marketplace.empty.relevant": "Nessun elemento rilevante del marketplace trovato per questo spazio di lavoro.",
   "marketplace.badge.mcpServer": "Server MCP",
-  "marketplace.badge.mode": "Modalità",
   "marketplace.card.by": "di {{author}}",
   "marketplace.install.method": "Metodo di installazione",
   "marketplace.install.parameters": "Parametri",
   "marketplace.install.optional": "(opzionale)",
-  "marketplace.install.required": "{{name}} è obbligatorio",
   "marketplace.scope.project": "progetto",
   "marketplace.scope.global": "globale",
   "marketplace.remove.type.mcp": "server MCP",
@@ -129,8 +113,6 @@ export const dict = {
     "Disattiva gli snapshot di Kilo per questo progetto. Perderai annulla/ripeti sulle modifiche ai file fatte da Kilo, ma git continuerà a tracciare tutto.",
 
   "ui.messagePart.openInDiffViewer": "Apri nel visualizzatore diff",
-  "ui.messagePart.shell.command": "Comando",
-  "ui.messagePart.shell.output": "Output",
   "ui.messagePart.openInEditor": "Apri nell'editor",
 
   "ui.message.feedback.helpful": "È stato utile",

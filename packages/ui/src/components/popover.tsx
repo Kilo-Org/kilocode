@@ -160,7 +160,7 @@ export function Popover<T extends ValidComponent = "div">(props: PopoverProps<T>
         focus(node)
       }}
       onCloseAutoFocus={(event: Event) => {
-        if (state.dismiss === "outside") event.preventDefault()
+        if (opened() || state.dismiss === "outside") event.preventDefault() // kilocode_change
         setState("dismiss", null)
       }}
     >
