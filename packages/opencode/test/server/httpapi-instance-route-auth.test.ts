@@ -12,6 +12,10 @@ import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 // kilocode_change start - route auth tests do not need an indexing worker per temp project;
 // the worker boot races tmpdir teardown and flakes CI with EBADF/invalid handle errors
 process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// The PTY connect handler builds the full v2 location stack (FFF native index and git-status
+// watcher threads) just to 404 an unknown session; its native teardown races the tmpdir
+// deletion and flakes CI with EBADF on Linux and invalid handle on Windows.
+process.env.KILO_DISABLE_FFF = "true"
 // kilocode_change end
 
 function app(input: { password?: string; username?: string }) {
