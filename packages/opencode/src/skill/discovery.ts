@@ -71,8 +71,22 @@ export const layer: Layer.Layer<Service, never, FSUtil.Service | Path.Path | Htt
       )
       const list = data.skills.filter((skill) => skill.files.includes("SKILL.md"))
 
+      // kilocode_change start - remote index.json controls skill.name/file, so a crafted `../` could escape the
+      // cache and plant a SKILL.md in a trusted dir (e.g. ~/.agents/skills). Drop any skill whose paths escape it.
+      const rooted = (target: string) => {
+        const rel = path.relative(cache, target)
+        return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel)
+      }
+      const safe: typeof list = []
+      for (const skill of list) {
+        const root = path.join(cache, skill.name)
+        if (rooted(root) && skill.files.every((file) => rooted(path.join(root, file)))) safe.push(skill)
+        else yield* Effect.logWarning("skipping skill with unsafe path", { url: index, skill: skill.name })
+      }
+      // kilocode_change end
+
       const dirs = yield* Effect.forEach(
-        list,
+        safe, // kilocode_change - was `list`; drop skills whose paths escape the cache
         (skill) =>
           Effect.gen(function* () {
             const root = path.join(cache, skill.name)
