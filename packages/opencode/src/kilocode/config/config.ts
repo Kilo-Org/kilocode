@@ -112,6 +112,34 @@ export namespace KilocodeConfig {
     return stripGlobalIndexing(info)
   }
 
+  /**
+   * Merge discovered agent markdown without silently reclassifying an earlier
+   * config-defined subagent as a primary agent. A config-only custom agent has
+   * the normal default mode of "all", even when a later markdown definition
+   * shares its name.
+   */
+  export function mergeAgentMarkdown(
+    existing: Record<string, ConfigAgentV1.Info>,
+    incoming: Record<string, ConfigAgentV1.Info>,
+  ) {
+    const result = { ...existing }
+    for (const [name, agent] of Object.entries(incoming)) {
+      const current = result[name]
+      if (!current) {
+        result[name] = agent
+        continue
+      }
+
+      if (agent.mode === "primary" && current.mode !== "primary") {
+        result[name] = mergeDeep(agent, { ...current, mode: current.mode ?? "all" })
+        continue
+      }
+
+      result[name] = mergeDeep(current, agent)
+    }
+    return result
+  }
+
   export function retireIndexingFlag(info: Record<string, unknown>, source: string) {
     if (!isRecord(info.experimental) || !("semantic_indexing" in info.experimental)) return info
     const experimental = { ...info.experimental }

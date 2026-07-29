@@ -758,11 +758,11 @@ export const layer = Layer.effect(
             result.command ?? {},
             yield* Effect.promise(() => ConfigCommand.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.load(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
-          result.agent = mergeDeep(
+          result.agent = KilocodeConfig.mergeAgentMarkdown(
             result.agent ?? {},
             yield* Effect.promise(() => ConfigAgent.loadMode(dir, warnings, dirTrusted, dirFileScope, dirSourceScope)),
           )
