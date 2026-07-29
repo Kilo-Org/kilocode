@@ -2,6 +2,7 @@ package ai.kilocode.client.agentManager
 
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.WorktreeSessionFileType
+import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.ensureWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.unregisterWorktreeSessionEditorKind
 import ai.kilocode.client.agentManager.worktree.worktreeSessionParams
@@ -15,6 +16,14 @@ import com.intellij.openapi.vfs.VirtualFilePathWrapper
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 
 class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
+    override fun tearDown() {
+        try {
+            service<WorktreeNameCache>().clear()
+        } finally {
+            super.tearDown()
+        }
+    }
+
     fun `test worktree session params use only the worktree path`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         val params = worktreeSessionParams(item)
@@ -41,5 +50,12 @@ class WorktreeSessionEditorKindTest : BasePlatformTestCase() {
         assertNull(service<KiloEditorKindRegistry>().get(WorktreeSessionEditorKind.ID))
         assertNull(service<KiloVirtualFileKindRegistry>().get(WorktreeSessionEditorKind.ID))
         assertNull(fs.findOrCreateFile(path))
+    }
+
+    fun `test worktree session title uses cached label`() {
+        val path = "/repo/.kilo/worktrees/feature-x"
+        service<WorktreeNameCache>().put(path, "Feature Label")
+
+        assertEquals("Feature Label", WorktreeSessionEditorKind.title(mapOf("path" to path)))
     }
 }

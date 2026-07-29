@@ -89,6 +89,33 @@ internal class ActiveList(
     }
 
     @RequiresEdt
+    fun editName(anchor: RelativePoint, opts: ActiveListEditOptions, commit: (String) -> Unit) {
+        trackBalloon(showActiveListEditPopup(anchor, opts, commit))
+    }
+
+    @RequiresEdt
+    fun rename(
+        key: String,
+        cell: String? = null,
+        current: (String) -> String?,
+        commit: (String, String) -> Unit,
+    ) {
+        if (!select(key)) return
+        val value = current(key) ?: return
+        editName(point(key, cell), ActiveListEditOptions(value)) { name -> commit(key, name) }
+    }
+
+    @RequiresEdt
+    fun renameSelected(current: (String) -> String?, commit: (String, String) -> Unit): Boolean {
+        for (key in selectedKeys()) {
+            if (current(key) == null) continue
+            rename(key, null, current, commit)
+            return true
+        }
+        return false
+    }
+
+    @RequiresEdt
     fun setBusy(value: Boolean) {
         search?.isEnabled = !value
         search?.textEditor?.isEnabled = !value

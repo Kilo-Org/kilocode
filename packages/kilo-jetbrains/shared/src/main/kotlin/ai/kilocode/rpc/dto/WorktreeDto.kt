@@ -40,3 +40,9 @@ data class RemoveWorktreeResultDto(
     val error: String? = null,
     val locked: Boolean = false, // removal was blocked by a worktree lock; retry with force
 )
+
+@Serializable
+data class RenameWorktreeResultDto(
+    val worktree: WorktreeDto? = null,
+    val error: String? = null,
+)

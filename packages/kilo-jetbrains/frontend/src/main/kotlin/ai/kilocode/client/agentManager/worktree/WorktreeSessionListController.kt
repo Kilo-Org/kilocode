@@ -6,6 +6,7 @@ import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.SessionDto
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.ui.CollectionListModel
+import com.intellij.util.concurrency.annotations.RequiresEdt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -74,6 +75,40 @@ class WorktreeSessionListController(
         }
     }
 
+    @RequiresEdt
+    fun rename(id: String, title: String, done: (Boolean, String?) -> Unit) {
+        val name = title.trim()
+        if (id.isBlank()) return edt { done(false, "Missing session id") }
+        if (name.isBlank()) return edt { done(false, "Missing session title") }
+        val prior = (0 until model.size)
+            .map { model.getElementAt(it) }
+            .firstOrNull { it.id == id }
+            ?: return edt { done(false, "Session not found") }
+        val optimistic = prior.copy(title = name)
+        edt {
+            index(id).takeIf { it >= 0 }?.let { model.setElementAt(optimistic, it) }
+        }
+        cs.launch {
+            val result = runCatching { service.renameSession(id, dir, name) }
+            val updated = result.getOrNull()
+            if (updated != null) {
+                edt {
+                    index(id).takeIf { it >= 0 }?.let { model.setElementAt(updated, it) }
+                    capture("Worktree Session Renamed", mapOf("sessionId" to id))
+                    done(true, null)
+                }
+                return@launch
+            }
+            val err = result.exceptionOrNull()
+            LOG.warn("worktree session rename failed id=$id dir=$dir message=${err?.message}", err)
+            edt {
+                index(id).takeIf { it >= 0 }?.let { model.setElementAt(prior, it) }
+                done(false, err?.message)
+            }
+            reload()
+        }
+    }
+
     companion object {
         private val LOG = KiloLog.create(WorktreeSessionListController::class.java)
     }
@@ -84,6 +119,10 @@ class WorktreeSessionListController(
         } catch (e: Exception) {
             LOG.warn("worktree session telemetry failed event=$event message=${e.message}", e)
         }
+    }
+
+    private fun index(id: String): Int {
+        return (0 until model.size).firstOrNull { model.getElementAt(it).id == id } ?: -1
     }
 }
 

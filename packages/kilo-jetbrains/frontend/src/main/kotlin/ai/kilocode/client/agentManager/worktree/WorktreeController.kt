@@ -5,6 +5,7 @@ import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.ui.CollectionListModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -54,6 +55,7 @@ class WorktreeController(
                 val extra = result.worktrees.filter { !it.main }
                 val rows = extra + pending.values
                 model.replaceAll(rows)
+                cache().putAll(rows)
                 defaultBranch = main?.branch?.takeIf { it.isNotBlank() && it != "(detached)" } ?: "main"
                 val worktreeBranches = rows.mapTo(HashSet()) { it.branch }
                 branches = branchInfo.branches.filter { it !in worktreeBranches }
@@ -85,6 +87,7 @@ class WorktreeController(
                 val idx = model.getElementIndex(temp)
                 if (created != null) {
                     if (idx >= 0) model.setElementAt(created, idx) else model.add(created)
+                    cache().put(created)
                     onSelect?.invoke(created.id)
                     telemetry("Worktree Created", mapOf("branch" to branch))
                     return@edt
@@ -136,9 +139,52 @@ class WorktreeController(
         }
     }
 
+    fun rename(
+        dto: WorktreeDto,
+        name: String,
+        onSuccess: (WorktreeDto) -> Unit = {},
+        onFailure: (String?) -> Unit = {},
+    ) {
+        val title = name.trim()
+        if (title.isEmpty() || title == dto.name) return
+        edt {
+            val idx = index(dto.id)
+            if (idx < 0) return@edt
+            val row = dto.copy(name = title)
+            model.setElementAt(row, idx)
+            cache().put(row)
+        }
+        cs.launch {
+            val result = service.rename(directory, dto.path, title)
+            edt {
+                val updated = result.worktree
+                if (updated != null) {
+                    index(dto.id).takeIf { it >= 0 }?.let { model.setElementAt(updated, it) }
+                    cache().put(updated)
+                    telemetry("Worktree Renamed", mapOf("path" to dto.path))
+                    onSuccess(updated)
+                    return@edt
+                }
+                index(dto.id).takeIf { it >= 0 }?.let { model.setElementAt(dto, it) }
+                cache().put(dto)
+                telemetry("Worktree Rename Failed", mapOf("path" to dto.path))
+                onFailure(result.error)
+                reload()
+            }
+        }
+    }
+
     private fun refresh(dto: WorktreeDto) {
         val idx = model.getElementIndex(dto)
         if (idx >= 0) model.setElementAt(dto, idx)
+    }
+
+    private fun index(id: String): Int {
+        return (0 until model.size).firstOrNull { model.getElementAt(it).id == id } ?: -1
+    }
+
+    private fun cache(): WorktreeNameCache {
+        return ApplicationManager.getApplication().service()
     }
 }
 

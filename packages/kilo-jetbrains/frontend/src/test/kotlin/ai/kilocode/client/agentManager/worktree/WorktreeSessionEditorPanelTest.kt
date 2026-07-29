@@ -75,6 +75,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
             assertEquals(0.25f, splitter.proportion, 0.01f)
             val buttons = components(panel).filterIsInstance<ActionButton>().mapNotNull { it.presentation.text }
             assertTrue(buttons.contains("New session"))
+            assertTrue(buttons.contains("Rename session"))
             assertTrue(buttons.contains("Delete session"))
             assertNotNull(UIUtil.findComponentOfType(panel, JBList::class.java))
             assertNull(UIUtil.findComponentOfType(panel, SearchTextField::class.java))
@@ -278,12 +279,33 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         flush()
 
         edt { panel.selectSessions(listOf("ses_1")) }
-        assertEquals(listOf(DELETE_CELL), row("ses_1").cells.map { it.id })
+        assertEquals(listOf(RENAME_CELL, DELETE_CELL), row("ses_1").cells.map { it.id })
 
         edt { panel.selectSessions(listOf("ses_1", "ses_2")) }
 
         assertTrue(row("ses_1").cells.isEmpty())
         assertTrue(row("ses_2").cells.isEmpty())
+    }
+
+    fun `test multi select rename resets to first visible selected session`() {
+        val edits = mutableListOf<String>()
+        val view = edt {
+            WorktreeSessionEditorPanel(testRootDisposable, manager, controller, workspace, edit = { _, opts, _ -> edits += opts.value })
+        }
+        rpc.listed += session("ses_1", 1.0)
+        rpc.listed += session("ses_2", 2.0)
+        edt { controller.reload() }
+        flush()
+
+        edt {
+            view.selectSessions(listOf("ses_1", "ses_2"))
+            view.renameSelected()
+        }
+
+        val list = edt { UIUtil.findComponentOfType(view, JBList::class.java)!! }
+        assertEquals(listOf("Session ses_2"), edits)
+        assertEquals(listOf(0), edt { list.selectedIndices.toList() })
+        assertTrue(manager.renamed.isEmpty())
     }
 
     fun `test delete action skips deleting selected sessions`() {
@@ -385,6 +407,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         val refs = mutableListOf<String>()
         val focuses = mutableListOf<Boolean>()
         val deleted = mutableListOf<String>()
+        val renamed = mutableListOf<Pair<String, String>>()
 
         override fun hasPendingNew(): Boolean = pending
 
@@ -403,6 +426,10 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
         override fun deleteSessions(ids: List<String>) {
             deleted += ids
+        }
+
+        override fun renameSession(id: String, title: String) {
+            renamed += id to title
         }
     }
 
@@ -425,6 +452,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     private companion object {
         const val DIR = "/repo/.kilo/worktrees/feature-x"
+        const val RENAME_CELL = "rename"
         const val DELETE_CELL = "delete"
     }
 }

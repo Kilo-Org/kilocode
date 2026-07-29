@@ -216,8 +216,44 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(listOf("Failed to delete session \"Session ses_1\"" to "delete unavailable"), notified)
     }
 
-    private fun manager(focus: Boolean = false): WorktreeSessionEditorManager {
+    fun `test rename updates session title optimistically and keeps success`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
         val controller = WorktreeSessionListController(sessions, DIR, coroutines.scope)
+        val manager = manager(controller = controller)
+        edt { manager.start() }
+        flush()
+
+        edt { manager.renameSession(session.id, "Renamed Session") }
+
+        assertEquals("Renamed Session", edt { controller.model.getElementAt(0).title })
+        flush()
+
+        assertEquals(listOf(Triple(session.id, DIR, "Renamed Session")), rpc.renames)
+        assertEquals("Renamed Session", edt { controller.model.getElementAt(0).title })
+        assertTrue(notified.isEmpty())
+    }
+
+    fun `test rename failure reverts session title and notifies`() {
+        val session = session("ses_1", updated = 1.0)
+        rpc.listed += session
+        rpc.renameThrows = IllegalStateException("rename unavailable")
+        val controller = WorktreeSessionListController(sessions, DIR, coroutines.scope)
+        val manager = manager(controller = controller)
+        edt { manager.start() }
+        flush()
+
+        edt { manager.renameSession(session.id, "Renamed Session") }
+        flush()
+
+        assertEquals("Session ses_1", edt { controller.model.getElementAt(0).title })
+        assertEquals(listOf("Failed to rename session \"Renamed Session\"" to "rename unavailable"), notified)
+    }
+
+    private fun manager(
+        focus: Boolean = false,
+        controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope),
+    ): WorktreeSessionEditorManager {
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
             project = project,

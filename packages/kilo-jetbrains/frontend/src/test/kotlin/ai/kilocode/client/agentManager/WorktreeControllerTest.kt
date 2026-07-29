@@ -3,13 +3,16 @@ package ai.kilocode.client.agentManager
 import ai.kilocode.client.agentManager.worktree.WorktreeIcons
 import ai.kilocode.client.agentManager.worktree.KiloWorktreeService
 import ai.kilocode.client.agentManager.worktree.WorktreeController
+import ai.kilocode.client.agentManager.worktree.WorktreeNameCache
 import ai.kilocode.client.agentManager.worktree.WorktreeNames
 import ai.kilocode.client.testing.FakeWorktreeRpcApi
 import ai.kilocode.client.testing.TestCoroutines
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CompletableDeferred
@@ -29,6 +32,7 @@ class WorktreeControllerTest : BasePlatformTestCase() {
 
     override fun tearDown() {
         try {
+            cache().clear()
             coroutines.close(::pump)
         } finally {
             super.tearDown()
@@ -173,6 +177,48 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         assertEquals(0, controller.model.size)
     }
 
+    fun `test rename optimistically updates and keeps successful result`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val gate = CompletableDeferred<Unit>()
+        rpc.listed += item
+        rpc.beforeRename = { gate.await() }
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        ApplicationManager.getApplication().invokeAndWait { controller.rename(controller.model.getElementAt(0), "Feature Label") }
+
+        assertEquals("Feature Label", controller.model.getElementAt(0).name)
+        assertEquals("Feature Label", cache().get(item.path))
+        assertTrue(rpc.renames.isEmpty())
+
+        gate.complete(Unit)
+        flush()
+
+        assertEquals(listOf(Triple("/test", item.path, "Feature Label")), rpc.renames.toList())
+        assertEquals("Feature Label", controller.model.getElementAt(0).name)
+        assertEquals("Feature Label", cache().get(item.path))
+    }
+
+    fun `test rename failure reverts row and invokes callback`() {
+        val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        rpc.listed += item
+        rpc.renameResult = { _, _ -> RenameWorktreeResultDto(error = "cannot rename") }
+        val failures = mutableListOf<String?>()
+        val controller = controller()
+        controller.reload()
+        flush()
+
+        ApplicationManager.getApplication().invokeAndWait {
+            controller.rename(controller.model.getElementAt(0), "Feature Label", onFailure = { failures += it })
+        }
+        flush()
+
+        assertEquals("feature-x", controller.model.getElementAt(0).name)
+        assertEquals(listOf("cannot rename"), failures)
+        assertEquals("feature-x", cache().get(item.path))
+    }
+
     fun `test reload derives default branch from the main worktree`() {
         rpc.listed += WorktreeDto("/repo", "repo", "trunk", "/repo", main = true)
         rpc.listed += WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
@@ -260,6 +306,8 @@ class WorktreeControllerTest : BasePlatformTestCase() {
         WorktreeController(service, "/test", coroutines.scope)
 
     private fun flush() = coroutines.drain(::pump)
+
+    private fun cache(): WorktreeNameCache = ApplicationManager.getApplication().service()
 
     private fun pump() {
         ApplicationManager.getApplication().invokeAndWait { UIUtil.dispatchAllInvocationEvents() }

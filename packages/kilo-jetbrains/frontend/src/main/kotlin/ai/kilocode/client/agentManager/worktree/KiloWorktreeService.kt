@@ -7,6 +7,7 @@ import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeListDto
 import com.intellij.openapi.components.Service
@@ -57,5 +58,12 @@ class KiloWorktreeService internal constructor(
     } catch (e: Exception) {
         LOG.warn("worktree remove failed for $path", e)
         RemoveWorktreeResultDto(error = e.message ?: "worktree remove failed")
+    }
+
+    suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto = try {
+        call { rename(directory, path, name) }
+    } catch (e: Exception) {
+        LOG.warn("worktree rename failed for $path", e)
+        RenameWorktreeResultDto(error = e.message ?: "worktree rename failed")
     }
 }

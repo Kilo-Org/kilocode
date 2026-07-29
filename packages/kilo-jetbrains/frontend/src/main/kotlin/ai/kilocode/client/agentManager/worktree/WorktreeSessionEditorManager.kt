@@ -138,6 +138,18 @@ open class WorktreeSessionEditorManager(
     }
 
     @RequiresEdt
+    open fun renameSession(id: String, title: String) {
+        val name = title.trim()
+        if (id == NEW || name.isBlank()) return
+        list.rename(id, name) { ok, err ->
+            onListChanged?.invoke()
+            if (ok) return@rename
+            notify(KiloBundle.message("worktree.session.rename.failed.title", name), err)
+        }
+        onListChanged?.invoke()
+    }
+
+    @RequiresEdt
     override fun present(ui: SessionUi?) {
         right.removeAll()
         if (ui != null) right.add(ui, BorderLayout.CENTER)

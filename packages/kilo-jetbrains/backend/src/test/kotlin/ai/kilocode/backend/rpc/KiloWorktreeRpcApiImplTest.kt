@@ -1,6 +1,7 @@
 package ai.kilocode.backend.rpc
 
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
+import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import kotlinx.coroutines.runBlocking
@@ -114,6 +115,30 @@ class KiloWorktreeRpcApiImplTest {
     }
 
     @Test
+    fun `overlayWorktreeNames applies labels only to non-main worktrees`() {
+        val main = WorktreeDto("/repo", "repo", "main", "/repo", main = true)
+        val child = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+
+        val out = overlayWorktreeNames(listOf(main, child), mapOf(main.path to "Main Label", child.path to "Feature Label"))
+
+        assertEquals("repo", out[0].name)
+        assertEquals("Feature Label", out[1].name)
+    }
+
+    @Test
+    fun `worktree names store round trips and tolerates missing or corrupt files`() {
+        val file = repo.resolve(".kilo").resolve("worktree-names.json")
+
+        assertTrue(readWorktreeNames(file).isEmpty())
+        writeWorktreeNames(file, mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label", "/blank" to ""))
+
+        assertEquals(mapOf("/repo/.kilo/worktrees/feature-x" to "Feature Label"), readWorktreeNames(file))
+
+        Files.writeString(file, "not json")
+        assertTrue(readWorktreeNames(file).isEmpty())
+    }
+
+    @Test
     fun `remove reports locked and force removes a locked worktree`() = runBlocking {
         initRepo()
         val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
@@ -159,6 +184,20 @@ class KiloWorktreeRpcApiImplTest {
         assertFalse(Files.exists(dir), "worktree directory should be removed")
         val after = api.list(repo.toString()).worktrees
         assertFalse(after.any { it.branch == "feature/x" }, "removed worktree should be gone")
+    }
+
+    @Test
+    fun `rename persists a custom worktree name and list overlays it`() = runBlocking {
+        initRepo()
+        val created = assertNotNull(api.create(repo.toString(), CreateWorktreeRequestDto("feature/x")).worktree)
+
+        val renamed = api.rename(repo.toString(), created.path, "Feature Label")
+
+        assertNull(renamed.error)
+        assertEquals("Feature Label", assertNotNull(renamed.worktree).name)
+        val listed = api.list(repo.toString()).worktrees.single { it.path == created.path }
+        assertEquals("Feature Label", listed.name)
+        assertEquals(mapOf(created.path to "Feature Label"), readWorktreeNames(repo.resolve(".kilo").resolve("worktree-names.json")))
     }
 
     @Test

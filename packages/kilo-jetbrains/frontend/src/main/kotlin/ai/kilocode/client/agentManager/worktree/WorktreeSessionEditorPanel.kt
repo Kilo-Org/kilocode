@@ -14,6 +14,7 @@ import ai.kilocode.client.ui.list.ActiveListBadge
 import ai.kilocode.client.ui.list.ActiveListCell
 import ai.kilocode.client.ui.list.ActiveListConfig
 import ai.kilocode.client.ui.list.ActiveListDeleteOptions
+import ai.kilocode.client.ui.list.ActiveListEditOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListRowHeight
 import ai.kilocode.client.ui.list.ActiveListSelection
@@ -50,8 +51,10 @@ class WorktreeSessionEditorPanel(
     private val controller: WorktreeSessionListController,
     private val worktree: ai.kilocode.client.app.Workspace,
     private val confirm: ((RelativePoint, ActiveListDeleteOptions, () -> Unit) -> Unit)? = null,
+    private val edit: ((RelativePoint, ActiveListEditOptions, (String) -> Unit) -> Unit)? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val add = NewAction()
+    private val rename = RenameAction()
     private val delete = DeleteAction()
     private val list = ActiveList(
         KiloBundle.message("worktree.session.list.empty"),
@@ -61,7 +64,10 @@ class WorktreeSessionEditorPanel(
             selection = ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
         ),
         showSearch = false,
-        onCell = { key, id -> if (id == DELETE_CELL) confirmDelete(listOf(key), DELETE_CELL) },
+        onCell = { key, id ->
+            if (id == RENAME_CELL) beginRename(key, RENAME_CELL)
+            if (id == DELETE_CELL) confirmDelete(listOf(key), DELETE_CELL)
+        },
         onOpen = { row, focus -> open(row, focus) },
         onSelect = { updateActions() },
     )
@@ -81,6 +87,9 @@ class WorktreeSessionEditorPanel(
         bindTheme()
         manager.onPresent = { key -> select(key) }
         manager.onListChanged = { sync() }
+        ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
+            rename.registerCustomShortcutSet(set, list, this)
+        }
         addHierarchyListener {
             if (isShowing) start()
         }
@@ -107,6 +116,12 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
+    fun renameSelected() {
+        val key = selectedKeys().firstOrNull { it != SessionHost.NEW && it !in manager.deleting() } ?: return
+        beginRename(key)
+    }
+
+    @RequiresEdt
     private fun confirmDelete(ids: List<String>, cell: String? = null) {
         val active = ids.filter { it != SessionHost.NEW && it !in manager.deleting() }.distinct()
         if (active.isEmpty()) return
@@ -126,6 +141,19 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
+    private fun beginRename(key: String, cell: String? = null) {
+        if (key == SessionHost.NEW || key in manager.deleting()) return
+        val value = title(key)
+        if (!list.select(key)) return
+        val handler = edit ?: { anchor: RelativePoint, opts: ActiveListEditOptions, commit: (String) -> Unit ->
+            list.editName(anchor, opts, commit)
+        }
+        handler(list.point(key, cell), ActiveListEditOptions(value)) { name ->
+            manager.renameSession(key, name)
+        }
+    }
+
+    @RequiresEdt
     private fun start() {
         if (started) return
         started = true
@@ -136,7 +164,7 @@ class WorktreeSessionEditorPanel(
     private fun toolbar(): JComponent {
         val toolbar = ActionManager.getInstance().createActionToolbar(
             ActionPlaces.TOOLBAR,
-            DefaultActionGroup(add, delete),
+            DefaultActionGroup(add, rename, delete),
             true,
         )
         toolbar.targetComponent = this
@@ -250,6 +278,22 @@ class WorktreeSessionEditorPanel(
         }
     }
 
+    private inner class RenameAction : AnAction(
+        KiloBundle.message("worktree.session.rename.action"),
+        null,
+        AllIcons.Actions.Edit,
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = selectedKeys().any { it != SessionHost.NEW && it !in manager.deleting() }
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            renameSelected()
+        }
+    }
+
     private object NewRow : ActiveListItem {
         override val key: String get() = SessionHost.NEW
         override val title: String get() = KiloBundle.message("worktree.session.new")
@@ -274,16 +318,25 @@ class WorktreeSessionEditorPanel(
         override val cells: List<ActiveListCell>
             get() {
                 if (selectedKeys().size != 1) return emptyList()
-                return listOf(ActiveListCell(
-                    DELETE_CELL,
-                    KiloBundle.message("worktree.session.delete.action"),
-                    icon = AllIcons.Actions.GC,
-                    iconOnly = true,
-                ))
+                return listOf(
+                    ActiveListCell(
+                        RENAME_CELL,
+                        KiloBundle.message("worktree.session.rename.action"),
+                        icon = AllIcons.Actions.Edit,
+                        iconOnly = true,
+                    ),
+                    ActiveListCell(
+                        DELETE_CELL,
+                        KiloBundle.message("worktree.session.delete.action"),
+                        icon = AllIcons.Actions.GC,
+                        iconOnly = true,
+                    ),
+                )
             }
     }
 
     private companion object {
+        const val RENAME_CELL = "rename"
         const val DELETE_CELL = "delete"
     }
 }

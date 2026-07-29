@@ -4,6 +4,7 @@ import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
@@ -20,12 +21,22 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
     val creates = CopyOnWriteArrayList<CreateWorktreeRequestDto>()
     val removes = CopyOnWriteArrayList<Triple<String, String, String?>>()
     val removeForces = CopyOnWriteArrayList<Boolean>()
+    val renames = CopyOnWriteArrayList<Triple<String, String, String>>()
     var beforeCreate: suspend () -> Unit = {}
     var beforeRemove: suspend () -> Unit = {}
+    var beforeRename: suspend () -> Unit = {}
     var createResult: (CreateWorktreeRequestDto) -> CreateWorktreeResultDto = { req ->
         CreateWorktreeResultDto(WorktreeDto(req.branch, req.branch, req.branch, req.branch))
     }
     var removeResult: (String, String?, Boolean) -> RemoveWorktreeResultDto = { _, _, _ -> RemoveWorktreeResultDto(ok = true) }
+    var renameResult: (String, String) -> RenameWorktreeResultDto = { path, name ->
+        val idx = listed.indexOfFirst { it.path == path }
+        if (idx < 0) RenameWorktreeResultDto(error = "missing") else {
+            val item = listed[idx].copy(name = name)
+            listed[idx] = item
+            RenameWorktreeResultDto(worktree = item)
+        }
+    }
 
     override suspend fun list(directory: String): WorktreeListDto {
         assertNotEdt("list")
@@ -50,5 +61,12 @@ class FakeWorktreeRpcApi : KiloWorktreeRpcApi {
         removeForces.add(force)
         beforeRemove()
         return removeResult(path, branch, force)
+    }
+
+    override suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto {
+        assertNotEdt("rename")
+        renames.add(Triple(directory, path, name))
+        beforeRename()
+        return renameResult(path, name)
     }
 }

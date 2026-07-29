@@ -5,6 +5,7 @@ import ai.kilocode.rpc.KiloWorktreeRpcApi
 import ai.kilocode.rpc.dto.CreateWorktreeRequestDto
 import ai.kilocode.rpc.dto.CreateWorktreeResultDto
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
+import ai.kilocode.rpc.dto.RenameWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeBranchesDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import ai.kilocode.rpc.dto.WorktreeListDto
@@ -12,19 +13,27 @@ import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
 
     companion object {
-        private val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
+        internal val LOG = KiloLog.create(KiloWorktreeRpcApiImpl::class.java)
     }
 
     override suspend fun list(directory: String): WorktreeListDto = withContext(Dispatchers.IO) {
         val base = Path.of(directory).normalize()
         val res = runGit(base, "worktree", "list", "--porcelain")
-        if (!res.ok) WorktreeListDto() else WorktreeListDto(managedWorktrees(parseWorktreeList(res.stdout)))
+        if (!res.ok) return@withContext WorktreeListDto()
+        val items = managedWorktrees(parseWorktreeList(res.stdout))
+        val store = worktreeNameStore(items)
+        val names = store?.let(::readWorktreeNames).orEmpty()
+        WorktreeListDto(overlayWorktreeNames(items, names))
     }
 
     override suspend fun listBranches(directory: String): WorktreeBranchesDto = withContext(Dispatchers.IO) {
@@ -53,8 +62,9 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
                 CreateWorktreeResultDto(error = res.stderr.ifBlank { "git worktree add failed" })
             } else {
                 LOG.info("worktree created: branch=$branch dir=$dir")
+                val path = dir.toRealPath().toString()
                 CreateWorktreeResultDto(
-                    worktree = WorktreeDto(dir.toString(), dir.fileName.toString(), branch, dir.toString()),
+                    worktree = WorktreeDto(path, dir.fileName.toString(), branch, path),
                 )
             }
         }
@@ -87,6 +97,29 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
             RemoveWorktreeResultDto(ok = true)
         }
 
+    override suspend fun rename(directory: String, path: String, name: String): RenameWorktreeResultDto =
+        withContext(Dispatchers.IO) {
+            val title = name.trim()
+            if (title.isEmpty()) return@withContext RenameWorktreeResultDto(error = "Name is required")
+            val base = Path.of(directory).normalize()
+            val res = runGit(base, "worktree", "list", "--porcelain")
+            if (!res.ok) return@withContext RenameWorktreeResultDto(error = res.stderr.ifBlank { "git worktree list failed" })
+            val items = managedWorktrees(parseWorktreeList(res.stdout))
+            val store = worktreeNameStore(items)
+                ?: return@withContext RenameWorktreeResultDto(error = "Main worktree not found")
+            val target = items.firstOrNull { samePath(it.path, path) && !it.main }
+                ?: return@withContext RenameWorktreeResultDto(error = "Worktree not found")
+            return@withContext try {
+                val names = readWorktreeNames(store).toMutableMap()
+                names[target.path] = title
+                writeWorktreeNames(store, names)
+                RenameWorktreeResultDto(worktree = target.copy(name = title))
+            } catch (e: Exception) {
+                LOG.warn("worktree rename failed: path=$path message=${e.message}", e)
+                RenameWorktreeResultDto(error = e.message ?: "worktree rename failed")
+            }
+        }
+
     private data class GitResult(val exit: Int, val stdout: String, val stderr: String) {
         val ok get() = exit == 0
     }
@@ -101,6 +134,10 @@ class KiloWorktreeRpcApiImpl : KiloWorktreeRpcApi {
         }
     }
 }
+
+private val json = Json { prettyPrint = true }
+private val codec = MapSerializer(String.serializer(), String.serializer())
+private const val WORKTREE_NAMES_FILE = "worktree-names.json"
 
 /** Parse `git worktree list --porcelain`. First entry is the main working tree. */
 internal fun parseWorktreeList(raw: String): List<WorktreeDto> {
@@ -144,4 +181,54 @@ internal fun managedWorktrees(items: List<WorktreeDto>): List<WorktreeDto> {
         val path = Path.of(item.path).normalize()
         path.startsWith(storage) && path != storage
     }
+}
+
+internal fun overlayWorktreeNames(items: List<WorktreeDto>, names: Map<String, String>): List<WorktreeDto> {
+    if (names.isEmpty()) return items
+    return items.map { item ->
+        val name = names[item.path]?.trim()
+        if (item.main || name.isNullOrEmpty()) item else item.copy(name = name)
+    }
+}
+
+internal fun readWorktreeNames(file: Path): Map<String, String> {
+    if (!Files.exists(file)) return emptyMap()
+    return try {
+        val raw = Files.readString(file)
+        json.decodeFromString(codec, raw)
+            .filterValues { it.isNotBlank() }
+    } catch (e: Exception) {
+        KiloWorktreeRpcApiImpl.LOG.warn("worktree names read failed: file=$file message=${e.message}", e)
+        emptyMap()
+    }
+}
+
+internal fun writeWorktreeNames(file: Path, names: Map<String, String>) {
+    Files.createDirectories(file.parent)
+    val data = names.filterValues { it.isNotBlank() }
+    val tmp = Files.createTempFile(file.parent, ".worktree-names", ".tmp")
+    try {
+        Files.writeString(tmp, json.encodeToString(codec, data))
+        try {
+            Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: Exception) {
+            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING)
+        }
+    } finally {
+        Files.deleteIfExists(tmp)
+    }
+}
+
+private fun worktreeNameStore(items: List<WorktreeDto>): Path? {
+    val main = items.firstOrNull { it.main } ?: return null
+    return Path.of(main.path).normalize().resolve(".kilo").resolve(WORKTREE_NAMES_FILE)
+}
+
+private fun samePath(a: String, b: String): Boolean {
+    return realPath(a) == realPath(b)
+}
+
+private fun realPath(path: String): Path {
+    val file = Path.of(path).normalize()
+    return if (Files.exists(file)) file.toRealPath() else file
 }

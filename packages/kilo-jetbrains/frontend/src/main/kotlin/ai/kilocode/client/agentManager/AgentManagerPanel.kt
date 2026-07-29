@@ -21,7 +21,10 @@ import com.intellij.icons.AllIcons
 import com.intellij.ide.DeleteProvider
 import com.intellij.ide.ui.LafManagerListener
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUpdateThread
+import com.intellij.openapi.actionSystem.AnAction
+import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.PlatformDataKeys
@@ -47,13 +50,14 @@ class AgentManagerPanel(
     private val project: Project? = null,
 ) : BorderLayoutPanel(), Disposable, UiDataProvider {
     private val provider = WorktreeDeleteProvider()
+    private val edit = RenameAction()
     private val list = ActiveList(
         KiloBundle.message("worktree.empty"),
         showSearch = false,
         onCell = { key, id ->
-            if (id != DELETE_CELL) return@ActiveList
             val item = item(key) ?: return@ActiveList
-            if (deletable(item)) showDeletePopup(item, id)
+            if (id == RENAME_CELL && renameable(item)) beginRename(item, id)
+            if (id == DELETE_CELL && deletable(item)) showDeletePopup(item, id)
         },
         onOpen = { row, focus ->
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
@@ -76,6 +80,9 @@ class AgentManagerPanel(
         }
         controller.onCreateFailure = { err -> notifyCreateFailed(err) }
         controller.onRemoveSuccess = { item -> close(item) }
+        ActionManager.getInstance().getAction("RenameElement")?.shortcutSet?.let { set ->
+            edit.registerCustomShortcutSet(set, list, this)
+        }
     }
 
     val component: JComponent get() = this
@@ -96,6 +103,28 @@ class AgentManagerPanel(
 
     private fun remove(item: WorktreeDto, force: Boolean) {
         controller.remove(item, force, onFailure = { result -> notifyFailed(item, result, force) })
+    }
+
+    private fun beginRename(item: WorktreeDto, cell: String? = null) {
+        list.rename(
+            item.id,
+            cell,
+            current = { key -> item(key)?.takeIf(::renameable)?.name },
+            commit = { key, name -> item(key)?.takeIf(::renameable)?.let { renameWorktree(it, name) } },
+        )
+    }
+
+    private fun renameWorktree(item: WorktreeDto, name: String) {
+        controller.rename(
+            item,
+            name,
+            onSuccess = { updated ->
+                project?.service<KiloVfsManager>()?.updatePresentation(WorktreeSessionEditorKind.ID, worktreeSessionParams(updated))
+            },
+            onFailure = { err ->
+                KiloNotifications.error(project, KiloBundle.message("worktree.rename.failed.title", name), err)
+            },
+        )
     }
 
     private fun open(item: WorktreeDto, focus: Boolean) {
@@ -130,6 +159,11 @@ class AgentManagerPanel(
     private fun deletable(item: WorktreeDto?): Boolean {
         if (!worktreeDeletable(item, item?.id?.let(controller::isPending) == true)) return false
         return item?.id?.let(controller::isDeleting) != true
+    }
+
+    private fun renameable(item: WorktreeDto?): Boolean {
+        if (item == null || item.main) return false
+        return !controller.isPending(item.id) && !controller.isDeleting(item.id)
     }
 
     /**
@@ -222,6 +256,22 @@ class AgentManagerPanel(
         }
     }
 
+    private inner class RenameAction : AnAction(
+        KiloBundle.message("worktree.rename.action"),
+        null,
+        AllIcons.Actions.Edit,
+    ) {
+        override fun getActionUpdateThread(): ActionUpdateThread = ActionUpdateThread.EDT
+
+        override fun update(e: AnActionEvent) {
+            e.presentation.isEnabled = renameable(selectedRow()?.dto)
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            selectedRow()?.dto?.takeIf(::renameable)?.let { beginRename(it) }
+        }
+    }
+
     private data class WorktreeRow(val dto: WorktreeDto, val pending: Boolean, override val deleting: Boolean) : ActiveListItem {
         override val key: String get() = dto.id
         override val title: String get() = dto.name
@@ -230,15 +280,24 @@ class AgentManagerPanel(
         override val icon = WorktreeIcons.forRow(dto.locked, pending)
         override val search: String get() = listOfNotNull(dto.name, dto.branch, dto.path, dto.lockReason).joinToString(" ")
         override val cells: List<ActiveListCell>
-            get() = if (dto.main || pending) emptyList() else listOf(ActiveListCell(
-                DELETE_CELL,
-                KiloBundle.message("worktree.delete.action"),
-                icon = AllIcons.Actions.GC,
-                iconOnly = true,
-            ))
+            get() = if (dto.main || pending) emptyList() else listOf(
+                ActiveListCell(
+                    RENAME_CELL,
+                    KiloBundle.message("worktree.rename.action"),
+                    icon = AllIcons.Actions.Edit,
+                    iconOnly = true,
+                ),
+                ActiveListCell(
+                    DELETE_CELL,
+                    KiloBundle.message("worktree.delete.action"),
+                    icon = AllIcons.Actions.GC,
+                    iconOnly = true,
+                ),
+            )
     }
 
     private companion object {
+        const val RENAME_CELL = "rename"
         const val DELETE_CELL = "delete"
     }
 }
