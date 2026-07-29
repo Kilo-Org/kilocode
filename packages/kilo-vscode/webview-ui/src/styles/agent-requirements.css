@@ -72,10 +72,6 @@
   flex: 0 0 auto;
 }
 
-.agent-requirements-title-spinner {
-  flex: 0 0 auto;
-}
-
 [data-slot="agent-requirements-description"] {
   margin: 0;
   color: var(--text-weak-base, var(--vscode-descriptionForeground));
