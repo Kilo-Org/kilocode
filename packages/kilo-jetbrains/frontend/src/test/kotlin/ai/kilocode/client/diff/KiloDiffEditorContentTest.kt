@@ -2,11 +2,17 @@ package ai.kilocode.client.diff
 
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import java.awt.BorderLayout
 import java.awt.Component
 import java.awt.Container
@@ -18,7 +24,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test tree toolbar shows aggregate badge`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, files(), parent, "feature/test")
+            val view = view(files(), parent)
             val badges = components(view).filterIsInstance<DiffStatBadge>()
 
             assertTrue(badges.any { it.addedLabelForTest().text == "+5" && it.removedLabelForTest().text == "-4" })
@@ -30,7 +36,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test tree renderer shows compact row change badge`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, files(), parent, "feature/test")
+            val view = view(files(), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
             val badge = rowBadge(renderer(tree, leaf(tree)))
 
@@ -44,7 +50,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test row renderer places badge east of filename`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, files(), parent, "feature/test")
+            val view = view(files(), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
             val row = renderer(tree, leaf(tree)) as Container
             val layout = row.layout as BorderLayout
@@ -61,7 +67,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test row badge hidden when node has no changes`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, listOf(file("src/Empty.kt", 0, 0)), parent, "feature/test")
+            val view = view(listOf(file("src/Empty.kt", 0, 0)), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
             val badge = rowBadge(renderer(tree, leaf(tree)))
 
@@ -74,7 +80,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test tree expands all rows on show`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, files(), parent, "feature/test")
+            val view = view(files(), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
 
             assertEquals(4, tree.rowCount)
@@ -86,7 +92,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test tree paints tool window background`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, files(), parent, "feature/test")
+            val view = view(files(), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
             val scroll = SwingUtilities.getAncestorOfClass(JBScrollPane::class.java, tree) as JBScrollPane
             val row = (scroll.parent.layout as BorderLayout).getLayoutComponent(BorderLayout.NORTH) as Container
@@ -112,7 +118,7 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     fun `test row renderer reuses badge instance`() {
         val parent = Disposer.newDisposable()
         try {
-            val view = buildDiffEditor(project, files(), parent, "feature/test")
+            val view = view(files(), parent)
             val tree = components(view).filterIsInstance<Tree>().single()
             val leaf = leaf(tree)
             val first = renderer(tree, leaf)
@@ -129,6 +135,38 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         val request = diffRequest(project, file("src/App.kt", 1, 1), "feature/test")
 
         assertEquals("src/App.kt (feature/test)", request.title)
+    }
+
+    fun `test reload updates aggregate badge`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val editor = editor(files(), parent)
+
+            editor.applyFiles(listOf(file("src/App.kt", 7, 6)), "feature/test")
+            val badges = components(editor.component).filterIsInstance<DiffStatBadge>()
+
+            assertTrue(badges.any { it.addedLabelForTest().text == "+7" && it.removedLabelForTest().text == "-6" })
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test reload preserves selected file`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val editor = editor(files(), parent)
+            val tree = components(editor.component).filterIsInstance<Tree>().single()
+            tree.selectionPath = TreePath(leaf(tree).path)
+
+            editor.applyFiles(
+                listOf(file("src/App.kt", 4, 2), file("test/AppTest.kt", 1, 1)),
+                "feature/test",
+            )
+
+            assertSame(leaf(tree), tree.lastSelectedPathComponent)
+        } finally {
+            Disposer.dispose(parent)
+        }
     }
 
     private fun renderer(tree: Tree, node: DefaultMutableTreeNode): Component =
@@ -149,6 +187,22 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
     }
 
     private fun rowBadge(row: Component): DiffStatBadge = components(row).filterIsInstance<DiffStatBadge>().single()
+
+    private fun view(files: List<DiffFileDto>, parent: Disposable): Component = editor(files, parent).component
+
+    private fun editor(files: List<DiffFileDto>, parent: Disposable): DiffEditorView {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        Disposer.register(parent) { scope.cancel() }
+        return DiffEditorView(
+            project,
+            mapOf("directory" to project.basePath.orEmpty(), "source" to "branch"),
+            files,
+            parent,
+            "feature/test",
+            scope,
+            { Job().also { it.complete() } },
+        ) {}
+    }
 
     private fun components(root: Component): List<Component> {
         val out = mutableListOf<Component>()

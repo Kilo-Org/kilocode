@@ -58,20 +58,35 @@ internal object KiloDiffEditorKind : KiloEditorKind {
     override fun createContent(project: Project, file: KiloVirtualFile, parent: Disposable): JComponent {
         val panel = JPanel(BorderLayout())
         panel.add(connecting(), BorderLayout.CENTER)
-        project.service<KiloDiffEditorService>().load(file.path.params, parent) { data ->
+        val service = project.service<KiloDiffEditorService>()
+        var current: Disposable? = null
+        fun render(data: DiffEditorData) {
+            current?.let { Disposer.dispose(it) }
+            val child = Disposer.newDisposable(parent, "Kilo diff editor content")
+            current = child
             panel.removeAll()
             panel.add(
                 when (data) {
                     DiffEditorData.Connecting -> connecting()
                     DiffEditorData.Empty -> emptyChangesComponent()
                     is DiffEditorData.Error -> failed(data.message)
-                    is DiffEditorData.Files -> buildDiffEditor(project, data.files, parent, data.branch)
+                    is DiffEditorData.Files -> buildDiffEditor(
+                        project,
+                        file.path.params,
+                        data.files,
+                        child,
+                        data.branch,
+                        service.scope,
+                        { done -> service.refresh(file.path.params, done) },
+                        ::render,
+                    )
                 },
                 BorderLayout.CENTER,
             )
             panel.revalidate()
             panel.repaint()
         }
+        service.load(file.path.params, parent, ::render)
         return panel
     }
 }
@@ -81,6 +96,9 @@ internal class KiloDiffEditorService(
     private val project: Project,
     private val cs: CoroutineScope,
 ) {
+    internal val scope: CoroutineScope
+        get() = cs
+
     fun load(params: Map<String, String>, parent: Disposable, done: (DiffEditorData) -> Unit) {
         val disposed = AtomicBoolean(false)
         val job = cs.launch {
@@ -108,6 +126,17 @@ internal class KiloDiffEditorService(
         Disposer.register(parent) {
             disposed.set(true)
             job.cancel()
+        }
+    }
+
+    fun refresh(params: Map<String, String>, done: (DiffEditorData) -> Unit) = cs.launch {
+        val data = runCatching { fetch(params) }
+            .getOrElse {
+                LOG.warn("diff editor refresh failed source=${params["source"]} dir=${params["directory"]}", it)
+                DiffEditorData.Error(it.message ?: it::class.java.simpleName)
+            }
+        withContext(Dispatchers.Main) {
+            if (!project.isDisposed) done(data)
         }
     }
 

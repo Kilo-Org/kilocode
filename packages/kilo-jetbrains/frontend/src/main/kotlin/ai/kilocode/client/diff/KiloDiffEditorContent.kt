@@ -4,7 +4,10 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.rpc.dto.DiffFileDto
-import com.intellij.diff.DiffManager
+import com.intellij.diff.chains.DiffRequestProducer
+import com.intellij.diff.chains.SimpleDiffRequestChain
+import com.intellij.diff.impl.CacheDiffRequestChainProcessor
+import com.intellij.diff.impl.DiffRequestProcessorListener
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.actionSystem.ActionManager
@@ -12,8 +15,17 @@ import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
+import com.intellij.openapi.actionSystem.IdeActions
+import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.UserDataHolder
+import com.intellij.openapi.vfs.AsyncFileListener
+import com.intellij.openapi.vfs.VirtualFileManager
+import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
@@ -23,9 +35,18 @@ import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
+import java.nio.file.InvalidPathException
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.swing.Icon
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -40,22 +61,198 @@ import javax.swing.tree.TreeNode
 import javax.swing.tree.TreePath
 
 @RequiresEdt
-internal fun buildDiffEditor(project: Project, files: List<DiffFileDto>, parent: Disposable, branch: String? = null): JComponent {
-    val panel = DiffManager.getInstance().createRequestPanel(project, parent, null)
-    val tree = buildFileTree(files)
-    tree.addTreeSelectionListener {
-        val node = tree.lastSelectedPathComponent as? DefaultMutableTreeNode ?: return@addTreeSelectionListener
-        val file = (node.userObject as? Node)?.file ?: return@addTreeSelectionListener
-        panel.setRequest(diffRequest(project, file, branch), diffTitle(file.file, branch))
-    }
-    files.firstOrNull()?.let {
-        panel.setRequest(diffRequest(project, it, branch), diffTitle(it.file, branch))
-        selectTreeNode(tree, it.file)
+internal fun buildDiffEditor(
+    project: Project,
+    params: Map<String, String>,
+    files: List<DiffFileDto>,
+    parent: Disposable,
+    branch: String? = null,
+    scope: CoroutineScope,
+    refresh: ((DiffEditorData) -> Unit) -> Job,
+    replace: (DiffEditorData) -> Unit,
+): JComponent = DiffEditorView(project, params, files, parent, branch, scope, refresh, replace).component
+
+internal val DIFF_FILE_KEY: Key<String> = Key.create("kilo.diff.file")
+
+internal class DiffEditorView(
+    private val project: Project,
+    private val params: Map<String, String>,
+    initial: List<DiffFileDto>,
+    private val parent: Disposable,
+    branch: String?,
+    scope: CoroutineScope,
+    private val refresh: ((DiffEditorData) -> Unit) -> Job,
+    private val replace: (DiffEditorData) -> Unit,
+) : Disposable {
+    private val disposed = AtomicBoolean(false)
+    private val tree = buildFileTree(initial)
+    private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.pad())
+    private val splitter = OnePixelSplitter(false, 0.25f)
+    private val select = Debouncer<Int>(scope, parent) { show(it) }
+    private val reload = Debouncer<Unit>(scope, parent) { reload() }
+    private var files = initial
+    private var branch = branch
+    private var syncing = false
+    private var processor = processor(initial, selected(initial.firstOrNull()?.file))
+    val component: JComponent = splitter
+
+    init {
+        Disposer.register(parent, this)
+        Disposer.register(parent, processor)
+        tree.addTreeSelectionListener {
+            if (syncing) return@addTreeSelectionListener
+            val file = selectedFile() ?: return@addTreeSelectionListener
+            val index = files.indexOfFirst { it.file == file.file }
+            if (index >= 0) select.request(index)
+        }
+        processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
+        splitter.firstComponent = buildTreePanel(tree, initial, badge, processor.component)
+        splitter.secondComponent = processor.component
+        processor.updateRequest()
+        applyBadge(initial)
+        select(initial.firstOrNull()?.file)
+        listen()
     }
 
-    return OnePixelSplitter(false, 0.25f).apply {
-        firstComponent = buildTreePanel(tree, files)
-        secondComponent = panel.component
+    override fun dispose() {
+        disposed.set(true)
+    }
+
+    @RequiresEdt
+    fun applyFiles(next: List<DiffFileDto>, nextBranch: String? = branch) {
+        if (same(files, next) && branch == nextBranch) return
+        val path = selectedFile()?.file ?: activePath() ?: files.firstOrNull()?.file
+        val index = selected(path, next)
+        val old = processor
+        files = next
+        branch = nextBranch
+        tree.model = buildFileModel(next)
+        expandAll(tree)
+        processor = processor(next, index)
+        Disposer.register(parent, processor)
+        processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
+        splitter.firstComponent = buildTreePanel(tree, next, badge, processor.component)
+        splitter.secondComponent = processor.component
+        processor.updateRequest()
+        Disposer.dispose(old)
+        applyBadge(next)
+        select(next.getOrNull(index)?.file)
+        splitter.revalidate()
+        splitter.repaint()
+    }
+
+    private fun show(index: Int) {
+        if (disposed.get() || project.isDisposed || index !in files.indices) return
+        processor.setCurrentRequest(index)
+    }
+
+    private fun reload() {
+        if (disposed.get() || project.isDisposed) return
+        refresh { data ->
+            if (disposed.get() || project.isDisposed) return@refresh
+            if (data is DiffEditorData.Files) applyFiles(data.files, data.branch)
+            if (data !is DiffEditorData.Files) replace(data)
+        }
+    }
+
+    private fun listen() {
+        val dir = params["directory"] ?: return
+        val root = clean(dir) ?: return
+        VirtualFileManager.getInstance().addAsyncFileListenerBackgroundable(
+            object : AsyncFileListener {
+                override fun prepareChange(events: List<VFileEvent>): AsyncFileListener.ChangeApplier? {
+                    if (events.none { inside(root, it.path) }) return null
+                    return object : AsyncFileListener.ChangeApplier {
+                        override fun afterVfsChange() {
+                            reload.request(Unit)
+                        }
+                    }
+                }
+            },
+            parent,
+        )
+    }
+
+    private fun processor(next: List<DiffFileDto>, index: Int): CacheDiffRequestChainProcessor {
+        val producers = next.map { file -> producer(file) }
+        val chain = SimpleDiffRequestChain.fromProducers(producers, index.coerceIn(0, (next.size - 1).coerceAtLeast(0)))
+        return CacheDiffRequestChainProcessor(project, chain)
+    }
+
+    private fun producer(file: DiffFileDto): DiffRequestProducer = object : DiffRequestProducer {
+        override fun getName(): String = file.file
+
+        override fun process(context: UserDataHolder, indicator: ProgressIndicator) = diffRequest(project, file, branch).also {
+            it.putUserData(DIFF_FILE_KEY, file.file)
+        }
+    }
+
+    private fun syncTree() {
+        if (disposed.get()) return
+        val path = activePath() ?: return
+        if (selectedFile()?.file == path) return
+        select(path)
+    }
+
+    private fun select(path: String?) {
+        if (path == null) return
+        syncing = true
+        selectTreeNode(tree, path)
+        syncing = false
+    }
+
+    private fun activePath(): String? = processor.activeRequest?.getUserData(DIFF_FILE_KEY)
+
+    private fun selectedFile(): DiffFileDto? {
+        val node = tree.lastSelectedPathComponent as? DefaultMutableTreeNode ?: return null
+        return (node.userObject as? Node)?.file
+    }
+
+    private fun applyBadge(next: List<DiffFileDto>) {
+        badge.update(next.sumOf { it.additions }, next.sumOf { it.deletions })
+    }
+
+    private fun selected(path: String?, next: List<DiffFileDto> = files): Int {
+        val index = next.indexOfFirst { it.file == path }
+        if (index >= 0) return index
+        return 0
+    }
+
+    private fun same(a: List<DiffFileDto>, b: List<DiffFileDto>): Boolean = a == b
+
+    private fun clean(dir: String): Path? = try {
+        Path.of(dir).normalize()
+    } catch (_: InvalidPathException) {
+        null
+    }
+
+    private fun inside(root: Path, raw: String): Boolean = try {
+        val path = Path.of(raw).normalize()
+        val text = path.toString().replace('\\', '/')
+        path.startsWith(root) && !text.contains("/.git/") && !text.endsWith("/.git")
+    } catch (_: InvalidPathException) {
+        false
+    }
+}
+
+private class Debouncer<T>(
+    private val scope: CoroutineScope,
+    parent: Disposable,
+    private val delay: Long = 300,
+    private val action: suspend (T) -> Unit,
+) {
+    private var job: Job? = null
+
+    init {
+        Disposer.register(parent) { job?.cancel() }
+    }
+
+    fun request(value: T) {
+        job?.cancel()
+        job = scope.launch {
+            delay(delay)
+            withContext(Dispatchers.Main) { action(value) }
+        }
     }
 }
 
@@ -65,10 +262,7 @@ internal fun emptyChangesComponent(): JComponent = JPanel(BorderLayout()).apply 
 }
 
 private fun buildFileTree(files: List<DiffFileDto>): Tree {
-    val root = DefaultMutableTreeNode(Node("", "", true, null))
-    for (file in files) addFile(root, file)
-    updateStats(root)
-    val tree = DiffTree(DefaultTreeModel(root)).apply {
+    val tree = DiffTree(buildFileModel(files)).apply {
         isRootVisible = false
         showsRootHandles = true
         isOpaque = true
@@ -82,17 +276,26 @@ private fun buildFileTree(files: List<DiffFileDto>): Tree {
     return tree
 }
 
-private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>): JComponent {
-    val stats = Stats(files.sumOf { it.additions }, files.sumOf { it.deletions })
+private fun buildFileModel(files: List<DiffFileDto>): DefaultTreeModel {
+    val root = DefaultMutableTreeNode(Node("", "", true, null))
+    for (file in files) addFile(root, file)
+    updateStats(root)
+    return DefaultTreeModel(root)
+}
+
+private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStatBadge, target: JComponent): JComponent {
     val toolbar = ActionManager.getInstance().createActionToolbar(
         ActionPlaces.TOOLBAR,
         DefaultActionGroup(
+            ActionManager.getInstance().getAction(IdeActions.ACTION_PREVIOUS_DIFF),
+            ActionManager.getInstance().getAction(IdeActions.ACTION_NEXT_DIFF),
+            Separator.getInstance(),
             TreeAction(KiloBundle.message("diff.editor.tree.expandAll"), AllIcons.Actions.Expandall) { expandAll(tree) },
             TreeAction(KiloBundle.message("diff.editor.tree.collapseAll"), AllIcons.Actions.Collapseall) { collapseAll(tree) },
         ),
         true,
     )
-    toolbar.targetComponent = tree
+    toolbar.targetComponent = target
     toolbar.component.background = JBUI.CurrentTheme.ToolWindow.background()
     toolbar.updateActionsImmediately()
     val row = object : JPanel(BorderLayout()) {
@@ -100,7 +303,8 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>): JComponent {
     }.apply {
         border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
         add(toolbar.component, BorderLayout.WEST)
-        add(DiffStatBadge(stats.additions, stats.deletions, inset = UiStyle.Gap.pad()), BorderLayout.EAST)
+        badge.update(files.sumOf { it.additions }, files.sumOf { it.deletions })
+        add(badge, BorderLayout.EAST)
     }
     return object : JPanel(BorderLayout()) {
         override fun getBackground(): Color = JBUI.CurrentTheme.ToolWindow.background()
