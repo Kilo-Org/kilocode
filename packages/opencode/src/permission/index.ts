@@ -300,7 +300,12 @@ export const layer = Layer.effect(
 
       // kilocode_change start - skill-shell batches must be answered by a human; ignore machine approvals
       // (auto-approve/YOLO clients omit `interactive`) so the prompt stays pending for a real decision.
+      // Log rather than fail silently: a genuine human client sets `interactive`, so a refused reply here
+      // means an auto-approver tried to answer — the request intentionally stays pending for a human.
       if (existing.info.metadata?.["skillShell"] === true && input.reply !== "reject" && input.interactive !== true) {
+        yield* Effect.logWarning("skill shell approval refused: requires an interactive human reply", {
+          id: input.requestID,
+        })
         return
       }
       // kilocode_change end
