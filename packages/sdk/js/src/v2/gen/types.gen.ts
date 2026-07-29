@@ -7717,6 +7717,7 @@ export type AppSkillsResponses = {
     description?: string
     location: string
     content: string
+    trusted?: boolean
   }>
 }
 
@@ -8628,6 +8629,7 @@ export type PermissionReplyData = {
   body?: {
     reply: "once" | "always" | "reject"
     message?: string
+    interactive?: boolean
   }
   path: {
     requestID: string
