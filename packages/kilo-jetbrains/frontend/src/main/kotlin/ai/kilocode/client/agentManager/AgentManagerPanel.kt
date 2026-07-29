@@ -15,6 +15,7 @@ import ai.kilocode.client.ui.list.ActiveListDeleteOptions
 import ai.kilocode.client.ui.list.ActiveListItem
 import ai.kilocode.client.ui.list.ActiveListSelection
 import ai.kilocode.client.vfs.KiloVfsManager
+import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.rpc.dto.RemoveWorktreeResultDto
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.icons.AllIcons
@@ -30,8 +31,9 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.PlatformDataKeys
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.Project
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileEditorManager
+import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.components.BorderLayoutPanel
@@ -63,7 +65,9 @@ class AgentManagerPanel(
             val item = (row as? WorktreeRow)?.dto ?: return@ActiveList
             open(item, focus)
         },
+        onSelect = { selectedRow()?.dto?.id?.let { selected = it } },
     )
+    private var selected: String? = null
 
     init {
         Disposer.register(parent, this)
@@ -87,7 +91,10 @@ class AgentManagerPanel(
 
     val component: JComponent get() = this
 
-    fun refresh() = controller.reload()
+    fun refresh() {
+        selected = activeWorktreeKey() ?: selected
+        controller.reload()
+    }
 
     /** Branch shown in the quick "New Worktree from …" menu item. */
     fun defaultBranch(): String = controller.defaultBranch
@@ -218,6 +225,7 @@ class AgentManagerPanel(
     }
 
     private fun sync() {
+        val key = selected
         list.update(
             (0 until controller.model.size).map {
                 val item = controller.model.getElementAt(it)
@@ -225,6 +233,18 @@ class AgentManagerPanel(
             },
             ActiveListSelection.PreserveNoScroll,
         )
+        if (key != null) list.select(key, scroll = false)
+    }
+
+    private fun activeWorktreeKey(): String? {
+        val target = project ?: return null
+        return FileEditorManager.getInstance(target).selectedFiles
+            .filterIsInstance<KiloVirtualFile>()
+            .firstOrNull { it.path.kind == WorktreeSessionEditorKind.ID }
+            ?.path
+            ?.params
+            ?.get("path")
+            ?.takeIf { it.isNotBlank() }
     }
 
     private fun item(key: String): WorktreeDto? {

@@ -125,6 +125,45 @@ class AgentManagerPanelTest : BasePlatformTestCase() {
         assertEquals(false, file.getUserData(KiloVfsManager.FOCUS))
     }
 
+    fun `test refresh preserves selected worktree across model replace`() {
+        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        rpc.listed += first
+        rpc.listed += second
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt { list.selectedIndex = 1 }
+
+        edt { controller.reload() }
+        flush()
+
+        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
+    fun `test refresh selects active worktree editor`() {
+        val first = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
+        val second = WorktreeDto("/repo/.kilo/worktrees/feature-y", "feature-y", "feature/y", "/repo/.kilo/worktrees/feature-y")
+        rpc.listed += first
+        rpc.listed += second
+        val controller = WorktreeController(service, "/test", coroutines.scope)
+        val panel = edt { AgentManagerPanel(testRootDisposable, controller, project) }
+        edt { controller.reload() }
+        flush()
+        val list = edt { UIUtil.findComponentOfType(panel, JBList::class.java)!! }
+        edt {
+            ensureWorktreeSessionEditorKind()
+            project.service<KiloVfsManager>().open(WorktreeSessionEditorKind.ID, worktreeSessionParams(second), focus = true)
+            list.selectedIndex = 0
+            panel.refresh()
+        }
+        flush()
+
+        assertEquals(second.id, edt { (list.selectedValue as ActiveListItem).key })
+    }
+
     fun `test deleting a worktree closes and releases its worktree session editor`() {
         val item = WorktreeDto("/repo/.kilo/worktrees/feature-x", "feature-x", "feature/x", "/repo/.kilo/worktrees/feature-x")
         rpc.listed += item

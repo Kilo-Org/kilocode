@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.list
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBTextField
 import java.awt.Component
 import java.awt.Container
@@ -24,6 +25,18 @@ class ActiveListEditPopupTest : BasePlatformTestCase() {
         assertFalse(button.isEnabled)
         field.text = "Next"
         assertTrue(button.isEnabled)
+    }
+
+    fun `test edit content shows rename help label by default`() {
+        val content = activeListEditContent(
+            ActiveListEditOptions(value = "Current"),
+            hide = {},
+            commit = {},
+        )
+
+        val labels = components(content).filterIsInstance<JBLabel>().map { it.text }
+
+        assertTrue(labels.contains("Use a custom name that describes your task."))
     }
 
     fun `test edit content commits trimmed value and hides`() {

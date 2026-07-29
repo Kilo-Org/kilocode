@@ -57,7 +57,7 @@ internal class ActiveList(
     }
 
     @RequiresEdt
-    fun select(key: String): Boolean = view.select(key)
+    fun select(key: String, scroll: Boolean = true): Boolean = view.select(key, scroll)
 
     @RequiresEdt
     fun selectIndex(index: Int) = view.selectIndex(index)
