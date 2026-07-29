@@ -10,7 +10,7 @@ import { Tool } from "@/tool/tool"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
-import { nativeWebSearchEnabled } from "@/tool/websearch" // kilocode_change - native hosted web search
+import { nativeWebSearchSelected } from "@/tool/websearch" // kilocode_change - native hosted web search
 
 import { Plugin } from "@/plugin"
 import type { TaskPromptOps } from "@/tool/task"
@@ -151,7 +151,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   // Registry hides the local Exa/Parallel tool; the AI SDK owns execution and
   // emits providerExecuted tool parts. Env (not RuntimeFlags) keeps this
   // Effect's environment unchanged.
-  const webSearchNative = process.env.KILO_WEBSEARCH_PROVIDER === "native" && nativeWebSearchEnabled(input.model.api.npm)
+  const webSearchNative = nativeWebSearchSelected(input.model.api.npm)
   if (webSearchNative) {
     const anthropic = yield* Effect.promise(() => import("@ai-sdk/anthropic").then((m) => m.createAnthropic()))
     tools["web_search"] = anthropic.tools.webSearch_20250305({}) as unknown as AITool

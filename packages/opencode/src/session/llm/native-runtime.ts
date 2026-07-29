@@ -10,7 +10,7 @@ import { FetchHttpClient } from "effect/unstable/http"
 import {
   LLMRequest,
   Tool as NativeTool,
-  ToolDefinition,
+  ToolDefinition, // kilocode_change - native hosted web search
   ToolFailure,
   ToolRuntime,
   toDefinitions,
@@ -19,7 +19,7 @@ import {
 } from "@opencode-ai/llm"
 import type { LLMClientShape } from "@opencode-ai/llm/route"
 import { LLMNative } from "./native-request"
-import { nativeAnthropicWebSearchTool, nativeWebSearchEnabled } from "@/tool/websearch" // kilocode_change - native hosted web search
+import { nativeAnthropicWebSearchTool, nativeWebSearchSelected } from "@/tool/websearch" // kilocode_change - native hosted web search
 
 export type RuntimeStatus =
   | { readonly type: "supported"; readonly apiKey: string; readonly baseURL?: string }
@@ -92,7 +92,7 @@ export function stream(input: StreamInput): StreamResult {
   // kilocode_change start - when native hosted search is active the AI-SDK
   // web_search has an execute stub but only the Anthropic-hosted tool runs
   // (providerExecuted), so drop it from the local dispatch map.
-  const webSearchNative = process.env.KILO_WEBSEARCH_PROVIDER === "native" && nativeWebSearchEnabled(input.model.api.npm)
+  const webSearchNative = nativeWebSearchSelected(input.model.api.npm)
   const dispatchTools = webSearchNative ? Object.fromEntries(Object.entries(tools).filter(([k]) => k !== "web_search")) : tools
   // kilocode_change end
   const request = LLMNative.request({
