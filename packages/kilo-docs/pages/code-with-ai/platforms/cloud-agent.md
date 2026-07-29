@@ -108,7 +108,7 @@ You can customize each Cloud Agent session by also defining env vars and startup
 
 Cloud Agents support project-level [skills](/docs/code-with-ai/platforms/cli#skills) stored in your repository. When your repo is cloned, any skills in `.kilocode/skills/` are automatically available.
 
-- Skills (skill folders uploaded as `.zip` archives, with up to 40 companion files per skill)
+You can also upload skills as `.zip` archives through the Cloud UI. Each skill archive can include up to 40 companion files.
 
 {% callout type="note" %}
 Global skills (`~/.kilocode/skills/`) are not available in Cloud Agents since there is no persistent user home directory.
