@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.terminal.new": "แท็บเทอร์มินัลใหม่",
   "agentManager.terminal.ended": "เทอร์มินัลสิ้นสุด — ปิดแท็บเพื่อยกเลิก",
   "agentManager.terminal.connectionError": "ข้อผิดพลาดการเชื่อมต่อเทอร์มินัล",
-  "agentManager.terminal.kill": "หยุดเทอร์มินัล",
+  "agentManager.terminal.add": "เทอร์มินัลใหม่",
   "agentManager.terminal.empty": "ยังไม่มีเทอร์มินัลที่นี่",
   "agentManager.terminal.start": "เริ่มเทอร์มินัล",
   "agentManager.terminal.destination": "เลือกว่าปุ่มเทอร์มินัลจะเปิดอะไร",

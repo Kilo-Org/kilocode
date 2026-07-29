@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.terminal.new": "علامة تبويب جديدة للمحطة الطرفية",
   "agentManager.terminal.ended": "انتهت المحطة الطرفية — أغلق علامة التبويب للإخفاء",
   "agentManager.terminal.connectionError": "خطأ في اتصال المحطة الطرفية",
-  "agentManager.terminal.kill": "إنهاء المحطة الطرفية",
+  "agentManager.terminal.add": "محطة طرفية جديدة",
   "agentManager.terminal.empty": "لا توجد محطة طرفية هنا بعد",
   "agentManager.terminal.start": "بدء المحطة الطرفية",
   "agentManager.terminal.destination": "اختر ما الذي يفتحه زر المحطة الطرفية",

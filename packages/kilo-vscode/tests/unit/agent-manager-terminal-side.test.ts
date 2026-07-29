@@ -10,12 +10,12 @@ function scene(
     destination?: "vscode" | "agentManager"
     saved?: "vscode" | "agentManager"
     visible?: boolean
-    focused?: boolean
+    focusedId?: string
   } = {},
 ) {
   const calls = {
     requestSide: 0,
-    closeSide: 0,
+    closed: [] as string[],
     hide: 0,
     refocus: 0,
     openVscode: 0,
@@ -24,21 +24,21 @@ function scene(
     tracked: [] as string[],
   }
   let visible = opts.visible ?? false
-  let focused = opts.focused ?? false
+  let focusedId = opts.focusedId as string | undefined
   const ctl = createSideTerminal({
     handlers: {
       requestSide: () => {
         calls.requestSide++
         visible = true
       },
-      closeSide: () => {
-        calls.closeSide++
-        visible = false
+      closeSide: (terminalId) => {
+        calls.closed.push(terminalId)
+        focusedId = undefined
         return true
       },
     },
     visible: () => visible,
-    focused: () => focused,
+    focusedId: () => focusedId,
     hide: () => {
       calls.hide++
       visible = false
@@ -56,12 +56,12 @@ function scene(
 
 describe("Agent Manager side terminal controller", () => {
   it("toggles the panel and hands focus to the chat only when the terminal had it", () => {
-    const focused = scene({ destination: "agentManager", visible: true, focused: true })
+    const focused = scene({ destination: "agentManager", visible: true, focusedId: "terminal:side" })
     focused.ctl.toggle()
     expect(focused.calls.hide).toBe(1)
     expect(focused.calls.refocus).toBe(1)
 
-    const elsewhere = scene({ destination: "agentManager", visible: true, focused: false })
+    const elsewhere = scene({ destination: "agentManager", visible: true })
     elsewhere.ctl.toggle()
     expect(elsewhere.calls.hide).toBe(1)
     expect(elsewhere.calls.refocus).toBe(0)
@@ -72,15 +72,18 @@ describe("Agent Manager side terminal controller", () => {
     expect(hidden.calls.hide).toBe(0)
   })
 
-  it("refocuses the chat after killing a focused terminal, not otherwise", () => {
-    const focused = scene({ focused: true })
+  it("kills the focused terminal and refocuses the chat", () => {
+    const focused = scene({ focusedId: "terminal:two" })
     expect(focused.ctl.close()).toBe(true)
-    expect(focused.calls.closeSide).toBe(1)
+    expect(focused.calls.closed).toEqual(["terminal:two"])
     expect(focused.calls.refocus).toBe(1)
+  })
 
-    const elsewhere = scene({ focused: false })
-    expect(elsewhere.ctl.close()).toBe(true)
-    expect(elsewhere.calls.refocus).toBe(0)
+  it("does nothing on close without a focused terminal", () => {
+    const item = scene()
+    expect(item.ctl.close()).toBe(false)
+    expect(item.calls.closed).toEqual([])
+    expect(item.calls.refocus).toBe(0)
   })
 
   it("routes the primary action by destination", () => {

@@ -55,7 +55,9 @@ function isTerminalMessage(
 
 export class TerminalRouter {
   private manager: TerminalManager
-  private readonly ordinals = new Map<string, number>()
+  /** Ordinals reserved by in-flight creates, per context — prevents two
+   *  concurrent creates from grabbing the same "Terminal N" title. */
+  private readonly reserved = new Map<string, Set<number>>()
   private generation = 0
 
   constructor(private readonly deps: TerminalRoutingDeps) {
@@ -102,6 +104,7 @@ export class TerminalRouter {
     this.generation++
     const manager = this.manager
     this.manager = this.createManager()
+    this.reserved.clear()
     return manager.dispose()
   }
 
@@ -119,7 +122,8 @@ export class TerminalRouter {
       })
       return
     }
-    const title = `Terminal ${this.nextOrdinal(worktreeId)}`
+    const ordinal = this.reserveOrdinal(worktreeId)
+    const title = `Terminal ${ordinal}`
     try {
       // Join the shared backend connection instead of racing its synchronous
       // client accessor when this is the first Kilo action in the window.
@@ -144,6 +148,11 @@ export class TerminalRouter {
       const message = err instanceof Error ? err.message : String(err)
       this.deps.log(`Terminal create failed: ${message}`)
       this.deps.post({ type: "agentManager.terminal.error", createId, message })
+    } finally {
+      // Only a current-generation create may release: dispose() already
+      // cleared this create's reservation, and releasing here would
+      // delete a *new* panel's reservation for the same number.
+      if (generation === this.generation) this.releaseOrdinal(worktreeId, ordinal)
     }
   }
 
@@ -161,13 +170,38 @@ export class TerminalRouter {
     return this.deps.getWorktreePath(worktreeId)
   }
 
-  /** Per-context counter so default titles are "Terminal 1", "Terminal 2"…
-   *  Not persisted; a webview reload resets counts. */
-  private nextOrdinal(worktreeId: string | null): number {
+  /**
+   * Pick the lowest "Terminal N" ordinal not used by a live terminal or
+   * an in-flight create in this context, and reserve it until the
+   * create settles. Gap-filling keeps numbering consistent: closing
+   * "Terminal 1" of three frees 1 for the next terminal, instead of
+   * drifting to ever-higher numbers. Not persisted; a webview reload
+   * resets the live set.
+   */
+  private reserveOrdinal(worktreeId: string | null): number {
     const key = worktreeId ?? "__local__"
-    const next = (this.ordinals.get(key) ?? 0) + 1
-    this.ordinals.set(key, next)
+    const used = new Set<number>()
+    for (const title of this.manager.titles(worktreeId)) {
+      const match = /^Terminal (\d+)$/.exec(title)
+      if (match) used.add(Number(match[1]))
+    }
+    const pending = this.reserved.get(key)
+    if (pending) for (const n of pending) used.add(n)
+    let next = 1
+    while (used.has(next)) next++
+    const set = pending ?? new Set<number>()
+    set.add(next)
+    this.reserved.set(key, set)
     return next
+  }
+
+  /** Return an in-flight create's reservation. */
+  private releaseOrdinal(worktreeId: string | null, ordinal: number) {
+    const key = worktreeId ?? "__local__"
+    const set = this.reserved.get(key)
+    if (!set) return
+    set.delete(ordinal)
+    if (set.size === 0) this.reserved.delete(key)
   }
 
   /**

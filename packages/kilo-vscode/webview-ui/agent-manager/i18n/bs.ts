@@ -58,7 +58,7 @@ export const dict = {
   "agentManager.terminal.new": "Nova kartica terminala",
   "agentManager.terminal.ended": "terminal je završen — zatvorite karticu da biste odbacili",
   "agentManager.terminal.connectionError": "greška u vezi terminala",
-  "agentManager.terminal.kill": "Prekini terminal",
+  "agentManager.terminal.add": "Novi terminal",
   "agentManager.terminal.empty": "Ovdje još nema terminala",
   "agentManager.terminal.start": "Pokreni terminal",
   "agentManager.terminal.destination": "Odaberite šta otvara dugme terminala",
