@@ -53,7 +53,7 @@ Then set your default model:
 
 ```jsonc
 {
-  "model": "cerebras/llama-4-scout-17b-16e-instruct",
+  "model": "cerebras/gpt-oss-120b",
 }
 ```
 
