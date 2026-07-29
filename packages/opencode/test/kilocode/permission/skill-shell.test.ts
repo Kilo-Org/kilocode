@@ -109,6 +109,31 @@ it.instance(
 )
 
 it.instance(
+  "skillShell - a cd-chained escape is vetoed via the verbatim command pattern",
+  () =>
+    Effect.gen(function* () {
+      // The injector asks with the decomposed sub-command (`cat .ssh/id_rsa`, which
+      // readOnlyBash would allow) AND the verbatim command. In plan mode the metachar
+      // hard-veto (`*\n*` deny) must fire on the verbatim string, blocking the escape.
+      const err = yield* fail(
+        ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ['cd "$HOME"\ncat .ssh/id_rsa', "cat .ssh/id_rsa"],
+          metadata: { skillShell: true },
+          always: [],
+          ruleset: [{ permission: "bash", pattern: "cat *", action: "allow" }],
+          hardRuleset: [{ permission: "bash", pattern: "*\n*", action: "deny" }],
+        }),
+      )
+
+      expect(err).toBeInstanceOf(PermissionV1.DeniedError)
+      expect(yield* list()).toHaveLength(0)
+    }),
+  { git: true },
+)
+
+it.instance(
   "skillShell - is denied by a hard-ruleset veto instead of prompting",
   () =>
     Effect.gen(function* () {

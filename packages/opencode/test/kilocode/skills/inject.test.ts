@@ -115,11 +115,12 @@ describe("skill shell injection", () => {
     }),
   )
 
-  unix("decomposes a compound command into per-sub-command patterns", () =>
+  unix("authorizes both the decomposed sub-commands and the verbatim command", () =>
     Effect.gen(function* () {
-      // A single placeholder with a chained command must not be asked as one glob
-      // pattern (which would let e.g. `cat *` match the whole string). Each
-      // sub-command must appear separately so deny/veto rules apply per command.
+      // A chained placeholder is asked with per-sub-command patterns (so deny/veto
+      // rules apply to each) AND the verbatim string (so the metachar deny rules
+      // `*;*`/`*|*`/`*\n*` fire and cd/set-location escapes can't hide). The prompt
+      // still displays the verbatim placeholder.
       yield* writeGlobalSkill("compound-shell", "Out: !`cat README.md; printf hi`")
 
       const requests: Array<Omit<PermissionV1.Request, "id" | "sessionID" | "tool">> = []
@@ -131,11 +132,10 @@ describe("skill shell injection", () => {
 
       const bash = requests.filter((r) => r.permission === "bash")
       expect(bash.length).toBe(1)
-      // patterns are decomposed per sub-command so deny/veto rules apply to each
       expect(bash[0].patterns).toContain("cat README.md")
       expect(bash[0].patterns).toContain("printf hi")
-      expect(bash[0].patterns).not.toContain("cat README.md; printf hi")
-      // but the prompt displays the verbatim placeholder, so nothing is hidden from the user
+      // the raw chained string is authorized too, so metachar deny rules can match it
+      expect(bash[0].patterns).toContain("cat README.md; printf hi")
       expect(bash[0].metadata?.["commands"]).toEqual(["cat README.md; printf hi"])
     }),
   )

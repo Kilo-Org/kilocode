@@ -66,10 +66,15 @@ export namespace SkillInject {
 
     // Decompose each command into sub-command patterns + out-of-project dir globs
     // via the shared bash scan, so plan-mode denies and external_directory checks
-    // apply per sub-command instead of matching the raw string as one glob.
+    // apply per sub-command instead of matching the raw string as one glob. Also
+    // authorize the verbatim command: decomposition drops cd/set-location segments
+    // and strips chaining metacharacters, so a payload like `cd $HOME; cat secret`
+    // would otherwise slip past the metachar deny rules (`*;*`, `*|*`, `*\n*`) and
+    // hide the escape. Keeping the raw string as a pattern makes those rules fire.
     const patterns = new Set<string>()
     const dirs = new Set<string>()
     for (const command of commands) {
+      patterns.add(command)
       const scan = yield* opts.decompose({ command, cwd: opts.cwd, shell })
       for (const pattern of scan.patterns) patterns.add(pattern)
       for (const dir of scan.dirs) dirs.add(dir)
