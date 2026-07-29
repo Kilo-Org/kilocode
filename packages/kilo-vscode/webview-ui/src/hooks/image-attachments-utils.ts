@@ -1,4 +1,5 @@
 export const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"]
+export const IMAGE_ACCEPT = ACCEPTED_IMAGE_TYPES.join(",")
 
 /** Returns true if the given MIME type is an accepted image type. */
 export function isAcceptedImageType(mimeType: string): boolean {

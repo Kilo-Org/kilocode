@@ -35,6 +35,7 @@ import { useSlashCommand } from "../../hooks/useSlashCommand"
 import { useGhostText } from "../../hooks/useGhostText"
 import { useSpeechToText } from "../speech-to-text/useSpeechToText"
 import { useImageAttachments, type ImageAttachment } from "../../hooks/useImageAttachments"
+import { IMAGE_ACCEPT } from "../../hooks/image-attachments-utils"
 import { convertToMentionPath } from "../../utils/path-mentions"
 import { SessionMentionPicker } from "./SessionMentionPicker"
 import { usePromptHistory } from "../../hooks/usePromptHistory"
@@ -203,6 +204,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
   })
   const history = usePromptHistory()
   let textareaRef: HTMLTextAreaElement | undefined
+  let imageInputRef: HTMLInputElement | undefined
   let highlightRef: HTMLDivElement | undefined
   let dropdownRef: HTMLDivElement | undefined
   let slashDropdownRef: HTMLDivElement | undefined
@@ -842,6 +844,12 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
     })
   }
 
+  const selectImages = (event: Event) => {
+    const input = event.currentTarget as HTMLInputElement
+    for (const file of Array.from(input.files ?? [])) imageAttach.add(file)
+    input.value = ""
+  }
+
   const handleInput = (e: InputEvent) => {
     const target = e.target as HTMLTextAreaElement
     const val = target.value
@@ -1448,6 +1456,26 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           </Show>
         </div>
         <div class="prompt-input-hint-actions">
+          <input
+            ref={imageInputRef}
+            class="sr-only"
+            type="file"
+            accept={IMAGE_ACCEPT}
+            multiple
+            onChange={selectImages}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <Tooltip value="Upload images" placement="top" openDelay={0}>
+            <IconButton
+              icon="cloud-upload"
+              size="small"
+              variant="ghost"
+              onClick={() => imageInputRef?.click()}
+              disabled={isDisabled()}
+              aria-label="Upload images"
+            />
+          </Tooltip>
           <Show when={showIndexing()}>
             <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <Button
