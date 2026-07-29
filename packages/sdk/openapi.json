@@ -23784,6 +23784,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "replayExited",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "security": [],
@@ -24635,6 +24642,9 @@
             "$ref": "#/components/schemas/EventSandboxStatusChanged"
           },
           {
+            "$ref": "#/components/schemas/EventLspClientDiagnostics"
+          },
+          {
             "$ref": "#/components/schemas/EventSuggestionShown"
           },
           {
@@ -24662,9 +24672,6 @@
             "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
           },
           {
-            "$ref": "#/components/schemas/EventLspClientDiagnostics"
-          },
-          {
             "$ref": "#/components/schemas/EventMemoryStatus1"
           },
           {
@@ -24678,6 +24685,9 @@
           },
           {
             "$ref": "#/components/schemas/EventIndexingWarning"
+          },
+          {
+            "$ref": "#/components/schemas/EventModels-devRefreshed"
           },
           {
             "$ref": "#/components/schemas/EventServerConnected"
@@ -24848,22 +24858,13 @@
             "$ref": "#/components/schemas/EventSessionError"
           },
           {
-            "$ref": "#/components/schemas/EventModels-devRefreshed"
-          },
-          {
             "$ref": "#/components/schemas/EventInstallationUpdated"
           },
           {
             "$ref": "#/components/schemas/EventInstallationUpdate-available"
           },
           {
-            "$ref": "#/components/schemas/EventPermissionAsked"
-          },
-          {
-            "$ref": "#/components/schemas/EventPermissionReplied"
-          },
-          {
-            "$ref": "#/components/schemas/EventReferenceUpdated"
+            "$ref": "#/components/schemas/EventFileEdited"
           },
           {
             "$ref": "#/components/schemas/EventPermissionV2Asked"
@@ -24872,10 +24873,10 @@
             "$ref": "#/components/schemas/EventPermissionV2Replied"
           },
           {
-            "$ref": "#/components/schemas/EventProjectDirectoriesUpdated"
+            "$ref": "#/components/schemas/EventReferenceUpdated"
           },
           {
-            "$ref": "#/components/schemas/EventFileEdited"
+            "$ref": "#/components/schemas/EventProjectDirectoriesUpdated"
           },
           {
             "$ref": "#/components/schemas/EventFileWatcherUpdated"
@@ -24905,6 +24906,15 @@
             "$ref": "#/components/schemas/EventTodoUpdated"
           },
           {
+            "$ref": "#/components/schemas/EventLspUpdated"
+          },
+          {
+            "$ref": "#/components/schemas/EventPermissionAsked"
+          },
+          {
+            "$ref": "#/components/schemas/EventPermissionReplied"
+          },
+          {
             "$ref": "#/components/schemas/EventSessionStatus"
           },
           {
@@ -24921,9 +24931,6 @@
           },
           {
             "$ref": "#/components/schemas/EventVcsBranchUpdated"
-          },
-          {
-            "$ref": "#/components/schemas/EventLspUpdated"
           },
           {
             "$ref": "#/components/schemas/EventWorkspaceReady"
@@ -27828,6 +27835,9 @@
                 "$ref": "#/components/schemas/EventSandboxStatusChanged"
               },
               {
+                "$ref": "#/components/schemas/EventLspClientDiagnostics"
+              },
+              {
                 "$ref": "#/components/schemas/EventSuggestionShown"
               },
               {
@@ -27855,9 +27865,6 @@
                 "$ref": "#/components/schemas/EventKilo-sessionsRemote-status-changed"
               },
               {
-                "$ref": "#/components/schemas/EventLspClientDiagnostics"
-              },
-              {
                 "$ref": "#/components/schemas/EventMemoryStatus"
               },
               {
@@ -27871,6 +27878,9 @@
               },
               {
                 "$ref": "#/components/schemas/EventIndexingWarning"
+              },
+              {
+                "$ref": "#/components/schemas/EventModels-devRefreshed"
               },
               {
                 "$ref": "#/components/schemas/EventServerConnected"
@@ -28041,22 +28051,13 @@
                 "$ref": "#/components/schemas/EventSessionError"
               },
               {
-                "$ref": "#/components/schemas/EventModels-devRefreshed"
-              },
-              {
                 "$ref": "#/components/schemas/EventInstallationUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventInstallationUpdate-available"
               },
               {
-                "$ref": "#/components/schemas/EventPermissionAsked"
-              },
-              {
-                "$ref": "#/components/schemas/EventPermissionReplied"
-              },
-              {
-                "$ref": "#/components/schemas/EventReferenceUpdated"
+                "$ref": "#/components/schemas/EventFileEdited"
               },
               {
                 "$ref": "#/components/schemas/EventPermissionV2Asked"
@@ -28065,10 +28066,10 @@
                 "$ref": "#/components/schemas/EventPermissionV2Replied"
               },
               {
-                "$ref": "#/components/schemas/EventProjectDirectoriesUpdated"
+                "$ref": "#/components/schemas/EventReferenceUpdated"
               },
               {
-                "$ref": "#/components/schemas/EventFileEdited"
+                "$ref": "#/components/schemas/EventProjectDirectoriesUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventFileWatcherUpdated"
@@ -28098,6 +28099,15 @@
                 "$ref": "#/components/schemas/EventTodoUpdated"
               },
               {
+                "$ref": "#/components/schemas/EventLspUpdated"
+              },
+              {
+                "$ref": "#/components/schemas/EventPermissionAsked"
+              },
+              {
+                "$ref": "#/components/schemas/EventPermissionReplied"
+              },
+              {
                 "$ref": "#/components/schemas/EventSessionStatus"
               },
               {
@@ -28114,9 +28124,6 @@
               },
               {
                 "$ref": "#/components/schemas/EventVcsBranchUpdated"
-              },
-              {
-                "$ref": "#/components/schemas/EventLspUpdated"
               },
               {
                 "$ref": "#/components/schemas/EventWorkspaceReady"
@@ -35836,6 +35843,33 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventLspClientDiagnostics": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.client.diagnostics"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "serverID": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              }
+            },
+            "required": ["serverID", "path"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventSuggestionShown": {
         "type": "object",
         "properties": {
@@ -36126,33 +36160,6 @@
               }
             },
             "required": ["enabled", "connected"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventLspClientDiagnostics": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.client.diagnostics"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "serverID": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": ["serverID", "path"],
             "additionalProperties": false
           }
         },
@@ -37224,6 +37231,24 @@
           },
           "properties": {
             "$ref": "#/components/schemas/IndexingWarning"
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventModels-devRefreshed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["models-dev.refreshed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
           }
         },
         "required": ["id", "type", "properties"],
@@ -39271,24 +39296,6 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventModels-devRefreshed": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["models-dev.refreshed"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {}
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
       "EventInstallationUpdated": {
         "type": "object",
         "properties": {
@@ -39337,7 +39344,7 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
-      "EventPermissionAsked": {
+      "EventFileEdited": {
         "type": "object",
         "properties": {
           "id": {
@@ -39345,104 +39352,17 @@
           },
           "type": {
             "type": "string",
-            "enum": ["permission.asked"]
+            "enum": ["file.edited"]
           },
           "properties": {
             "type": "object",
             "properties": {
-              "id": {
-                "type": "string",
-                "pattern": "^per"
-              },
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "permission": {
+              "file": {
                 "type": "string"
-              },
-              "patterns": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "metadata": {
-                "type": "object"
-              },
-              "always": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "tool": {
-                "type": "object",
-                "properties": {
-                  "messageID": {
-                    "type": "string"
-                  },
-                  "callID": {
-                    "type": "string"
-                  }
-                },
-                "required": ["messageID", "callID"],
-                "additionalProperties": false
               }
             },
-            "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
+            "required": ["file"],
             "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventPermissionReplied": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["permission.replied"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "sessionID": {
-                "type": "string",
-                "pattern": "^ses"
-              },
-              "requestID": {
-                "type": "string",
-                "pattern": "^per"
-              },
-              "reply": {
-                "type": "string",
-                "enum": ["once", "always", "reject"]
-              }
-            },
-            "required": ["sessionID", "requestID", "reply"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventReferenceUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["reference.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {}
           }
         },
         "required": ["id", "type", "properties"],
@@ -39551,6 +39471,24 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventReferenceUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["reference.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventProjectDirectoriesUpdated": {
         "type": "object",
         "properties": {
@@ -39569,30 +39507,6 @@
               }
             },
             "required": ["projectID"],
-            "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventFileEdited": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["file.edited"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {
-              "file": {
-                "type": "string"
-              }
-            },
-            "required": ["file"],
             "additionalProperties": false
           }
         },
@@ -39925,6 +39839,117 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventLspUpdated": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["lsp.updated"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventPermissionAsked": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["permission.asked"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^per"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "permission": {
+                "type": "string"
+              },
+              "patterns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "metadata": {
+                "type": "object"
+              },
+              "always": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "tool": {
+                "type": "object",
+                "properties": {
+                  "messageID": {
+                    "type": "string"
+                  },
+                  "callID": {
+                    "type": "string"
+                  }
+                },
+                "required": ["messageID", "callID"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "sessionID", "permission", "patterns", "metadata", "always"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventPermissionReplied": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["permission.replied"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "requestID": {
+                "type": "string",
+                "pattern": "^per"
+              },
+              "reply": {
+                "type": "string",
+                "enum": ["once", "always", "reject"]
+              }
+            },
+            "required": ["sessionID", "requestID", "reply"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventSessionStatus": {
         "type": "object",
         "properties": {
@@ -40140,24 +40165,6 @@
               }
             },
             "additionalProperties": false
-          }
-        },
-        "required": ["id", "type", "properties"],
-        "additionalProperties": false
-      },
-      "EventLspUpdated": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["lsp.updated"]
-          },
-          "properties": {
-            "type": "object",
-            "properties": {}
           }
         },
         "required": ["id", "type", "properties"],
