@@ -2092,9 +2092,6 @@ const AgentManagerContent: Component = () => {
     postMessage: (msg) => vscode.postMessage(msg as never),
     onRemove: freezeTabs,
     onShowSide: showSideTerminal,
-    onHideSide: () => {
-      if (sidePanel() === "terminal") setSidePanel(null)
-    },
     getSelection: selection,
     LOCAL,
     REVIEW_TAB_ID,
@@ -2103,7 +2100,7 @@ const AgentManagerContent: Component = () => {
   const sideCtl = createSideTerminal({
     handlers: termHandlers,
     visible: () => sidePanel() === "terminal",
-    focused: () => terms.focusedId() !== undefined && terms.focusedId() === terms.side()?.id,
+    focusedId: () => terms.sideFocusedId(),
     hide: () => setSidePanel(null),
     refocus: () => window.dispatchEvent(new Event("focusPrompt")),
     postMessage: (msg) => vscode.postMessage(msg as never),
@@ -2186,8 +2183,8 @@ const AgentManagerContent: Component = () => {
     if (!id) return undefined
     if (id === REVIEW_TAB_ID) return { id, title: t("session.tab.review") }
     if (isTerminalTabId(id)) {
-      const term = terms.lookup().get(id)
-      return term ? { id, title: term.title } : undefined
+      const title = terms.title(id)
+      return title ? { id, title } : undefined
     }
     return activeTabs().find((s) => s.id === id)
   })
@@ -2215,8 +2212,8 @@ const AgentManagerContent: Component = () => {
   const closeActiveTab = () => {
     // A focused side terminal owns Cmd+W while its panel is visible —
     // closing a chat tab out from under the user's cursor would be
-    // surprising.
-    if (sidePanel() === "terminal" && terms.focusedId() && terms.focusedId() === terms.side()?.id) {
+    // surprising. Only that terminal dies; the panel keeps the rest.
+    if (sidePanel() === "terminal" && terms.sideFocusedId()) {
       if (sideCtl.close()) return
     }
     if (termHandlers.closeActive()) {
@@ -3092,8 +3089,9 @@ const AgentManagerContent: Component = () => {
                       state={terms}
                       contextKey={terms.sideKey}
                       visible={() => sidePanel() === "terminal"}
-                      onClose={() => sideCtl.close()}
-                      onStart={() => termHandlers.requestSide()}
+                      onSelect={(id) => termHandlers.selectSide(id)}
+                      onClose={(id) => termHandlers.closeSide(id)}
+                      onStart={() => termHandlers.addSide()}
                     />
                   </div>
                 </div>

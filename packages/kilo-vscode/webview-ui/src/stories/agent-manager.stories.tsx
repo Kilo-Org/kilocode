@@ -933,9 +933,9 @@ export const TabBarSingleTab: Story = {
 }
 
 // Side terminal panel inside the real inspector host chain, empty state —
-// no live PTY, so the start affordance renders. The header reuses the
-// .am-diff-header metrics so the a11y/screenshot baseline also guards the
-// alignment against the diff panel chrome.
+// no live PTY, so the start affordance renders. The tab strip header keeps
+// the .am-diff-header height so the a11y/screenshot baseline also guards
+// the alignment against the diff panel chrome.
 export const SideTerminalPanelEmpty: Story = {
   name: "Side terminal panel — empty",
   render: () => {
@@ -953,6 +953,47 @@ export const SideTerminalPanelEmpty: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  onSelect={() => undefined}
+                  onClose={() => undefined}
+                  onStart={() => undefined}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// Tab strip with several side terminals: the active one shows the X close
+// button, the others reveal it on hover. Terminals point at a dead port —
+// xterm renders its connection-error notice inside the panel, which keeps
+// the story self-contained without a live PTY.
+export const SideTerminalPanelTabs: Story = {
+  name: "Side terminal panel — tabs",
+  render: () => {
+    const state = createTerminalState(() => LOCAL)
+    const font = { fontFamily: "monospace", fontSize: 12 }
+    state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://127.0.0.1:1/a", font, placement: "side" })
+    state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://127.0.0.1:1/b", font, placement: "side" })
+    state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://127.0.0.1:1/c", font, placement: "side" })
+    state.setSideActive(LOCAL, "terminal:two")
+    state.setTitle("terminal:two", "npm run dev")
+    return (
+      <StoryProviders noPadding>
+        <div class="am-detail-stack" style={{ height: "420px" }}>
+          <div class="am-detail-content am-detail-split">
+            <div class="am-main-pane" style={{ padding: "24px", color: "var(--text-weak)" }}>
+              Agent session stays visible beside the terminal.
+            </div>
+            <div class="am-diff-resize" style={{ width: "360px" }}>
+              <div class="am-diff-panel-wrapper">
+                <SideTerminalPanel
+                  state={state}
+                  contextKey={() => LOCAL}
+                  visible={() => true}
+                  onSelect={(id) => state.setSideActive(LOCAL, id)}
                   onClose={() => undefined}
                   onStart={() => undefined}
                 />

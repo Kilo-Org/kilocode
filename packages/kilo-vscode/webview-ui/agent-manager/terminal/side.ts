@@ -15,15 +15,15 @@ import type { TerminalDestination } from "../../src/types/messages/agent-manager
 
 interface Handlers {
   requestSide(): void
-  closeSide(): boolean
+  closeSide(terminalId: string): boolean
 }
 
 export interface SideTerminalDeps {
   handlers: Handlers
   /** True while the right-side inspector shows the terminal. */
   visible: Accessor<boolean>
-  /** True while the side terminal itself holds DOM focus. */
-  focused: Accessor<boolean>
+  /** Id of the side terminal holding DOM focus, if any. */
+  focusedId: Accessor<string | undefined>
   /** Leave terminal mode; the terminal stays alive in the background. */
   hide: () => void
   /** Move focus back to the chat composer. */
@@ -49,7 +49,7 @@ export function createSideTerminal(deps: SideTerminalDeps) {
 
   const toggle = () => {
     if (deps.visible()) {
-      const was = deps.focused()
+      const was = deps.focusedId() !== undefined
       deps.hide()
       handoff(was)
       return
@@ -57,12 +57,14 @@ export function createSideTerminal(deps: SideTerminalDeps) {
     deps.handlers.requestSide()
   }
 
-  /** Kill the current context's side terminal (or cancel its in-flight
-   *  create) and hide the panel. */
+  /** Kill the focused side terminal (Cmd/Ctrl+W). The panel stays open
+   *  on the remaining terminals, or on the empty state when this was
+   *  the last one. */
   const close = (): boolean => {
-    const was = deps.focused()
-    const done = deps.handlers.closeSide()
-    if (done) handoff(was)
+    const id = deps.focusedId()
+    if (!id) return false
+    const done = deps.handlers.closeSide(id)
+    if (done) handoff(true)
     return done
   }
 

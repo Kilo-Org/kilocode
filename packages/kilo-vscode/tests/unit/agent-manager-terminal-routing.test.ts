@@ -108,4 +108,125 @@ describe("Agent Manager terminal routing", () => {
     await router.dispose()
     expect(removed).toContain("pty-new")
   })
+
+  it("fills numbering gaps left by closed terminals", async () => {
+    const messages: AgentManagerOutMessage[] = []
+    const titles: string[] = []
+    let seq = 0
+    const client = {
+      pty: {
+        create: async ({ title }: { title: string }) => {
+          titles.push(title)
+          seq++
+          return { data: { id: `pty-${seq}`, title } }
+        },
+        remove: async () => ({ data: true }),
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      getTerminalFont: () => font,
+    })
+    const create = (createId: string) =>
+      router.handle({ type: "agentManager.terminal.create", createId, placement: "side", worktreeId: null })
+
+    create("one")
+    await wait()
+    create("two")
+    await wait()
+    expect(titles).toEqual(["Terminal 1", "Terminal 2"])
+
+    // Close "Terminal 1"; the next create reuses the freed number.
+    const first = messages.find((m) => m.type === "agentManager.terminal.created" && m.createId === "one")
+    if (first?.type !== "agentManager.terminal.created") throw new Error("missing created message")
+    router.handle({ type: "agentManager.terminal.close", terminalId: first.terminalId })
+    await wait()
+
+    create("three")
+    await wait()
+    expect(titles).toEqual(["Terminal 1", "Terminal 2", "Terminal 1"])
+    await router.dispose()
+  })
+
+  it("hands out distinct numbers to concurrent creates", async () => {
+    const messages: AgentManagerOutMessage[] = []
+    const titles: string[] = []
+    const resolvers: Array<(value: { data: { id: string; title: string } }) => void> = []
+    const client = {
+      pty: {
+        create: ({ title }: { title: string }) =>
+          new Promise<{ data: { id: string; title: string } }>((resolve) => {
+            titles.push(title)
+            resolvers.push(resolve)
+          }),
+        remove: async () => ({ data: true }),
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      getTerminalFont: () => font,
+    })
+
+    // Two creates before either settles must not share an ordinal.
+    router.handle({ type: "agentManager.terminal.create", createId: "a", placement: "side", worktreeId: null })
+    router.handle({ type: "agentManager.terminal.create", createId: "b", placement: "side", worktreeId: null })
+    expect(titles).toEqual(["Terminal 1", "Terminal 2"])
+    resolvers[0]?.({ data: { id: "pty-a", title: titles[0]! } })
+    resolvers[1]?.({ data: { id: "pty-b", title: titles[1]! } })
+    await wait()
+
+    // A failed create releases its reservation for the next attempt.
+    await router.dispose()
+  })
+
+  it("does not let a stale create release a new generation's reservation", async () => {
+    const titles: string[] = []
+    const resolvers: Array<(value: { data: { id: string; title: string } }) => void> = []
+    const client = {
+      pty: {
+        create: ({ title }: { title: string }) =>
+          new Promise<{ data: { id: string; title: string } }>((resolve) => {
+            titles.push(title)
+            resolvers.push(resolve)
+          }),
+        remove: async () => ({ data: true }),
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => client,
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      log: () => undefined,
+      post: () => undefined,
+      getTerminalFont: () => font,
+    })
+
+    // Create A starts before the panel is recreated; its reservation dies
+    // with dispose(). Create B of the new generation reserves the same
+    // free number. When A's late completion settles, its release must not
+    // wipe B's reservation — otherwise create C would duplicate B's title.
+    router.handle({ type: "agentManager.terminal.create", createId: "a", placement: "side", worktreeId: null })
+    await router.dispose()
+    router.handle({ type: "agentManager.terminal.create", createId: "b", placement: "side", worktreeId: null })
+    expect(titles).toEqual(["Terminal 1", "Terminal 1"])
+    resolvers[0]?.({ data: { id: "pty-a", title: titles[0]! } })
+    await wait()
+    router.handle({ type: "agentManager.terminal.create", createId: "c", placement: "side", worktreeId: null })
+    expect(titles).toEqual(["Terminal 1", "Terminal 1", "Terminal 2"])
+    await router.dispose()
+  })
 })

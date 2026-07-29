@@ -59,7 +59,7 @@ export const dict = {
   "agentManager.terminal.new": "Nowa karta terminala",
   "agentManager.terminal.ended": "terminal zakończony — zamknij kartę, aby zamknąć",
   "agentManager.terminal.connectionError": "błąd połączenia terminala",
-  "agentManager.terminal.kill": "Zakończ terminal",
+  "agentManager.terminal.add": "Nowy terminal",
   "agentManager.terminal.empty": "Nie ma tu jeszcze terminala",
   "agentManager.terminal.start": "Uruchom terminal",
   "agentManager.terminal.destination": "Wybierz, co otwiera przycisk terminala",

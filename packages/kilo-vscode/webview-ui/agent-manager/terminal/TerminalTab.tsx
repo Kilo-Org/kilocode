@@ -46,6 +46,11 @@ interface Props {
    *  layer tracks this as `focusedId` so `Cmd+W` can target the
    *  terminal that actually has the cursor. */
   onFocusChange?: (focused: boolean) => void
+  /** Reports OSC window-title escape codes (`ESC ] 0/1/2 ; title BEL`)
+   *  sent by the shell or running programs — fish sets it to the active
+   *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
+   *  state layer mirrors it into the tab label. */
+  onTitleChange?: (title: string) => void
 }
 
 /** How long the ResizeObserver waits after the last size change before
@@ -206,6 +211,10 @@ export const TerminalTab: Component<Props> = (props) => {
     }
     host.addEventListener("focusin", onFocusIn)
     host.addEventListener("focusout", onFocusOut)
+
+    // OSC 0/1/2 window-title sequences → tab label. xterm parses and
+    // strips these itself, so this only fires for real title codes.
+    const disposeTitle = term.onTitleChange((title) => props.onTitleChange?.(title))
 
     const ws = new WebSocket(props.wsUrl)
     ws.binaryType = "arraybuffer"
@@ -394,6 +403,7 @@ export const TerminalTab: Component<Props> = (props) => {
       clearTimeout(resizeTimer)
       ro.disconnect()
       disposeData.dispose()
+      disposeTitle.dispose()
       try {
         ws.close()
       } catch (err) {
