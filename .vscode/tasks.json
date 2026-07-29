@@ -95,7 +95,7 @@
       "problemMatcher": ["$tsc", "$eslint-stylish"]
     },
     {
-      "label": "VSCode - Clear Isolated Kilo State",
+      "label": "VSCode - Clear Isolated State",
       "type": "process",
       "command": "bun",
       "args": [
@@ -113,7 +113,7 @@
     },
     {
       "label": "VSCode - Compile (Clean Isolated)",
-      "dependsOn": ["VSCode - Clear Isolated Kilo State", "VSCode - Compile"],
+      "dependsOn": ["VSCode - Clear Isolated State", "VSCode - Compile"],
       "dependsOrder": "sequence",
       "problemMatcher": []
     },

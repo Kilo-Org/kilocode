@@ -10,9 +10,11 @@
  *   --workspace PATH  Folder to open in VS Code (default: repo root)
  *   --mode dev|vsix   "dev" uses --extensionDevelopmentPath, "vsix" packages a VSIX (default: dev)
  *   --app-path PATH   Explicit path to the VS Code executable (auto-detected if omitted)
+ *   --state-dir PATH  Directory for isolated VS Code user-data/extensions (default: OS temp per repo)
+ *   --kilo-storage-dir PATH  Directory for isolated Kilo XDG storage
  *   --insiders        Prefer VS Code Insiders over stable
  *   --wait            Block until the VS Code window is closed
- *   --clean           Wipe the user-data and extensions dirs before launching
+ *   --clean           Wipe isolated VS Code dirs and Kilo storage before launching
  *   --preserve-settings  Merge defaults into existing VS Code user settings
  *   --accessible      Enable VS Code accessibility support for assistive-technology testing
  *
@@ -34,12 +36,6 @@ import { spawn } from "node:child_process"
 const win = process.platform === "win32"
 const root = join(import.meta.dir, "..")
 const repo = resolve(root, "..", "..")
-
-// Stable per-repo directory under OS temp — no accumulation
-const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
-const base = join(tmpdir(), `kilo-vscode-dev-${hash}`)
-const userDir = join(base, "user-data")
-const extDir = join(base, "extensions")
 
 // ---------------------------------------------------------------------------
 // Argument parsing
@@ -79,6 +75,14 @@ function parse(argv: string[]) {
 }
 
 const opts = parse(process.argv.slice(2))
+
+// Stable per-repo directory under OS temp — no accumulation
+const hash = createHash("sha256").update(repo).digest("hex").slice(0, 12)
+const base = opts["state-dir"] ? resolve(opts["state-dir"] as string) : join(tmpdir(), `kilo-vscode-dev-${hash}`)
+const userDir = join(base, "user-data")
+const extDir = join(base, "extensions")
+const kilo = opts["kilo-storage-dir"] ? resolve(opts["kilo-storage-dir"] as string) : undefined
+
 const shouldBuild = opts["build"] !== false
 const mode = (opts["mode"] as string) ?? "dev"
 const workspace = opts["workspace"] ? resolve(opts["workspace"] as string) : repo
@@ -305,6 +309,7 @@ async function launch() {
   if (clean) {
     console.log("[launch] Cleaning previous state...")
     rmSync(base, { recursive: true, force: true })
+    if (kilo) rmSync(kilo, { recursive: true, force: true })
   }
 
   mkdirSync(userDir, { recursive: true })
@@ -336,6 +341,12 @@ async function launch() {
   // Strip Electron/VS Code env vars so the spawned instance doesn't attach
   // to the current Electron process (e.g. when launched from a VS Code task).
   const env = cleanEnv(process.env)
+  if (kilo) {
+    env.XDG_DATA_HOME = join(kilo, "data")
+    env.XDG_CONFIG_HOME = join(kilo, "config")
+    env.XDG_STATE_HOME = join(kilo, "state")
+    env.XDG_CACHE_HOME = join(kilo, "cache")
+  }
   for (const key of Object.keys(env)) {
     if (key.startsWith("ELECTRON_") || key.startsWith("VSCODE_")) delete env[key]
   }
@@ -344,6 +355,7 @@ async function launch() {
   console.log(`[launch] Executable: ${app}`)
   console.log(`[launch] Workspace:  ${workspace}`)
   console.log(`[launch] State:      ${base}`)
+  if (kilo) console.log(`[launch] Kilo state: ${kilo}`)
   console.log(`[launch] Accessibility support: ${accessible ? "on" : "off"}`)
 
   if (blocking) {
