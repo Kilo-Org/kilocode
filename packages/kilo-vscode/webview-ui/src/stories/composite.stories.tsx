@@ -304,9 +304,15 @@ const skillShellPermission: PermissionRequest = {
   id: "perm-skill-shell-001",
   sessionID: SESSION_ID,
   toolName: "bash",
+  // patterns are the decomposed sub-commands (for authorization); the prompt displays the
+  // verbatim per-placeholder commands from args.commands, and names the skill via args.skill.
   patterns: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
   always: [],
-  args: { skillShell: true },
+  args: {
+    skillShell: true,
+    skill: "git-status",
+    commands: ["git rev-parse --abbrev-ref HEAD", "printf INJECTED_OK"],
+  },
   tool: { messageID: ASST_MSG_ID, callID: "call-skill-shell-001" },
 }
 

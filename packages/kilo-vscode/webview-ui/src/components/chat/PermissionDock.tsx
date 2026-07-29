@@ -17,7 +17,13 @@ import { Tooltip } from "@kilocode/kilo-ui/tooltip"
 import { useSession } from "../../context/session"
 import { useLanguage } from "../../context/language"
 import { useConfig } from "../../context/config"
-import { describePatterns, describeRule, savedRuleStates, type RuleDecision } from "./permission-dock-utils"
+import {
+  describePatterns,
+  describeRule,
+  displaySkillCommand,
+  savedRuleStates,
+  type RuleDecision,
+} from "./permission-dock-utils"
 import { PermissionCommand } from "./PermissionCommand"
 import { PermissionDiff } from "./PermissionDiff"
 import { permissionDiffs } from "./permission-diff-utils"
@@ -37,9 +43,12 @@ export const PermissionDock: Component<{
   const { config } = useConfig()
 
   const fromChild = () => props.request.sessionID !== session.currentSessionID()
-  // Skill shell batches list every command and are never persisted, so they show
-  // the command list and no auto-approve rules (matching the CLI TUI).
+  // Skill shell batches are never persisted, so they show no auto-approve rules. The command
+  // list is only shown for the bash ask; the sibling external_directory ask (same skillShell
+  // metadata) keeps its normal directory rendering.
   const skillShell = () => props.request.args?.skillShell === true
+  const skillShellCommands = () =>
+    skillShell() && props.request.toolName === "bash" ? (props.request.args?.commands ?? []) : []
   // Bash sends fine-grained rules via metadata.rules; other tools use the always array.
   const rules = () => props.request.args?.rules ?? props.request.always ?? []
   // Rules like "git *" or "git log *" — strip the trailing wildcard for display.
@@ -119,8 +128,15 @@ export const PermissionDock: Component<{
     return value
   }
 
-  const title = () =>
-    fromChild() ? language.t("notification.permission.titleSubagent") : language.t("notification.permission.title")
+  const title = () => {
+    const skill = props.request.args?.skill
+    if (skillShell() && typeof skill === "string" && skill.length > 0)
+      // Escape the untrusted skill name so bidi/control chars can't reorder the header text.
+      return language.t("notification.permission.titleSkillShell", { skill: displaySkillCommand(skill) })
+    return fromChild()
+      ? language.t("notification.permission.titleSubagent")
+      : language.t("notification.permission.title")
+  }
 
   const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
@@ -272,7 +288,7 @@ export const PermissionDock: Component<{
         }
       >
         <Show
-          when={skillShell()}
+          when={skillShellCommands().length > 0}
           fallback={
             <>
               <Show when={cmdDescription()}>{(desc) => <div data-slot="permission-hint">{desc()}</div>}</Show>
@@ -306,7 +322,8 @@ export const PermissionDock: Component<{
             </>
           }
         >
-          <For each={props.request.patterns}>{(cmd) => <PermissionCommand command={cmd} />}</For>
+          {/* Verbatim commands (args.commands), control-char/bidi-escaped so the displayed command matches execution. */}
+          <For each={skillShellCommands()}>{(cmd) => <PermissionCommand command={displaySkillCommand(cmd)} />}</For>
         </Show>
 
         <Show when={diffs().length > 0}>
