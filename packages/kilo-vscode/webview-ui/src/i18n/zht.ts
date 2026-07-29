@@ -656,6 +656,10 @@ export const dict = {
   "session.messages.scrollToBottom": "捲動至底部",
   "session.messages.initializing": "初始化中...",
   "session.messages.taskStarting": "啟動中...",
+  "session.prompts.navLabel": "提示詞導覽",
+  "session.prompts.tick": "提示詞 {{index}}/{{total}}：{{prompt}}",
+  "session.prompts.noAnswer": "尚無回應",
+  "session.prompts.queued": "已排入佇列",
   "session.status.writingResponse": "正在撰寫回覆…",
   "session.status.retry": "正在重試…",
   "session.status.working": "處理中…",
@@ -682,7 +686,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "正在連線至伺服器...",
   "prompt.placeholder.error": "連線失敗。請檢查輸出面板或重新啟動擴充功能。",
-  "prompt.placeholder.default": "輸入訊息... (Enter 送出，Shift+Enter 換行)",
+  "prompt.placeholder.default": "輸入訊息，用 @ 提及檔案... (Enter 送出，Shift+Enter 換行)",
 
   "context.usage.sessionCost": "工作階段費用",
   "context.usage.olderSessions": "{{count}} 個較早的工作階段",

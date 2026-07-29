@@ -39,6 +39,7 @@ vi.mock("../SessionTerminalManager", () => ({
   SessionTerminalManager: class {
     showTerminal() {}
     showLocalTerminal() {}
+    showWorktreeTerminal() {}
     syncLocalOnSessionSwitch() {}
     syncOnSessionSwitch() {
       return false
@@ -214,6 +215,20 @@ describe("AgentManagerProvider worktree creation", () => {
     await pending
 
     expect(manager.createWorktreeOnDisk).toHaveBeenCalledTimes(1)
+  })
+
+  it("disposes orphaned terminals when a freshly mounted webview requests state", async () => {
+    const manager = createHarness()
+    const dispose = vi.fn().mockResolvedValue(undefined)
+    manager.terminalRouter = { handle: vi.fn().mockReturnValue(false), dispose } as unknown as {
+      handle: ReturnType<typeof vi.fn>
+    }
+    // Avoid the vscode-backed pushEmptyState; the disposal under test is synchronous.
+    ;(manager as unknown as Record<string, unknown>).pushEmptyState = vi.fn()
+
+    await manager.onMessage({ type: "agentManager.requestState" })
+
+    expect(dispose).toHaveBeenCalledTimes(1)
   })
 
   it("routes file search through the active worktree session", async () => {

@@ -705,6 +705,10 @@ export const dict = {
   "session.messages.scrollToBottom": "التمرير إلى الأسفل",
   "session.messages.initializing": "جاري التهيئة...",
   "session.messages.taskStarting": "جاري البدء...",
+  "session.prompts.navLabel": "مستعرض المطالبات",
+  "session.prompts.tick": "المطالبة {{index}} من {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "لا توجد استجابة بعد",
+  "session.prompts.queued": "في قائمة الانتظار",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
   "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.working": "...جارٍ العمل",
@@ -732,7 +736,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "جارٍ الاتصال بالخادم...",
   "prompt.placeholder.error": "فشل الاتصال. تحقق من لوحة الإخراج أو أعد تشغيل الإضافة.",
-  "prompt.placeholder.default": "اكتب رسالة... (Enter للإرسال، Shift+Enter لسطر جديد)",
+  "prompt.placeholder.default": "اكتب رسالة، @ للإشارة إلى الملفات... (Enter للإرسال، Shift+Enter لسطر جديد)",
 
   "context.usage.sessionCost": "تكلفة الجلسة",
   "context.usage.olderSessions": "{{count}} جلسات أقدم",
