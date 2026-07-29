@@ -4,7 +4,6 @@ import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.layout.StackAxis
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.ui.popup.JBPopup
 import com.intellij.openapi.ui.popup.JBPopupListener
 import com.intellij.openapi.ui.popup.LightweightWindowEvent
@@ -40,6 +39,7 @@ internal class ActiveListView(
     private val cfg: ActiveListConfig = ActiveListConfig.Equal,
     private val surface: ActiveListSurface = ActiveListSurface.Default,
     private val matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
+    private val enter: () -> Boolean = ::activeListEnterFocus,
     private val onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     private val onActivate: ((ActiveListItem) -> Unit)? = null,
     private val onClick: ((ActiveListItem) -> Unit)? = null,
@@ -461,8 +461,6 @@ internal class ActiveListView(
         check(ApplicationManager.getApplication().isDispatchThread) { "Active list updates must run on EDT" }
     }
 
-    private fun enter(): Boolean = AdvancedSettings.getBoolean(ENTER_FOCUS)
-
     private fun selection(e: MouseEvent): Boolean {
         if (list.selectionMode == ListSelectionModel.SINGLE_SELECTION) return false
         return e.isShiftDown || e.isMetaDown || e.isControlDown
@@ -502,9 +500,6 @@ internal class ActiveListView(
 
     private data class Press(val key: String, val id: String)
 
-    private companion object {
-        const val ENTER_FOCUS = "edit.source.on.enter.key.request.focus.in.editor"
-    }
 }
 
 private fun activeListIndex(items: List<ActiveListItem>, key: String?): Int {

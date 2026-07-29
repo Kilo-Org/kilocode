@@ -6,7 +6,6 @@ import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionUiFactory
 import ai.kilocode.client.vfs.KiloEditorKind
 import ai.kilocode.client.vfs.KiloEditorKindRegistry
-import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.client.vfs.KiloVirtualFile
 import ai.kilocode.rpc.dto.WorktreeDto
 import com.intellij.openapi.Disposable
@@ -44,7 +43,6 @@ object WorktreeSessionEditorKind : KiloEditorKind {
         Disposer.register(parent) { cs.cancel() }
         val controller = WorktreeSessionListController(project.service<KiloSessionService>(), path, cs)
         val manager = WorktreeSessionEditorManager(parent, project, worktree, controller)
-        manager.startFocus = file.getUserData(KiloVfsManager.FOCUS) == true
         return WorktreeSessionEditorPanel(parent, manager, controller, worktree)
     }
 

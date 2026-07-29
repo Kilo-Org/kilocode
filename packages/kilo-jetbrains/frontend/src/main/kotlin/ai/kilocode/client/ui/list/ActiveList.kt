@@ -1,6 +1,7 @@
 package ai.kilocode.client.ui.list
 
 import ai.kilocode.client.ui.UiStyle
+import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.ui.DocumentAdapter
 import com.intellij.ui.SearchTextField
@@ -34,11 +35,12 @@ internal class ActiveList(
     onCell: (String, String) -> Unit,
     onOpen: ((ActiveListItem, Boolean) -> Unit)? = null,
     matcher: (String, ActiveListItem) -> Boolean = ::activeListMatches,
+    enter: () -> Boolean = ::activeListEnterFocus,
     onActivate: ((ActiveListItem) -> Unit)? = null,
     onClick: ((ActiveListItem) -> Unit)? = null,
     onSelect: (() -> Unit)? = null,
 ) : BorderLayoutPanel() {
-    private val view = ActiveListView(emptyText, cfg, surface, matcher, onOpen, onActivate, onClick, onCell)
+    private val view = ActiveListView(emptyText, cfg, surface, matcher, enter, onOpen, onActivate, onClick, onCell)
     private val search: SearchTextField? = if (showSearch) SearchTextField(false) else null
     private val scroll = object : JBScrollPane(view) {
         override fun getBackground(): Color {
@@ -105,6 +107,9 @@ internal class ActiveList(
     fun focusList() = view.focusList()
 
     @RequiresEdt
+    fun preferredFocus(): JComponent = view.list
+
+    @RequiresEdt
     fun trackBalloon(balloon: Balloon) = view.trackBalloon(balloon)
 
     @RequiresEdt
@@ -146,6 +151,8 @@ internal class ActiveList(
         view.setBusy(value)
     }
 }
+
+internal fun activeListEnterFocus(): Boolean = AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor")
 
 internal fun wireActiveListSearch(search: SearchTextField, view: ActiveListView) {
     search.textEditor.registerKeyboardAction(

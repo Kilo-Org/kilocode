@@ -53,7 +53,6 @@ open class WorktreeSessionEditorManager(
     private var pending = false
     var onPresent: ((String?) -> Unit)? = null
     var onListChanged: (() -> Unit)? = null
-    internal var startFocus = false
 
     val component: JPanel get() = right
 
@@ -65,7 +64,7 @@ open class WorktreeSessionEditorManager(
     fun start() {
         list.reload {
             val dto = latest()
-            if (dto != null) openSession(SessionRef.Local(dto), startFocus) else newSession(startFocus)
+            if (dto != null) openSession(SessionRef.Local(dto), false) else newSession(false)
         }
     }
 
@@ -90,9 +89,6 @@ open class WorktreeSessionEditorManager(
             if (session != null) openSession(SessionRef.Local(session), focus) else onListChanged?.invoke()
         }
     }
-
-    @RequiresEdt
-    fun preferredFocus(): JComponent? = currentUi()?.defaultFocusedComponent
 
     @RequiresEdt
     override fun showHistory() {

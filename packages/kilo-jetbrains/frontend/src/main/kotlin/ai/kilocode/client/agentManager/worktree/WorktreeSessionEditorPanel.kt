@@ -71,6 +71,7 @@ class WorktreeSessionEditorPanel(
         ),
         surface = ActiveListSurface.ToolWindow,
         showSearch = false,
+        enter = { true },
         onCell = { key, id ->
             if (id == RENAME_CELL) beginRename(key, RENAME_CELL)
             if (id == DELETE_CELL) confirmDelete(listOf(key), DELETE_CELL)
@@ -107,7 +108,7 @@ class WorktreeSessionEditorPanel(
     }
 
     @RequiresEdt
-    fun preferredFocus(): JComponent = manager.preferredFocus() ?: list
+    fun preferredFocus(): JComponent = list.preferredFocus()
 
     @RequiresEdt
     fun selectSessions(keys: List<String>) {

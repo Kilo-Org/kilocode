@@ -111,17 +111,6 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertTrue(requested.isEmpty())
     }
 
-    fun `test start preserves focused open intent`() {
-        rpc.listed += session("ses_new", updated = 3.0)
-        val manager = manager(focus = true)
-
-        edt { manager.start() }
-        flush()
-
-        assertEquals(listOf(DIR to "ses_new"), created)
-        assertEquals(1, requested.size)
-    }
-
     fun `test start creates a session when none are listed`() {
         rpc.session = session("ses_new", updated = 4.0).copy(title = "New session")
         val manager = manager()
@@ -133,15 +122,6 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(1, rpc.creates)
         assertEquals(listOf(DIR to "ses_new"), created)
         assertTrue(requested.isEmpty())
-    }
-
-    fun `test preferred focus returns active session focus component`() {
-        val session = session("ses_1", updated = 1.0)
-        val manager = manager()
-
-        edt { manager.openSession(SessionRef.Local(session)) }
-
-        assertSame(edt { ui.single().defaultFocusedComponent }, edt { manager.preferredFocus() })
     }
 
     fun `test deleting shown session removes it and falls back to next session`() {
@@ -250,10 +230,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
         assertEquals(listOf("Failed to rename session \"Renamed Session\"" to "rename unavailable"), notified)
     }
 
-    private fun manager(
-        focus: Boolean = false,
-        controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope),
-    ): WorktreeSessionEditorManager {
+    private fun manager(controller: WorktreeSessionListController = WorktreeSessionListController(sessions, DIR, coroutines.scope)): WorktreeSessionEditorManager {
         return WorktreeSessionEditorManager(
             parent = testRootDisposable,
             project = project,
@@ -287,7 +264,7 @@ class WorktreeSessionEditorManagerTest : BasePlatformTestCase() {
             timers = timers,
             request = { requested += it },
             notify = { title, content -> notified += title to content },
-        ).also { it.startFocus = focus }
+        )
     }
 
     private fun session(id: String, updated: Double) = SessionDto(

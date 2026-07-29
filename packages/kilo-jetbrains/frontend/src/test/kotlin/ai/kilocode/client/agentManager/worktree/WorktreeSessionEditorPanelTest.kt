@@ -24,7 +24,6 @@ import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.DataSnapshotProvider
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.actionSystem.impl.ActionButton
-import com.intellij.openapi.options.advanced.AdvancedSettings
 import com.intellij.openapi.ui.TestDialog
 import com.intellij.openapi.ui.TestDialogManager
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
@@ -106,6 +105,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
 
     fun `test editor kind delegates preferred focus to panel`() {
         edt {
+            assertSame(UIUtil.findComponentOfType(panel, JBList::class.java), panel.preferredFocus())
             assertSame(panel.preferredFocus(), WorktreeSessionEditorKind.preferredFocus(panel))
         }
     }
@@ -261,7 +261,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         assertEquals(listOf(true), manager.focuses)
     }
 
-    fun `test enter opens with platform focus setting and f4 focuses session`() {
+    fun `test enter and f4 focus selected session prompt`() {
         rpc.listed += session("ses_1", 1.0)
         edt { controller.reload() }
         flush()
@@ -276,7 +276,7 @@ class WorktreeSessionEditorPanelTest : BasePlatformTestCase() {
         }
 
         assertEquals(listOf("ses_1", "ses_1"), manager.refs)
-        assertEquals(listOf(AdvancedSettings.getBoolean("edit.source.on.enter.key.request.focus.in.editor"), true), manager.focuses)
+        assertEquals(listOf(true, true), manager.focuses)
     }
 
     fun `test multi select delete action deletes selected sessions`() {
