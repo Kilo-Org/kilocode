@@ -1,3 +1,18 @@
+import type { Config } from "../../types/messages"
+
+export function mcpEnabledPatch(config: Config, name: string, enabled: boolean): Partial<Config> {
+  const mcp = config.mcp ?? {}
+  return {
+    mcp: {
+      ...mcp,
+      [name]: {
+        ...mcp[name],
+        enabled,
+      },
+    },
+  }
+}
+
 export function selectedDefaultAgentValue(value: string): string | null {
   return value || null
 }

@@ -1,10 +1,36 @@
 import { describe, expect, it } from "bun:test"
 import {
+  mcpEnabledPatch,
   selectedAgentNumberOverrideValue,
   selectedAgentTextOverrideValue,
   selectedDefaultAgentValue,
   shouldClearDefaultAgentWhenAgentBecomesUnavailable,
 } from "../../webview-ui/src/components/settings/agent-behaviour-patches"
+
+describe("mcpEnabledPatch", () => {
+  it("persists the enabled state without dropping the server configuration", () => {
+    const config = {
+      mcp: {
+        docs: {
+          type: "remote" as const,
+          url: "https://example.com/mcp",
+          headers: { Authorization: "Bearer token" },
+        },
+      },
+    }
+
+    expect(mcpEnabledPatch(config, "docs", false)).toEqual({
+      mcp: {
+        docs: {
+          type: "remote",
+          url: "https://example.com/mcp",
+          headers: { Authorization: "Bearer token" },
+          enabled: false,
+        },
+      },
+    })
+  })
+})
 
 describe("selectedAgentTextOverrideValue", () => {
   it("maps an empty text field value to a null delete sentinel", () => {

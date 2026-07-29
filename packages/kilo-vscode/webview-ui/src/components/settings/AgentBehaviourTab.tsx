@@ -17,7 +17,7 @@ import ModeEditView from "./ModeEditView"
 import ModeCreateView from "./ModeCreateView"
 import McpEditView from "./McpEditView"
 import WorkflowsTab from "./agent-behaviour/WorkflowsTab"
-import { selectedDefaultAgentValue } from "./agent-behaviour-patches"
+import { mcpEnabledPatch, selectedDefaultAgentValue } from "./agent-behaviour-patches"
 import { parseImport, MAX_IMPORT_SIZE } from "./mode-io"
 import type { ImportError } from "./mode-io"
 
@@ -675,12 +675,13 @@ const AgentBehaviourTab: Component = () => {
                           <Switch
                             checked={isConnected(name)}
                             disabled={session.mcpLoading() === name}
-                            onChange={() => {
-                              if (isConnected(name)) {
+                            onChange={(enabled: boolean) => {
+                              updateConfig(mcpEnabledPatch(config(), name, enabled))
+                              if (!enabled) {
                                 session.disconnectMcp(name)
-                              } else {
-                                session.connectMcp(name)
+                                return
                               }
+                              session.connectMcp(name)
                             }}
                             hideLabel
                           >
