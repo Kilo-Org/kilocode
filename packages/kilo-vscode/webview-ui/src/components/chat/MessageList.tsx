@@ -979,9 +979,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     if (sid) setPending({ sid, key })
   }
 
-  // A restored session can expose prompt metadata before Virtua installs its
-  // handle. Keep the target by stable row key and resolve it once the loaded
-  // row is indexed, without mounting any additional transcript content.
+  // Keep unresolved targets by stable row key. Virtual rows resolve once
+  // Virtua installs its handle; direct/live rows resolve once Solid mounts
+  // their DOM node.
   createEffect(() => {
     const target = pending()
     if (!target) return
@@ -991,10 +991,18 @@ export const MessageList: Component<MessageListProps> = (props) => {
     }
     const index = indexes().get(target.key)
     const handle = virtualizer()
-    if (index === undefined || !handle) return
+    if (index !== undefined && handle) {
+      setPending(undefined)
+      autoScroll.pause()
+      handle.scrollToIndex(index, { align: "start" })
+      return
+    }
+    const el = scrollEl()
+    const row = el?.querySelector<HTMLElement>(`[data-row-key="${CSS.escape(target.key)}"]`)
+    if (!row) return
     setPending(undefined)
     autoScroll.pause()
-    handle.scrollToIndex(index, { align: "start" })
+    row.scrollIntoView({ block: "start" })
   })
 
   // Clicking a bar in the task timeline scrolls the transcript to that message.
@@ -1063,7 +1071,9 @@ export const MessageList: Component<MessageListProps> = (props) => {
     const count = session.messages().length
     const action = historyAction(target.count, count, session.hasOlderMessages())
     if (action === "stop") {
+      const item = items()[0]
       setSeek(undefined)
+      if (item) jump(item.key)
       return
     }
     if (action === "load") {
