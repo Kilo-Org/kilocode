@@ -290,14 +290,14 @@ export const dict = {
   "ui.permission.copyCommand": "کپی",
   "ui.approval.auto": "تأیید خودکار",
   "ui.approval.manual": "تأیید شده توسط شما",
-  "ui.approval.rule": "با قانون `{{pattern}}` از مجوز `{{permission}}` مطابقت داشت",
+  "ui.approval.rule": "با قانون `{{pattern}}` از `{{permission}}` مطابقت داشت",
   "ui.approval.source.agent": "توسط عامل {{agent}}",
   "ui.approval.source.agent.default": "توسط عامل",
   "ui.approval.source.global": "توسط تنظیمات سراسری شما",
   "ui.approval.source.project": "توسط تنظیمات پروژه",
   "ui.approval.source.yolo": "توسط حالت تأیید خودکار (YOLO)",
   "ui.approval.source.session": "توسط قانون تأیید خودکار جلسه",
-  "ui.approval.source.default": "به‌صورت پیش‌فرض",
+  "ui.approval.source.default": "به‌طور پیش‌فرض",
 
   "session.tab.review": "بررسی",
   "session.review.filesChanged": "{{count}} فایل تغییر یافته",
@@ -706,7 +706,7 @@ export const dict = {
   "sidebar.session.newWorktree.tooltip":
     "یک worktree گیت ایزوله ایجاد کنید تا به‌صورت امن آزمایش کنید، تغییرات را جدا نگه دارید و بدون اختلال در شاخه فعلی، جلسات موازی اجرا کنید.",
   "sidebar.session.configureWorktree.tooltip":
-    "دیالوگ worktree مدیر Agent را باز کنید تا قبل از ایجاد، یک worktree جدید پیکربندی کنید.",
+    "برای پیکربندی یک worktree جدید قبل از ایجاد آن، دیالوگ worktree در Agent Manager را باز کنید.",
   "sidebar.session.newWorktree.from": "Worktree جدید از",
   "sidebar.session.currentBranch": "شاخه فعلی",
   "sidebar.session.moveToWorktree": "انتقال به Worktree",
@@ -716,7 +716,7 @@ export const dict = {
     "این مکالمه و ۱ فایل تغییریافته را به یک worktree اختصاصی برای کار پیگیری ایزوله منتقل کنید.",
   "sidebar.session.moveToWorktree.tooltip.other":
     "این مکالمه و {{files}} فایل تغییریافته را به یک worktree اختصاصی برای کار پیگیری ایزوله منتقل کنید.",
-  "sidebar.session.showChanges.tooltip.empty": "نمای تغییرات را برای بررسی درخت کاری فعلی باز کنید.",
+  "sidebar.session.showChanges.tooltip.empty": "نمای تغییرات را برای بررسی working tree فعلی باز کنید.",
   "sidebar.session.progress.capturing": "در حال ثبت تغییرات...",
   "sidebar.session.progress.creating": "در حال ایجاد worktree...",
   "sidebar.session.progress.setup": "در حال اجرای راه‌اندازی...",
@@ -913,7 +913,7 @@ export const dict = {
   "settings.agentBehaviour.noAgentsFound": "هیچ عاملی یافت نشد.",
   "settings.agentBehaviour.removeAgent.title": "حذف عامل",
   "settings.agentBehaviour.removeAgent.confirm":
-    "عامل «{{name}}» حذف شود؟ این کار با به‌روزرسانی پیکربندی شما، عامل را غیرفعال می‌کند.",
+    "ایجنت «{{name}}» حذف شود؟ این کار با به‌روزرسانی پیکربندی شما، ایجنت را غیرفعال می‌کند.",
   "settings.agentBehaviour.removeAgent.button": "حذف",
   "settings.agentBehaviour.skillPaths": "مسیرهای پوشه مهارت",
   "settings.agentBehaviour.skillUrls": "URL های مهارت",
@@ -1063,13 +1063,13 @@ export const dict = {
   "settings.context.memory.status.disabled": "غیرفعال",
   "settings.context.memory.status.enabledTokens": "فعال - ~{{tokens}} توکن ذخیره‌شده",
   "settings.context.memory.storage.path": "{{path}}",
-  "settings.context.memory.storage.enable": "فعال‌سازی حافظه برای ایجاد فایل‌های حافظه پروژه.",
+  "settings.context.memory.storage.enable": "حافظه را فعال کنید تا فایل‌های حافظه پروژه ایجاد شوند.",
   "settings.context.memory.inspect": "بررسی",
   "chat.memory.project.disabled": "حافظه پروژه غیرفعال است",
   "chat.memory.project.empty": "این پروژه هنوز هیچ حافظه‌ای ندارد. پس از استفاده از Kilo نمایش داده خواهد شد.",
   "chat.memory.command.failed": "دستور حافظه ناموفق بود",
   "chat.memory.updated": "حافظه به‌روزرسانی شد",
-  "chat.memory.rebuild": "ایندکس حافظه بازسازی شد",
+  "chat.memory.rebuild": "Memory index rebuilt",
 
   "settings.commitMessage.title": "پیام Commit",
   "settings.commitMessage.override.title": "استفاده از Prompt سفارشی",
@@ -1158,7 +1158,7 @@ export const dict = {
     "فراخوانی ابزارهای موازی و زیرعامل‌ها به عامل شما امکان می‌دهند کارهای بیشتری را همزمان انجام دهد — تا زمان کمتری صرف نظارت کنید و زمان بیشتری برای ارسال داشته باشید.",
   "migration.whatsNew.features.interface.title": "رابط کاربری ساده‌تر",
   "migration.whatsNew.features.interface.detail": "حواس‌پرتی کمتر، خواندن آسان‌تر و سریع‌تر.",
-  "migration.whatsNew.features.agentManager.title": "مدیر عامل",
+  "migration.whatsNew.features.agentManager.title": "Agent Manager",
   "migration.whatsNew.features.agentManager.detail":
     "یک رابط یکپارچه برای اجرای چندین عامل به‌صورت موازی، هر کدام در worktree مخصوص خود — پیشرفت را رصد کنید، بین زمینه‌ها جابه‌جا شوید و تغییرات را در یک مکان بررسی کنید.",
   "migration.whatsNew.features.foundation.title": "پایه مشترک",
@@ -1256,7 +1256,7 @@ export const dict = {
     "فایل‌هایی با تغییراتی که به ناحیه staging گیت اضافه کرده‌اید (`git add`)، همان‌طور که در کامیت بعدی ظاهر خواهند شد.",
   "diffViewer.source.unstaged.label": "مرحله‌بندی‌نشده",
   "diffViewer.source.unstaged.tooltip":
-    "فایل‌هایی که در درخت کاری شما تغییر کرده‌اند اما هنوز مرحله‌بندی نشده‌اند، به علاوه فایل‌های ردیابی‌نشده (جدید).",
+    "فایل‌های تغییر یافته در working tree شما که هنوز stage نشده‌اند، به علاوه فایل‌های ردیابی‌نشده (جدید).",
   "diffViewer.source.session.label": "جلسه",
   "diffViewer.source.session.tooltip":
     "فایل‌هایی که توسط Kilo در جلسه جاری تغییر کرده‌اند، بر اساس عکس‌های فوری هر نوبت. با شروع جلسه جدید بازنشانی می‌شود.",

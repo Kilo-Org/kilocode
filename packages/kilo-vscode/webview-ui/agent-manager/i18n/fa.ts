@@ -126,7 +126,7 @@ export const dict = {
   "agentManager.dialog.branchBadge.default": "پیش‌فرض",
   "agentManager.dialog.branchBadge.remote": "راه دور",
   "agentManager.dialog.versions": "نسخه‌ها",
-  "agentManager.dialog.versionHint": "{{count}} درخت‌کاری به صورت موازی اجرا خواهند شد",
+  "agentManager.dialog.versionHint": "{{count}} worktree به صورت موازی اجرا خواهند شد",
   "agentManager.dialog.compareModels": "مقایسه مدل‌ها",
   "agentManager.dialog.compareModels.tooltip": "اجرای عامل‌ها روی مدل‌های مختلف به صورت موازی برای مقایسه نتایج",
   "agentManager.dialog.compareModels.searchModels": "جستجوی مدل‌ها...",
@@ -134,7 +134,7 @@ export const dict = {
   "agentManager.dialog.compareModels.effort": "میزان استدلال",
   "agentManager.dialog.compareModels.effortDefault": "پیش‌فرض",
   "agentManager.dialog.creating": "در حال ایجاد...",
-  "agentManager.dialog.createWorktree": "ایجاد درخت‌کاری",
+  "agentManager.dialog.createWorktree": "ایجاد Worktree",
   "agentManager.dialog.removeImage": "حذف تصویر",
   "agentManager.dialog.configureWorktree": "پیکربندی Worktree جدید...",
 
