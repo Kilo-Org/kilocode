@@ -9,6 +9,11 @@ import { PtyID } from "@opencode-ai/core/pty/schema"
 import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, tmpdir } from "../fixture/fixture"
 
+// kilocode_change start - route auth tests do not need an indexing worker per temp project;
+// the worker boot races tmpdir teardown and flakes CI with EBADF/invalid handle errors
+process.env.KILO_DISABLE_CODEBASE_INDEXING = "vscode-no-workspace"
+// kilocode_change end
+
 function app(input: { password?: string; username?: string }) {
   const handler = HttpRouter.toWebHandler(
     HttpApiApp.routes.pipe(

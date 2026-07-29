@@ -260,6 +260,9 @@ export namespace KiloIndexing {
 
   const boot = async (hit: Cache): Promise<Entry> => {
     const dir = Instance.directory
+    if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
+      return track(hit, await inert(() => noWorkspace()))
+    }
     const startup = await AppRuntime.runPromise(
       Effect.gen(function* () {
         const baseline = yield* baselineDirectory(dir)
@@ -269,9 +272,6 @@ export namespace KiloIndexing {
     )
     const baseline = startup.baseline
     const cfg = startup.cfg
-    if (process.env["KILO_DISABLE_CODEBASE_INDEXING"] === "vscode-no-workspace") {
-      return track(hit, await inert(() => noWorkspace()))
-    }
     if (!hasIndexingPlugin(cfg.plugin)) {
       return track(hit, await inert(() => missing()))
     }
