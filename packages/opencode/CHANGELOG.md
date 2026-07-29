@@ -1,5 +1,64 @@
 # @kilocode/cli
 
+## 7.4.17
+
+### Patch Changes
+
+- [#12544](https://github.com/Kilo-Org/kilocode/pull/12544) [`b8d83fb`](https://github.com/Kilo-Org/kilocode/commit/b8d83fb537040afd6632a6d893acc412395832e4) - Support adaptive thinking levels for Claude Opus and Sonnet 5 and later.
+
+- [#12587](https://github.com/Kilo-Org/kilocode/pull/12587) [`16f8e7e`](https://github.com/Kilo-Org/kilocode/commit/16f8e7ef7fbd47755395539e7df54af3baae0c63) - Keep conversations and workspace files unchanged when a checkpoint cannot be fully restored.
+
+- [#12444](https://github.com/Kilo-Org/kilocode/pull/12444) [`92076e7`](https://github.com/Kilo-Org/kilocode/commit/92076e7071084b4bf2ce87d90eb6d45a502c836c) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Add a `/auto-approve` slash command in the TUI for toggling auto-approve mode, with aliases `/autoapprove`, `/approve-all`, and `/approveall`. The command dispatches the existing palette entry, so behavior matches the Ctrl+P "Enable/Disable auto-approve mode" toggle.
+
+- [#11986](https://github.com/Kilo-Org/kilocode/pull/11986) [`0abe474`](https://github.com/Kilo-Org/kilocode/commit/0abe474b6d5c5d482ce950abfd9033bf0c5af3b4) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Let the Context section in the TUI session sidebar collapse and expand on header click, matching the existing collapsible pattern used by Token Usage, Models, and Terminal Bench 2.0. When collapsed, the header shows a one-line summary of percent used and total cost.
+
+- [#12601](https://github.com/Kilo-Org/kilocode/pull/12601) [`dab2e79`](https://github.com/Kilo-Org/kilocode/commit/dab2e79d6ecc24acfd8737a10dfdf8ef02765b30) - Exclude GPT-5.6 from models available through ChatGPT subscriptions while retaining access to variants such as GPT-5.6 Sol.
+
+- [#12592](https://github.com/Kilo-Org/kilocode/pull/12592) [`8c88048`](https://github.com/Kilo-Org/kilocode/commit/8c880487818728f41ffc3087d27d6ce6b4591b53) Thanks [@noobezlol](https://github.com/noobezlol)! - Keep Nix builds on the Bun version required by the repository.
+
+- [#12545](https://github.com/Kilo-Org/kilocode/pull/12545) [`b2735bf`](https://github.com/Kilo-Org/kilocode/commit/b2735bfbc9df170274a12ec4786106dacb61090f) - Fix session transcripts losing their final messages when the CLI exits — pending uploads are now flushed on shutdown and as soon as a session closes.
+
+- [#12470](https://github.com/Kilo-Org/kilocode/pull/12470) [`c0ebf98`](https://github.com/Kilo-Org/kilocode/commit/c0ebf987789ab6fa070106219ebc8c46cd0105af) Thanks [@IamCoder18](https://github.com/IamCoder18)! - Route the websearch tool's Exa requests through the Kilo proxy when signed into Kilo. The MCP-Exa transport is preserved as a fallback for users who set `EXA_API_KEY` or are not authenticated. A new `KILO_WEBSEARCH_PROVIDER=kilo-exa` env override forces the Kilo proxy path. Results are capped at 10.
+
+- [#12460](https://github.com/Kilo-Org/kilocode/pull/12460) [`51d8031`](https://github.com/Kilo-Org/kilocode/commit/51d8031c9997bd5478bcde715562169f732d04d4) - Changes from opencode v1.17.5 to v1.17.9 upstream:
+  - Core Bugfixes: Improved MCP server compatibility by declaring Kilo's supported client capabilities.
+  - Core Bugfixes: Plugin client requests now reuse the active server instead of assuming the default local port.
+  - Core Bugfixes: ACP shell tool calls now show the command and working directory from the start.
+  - Core Bugfixes: Plugin-provided shell environment variables now apply to PTY sessions.
+  - Core Bugfixes: OpenAI-compatible providers now accept MCP tool schemas that previously failed validation. (@jquense)
+  - Core Bugfixes: Cloudflare AI Gateway now receives the configured API key correctly. (@keefetang)
+  - Core Bugfixes: MCP tools without declared schema properties now work with providers that expect object properties.
+  - Core Bugfixes: Long-running MCP tools now keep their timeout alive when they report progress. (@Nomadcxx)
+  - Core Bugfixes: The MCP OAuth callback server now shuts down once authorization finishes or is cancelled.
+  - Core Bugfixes: MCP tool failures now surface the server's error text instead of a generic failure.
+  - Core Bugfixes: MCP OAuth error pages now escape provider error text correctly.
+  - Core Bugfixes: Honor configured agent step limits by forcing a final text response instead of failing mid-run.
+  - Core Bugfixes: Queue steering prompts before dismissing pending questions so the previous turn cannot resume first.
+  - Core Bugfixes: Prevent local server credentials from leaking into spawned PTY processes.
+  - Core Bugfixes: Fix Devstral model detection when provider IDs use different casing. (@Robin1987China)
+  - Core Bugfixes: Pass configured custom headers to Copilot model requests.
+  - Core Improvements: MCP servers can now receive the current workspace as a client root.
+  - Core Improvements: Session timelines load much faster and avoid flicker or scroll jumps.
+  - Core Improvements: Add `high` and `max` thinking variants for GLM-5.2 across supported providers. (@imranshaiedi-byte)
+  - Core Improvements: Stop wrapping follow-up user messages in a steering reminder so prompt caching stays effective.
+  - TUI Bugfixes: MCP debug now uses the SDK's latest protocol version.
+  - TUI Bugfixes: Only show the background subagent shortcut when the server supports it.
+  - UI Bugfixes: Render completed Mermaid blocks from diagram source instead of fenced Markdown.
+
+- [#12585](https://github.com/Kilo-Org/kilocode/pull/12585) [`a0a760e`](https://github.com/Kilo-Org/kilocode/commit/a0a760e00e915a800125f03db7e08381ddc63e2a) - Fix bash permission rules being bypassed on PowerShell for commands containing a bare `--` such as `git checkout -- <file>`. Commands the shell parser cannot parse now get checked against their raw command text instead of executing without a permission check.
+
+- [#12505](https://github.com/Kilo-Org/kilocode/pull/12505) [`bcf8b8b`](https://github.com/Kilo-Org/kilocode/commit/bcf8b8b9a852969ee842783e33a7fe32f9b3c3b8) - Emit each agent event once from `kilo run --format json`.
+
+- [#12593](https://github.com/Kilo-Org/kilocode/pull/12593) [`160b066`](https://github.com/Kilo-Org/kilocode/commit/160b06661acc5f04b21221ab6578c468325f64c5) - Prevent the VS Code backend from eagerly starting native file watchers for every Agent Manager worktree.
+
+- [#12583](https://github.com/Kilo-Org/kilocode/pull/12583) [`1310c12`](https://github.com/Kilo-Org/kilocode/commit/1310c1200ab613b316f27fe4fd59e23e262df02f) Thanks [@noobezlol](https://github.com/noobezlol)! - Keep Windows snapshot diffs parseable and preserve valid files when a stored patch is malformed.
+
+- [#12588](https://github.com/Kilo-Org/kilocode/pull/12588) [`deddf00`](https://github.com/Kilo-Org/kilocode/commit/deddf0012fe36c5bb8072f4378abd444fbd134fe) - Bound the wait for a provider's first response byte by the request timeout. A provider that accepts a request and returns headers but never sends body data now fails and retries instead of leaving the turn hanging after a tool call completes. The same `timeout` value now covers both the connection phase and the wait for the first byte as a single deadline; streaming responses that have already produced data are unaffected.
+
+- [#12514](https://github.com/Kilo-Org/kilocode/pull/12514) [`a33493e`](https://github.com/Kilo-Org/kilocode/commit/a33493e7222857a5c9f5e2c09a17312781567b3f) - Stabilize cross-platform CLI subprocess tests under constrained CI runners
+
+- [#12639](https://github.com/Kilo-Org/kilocode/pull/12639) [`8a47d8b`](https://github.com/Kilo-Org/kilocode/commit/8a47d8b78885fa8fd14c73b3aecdb57e1fc96c9c) - Stop flashing a "Turn interrupted" warning when a follow-up message is queued while the assistant is still working. The running turn now closes with a dedicated "superseded" reason instead of "interrupted" when it hands off to the queued prompt, so the premature-stop warning only appears for real interruptions.
+
 ## 7.4.16
 
 ### Minor Changes

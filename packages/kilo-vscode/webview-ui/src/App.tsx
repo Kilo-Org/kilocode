@@ -1,34 +1,18 @@
 import { Component, createSignal, createMemo, Switch, Match, Show, onMount, onCleanup } from "solid-js"
-import { ThemeProvider } from "@kilocode/kilo-ui/theme"
-import { DialogProvider } from "@kilocode/kilo-ui/context/dialog"
-import { MarkedProvider } from "@kilocode/kilo-ui/context/marked"
-import { CodeComponentProvider } from "@kilocode/kilo-ui/context/code"
-import { DiffComponentProvider } from "@kilocode/kilo-ui/context/diff"
-import { FileComponentProvider } from "@kilocode/kilo-ui/context/file"
-import { Code } from "@kilocode/kilo-ui/code"
-import { Diff } from "@kilocode/kilo-ui/diff"
-import { File } from "@kilocode/kilo-ui/file"
 import { DataProvider } from "@kilocode/kilo-ui/context/data"
-import { Toast } from "@kilocode/kilo-ui/toast"
 import Settings from "./components/settings/Settings"
 import ProfileView from "./components/profile/ProfileView"
-import { VSCodeProvider, useVSCode } from "./context/vscode"
-import { ServerProvider, useServer } from "./context/server"
-import { ProviderProvider, useProvider } from "./context/provider"
-import { ConfigProvider } from "./context/config"
-import { DisplayProvider } from "./context/display"
+import { useVSCode } from "./context/vscode"
+import { useServer } from "./context/server"
+import { useProvider } from "./context/provider"
 import { WorkStyleProvider } from "./context/work-style"
-import { IndexingProvider } from "./context/indexing"
-import { AgentRequirementsProvider } from "./context/agent-requirements"
-import { MemoryProvider } from "./context/memory"
-import { SessionProvider, useSession } from "./context/session"
+import { useSession } from "./context/session"
 import { LocalTabsProvider, useLocalTabs } from "./context/local-tabs"
-import { LanguageBridge } from "./context/language-bridge"
+import { ProviderShell } from "./context/provider-shell"
 import { ChatView } from "./components/chat"
 import { SidebarEmptyState } from "./components/chat/SidebarEmptyState"
 import { registerExpandedTaskTool } from "./components/chat/TaskToolExpanded"
 import { registerVscodeToolOverrides } from "./components/chat/VscodeToolOverrides"
-import { SpeechToTextPrewarm } from "./components/speech-to-text/SpeechToTextPrewarm"
 
 // Override the upstream "task" tool renderer with the fully-expanded version
 // that shows child session parts inline in the VS Code sidebar.
@@ -37,10 +21,6 @@ registerExpandedTaskTool()
 registerVscodeToolOverrides()
 import HistoryView from "./components/history/HistoryView"
 import { MigrationWizard } from "./components/migration" // legacy-migration
-import { NotificationsProvider } from "./context/notifications"
-import { FeedbackProvider } from "./context/feedback"
-import { KiloEmbeddingModelsProvider } from "./context/kilo-embedding-models"
-import { ImageModelsProvider } from "./context/image-models"
 import type { Message as SDKMessage, Part as SDKPart } from "@kilocode/sdk/v2"
 import { cycleAgent as cycle } from "./context/session-agent"
 import "./styles/chat.css"
@@ -208,27 +188,6 @@ export const DataBridge: Component<{ children: any }> = (props) => {
       {props.children}
     </DataProvider>
   )
-}
-
-type MermaidImageEvent = CustomEvent<{ dataUrl: string; filename: string }>
-
-export const MermaidDownloadBridge: Component = () => {
-  const vscode = useVSCode()
-
-  onMount(() => {
-    const save = (event: Event) => {
-      const detail = (event as MermaidImageEvent).detail
-      if (!detail?.dataUrl || !detail.filename) return
-      event.preventDefault()
-      vscode.postMessage({ type: "saveImage", dataUrl: detail.dataUrl, filename: detail.filename })
-    }
-    window.addEventListener("kilo:save-image", save)
-    onCleanup(() => {
-      window.removeEventListener("kilo:save-image", save)
-    })
-  })
-
-  return null
 }
 
 // Inner app component that uses the contexts
@@ -412,59 +371,21 @@ const AppContent: Component = () => {
   )
 }
 
-// Main App component with context providers
 const App: Component = () => {
   return (
-    <ThemeProvider defaultTheme="kilo-vscode">
-      <DialogProvider>
-        <VSCodeProvider>
-          <MermaidDownloadBridge />
-          <ServerProvider>
-            <LanguageBridge>
-              <MarkedProvider>
-                <DiffComponentProvider component={Diff}>
-                  <CodeComponentProvider component={Code}>
-                    <FileComponentProvider component={File}>
-                      <ProviderProvider>
-                        <ConfigProvider>
-                          <SpeechToTextPrewarm />
-                          <DisplayProvider>
-                            <WorkStyleProvider>
-                              <IndexingProvider>
-                                <KiloEmbeddingModelsProvider>
-                                  <ImageModelsProvider>
-                                    <NotificationsProvider>
-                                      <SessionProvider>
-                                        <LocalTabsProvider>
-                                          <AgentRequirementsProvider>
-                                            <MemoryProvider>
-                                              <FeedbackProvider>
-                                                <DataBridge>
-                                                  <AppContent />
-                                                </DataBridge>
-                                              </FeedbackProvider>
-                                            </MemoryProvider>
-                                          </AgentRequirementsProvider>
-                                        </LocalTabsProvider>
-                                      </SessionProvider>
-                                    </NotificationsProvider>
-                                  </ImageModelsProvider>
-                                </KiloEmbeddingModelsProvider>
-                              </IndexingProvider>
-                            </WorkStyleProvider>
-                          </DisplayProvider>
-                        </ConfigProvider>
-                      </ProviderProvider>
-                    </FileComponentProvider>
-                  </CodeComponentProvider>
-                </DiffComponentProvider>
-              </MarkedProvider>
-            </LanguageBridge>
-          </ServerProvider>
-        </VSCodeProvider>
-        <Toast.Region />
-      </DialogProvider>
-    </ThemeProvider>
+    <ProviderShell.Root>
+      <WorkStyleProvider>
+        <ProviderShell.Session>
+          <LocalTabsProvider>
+            <ProviderShell.Chat>
+              <DataBridge>
+                <AppContent />
+              </DataBridge>
+            </ProviderShell.Chat>
+          </LocalTabsProvider>
+        </ProviderShell.Session>
+      </WorkStyleProvider>
+    </ProviderShell.Root>
   )
 }
 
