@@ -100,16 +100,14 @@
       "command": "bun",
       "args": [
         "-e",
-        "const fs = require('node:fs'); const dir = process.env.KILO_DEV_DIR; if (!dir) { console.error('KILO_DEV_DIR is required to clear isolated state'); process.exit(1); } fs.rmSync(dir, { recursive: true, force: true }); console.log(`Cleared ${dir}`)"
+        "const fs = require('node:fs'); const dir = process.argv[1]; if (!dir) { console.error('Isolated state path argument is required'); process.exit(1); } fs.rmSync(dir, { recursive: true, force: true }); console.log(`Cleared ${dir}`)",
+        "${workspaceFolder}/.kilo-dev"
       ],
       "presentation": {
         "reveal": "always"
       },
       "options": {
-        "cwd": "${workspaceFolder}",
-        "env": {
-          "KILO_DEV_DIR": "${workspaceFolder}/.kilo-dev"
-        }
+        "cwd": "${workspaceFolder}"
       },
       "problemMatcher": []
     },
