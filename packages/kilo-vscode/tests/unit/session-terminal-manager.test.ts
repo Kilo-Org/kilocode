@@ -131,8 +131,8 @@ describe("SessionTerminalManager structure", () => {
     expect(text).toContain("panel command registration skipped")
   })
 
-  it("resolves the session that owns the active managed terminal", () => {
-    const text = body("activeSession")
+  it("resolves the key that owns the active managed terminal", () => {
+    const text = body("activeKey")
     expect(text).toContain("this.host.activeTerminal()")
     expect(text).toContain("entry.terminal === active")
   })
@@ -140,7 +140,8 @@ describe("SessionTerminalManager structure", () => {
   it("rejects context capture from another managed session", () => {
     const text = body("prepareContext")
     expect(text).toContain("this.showExisting(sessionId)")
-    expect(text).toContain("this.activeSession()")
+    expect(text).toContain("this.activeKey()")
+    expect(text).toContain("SessionTerminalManager.sessionKey(sessionId)")
   })
 })
 
@@ -207,6 +208,17 @@ describe("SessionTerminalManager worktree terminals", () => {
     s.manager.showWorktreeTerminal("wt-1", s.state)
     s.manager.showWorktreeTerminal("wt-1", s.state)
     expect(s.created).toHaveLength(1)
+    expect(s.shown()).toBe(2)
+  })
+
+  it("keeps session and worktree terminal keys in separate namespaces", () => {
+    const s = scene({ worktreePath: "/repo/.kilo/worktrees/wt-1", repoPath: "/repo" })
+    s.manager.showTerminal("worktree:wt-1", undefined)
+    s.manager.showWorktreeTerminal("wt-1", s.state)
+    expect(s.created).toEqual([
+      { cwd: "/repo", name: "Agent: local" },
+      { cwd: "/repo/.kilo/worktrees/wt-1", name: "Agent: feature/x" },
+    ])
     expect(s.shown()).toBe(2)
   })
 
