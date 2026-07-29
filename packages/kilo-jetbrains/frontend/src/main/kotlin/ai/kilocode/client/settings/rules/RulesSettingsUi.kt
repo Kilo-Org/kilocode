@@ -1,7 +1,6 @@
 package ai.kilocode.client.settings.rules
 
 import ai.kilocode.client.KiloNotifications
-import ai.kilocode.client.app.KiloAgentBehaviorService
 import ai.kilocode.client.app.KiloAppService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
@@ -13,8 +12,6 @@ import ai.kilocode.client.settings.base.SettingsListConfig
 import ai.kilocode.client.settings.base.SettingsListItem
 import ai.kilocode.client.settings.base.SettingsListPanel
 import ai.kilocode.client.settings.base.SettingsListSelection
-import ai.kilocode.client.settings.base.SettingsRow
-import ai.kilocode.client.settings.base.SettingsToggle
 import ai.kilocode.client.settings.base.SettingsToolbarAction
 import ai.kilocode.client.settings.base.SettingsPathDialog
 import ai.kilocode.client.settings.base.settingsChoosePath
@@ -22,7 +19,6 @@ import ai.kilocode.client.settings.base.settingsContentScroll
 import ai.kilocode.client.settings.base.settingsEditorFileType
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.StackAxis
 import ai.kilocode.log.KiloLog
 import ai.kilocode.rpc.dto.KiloAppStateDto
 import com.intellij.icons.AllIcons
@@ -38,7 +34,6 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
-import com.intellij.ui.TitledSeparator
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBUI
@@ -46,7 +41,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.awt.BorderLayout
 import java.nio.charset.StandardCharsets
 import java.nio.file.InvalidPathException
 import java.nio.file.Path
@@ -65,26 +59,21 @@ internal class RulesSettingsUi(
     private val editor: (String, String) -> RuleContentDialogHandle = { title, content -> InstructionEditDialog(title, content) },
     private val app: KiloAppService = service(),
     private val workspaces: KiloWorkspaceService = service(),
-    private val agent: KiloAgentBehaviorService = service(),
 ) : SettingsListPanel(scope, SettingsListConfig.Equal.copy(tooltip = false)), SettingsDraftPage {
     private val cs = scope
-    private val state = SettingsDraftState(rulesDraft(app.state.value.config, false), ::savedMatches)
+    private val state = SettingsDraftState(rulesDraft(app.state.value.config), ::savedMatches)
     private val draft get() = state.draft
     private var closed = false
-    internal val footer = RulesFooterView { value -> updateCompat(value) }
 
     init {
         start()
         setCenter(ruleScroll())
-        content.add(footer, BorderLayout.SOUTH)
         reload()
     }
 
     override suspend fun fetch(): List<SettingsListItem> {
-        val compat = agent.claudeCodeCompat()
         return withContext(edt) {
-            state.accept(rulesDraft(app.state.value.config, compat))
-            footer.refresh(draft.compat)
+            state.accept(rulesDraft(app.state.value.config))
             rows()
         }
     }
@@ -116,7 +105,6 @@ internal class RulesSettingsUi(
 
     override fun resetDraft() {
         state.reset()
-        footer.refresh(draft.compat)
         view.update(rows())
         clearProgress()
     }
@@ -134,8 +122,7 @@ internal class RulesSettingsUi(
                 change.config != null -> app.updateConfig(change.config)
                 else -> app.state.value
             }
-            val ok = next != null && (change.compat == null || agent.setClaudeCodeCompat(change.compat) == change.compat)
-            withContext(edt) { finish(token, target, next.takeIf { ok }) }
+            withContext(edt) { finish(token, target, next) }
         }
     }
 
@@ -153,14 +140,13 @@ internal class RulesSettingsUi(
             return
         }
         if (next != null) {
-            state.complete(token, rulesDraft(next.config, target.compat))
+            state.complete(token, rulesDraft(next.config))
             LOG.info("rules settings apply succeeded")
         } else {
             state.fail(token, KiloBundle.message("settings.rules.save.failed"))
             showError(KiloBundle.message("settings.rules.save.failed"))
             LOG.warn("rules settings apply failed")
         }
-        footer.refresh(draft.compat)
         view.update(rows())
         if (next != null) clearProgress()
         setBusy(false)
@@ -218,11 +204,6 @@ internal class RulesSettingsUi(
         }
     }
 
-    private fun updateCompat(value: Boolean) {
-        state.update { copy(compat = value) }
-        footer.refresh(draft.compat)
-    }
-
     private fun ruleScroll() = JBScrollPane(view).apply {
         border = null
         horizontalScrollBarPolicy = ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER
@@ -259,27 +240,6 @@ internal class RulesSettingsUi(
         const val EDIT_CELL = "edit"
         const val DELETE_CELL = "delete"
         val LOG = KiloLog.create(RulesSettingsUi::class.java)
-    }
-}
-
-internal class RulesFooterView(
-    private val update: (Boolean) -> Unit,
-) : Stack(StackAxis.VERTICAL, UiStyle.Gap.sm()) {
-    private val compat = SettingsToggle { value -> update(value) }
-
-    init {
-        border = JBUI.Borders.empty(UiStyle.Gap.pad(), 0, 0, UiStyle.Gap.xl())
-        next(TitledSeparator(KiloBundle.message("settings.rules.claude.heading")))
-        next(SettingsRow(
-            KiloBundle.message("settings.rules.claude.title"),
-            KiloBundle.message("settings.rules.claude.description"),
-            compat,
-        ))
-    }
-
-    @RequiresEdt
-    fun refresh(value: Boolean) {
-        compat.isSelected = value
     }
 }
 
@@ -363,5 +323,3 @@ private fun writeInstruction(root: String?, path: String, text: String): Boolean
     }
     return ok
 }
-
-

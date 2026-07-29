@@ -793,6 +793,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "ตัวแทน",
   "settings.agentBehaviour.subtab.mcpServers": "เซิร์ฟเวอร์ MCP",
   "settings.agentBehaviour.subtab.rules": "กฎ",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "เวิร์กโฟลว์",
   "settings.agentBehaviour.subtab.skills": "ทักษะ",
 
@@ -809,6 +810,7 @@ export const dict = {
   "settings.language.auto": "อัตโนมัติ (ภาษา VS Code)",
   "settings.language.current": "ปัจจุบัน:",
 
+  "common.apply": "Apply",
   "common.add": "เพิ่ม",
 
   "settings.autocomplete.autoTrigger.title": "เปิดใช้งานการเติมอัตโนมัติแบบอินไลน์",
@@ -883,6 +885,11 @@ export const dict = {
   "settings.experimental.remote.inactive": "ปิดใช้งาน",
   "settings.experimental.remote.hint": "ใช้ /remote ในแชทเพื่อสลับสถานะ",
   "settings.experimental.toolToggles": "สวิตช์เครื่องมือ",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+  "claudeContext.banner.hint": "You can always change this in Agent settings > Integrations.",
+
   "settings.agentBehaviour.defaultAgent.title": "เอเจนต์เริ่มต้น",
   "settings.agentBehaviour.defaultAgent.description": "เอเจนต์ที่ใช้เมื่อไม่ได้ระบุ",
   "settings.agentBehaviour.availableAgents": "เอเจนต์ที่ใช้งานได้",
@@ -982,9 +989,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "ไฟล์คำสั่งเพิ่มเติม",
   "settings.agentBehaviour.instructionFiles.description": "เส้นทางไฟล์คำสั่งเพิ่มเติมในพรอมต์ระบบ",
   "settings.agentBehaviour.claudeCompat.heading": "ความเข้ากันได้กับ Claude Code",
-  "settings.agentBehaviour.claudeCompat.title": "โหลดไฟล์ Claude Code",
-  "settings.agentBehaviour.claudeCompat.description":
-    "โหลดคำแนะนำและทักษะจาก CLAUDE.md ในไดเรกทอรีการกำหนดค่า Claude Code ของคุณลงในเซสชัน เปิดใช้งานตัวเลือกนี้หากคุณต้องการให้ Kilo ใช้คำแนะนำและทักษะจาก Claude Code ของคุณ จำเป็นต้องรีสตาร์ท",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "คำสั่ง",
   "settings.agentBehaviour.mcpDetail.args": "อาร์กิวเมนต์",
   "settings.agentBehaviour.mcpDetail.env": "สภาพแวดล้อม",

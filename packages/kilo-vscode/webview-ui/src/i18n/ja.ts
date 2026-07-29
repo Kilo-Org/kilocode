@@ -799,6 +799,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "エージェント",
   "settings.agentBehaviour.subtab.mcpServers": "MCPサーバー",
   "settings.agentBehaviour.subtab.rules": "ルール",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "ワークフロー",
   "settings.agentBehaviour.subtab.skills": "スキル",
 
@@ -816,6 +817,7 @@ export const dict = {
   "settings.language.auto": "自動（VS Code言語）",
   "settings.language.current": "現在：",
 
+  "common.apply": "Apply",
   "common.add": "追加",
 
   "settings.autocomplete.autoTrigger.title": "自動インライン補完を有効にする",
@@ -890,6 +892,11 @@ export const dict = {
   "settings.experimental.remote.inactive": "非アクティブ",
   "settings.experimental.remote.hint": "チャットで /remote を使用して切り替えます",
   "settings.experimental.toolToggles": "ツールトグル",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+  "claudeContext.banner.hint": "You can always change this in Agent settings > Integrations.",
+
   "settings.agentBehaviour.defaultAgent.title": "デフォルトエージェント",
   "settings.agentBehaviour.defaultAgent.description": "指定されていない場合に使用するエージェント",
   "settings.agentBehaviour.availableAgents": "利用可能なエージェント",
@@ -991,9 +998,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "追加の指示ファイル",
   "settings.agentBehaviour.instructionFiles.description": "システムプロンプトに含まれる追加の指示ファイルへのパス",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code 互換性",
-  "settings.agentBehaviour.claudeCompat.title": "Claude Code ファイルを読み込む",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Claude Code の設定ディレクトリから CLAUDE.md のインストラクションとスキルをセッションに読み込みます。Kilo に Claude Code のインストラクションとスキルを使用させる場合は、これを有効にしてください。再起動が必要です。",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "コマンド",
   "settings.agentBehaviour.mcpDetail.args": "引数",
   "settings.agentBehaviour.mcpDetail.env": "環境",

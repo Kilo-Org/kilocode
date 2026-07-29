@@ -1039,7 +1039,18 @@
         "kilo-code.new.claudeCodeCompat": {
           "type": "boolean",
           "default": false,
+          "deprecationMessage": "Use kilo-code.new.claudeCodeSkillsCommands and kilo-code.new.claudeCodeInstructions instead.",
           "description": "Load CLAUDE.md instructions and skills from your Claude Code configuration directory into Kilo sessions. Enable this if you want Kilo to use your Claude Code instructions and skills."
+        },
+        "kilo-code.new.claudeCodeSkillsCommands": {
+          "type": "boolean",
+          "default": true,
+          "description": "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to restart the Kilo backend."
+        },
+        "kilo-code.new.claudeCodeInstructions": {
+          "type": "boolean",
+          "default": false,
+          "description": "Load CLAUDE.md instructions into Kilo sessions. Requires reloading VS Code to restart the Kilo backend."
         },
         "kilo-code.new.extraCaCerts": {
           "type": "string",

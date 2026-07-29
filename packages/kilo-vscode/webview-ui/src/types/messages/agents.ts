@@ -12,6 +12,7 @@ export interface SlashCommandInfo {
   name: string
   description?: string
   source?: "command" | "mcp" | "skill"
+  origin?: string
   hints: string[]
 }
 

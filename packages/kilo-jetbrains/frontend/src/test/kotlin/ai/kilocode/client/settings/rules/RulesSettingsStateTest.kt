@@ -3,22 +3,20 @@ package ai.kilocode.client.settings.rules
 import ai.kilocode.rpc.dto.ConfigDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RulesSettingsStateTest {
     @Test
-    fun `draft reads instructions and compat`() {
-        val draft = rulesDraft(ConfigDto(instructions = listOf("./RULES.md")), true)
+    fun `draft reads instructions`() {
+        val draft = rulesDraft(ConfigDto(instructions = listOf("./RULES.md")))
 
         assertEquals(listOf("./RULES.md"), draft.instructions)
-        assertTrue(draft.compat)
     }
 
     @Test
     fun `unchanged instructions emit no config patch`() {
-        val draft = RulesDraft(instructions = listOf("./RULES.md"), compat = true)
+        val draft = RulesDraft(instructions = listOf("./RULES.md"))
 
         assertNull(configPatch(draft, draft))
     }
@@ -40,25 +38,22 @@ class RulesSettingsStateTest {
     }
 
     @Test
-    fun `saved match compares instructions compat and staged edits`() {
-        assertTrue(savedMatches(RulesDraft(listOf("a"), true), RulesDraft(listOf("a"), true)))
-        assertFalse(savedMatches(RulesDraft(listOf("a"), true), RulesDraft(listOf("b"), true)))
-        assertFalse(savedMatches(RulesDraft(listOf("a"), true), RulesDraft(listOf("a"), false)))
-        assertFalse(savedMatches(RulesDraft(listOf("a"), true), RulesDraft(listOf("a"), true, mapOf("a" to "x"))))
+    fun `saved match compares instructions and staged edits`() {
+        assertTrue(savedMatches(RulesDraft(listOf("a")), RulesDraft(listOf("a"))))
+        assertEquals(false, savedMatches(RulesDraft(listOf("a")), RulesDraft(listOf("b"))))
+        assertEquals(false, savedMatches(RulesDraft(listOf("a")), RulesDraft(listOf("a"), mapOf("a" to "x"))))
     }
 
     @Test
-    fun `change captures config compat and edits`() {
-        val from = RulesDraft(listOf("a"), false)
+    fun `change captures config and edits`() {
+        val from = RulesDraft(listOf("a"))
         assertNull(rulesChange(from, from))
 
         val edited = rulesChange(from, from.copy(edited = mapOf("a" to "x")))
         assertNull(edited?.config)
-        assertNull(edited?.compat)
         assertEquals(mapOf("a" to "x"), edited?.edited)
 
-        val both = rulesChange(from, RulesDraft(listOf("a", "b"), true))
+        val both = rulesChange(from, RulesDraft(listOf("a", "b")))
         assertEquals(listOf("a", "b"), both?.config?.instructions)
-        assertEquals(true, both?.compat)
     }
 }

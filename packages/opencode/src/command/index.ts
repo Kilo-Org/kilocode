@@ -10,6 +10,11 @@ import { Skill } from "../skill"
 import { legacyReviewCommand, reviewCommand } from "@/kilocode/review/command" // kilocode_change
 import { EventV2 } from "@opencode-ai/core/event"
 import PROMPT_INITIALIZE from "./template/initialize.txt"
+import { RuntimeFlags } from "@/effect/runtime-flags" // kilocode_change
+import { ClaudeCommands } from "@/kilocode/command/claude" // kilocode_change
+import { FSUtil } from "@opencode-ai/core/fs-util" // kilocode_change
+import { Global } from "@opencode-ai/core/global" // kilocode_change
+import { Git } from "@/git" // kilocode_change
 
 type State = {
   commands: Record<string, Info>
@@ -33,6 +38,7 @@ export const Info = Schema.Struct({
   agent: Schema.optional(Schema.String),
   model: Schema.optional(Schema.String),
   source: Schema.optional(Schema.Literals(["command", "mcp", "skill"])),
+  origin: Schema.optional(Schema.String), // kilocode_change
   // Some command templates are lazy promises from MCP prompt resolution.
   template: Schema.Unknown,
   subtask: Schema.optional(Schema.Boolean),
@@ -63,10 +69,13 @@ export interface Interface {
 
 // kilocode_change start - skills can share names with slash commands
 function fromSkill(item: Skill.Info): Info {
+  const location = item.location.replaceAll("\\", "/")
+  const claude = location.includes("/.claude/") || location.startsWith(".claude/")
   return {
     name: item.name,
     description: item.description,
     source: "skill",
+    ...(claude ? { origin: "claude" } : {}),
     get template() {
       return item.content
     },
@@ -91,6 +100,10 @@ export const layer = Layer.effect(
     const config = yield* Config.Service
     const mcp = yield* MCP.Service
     const skill = yield* Skill.Service
+    const flags = yield* RuntimeFlags.Service // kilocode_change
+    const fsys = yield* FSUtil.Service // kilocode_change
+    const global = yield* Global.Service // kilocode_change
+    const git = yield* Git.Service // kilocode_change
 
     const init = Effect.fn("Command.state")(function* (ctx: InstanceContext) {
       const cfg = yield* config.get()
@@ -126,6 +139,36 @@ export const layer = Layer.effect(
           hints: hints(command.template),
         }
       }
+
+      // kilocode_change start
+      const warnings = yield* config.warnings()
+      for (const [name, command] of Object.entries(
+        yield* ClaudeCommands.load({
+          directory: ctx.directory,
+          worktree: ctx.worktree,
+          disabled: flags.disableClaudeCodeCommands,
+          warnings,
+        }).pipe(
+          Effect.provideService(FSUtil.Service, fsys),
+          Effect.provideService(Global.Service, global),
+          Effect.provideService(Git.Service, git),
+        ),
+      )) {
+        if (commands[name]) continue
+        commands[name] = {
+          name,
+          agent: command.agent,
+          description: command.description,
+          source: "command",
+          origin: "claude",
+          get template() {
+            return command.template
+          },
+          subtask: command.subtask,
+          hints: hints(command.template),
+        }
+      }
+      // kilocode_change end
 
       for (const [name, prompt] of Object.entries(yield* mcp.prompts())) {
         commands[name] = {
@@ -214,8 +257,12 @@ export const defaultLayer = layer.pipe(
   Layer.provide(Config.defaultLayer),
   Layer.provide(MCP.defaultLayer),
   Layer.provide(Skill.defaultLayer),
+  Layer.provide(RuntimeFlags.defaultLayer), // kilocode_change
+  Layer.provide(FSUtil.defaultLayer), // kilocode_change
+  Layer.provide(Global.layer), // kilocode_change
+  Layer.provide(Git.defaultLayer), // kilocode_change
 )
 
-export const node = LayerNode.make(layer, [Config.node, MCP.node, Skill.node])
+export const node = LayerNode.make(layer, [Config.node, MCP.node, Skill.node, RuntimeFlags.node, FSUtil.node, Global.node, Git.node]) // kilocode_change
 
 export * as Command from "."

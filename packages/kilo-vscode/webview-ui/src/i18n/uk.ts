@@ -792,6 +792,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "Агенти",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-сервери",
   "settings.agentBehaviour.subtab.rules": "Правила",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "Робочі процеси",
   "settings.agentBehaviour.subtab.skills": "Навички",
 
@@ -810,6 +811,7 @@ export const dict = {
   "settings.language.auto": "Автоматично (мова VS Code)",
   "settings.language.current": "Поточна:",
 
+  "common.apply": "Apply",
   "common.add": "Додати",
 
   "settings.autocomplete.autoTrigger.title": "Увімкнути автоматичні підказки",
@@ -892,6 +894,11 @@ export const dict = {
   "settings.sandboxing.enabled.description":
     "Виконувати команди оболонки агента в пісочниці на рівні ОС, яка обмежує запис до каталогів стану проєкту та Kilo",
 
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+  "claudeContext.banner.hint": "You can always change this in Agent settings > Integrations.",
+
   "settings.agentBehaviour.defaultAgent.title": "Агент за замовчуванням",
   "settings.agentBehaviour.defaultAgent.description": "Агент, що використовується, якщо не вказано інший",
   "settings.agentBehaviour.availableAgents": "Доступні агенти",
@@ -942,9 +949,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles.description":
     "Шляхи до додаткових файлів інструкцій, що включаються до системного запиту",
   "settings.agentBehaviour.claudeCompat.heading": "Сумісність з Claude Code",
-  "settings.agentBehaviour.claudeCompat.title": "Завантажувати файли Claude Code",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Завантажувати інструкції та навички CLAUDE.md з вашого каталогу конфігурації Claude Code у сесії. Увімкніть це, якщо ви хочете, щоб Kilo використовував ваші інструкції та навички Claude Code. Потребує перезапуску.",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.removeMcp.title": "Видалити MCP-сервер",
   "settings.agentBehaviour.removeMcp.confirm": 'Видалити MCP-сервер "{{name}}"? Це видалить його з вашої конфігурації.',
   "settings.agentBehaviour.removeMcp.button": "Видалити",

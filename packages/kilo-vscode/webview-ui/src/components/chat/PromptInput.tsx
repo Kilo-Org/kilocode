@@ -1303,6 +1303,9 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                           <Show when={cmd.description}>
                             <span class="slash-command-desc">{cmd.description}</span>
                           </Show>
+                          <Show when={cmd.origin === "claude"}>
+                            <span class="slash-command-source">claude</span>
+                          </Show>
                         </div>
                       )}
                     </For>

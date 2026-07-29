@@ -3,6 +3,7 @@ package ai.kilocode.rpc
 import ai.kilocode.rpc.dto.AgentDetailDto
 import ai.kilocode.rpc.dto.AgentCreateDto
 import ai.kilocode.rpc.dto.CommandDto
+import ai.kilocode.rpc.dto.ClaudeCompatSettingsDto
 import ai.kilocode.rpc.dto.McpConfigDto
 import ai.kilocode.rpc.dto.McpServerConfigDto
 import ai.kilocode.rpc.dto.McpStatusDto
@@ -50,7 +51,7 @@ interface KiloAgentBehaviorRpcApi : RemoteApi<Unit> {
 
     suspend fun mcpAuthenticate(directory: String, name: String): Boolean
 
-    suspend fun claudeCodeCompat(): Boolean
+    suspend fun claudeCompatSettings(): ClaudeCompatSettingsDto
 
-    suspend fun setClaudeCodeCompat(value: Boolean): Boolean
+    suspend fun setClaudeCompatSettings(value: ClaudeCompatSettingsDto): ClaudeCompatSettingsDto
 }

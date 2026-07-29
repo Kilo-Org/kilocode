@@ -804,6 +804,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "Agenter",
   "settings.agentBehaviour.subtab.mcpServers": "MCP-servere",
   "settings.agentBehaviour.subtab.rules": "Regler",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "Arbejdsgange",
   "settings.agentBehaviour.subtab.skills": "Færdigheder",
 
@@ -821,6 +822,7 @@ export const dict = {
   "settings.language.auto": "Auto (VS Code-sprog)",
   "settings.language.current": "Nuværende:",
 
+  "common.apply": "Apply",
   "common.add": "Tilføj",
 
   "settings.autocomplete.autoTrigger.title": "Aktiver automatisk inline-fuldførelse",
@@ -896,6 +898,11 @@ export const dict = {
   "settings.experimental.remote.inactive": "Inaktiv",
   "settings.experimental.remote.hint": "Brug /remote i chatten for at skifte",
   "settings.experimental.toolToggles": "Værktøjsskift",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+  "claudeContext.banner.hint": "You can always change this in Agent settings > Integrations.",
+
   "settings.agentBehaviour.defaultAgent.title": "Standardagent",
   "settings.agentBehaviour.defaultAgent.description": "Agent til brug, når ingen er angivet",
   "settings.agentBehaviour.availableAgents": "Tilgængelige agenter",
@@ -996,9 +1003,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles": "Yderligere instruktionsfiler",
   "settings.agentBehaviour.instructionFiles.description": "Stier til yderligere instruktionsfiler i systemprompten",
   "settings.agentBehaviour.claudeCompat.heading": "Claude Code-kompatibilitet",
-  "settings.agentBehaviour.claudeCompat.title": "Indlæs Claude Code-filer",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Indlæs CLAUDE.md-instruktioner og -færdigheder fra din Claude Code-konfigurationsmappe i sessioner. Aktivér dette, hvis du vil have Kilo til at bruge dine Claude Code-instruktioner og -færdigheder. Kræver genstart.",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "Kommando",
   "settings.agentBehaviour.mcpDetail.args": "Argumenter",
   "settings.agentBehaviour.mcpDetail.env": "Miljø",

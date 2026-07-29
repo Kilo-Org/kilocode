@@ -762,6 +762,7 @@ export const dict = {
   "settings.agentBehaviour.subtab.agents": "Agenci",
   "settings.agentBehaviour.subtab.mcpServers": "Serwery MCP",
   "settings.agentBehaviour.subtab.rules": "Reguły",
+  "settings.agentBehaviour.subtab.compatibility": "Compatibility",
   "settings.agentBehaviour.subtab.workflows": "Przepływy pracy",
   "settings.agentBehaviour.subtab.skills": "Umiejętności",
 
@@ -779,6 +780,7 @@ export const dict = {
   "settings.language.auto": "Auto (język VS Code)",
   "settings.language.current": "Bieżący:",
 
+  "common.apply": "Apply",
   "common.add": "Dodaj",
 
   "settings.autocomplete.autoTrigger.title": "Włącz automatyczne uzupełnianie inline",
@@ -894,6 +896,11 @@ export const dict = {
   "settings.indexing.tuning.description": "Zaawansowane parametry wyszukiwania i batchowania.",
   "settings.indexing.vectorStore.description": "Wybierz, gdzie są przechowywane zaindeksowane osadzenia.",
   "settings.indexing.vectorStore.title": "Magazyn wektorów",
+  "claudeContext.banner.title": "Claude context detected",
+  "claudeContext.banner.description": "This repo contains Claude Code files. Choose how Kilo should use them for this repo; changes require reload.",
+  "claudeContext.banner.dismiss": "Don't ask again",
+  "claudeContext.banner.hint": "You can always change this in Agent settings > Integrations.",
+
   "settings.agentBehaviour.defaultAgent.title": "Domyślny agent",
   "settings.agentBehaviour.defaultAgent.description": "Agent używany, gdy żaden nie jest określony",
   "settings.agentBehaviour.availableAgents": "Dostępni agenci",
@@ -997,9 +1004,12 @@ export const dict = {
   "settings.agentBehaviour.instructionFiles.description":
     "Ścieżki do dodatkowych plików instrukcji w prompcie systemowym",
   "settings.agentBehaviour.claudeCompat.heading": "Kompatybilność z Claude Code",
-  "settings.agentBehaviour.claudeCompat.title": "Wczytuj pliki Claude Code",
-  "settings.agentBehaviour.claudeCompat.description":
-    "Wczytuje instrukcje CLAUDE.md oraz umiejętności z katalogu konfiguracyjnego Claude Code do sesji. Włącz tę opcję, jeśli chcesz, aby Kilo korzystał z Twoich instrukcji i umiejętności Claude Code. Wymaga ponownego uruchomienia.",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.title": "Claude Code skills & commands",
+  "settings.agentBehaviour.claudeCompat.skillsCommands.description":
+    "Load Claude Code skills and slash commands from .claude/skills and .claude/commands. Requires reloading VS Code to apply changes.",
+  "settings.agentBehaviour.claudeCompat.instructions.title": "Claude Code instructions",
+  "settings.agentBehaviour.claudeCompat.instructions.description":
+    "Load CLAUDE.md instructions into Kilo sessions. Off by default to preserve custom agent behavior. Requires reloading VS Code to apply changes.",
   "settings.agentBehaviour.mcpDetail.command": "Polecenie",
   "settings.agentBehaviour.mcpDetail.args": "Argumenty",
   "settings.agentBehaviour.mcpDetail.env": "Środowisko",

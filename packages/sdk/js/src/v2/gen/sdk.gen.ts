@@ -47,6 +47,8 @@ import type {
   CommitMessageGenerateErrors,
   CommitMessageGenerateResponses,
   Config as Config4,
+  ConfigClaudeContextErrors,
+  ConfigClaudeContextResponses,
   ConfigEffectiveErrors,
   ConfigEffectiveResponses,
   ConfigGetErrors,
@@ -1923,6 +1925,36 @@ export class Config2 extends HeyApiClient {
         ...options?.headers,
         ...params.headers,
       },
+    })
+  }
+
+  /**
+   * Get Claude context presence
+   *
+   * Detect Claude Code instructions, skills, and commands for the current workspace.
+   */
+  public claudeContext<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).get<ConfigClaudeContextResponses, ConfigClaudeContextErrors, ThrowOnError>({
+      url: "/config/claude-context",
+      ...options,
+      ...params,
     })
   }
 

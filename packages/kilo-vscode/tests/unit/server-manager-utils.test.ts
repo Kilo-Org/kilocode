@@ -4,6 +4,7 @@ import {
   resolveServerCwd,
   resolveIndexingEnv,
   resolveManagedServerEnv,
+  resolveClaudeCodeEnv,
   toErrorMessage,
 } from "../../src/services/cli-backend/server-manager"
 import {
@@ -320,5 +321,16 @@ describe("server workspace helpers", () => {
       PATH: "/usr/bin",
       KILO_DISABLE_CHANNEL_DB: "true",
     })
+  })
+
+  it("uses granular Claude Code env flags", () => {
+    expect(resolveClaudeCodeEnv({ skillsCommands: true, instructions: false })).toEqual({
+      KILO_DISABLE_CLAUDE_CODE_PROMPT: "true",
+    })
+    expect(resolveClaudeCodeEnv({ skillsCommands: false, instructions: true })).toEqual({
+      KILO_DISABLE_CLAUDE_CODE_SKILLS: "true",
+      KILO_DISABLE_CLAUDE_CODE_COMMANDS: "true",
+    })
+    expect(resolveClaudeCodeEnv({ skillsCommands: true, instructions: true })).toEqual({})
   })
 })

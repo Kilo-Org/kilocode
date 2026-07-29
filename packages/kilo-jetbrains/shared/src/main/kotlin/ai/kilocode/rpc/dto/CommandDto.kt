@@ -7,6 +7,7 @@ data class CommandDto(
     val name: String,
     val description: String? = null,
     val source: String? = null,
+    val origin: String? = null,
     val hints: List<String> = emptyList(),
     val template: String? = null,
 )
