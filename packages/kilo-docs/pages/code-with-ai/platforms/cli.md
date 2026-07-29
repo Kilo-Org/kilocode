@@ -119,6 +119,7 @@ For detailed help on every command and subcommand, see the [CLI Command Referenc
 | `/help` | - | Show help |
 | `/reload` | - | Reload config, skills, agents, and commands from disk |
 | `/editor` | - | Open external editor |
+| `/auto-approve` | `/autoapprove`, `/approve-all`, `/approveall` | Toggle auto-approve mode for all permission prompts, saved to global config |
 | `/exit` | `/quit`, `/q` | Exit the app |
 
 #### Kilo Gateway Commands (when connected)
@@ -209,6 +210,12 @@ Supported sound names are `default`, `question`, `permission`, `error`, `done`, 
 The `attention.sound_pack` setting selects a sound pack registered by a TUI plugin. Setting an arbitrary pack name does not install or load a pack. Per-event file overrides remain the simplest way to customize sounds without a plugin.
 
 There is no notification slash command or command-palette toggle. Use Kilo Console or `tui.json` / `tui.jsonc` so all attention behavior is controlled by the same configuration.
+
+### Push Notifications to Your Phone
+
+When the CLI is connected to Kilo cloud (see [Remote Connections](#remote-connections)), the agent can send a push notification to your phone through the Kilo mobile app using the built-in `notify_user` tool. The agent uses it only for pings you explicitly ask for ("ping me when the build finishes") and for significant milestones or anomalies during long-running tasks — not for questions, permission requests, or task completion, which the platform already notifies.
+
+Delivery can be suppressed by your Agent notifications preference, per-session rate limits, or while you are actively viewing the session. When the session is not connected to Kilo cloud, the tool tells the agent that notifications are unavailable.
 
 ## Slash Commands
 
@@ -557,6 +564,10 @@ This instructs the AI to proceed without user input.
 - `124`: Timeout (task exceeded time limit)
 - `1`: Error (initialization or execution failure)
 
+A plain headless run — without `--auto` or `--dangerously-skip-permissions` — auto-rejects every permission request it receives. If at least one request was auto-rejected, the run exits `1` and prints a stderr diagnostic (`run ended with an auto-rejected permission; pass --auto for autonomous use`), even if the session otherwise reached idle. The same rule applies to a non-interactive `--attach` run. Runs that complete their turn with no auto-rejected permission still exit `0`.
+
+Under `--format json`, the auto-reject path also emits an `error` event in the JSON stream, and a session that errors mid-stream prints its diagnostic to stderr before the event.
+
 ### Example CI/CD Integration
 
 ```yaml
@@ -631,6 +642,14 @@ Add to `~/.config/kilo/config.json`:
 ### Using Remote Mode
 
 Once enabled, start a CLI session and open [Cloud Agents](https://app.kilo.ai/cloud). Your local session appears in the dashboard. See [Cloud Agent Remote Connections](/docs/code-with-ai/platforms/cloud-agent#remote-connections) for details.
+
+Connected clients such as the Kilo mobile app can attach files to messages in a remote session, up to 5 MB per file. Images, PDFs, and text files are passed to the agent directly; other file types are saved to a per-session directory and the agent is given their paths. Clients enable attachments only when the CLI advertises support, so keep the CLI up to date. See [Attaching files](/docs/code-with-ai/platforms/mobile#attaching-files) for the mobile side.
+
+### Remote Slash Commands
+
+Connected clients can discover and run a remote-safe subset of the CLI's slash commands — including `/compact` and your custom commands — scoped to the current session's workspace. Starting a session with `/new` from a connected client creates a new root session in the CLI's current workspace. Terminal-local commands are not exposed remotely. Remote commands require an up-to-date CLI; connected clients prompt you to upgrade when the CLI does not support them.
+
+Clients can also exit an individual session remotely: the CLI cancels any active prompt and detaches that session from remote access, preserving its history. A headless `kilo remote` host keeps running and can create new sessions afterwards.
 
 ### Requirements
 

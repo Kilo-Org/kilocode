@@ -30,6 +30,8 @@ Key features include:
 - **[Skills](/docs/customize/skills)** — Load specialized domain knowledge from SKILL.md files
 - **[Custom Subagents](/docs/customize/custom-subagents)** — Define specialized sub-agents for the `task` tool
 - **Open in Tab** — Pop the chat out into a full editor tab
+- **Session tab switcher** — Searchable list of open session tabs for quickly switching between or closing sessions
+- **Prompt navigator rail** — One tick per sent prompt on the left edge of the transcript, with a hover card for jumping straight to a turn
 - **Transcript export:** Save complete local session transcripts as Markdown files
 - **Sub-Agent Viewer** — Read-only panels for viewing child agent sessions
 - **Legacy Migration** — Automatic migration wizard for VSCode extension settings
@@ -37,6 +39,14 @@ Key features include:
 ## Shared Settings
 
 Settings apply across extension surfaces, including the sidebar and Agent Manager. The standalone CLI uses the same `~/.config/kilo/kilo.jsonc` (global) and `./kilo.jsonc` (project) files when used directly.
+
+## Interface Language
+
+The extension UI is available in 21 languages. Pick one from the **Language** tab in the Kilo settings, or set `kilo-code.new.language` in your VS Code settings. The default (Auto) follows VS Code's display language.
+
+Available languages: English, 简体中文, 繁體中文, 한국어, Deutsch, Español, Français, Dansk, 日本語, Polski, Русский, العربية, Norsk, Português (Brasil), ภาษาไทย, Bosanski, Türkçe, Nederlands, Українська, Italiano, فارسی.
+
+Arabic and Persian are right-to-left languages; the layout switches to right-to-left automatically when either is selected.
 
 ## Proxy and Certificate Troubleshooting
 

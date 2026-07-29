@@ -54,7 +54,10 @@ Once configured, the Review Agent automatically runs when:
 | PR reopened | ✅ Yes |
 | Draft PR marked ready | ✅ Yes |
 | Draft PR opened | ❌ Skipped |
+| PR opened by a bot | ❌ Skipped by default |
 | PR closed | ❌ No |
+
+Bot-authored PRs (Dependabot, Renovate, and other automation accounts) are detected with GitHub's author metadata and skipped before any review is created. To have them reviewed, turn off **Skip pull requests from bots** under Global Settings in the Code Reviews configuration. Reviews you start manually are not affected by this setting.
 
 ## What to Expect
 

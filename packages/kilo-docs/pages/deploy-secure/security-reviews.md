@@ -375,7 +375,7 @@ SLA notifications require both SLA tracking and SLA notifications to be enabled.
 
 ## Notification delivery
 
-Security Agent currently sends notifications only by email.
+Security Agent sends notifications by email and as mobile push notifications. When a notification email is sent, the recipient also receives a push in the Kilo mobile app with the same new-finding, SLA warning, or SLA breach content; tapping it opens the finding. Push delivery requires the **Security findings** category in the app's [notification preferences](/docs/code-with-ai/platforms/mobile#notification-preferences), which is on by default — turning it off suppresses only the push, never the email.
 
 Notification kinds:
 

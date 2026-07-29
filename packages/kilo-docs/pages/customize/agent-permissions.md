@@ -132,6 +132,8 @@ cd "/project"; git status
 
 Kilo checks the parsed command patterns. The `git status` command matches `git *`, so the request is denied. Directory changes and commands that access paths outside the worktree can also trigger `external_directory` checks.
 
+When the shell parser cannot parse a command — for example a PowerShell command containing a bare `--`, such as `git checkout -- <file>` — Kilo checks the raw command text against your rules instead of skipping the check. If no rule matches the raw text, the command falls back to `ask`, so a command that cannot be scanned never runs without a permission decision.
+
 Built-in read-only agents include additional shell restrictions for write-like patterns such as output redirection, command substitution, pipes, and command chains. If you create your own read-only agent, prefer an explicit deny fallback and allow only the commands you trust:
 
 ```yaml

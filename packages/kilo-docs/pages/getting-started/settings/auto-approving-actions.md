@@ -49,7 +49,7 @@ The Auto Approve tab lists the following tool-specific permissions. Some tools a
 | `glob` | File pattern matching / searching by name |
 | `grep` | Searching file contents by regex |
 | `task` | Launching sub-agents |
-| `agent_manager` | Starting Agent Manager sessions, inspecting managed sessions, and prompting an existing managed session |
+| `agent_manager` | Starting Agent Manager sessions, inspecting managed sessions, and prompting or stopping an existing managed session |
 | `skill` | Loading specialized skills |
 | `lsp` | Language server protocol operations |
 | `todoread` / `todowrite` | Reading and updating the todo list |
@@ -70,7 +70,13 @@ Use the shield button in the prompt controls to toggle runtime auto-approve for 
 
 Expand **Manage Auto-Approve Rules** to add commands or patterns to your allowed or denied lists. These rules are then appended to the bottom of the approval rules in settings and the config file.
 
-For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, or `prompt`. Prompting an existing managed session always requires an explicit `prompt` approval the first time, even when a broad Agent Manager allow rule already exists.
+For the `agent_manager` tool, runtime approvals use the requested capability as the pattern: `worktree`, `local`, `overview`, `prompt`, or `stop`. Prompting or stopping an existing managed session always requires an explicit `prompt` or `stop` approval the first time, even when a broad Agent Manager allow rule already exists.
+
+## Why a Tool Ran Without a Prompt
+
+Expanding a tool call in the chat shows how it was approved: **Auto-approved** when a rule allowed it, or **Approved by you** when you confirmed it manually. An auto-approved call also names the source of the deciding rule — the agent, the project config, your global config, a session auto-approve rule, auto-approve (YOLO) mode, or the defaults. When a specific pattern rule made the decision, the line includes the matched permission and pattern (for example, `bash` rule `git *`).
+
+Because the last matching rule wins, the source shown may not be the rule you expected — use this line to see which rule actually allowed the call.
 
 ## MCP Tool Permissions
 

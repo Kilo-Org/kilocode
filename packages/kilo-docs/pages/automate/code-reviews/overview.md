@@ -66,6 +66,10 @@ To use it:
 
 Kilo reads `REVIEW.md` from the PR/MR base branch, not the feature branch. That prevents an unreviewed change from rewriting the review policy used to evaluate itself. If the file is disabled, missing, empty, or unreadable, Kilo falls back to built-in guidance. If it is longer than 10,000 characters, Kilo truncates it and notes that in the review summary footer.
 
+{% callout type="note" title="Custom Instructions is being deprecated" %}
+The **Custom Instructions** field in Code Reviews settings is planned for deprecation in favor of `REVIEW.md`. The field no longer appears for configurations that have never used it. Configurations that already have a value keep the field, and stored instructions still apply to reviews — but you should move those guidelines into a `REVIEW.md` file in your repository.
+{% /callout %}
+
 ### Default Sub-Agent Usage
 
 By default, Code Reviews uses sub-agents only when they materially improve coverage. After reading the diff, the reviewer estimates changed file count and changed lines, then chooses the largest tier triggered by either signal.
@@ -133,6 +137,15 @@ Each specialist reports findings with a severity — `critical`, `warning`, `sug
 
 Under Unanimous or Majority, a `block` decision fails the PR/MR status check, so the change cannot be merged. If specialist results are missing or invalid, these modes fail closed to `block`. Reviews you start manually report the decision but never block merging.
 
+### Per-Repository Council Opt-In
+
+Automated (webhook-triggered) reviews run as standard reviews by default. To run a council review automatically when a repository's pull requests are opened or updated, opt the repository in:
+
+1. Open the Review Agent configuration and turn on **Advanced Settings**.
+2. In the per-repository overrides, enable **Council** for each repository that should receive automated council reviews.
+
+Opted-in repositories run the shared council configuration — the same specialist models and governance mode — on automated reviews, and the council decision drives the PR/MR status check. All other repositories continue to receive standard reviews, and a repository falls back to a standard review whenever the council configuration is missing or inactive.
+
 ### Automated Review Exclusions
 
 On GitHub, automated (webhook-triggered) reviews never use a council for draft PRs, bot-authored PRs, or PRs opened from a fork — these run as standard reviews instead, even when the repository is opted in to council reviews. These exclusions are built in and cannot be overridden by configuration. The review still runs; only the council review type is skipped. Reviews you start manually can always use a council.
@@ -184,7 +197,7 @@ When a pull request or merge request is opened or updated:
 Reviews are posted directly in your platform (GitHub or GitLab) as if coming from a team reviewer.
 
 {% callout type="info" title="Bot-generated PRs are ignored by default" %}
-Kilo does not automatically review pull or merge requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes.
+Kilo does not automatically review pull requests opened by bots, such as Dependabot, Renovate, or other automation accounts. This keeps review credits and notifications focused on human-authored changes. On GitHub, the **Skip pull requests from bots** toggle in Global Settings controls this behavior and is on by default — turn it off to have bot-authored PRs reviewed. Reviews you start manually are unaffected either way. Bot detection relies on GitHub's author metadata, so the toggle does not appear for GitLab.
 {% /callout %}
 
 ## Review Styles

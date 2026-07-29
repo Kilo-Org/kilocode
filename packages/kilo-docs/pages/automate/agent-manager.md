@@ -11,7 +11,7 @@ The Agent Manager is a **full-panel editor tab** built directly into the extensi
 
 - Multiple parallel sessions, each in its own git worktree
 - A diff/review panel showing changes vs. the parent branch
-- Dedicated VS Code integrated terminals per session
+- Dedicated terminals per session, in the VS Code integrated terminal or an embedded side panel
 - Setup scripts and `.env` auto-copy on worktree creation
 - Session import from existing branches, external worktrees, or GitHub PR URLs
 - "Continue in Worktree" to promote a sidebar session to the Agent Manager
@@ -122,6 +122,8 @@ You can run up to 4 parallel implementations of the same prompt across separate 
 2. Optionally assign different models to each version
 3. Kilo creates one worktree + session per version and runs them in parallel
 
+With **Compare Models**, checked models that support reasoning variants get a **Reasoning effort** dropdown next to the version count, so compared worktrees can run the same prompt at different effort levels. The collapsed selector shows the picked effort next to the model name (e.g. "Claude Opus 4.8 (high)"). Leaving the dropdown on **Default** — or using a model without variants — runs that version at the model's default effort.
+
 ### Importing Existing Work
 
 - **From a branch:** Import an existing git branch as a worktree
@@ -136,6 +138,7 @@ Imported work stays associated with its branch or worktree and can be continued 
 - Create a worktree session to start a new agent in an isolated branch
 - Press `Cmd+T` (macOS) / `Ctrl+T` (Windows/Linux) to start another session in the selected worktree
 - Use session history to reopen local sessions or preview cloud sessions
+- When a managed worktree is selected, session history gains a **Worktree** tab listing only sessions assigned to that worktree; **Local** remains the aggregate history across the workspace and every managed worktree
 - Continue a cloud session locally from Agent Manager using the same extension sign-in and provider settings
 
 ### Renaming Worktrees
@@ -221,11 +224,30 @@ See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-wor
 
 ## Terminals
 
-Each session has a dedicated integrated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to open or focus the terminal for the active session.
+
+The terminal button in the toolbar is a split button: click it to open a terminal in the current destination, or open its dropdown to choose where terminals open:
+
+- **VS Code terminal** (default) — opens or focuses the VS Code integrated terminal.
+- **Agent Manager panel** — opens an embedded terminal in the right-hand side panel, next to the chat.
+
+The choice is saved in the `kilo-code.new.agentManager.terminalButtonDestination` setting and applies to both the button and the `Cmd+/` / `Ctrl+/` shortcut.
+
+### Side Panel Terminals
+
+With the **Agent Manager panel** destination, terminals open in the side panel that also hosts the diff view. You can switch between the diff and the terminal freely, and resize the panel with its drag handle — the panel remembers one width per mode.
+
+The panel supports multiple terminals per context (local, or per worktree):
+
+- The header is a tab strip: click a tab to switch, click **+** to open another terminal, and click **×** (or middle-click) to close a single terminal. Drag tabs to reorder them.
+- New terminals are named with the lowest free "Terminal N" number, and tabs pick up the live title from the shell or running program, so a dev server or editor names its own tab.
+- `Cmd+W` (macOS) / `Ctrl+W` (Windows/Linux) with a side terminal focused closes that terminal. Closing the last terminal leaves the panel on its empty state.
+
+Hiding the panel keeps its terminals running in the background — scrollback and running processes survive, and the same terminals are there when you reopen the panel or switch worktrees. When the panel hides while the terminal held focus, focus returns to the chat input. Side panel terminals are not kept across webview reloads.
 
 ### Switching Between Terminal and Agent Manager
 
-A common workflow is letting the agent work, then switching to the terminal to run tests or inspect the worktree, then switching back to control the agent:
+With the default **VS Code terminal** destination, a common workflow is letting the agent work, then switching to the terminal to run tests or inspect the worktree, then switching back to control the agent:
 
 1. **Agent Manager → Terminal:** Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to open and focus the terminal for the current session. The terminal runs inside the session's worktree, so commands like `npm test` or `git status` operate on the agent's isolated branch.
 2. **Terminal → Agent Manager:** Press `Cmd+Shift+M` (macOS) / `Ctrl+Shift+M` (Windows/Linux) to bring focus back to the Agent Manager panel and its prompt input. This works from anywhere in VS Code — the terminal, another editor tab, or the sidebar.
@@ -364,7 +386,7 @@ Closing a managed worktree removes it from Agent Manager, deletes its `.kilo/wor
 | `Cmd+W` | `Ctrl+W` | Close current tab |
 | `Cmd+Alt+Up` / `Down` | `Ctrl+Alt+Up` / `Down` | Previous / next worktree |
 | `Cmd+Alt+Left` / `Right` | `Ctrl+Alt+Left` / `Right` | Previous / next tab in worktree |
-| `Cmd+/` | `Ctrl+/` | Focus terminal for current session |
+| `Cmd+/` | `Ctrl+/` | Open / focus terminal for current session (destination set by the terminal button dropdown) |
 | `Cmd+D` | `Ctrl+D` | Toggle diff panel |
 | `Cmd+E` | `Ctrl+E` | Run / stop run script |
 | `Cmd+Shift+/` | `Ctrl+Shift+/` | Show keyboard shortcuts |

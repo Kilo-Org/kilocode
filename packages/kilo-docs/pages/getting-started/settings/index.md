@@ -99,6 +99,20 @@ Terminal command blocks stay expanded by default in the VS Code chat UI. Choose 
 
 Valid values are `expanded` and `collapsed`.
 
+### Token Throughput
+
+The chat can show how fast the model generates text, in tokens per second. Enable **Show Token Throughput** in the Display tab, or set `kilo-code.new.showTokenThroughput` in your VS Code settings:
+
+```json
+{
+  "kilo-code.new.showTokenThroughput": true
+}
+```
+
+When enabled, the generation rate appears on assistant messages and in the task header's Tokens row. The rate counts output and reasoning tokens over active generation time — tool execution and waiting time are excluded. The setting is off by default, and the rate stays hidden for turns where the backend reports no metrics.
+
+The CLI shows the same metric as a **Generation speed** row in the usage sidebar whenever metrics are available; no setting is required there.
+
 ### Markdown Diff Rendering
 
 Markdown files in Kilo diff viewers can be shown as rendered Markdown instead of a raw text diff. Use the eye/code toggle in a Markdown file header, or set `kilo-code.new.diff.renderMarkdown` to `true` to render Markdown files by default.

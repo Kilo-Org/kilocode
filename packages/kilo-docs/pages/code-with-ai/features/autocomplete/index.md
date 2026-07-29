@@ -14,7 +14,7 @@ The extension uses **Fill-in-the-Middle (FIM)** completion routed through the **
 You can choose between two FIM models:
 
 - **Codestral** (`mistralai/codestral-2508`) by Mistral AI — the default, billed through your Kilo account.
-- **Mercury Edit 2** (`inception/mercury-edit-2`) by Inception — temporarily available via **BYOK** (Bring Your Own Key) only; Kilo Gateway support is coming soon.
+- **Mercury Edit 2** (`inception/mercury-edit-2`) by Inception — billed through your Kilo account, or routed through your own Inception key via BYOK.
 
 ## Triggering Options
 
@@ -35,10 +35,10 @@ This keybinding requires `kilo-code.new.autocomplete.enableSmartInlineTaskKeybin
 Autocomplete requests are routed through the **Kilo Gateway**. You can pick the FIM model under **Settings → Models → Autocomplete model**:
 
 - **Codestral** (`mistralai/codestral-2508`) — the default. Billed through your Kilo account, or free when you add your own Mistral Codestral key via BYOK. See [Setting Up Mistral for Free Autocomplete](/docs/code-with-ai/features/autocomplete/mistral-setup).
-- **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception. Temporarily requires an **Inception BYOK key** until Kilo Gateway support lands. Add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
+- **Mercury Edit 2** (`inception/mercury-edit-2`) — a fast diffusion-based FIM model by Inception. Billed through your Kilo account at published rates, or routed through your own Inception key via BYOK — add one from the [BYOK page](https://app.kilo.ai/byok) in the Kilo platform. See [Bring Your Own Key (BYOK)](/docs/getting-started/byok) for setup details.
 
 {% callout type="note" %}
-Mercury Edit 2 is only available through BYOK for now — Kilo Gateway support is coming soon. If you select Mercury Edit 2 without a valid Inception BYOK key configured, autocomplete requests will fail — switch back to Codestral or add an Inception key to continue.
+Mercury Edit 2 usage through the Kilo Gateway is billed at published rates — the introductory free period has ended, and requests require a positive credit balance. To avoid charges on your Kilo balance, add your own Inception key via BYOK instead.
 {% /callout %}
 
 ## Status Bar

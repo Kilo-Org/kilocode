@@ -125,6 +125,7 @@ When remote mode is enabled in the CLI, your active local sessions appear in the
 - **Agent questions** appear in both places — answer wherever you are
 - **Permission requests** route to your active connection
 - **Full editing capabilities** work remotely
+- **Slash commands** — connected clients can run remote-safe commands like `/compact`, and start a new session in the CLI's workspace with `/new`
 
 ### Enabling Remote Mode
 

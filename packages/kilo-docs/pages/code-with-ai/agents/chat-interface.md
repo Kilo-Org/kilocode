@@ -67,7 +67,7 @@ Open your terminal and run `kilo` to launch the interactive terminal interface (
 
 **Providing context:**
 
-The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
+The extension automatically passes context from your editor, including your open tabs and active file. You can type `@` in the chat input to get file and terminal autocomplete suggestions — use `@filename` to attach a file or `@terminal` to include your active terminal output. The `@` menu also includes **Past chats**, which attaches a previous session's transcript as context. You can also mention file paths naturally in your message (e.g., "update src/utils.ts to add a helper function"). The agent can also discover files on its own using its built-in tools.
 
 **Exporting local transcripts:**
 
@@ -80,6 +80,18 @@ Kilo builds the export from the complete local session history, not only the mes
 Double-click the current session title at the top of the chat to edit it inline. Press `Enter` or click outside the field to save, or press `Escape` to cancel.
 
 You can also rename local sessions from **History** using the edit button or the session's context menu.
+
+**Switching between open sessions:**
+
+Each open session has a tab in the strip above the chat. When tabs overflow or their titles get truncated, click **Show open tabs** at the end of the strip to open a searchable list of your open sessions. Filter by title, then activate a session with `Enter` or a click — the list marks the current session and flags sessions that are new or still working. Close a tab directly from the list with its × button or `Delete`; your search filter stays intact.
+
+**Jumping between prompts:**
+
+A prompt navigator rail runs along the left edge of the transcript, with one tick per prompt you sent. Hover or focus the rail to expand a card listing your prompts with a short preview of each answer, and click a tick or row to jump straight to that turn. Long sessions show only as many prompts as fit the transcript height, keeping the newest. The rail appears in the sidebar, Kilo editor tabs, the sub-agent viewer, and Agent Manager, and never changes the readable width of the chat.
+
+**Deleting queued follow-ups:**
+
+Messages you send while the agent is still working are queued and processed in order. A queued message shows a **Queued** indicator with a **Delete queued message** (×) action that removes it before it runs. Deleting a queued message does not interrupt the active prompt, and any later queued messages still run.
 
 {% /tab %}
 {% tab label="CLI" %}
@@ -96,7 +108,7 @@ You can also rename local sessions from **History** using the edit button or the
 
 **Providing context:**
 
-Type `@` in the TUI to get file autocomplete suggestions, or mention file paths directly in your message (e.g., "look at src/utils.ts") and the agent will read them. When using the non-interactive `kilo run` command, you can pass `-f path/to/file.ts` to explicitly include files. The agent can also discover files on its own using its built-in tools.
+Type `@` in the TUI to get file autocomplete suggestions, or choose **Past chats** from the `@` menu to attach a previous session's transcript as context. You can also mention file paths directly in your message (e.g., "look at src/utils.ts") and the agent will read them. When using the non-interactive `kilo run` command, you can pass `-f path/to/file.ts` to explicitly include files. The agent can also discover files on its own using its built-in tools.
 
 {% /tab %}
 {% /tabs %}

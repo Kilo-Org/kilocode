@@ -104,10 +104,6 @@ Workspace restoration requires snapshots. If snapshots are disabled or the rever
 
 The button is only active when the agent is idle. While the agent is running, the button is disabled to prevent reverting mid-operation.
 
-{% callout type="note" %}
-Workspace restoration requires snapshots. If snapshots are disabled or the reverted range has no stored checkpoint, only the conversation is rewound — the agent's file changes remain on disk, and the revert banner warns you (see below).
-{% /callout %}
-
 ### The Revert Banner
 
 After reverting, a **Revert Banner** appears at the bottom of the chat. The banner shows:

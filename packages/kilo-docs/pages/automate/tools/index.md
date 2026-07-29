@@ -21,7 +21,7 @@ Tools are organized into logical groups based on their functionality:
 | **Web Group** | Fetch and search web content | `webfetch`, `websearch` | Research, documentation lookup |
 | **Browser Group** | Web browser automation | `kilo-playwright_*` (via built-in Playwright MCP) | Browser testing and interaction |
 | **MCP Group** | External tool integration | MCP server tools (namespaced as `{server}_{tool}`) | Specialized functionality via MCP |
-| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager` | Context switching and task organization |
+| **Workflow Group** | Sub-agents and task management | `question`, `task`, `todowrite`, `todoread`, `plan`, `skill`, `agent_manager`, `notify_user` | Context switching and task organization |
 
 ### Always Available Tools
 
@@ -64,6 +64,18 @@ These tools help Kilo Code access web content:
 - `webfetch` - Fetches a URL and returns the content
 - `websearch` - Searches the web (available to Kilo/OpenRouter users)
 
+#### Web Search Providers
+
+The `websearch` tool routes searches through one of two providers, Exa or Parallel, chosen per session. Set the `KILO_WEBSEARCH_PROVIDER` environment variable to `exa`, `parallel`, or `kilo-exa` to force a provider.
+
+When the provider is Exa, authentication decides how the search is transported:
+
+1. If `EXA_API_KEY` is set, the search uses your own Exa API key (BYOK).
+2. Otherwise, if you are signed in to Kilo, the search routes through the Kilo proxy and is billed to your Kilo account — no Exa key needed. Set `KILO_WEBSEARCH_PROVIDER=kilo-exa` to force this path (requires Kilo sign-in).
+3. If neither is available, the search falls back to Exa's unauthenticated endpoint.
+
+The `numResults` parameter defaults to 8 and is capped at 10.
+
 ### Browser Tools
 
 The VS Code extension has a built-in browser automation tool powered by [Playwright MCP](https://www.npmjs.com/package/@playwright/mcp). Enable it in Settings → Browser Automation. When enabled, it registers an MCP server named `kilo-playwright` and exposes tools such as:
@@ -91,6 +103,7 @@ These tools help manage the conversation and task flow:
 - `plan` - Enters structured planning mode
 - `skill` - Invokes a reusable skill (Markdown instruction module)
 - `agent_manager` - Starts Agent Manager local or worktree sessions in VS Code
+- `notify_user` - Sends a push notification to your phone via the Kilo mobile app (requires a session connected to Kilo cloud)
 
 ## Tool Calling Mechanism
 

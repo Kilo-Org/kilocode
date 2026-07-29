@@ -312,6 +312,39 @@ Returns an OpenAI-compatible model list:
 }
 ```
 
+## List model endpoints
+
+Retrieve the per-provider endpoint metadata for a single model, in an OpenRouter-compatible shape.
+
+```
+GET /models/{provider}/{model}/endpoints
+```
+
+No authentication required. The route is also available under `/api/gateway/v1/models/{provider}/{model}/endpoints` for OpenRouter compatibility.
+
+### Response
+
+```json
+{
+  "data": {
+    "id": "deepseek/deepseek-v4-pro",
+    "name": "DeepSeek: DeepSeek V4 Pro",
+    "endpoints": [
+      {
+        "provider_name": "DeepSeek",
+        "context_length": 1048576,
+        "pricing": {
+          "prompt": "0.000000870000",
+          "completion": "0.000001740000"
+        }
+      }
+    ]
+  }
+}
+```
+
+Endpoint pricing reflects the same applied Kilo pricing as the model list: provider discounts are normalized and Kilo custom pricing is applied to every priced endpoint. Unknown models return `404` with `{ "error": { "message": "Not Found", "code": 404 } }`. Responses are cached at the CDN for 60 seconds.
+
 ## List providers
 
 Retrieve the list of available providers.
