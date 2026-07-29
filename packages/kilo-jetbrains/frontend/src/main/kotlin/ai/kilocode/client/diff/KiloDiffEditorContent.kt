@@ -17,6 +17,12 @@ import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.Separator
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.editor.EditorFactory
+import com.intellij.openapi.editor.event.DocumentEvent
+import com.intellij.openapi.editor.event.DocumentListener
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.progress.ProgressIndicator
@@ -27,6 +33,7 @@ import com.intellij.openapi.vfs.AsyncFileListener
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.IdeBorderFactory
+import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.OnePixelSplitter
 import com.intellij.ui.SideBorder
 import com.intellij.ui.SimpleColoredComponent
@@ -81,20 +88,30 @@ internal class DiffEditorView(
     private val parent: Disposable,
     branch: String?,
     scope: CoroutineScope,
-    private val refresh: ((DiffEditorData) -> Unit) -> Job,
+    private val load: ((DiffEditorData) -> Unit) -> Job,
     private val replace: (DiffEditorData) -> Unit,
 ) : Disposable {
     private val disposed = AtomicBoolean(false)
+    private val outdated = AtomicBoolean(false)
+    private val refreshing = AtomicBoolean(false)
     private val tree = buildFileTree(initial)
     private val badge = DiffStatBadge(0, 0, inset = UiStyle.Gap.pad())
     private val splitter = OnePixelSplitter(false, 0.25f)
     private val select = Debouncer<Int>(scope, parent) { show(it) }
-    private val reload = Debouncer<Unit>(scope, parent) { reload() }
+    private val banner = EditorNotificationPanel(EditorNotificationPanel.Status.Warning).apply {
+        text(KiloBundle.message("diff.editor.outdated"))
+        createActionLabel(KiloBundle.message("diff.editor.refresh")) { refresh() }
+        isVisible = false
+    }
+    private val root = JPanel(BorderLayout()).apply {
+        add(banner, BorderLayout.NORTH)
+        add(splitter, BorderLayout.CENTER)
+    }
     private var files = initial
     private var branch = branch
     private var syncing = false
     private var processor = processor(initial, selected(initial.firstOrNull()?.file))
-    val component: JComponent = splitter
+    val component: JComponent = root
 
     init {
         Disposer.register(parent, this)
@@ -106,7 +123,7 @@ internal class DiffEditorView(
             if (index >= 0) select.request(index)
         }
         processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
-        splitter.firstComponent = buildTreePanel(tree, initial, badge, processor.component)
+        splitter.firstComponent = buildTreePanel(tree, initial, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
         processor.updateRequest()
         applyBadge(initial)
@@ -131,14 +148,39 @@ internal class DiffEditorView(
         processor = processor(next, index)
         Disposer.register(parent, processor)
         processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
-        splitter.firstComponent = buildTreePanel(tree, next, badge, processor.component)
+        splitter.firstComponent = buildTreePanel(tree, next, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
         processor.updateRequest()
         Disposer.dispose(old)
         applyBadge(next)
         select(next.getOrNull(index)?.file)
-        splitter.revalidate()
-        splitter.repaint()
+        root.revalidate()
+        root.repaint()
+    }
+
+    @RequiresEdt
+    internal fun refresh() {
+        if (disposed.get() || project.isDisposed) return
+        if (!refreshing.compareAndSet(false, true)) return
+        saveDocuments()
+        outdated.set(false)
+        banner.isVisible = false
+        root.revalidate()
+        root.repaint()
+        load { data ->
+            refreshing.set(false)
+            if (!disposed.get() && !project.isDisposed) {
+                if (data is DiffEditorData.Files) applyFiles(data.files, data.branch)
+                if (data !is DiffEditorData.Files) replace(data)
+            }
+        }
+    }
+
+    internal fun markOutdated() {
+        if (!outdated.compareAndSet(false, true)) return
+        ApplicationManager.getApplication().invokeLater({ showOutdated() }, ModalityState.any()) {
+            disposed.get() || project.isDisposed
+        }
     }
 
     private fun show(index: Int) {
@@ -146,31 +188,50 @@ internal class DiffEditorView(
         processor.setCurrentRequest(index)
     }
 
-    private fun reload() {
+    @RequiresEdt
+    private fun showOutdated() {
         if (disposed.get() || project.isDisposed) return
-        refresh { data ->
-            if (disposed.get() || project.isDisposed) return@refresh
-            if (data is DiffEditorData.Files) applyFiles(data.files, data.branch)
-            if (data !is DiffEditorData.Files) replace(data)
-        }
+        banner.isVisible = true
+        root.revalidate()
+        root.repaint()
     }
 
     private fun listen() {
         val dir = params["directory"] ?: return
         val root = clean(dir) ?: return
+        EditorFactory.getInstance().eventMulticaster.addDocumentListener(
+            object : DocumentListener {
+                override fun documentChanged(event: DocumentEvent) {
+                    val file = FileDocumentManager.getInstance().getFile(event.document) ?: return
+                    if (inside(root, file.path)) markOutdated()
+                }
+            },
+            parent,
+        )
         VirtualFileManager.getInstance().addAsyncFileListenerBackgroundable(
             object : AsyncFileListener {
                 override fun prepareChange(events: List<VFileEvent>): AsyncFileListener.ChangeApplier? {
+                    if (outdated.get()) return null
                     if (events.none { inside(root, it.path) }) return null
                     return object : AsyncFileListener.ChangeApplier {
                         override fun afterVfsChange() {
-                            reload.request(Unit)
+                            markOutdated()
                         }
                     }
                 }
             },
             parent,
         )
+    }
+
+    private fun saveDocuments() {
+        val dir = params["directory"] ?: return
+        val root = clean(dir) ?: return
+        val manager = FileDocumentManager.getInstance()
+        manager.saveDocuments { doc ->
+            val file = manager.getFile(doc) ?: return@saveDocuments false
+            inside(root, file.path)
+        }
     }
 
     private fun processor(next: List<DiffFileDto>, index: Int): CacheDiffRequestChainProcessor {
@@ -228,8 +289,10 @@ internal class DiffEditorView(
 
     private fun inside(root: Path, raw: String): Boolean = try {
         val path = Path.of(raw).normalize()
-        val text = path.toString().replace('\\', '/')
-        path.startsWith(root) && !text.contains("/.git/") && !text.endsWith("/.git")
+        if (!path.startsWith(root)) return false
+        val rel = root.relativize(path).toString().replace('\\', '/')
+        if (rel == ".git/HEAD" || rel.startsWith(".git/refs/")) return true
+        rel != ".git" && !rel.startsWith(".git/")
     } catch (_: InvalidPathException) {
         false
     }
@@ -283,7 +346,7 @@ private fun buildFileModel(files: List<DiffFileDto>): DefaultTreeModel {
     return DefaultTreeModel(root)
 }
 
-private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStatBadge, target: JComponent): JComponent {
+private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStatBadge, target: JComponent, refresh: () -> Unit): JComponent {
     val toolbar = ActionManager.getInstance().createActionToolbar(
         ActionPlaces.TOOLBAR,
         DefaultActionGroup(
@@ -292,6 +355,8 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStat
             Separator.getInstance(),
             TreeAction(KiloBundle.message("diff.editor.tree.expandAll"), AllIcons.Actions.Expandall) { expandAll(tree) },
             TreeAction(KiloBundle.message("diff.editor.tree.collapseAll"), AllIcons.Actions.Collapseall) { collapseAll(tree) },
+            Separator.getInstance(),
+            TreeAction(KiloBundle.message("diff.editor.refresh"), AllIcons.Actions.Refresh, refresh),
         ),
         true,
     )

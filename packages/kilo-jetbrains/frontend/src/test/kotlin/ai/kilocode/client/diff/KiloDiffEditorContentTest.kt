@@ -3,11 +3,15 @@ package ai.kilocode.client.diff
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
+import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
+import com.intellij.util.ui.UIUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -169,6 +173,84 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test outdated banner is hidden initially`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val editor = editor(files(), parent)
+
+            assertFalse(banner(editor).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test outdated banner appears when files change`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val editor = editor(files(), parent)
+
+            editor.markOutdated()
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertTrue(banner(editor).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test outdated banner appears for unsaved ide document changes`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val psi = myFixture.addFileToProject("src/App.kt", "old")
+            val doc = FileDocumentManager.getInstance().getDocument(psi.virtualFile)!!
+            val dir = psi.virtualFile.parent.parent.path
+            val editor = editor(files(), parent, dir = dir)
+
+            ApplicationManager.getApplication().runWriteAction { doc.setText("new") }
+            UIUtil.dispatchAllInvocationEvents()
+
+            assertTrue(banner(editor).isVisible)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test manual refresh clears banner and updates files`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val next = listOf(file("src/App.kt", 9, 8))
+            val editor = editor(files(), parent) { done ->
+                done(DiffEditorData.Files(next, "feature/test"))
+                Job().also { it.complete() }
+            }
+            editor.markOutdated()
+            UIUtil.dispatchAllInvocationEvents()
+
+            editor.refresh()
+            val badges = components(editor.component).filterIsInstance<DiffStatBadge>()
+
+            assertFalse(banner(editor).isVisible)
+            assertTrue(badges.any { it.addedLabelForTest().text == "+9" && it.removedLabelForTest().text == "-8" })
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test editor construction does not refresh`() {
+        val parent = Disposer.newDisposable()
+        var calls = 0
+        try {
+            editor(files(), parent) {
+                calls += 1
+                Job().also { it.complete() }
+            }
+
+            assertEquals(0, calls)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     private fun renderer(tree: Tree, node: DefaultMutableTreeNode): Component =
         tree.cellRenderer.getTreeCellRendererComponent(
             tree,
@@ -188,19 +270,28 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
 
     private fun rowBadge(row: Component): DiffStatBadge = components(row).filterIsInstance<DiffStatBadge>().single()
 
+    private fun banner(editor: DiffEditorView): EditorNotificationPanel = components(editor.component)
+        .filterIsInstance<EditorNotificationPanel>()
+        .single()
+
     private fun view(files: List<DiffFileDto>, parent: Disposable): Component = editor(files, parent).component
 
-    private fun editor(files: List<DiffFileDto>, parent: Disposable): DiffEditorView {
+    private fun editor(
+        files: List<DiffFileDto>,
+        parent: Disposable,
+        dir: String = project.basePath.orEmpty(),
+        load: ((DiffEditorData) -> Unit) -> Job = { Job().also { it.complete() } },
+    ): DiffEditorView {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         Disposer.register(parent) { scope.cancel() }
         return DiffEditorView(
             project,
-            mapOf("directory" to project.basePath.orEmpty(), "source" to "branch"),
+            mapOf("directory" to dir, "source" to "branch"),
             files,
             parent,
             "feature/test",
             scope,
-            { Job().also { it.complete() } },
+            load,
         ) {}
     }
 
