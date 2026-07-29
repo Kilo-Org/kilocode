@@ -53,6 +53,7 @@ describe("Agent Manager terminal font", () => {
     const message = new Promise<AgentManagerOutMessage>((resolve) => {
       const router = new TerminalRouter({
         getClient: () => client,
+        getClientAsync: async () => client,
         getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
         getRoot: () => "/workspace",
         getWorktreePath: () => undefined,
@@ -77,6 +78,7 @@ describe("Agent Manager terminal font", () => {
     expect(created.font).toEqual(font)
     expect(created.worktreeId).toBeNull()
     expect(created.wsUrl).toContain("/pty/pty-1/connect")
+    expect(created.wsUrl).toContain("cursor=0")
   })
 
   it("keeps the created font in terminal state", () => {
