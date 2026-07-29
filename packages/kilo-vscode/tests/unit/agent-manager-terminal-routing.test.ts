@@ -21,6 +21,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: (id) => (id === "wt-1" ? "/workspace/wt-1" : undefined),
@@ -78,6 +79,7 @@ describe("Agent Manager terminal routing", () => {
     } as unknown as KiloClient
     const router = new TerminalRouter({
       getClient: () => client,
+      getClientAsync: async () => client,
       getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
       getRoot: () => "/workspace",
       getWorktreePath: () => undefined,
@@ -107,5 +109,47 @@ describe("Agent Manager terminal routing", () => {
     expect(removed).toContain("pty-old")
     await router.dispose()
     expect(removed).toContain("pty-new")
+  })
+
+  it("awaits the shared backend connection before creating a terminal", async () => {
+    let connected = false
+    const client = {
+      pty: {
+        create: async () => ({ data: { id: "pty-1", title: "Terminal 1" } }),
+        remove: async () => ({ data: true }),
+        update: async () => ({ data: true }),
+      },
+    } as unknown as KiloClient
+    const router = new TerminalRouter({
+      getClient: () => {
+        if (!connected) throw new Error("Not connected")
+        return client
+      },
+      getClientAsync: async () => {
+        await wait()
+        connected = true
+        return client
+      },
+      getServerConfig: () => ({ baseUrl: "http://127.0.0.1:4096", password: "secret" }),
+      getRoot: () => "/workspace",
+      getWorktreePath: () => undefined,
+      log: () => undefined,
+      post: (message) => messages.push(message),
+      getTerminalFont: () => font,
+    })
+
+    const messages: AgentManagerOutMessage[] = []
+    router.handle({
+      type: "agentManager.terminal.create",
+      createId: "real",
+      placement: "tab",
+      worktreeId: null,
+    })
+    expect(messages).toHaveLength(0)
+    await wait()
+    await wait()
+
+    expect(messages[0]).toMatchObject({ type: "agentManager.terminal.created", createId: "real" })
+    await router.dispose()
   })
 })
