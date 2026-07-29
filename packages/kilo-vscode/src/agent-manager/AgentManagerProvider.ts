@@ -18,7 +18,7 @@ import {
   deleteLifecycleWorktree,
   promoteLifecycleSession,
   removeStaleLifecycleWorktree,
-  type LifecycleDeps,
+  type LifecycleHost,
 } from "./provider-lifecycle"
 import { normalizeBaseBranch } from "./base-branch"
 import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
@@ -1039,27 +1039,37 @@ export class AgentManagerProvider implements Disposable {
 
   /** Create a new worktree with an auto-created first session. */
   private async onCreateWorktree(baseBranch?: string, branchName?: string): Promise<null> {
-    return createLifecycleWorktree(this.lifecycle, { baseBranch, branchName })
+    const ctx = this.context
+    if (!ctx) return null
+    return createLifecycleWorktree(ctx, this.lifecycleHost, { baseBranch, branchName })
   }
 
   /** Delete a worktree and dissociate its sessions. */
   private async onDeleteWorktree(worktreeId: string): Promise<null> {
-    return deleteLifecycleWorktree(this.lifecycle, worktreeId)
+    const ctx = this.context
+    if (!ctx) return null
+    return deleteLifecycleWorktree(ctx, this.lifecycleHost, worktreeId)
   }
 
   /** Remove a stale worktree entry from state without touching the filesystem. */
   private async onRemoveStaleWorktree(worktreeId: string): Promise<null> {
-    return removeStaleLifecycleWorktree(this.lifecycle, worktreeId)
+    const ctx = this.context
+    if (!ctx) return null
+    return removeStaleLifecycleWorktree(ctx, this.lifecycleHost, worktreeId)
   }
 
   /** Promote a session: create a worktree and move the session into it. */
   private async onPromoteSession(sessionId: string): Promise<null> {
-    return promoteLifecycleSession(this.lifecycle, sessionId)
+    const ctx = this.context
+    if (!ctx) return null
+    return promoteLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
 
   /** Add a new session to an existing worktree. */
   private async onAddSessionToWorktree(worktreeId: string, sessionId?: string): Promise<null> {
-    return addSessionToLifecycleWorktree(this.lifecycle, worktreeId, sessionId)
+    const ctx = this.context
+    if (!ctx) return null
+    return addSessionToLifecycleWorktree(ctx, this.lifecycleHost, worktreeId, sessionId)
   }
 
   private onForkSession(sessionId: string, worktreeId?: string, messageId?: string) {
@@ -1089,7 +1099,9 @@ export class AgentManagerProvider implements Disposable {
 
   /** Stop a session and remove it from Agent Manager. */
   private async onCloseSession(sessionId: string): Promise<null> {
-    return closeLifecycleSession(this.lifecycle, sessionId)
+    const ctx = this.context
+    if (!ctx) return null
+    return closeLifecycleSession(ctx, this.lifecycleHost, sessionId)
   }
 
   // Multi-version worktree creation
@@ -1513,37 +1525,34 @@ export class AgentManagerProvider implements Disposable {
   }
 
   // Manager accessors — repository-bound services are owned by the active ProjectContext (immutable per root).
-  private get lifecycle(): LifecycleDeps {
+  /** Provider capabilities for the worktree lifecycle handlers (state stays in ProjectContext). */
+  private get lifecycleHost(): LifecycleHost {
     return {
-      waitReady: (context) => this.waitForStateReady(context),
       createOnDisk: (opts) => this.createWorktreeOnDisk(opts),
-      setup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
+      runSetup: (dir, branch, id) => this.runSetupScriptForWorktree(dir, branch, id),
       createSession: (dir, branch, id) => this.createSessionInWorktree(dir, branch, id),
-      state: () => this.getStateManager(),
-      manager: () => this.getWorktreeManager(),
+      notifyReady: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
+      sessions: {
+        register: (session) => this.panel?.sessions.registerSession(session),
+        clearDirectory: (sid) => this.panel?.sessions.clearSessionDirectory(sid),
+        directories: () => this.panel?.sessions.getSessionDirectories(),
+        abort: (ids) => this.panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
+        forget: (sid) => void this.panelSessions.delete(sid),
+      },
       push: () => this.pushState(),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
-      ready: (sid, result, id) => this.notifyWorktreeReady(sid, result, id),
-      registerSession: (session) => this.panel?.sessions.registerSession(session),
-      clearDirectory: (sid) => this.panel?.sessions.clearSessionDirectory(sid),
-      directories: () => this.panel?.sessions.getSessionDirectories(),
-      abort: (ids) => this.panel?.sessions.abortSessions(ids) ?? Promise.resolve(),
-      forgetPanel: (sid) => void this.panelSessions.delete(sid),
       skipStats: (id) => this.statsPoller.skipWorktree(id),
       removePR: (id) => this.prBridge.remove(id),
       removeRun: (id) => this.run.remove(id),
       forgetName: (id) => this.naming.forget(id),
-      stale: () => this.staleWorktreeIds,
-      clearStale: (id) => this.clearStaleTracking(id),
-      stopDiffsFor: (path, orphaned) => {
+      stopDiffs: (path, orphaned) => {
         if (this.diffs.shouldStopForWorktree(path, orphaned)) this.diffs.stop()
       },
       capture: (event, props) => this.host.capture(event, props),
       autoName: () => this.host.autoBranchNaming(),
       client: () => this.connectionService.getClient(),
       metadata: (client, dir) => sandboxSessionMetadata(this.connectionService.sandboxPreference, client, dir),
-      root: () => this.getRoot(),
-      post: (msg) => this.postToWebview(msg as unknown as AgentManagerOutMessage),
+      post: (msg) => this.postToWebview(msg),
       log: (...args) => this.log(...args),
     }
   }

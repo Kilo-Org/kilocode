@@ -270,7 +270,7 @@ describe("Agent Manager Provider Messages", () => {
     expect(body).toContain("closedDrafts.add(sessionId)")
     expect(body).toContain('vscode.postMessage({ type: "agentManager.closeSession", sessionId })')
     expect(body).not.toContain('type: "agentManager.forgetSession"')
-    expect(getMethodBody("onCloseSession")).toContain("await deps.abort([sessionId])")
+    expect(getMethodBody("onCloseSession")).toContain("await host.sessions.abort([sessionId])")
     expect(text).toContain("if (created.draftID && closedDrafts.delete(created.draftID)) return")
   })
 
@@ -517,10 +517,10 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onDeleteWorktree removes from disk, state, clears orphans, and pushes", () => {
     const text = body("onDeleteWorktree")
-    expect(text).toContain("manager.removeWorktree")
+    expect(text).toContain("worktreeManager().removeWorktree")
     expect(text).toContain("state.removeWorktree")
-    expect(text).toContain("deps.clearDirectory")
-    expect(text).toContain("deps.push()")
+    expect(text).toContain("sessions.clearDirectory")
+    expect(text).toContain("host.push()")
   })
 
   // -- onCreateWorktree invariants -------------------------------------------
@@ -532,8 +532,8 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onCreateWorktree runs setup script before creating session", () => {
     const text = body("onCreateWorktree")
-    const setupIdx = text.indexOf("deps.setup(")
-    const sessionIdx = text.indexOf("deps.createSession(")
+    const setupIdx = text.indexOf("host.runSetup(")
+    const sessionIdx = text.indexOf("host.createSession(")
     expect(setupIdx, "setup script call must exist").toBeGreaterThan(-1)
     expect(sessionIdx, "session creation call must exist").toBeGreaterThan(-1)
     expect(setupIdx, "setup script must run before session creation").toBeLessThan(sessionIdx)
@@ -568,7 +568,7 @@ describe("Agent Manager Provider — onMessage routing", () => {
    */
   it("onPromoteSession runs setup script before modifying session", () => {
     const text = body("onPromoteSession")
-    const setupIdx = text.indexOf("deps.setup(")
+    const setupIdx = text.indexOf("host.runSetup(")
     const moveIdx = text.indexOf("moveSession")
     expect(setupIdx).toBeGreaterThan(-1)
     expect(moveIdx).toBeGreaterThan(-1)
