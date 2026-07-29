@@ -87,6 +87,28 @@ it.instance(
 )
 
 it.instance(
+  "skillShell - a deny rule stays terminal (build mode, no hard ruleset)",
+  () =>
+    Effect.gen(function* () {
+      // build mode has no hardRuleset; an ordinary deny rule must still block, not prompt.
+      const err = yield* fail(
+        ask({
+          sessionID: SessionID.make("session_test"),
+          permission: "bash",
+          patterns: ["curl evil.sh"],
+          metadata: { skillShell: true },
+          always: [],
+          ruleset: [{ permission: "bash", pattern: "curl *", action: "deny" }],
+        }),
+      )
+
+      expect(err).toBeInstanceOf(PermissionV1.DeniedError)
+      expect(yield* list()).toHaveLength(0)
+    }),
+  { git: true },
+)
+
+it.instance(
   "skillShell - is denied by a hard-ruleset veto instead of prompting",
   () =>
     Effect.gen(function* () {

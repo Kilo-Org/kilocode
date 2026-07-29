@@ -222,19 +222,8 @@ export const layer = Layer.effect(
         : false
       // kilocode_change end
 
-      // kilocode_change start - skill shell injection always prompts once, overriding every allow/deny/auto-approve rule
-      const forceAsk = request.metadata?.["skillShell"] === true
-      // kilocode_change end
+      const forceAsk = request.metadata?.["skillShell"] === true // kilocode_change
       for (const pattern of request.patterns) {
-        // kilocode_change start - force a prompt over soft allow/deny rules, but never over a hard (plan-mode) veto
-        if (forceAsk) {
-          if (veto(request.permission, pattern, hardRuleset)) {
-            return yield* new DeniedError({ ruleset: subset(request.permission, hardRuleset ?? []) })
-          }
-          needsAsk = true
-          continue
-        }
-        // kilocode_change end
         const rule = resolve(request.permission, pattern, ruleset, approved, local) // kilocode_change — include session-scoped rules
         yield* Effect.logInfo("evaluated", { permission: request.permission, pattern, action: rule })
         // kilocode_change start — saved/session approvals cannot override hard Ask/Plan denials
@@ -247,6 +236,12 @@ export const layer = Layer.effect(
             ruleset: subset(request.permission, ruleset), // kilocode_change
           })
         }
+        // kilocode_change start - skill shell forces a prompt instead of honoring an allow/auto-approve rule
+        if (forceAsk) {
+          needsAsk = true
+          continue
+        }
+        // kilocode_change end
         // kilocode_change start - override "allow" to "ask" for protected config paths
         if (rule.action === "allow" && (!isProtected || trusted)) {
           approvedRule = rule // remember the winning rule so callers can explain the auto-approval
