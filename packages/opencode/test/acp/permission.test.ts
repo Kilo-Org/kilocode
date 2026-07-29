@@ -213,7 +213,8 @@ describe("acp permissions", () => {
     harness.subscription.handle(
       permissionAsked("ses_a", "perm_skill", {
         permission: "bash",
-        metadata: { skillShell: true },
+        // metadata.commands carries the verbatim command list the injector sends
+        metadata: { skillShell: true, commands: ["git status", "printf hi"] },
         tool: { messageID: "msg_1", callID: "call_1" },
       }),
     )
@@ -223,7 +224,7 @@ describe("acp permissions", () => {
     expect(harness.requests[0]).toMatchObject({
       toolCall: {
         title: "Run skill shell commands",
-        rawInput: { skillShell: true, commands: ["*"] },
+        rawInput: { skillShell: true, commands: ["git status", "printf hi"] },
       },
       // no allow_always: skill shell is never persisted
       options: [

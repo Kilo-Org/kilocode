@@ -75,22 +75,26 @@ export namespace SkillInject {
       for (const dir of scan.dirs) dirs.add(dir)
     }
 
-    // Single up-front approval. Out-of-project directories are asked first, then
-    // the decomposed sub-commands. `skillShell` forces the prompt over allow/YOLO
-    // rules; a deny/veto on any sub-command propagates as a defect and aborts.
+    // Single up-front approval. `patterns` are the decomposed sub-commands used for
+    // rule matching; `metadata.commands` is the verbatim per-placeholder list the
+    // prompt displays, so what is shown is exactly what runs (decomposition drops
+    // cd/set-location segments and splits pipelines, which must not hide from the
+    // user). `skillShell` forces the prompt over allow/YOLO rules; a deny/veto on
+    // any sub-command propagates as a defect and aborts.
+    const metadata = { skillShell: true, skill: opts.skill, commands }
     if (dirs.size > 0) {
       yield* opts.ctx.ask({
         permission: "external_directory",
         patterns: Array.from(dirs),
         always: [],
-        metadata: { skillShell: true, skill: opts.skill },
+        metadata,
       })
     }
     yield* opts.ctx.ask({
       permission: "bash",
       patterns: Array.from(patterns),
       always: [],
-      metadata: { skillShell: true, skill: opts.skill },
+      metadata,
     })
 
     // Run each command in the instance directory, bounded by ctx.abort (ESC) and a

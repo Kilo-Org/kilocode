@@ -293,10 +293,12 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
-              // kilocode_change start - skill shell batches list every command, control-char-escaped so the
-              // displayed command cannot repaint the line to differ from what executes
+              // kilocode_change start - skill shell batches display the verbatim commands that will execute (from
+              // metadata.commands, never the decomposed patterns, which drop cd segments and split pipelines),
+              // control-char-escaped so the displayed command cannot repaint the line to differ from what runs
               if (props.request.metadata?.["skillShell"] === true) {
-                const commands = (props.request.patterns ?? []).filter((p): p is string => typeof p === "string")
+                const verbatim = props.request.metadata?.["commands"]
+                const commands = (Array.isArray(verbatim) ? verbatim : []).filter((p): p is string => typeof p === "string")
                 const skill = typeof props.request.metadata?.["skill"] === "string" ? props.request.metadata["skill"] : undefined
                 return {
                   icon: "#",

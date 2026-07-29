@@ -97,8 +97,9 @@ describe("skill shell injection", () => {
       const bash = requests.filter((r) => r.permission === "bash")
       expect(bash.length).toBe(1)
       expect(bash[0].metadata?.["skillShell"]).toBe(true)
-      // patterns carry the command list the prompt renders
+      // patterns drive rule matching; metadata.commands is the verbatim list the prompt renders
       expect(bash[0].patterns).toEqual(["printf one", "printf two"])
+      expect(bash[0].metadata?.["commands"]).toEqual(["printf one", "printf two"])
     }),
   )
 
@@ -130,10 +131,12 @@ describe("skill shell injection", () => {
 
       const bash = requests.filter((r) => r.permission === "bash")
       expect(bash.length).toBe(1)
-      // both sub-commands are present as distinct patterns, not the raw string
+      // patterns are decomposed per sub-command so deny/veto rules apply to each
       expect(bash[0].patterns).toContain("cat README.md")
       expect(bash[0].patterns).toContain("printf hi")
       expect(bash[0].patterns).not.toContain("cat README.md; printf hi")
+      // but the prompt displays the verbatim placeholder, so nothing is hidden from the user
+      expect(bash[0].metadata?.["commands"]).toEqual(["cat README.md; printf hi"])
     }),
   )
 

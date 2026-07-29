@@ -70,7 +70,7 @@ export class Handler {
           toolCallId: permission.tool?.callID ?? permission.id,
           status: "pending",
           title: skillShell ? "Run skill shell commands" : permission.permission, // kilocode_change
-          rawInput: skillShell ? { ...permission.metadata, commands: permission.patterns } : permission.metadata, // kilocode_change
+          rawInput: permission.metadata, // kilocode_change - metadata.commands carries the verbatim command list
           kind: toToolKind(permission.permission),
           locations: toLocations(permission.permission, permission.metadata),
         },
