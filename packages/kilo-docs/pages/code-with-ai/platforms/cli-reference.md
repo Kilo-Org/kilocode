@@ -939,10 +939,8 @@ Options:
 
 ## kilo console
 
-The Kilo Console is DEPRECATED and will be removed in an upcoming release.
-
 ```
-open or stop the local Kilo Console
+open or stop the local Kilo Console (deprecated)
 
 Commands:
   kilo console       open the local Kilo Console (deprecated)  [default]
