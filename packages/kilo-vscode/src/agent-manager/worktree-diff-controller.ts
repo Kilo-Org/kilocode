@@ -34,6 +34,8 @@ export class WorktreeDiffController {
   private readonly controller: SourceController
   private target: Target | undefined
   private applying: string | undefined
+  /** Intended watch mode for the active context; isPolling lags the initial fetch. */
+  private poll = false
   /** Ephemeral per-context base override, keyed by context id. */
   private baseOverrides = new Map<string, string>()
 
@@ -184,6 +186,7 @@ export class WorktreeDiffController {
   public stop(): void {
     this.controller.stop()
     this.target = undefined
+    this.poll = false
   }
 
   /**
@@ -195,8 +198,15 @@ export class WorktreeDiffController {
     const { ctx } = parseDiffId(id)
     if (branch) this.baseOverrides.set(ctx, branch)
     else this.baseOverrides.delete(ctx)
-    this.target = undefined
-    await this.controller.reactivate()
+    // Nothing to rebuild when the context isn't active; the override is
+    // picked up the next time start()/request() resolves it.
+    if (this.controller.currentId !== id) return
+    // Route through activate() so the base is re-resolved and pushed via
+    // setContext() — SourceController.reactivate() alone would rebuild the
+    // source against the stale context captured by the last activate(). The
+    // recorded poll intent preserves watch mode even when the initial fetch
+    // is still in flight (isPolling only turns true once it resolves).
+    await this.activate(id, this.poll, true)
   }
 
   /** Branch picker data for a context's directory, using any active override. */
@@ -210,6 +220,7 @@ export class WorktreeDiffController {
 
   private async activate(id: string, poll: boolean, fetch: boolean): Promise<void> {
     this.target = undefined
+    this.poll = poll
     await this.ready("stateReady rejected, continuing diff activate:")
     const { ctx } = parseDiffId(id)
     const resolved = await this.resolve(ctx)
