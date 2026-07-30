@@ -219,7 +219,6 @@ export const dict = {
   "ui.approval.source.default": "per impostazione predefinita",
   "session.tab.review": "Revisione",
   "session.review.filesChanged": "{{count}} file modificati",
-  "session.review.change.other": "Modifiche",
   "session.review.loadingChanges": "Caricamento modifiche...",
   "session.review.noChanges": "Nessuna modifica",
   "session.messages.loadingEarlier": "Caricamento messaggi precedenti...",

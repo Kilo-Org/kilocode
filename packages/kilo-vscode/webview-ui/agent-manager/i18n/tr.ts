@@ -145,7 +145,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Dosyayı geri al",
   "agentManager.diff.revertSuccess": "Dosya geri alındı",
   "agentManager.diff.revertError": "Geri alma başarısız",
-  "agentManager.diff.applyBranchOnly": "Uygula yalnızca tam Branch diff'inde çalışır. Uygulamak için Branch kapsamına geçin.",
+  "agentManager.diff.applyBranchOnly":
+    "Uygula yalnızca tam Branch diff'inde çalışır. Uygulamak için Branch kapsamına geçin.",
   "agentManager.open.button": "Aç",
   "agentManager.open.tooltip": "Bu worktree'yi VS Code'da aç",
   "agentManager.apply.globalButton": "Uygula",

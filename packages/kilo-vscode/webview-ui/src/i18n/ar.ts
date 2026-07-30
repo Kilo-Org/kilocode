@@ -296,7 +296,6 @@ export const dict = {
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
-  "session.review.change.other": "تغييرات",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",

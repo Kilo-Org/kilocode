@@ -40,7 +40,12 @@ export function isDiffScope(value: string): value is DiffScope {
  */
 export function scopeDescriptors(ctx: string, hasSession: boolean): DiffSourceDescriptor[] {
   const out: DiffSourceDescriptor[] = [
-    { id: composeDiffId(ctx, "branch"), type: "workspace", group: "Git", capabilities: { revert: true, comments: true } },
+    {
+      id: composeDiffId(ctx, "branch"),
+      type: "workspace",
+      group: "Git",
+      capabilities: { revert: true, comments: true },
+    },
     { id: composeDiffId(ctx, "staged"), type: "staged", group: "Git", capabilities: { revert: false, comments: true } },
     {
       id: composeDiffId(ctx, "unstaged"),

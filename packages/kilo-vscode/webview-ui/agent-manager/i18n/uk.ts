@@ -146,7 +146,8 @@ export const dict = {
   "agentManager.diff.revertFile": "Скасувати зміни файлу",
   "agentManager.diff.revertSuccess": "Файл відновлено",
   "agentManager.diff.revertError": "Не вдалося відновити",
-  "agentManager.diff.applyBranchOnly": "Застосування працює лише з повним diff гілки. Щоб застосувати зміни, перемкніться на область Branch.",
+  "agentManager.diff.applyBranchOnly":
+    "Застосування працює лише з повним diff гілки. Щоб застосувати зміни, перемкніться на область Branch.",
   "agentManager.open.button": "Відкрити",
   "agentManager.open.tooltip": "Відкрити це робоче дерево у VS Code",
   "agentManager.apply.globalButton": "Застосувати",

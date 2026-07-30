@@ -312,7 +312,6 @@ export const dict = {
 
   "session.tab.review": "Überprüfung",
   "session.review.filesChanged": "{{count}} Dateien geändert",
-  "session.review.change.other": "Änderungen",
   "session.review.loadingChanges": "Lade Änderungen...",
   "session.review.noChanges": "Keine Änderungen",
   "session.messages.loadingEarlier": "Lade frühere Nachrichten...",

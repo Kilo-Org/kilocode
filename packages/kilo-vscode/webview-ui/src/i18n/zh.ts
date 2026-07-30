@@ -292,7 +292,6 @@ export const dict = {
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
-  "session.review.change.other": "更改",
   "session.review.loadingChanges": "正在加载更改...",
   "session.review.noChanges": "无更改",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
