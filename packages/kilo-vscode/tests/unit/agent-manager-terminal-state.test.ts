@@ -5,6 +5,7 @@ import {
   createTerminalHandlers,
   createTerminalMessageHandler,
   createTerminalState,
+  isTerminalTabId,
 } from "../../webview-ui/agent-manager/terminal/state"
 import type { ExtensionMessage } from "../../webview-ui/src/types/messages/extension-messages"
 
@@ -14,7 +15,14 @@ function scene(initial: string | null = LOCAL) {
   const [selection, setSelection] = createSignal<string | null>(initial)
   const state = createTerminalState(selection)
   const posted: Array<Record<string, unknown>> = []
-  const events = { activated: [] as string[], selected: [] as string[], saved: 0, shown: [] as string[], errors: 0 }
+  const events = {
+    activated: [] as string[],
+    selected: [] as string[],
+    saved: 0,
+    shown: [] as string[],
+    errors: 0,
+    running: [] as Array<{ contextKey: string; terminalId: string }>,
+  }
   const tabs = () => state.current().map((term) => term.id)
   const handlers = createTerminalHandlers({
     state,
@@ -41,6 +49,7 @@ function scene(initial: string | null = LOCAL) {
     },
     showError: () => events.errors++,
     postMessage: (message) => posted.push(message as Record<string, unknown>),
+    onScriptRunning: (contextKey, terminalId) => events.running.push({ contextKey, terminalId }),
   })
   return { state, selection, setSelection, posted, events, handlers, dispatch }
 }
@@ -55,6 +64,28 @@ function createdSide(createId: string, terminalId: string, title = "Terminal 1")
     title,
     wsUrl: `ws://${terminalId}`,
     font,
+  } satisfies ExtensionMessage
+}
+
+function script(
+  terminalId: string,
+  state: "running" | "stopping" | "exited" | "failed" = "running",
+  exitCode?: number,
+) {
+  return {
+    type: "agentManager.scriptTerminals",
+    terminals: [
+      {
+        terminalId,
+        worktreeId: null,
+        kind: "run",
+        title: "Run",
+        wsUrl: `ws://${terminalId}`,
+        state,
+        ...(exitCode === undefined ? {} : { exitCode }),
+        font,
+      },
+    ],
   } satisfies ExtensionMessage
 }
 
@@ -87,6 +118,47 @@ describe("Agent Manager terminal state", () => {
       expect(item.state.current()).toEqual([])
       expect(item.state.sideKey()).toBe(LOCAL)
       expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:side")
+      dispose()
+    })
+  })
+
+  it("hydrates complete Run snapshots without create ids and preserves mounted terminal records", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:user", title: "Terminal 1", wsUrl: "ws://user", font, placement: "side" })
+      const user = item.state.sidesForContext(LOCAL)[0]!
+
+      expect(item.dispatch(script("script:run"))).toBe(true)
+      const run = item.state.sidesForContext(LOCAL).find((term) => term.id === "script:run")
+      expect(run).toMatchObject({ title: "Run", placement: "side", kind: "run", contextKey: LOCAL })
+      expect(item.events.running).toEqual([{ contextKey: LOCAL, terminalId: "script:run" }])
+      expect(item.state.scriptStatus("script:run")).toEqual({ state: "running" })
+      expect(isTerminalTabId("script:run")).toBe(true)
+
+      item.state.setTitle("script:run", "npm test")
+      expect(item.state.title("script:run")).toBe("Run")
+
+      item.dispatch(script("script:run", "exited", 0))
+      expect(item.state.sidesForContext(LOCAL).find((term) => term.id === "script:run")).toBe(run)
+      expect(item.state.scriptStatus("script:run")).toEqual({ state: "exited", exitCode: 0 })
+      expect(item.state.sidesForContext(LOCAL).find((term) => term.id === "terminal:user")).toBe(user)
+      // Existing snapshots update status only; they do not re-open the inspector.
+      expect(item.events.running).toEqual([{ contextKey: LOCAL, terminalId: "script:run" }])
+
+      item.dispatch({ type: "agentManager.scriptTerminals", terminals: [] } satisfies ExtensionMessage)
+      expect(item.state.sidesForContext(LOCAL)).toEqual([user])
+      expect(item.state.scriptStatus("script:run")).toBeUndefined()
+      dispose()
+    })
+  })
+
+  it("maps Local Run snapshots to LOCAL and does not reveal exited terminals", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.dispatch(script("script:exit", "exited", 2))
+
+      expect(item.state.sidesForContext(LOCAL)[0]).toMatchObject({ id: "script:exit", contextKey: LOCAL })
+      expect(item.events.running).toEqual([])
       dispose()
     })
   })
@@ -166,6 +238,26 @@ describe("Agent Manager terminal state", () => {
       // Closing an unknown or non-side id is a no-op.
       expect(item.handlers.closeSide("terminal:gone")).toBe(false)
       expect(item.posted).toHaveLength(2)
+      dispose()
+    })
+  })
+
+  it("waits for Run closure confirmation while user terminal closes stay optimistic", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:user", title: "Terminal 1", wsUrl: "ws://user", font, placement: "side" })
+      item.dispatch(script("script:run"))
+
+      expect(item.handlers.closeSide("script:run")).toBe(true)
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["terminal:user", "script:run"])
+      expect(item.posted).toEqual([{ type: "agentManager.terminal.close", terminalId: "script:run" }])
+
+      expect(item.handlers.closeSide("terminal:user")).toBe(true)
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["script:run"])
+      expect(item.posted).toEqual([
+        { type: "agentManager.terminal.close", terminalId: "script:run" },
+        { type: "agentManager.terminal.close", terminalId: "terminal:user" },
+      ])
       dispose()
     })
   })

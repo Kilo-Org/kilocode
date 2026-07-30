@@ -71,6 +71,7 @@ function createMockHost(): Host {
   return {
     openPanel: vi.fn(),
     workspacePath: () => "/repo",
+    isTrusted: () => true,
     autoBranchNaming: () => ({ enabled: true, prefix: "" }),
     showError: vi.fn(),
     openDocument: vi.fn().mockResolvedValue(undefined),
@@ -78,7 +79,10 @@ function createMockHost(): Host {
     openFolder: vi.fn(),
     createOutput: () => ({ appendLine: vi.fn(), dispose: vi.fn() }) as OutputHandle,
     extensionKeybindings: () => [],
+    copyToClipboard: vi.fn(),
     capture: vi.fn(),
+    openExternal: vi.fn(),
+    refreshGit: vi.fn(),
     dispose: vi.fn(),
   }
 }
@@ -102,6 +106,7 @@ function createHarness() {
     prBridge: { handleMessage: ReturnType<typeof vi.fn> }
     activeSessionId: string | undefined
     naming: { prompt: ReturnType<typeof vi.fn> }
+    scripts: { intercept: ReturnType<typeof vi.fn>; snapshot: ReturnType<typeof vi.fn> }
     terminalRouter: { handle: ReturnType<typeof vi.fn> }
     stateReady: Promise<void> | undefined
     contextTarget: ReturnType<typeof vi.fn>
@@ -125,6 +130,7 @@ function createHarness() {
   manager.prBridge = { handleMessage: vi.fn().mockReturnValue(false) }
   manager.activeSessionId = undefined
   manager.naming = { prompt: vi.fn() }
+  manager.scripts = { intercept: vi.fn().mockReturnValue(false), snapshot: vi.fn() }
   manager.terminalRouter = { handle: vi.fn().mockReturnValue(false) }
   manager.stateReady = Promise.resolve()
   manager.contextTarget = vi.fn()

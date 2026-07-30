@@ -7,7 +7,7 @@ export function handleRunMessage(run: RunController, msg: AgentManagerInMessage)
     return true
   }
   if (msg.type === "agentManager.runScript") {
-    void run.run(msg.worktreeId)
+    void run.run(msg.worktreeId, msg.destination)
     return true
   }
   if (msg.type === "agentManager.stopRunScript") {
