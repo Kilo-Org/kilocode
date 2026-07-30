@@ -19,8 +19,7 @@ Background: the IDE maintains Classic UI and New UI in parallel. Code branches w
 5. **Use `fill="none"` on the root `<svg>`** and set `fill` / `stroke` explicitly per shape — never rely on CSS or `currentColor`.
 6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`.
 7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering.
-8. **Preserve the Apache 2.0 copyright comment** as line 1. Match the year of contribution.
-9. **File names use camelCase** matching the action/node ID and stay ASCII-only.
+8. **File names use camelCase** matching the action/node ID and stay ASCII-only.
 
 ## Icon roles
 
@@ -118,7 +117,7 @@ Do not use plain `#000000` or off-the-palette grays.
 1. **Pick the role and canvas size** from the table above. For source lookup, follow the IntelliJ repository guidance in `packages/kilo-jetbrains/AGENTS.md`; use that AGENTS file alongside this skill when generating or reviewing plugin icons. Find at least two visually similar sibling icons and mirror their stroke/fill mix.
 2. **Lay out geometry on the pixel grid** (whole-pixel fills, half-pixel stroke centers). Optical-center the glyph.
 3. **Apply the canonical light palette** from [palette.md](./palette.md). Never invent colors.
-4. **Save the light SVG** with the Apache 2.0 header, `width`/`height`/`viewBox` matching the role, and `fill="none"` on `<svg>`.
+4. **Save the light SVG** with `width`/`height`/`viewBox` matching the role and `fill="none"` on `<svg>`.
 5. **Duplicate to the `_dark` filename** and swap each color for its dark-theme partner from the palette mapping. Keep paths byte-identical otherwise.
 6. **Place and wire the file**:
    - **Fresh New UI icon** → drop into the matching `expui/<role>/` resource folder; reference it from the plugin's `<Plugin>Icons` class.
