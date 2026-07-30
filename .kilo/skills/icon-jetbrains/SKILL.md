@@ -125,7 +125,7 @@ Do not use plain `#000000` or off-the-palette grays.
 3. **Apply the canonical light palette** from [palette.md](./palette.md). Never invent colors.
 4. **Save the light SVG** with `width`/`height`/`viewBox` matching the role and `fill="none"` on `<svg>`.
 5. **Duplicate to the `_dark` filename** and swap each color for its dark-theme partner from the palette mapping. Keep paths byte-identical otherwise.
-6. **Place and wire the file** → drop both files into `packages/kilo-jetbrains/frontend/src/main/resources/icons/`, or `icons/views/` for in-view chat/session icons (no `expui/` or role subfolder — this repo has no such structure and no `*IconMappings.json`); reference the icon from the plugin's icon-holder class. The upstream `expui/<role>/` placement and `*IconMappings.json` mapping described in [Where the SVGs live](#where-the-svgs-live) apply only to the IntelliJ Community sources under `$INTELLIJ_REPO`, not to this repo.
+6. **Place and wire the file** → drop both files into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (action icons, tool-window icons) or `icons/views/` (in-view chat/session icons). There is no `expui/` or role subfolder — this repo has no such structure and no `*IconMappings.json`. Reference the icon from the plugin's icon-holder class. The upstream `expui/<role>/` placement and `*IconMappings.json` mapping described in [Where the SVGs live](#where-the-svgs-live) apply only to the IntelliJ Community sources under `$INTELLIJ_REPO`, not to this repo.
 7. **Verify visually** in both themes via the image preview in the IDE, or run the IDE and toggle *View ▸ Appearance ▸ New UI* to compare. Check selection states for stripe icons.
 
 ## Common mistakes
