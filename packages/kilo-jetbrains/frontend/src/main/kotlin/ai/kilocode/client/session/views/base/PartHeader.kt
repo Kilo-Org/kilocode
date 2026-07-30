@@ -40,6 +40,12 @@ class PartHeader : JPanel(BorderLayout(Header.gap(), 0)) {
         return this
     }
 
+    /** Reserves the larger title-to-elements gap before the next left element. */
+    fun titleGap(): PartHeader {
+        left.gap(Header.title())
+        return this
+    }
+
     fun left(vararg items: Component): PartHeader {
         items.forEach { left.next(it) }
         return this

@@ -413,6 +413,7 @@ internal fun toolParts(
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
+        titleGap()
         fill(slot)
         right(state)
     }
@@ -443,6 +444,7 @@ internal fun searchParts(count: Int): ToolParts {
     val header = PartHeader().apply {
         leading(glyph)
         left(title)
+        titleGap()
         fill(target)
         right(state)
     }

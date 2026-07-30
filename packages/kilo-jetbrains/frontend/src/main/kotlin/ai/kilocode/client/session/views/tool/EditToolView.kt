@@ -30,7 +30,6 @@ import com.intellij.ui.EditorTextField
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
 import com.intellij.util.ui.JBFont
-import com.intellij.util.ui.JBUI
 import java.awt.Dimension
 import javax.swing.ScrollPaneConstants
 
@@ -61,15 +60,16 @@ class EditToolView(
     private val filesTag = JBLabel().apply {
         foreground = UiStyle.Colors.weak()
         font = JBFont.small()
-        border = JBUI.Borders.emptyRight(SessionUiStyle.View.Layout.HORIZONTAL_PADDING)
         isVisible = false
     }
 
     init {
         body.parent = this
-        parts.slot.add(PartHeader.centered(diff))
-        parts.right.next(filesTag)
-        parts.right.next(PartHeader.centered(badge))
+        // Left-aligned header: icon, title, file name (single) or file count (multi), change badge, open-in-diff.
+        parts.left.next(parts.link)
+        parts.left.next(filesTag)
+        parts.left.next(PartHeader.centered(badge))
+        parts.left.next(PartHeader.centered(diff))
         bindHeader(parts.glyph, parts.title, parts.sub, parts.link, parts.state, parts.left, parts.right, parts.slot, filesTag, badge)
         unbindHeader(diff)
         applyStyle(style)
@@ -209,7 +209,7 @@ class EditToolView(
         changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
-        changed = setVisible(diff, editDiff(item).isNotBlank()) || changed
+        changed = setVisible(diff, toDiffFiles(item).isNotEmpty()) || changed
         changed = syncFilesTag(count) || changed
         changed = syncBadge() || changed
         return changed

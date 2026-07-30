@@ -52,7 +52,7 @@ class ModifiedFilesView private constructor(
         body.parent = this
         parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
-        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.panel.right, parts.bars)
+        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.bars)
         unbindHeader(parts.diff)
         applyStyle(style)
     }
@@ -153,11 +153,12 @@ class ModifiedFilesView private constructor(
             ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {},
         ).apply { isVisible = false }
         val bars = DiffBars(0, 0)
-        // Glyph, title, count, and the open-diff action on the left; diff bars hug the right edge.
+        // Left-aligned header: icon, title, file count, sticks change badge, open-in-diff.
         val panel = PartHeader().apply {
             leading(glyph)
-            left(title, count, PartHeader.centered(diff))
-            right(PartHeader.centered(bars))
+            left(title)
+            titleGap()
+            left(count, PartHeader.centered(bars), PartHeader.centered(diff))
         }
 
         @RequiresEdt

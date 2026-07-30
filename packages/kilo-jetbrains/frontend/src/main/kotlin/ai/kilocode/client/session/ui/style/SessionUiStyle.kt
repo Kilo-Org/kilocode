@@ -51,8 +51,11 @@ object SessionUiStyle {
             /** Gap between the leading glyph icon and the title. */
             fun icon() = UiStyle.Gap.sm()
 
-            /** Universal gap: title to every trailing element, and between all elements. */
+            /** Universal gap between every element after the title. */
             fun gap() = JBUI.scale(Layout.GAP)
+
+            /** Larger gap separating the title from the elements that follow it (one standard step above [gap]). */
+            fun title() = UiStyle.Gap.lg()
         }
 
         object Popup {

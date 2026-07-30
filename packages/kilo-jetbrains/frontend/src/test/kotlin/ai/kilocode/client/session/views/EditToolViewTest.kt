@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
@@ -9,6 +10,7 @@ import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.views.tool.ReadToolView
 import ai.kilocode.client.session.views.tool.ToolView
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.diff.DiffColors
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.util.Disposer
@@ -23,6 +25,7 @@ import kotlinx.serialization.json.put
 import java.awt.Component
 import java.awt.Container
 import java.awt.event.MouseEvent
+import javax.swing.AbstractButton
 
 @Suppress("UnstableApiUsage")
 class EditToolViewTest : BasePlatformTestCase() {
@@ -128,6 +131,28 @@ class EditToolViewTest : BasePlatformTestCase() {
 
         click(fileLinks.first { it.text!!.contains("A.kt") }, 1)
         assertEquals(listOf("src/A.kt"), opened)
+    }
+
+    fun `test open in diff action fires for edit and patch`() {
+        val edit = mutableListOf<List<DiffFileDto>>()
+        val editView = track(EditToolView(tool(), { _, _ -> }, null, { files, _, _ -> edit.add(files) }, "ses"))
+        val editButton = openDiffButton(editView)
+        assertTrue(editButton.isVisible)
+        editButton.doClick()
+        assertEquals(1, edit.single().size)
+
+        val patch = mutableListOf<List<DiffFileDto>>()
+        val patchView = track(EditToolView(tool().also {
+            it.input = emptyMap()
+            it.metadata = mapOf("files" to filesMeta(
+                FileChange("src/A.kt", 2, 0, ADD_HUNK),
+                FileChange("src/B.kt", 1, 1, UPDATE_HUNK),
+            ))
+        }, { _, _ -> }, null, { files, _, _ -> patch.add(files) }, "ses"))
+        val patchButton = openDiffButton(patchView)
+        assertTrue(patchButton.isVisible)
+        patchButton.doClick()
+        assertEquals(2, patch.single().size)
     }
 
     fun `test single file apply_patch keeps link and hides count tag`() {
@@ -395,6 +420,14 @@ class EditToolViewTest : BasePlatformTestCase() {
     private fun badges(root: Container): List<DiffStatBadge> = root.components.flatMap { child ->
         val nested = if (child is Container) badges(child) else emptyList()
         if (child is DiffStatBadge) nested + child else nested
+    }
+
+    private fun openDiffButton(view: EditToolView): AbstractButton =
+        buttons(view).first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+
+    private fun buttons(root: Container): List<AbstractButton> = root.components.flatMap { child ->
+        val nested = if (child is Container) buttons(child) else emptyList()
+        if (child is AbstractButton) nested + child else nested
     }
 
     private fun tool() = Tool("p1", "edit", toolKind("edit")).also {

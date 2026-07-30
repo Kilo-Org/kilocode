@@ -106,7 +106,9 @@ private fun todoParts(): TodoParts {
     val sub = JBLabel().apply { foreground = UiStyle.Colors.weak() }
     val header = PartHeader().apply {
         leading(glyph)
-        left(title, sub)
+        left(title)
+        titleGap()
+        left(sub)
     }
     return TodoParts(header, glyph, title, sub, header.left, header.right, TodoListPanel())
 }

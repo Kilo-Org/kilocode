@@ -44,6 +44,25 @@ class PartHeaderTest : BasePlatformTestCase() {
         assertEquals(Header.gap(), extra.x - (title.x + title.width))
     }
 
+    fun `test title gap separates the title from following elements`() {
+        val glyph = JBLabel("g")
+        val title = JBLabel("Edit")
+        val name = JBLabel("main.tf")
+        val extra = JBLabel("x")
+        val header = PartHeader().apply {
+            leading(glyph)
+            left(title)
+            titleGap()
+            left(name, extra)
+        }
+
+        sized(header, 400)
+
+        assertEquals(Header.title(), name.x - (title.x + title.width))
+        assertEquals(Header.gap(), extra.x - (name.x + name.width))
+        assertTrue(Header.title() > Header.gap())
+    }
+
     fun `test right group hugs the trailing edge`() {
         val bars = DiffBars(1, 1)
         val header = PartHeader().apply {
