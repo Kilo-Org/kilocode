@@ -104,7 +104,6 @@ function providerFields(provider: ProviderId | undefined): Array<{ key: string; 
   return []
 }
 
-
 function localDescription(choice: ProviderChoice | undefined, provider: ProviderId | undefined) {
   if (choice === "lmstudio")
     return "Load an embedding model in LM Studio, start its local server, then discover it here."
@@ -310,7 +309,6 @@ const IndexingTab: Component = () => {
     }
     updateIndexing({ provider: next, model: null, dimension: null })
   }
-
 
   const localRuntime = () => {
     const selected = selectedProvider()
