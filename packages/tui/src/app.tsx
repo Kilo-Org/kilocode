@@ -954,14 +954,18 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
           dialog.clear()
         },
       },
-      // kilocode_change - this toggles the in-memory mode that `--auto`/`--yolo` seed, and is the
-      // only way to leave it mid-session. Kilo also ships `permission.allow_everything`
-      // (kilocode/cli/cmd/tui/app.tsx), which persists a server-side allow rule instead. Two
-      // entries with different scope is confusing and should be consolidated onto the Kilo one.
+      // kilocode_change - titled by scope. This toggles the in-memory mode that `--auto`/`--yolo`
+      // seed, which lasts for the TUI process and survives switching sessions. It is also the only
+      // way to leave that mode without restarting; Kilo's `permission.allow_everything`
+      // (kilocode/cli/cmd/tui/app.tsx) saves a global rule instead. Consolidating the two is a
+      // follow-up that has to cover VS Code and JetBrains as well.
       {
         name: "permission.mode",
         title:
-          local.permission.mode === "auto" ? "Disable auto-approve permissions" : "Enable auto-approve permissions",
+          local.permission.mode === "auto"
+            ? "Disable auto-approve for this TUI run"
+            : "Enable auto-approve for this TUI run",
+        desc: "Auto-approve permission prompts until you exit the TUI, nothing is saved", // kilocode_change
         category: "System",
         run: () => {
           local.permission.toggle()

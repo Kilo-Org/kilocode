@@ -19,7 +19,12 @@ import { TestInstance } from "../../fixture/fixture"
 import { testEffect } from "../../lib/effect"
 
 const it = testEffect(
-  Layer.mergeAll(Bus.layer, AppNodeBuilder.build(Config.node), AppNodeBuilder.build(CrossSpawnSpawner.node), AppNodeBuilder.build(Database.node)),
+  Layer.mergeAll(
+    Bus.layer,
+    AppNodeBuilder.build(Config.node),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+    AppNodeBuilder.build(Database.node),
+  ),
 )
 const linux = process.platform === "linux" ? test : test.skip
 const posix = process.platform === "win32" ? test.skip : test
@@ -37,6 +42,7 @@ test("restores the session snapshot after a backend restart", async () => {
     'import { Effect, Layer } from "effect"',
     'import { Config } from "@/config/config"',
     'import { Database } from "@opencode-ai/core/database/database"',
+    'import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"',
     'import { InstanceRef } from "@/effect/instance-ref"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SandboxStore } from "@/kilocode/sandbox/store"',
@@ -143,6 +149,7 @@ linux("reports configured network namespace availability", async () => {
     'import { Effect, Layer } from "effect"',
     'import { Config } from "@/config/config"',
     'import { Database } from "@opencode-ai/core/database/database"',
+    'import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"',
     'import { InstanceRef } from "@/effect/instance-ref"',
     'import * as SandboxPolicy from "@/kilocode/sandbox/policy"',
     'import { SessionID } from "@/session/schema"',

@@ -15,8 +15,16 @@ import { Npm } from "@opencode-ai/core/npm"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { Reference } from "@opencode-ai/core/reference"
 import { SkillV2 } from "@opencode-ai/core/skill"
+import { Global } from "@opencode-ai/core/global"
 import { Effect, Layer } from "effect"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 import { tempLocationLayer } from "../fixture/location"
+
+// kilocode_change - Credential imports Global.data/auth.json on startup, so without this the suite
+// reads the developer's real credential store and its results depend on whether they are logged in.
+const globalLayer = Global.layerWith({ data: fs.mkdtempSync(path.join(os.tmpdir(), "kilo-plugin-test-")) })
 
 const npmLayer = Layer.succeed(
   Npm.Service,
@@ -48,5 +56,6 @@ export const PluginTestLayer = AppNodeBuilder.build(
   [
     [Location.node, tempLocationLayer],
     [Npm.node, npmLayer],
+    [Global.node, globalLayer], // kilocode_change
   ],
 )

@@ -357,7 +357,13 @@ export function createListenerRoutes(corsOptions?: CorsOptions) {
     provideKiloListenerRoutes(corsOptions),
     // Upstream's v2 ServerApi groups declare location/session middleware and services that must be
     // satisfied when the layer is built, not at request time, so the listener needs the same chain
-    // createRoutes uses. Application services still come from AppRuntime.
+    // createRoutes uses.
+    //
+    // These builds sit inside KiloListener's Layer.fresh boundary, so each one self-provides its own
+    // dependency subtree rather than resolving AppRuntime's. That is deliberate: SessionV2 is bound
+    // to this listener's LocationServiceMap and to SessionExecutionLocal, so it cannot be the
+    // process-wide instance. Everything the graph does not rebind (the nodes listed in AppLayer)
+    // still comes from AppRuntime, and the scope teardown releases the rest.
     Layer.provide(sessionLocationLayer),
     Layer.provide(locationLayer),
     Layer.provide(PtyEnvironment.layer),

@@ -1090,6 +1090,7 @@ export type SessionsHistoryOutput = {
           readonly reason: "auto" | "manual"
           readonly text: string
           readonly recent: string
+          readonly include?: string | null
         }
       }
     | {
@@ -1548,6 +1549,7 @@ export type SessionsEventsOutput =
         readonly reason: "auto" | "manual"
         readonly text: string
         readonly recent: string
+        readonly include?: string | undefined
       }
     }
   | {
@@ -2561,6 +2563,7 @@ export type PtysListOutput = {
     readonly status: "running" | "exited"
     readonly pid: number
     readonly exitCode?: number
+    readonly sessionID?: string | null
   }>
 }
 
@@ -2620,6 +2623,7 @@ export type PtysCreateOutput = {
     readonly status: "running" | "exited"
     readonly pid: number
     readonly exitCode?: number
+    readonly sessionID?: string | null
   }
 }
 
@@ -2645,6 +2649,7 @@ export type PtysGetOutput = {
     readonly status: "running" | "exited"
     readonly pid: number
     readonly exitCode?: number
+    readonly sessionID?: string | null
   }
 }
 
@@ -2675,6 +2680,7 @@ export type PtysUpdateOutput = {
     readonly status: "running" | "exited"
     readonly pid: number
     readonly exitCode?: number
+    readonly sessionID?: string | null
   }
 }
 

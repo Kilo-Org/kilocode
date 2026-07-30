@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+import { afterAll, beforeAll, describe, expect } from "bun:test"
 import { Duration, Effect, Exit, Fiber, Scope, Stream } from "effect"
 import * as TestClock from "effect/testing/TestClock"
 import { Credential } from "@opencode-ai/core/credential"
@@ -16,8 +16,18 @@ import { testEffect } from "./lib/effect"
 // them on every startup. testEffect rebuilds the layer per test, so without isolation one test's
 // credentials reappear in the next as "Imported" (and the real developer store gets written to).
 // KILO_AUTH_CONTENT is Kilo's process-local credential mode: it skips the auth.json dual-write.
-process.env.KILO_AUTH_CONTENT ??= "{}"
+// Set it around this file only. bun shares one process across test files, so setting it at module
+// scope leaks into credential.test.ts, whose auth.json cases then read "{}" and see no credentials.
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-integration-test-"))
+let previous: string | undefined
+beforeAll(() => {
+  previous = process.env.KILO_AUTH_CONTENT
+  process.env.KILO_AUTH_CONTENT ??= "{}"
+})
+afterAll(() => {
+  if (previous === undefined) delete process.env.KILO_AUTH_CONTENT
+  else process.env.KILO_AUTH_CONTENT = previous
+})
 const it = testEffect(
   AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventV2.node]), [
     [Global.node, Global.layerWith({ data: directory })],

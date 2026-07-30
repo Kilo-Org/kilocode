@@ -1,8 +1,12 @@
-import { describe, expect } from "bun:test"
+import { afterAll, describe, expect } from "bun:test"
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
 import { Integration } from "@opencode-ai/core/integration"
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
 import { Credential } from "@opencode-ai/core/credential"
+import { Global } from "@opencode-ai/core/global"
 import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { EventV2 } from "@opencode-ai/core/event"
@@ -23,9 +27,25 @@ const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory: AbsolutePath.make("test") })),
 )
+// kilocode_change - Credential imports Global.data/auth.json on startup, so without this the suite
+// reads the developer's real credential store and its results depend on whether they are logged in.
+const dataDirs: string[] = []
+// Each Layer.fresh below rebuilds Credential, which re-imports data/auth.json, so a shared directory
+// would carry credentials from one test into the next. Give every layer its own.
+const globalLayer = () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-catalog-test-"))
+  dataDirs.push(dir)
+  return Global.layerWith({ data: dir })
+}
+afterAll(() => {
+  for (const dir of dataDirs) fs.rmSync(dir, { recursive: true, force: true })
+})
 const catalogLayer = AppNodeBuilder.build(
   LayerNode.group([Catalog.node, EventV2.node, Credential.node, Integration.node, Policy.node]),
-  [[Location.node, locationLayer]],
+  [
+    [Location.node, locationLayer],
+    [Global.node, globalLayer()], // kilocode_change
+  ],
 )
 const it = testEffect(catalogLayer)
 
@@ -48,7 +68,10 @@ describe("CatalogV2", () => {
   it.effect("derives availability from active credentials without changing provider state", () => {
     const integrationID = Integration.ID.make("test")
     const localCatalogLayer = Layer.fresh(
-      AppNodeBuilder.build(LayerNode.group([Catalog.node, Credential.node]), [[Location.node, locationLayer]]),
+      AppNodeBuilder.build(LayerNode.group([Catalog.node, Credential.node]), [
+        [Location.node, locationLayer],
+        [Global.node, globalLayer()], // kilocode_change
+      ]),
     )
 
     return Effect.gen(function* () {
@@ -79,6 +102,7 @@ describe("CatalogV2", () => {
     const localCatalogLayer = Layer.fresh(
       AppNodeBuilder.build(LayerNode.group([Catalog.node, Credential.node, Integration.node]), [
         [Location.node, locationLayer],
+        [Global.node, globalLayer()], // kilocode_change
       ]),
     )
 

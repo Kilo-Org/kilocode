@@ -1,5 +1,5 @@
 import path from "path"
-import { describe, expect } from "bun:test"
+import { afterAll, describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
 import { Integration } from "@opencode-ai/core/integration"
@@ -14,6 +14,9 @@ import { ModelsDevPlugin } from "@opencode-ai/core/plugin/models-dev"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { AbsolutePath } from "@opencode-ai/core/schema"
 import { location } from "../fixture/location"
+import { Global } from "@opencode-ai/core/global"
+import fs from "node:fs"
+import os from "node:os"
 import { testEffect } from "../lib/effect"
 import { catalogHost, host, integrationHost } from "./host"
 
@@ -21,8 +24,14 @@ const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory: AbsolutePath.make(import.meta.dir) })),
 )
+// kilocode_change - Catalog pulls Credential, which imports Global.data/auth.json on startup, so
+// without this the suite reads the developer's real credential store.
+const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "kilo-modelsdev-test-"))
+const globalLayer = Global.layerWith({ data: dataDir })
+afterAll(() => fs.rmSync(dataDir, { recursive: true, force: true }))
 const layer = AppNodeBuilder.build(LayerNode.group([Catalog.node, Integration.node, EventV2.node]), [
   [Location.node, locationLayer],
+  [Global.node, globalLayer], // kilocode_change
 ])
 const it = testEffect(layer)
 

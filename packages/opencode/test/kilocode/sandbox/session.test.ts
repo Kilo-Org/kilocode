@@ -7,6 +7,7 @@ import { Deferred, Effect, Exit, Layer } from "effect"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Database } from "@opencode-ai/core/database/database"
 import { SessionV2 } from "@opencode-ai/core/session"
+import { SessionExecution } from "@opencode-ai/core/session/execution"
 import { BackgroundJob } from "@/background/job"
 import { Bus } from "@/bus"
 import { Config } from "@/config/config"
@@ -37,7 +38,7 @@ const it = testEffect(
       Layer.provide(AppNodeBuilder.build(BackgroundJob.node)),
       Layer.provide(AppNodeBuilder.build(Database.node)),
       Layer.provide(AppNodeBuilder.build(EventV2Bridge.node)),
-      Layer.provide(AppNodeBuilder.build(SessionV2.node)),
+      Layer.provide(AppNodeBuilder.build(SessionV2.node, [[SessionExecution.node, SessionExecution.noopLayer]])), // kilocode_change
     ),
     AppNodeBuilder.build(BackgroundJob.node),
     Bus.layer,
@@ -138,7 +139,9 @@ describe("sandbox session cleanup", () => {
       if (!status.available) return
       const token = SandboxInheritance.issue({ sessionID: source.id, directory: dir, count: 1 })
 
-      const child = yield* provideInstance(worktree)(sessions.create({ title: "sandbox-child", sandboxInheritanceToken: token }))
+      const child = yield* provideInstance(worktree)(
+        sessions.create({ title: "sandbox-child", sandboxInheritanceToken: token }),
+      )
       expect((yield* provideInstance(worktree)(SandboxPolicy.status(child.id))).enabled).toBe(true)
 
       yield* provideInstance(dir)(SandboxPolicy.toggle(source.id))

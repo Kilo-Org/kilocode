@@ -112,6 +112,7 @@ const plugin = Layer.mock(Plugin.Service)({
 })
 const mcp = Layer.mock(MCP.Service)({
   tools: () => Effect.succeed({}),
+  clients: () => Effect.succeed({}), // kilocode_change - upstream's MCP resource tools probe the clients
 })
 const lsp = Layer.mock(LSP.Service)({
   touchFile: () => Effect.void,
