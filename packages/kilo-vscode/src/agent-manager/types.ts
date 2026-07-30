@@ -271,6 +271,13 @@ interface WorktreeDiffLoadingMessage {
   loading: boolean
 }
 
+/** Source-level notice for a diff context (e.g. snapshots disabled). */
+interface WorktreeDiffNoticeMessage {
+  type: "agentManager.worktreeDiffNotice"
+  sessionId: string
+  notice?: string
+}
+
 interface WorktreeDiffMessage {
   type: "agentManager.worktreeDiff"
   sessionId: string
@@ -339,6 +346,7 @@ export type AgentManagerOutMessage =
   | RepoInfoMessage
   | ApplyWorktreeDiffResultMessage
   | WorktreeDiffLoadingMessage
+  | WorktreeDiffNoticeMessage
   | WorktreeDiffMessage
   | WorktreeDiffFileMessage
   | RevertWorktreeFileResultMessage
@@ -552,12 +560,16 @@ interface RequestWorktreeDiffFileIn {
   sessionId: string
   file: string
   scope?: string
+  /** Active session for the session scope (ctx alone is a worktree/local id). */
+  diffSessionId?: string
 }
 
 interface StartDiffWatchIn {
   type: "agentManager.startDiffWatch"
   sessionId: string
   scope?: string
+  /** Active session for the session scope (ctx alone is a worktree/local id). */
+  diffSessionId?: string
 }
 
 interface StopDiffWatchIn {

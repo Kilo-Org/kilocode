@@ -880,6 +880,13 @@ export interface AgentManagerWorktreeDiffLoadingMessage {
   loading: boolean
 }
 
+// Agent Manager: Source-level diff notice (extension → webview)
+export interface AgentManagerWorktreeDiffNoticeMessage {
+  type: "agentManager.worktreeDiffNotice"
+  sessionId: string
+  notice?: DiffViewerNotice
+}
+
 export interface AgentManagerApplyWorktreeDiffResultMessage {
   type: "agentManager.applyWorktreeDiffResult"
   worktreeId: string
@@ -1276,6 +1283,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffMessage
   | AgentManagerWorktreeDiffFileMessage
   | AgentManagerWorktreeDiffLoadingMessage
+  | AgentManagerWorktreeDiffNoticeMessage
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerRevertWorktreeFileResultMessage
   | AgentManagerDiffBranchesMessage
