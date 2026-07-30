@@ -572,7 +572,9 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("class WorktreeDiffController")
     expect(text).toContain("buildWorktreePatch")
     expect(text).toContain("revertFile")
-    expect(text).toContain("diffSummary")
+    // Summary/detail diff data comes from the shared DiffSourceCatalog sources
+    // (workspace/staged/unstaged/session), not a bespoke in-controller pipeline.
+    expect(text).toContain("catalog.build")
     expect(text).toContain("shouldStopDiffPolling")
     expect(providerText).toContain("this.diffs")
   })

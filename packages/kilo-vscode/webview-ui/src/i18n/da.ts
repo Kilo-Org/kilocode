@@ -303,7 +303,6 @@ export const dict = {
 
   "session.tab.review": "Gennemgang",
   "session.review.filesChanged": "{{count}} Filer ændret",
-  "session.review.change.other": "Ændringer",
   "session.review.loadingChanges": "Indlæser ændringer...",
   "session.review.noChanges": "Ingen ændringer",
   "session.messages.loadingEarlier": "Indlæser tidligere beskeder...",

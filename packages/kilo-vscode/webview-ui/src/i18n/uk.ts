@@ -306,7 +306,6 @@ export const dict = {
 
   "session.tab.review": "Огляд",
   "session.review.filesChanged": "{{count}} файлів змінено",
-  "session.review.change.other": "Змін",
   "session.review.loadingChanges": "Завантаження змін...",
   "session.review.noChanges": "Змін немає",
 

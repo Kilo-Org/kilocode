@@ -290,7 +290,6 @@ export const dict = {
 
   "session.tab.review": "審查",
   "session.review.filesChanged": "{{count}} 個檔案變更",
-  "session.review.change.other": "變更",
   "session.review.loadingChanges": "正在載入變更...",
   "session.review.noChanges": "沒有變更",
   "session.messages.loadingEarlier": "正在載入更早的訊息...",
