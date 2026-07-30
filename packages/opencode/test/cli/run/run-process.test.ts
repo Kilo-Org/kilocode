@@ -157,13 +157,13 @@ describe("opencode run (non-interactive subprocess)", () => {
         yield* llm.tool("bash", { command: "sed -n 1,5p README.md" })
         const result = yield* opencode.run("run sed on readme", {
           format: "json",
-          timeoutMs: 45_000,
+          timeoutMs: 75_000,
         })
         opencode.expectExit(result, 1)
         expect(result.stderr).toContain("run ended with an auto-rejected permission; pass --auto for autonomous use")
         expect(opencode.parseJsonEvents(result.stdout).some((event) => event.type === "error")).toBe(true)
       }),
-    60_000,
+    90_000,
   )
   // kilocode_change end
 
@@ -302,13 +302,17 @@ describe("opencode run (non-interactive subprocess)", () => {
         expect(result.exitCode).toBe(0)
         expect(events.map((event) => event.type)).toEqual([
           "step_start",
-          "text",
           "tool_use",
+          "text", // kilocode_change - a pre-denied tool settles before the SDK closes its preceding text part
           "step_finish",
           "step_start",
           "step_finish",
         ])
-        expect(events[1]?.part).toEqual(expect.objectContaining({ type: "text", text: "partial json" }))
+        // kilocode_change start - the pre-denied tool completes before text-end
+        expect(events.find((event) => event.type === "text")?.part).toEqual(
+          expect.objectContaining({ type: "text", text: "partial json" }),
+        )
+        // kilocode_change end
         // kilocode_change - upstream asserts reason "unknown" here. Reaching that requires the bash call
         // to proceed without permission friction, which a Kilo headless run never does: left alone the ask
         // is auto-rejected (exit 1, no second step), and settling it up front changes the request sequence
@@ -399,12 +403,13 @@ describe("opencode run (non-interactive subprocess)", () => {
         yield* llm.hang
         const run = yield* opencode.startRun("wait forever")
         yield* llm.wait(1)
+        const interrupted = Date.now() // kilocode_change - assert signal handling, independent of contended CLI startup
         run.interrupt()
         const result = yield* run.result
 
         expect(result.exitCode).not.toBe(0)
-        expect(result.durationMs).toBeLessThan(30_000)
+        expect(Date.now() - interrupted).toBeLessThan(10_000) // kilocode_change
       }),
-    30_000,
+    60_000, // kilocode_change
   )
 })

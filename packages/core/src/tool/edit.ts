@@ -17,6 +17,7 @@ import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { PermissionV2 } from "../permission"
+import { ToolOutputStore } from "../tool-output-store" // kilocode_change
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -40,6 +41,21 @@ export const Output = Schema.Struct({
   replacements: Schema.Number,
 })
 export type Output = typeof Output.Type
+
+// kilocode_change start - keep durable/SSE tool records bounded without hiding normal-sized diff previews
+const compact = (output: Output): Output => {
+  if (Buffer.byteLength(JSON.stringify(output), "utf-8") <= ToolOutputStore.MAX_BYTES) return output
+  return {
+    ...output,
+    files: output.files.map((file) => ({
+      additions: file.additions,
+      deletions: file.deletions,
+      ...(file.file === undefined ? {} : { file: file.file }),
+      ...(file.status === undefined ? {} : { status: file.status }),
+    })),
+  }
+}
+// kilocode_change end
 
 const normalizeLineEndings = (text: string) => text.replaceAll("\r\n", "\n")
 const detectLineEnding = (text: string): "\n" | "\r\n" => (text.includes("\r\n") ? "\r\n" : "\n")
@@ -105,6 +121,8 @@ const layer = Layer.effectDiscard(
               "Replace exact text in one file. Relative paths resolve within the active Location. Absolute paths inside the Location are accepted. Explicit external absolute paths require external_directory approval before edit approval.",
             input: Input,
             output: Output,
+            structured: Output, // kilocode_change
+            toStructuredOutput: ({ output }) => compact(output), // kilocode_change
             toModelOutput: ({ input, output }) => [
               { type: "text", text: toModelOutput(output, input.oldString, input.newString) },
             ],

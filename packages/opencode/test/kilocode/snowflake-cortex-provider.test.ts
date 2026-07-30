@@ -6,9 +6,8 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { Provider } from "@/provider/provider"
 import { Env } from "@/env"
 import { Plugin } from "@/plugin"
-import { provideInstanceEffect, tmpdirScoped } from "../fixture/fixture"
+import { provideInstanceEffect, testInstanceStoreLayer, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import { InstanceStore } from "@/project/instance-store"
 
 const it = testEffect(
   Layer.mergeAll(AppNodeBuilder.build(Provider.node), AppNodeBuilder.build(Env.node), AppNodeBuilder.build(Plugin.node), AppNodeBuilder.build(CrossSpawnSpawner.node)),
@@ -50,7 +49,7 @@ it.effect("loads Snowflake Cortex from OAuth credentials", () =>
         })
         const provider = yield* Provider.use
           .getProvider(ProviderV2.ID.make("snowflake-cortex"))
-          .pipe(provideInstanceEffect(directory), Effect.provide(AppNodeBuilder.build(InstanceStore.node)))
+          .pipe(provideInstanceEffect(directory), Effect.provide(testInstanceStoreLayer))
 
         expect(provider.options.baseURL).toBe("https://test-account.snowflakecomputing.com/api/v2/cortex/v1")
         expect(provider.options.apiKey).toBe("access-token")

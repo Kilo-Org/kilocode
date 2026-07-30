@@ -11,7 +11,10 @@ import { awaitWithTimeout, testEffect } from "../../lib/effect"
 
 const bootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const it = testEffect(
-  Layer.mergeAll(AppNodeBuilder.build(InstanceStore.node), AppNodeBuilder.build(CrossSpawnSpawner.node)).pipe(Layer.provide(bootstrap)),
+  Layer.mergeAll(
+    AppNodeBuilder.build(InstanceStore.node, [[InstanceStore.bootstrapNode, bootstrap]]),
+    AppNodeBuilder.build(CrossSpawnSpawner.node),
+  ),
 )
 
 const register = (disposer: (directory: string) => Promise<void>) =>

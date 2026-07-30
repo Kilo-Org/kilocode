@@ -10,6 +10,7 @@ import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { Patch } from "../patch"
 import { PermissionV2 } from "../permission"
+import { ToolOutputStore } from "../tool-output-store" // kilocode_change
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -33,6 +34,21 @@ export const Output = Schema.Struct({
   files: Schema.Array(FileDiff.Info),
 })
 export type Output = typeof Output.Type
+
+// kilocode_change start - keep durable/SSE tool records bounded without hiding normal-sized diff previews
+const compact = (output: Output): Output => {
+  if (Buffer.byteLength(JSON.stringify(output), "utf-8") <= ToolOutputStore.MAX_BYTES) return output
+  return {
+    ...output,
+    files: output.files.map((file) => ({
+      additions: file.additions,
+      deletions: file.deletions,
+      ...(file.file === undefined ? {} : { file: file.file }),
+      ...(file.status === undefined ? {} : { status: file.status }),
+    })),
+  }
+}
+// kilocode_change end
 
 export const toModelOutput = (output: Output) =>
   [
@@ -72,6 +88,8 @@ const layer = Layer.effectDiscard(
               "Apply one patch containing add, update, and delete file operations. All targets are resolved and approved before target contents are read. Operations apply sequentially; if a later operation fails, earlier operations remain applied and the failure reports them explicitly. Moves and atomic rollback are not supported yet.",
             input: Input,
             output: Output,
+            structured: Output, // kilocode_change
+            toStructuredOutput: ({ output }) => compact(output), // kilocode_change
             toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],
             execute: (input, context) => {
               const applied: Array<typeof Applied.Type> = []

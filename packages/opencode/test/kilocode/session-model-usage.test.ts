@@ -1,6 +1,7 @@
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { describe, expect } from "bun:test"
-import { Effect, Layer } from "effect"
+import { Effect } from "effect"
 import { ModelUsage } from "@/kilocode/session/model-usage"
 import { ProjectTable } from "@opencode-ai/core/project/sql"
 import { ProjectV2 } from "@opencode-ai/core/project"
@@ -16,7 +17,7 @@ import { eq } from "drizzle-orm"
 import { TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 
-const it = testEffect(Layer.mergeAll(AppNodeBuilder.build(Session.node), AppNodeBuilder.build(Database.node)))
+const it = testEffect(LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node, Database.node])))
 
 const ref = (providerID: string, modelID: string) => ({
   providerID: ProviderV2.ID.make(providerID),

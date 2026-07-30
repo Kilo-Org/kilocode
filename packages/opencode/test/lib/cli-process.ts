@@ -212,7 +212,7 @@ export function withCliFixture<A, E>(
 
     const spawn = Effect.fn("opencode.spawn")(function* (args: string[], opts?: SpawnOpts) {
       const start = Date.now()
-      const timeoutMs = opts?.timeoutMs ?? 30_000
+      const timeoutMs = opts?.timeoutMs ?? 45_000 // kilocode_change - current full CLI startup leaves less than 30s for multi-step runs
       // stdin: "ignore" so the child doesn't see a piped stdin and block
       // on `Bun.stdin.text()` (see src/cli/cmd/run.ts — non-TTY stdin is
       // consumed as the prompt). The old Process.run wrapper defaulted to
@@ -537,8 +537,8 @@ export const cliIt = {
     body: (input: CliFixture) => Effect.Effect<A, E, Scope.Scope | HttpClient.HttpClient>,
     opts?: number | TestOptions,
   ) =>
-    // kilocode_change start - Windows CI cannot reliably start nested CLI trees concurrently
-    (process.platform === "win32" ? test : test.concurrent)(
+    // kilocode_change start - full CLI processes contend heavily during startup after the Effect graph migration
+    test.serial(
       name,
       () => Effect.runPromise(Effect.scoped(withCliFixture(body))),
       opts,

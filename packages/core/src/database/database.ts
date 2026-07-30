@@ -8,6 +8,7 @@ import { Flag } from "../flag/flag"
 import { isAbsolute, join } from "path"
 import { existsSync } from "fs" // kilocode_change
 import { DbPreflight } from "../kilocode/db-preflight" // kilocode_change
+import { ensure as compat } from "../kilocode/database-compat" // kilocode_change
 import { DatabaseMigration } from "./migration"
 import { InstallationChannel } from "../installation/version"
 import { makeGlobalNode } from "../effect/app-node"
@@ -33,6 +34,7 @@ const layer = Layer.effect(
     yield* db.run("PRAGMA foreign_keys = ON")
     yield* db.run("PRAGMA wal_checkpoint(PASSIVE)")
     yield* DatabaseMigration.apply(db)
+    yield* compat(db) // kilocode_change - keep the shared database usable by released CLIs
 
     return { db }
   }).pipe(Effect.orDie),

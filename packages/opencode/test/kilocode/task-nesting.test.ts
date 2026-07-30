@@ -1,6 +1,7 @@
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { afterEach, describe, expect, test } from "bun:test"
-import { Effect, Exit, Layer } from "effect"
+import { Effect, Exit } from "effect"
 import { Database } from "@opencode-ai/core/database/database"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "../../src/background/job"
@@ -35,20 +36,23 @@ const ref = {
 }
 
 const it = testEffect(
-  Layer.mergeAll(
-    AppNodeBuilder.build(Agent.node),
-    AppNodeBuilder.build(BackgroundJob.node),
-    AppNodeBuilder.build(Bus.node),
-    AppNodeBuilder.build(Config.node),
-    RuntimeFlags.layer(),
-    AppNodeBuilder.build(SessionRunState.node),
-    AppNodeBuilder.build(SessionStatus.node),
-    AppNodeBuilder.build(CrossSpawnSpawner.node),
-    AppNodeBuilder.build(Session.node),
-    AppNodeBuilder.build(Truncate.node),
-    AppNodeBuilder.build(Provider.node),
-    AppNodeBuilder.build(ToolRegistry.node),
-    AppNodeBuilder.build(Database.node),
+  LayerNode.compile(
+    LayerNode.group([
+      Agent.node,
+      BackgroundJob.node,
+      Bus.node,
+      Config.node,
+      RuntimeFlags.node,
+      SessionRunState.node,
+      SessionStatus.node,
+      CrossSpawnSpawner.node,
+      Session.node,
+      SessionProjector.node,
+      Truncate.node,
+      Provider.node,
+      ToolRegistry.node,
+      Database.node,
+    ]),
   ),
 )
 

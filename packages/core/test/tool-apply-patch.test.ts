@@ -202,6 +202,33 @@ describe("ApplyPatchTool", () => {
     ),
   )
 
+  // kilocode_change start
+  it.live("omits oversized patches from durable structured output", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const content = "x".repeat(ToolOutputStore.MAX_BYTES)
+        const patch = `*** Begin Patch\n*** Add File: large.txt\n+${content}\n*** End Patch`
+        return withTool(tmp.path, (registry) => settleTool(registry, call(patch))).pipe(
+          Effect.tap((settled) =>
+            Effect.sync(() => {
+              expect(settled.output?.structured).toEqual({
+                applied: [{ type: "add", resource: "large.txt", target: path.join(tmp.path, "large.txt") }],
+                files: [{ file: "large.txt", status: "added", additions: 1, deletions: 0 }],
+              })
+              expect(Buffer.byteLength(JSON.stringify(settled.output?.structured), "utf-8")).toBeLessThanOrEqual(
+                ToolOutputStore.MAX_BYTES,
+              )
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+  // kilocode_change end
+
   it.live("rejects moves before applying any hunk", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),

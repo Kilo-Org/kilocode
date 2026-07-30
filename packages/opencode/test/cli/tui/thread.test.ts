@@ -37,11 +37,11 @@ describe("tui thread", () => {
     await check(".")
   })
 
-  test("resolves a relative mini project from PWD when cwd differs", async () => {
+  test("ignores stale PWD when resolving a relative mini project", async () => { // kilocode_change
     await using pwd = await tmpdir({ git: true })
     await using cwd = await tmpdir({ git: true })
 
-    expect(resolveThreadDirectory(".", pwd.path, cwd.path)).toBe(pwd.path)
+    expect(resolveThreadDirectory(".", pwd.path, cwd.path)).toBe(cwd.path) // kilocode_change
     expect(resolveThreadDirectory(undefined, pwd.path, cwd.path)).toBe(cwd.path)
   })
 

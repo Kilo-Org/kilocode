@@ -4,7 +4,8 @@
 // transitively load flag.ts to ensure the env is captured at load time.
 process.env.KILO_SESSION_RETRY_LIMIT = "2"
 
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { NodeFileSystem } from "@effect/platform-node"
 import { afterEach, describe, expect, spyOn } from "bun:test"
 import { APICallError } from "ai"
@@ -56,6 +57,8 @@ class TestLLM extends Context.Service<
   }
 >()("@test/RetryLimitLLM") {}
 
+class State extends Context.Service<State, { readonly queue: Script[]; calls: number }>()("@test/RetryLimitLLMState") {}
+
 function model(): Provider.Model {
   return {
     id: "test-model",
@@ -87,49 +90,65 @@ function retryable429() {
   })
 }
 
-const llm = Layer.unwrap(
-  Effect.gen(function* () {
-    const queue: Script[] = []
-    let calls = 0
-    const push = (item: Script) => {
-      queue.push(item)
-      return Effect.void
-    }
-    return Layer.mergeAll(
-      Layer.succeed(
-        LLM.Service,
-        LLM.Service.of({
-          stream: () => {
-            calls += 1
-            const item = queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
-            return item
-          },
-        }),
-      ),
-      Layer.succeed(TestLLM, TestLLM.of({ push, calls: Effect.sync(() => calls) })),
-    )
-  }),
-)
-
-const status = Layer.mergeAll(AppNodeBuilder.build(SessionStatus.node), Bus.layer)
-const infra = Layer.mergeAll(NodeFileSystem.layer, AppNodeBuilder.build(CrossSpawnSpawner.node))
-const deps = Layer.mergeAll(
-  AppNodeBuilder.build(Session.node),
-  AppNodeBuilder.build(Snapshot.node),
-  AppNodeBuilder.build(AgentSvc.node),
-  AppNodeBuilder.build(Permission.node),
-  AppNodeBuilder.build(Plugin.node),
-  AppNodeBuilder.build(Config.node),
-  RuntimeFlags.layer(),
-  AppNodeBuilder.build(SessionSummary.node),
-  AppNodeBuilder.build(Image.node),
-  SyncEvent.defaultLayer,
-  AppNodeBuilder.build(EventV2Bridge.node),
-  AppNodeBuilder.build(Database.node),
-  status,
-  llm,
-).pipe(Layer.provideMerge(infra))
-const env = AppNodeBuilder.build(SessionProcessor.node).pipe(Layer.provideMerge(deps))
+const stateNode = LayerNode.make({
+  service: State,
+  layer: Layer.sync(State, () => State.of({ queue: [], calls: 0 })),
+  deps: [],
+})
+const llmNode = LayerNode.make({
+  service: LLM.Service,
+  layer: Layer.effect(
+    LLM.Service,
+    Effect.gen(function* () {
+      const state = yield* State
+      return LLM.Service.of({
+        stream: () => {
+          state.calls += 1
+          return state.queue.shift() ?? Stream.fail(new Error("unexpected extra llm call"))
+        },
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const testNode = LayerNode.make({
+  service: TestLLM,
+  layer: Layer.effect(
+    TestLLM,
+    Effect.gen(function* () {
+      const state = yield* State
+      return TestLLM.of({
+        push: (item) => Effect.sync(() => state.queue.push(item)).pipe(Effect.asVoid),
+        calls: Effect.sync(() => state.calls),
+      })
+    }),
+  ),
+  deps: [stateNode],
+})
+const root = LayerNode.group([
+  SessionProcessor.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  AgentSvc.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  SessionSummary.node,
+  Image.node,
+  SessionStatus.node,
+  EventV2Bridge.node,
+  Database.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  LLM.node,
+  testNode,
+])
+const env = LayerNode.compile(root, [
+  [LLM.node, llmNode],
+  [RuntimeFlags.node, RuntimeFlags.layer()],
+]).pipe(Layer.provideMerge(Layer.mergeAll(NodeFileSystem.layer, Bus.layer, SyncEvent.defaultLayer)))
 
 const it = testEffect(env)
 

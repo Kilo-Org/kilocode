@@ -64,6 +64,9 @@ import { Truncate } from "@/tool/truncate"
 import { Image } from "@/image/image"
 import { decodeDataUrl } from "@/util/data-url"
 import { Cause, Effect, Exit, Latch, Layer, Option, Scope, Context, Schema, Types } from "effect"
+import * as DateTime from "effect/DateTime" // kilocode_change
+import { SessionEvent } from "@opencode-ai/core/session/event" // kilocode_change
+import { SessionMessage } from "@opencode-ai/core/session/message" // kilocode_change
 import { InstanceState } from "@/effect/instance-state"
 import { InstanceRef } from "@/effect/instance-ref"
 import { Instance } from "@/kilocode/instance"
@@ -628,6 +631,17 @@ export const layer = Layer.effect(
               },
             }
             yield* sessions.updatePart(part)
+            // kilocode_change start - dual-write the v2 shell record so the durable timeline correlates with the tool part
+            if (flags.experimentalEventSystem) {
+              yield* events.publish(SessionEvent.Shell.Started, {
+                sessionID: input.sessionID,
+                messageID: SessionMessage.ID.create(),
+                timestamp: DateTime.makeUnsafe(started),
+                callID: part.callID,
+                command: input.command,
+              })
+            }
+            // kilocode_change end
             return { msg, part, cwd: ctx.directory }
           }).pipe(Effect.ensuring(markReady))
 
@@ -645,6 +659,16 @@ export const layer = Layer.effect(
               }
               if (timeout) output += "\n\n" + ["<metadata>", timeout, "</metadata>"].join("\n") // kilocode_change
               const completed = Date.now()
+              // kilocode_change start
+              if (flags.experimentalEventSystem) {
+                yield* events.publish(SessionEvent.Shell.Ended, {
+                  sessionID: input.sessionID,
+                  timestamp: DateTime.makeUnsafe(completed),
+                  callID: part.callID,
+                  output,
+                })
+              }
+              // kilocode_change end
               if (!msg.time.completed) {
                 msg.time.completed = completed
                 yield* sessions.updateMessage(msg)

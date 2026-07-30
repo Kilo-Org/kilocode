@@ -159,6 +159,39 @@ describe("EditTool", () => {
     ),
   )
 
+  // kilocode_change start
+  it.live("omits an oversized patch from durable structured output", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        const target = path.join(tmp.path, "large.txt")
+        const before = "a".repeat(ToolOutputStore.MAX_BYTES)
+        const after = "b".repeat(ToolOutputStore.MAX_BYTES)
+        return Effect.promise(() => fs.writeFile(target, before)).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              settleTool(registry, call({ path: "large.txt", oldString: before, newString: after })),
+            ),
+          ),
+          Effect.tap((settled) =>
+            Effect.sync(() => {
+              expect(settled.output?.structured).toEqual({
+                replacements: 1,
+                files: [{ file: "large.txt", status: "modified", additions: 1, deletions: 1 }],
+              })
+              expect(Buffer.byteLength(JSON.stringify(settled.output?.structured), "utf-8")).toBeLessThanOrEqual(
+                ToolOutputStore.MAX_BYTES,
+              )
+            }),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+  // kilocode_change end
+
   it.live("accepts an absolute file path inside the active Location", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),

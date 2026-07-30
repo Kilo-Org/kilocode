@@ -21,7 +21,7 @@ const env = Layer.mergeAll(
   AppNodeBuilder.build(Permission.node),
   events,
   AppNodeBuilder.build(CrossSpawnSpawner.node),
-  AppNodeBuilder.build(InstanceStore.node).pipe(Layer.provide(noopBootstrap)),
+  AppNodeBuilder.build(InstanceStore.node, [[InstanceStore.bootstrapNode, noopBootstrap]]), // kilocode_change
 ).pipe(Layer.provide(RuntimeFlags.layer()), Layer.provide(AppNodeBuilder.build(Config.node)))
 const it = testEffect(Layer.mergeAll(env, RuntimeFlags.layer()))
 

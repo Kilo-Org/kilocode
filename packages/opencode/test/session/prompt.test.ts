@@ -40,6 +40,7 @@ import { SessionCompaction } from "../../src/session/compaction"
 import { SessionSummary } from "../../src/session/summary"
 import { Instruction } from "../../src/session/instruction"
 import { SessionProcessor } from "../../src/session/processor"
+import { SessionProjector } from "@opencode-ai/core/session/projector" // kilocode_change
 import { SessionPrompt } from "../../src/session/prompt"
 import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
@@ -167,10 +168,10 @@ const lsp = Layer.succeed(
   }),
 )
 
-const status = SessionStatus.layer.pipe(Layer.provideMerge(AppNodeBuilder.build(EventV2Bridge.node)))
-const run = SessionRunState.layer.pipe(Layer.provide(status))
-const infra = Layer.mergeAll(NodeFileSystem.layer, AppNodeBuilder.build(CrossSpawnSpawner.node))
-
+// kilocode_change start - one compiled graph per env. Effect v4 does not memoize nested layers, so
+// LayerNode.compile's cache is the only dedupe; building services with separate AppNodeBuilder.build
+// calls gave this file three Database instances and every prompt died with "Session not found".
+// Mirrors upstream's harness, with Kilo's KiloSessions/MemoryService/fastAgents deltas.
 const agent: AgentSvc.Info = {
   name: "build",
   mode: "primary",
@@ -200,72 +201,93 @@ const blockingProcessor = Layer.succeed(
   }),
 )
 
+const runtimeFlags = RuntimeFlags.layer({ experimentalEventSystem: true })
+
+const memoryNode = LayerNode.make({ service: MemoryService.Service, layer: MemoryService.layer, deps: [] })
+const testLLMServerNode = LayerNode.make({ service: TestLLMServer, layer: TestLLMServer.layer, deps: [] })
+
+const promptRoot = LayerNode.group([
+  SessionPrompt.node,
+  Session.node,
+  SessionProjector.node,
+  MessageV2.node,
+  Snapshot.node,
+  LLM.node,
+  Env.node,
+  AgentSvc.node,
+  Command.node,
+  Permission.node,
+  Plugin.node,
+  Config.node,
+  ProviderSvc.node,
+  LSP.node,
+  MCP.node,
+  FSUtil.node,
+  BackgroundJob.node,
+  SessionStatus.node,
+  SessionRunState.node,
+  Database.node,
+  EventV2Bridge.node,
+  Question.node,
+  Todo.node,
+  ToolRegistry.node,
+  Skill.node,
+  Git.node,
+  Ripgrep.node,
+  Format.node,
+  Truncate.node,
+  SessionProcessor.node,
+  Image.node,
+  SessionCompaction.node,
+  SessionRevert.node,
+  Instruction.node,
+  SystemPrompt.node,
+  CrossSpawnSpawner.node,
+  RuntimeFlags.node,
+  memoryNode,
+])
+
 function makePrompt(input?: { processor?: "blocking" }) {
-  const deps = Layer.mergeAll(
-    AppNodeBuilder.build(Session.node),
-    AppNodeBuilder.build(Snapshot.node),
-    AppNodeBuilder.build(LLM.node),
-    AppNodeBuilder.build(Env.node),
-    input?.processor === "blocking" ? fastAgents : AppNodeBuilder.build(AgentSvc.node),
-    AppNodeBuilder.build(Command.node),
-    AppNodeBuilder.build(Permission.node),
-    AppNodeBuilder.build(Plugin.node),
-    AppNodeBuilder.build(Config.node),
-    AppNodeBuilder.build(ProviderSvc.node),
-    lsp,
-    makeMcp(),
-    AppNodeBuilder.build(FSUtil.node),
-    AppNodeBuilder.build(BackgroundJob.node),
-    status,
-    AppNodeBuilder.build(Database.node),
-    AppNodeBuilder.build(EventV2Bridge.node),
-    Bus.layer,
-    MemoryService.layer,
-  ).pipe(Layer.provideMerge(infra))
-  const question = Question.layer.pipe(Layer.provideMerge(deps))
-  const todo = Todo.layer.pipe(Layer.provideMerge(deps))
-  const registry = AppNodeBuilder.build(ToolRegistry.node, [
-    [KiloSessions.node, KiloSessions.testLayer],
-    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
-  ])
-  const trunc = AppNodeBuilder.build(Truncate.node)
-  const proc =
-    input?.processor === "blocking"
-      ? blockingProcessor
-      : AppNodeBuilder.build(SessionProcessor.node, [
-          [SessionSummary.node, summary],
-          [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
-        ])
-  const compact = AppNodeBuilder.build(SessionCompaction.node, [
-    [SessionProcessor.node, proc],
+  const replacements = [
     [SessionSummary.node, summary],
-    [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
-  ])
-  return SessionPrompt.layer.pipe(
-    Layer.provide(AppNodeBuilder.build(SessionRevert.node)),
-    Layer.provide(AppNodeBuilder.build(Image.node)),
-    Layer.provide(summary),
-    Layer.provideMerge(run),
-    Layer.provideMerge(compact),
-    Layer.provideMerge(proc),
-    Layer.provideMerge(registry),
-    Layer.provideMerge(trunc),
-    Layer.provideMerge(question),
-    Layer.provide(AppNodeBuilder.build(Instruction.node)),
-    Layer.provide(AppNodeBuilder.build(SystemPrompt.node)),
-    Layer.provide(RuntimeFlags.layer({ experimentalEventSystem: true })),
-    Layer.provideMerge(deps),
-    Layer.provide(summary),
-  )
+    [LSP.node, lsp],
+    [MCP.node, makeMcp()],
+    [RuntimeFlags.node, runtimeFlags],
+    [KiloSessions.node, KiloSessions.testLayer],
+  ] as const
+  if (input?.processor === "blocking") {
+    return LayerNode.compile(promptRoot, [
+      ...replacements,
+      [SessionProcessor.node, blockingProcessor],
+      [AgentSvc.node, fastAgents],
+    ])
+  }
+  return LayerNode.compile(promptRoot, replacements)
 }
 
 function makeHttp(input?: { processor?: "blocking" }) {
-  return Layer.mergeAll(TestLLMServer.layer, makePrompt(input))
+  const root = LayerNode.group([promptRoot, testLLMServerNode])
+  const replacements = [
+    [SessionSummary.node, summary],
+    [LSP.node, lsp],
+    [MCP.node, makeMcp()],
+    [RuntimeFlags.node, runtimeFlags],
+    [KiloSessions.node, KiloSessions.testLayer],
+  ] as const
+  if (input?.processor === "blocking") {
+    return LayerNode.compile(root, [
+      ...replacements,
+      [SessionProcessor.node, blockingProcessor],
+      [AgentSvc.node, fastAgents],
+    ])
+  }
+  return LayerNode.compile(root, replacements)
 }
 
 function makeHttpNoLLMServer(input?: { processor?: "blocking" }) {
   return makePrompt(input)
 }
+// kilocode_change end
 
 const it = testEffect(makeHttp())
 const noLLMServer = testEffect(makeHttpNoLLMServer())
@@ -777,6 +799,7 @@ noLLMServer.instance.skip(
         ],
       })
 
+      // kilocode_change start - compile the v2 reader against this test's database graph
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
         Effect.provide(
           LayerNode.compile(SessionV2.node, [
@@ -785,6 +808,7 @@ noLLMServer.instance.skip(
           ]),
         ),
       )
+      // kilocode_change end
       const { db } = yield* Database.Service
       const row = yield* db
         .select()
@@ -1829,9 +1853,16 @@ unixNoLLMServer(
       const tool = completedTool(result.parts)
       if (!tool) return
 
+      // kilocode_change start - bind v2 execution and location services in the consolidated test graph
       const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
-        Effect.provide(AppNodeBuilder.build(SessionV2.node)),
+        Effect.provide(
+          LayerNode.compile(SessionV2.node, [
+            [SessionExecution.node, SessionExecution.noopLayer],
+            [LocationServiceMap.node, locationServiceMapLayer],
+          ]),
+        ),
       )
+      // kilocode_change end
       const shell = messages.find((message) => message.type === "shell")
 
       expect(shell).toMatchObject({

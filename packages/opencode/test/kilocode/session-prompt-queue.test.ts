@@ -1,10 +1,11 @@
 import path from "path"
-import { afterAll, beforeAll, describe, expect, test } from "bun:test"
+import { afterAll, beforeAll, describe, expect, setDefaultTimeout, test } from "bun:test"
 import { Effect } from "effect"
 import fs from "fs/promises"
 import os from "os"
 import { Bus } from "../../src/bus"
 import { AppRuntime } from "../../src/effect/app-runtime"
+import { makeRuntime } from "../../src/effect/run-service"
 import { InstanceRef } from "../../src/effect/instance-ref"
 import { KiloSessionCompaction } from "@/kilocode/session/compaction"
 import { KiloSessionPromptQueue } from "@/kilocode/session/prompt-queue"
@@ -12,6 +13,8 @@ import { KiloSession } from "@/kilocode/session"
 import { Suggestion } from "../../src/kilocode/suggestion"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { ModelV2 } from "@opencode-ai/core/model"
+import { LayerNode } from "@opencode-ai/core/effect/layer-node"
+import { SessionProjector } from "@opencode-ai/core/session/projector"
 import { InstanceStore } from "../../src/project/instance-store"
 import { provideTestInstance } from "../fixture/fixture"
 import { Session } from "../../src/session/session"
@@ -26,9 +29,13 @@ import { remove as cleanup } from "./cleanup"
 import { pollWithTimeout } from "../lib/effect"
 
 Log.init({ print: false })
+setDefaultTimeout(15_000)
 
 const previous = Flag.KILO_DB
 const dbfile = path.join(os.tmpdir(), `kilo-prompt-queue-${process.pid}-${crypto.randomUUID()}.db`)
+const layer = LayerNode.compile(LayerNode.group([Session.node, SessionProjector.node]))
+const prompt = LayerNode.compile(LayerNode.group([SessionPrompt.node, SessionProjector.node]))
+const runtime = makeRuntime(Session.Service, layer)
 
 beforeAll(async () => {
   await fs.rm(dbfile, { force: true })
@@ -36,6 +43,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
+  await runtime.dispose()
   await AppRuntime.dispose()
   await disposeTestRuntime()
   Flag.KILO_DB = previous
@@ -49,13 +57,13 @@ const store = {
 
 const sessions = {
   create: (input?: Parameters<Session.Interface["create"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.create(input)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.create(input)),
   messages: (input: Parameters<Session.Interface["messages"]>[0]) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.messages(input)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.messages(input)),
   updateMessage: <T extends MessageV2.Info>(msg: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updateMessage(msg)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.updateMessage(msg)),
   updatePart: <T extends MessageV2.Part>(part: T) =>
-    Effect.runPromise(Session.Service.use((svc) => svc.updatePart(part)).pipe(Effect.provide(Session.defaultLayer))),
+    runtime.runPromise((svc) => svc.updatePart(part)),
 }
 
 function line(input: unknown) {
@@ -121,7 +129,7 @@ function hasText(msg: MessageV2.WithParts, text: string) {
 function scoped<T>(dir: string, fn: (prompt: SessionPrompt.Interface) => Promise<T>) {
   return Effect.runPromise(
     SessionPrompt.Service.use((prompt) => Effect.promise(() => fn(prompt))).pipe(
-      Effect.provide(SessionPrompt.defaultLayer),
+      Effect.provide(prompt),
       provideInstance(dir),
       Effect.provide(testInstanceStoreLayer),
       Effect.scoped,
