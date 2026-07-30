@@ -137,6 +137,8 @@ function localActionLabel(active: boolean, action: "connect" | "validate") {
 function providerName(choice: ProviderChoice | undefined, provider: ProviderId) {
   if (choice === "lmstudio") return "LM Studio"
   return allProviders.find((item) => item.value === provider)?.label ?? provider
+}
+
 /** Config scope switcher plus the scope-derived enable switch. */
 const ScopeRows: Component<{
   scope: IndexingScope
