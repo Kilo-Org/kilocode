@@ -26,7 +26,7 @@ Choose the path closest to the change you are making:
 ## Repository boundaries
 
 {% callout type="warning" title="Kilo Console is deprecated" %}
-References to Kilo Console and `kilo console` on the architecture pages describe a deprecated browser interface that is deprecated and will be removed in a future release.
+References to Kilo Console and `kilo console` on the architecture pages describe a browser interface that is deprecated and will be removed in a future release.
 {% /callout %}
 
 Architecture pages cross two repositories:

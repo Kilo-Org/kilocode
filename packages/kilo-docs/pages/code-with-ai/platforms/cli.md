@@ -165,7 +165,7 @@ Configuration is managed through:
 
 ## CLI Notifications and Sounds
 
-Enable and configure them by editing the TUI configuration:
+CLI attention alerts are disabled by default. Enable and configure them by editing the TUI configuration:
 
 - Edit `~/.config/kilo/tui.jsonc` (or `tui.json`) for global settings.
 - Edit `.kilo/tui.json` (or `tui.jsonc`) for project settings.
