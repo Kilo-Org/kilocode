@@ -877,6 +877,18 @@ export interface AgentManagerRevertWorktreeFileResultMessage {
   message: string
 }
 
+// Agent Manager: Branch picker data for a diff context (extension → webview)
+export interface AgentManagerDiffBranchesMessage {
+  type: "agentManager.diffBranches"
+  sessionId: string
+  branches: BranchInfo[]
+  defaultBranch: string
+  autoBase?: string
+  currentBase?: string
+  isAuto: boolean
+  currentBranch?: string
+}
+
 // Agent Manager: Worktree git stats push (extension → webview)
 export interface AgentManagerWorktreeStatsMessage {
   type: "agentManager.worktreeStats"
@@ -1246,6 +1258,7 @@ export type ExtensionMessage =
   | AgentManagerWorktreeDiffLoadingMessage
   | AgentManagerApplyWorktreeDiffResultMessage
   | AgentManagerRevertWorktreeFileResultMessage
+  | AgentManagerDiffBranchesMessage
   | AgentManagerWorktreeStatsMessage
   | AgentManagerLocalStatsMessage
   | AgentManagerPRStatusMessage

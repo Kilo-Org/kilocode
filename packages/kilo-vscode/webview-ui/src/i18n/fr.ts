@@ -306,7 +306,6 @@ export const dict = {
 
   "session.tab.review": "Revue",
   "session.review.filesChanged": "{{count}} fichiers modifiés",
-  "session.review.change.other": "Modifications",
   "session.review.loadingChanges": "Chargement des modifications...",
   "session.review.noChanges": "Aucune modification",
   "session.messages.loadingEarlier": "Chargement des messages précédents...",
@@ -744,6 +743,9 @@ export const dict = {
   "session.prompts.tick": "Prompt {{index}} sur {{total}} : {{prompt}}",
   "session.prompts.noAnswer": "Pas encore de réponse",
   "session.prompts.queued": "En attente",
+  "session.prompts.first": "Premier prompt",
+  "session.prompts.latest": "Dernier prompt",
+  "session.prompts.overflow": "{{count}} prompts précédents",
   "session.status.writingResponse": "Rédaction de la réponse…",
   "session.status.retry": "Nouvelle tentative…",
   "session.status.working": "En cours…",

@@ -304,7 +304,6 @@ export const dict = {
 
   "session.tab.review": "검토",
   "session.review.filesChanged": "{{count}}개 파일 변경됨",
-  "session.review.change.other": "변경",
   "session.review.loadingChanges": "변경 사항 로드 중...",
   "session.review.noChanges": "변경 없음",
   "session.messages.loadingEarlier": "이전 메시지 로드 중...",
@@ -725,6 +724,9 @@ export const dict = {
   "session.prompts.tick": "프롬프트 {{index}}/{{total}}: {{prompt}}",
   "session.prompts.noAnswer": "아직 응답이 없습니다",
   "session.prompts.queued": "대기 중",
+  "session.prompts.first": "첫 번째 프롬프트",
+  "session.prompts.latest": "최신 프롬프트",
+  "session.prompts.overflow": "{{count}}개 이전 프롬프트",
   "session.status.writingResponse": "응답 작성 중...",
   "session.status.retry": "재시도 중…",
   "session.status.working": "작업 중...",

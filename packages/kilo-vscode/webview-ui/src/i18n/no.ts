@@ -310,7 +310,6 @@ export const dict = {
 
   "session.tab.review": "Gjennomgang",
   "session.review.filesChanged": "{{count}} filer endret",
-  "session.review.change.other": "Endringer",
   "session.review.loadingChanges": "Laster endringer...",
   "session.review.noChanges": "Ingen endringer",
   "session.messages.loadingEarlier": "Laster inn tidligere meldinger...",
@@ -692,6 +691,9 @@ export const dict = {
   "session.prompts.tick": "Ledetekst {{index}} av {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Ingen svar ennå",
   "session.prompts.queued": "I kø",
+  "session.prompts.first": "Første ledetekst",
+  "session.prompts.latest": "Siste ledetekst",
+  "session.prompts.overflow": "{{count}} tidligere ledetekster",
   "session.status.writingResponse": "Skriver svar…",
   "session.status.retry": "Prøver på nytt…",
   "session.status.working": "Arbeider…",

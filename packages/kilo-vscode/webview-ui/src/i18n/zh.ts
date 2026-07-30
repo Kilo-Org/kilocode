@@ -292,7 +292,6 @@ export const dict = {
 
   "session.tab.review": "审查",
   "session.review.filesChanged": "{{count}} 个文件变更",
-  "session.review.change.other": "更改",
   "session.review.loadingChanges": "正在加载更改...",
   "session.review.noChanges": "无更改",
   "session.messages.loadingEarlier": "正在加载更早的消息...",
@@ -705,6 +704,9 @@ export const dict = {
   "session.prompts.tick": "提示词 {{index}}/{{total}}：{{prompt}}",
   "session.prompts.noAnswer": "暂无响应",
   "session.prompts.queued": "已排队",
+  "session.prompts.first": "首个提示",
+  "session.prompts.latest": "最新提示",
+  "session.prompts.overflow": "{{count}} 个更早的提示",
   "session.status.writingResponse": "正在撰写回复…",
   "session.status.retry": "正在重试…",
   "session.status.working": "处理中…",

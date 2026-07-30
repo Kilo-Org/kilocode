@@ -301,7 +301,6 @@ export const dict = {
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
-  "session.review.change.other": "การเปลี่ยนแปลง",
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
 
@@ -721,6 +720,9 @@ export const dict = {
   "session.prompts.tick": "พรอมต์ {{index}} จาก {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "ยังไม่มีการตอบกลับ",
   "session.prompts.queued": "อยู่ในคิว",
+  "session.prompts.first": "พรอมต์แรก",
+  "session.prompts.latest": "พรอมต์ล่าสุด",
+  "session.prompts.overflow": "พรอมต์ก่อนหน้า {{count}} รายการ",
   "session.status.writingResponse": "กำลังเขียนคำตอบ...",
   "session.status.retry": "กำลังลองใหม่…",
   "session.status.working": "กำลังทำงาน...",
