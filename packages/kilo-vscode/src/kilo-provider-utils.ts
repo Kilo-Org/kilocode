@@ -448,6 +448,7 @@ export type WebviewMessage =
   | { type: "permissionError"; permissionID: string; stale?: boolean }
   | { type: "sessionCreated"; session: ReturnType<typeof sessionToWebview>; draftID?: string }
   | { type: "sessionUpdated"; session: ReturnType<typeof sessionToWebview> }
+  | { type: "sessionAgentSwitched"; sessionID: string; agent: string }
   | { type: "sessionDeleted"; sessionID: string }
   | { type: "messageRemoved"; sessionID: string; messageID: string }
   | { type: "sessionError"; sessionID?: string; error?: unknown }
@@ -624,6 +625,12 @@ export function mapSSEEventToWebviewMessage(event: StreamEvent, sessionID: strin
         error: event.properties.error,
       }
     }
+    case "session.next.agent.switched":
+      return {
+        type: "sessionAgentSwitched",
+        sessionID: event.properties.sessionID,
+        agent: event.properties.agent,
+      }
     case "sandbox.status.changed":
       return {
         type: "sandboxStatus",
