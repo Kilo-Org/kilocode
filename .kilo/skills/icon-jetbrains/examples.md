@@ -1,6 +1,6 @@
 # Annotated New UI Icon Examples
 
-Each example below is paired with a dark variant and a short note on the pattern it represents. Use these as templates when generating new icons. Place generated icons flat into `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
+Each example below is paired with a dark variant and a short note on the pattern it represents. Use these as templates when generating new icons. Place generated icons in `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (or the `icons/views/` subfolder for in-view chat/session icons).
 
 ---
 
@@ -174,5 +174,3 @@ The warning badge dark variant shows the only common case where a literal find-a
 ```
 
 `white` → `#5E4D33` inside the warning triangle. Apply the same swap whenever a light icon paints a glyph as `white` over a warm fill (`#FFAF0F`, `#E66D17`, etc.). For cool fills (`#3574F0`, `#208A3C`, `#DB3B4B`), the dark-theme glyph stays `white` because contrast is still sufficient.
-
-Note: the exclamation glyph here (the vertical bar + dot paths) is the same optically centered `!` used by the error badge in section 5, so between the light and dark warning variants only the fill color changes. This is the one case where reusing a sibling glyph unchanged is correct; the general rule still stands that a glyph must be re-balanced when its container centers it differently.

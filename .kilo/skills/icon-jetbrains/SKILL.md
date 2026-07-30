@@ -7,19 +7,19 @@ description: Create or review IntelliJ New UI SVG icons, theme variants, sizes, 
 
 Guidance for authoring SVG icons for the JetBrains plugin. This skill is the single source of truth for icon sizing, palette, dark variants, composition rules, and placement. Other docs (including `packages/kilo-jetbrains/AGENTS.md`) defer here for SVG authoring details.
 
-Icons follow IntelliJ New UI conventions: a fixed canvas per role, a strict light/dark palette, and explicit per-shape colors (the IntelliJ SVG loader recolors by matching literal hex values, so `currentColor` and CSS do not work). The plugin loads icons directly from a flat resource folder — see [Where the SVGs live](#where-the-svgs-live).
+Icons follow IntelliJ New UI conventions: a fixed canvas per role, a strict light/dark palette, and explicit per-shape colors (the IntelliJ SVG loader recolors by matching literal hex values, so `currentColor` and CSS do not work). The plugin loads icons directly from its resource folder — see [Where the SVGs live](#where-the-svgs-live).
 
 ## Golden rules
 
 1. **Always ship two SVGs** — one for the light theme (e.g. `add-file.svg`) and one for the dark theme with the `_dark` suffix (`add-file_dark.svg`). Geometry must be identical between them; only the palette swaps.
-   - **Tool-window icons ship as a quartet, not a pair.** When a tool window has both a 16×16 base (`name.svg` / `name_dark.svg`) and a 20×20 stripe variant (`name@20x20.svg` / `name@20x20_dark.svg`), they must share the same metaphor. The stripe is only one surface — the 16×16 base also appears in **Search Everywhere**, **Find Action**, context menus, the Services tool window, recent locations, and the View ▸ Tool Windows menu. Changing only the @20x20 leaves users seeing two different icons for the same tool window depending on where they encounter it. Always update all four files together (e.g. `tool-window-chat.svg` + `tool-window-chat@20x20.svg`).
+   - **Tool-window icons ship as a quartet, not a pair.** When a tool window has both a 16×16 base (`name.svg` / `name_dark.svg`) and a 20×20 stripe variant (`name@20x20.svg` / `name@20x20_dark.svg`), they must share the same metaphor. The stripe is only one surface — the 16×16 base also appears in **Search Everywhere**, **Find Action**, context menus, the Services tool window, recent locations, and the View ▸ Tool Windows menu. Changing only the @20x20 leaves users seeing two different icons for the same tool window depending on where they encounter it. Always update all four files together (this repo's tool-window quartet is `kilo.svg` / `kilo_dark.svg` + `kilo@20x20.svg` / `kilo@20x20_dark.svg`).
 2. **Only use colors from the canonical palette.** See [palette.md](./palette.md). Picking a one-off color breaks theming and contrast.
 3. **One canvas size per icon role.** See [Icon roles](#icon-roles). Do not invent new sizes or pad with empty space — IntelliJ scales the canvas as a single unit.
 4. **No raster, no gradients, no filters, no embedded fonts.** Path geometry only (`<path>`, `<rect>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`). Text must be converted to outlines.
 5. **Use `fill="none"` on the root `<svg>`** and set `fill` / `stroke` explicitly per shape — never rely on CSS or `currentColor`.
 6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`.
-7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering. SVGs are resolution-independent — do not create `@2x` raster variants. Getting the base grid right is what keeps the icon crisp at 1× and at integer HiDPI scales (2×/Retina); fractional scales (125%/150%) are snapped by the IntelliJ renderer, so keep geometry simple and grid-aligned rather than chasing sub-pixel detail.
-8. **File names use kebab-case and stay ASCII-only** (e.g. `arrow-down-to-line.svg`, `book-open-check.svg`, `tool-window-chat.svg`), matching every existing icon in `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
+7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering. Getting the base grid right also keeps it crisp on HiDPI/Retina; fine sub-pixel detail blurs at fractional scales (125%/150%), so keep geometry simple rather than chasing detail that won't survive scaling. SVGs are resolution-independent — ship one vector per theme, never `@2x` raster variants.
+8. **File names use kebab-case and stay ASCII-only** (e.g. `arrow-down-to-line.svg`, `book-open-check.svg`, `kilo@20x20.svg`), matching every existing icon in `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
 
 ## Icon roles
 
@@ -120,4 +120,4 @@ Do not use plain `#000000` or off-the-palette grays.
 - [palette.md](./palette.md) — full color palette with light↔dark mapping.
 - [examples.md](./examples.md) — annotated SVG snippets for each icon role.
 - `packages/kilo-jetbrains/AGENTS.md` — repository-specific JetBrains plugin constraints; use it together with this skill for icon work.
-- `packages/kilo-jetbrains/frontend/src/main/resources/icons/` — the flat resource folder where plugin icons live; this is the ground truth for placement.
+- `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (with its `views/` subfolder) — where plugin icons live; this is the ground truth for placement.
