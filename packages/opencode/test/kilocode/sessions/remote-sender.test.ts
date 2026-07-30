@@ -3586,6 +3586,81 @@ describe("RemoteSender slash commands", () => {
     expect(sent).toEqual([{ type: "response", id: "req_rollback", error: "failed to exit session" }])
   })
 
+  // Item 8 locking gap: after exiting one of two attached sessions, the
+  // survivor must still accept send_message (and the host must not exit).
+  test("survivor session keeps accepting send_message after sibling exit_cli", async () => {
+    const { conn, sent } = fakeConn()
+    const exitID = SessionID.make("ses_exit")
+    const keepID = SessionID.make("ses_keep")
+    const owned = new Set<SessionID>([exitID, keepID])
+    const cancelled: SessionID[] = []
+    const detached: SessionID[] = []
+    const calls: SessionPrompt.PromptInput[] = []
+    let exitInvoked = false
+
+    const sender = RemoteSender.create({
+      conn,
+      directory: "/workspace/project-a",
+      log: nolog,
+      subscribe: fakeBus().subscribe,
+      session: {
+        get: async (id) => info(id),
+        children: async () => [],
+      },
+      hasSession: (id) => owned.has(id),
+      cancelPrompt: async (id) => {
+        cancelled.push(id)
+      },
+      detachSession: async (id) => {
+        detached.push(id)
+        owned.delete(id)
+      },
+      ownedCount: () => owned.size,
+      remoteExit: {
+        get: () => async () => {
+          exitInvoked = true
+        },
+      },
+      prompt: prompts(calls),
+      provide: async (input: any) => input.fn(),
+    })
+
+    sender.handle({
+      type: "command",
+      id: "req_exit_sibling",
+      command: "exit_cli",
+      sessionId: exitID,
+      data: { protocolVersion: 1 },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(cancelled).toEqual([exitID])
+    expect(detached).toEqual([exitID])
+    expect(owned.has(keepID)).toBe(true)
+    expect(owned.has(exitID)).toBe(false)
+    expect(exitInvoked).toBe(false)
+    expect(sent).toEqual([{ type: "response", id: "req_exit_sibling", result: {} }])
+
+    sender.handle({
+      type: "command",
+      id: "req_survivor_send",
+      command: "send_message",
+      data: {
+        sessionID: keepID,
+        parts: [{ type: "text", text: "still here" }],
+      },
+    })
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.sessionID).toBe(keepID)
+    expect(sent).toContainEqual({ type: "response", id: "req_survivor_send", result: {} })
+  })
+
   test("create_session forwards agent, model (with variant), and orgId metadata", async () => {
     const { conn, sent } = fakeConn()
     const createCalls: unknown[] = []
