@@ -21,7 +21,11 @@ internal object DiffPatchReconstruct {
         var newLen = 0
         var oldSeen = 0
         var newSeen = 0
-        for (line in patch.split('\n')) {
+        // Drop the trailing empty element that split('\n') yields for a newline-terminated patch (the
+        // usual case for git output). Counting it as a body line would inflate oldSeen/newSeen past the
+        // header lengths and wrongly reject every full-context diff. Mirrors DiffLineNumbers' edge trim;
+        // real blank context lines are " " (space-prefixed), never "", so no content is lost.
+        for (line in patch.split('\n').dropLastWhile { it.isEmpty() }) {
             if (line.startsWith("@@")) {
                 hunks += 1
                 HUNK.find(line)?.let { match ->

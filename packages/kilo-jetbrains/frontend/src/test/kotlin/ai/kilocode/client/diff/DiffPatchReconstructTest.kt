@@ -34,6 +34,35 @@ class DiffPatchReconstructTest {
     }
 
     @Test
+    fun `newline terminated full context patch stays renderable`() {
+        // Real git patches end with a newline, so split('\n') yields a trailing "" that must not be
+        // counted as a hunk body line. Without the edge trim this reconstructs as non-renderable and
+        // falls back to the all-green raw-patch view.
+        val dto = DiffFileDto(
+            file = "src/A.kt",
+            additions = 1,
+            deletions = 1,
+            patch = """
+                diff --git a/src/A.kt b/src/A.kt
+                index 111..222 100644
+                --- a/src/A.kt
+                +++ b/src/A.kt
+                @@ -1,3 +1,3 @@
+                 one
+                -two
+                +TWO
+                 three
+            """.trimIndent() + "\n",
+        )
+
+        val sides = DiffPatchReconstruct.sides(dto)
+
+        assertTrue(sides.renderable)
+        assertEquals("one\ntwo\nthree", sides.before)
+        assertEquals("one\nTWO\nthree", sides.after)
+    }
+
+    @Test
     fun `added file has empty before side`() {
         val dto = DiffFileDto(
             file = "src/A.kt",
