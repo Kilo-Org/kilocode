@@ -101,18 +101,19 @@ export function applyRevertAnnotations(digest, revertSignals) {
  * `appliedPairs` is applyRevertAnnotations' return ([targetUrl, reverterUrl]).
  * Returns { missed, unparsed, chains }:
  * - missed: [{ url, targets: [targetUrl, ...] }] — one entry per signal with at least
- *   one unannotated target, listing exactly the targets that missed (a partially-covered
- *   revert still surfaces its uncovered targets).
+ *   one unannotated plain target, listing exactly the targets that missed (a partially-covered
+ *   revert still surfaces its uncovered targets). Plain = not itself an intercepted revert.
  * - unparsed: [url, ...] — urls of signals with zero targets (they already warn at
  *   intercept time).
  * - chains: [{ url, targets: [targetUrl, ...] }] — signals involved in a revert chain,
  *   reported for human visibility only; the pipeline never resolves a chain's net effect.
  *   A signal lands here when EITHER its own url is a target of another signal (cancelled
- *   by computeRevertAnnotations), OR at least one of its targets is itself an intercepted
- *   revert (re-land chain link).
- * A signal in chains never also lands in missed/unparsed. Targets that are themselves
- * intercepted reverts still never appear in missed (unchanged). All url comparisons are
- * case-insensitive.
+ *   by computeRevertAnnotations — lists ALL its targets), OR at least one of its targets
+ *   is itself an intercepted revert (re-land chain link — lists ONLY those chain-link
+ *   targets; plain targets still flow through missed).
+ * Cancelled signals skip missed/unparsed. Chain-linked (non-cancelled) signals may also
+ * appear in missed for their unannotated plain targets. Chain-link targets never appear
+ * in missed. All url comparisons are case-insensitive.
  */
 export function unannotatedRevertSignals(signals, appliedPairs) {
   const list = Array.isArray(signals) ? signals : []
@@ -133,15 +134,19 @@ export function unannotatedRevertSignals(signals, appliedPairs) {
     const targets = (s.targets ?? []).map((t) => t?.url).filter(Boolean)
     const cancelled = cancelledUrls.has(url.toLowerCase())
     const chainTargets = targets.filter((u) => signalUrls.has(u.toLowerCase()))
-    if (cancelled || chainTargets.length > 0) {
+    if (cancelled) {
       chains.push({ url, targets })
       continue
+    }
+    if (chainTargets.length > 0) {
+      chains.push({ url, targets: chainTargets })
     }
     if (targets.length === 0) {
       unparsed.push(url)
       continue
     }
-    const missing = targets.filter((u) => !annotated.has(u.toLowerCase()))
+    const plainTargets = targets.filter((u) => !signalUrls.has(u.toLowerCase()))
+    const missing = plainTargets.filter((u) => !annotated.has(u.toLowerCase()))
     if (missing.length > 0) missed.push({ url, targets: missing })
   }
   return { missed, unparsed, chains }

@@ -1677,7 +1677,7 @@ Reverts #12249 and #12481.
 
   {
     // depth-3 chain: R1→F, R2→R1, R3→R2 — all three in chains; missed/unparsed empty
-    const r3Url = "https://github.com/Kilo-Org/kilocode/pull/300"
+    const r3Url = "https://github.com/Kilo-Org/kilocode/pull/301"
     const signals = [
       {
         url: r1Url,
@@ -1703,6 +1703,38 @@ Reverts #12249 and #12481.
         { url: r1Url, targets: [fUrl] },
         { url: r2Url, targets: [r1Url] },
         { url: r3Url, targets: [r2Url] },
+      ],
+    })
+  }
+
+  {
+    // mixed signal: M targets [R1, A, B]; A annotated, B missed; chains lists only R1
+    const mUrl = "https://github.com/Kilo-Org/kilocode/pull/800"
+    const aUrl = "https://github.com/Kilo-Org/kilocode/pull/801"
+    const bUrl = "https://github.com/Kilo-Org/kilocode/pull/802"
+    const signals = [
+      {
+        url: r1Url,
+        merged_at: mergedAt,
+        targets: [{ repo: "Kilo-Org/kilocode", number: 100, url: fUrl }],
+      },
+      {
+        url: mUrl,
+        merged_at: mergedAt2,
+        targets: [
+          { repo: "Kilo-Org/kilocode", number: 200, url: r1Url },
+          { repo: "Kilo-Org/kilocode", number: 801, url: aUrl },
+          { repo: "Kilo-Org/kilocode", number: 802, url: bUrl },
+        ],
+      },
+    ]
+    const result = unannotatedRevertSignals(signals, [[aUrl, mUrl]])
+    assert.deepEqual(result, {
+      missed: [{ url: mUrl, targets: [bUrl] }],
+      unparsed: [],
+      chains: [
+        { url: r1Url, targets: [fUrl] },
+        { url: mUrl, targets: [r1Url] },
       ],
     })
   }
