@@ -10,6 +10,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.session.views.tool.EditFileChange
 import ai.kilocode.client.session.views.tool.POPUP_OPTS
@@ -21,17 +22,11 @@ import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffBars
 import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
-import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
-import com.intellij.util.ui.JBUI
-import java.awt.BorderLayout
-import java.awt.Dimension
-import javax.swing.JComponent
-import javax.swing.JPanel
 
 class ModifiedFilesView private constructor(
     private val openFile: SessionFileOpener,
@@ -57,7 +52,7 @@ class ModifiedFilesView private constructor(
         body.parent = this
         parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
-        bindHeader(parts.glyph, parts.title, parts.count, parts.center, parts.controls, parts.bars)
+        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.panel.right, parts.bars)
         unbindHeader(parts.diff)
         applyStyle(style)
     }
@@ -158,19 +153,10 @@ class ModifiedFilesView private constructor(
             ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {},
         ).apply { isVisible = false }
         val bars = DiffBars(0, 0)
-        private val titleRow = Stack.horizontal(UiStyle.Gap.sm()).next(title).next(count).next(diff)
-        val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-            isOpaque = false
-            minimumSize = Dimension(0, minimumSize.height)
-            add(titleRow, BorderLayout.WEST)
-        }
-        val controls: JComponent = Stack.horizontal().next(bars)
-        // Match edit/patch cards: glyph on the left, text in the center, and stats in the control slot.
-        val panel: JComponent = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-            isOpaque = false
-            add(glyph, BorderLayout.WEST)
-            add(center, BorderLayout.CENTER)
-            add(controls, BorderLayout.EAST)
+        // Glyph, title, count, and the open-diff action on the left; diff bars hug the right edge.
+        val panel = PartHeader().apply {
+            left(glyph, title, count, PartHeader.centered(diff))
+            right(PartHeader.centered(bars))
         }
 
         @RequiresEdt

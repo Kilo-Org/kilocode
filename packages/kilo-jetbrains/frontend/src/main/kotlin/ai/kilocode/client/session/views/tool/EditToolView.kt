@@ -13,6 +13,7 @@ import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffStatBadge
@@ -66,10 +67,10 @@ class EditToolView(
 
     init {
         body.parent = this
-        parts.slot.add(diff)
-        parts.controls.add(filesTag)
-        parts.controls.add(badge)
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.link, parts.state, parts.center, parts.controls, parts.slot, filesTag, badge)
+        parts.slot.add(PartHeader.centered(diff))
+        parts.right.next(filesTag)
+        parts.right.next(PartHeader.centered(badge))
+        bindHeader(parts.glyph, parts.title, parts.sub, parts.link, parts.state, parts.left, parts.right, parts.slot, filesTag, badge)
         unbindHeader(diff)
         applyStyle(style)
         sync()

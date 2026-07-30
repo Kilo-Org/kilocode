@@ -12,6 +12,7 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.UiStyle
@@ -330,7 +331,7 @@ class ReasoningView(
 }
 
 class ReasoningParts(
-    val header: JPanel,
+    val header: PartHeader,
     val title: JBLabel,
     val icon: JBLabel,
     private val selection: SessionSelection?,
@@ -385,11 +386,7 @@ class ReasoningBody(
 private fun reasoningParts(selection: SessionSelection? = null): ReasoningParts {
     val title = JBLabel(KiloBundle.message("session.part.reasoning")).apply { foreground = UiStyle.Colors.weak() }
     val icon = JBLabel(SessionViewIcons.brain).apply { foreground = UiStyle.Colors.weak() }
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-        isOpaque = false
-        add(icon, BorderLayout.WEST)
-        add(title, BorderLayout.CENTER)
-    }
+    val header = PartHeader().apply { left(icon, title) }
     return ReasoningParts(header, title, icon, selection)
 }
 

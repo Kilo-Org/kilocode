@@ -12,12 +12,10 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
+import ai.kilocode.client.session.views.base.PartHeader
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.editor.BashCommandHighlighter
-import ai.kilocode.client.ui.layout.HAlign
 import ai.kilocode.client.ui.layout.Stack
-import ai.kilocode.client.ui.layout.VAlign
-import ai.kilocode.client.ui.layout.align
 import ai.kilocode.cli.KiloCliParser
 import ai.kilocode.log.KiloLog
 import com.intellij.openapi.actionSystem.DataSink
@@ -44,7 +42,6 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Cursor
 import java.awt.Dimension
@@ -62,15 +59,16 @@ private val LOG = KiloLog.create(ToolParts::class.java)
 enum class ToolBodyMode { EDITOR, TEXT }
 
 class ToolParts(
-    val header: JPanel,
+    val header: PartHeader,
     val glyph: JBLabel,
     val title: JBLabel,
     val sub: JBLabel,
     val link: FileLinkLabel,
     val slot: JPanel,
     val state: JBLabel,
-    val center: JPanel,
-    val controls: JComponent,
+    val left: Stack,
+    val right: Stack,
+    val fill: JComponent,
     val extra: JBLabel? = null,
     val targets: List<JBLabel> = emptyList(),
     private val mode: ToolBodyMode = ToolBodyMode.EDITOR,
@@ -412,23 +410,12 @@ internal fun toolParts(
         next(link)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
-    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-        isOpaque = false
-        minimumSize = Dimension(0, minimumSize.height)
+    val header = PartHeader().apply {
+        left(glyph, title)
+        fill(slot)
+        right(state)
     }
-    val controls = Stack.horizontal()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-        isOpaque = false
-        center.add(title, BorderLayout.WEST)
-        center.add(slot, BorderLayout.CENTER)
-        add(glyph, BorderLayout.WEST)
-        add(center, BorderLayout.CENTER)
-        add(controls, BorderLayout.EAST)
-    }
-    val parts = ToolParts(header, glyph, title, sub, link, slot, state, center, controls, mode = mode)
-    return parts.also {
-        controls.add(it.state)
-    }
+    return ToolParts(header, glyph, title, sub, link, slot, state, header.left, header.right, fill = slot, mode = mode)
 }
 
 @RequiresEdt
@@ -448,24 +435,16 @@ internal fun searchParts(count: Int): ToolParts {
         next(link)
     }
     val state = clip(JBLabel()).apply { foreground = UiStyle.Colors.weak() }
-    val stack = Stack.fitHorizontal(UiStyle.Gap.md()).apply { targets.forEach { next(it) } }
-    val target = stack.align(HAlign.TRACK, VAlign.CENTER)
-    val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
-        isOpaque = false
+    val target = Stack.fitHorizontal(UiStyle.Gap.md()).apply {
         minimumSize = Dimension(0, minimumSize.height)
-        add(title, BorderLayout.WEST)
-        add(target, BorderLayout.CENTER)
+        targets.forEach { next(it) }
     }
-    val controls = Stack.horizontal()
-    val header = JPanel(BorderLayout(JBUI.scale(SessionUiStyle.View.Layout.GAP), 0)).apply {
-        isOpaque = false
-        add(glyph, BorderLayout.WEST)
-        add(center, BorderLayout.CENTER)
-        add(controls, BorderLayout.EAST)
+    val header = PartHeader().apply {
+        left(glyph, title)
+        fill(target)
+        right(state)
     }
-    return ToolParts(header, glyph, title, sub, link, slot, state, center, controls, targets = targets, mode = ToolBodyMode.EDITOR).also {
-        controls.add(it.state)
-    }
+    return ToolParts(header, glyph, title, sub, link, slot, state, header.left, header.right, fill = target, targets = targets, mode = ToolBodyMode.EDITOR)
 }
 
 internal fun icon(tool: Tool) = when (tool.name) {

@@ -36,13 +36,15 @@ internal class DiffBars(
         val g2 = g.create() as Graphics2D
         try {
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            val barHeight = JBUI.scale(HEIGHT)
+            val y = maxOf(0, (height - barHeight) / 2)
             blocks().forEachIndexed { index, color ->
                 g2.color = color
                 g2.fillRoundRect(
                     JBUI.scale(index * STEP),
-                    0,
+                    y,
                     JBUI.scale(BAR_WIDTH),
-                    JBUI.scale(HEIGHT),
+                    barHeight,
                     JBUI.scale(ARC),
                     JBUI.scale(ARC),
                 )
