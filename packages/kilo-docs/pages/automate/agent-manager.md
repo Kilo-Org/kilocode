@@ -159,7 +159,9 @@ Each request can include 1-20 tasks. Each task must include at least one of `pro
 
 The companion `agent_manager_models` tool searches models and their supported reasoning variants on demand. Results are grouped by model name (with the offering providers listed for reference) and limited to 20 per call, so the full catalog is never added to the conversation context.
 
-The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly.
+The same tool also manages existing sessions. It can return a compact overview of sections, worktrees, and local sessions, send a prompt to one managed session, or stop a managed session. Stopping aborts the session's active work and removes it from the panel, just like closing the session tab.
+
+The tool uses the `agent_manager` permission. Approval prompts are scoped to the requested capability, so approving `worktree` does not automatically approve `local`, an overview, or a targeted prompt. Prompting an existing managed session requires an explicit `prompt` approval the first time, even if Agent Manager session creation was previously approved broadly. Stopping a session likewise requires an explicit `stop` approval.
 
 ## Sections
 
@@ -241,6 +243,8 @@ Create a script file in `.kilo/` using the appropriate filename for your platfor
 
 Kilo runs the script automatically whenever a new worktree is created. It uses `sh` for POSIX scripts, PowerShell for `.ps1`, and `cmd.exe` for `.cmd` / `.bat`, so executable permissions are not required.
 
+Where the script runs follows the terminal destination dropdown in the Agent Manager toolbar. **Agent Manager panel** shows live output in a named `Setup` tab in the side terminal panel. After success, the panel returns to its previous state unless you interacted with it; the retained tab remains available for review. Failures keep the panel open. **VS Code terminal** runs setup as a task in the integrated terminal. The script keeps the existing five-minute timeout; when it expires, the setup process tree is terminated and the failed tab retains its partial output.
+
 Two extra variables are injected into the setup script's environment:
 
 | Variable | Value |
@@ -263,7 +267,7 @@ if [ -f "$REPO_PATH/apps/web/.env.local" ] && [ ! -f "$WORKTREE_PATH/apps/web/.e
 fi
 ```
 
-If the setup script fails, Agent Manager shows the failure and keeps the worktree available so you can inspect it, fix the script, or run setup steps manually.
+If the setup script fails, Agent Manager shows the failure (a failed `Setup` tab in the side terminal panel, or the task output in the integrated terminal) and keeps the worktree available so you can inspect it, fix the script, or run setup steps manually.
 
 ### Environment File Copying
 
@@ -339,9 +343,11 @@ Two extra variables are injected into the script's environment:
 
 ### Using the run button
 
-- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a dedicated VS Code task panel.
+- **Run:** Click the play button in the toolbar or press `Cmd+E` (macOS) / `Ctrl+E` (Windows/Linux). Output appears in a named `Run` tab in the Agent Manager terminal panel and remains available after the script exits.
 - **Stop:** Click the stop button (same position) or press `Cmd+E` again while running.
 - **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
+
+The terminal destination dropdown in the Agent Manager toolbar also controls where the script runs. **Agent Manager panel** uses the named side terminal, while **VS Code terminal** runs it as a task in the integrated terminal. The integrated terminal option is kept for comparison and will be removed in a future release.
 
 ## Session State and Persistence
 

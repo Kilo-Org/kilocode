@@ -22,6 +22,7 @@ import {
   MemoryPermissionRegistry,
   type PermissionInfo,
 } from "@/kilocode/cli/cmd/tui/routes/session/memory-permission"
+import { skillShellPrompt } from "@/kilocode/skills/display"
 // kilocode_change end
 import { KILO_BASE_MODE, useBindings, useCommandShortcut } from "../../keymap"
 import { usePathFormatter } from "../../context/path-format"
@@ -195,6 +196,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               requestID: props.request.id,
               directory: props.directory,
               workspace: project.workspace.current(),
+              interactive: true, // kilocode_change - human answered this prompt
             })
           }}
         />
@@ -295,6 +297,20 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             }
 
             if (permission === "bash") {
+              // kilocode_change start - skill shell batches show the verbatim, escaped commands + skill title
+              const skillShell = skillShellPrompt(props.request.metadata)
+              if (skillShell) {
+                return {
+                  icon: "#",
+                  title: skillShell.title,
+                  body: (
+                    <box paddingLeft={1}>
+                      <For each={skillShell.commands}>{(cmd) => <text fg={theme.text}>{"$ " + cmd}</text>}</For>
+                    </box>
+                  ),
+                }
+              }
+              // kilocode_change end
               // kilocode_change start
               const meta = props.request.metadata ?? {}
               const desc =
@@ -451,12 +467,14 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
             </box>
           )
 
-          // kilocode_change start - hide "Always allow" for protected Kilo configuration access
+          // kilocode_change start - skill shell batches never persisted; protected config hides "Always"
           const options: Record<string, string> =
             current.options ??
-            (props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
-              ? { once: "Allow once", reject: "Reject" }
-              : { once: "Allow once", always: "Allow always", reject: "Reject" })
+            (props.request.metadata?.["skillShell"]
+              ? { once: "Allow", reject: "Reject" }
+              : props.request.metadata?.[ConfigProtection.DISABLE_ALWAYS_KEY]
+                ? { once: "Allow once", reject: "Reject" }
+                : { once: "Allow once", always: "Allow always", reject: "Reject" })
           // kilocode_change end
 
           const body = (
@@ -490,6 +508,7 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
                   requestID: props.request.id,
                   directory: props.directory,
                   workspace: project.workspace.current(),
+                  interactive: true, // kilocode_change - human answered this prompt
                 })
               }}
             />

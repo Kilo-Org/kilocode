@@ -3,7 +3,7 @@ import * as path from "path"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
-import { normalizePath } from "./git-import"
+import { findTrackedBranch } from "./project/paths"
 import type { WorktreeDiffEntry } from "./types"
 
 export interface WorktreeStats {
@@ -69,6 +69,7 @@ export class GitStatsPoller {
   private readonly git: GitOps
   private skipWorktreeIds = new Set<string>()
   private visible = true
+  private generation = 0
 
   constructor(private readonly options: GitStatsPollerOptions) {
     this.intervalMs = options.intervalMs ?? 5000
@@ -102,6 +103,10 @@ export class GitStatsPoller {
     this.skipWorktreeIds.add(id)
   }
 
+  unskipWorktree(id: string): void {
+    this.skipWorktreeIds.delete(id)
+  }
+
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return
@@ -113,6 +118,7 @@ export class GitStatsPoller {
   }
 
   stop(): void {
+    this.generation++
     this.active = false
     if (this.timer) {
       clearTimeout(this.timer)
@@ -153,21 +159,26 @@ export class GitStatsPoller {
     if (!this.active) return Promise.resolve()
     if (this.busy) return Promise.resolve()
     this.busy = true
-    return this.fetch().finally(() => {
+    const generation = this.generation
+    return this.fetch(generation).finally(() => {
+      // stop() already reset busy and bumped the generation, so a stale
+      // fetch must not touch busy: a restarted poll may own it right now.
+      if (generation !== this.generation) return
       this.busy = false
       this.schedule(this.currentInterval())
     })
   }
 
-  private async fetch(): Promise<void> {
-    await Promise.all([this.fetchWorktreeStats(), this.fetchLocalStats()])
+  private async fetch(generation = this.generation): Promise<void> {
+    await Promise.all([this.fetchWorktreeStats(false, generation), this.fetchLocalStats(generation)])
   }
 
-  private async fetchWorktreeStats(includeSkipped = false): Promise<void> {
+  private async fetchWorktreeStats(includeSkipped = false, generation = this.generation): Promise<void> {
     const worktrees = this.options.getWorktrees()
     if (worktrees.length === 0) return
 
     const presence = await this.probeWorktreePresence(worktrees)
+    if (generation !== this.generation) return
     this.options.onWorktreePresence?.(presence)
 
     const missing = new Set(
@@ -211,6 +222,7 @@ export class GitStatsPoller {
         }),
       )
     ).filter((item): item is WorktreeStats => !!item)
+    if (generation !== this.generation) return
 
     for (const item of stats) this.lastStats[item.worktreeId] = item
 
@@ -248,13 +260,12 @@ export class GitStatsPoller {
     const worktreeStatuses = await Promise.all(
       worktrees.map(async (wt) => {
         const abs = path.isAbsolute(wt.path) ? wt.path : path.join(root, wt.path)
-        const normalized = normalizePath(abs)
         const exists = await fs.promises.access(abs).then(
           () => true,
           () => false,
         )
-        const missing = !exists || !tracked.has(normalized)
-        const branch = tracked.get(normalized)
+        const branch = exists ? findTrackedBranch(tracked, abs) : undefined
+        const missing = !exists || branch === undefined
         return { worktreeId: wt.id, missing, branch }
       }),
     )
@@ -262,7 +273,7 @@ export class GitStatsPoller {
     return { worktrees: worktreeStatuses, degraded: false }
   }
 
-  private async fetchLocalStats(): Promise<void> {
+  private async fetchLocalStats(generation = this.generation): Promise<void> {
     const root = this.options.getWorkspaceRoot()
     if (!root) return
 
@@ -301,6 +312,7 @@ export class GitStatsPoller {
         if (this.lastLocalStats && this.lastLocalStats.branch === branch) return
         return
       }
+      if (generation !== this.generation) return
 
       const hash = `local:${branch}:${files}:${additions}:${deletions}:${ahead}:${behind}`
       if (hash === this.lastLocalHash) {

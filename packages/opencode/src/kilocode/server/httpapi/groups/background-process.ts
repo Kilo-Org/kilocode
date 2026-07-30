@@ -22,7 +22,6 @@ export const BackgroundProcessPaths = {
 } as const
 
 export const Params = Schema.Struct({ processID: BackgroundProcess.ID })
-export const SessionParams = Schema.Struct({ sessionID: SessionID })
 
 export const BackgroundProcessApi = HttpApi.make("background-process")
   .add(

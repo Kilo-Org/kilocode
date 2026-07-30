@@ -248,6 +248,12 @@ object KiloCliDataParser {
                 ChatEventDto.SessionIdle(sid)
             }
 
+            "session.queue.changed" -> {
+                val sid = props.str("sessionID") ?: return null
+                val queued = props["queued"]?.jsonArray?.mapNotNull { it.jsonPrimitive.contentOrNull } ?: emptyList()
+                ChatEventDto.SessionQueueChanged(sid, queued)
+            }
+
             "session.compacted" -> {
                 val sid = props.str("sessionID") ?: return null
                 ChatEventDto.SessionCompacted(sid)
@@ -1573,6 +1579,7 @@ object KiloCliDataParser {
         sb.append("""{"reply":${escape(reply.reply)}""")
         val msg = reply.message
         if (msg != null) sb.append(""","message":${escape(msg)}""")
+        if (reply.interactive) sb.append(""","interactive":true""")
         sb.append("}")
         return sb.toString()
     }

@@ -52,6 +52,7 @@ export class SetupScriptRunner {
     private readonly log: (msg: string) => void,
     private readonly service: SetupScriptService,
     private readonly run: RunTask,
+    private readonly failed: (message: string) => void = () => undefined,
   ) {}
 
   /**
@@ -92,6 +93,7 @@ export class SetupScriptRunner {
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       this.log(`Setup script execution failed: ${msg}`)
+      this.failed(msg)
       return true // Script was attempted
     }
   }

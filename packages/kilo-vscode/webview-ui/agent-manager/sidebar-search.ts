@@ -14,6 +14,7 @@ export type SidebarSearchState = "idle" | "busy" | "retry" | "waiting"
 
 type SearchItem = {
   key: string
+  projectId?: string
   title: string
   meta: string[]
   search: string

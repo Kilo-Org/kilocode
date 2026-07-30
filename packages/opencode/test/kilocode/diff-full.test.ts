@@ -4,6 +4,7 @@
 
 import { $ } from "bun"
 import { describe, expect } from "bun:test"
+import { parsePatch } from "diff"
 import { Effect, Layer } from "effect"
 import path from "path"
 import * as CrossSpawnSpawner from "@opencode-ai/core/cross-spawn-spawner"
@@ -103,6 +104,24 @@ describe("DiffFull.batch", () => {
         expect(patch).toContain("-before")
         expect(patch).toContain("+after")
       }
+    }),
+  )
+
+  it.live("keeps distant changes in bounded, parseable hunks", () =>
+    Effect.gen(function* () {
+      const dir = yield* tmpdirScoped({ git: true })
+      const before = Array.from({ length: 30 }, (_, i) => `line ${i + 1}`)
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "multi.txt"), before.join("\n") + "\n"))
+      const from = yield* Effect.promise(() => commit(dir, "v1"))
+      const after = before.with(1, "changed near start").with(27, "changed near end")
+      yield* Effect.promise(() => Filesystem.write(path.join(dir, "multi.txt"), after.join("\n") + "\n"))
+      const to = yield* Effect.promise(() => commit(dir, "v2"))
+
+      const result = yield* DiffFull.batch(gitResult(dir), from, to, ["multi.txt"])
+      const parsed = parsePatch(result.get("multi.txt") ?? "")[0]
+
+      expect(parsed?.hunks).toHaveLength(2)
+      expect(parsed?.hunks.every((hunk) => hunk.lines.length < before.length)).toBe(true)
     }),
   )
 

@@ -464,6 +464,27 @@ class SessionController(
         }
     }
 
+    fun deleteQueuedMessage(message: String) {
+        assertEdt()
+        val id = sid ?: return
+        cs.launch {
+            try {
+                val ok = sessions.deleteMessage(id, directory, message)
+                if (!ok) {
+                    capture("Session Error", sessionProps(id) + mapOf("context" to "delete-message", "errorClass" to "DeleteMiss"))
+                    LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage missed message=$message")
+                    return@launch
+                }
+                capture("Conversation Queued Message Removed", sessionProps(id))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                capture("Session Error", sessionProps(id) + mapOf("context" to "delete-message", "errorClass" to e::class.java.name))
+                LOG.warn("${ChatLogSummary.sid(id)} kind=deleteMessage failed message=${e.message}", e)
+            }
+        }
+    }
+
     fun unrevert() {
         assertEdt()
         val id = sid ?: return
@@ -701,7 +722,10 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
         cs.launch {
             try {
-                if (!autoApprove) {
+                // Skill-shell batches must be answered by a human: the server refuses
+                // non-interactive approvals, so auto-approve must show the card (whose
+                // manual reply sets interactive=true) rather than send a machine reply.
+                if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
                     edt {
                         if (disposed) return@edt
                         model.setState(SessionState.AwaitingPermission(restore()))
@@ -738,9 +762,16 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                if (count == 0) return@launch
+                // Skill-shell requests are skipped by replyAll; surface one as a card so it
+                // isn't stranded (never machine-approved, never shown).
+                val card = skillShellCard(permissions)?.let { toPermission(it) }
+                if (count == 0 && card == null) return@launch
                 runEdt {
                     if (disposed) return@runEdt
+                    if (card != null) {
+                        updateModel { model.setState(SessionState.AwaitingPermission(card)) }
+                        return@runEdt
+                    }
                     val current = model.state
                     if (current is SessionState.AwaitingPermission && current.permission.sessionId in ids) {
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
@@ -756,12 +787,19 @@ class SessionController(
         var count = 0
         for (request in permissions) {
             if (!autoApprove) return count
+            // Skill-shell batches need a human; skip them here (callers surface the card).
+            if (request.metadata["skillShell"] == "true") continue
             sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
         }
         return count
     }
+
+    // A skill-shell request is never machine-approved (the server refuses non-interactive
+    // approvals); after draining, callers must surface one as a card so a human can answer.
+    private fun skillShellCard(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
+        permissions.lastOrNull { it.metadata["skillShell"] == "true" }
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
@@ -1135,11 +1173,15 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            if (autoApprove) {
+            // A skill-shell request must surface as a card even under auto-approve (replyAll
+            // skips it); prefer it over the last pending so a human can answer.
+            val show = if (autoApprove) {
                 replyAll(permissions)
-                return
+                skillShellCard(permissions) ?: return
+            } else {
+                skillShellCard(permissions) ?: permissions.last()
             }
-            val last = toPermission(permissions.last())
+            val last = toPermission(show)
             runEdt {
                 if (disposed) return@runEdt
                 if (child !in childIds) return@runEdt
@@ -1180,9 +1222,12 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
+            // replyAll auto-approves the ordinary permissions and skips skill-shell ones. A
+            // skill-shell request must then fall through to a human card rather than go Busy.
+            val skillCard = skillShellCard(permissions)
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
-                if (count > 0) {
+                if (count > 0 && skillCard == null) {
                     runEdt {
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
@@ -1205,7 +1250,8 @@ class SessionController(
                 if (sid != id) return@runEdt
                 updateModel {
                     if (permissions.isNotEmpty()) {
-                        model.setState(SessionState.AwaitingPermission(toPermission(permissions.last())))
+                        // Prefer a skill-shell request (needs a human) over the last pending.
+                        model.setState(SessionState.AwaitingPermission(toPermission(skillCard ?: permissions.last())))
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))
                     } else if (status != null) {
@@ -1368,6 +1414,8 @@ class SessionController(
                 idle()
             }
 
+            is ChatEventDto.SessionQueueChanged -> updateModel { model.setQueued(event.queued.toSet()) }
+
             is ChatEventDto.SessionCompacted -> {
                 capture("Context Condensed", sessionProps(event.sessionID))
                 model.markCompacted()
@@ -1406,7 +1454,8 @@ class SessionController(
         is ChatEventDto.QuestionRejected,
         is ChatEventDto.SessionStatusChanged,
         is ChatEventDto.SessionUpdated,
-        is ChatEventDto.SessionIdle -> {
+        is ChatEventDto.SessionIdle,
+        is ChatEventDto.SessionQueueChanged -> {
             edt {
                 if (disposed) return@edt
                 updateModel { handleMetadata(event) }
@@ -1428,6 +1477,7 @@ class SessionController(
             is ChatEventDto.SessionStatusChanged -> status(event.status)
             is ChatEventDto.SessionUpdated -> model.setSession(event.session)
             is ChatEventDto.SessionIdle -> idle()
+            is ChatEventDto.SessionQueueChanged -> model.setQueued(event.queued.toSet())
             else -> Unit
         }
     }
@@ -2312,6 +2362,7 @@ private fun matchesSession(event: ChatEventDto, id: String): Boolean = when (eve
     is ChatEventDto.SessionStatusChanged -> event.sessionID == id
     is ChatEventDto.SessionUpdated -> event.sessionID == id
     is ChatEventDto.SessionIdle -> event.sessionID == id
+    is ChatEventDto.SessionQueueChanged -> event.sessionID == id
     is ChatEventDto.SessionCompacted -> event.sessionID == id
     is ChatEventDto.SessionDiffChanged -> event.sessionID == id
     is ChatEventDto.TodoUpdated -> event.sessionID == id

@@ -15,6 +15,15 @@ export interface McpConfig {
   enabled?: boolean
 }
 
+export type ConfigOrigin = "project" | "global" | "system" | "default"
+
+export interface ConfigCollectionEntry {
+  key: string
+  source: ConfigOrigin
+}
+
+export type ConfigCollections = Record<string, ConfigCollectionEntry[]>
+
 export interface CommandConfig {
   template: string
   description?: string
@@ -156,6 +165,7 @@ export interface Config {
   compaction?: CompactionConfig
   commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
+  web_search?: boolean
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig

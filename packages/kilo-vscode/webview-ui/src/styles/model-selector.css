@@ -53,16 +53,6 @@
   position: relative;
 }
 
-.model-preview-empty {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--vscode-descriptionForeground);
-  font-size: var(--kilo-font-size-12);
-  font-style: italic;
-}
-
 .model-preview-header {
   display: flex;
   flex-direction: column;

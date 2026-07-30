@@ -17,7 +17,7 @@ import { Database } from "@opencode-ai/core/database/database"
 import { eq } from "drizzle-orm"
 import { provideTmpdirInstance } from "../fixture/fixture"
 import { resetDatabase } from "../fixture/db"
-import { pollWithTimeout, testEffect } from "../lib/effect" // kilocode_change
+import { pollWithTimeout, testEffect } from "../lib/effect"
 
 const env = LayerNode.buildLayer(CrossSpawnSpawner.node)
 const it = testEffect(env)
@@ -140,10 +140,10 @@ describe("ShareNext", () => {
   it.live("create posts share, persists it, and returns the result", () =>
     provideTmpdirInstance(
       () => {
-        const seen: HttpClientRequest.HttpClientRequest[] = []
+        const createRequests: HttpClientRequest.HttpClientRequest[] = []
         const client = HttpClient.make((req) => {
-          seen.push(req)
           if (req.url.endsWith("/api/share")) {
+            createRequests.push(req)
             return Effect.succeed(
               json(req, {
                 id: "shr_abc",
@@ -168,9 +168,9 @@ describe("ShareNext", () => {
           expect(row?.url).toBe("https://legacy-share.example.com/share/abc")
           expect(row?.secret).toBe("sec_123")
 
-          expect(seen).toHaveLength(1)
-          expect(seen[0].method).toBe("POST")
-          expect(seen[0].url).toBe("https://legacy-share.example.com/api/share")
+          expect(createRequests).toHaveLength(1)
+          expect(createRequests[0].method).toBe("POST")
+          expect(createRequests[0].url).toBe("https://legacy-share.example.com/api/share")
         }).pipe(Effect.provide(integrationLayer(client)))
       },
       { config: { enterprise: { url: "https://legacy-share.example.com" } } },
@@ -304,13 +304,13 @@ describe("ShareNext", () => {
                 deletions: 0,
                 status: "modified",
               },
-            ], // kilocode_change
+            ],
           })
           const sync = yield* pollWithTimeout(
             Effect.sync(() => seen[0]),
             "share sync was not sent",
             "3 seconds",
-          ) // kilocode_change
+          )
 
           expect(seen).toHaveLength(1)
           expect(sync.url).toBe("https://legacy-share.example.com/api/share/shr_abc/sync") // kilocode_change
