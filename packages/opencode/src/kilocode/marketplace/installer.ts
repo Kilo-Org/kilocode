@@ -8,7 +8,6 @@ import { Effect } from "effect"
 import { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import { Skill } from "@/skill"
-import * as KiloSkill from "@/kilocode/skill-remove"
 import { Process } from "@/util/process"
 import type {
   AgentMarketplaceItem,
@@ -52,7 +51,12 @@ export function isSafeId(id: string) {
 }
 
 function escapeJsonValue(raw: string) {
-  return raw.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t")
+  return raw
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t")
 }
 
 export function substituteParams(template: string, params: Record<string, unknown>) {
@@ -130,12 +134,19 @@ function removeAgentConfig(scope: Scope, svc: Services, id: string) {
 function installMcp(svc: Services, item: McpMarketplaceItem, opts: MarketplaceInstallPayload, scope: Scope) {
   return Effect.gen(function* () {
     const cfg = yield* scopedConfig(scope, svc)
-    if (cfg.mcp?.[item.id]) return { success: false, slug: item.id, error: "MCP server already installed. Remove it first." }
+    if (cfg.mcp?.[item.id])
+      return { success: false, slug: item.id, error: "MCP server already installed. Remove it first." }
 
     const content = resolveMcpContent(item, opts)
     if (!content) return { success: false, slug: item.id, error: "No installation content for MCP server" }
 
-    return yield* writeMcp(scope, svc, item.id, buildMcpEntry(content, opts.parameters)).pipe(
+    // buildMcpEntry parses JSON and can throw; run it inside the effect so a bad
+    // config surfaces as the friendly failure below instead of a 500-level defect.
+    return yield* Effect.try({
+      try: () => buildMcpEntry(content, opts.parameters),
+      catch: (err) => (err instanceof Error ? err : new Error(String(err))),
+    }).pipe(
+      Effect.flatMap((entry) => writeMcp(scope, svc, item.id, entry)),
       Effect.as({ success: true, slug: item.id } as MarketplaceInstallResult),
       Effect.catch((err: unknown) =>
         Effect.succeed({
@@ -206,15 +217,20 @@ function installSkill(item: SkillMarketplaceItem, scope: Scope, directory: strin
     const base = Paths.skillsDir(scope, directory)
     const dir = path.join(base, item.id)
     if (!contains(base, dir)) return { success: false, slug: item.id, error: "Invalid skill id" }
-    if (await exists(dir)) return { success: false, slug: item.id, error: "Skill already installed. Uninstall it before installing again." }
+    if (await exists(dir))
+      return { success: false, slug: item.id, error: "Skill already installed. Uninstall it before installing again." }
 
     await mkdir(base, { recursive: true })
     const staging = await mkdtemp(path.join(base, `.staging-${item.id}-`))
     const tarball = path.join(os.tmpdir(), `kilo-skill-${item.id}-${randomUUID()}.tar.gz`)
-    const data = item.content.startsWith("data:") ? item.content.match(/^data:[^,]*;base64,(.*)$/) : undefined
+    const inline = item.content.startsWith("data:")
+    const data = inline ? item.content.match(/^data:[^,]*;base64,(.*)$/) : null
 
     try {
-      if (data) {
+      if (inline) {
+        // Only base64 data URLs are supported; fail closed rather than falling
+        // through to fetch() with a data: URL that will not resolve.
+        if (!data) return { success: false, slug: item.id, error: "Unsupported skill archive data URL" }
         await Bun.write(tarball, Buffer.from(data[1], "base64"))
       } else {
         const response = await fetch(item.content)
@@ -225,16 +241,24 @@ function installSkill(item: SkillMarketplaceItem, scope: Scope, directory: strin
 
       const escaped = await findEscapedPaths(staging)
       if (escaped.length > 0) return { success: false, slug: item.id, error: "Skill archive contains unsafe paths" }
-      if (!(await exists(path.join(staging, "SKILL.md")))) return { success: false, slug: item.id, error: "Extracted archive missing SKILL.md" }
+      if (!(await exists(path.join(staging, "SKILL.md"))))
+        return { success: false, slug: item.id, error: "Extracted archive missing SKILL.md" }
 
       await rename(staging, dir)
       return { success: true, slug: item.id, filePath: path.join(dir, "SKILL.md"), line: 1 }
     } catch (err) {
-      if (await exists(dir)) return { success: false, slug: item.id, error: "Skill already installed. Uninstall it before installing again." }
+      if (await exists(dir))
+        return {
+          success: false,
+          slug: item.id,
+          error: "Skill already installed. Uninstall it before installing again.",
+        }
       return { success: false, slug: item.id, error: String(err) }
     } finally {
       await Promise.all([
-        rm(staging, { recursive: true, force: true }).catch((err) => console.warn("Failed to clean marketplace staging directory", err)),
+        rm(staging, { recursive: true, force: true }).catch((err) =>
+          console.warn("Failed to clean marketplace staging directory", err),
+        ),
         rm(tarball, { force: true }).catch((err) => console.warn("Failed to clean marketplace tarball", err)),
       ])
     }
@@ -274,16 +298,27 @@ function removeAgent(svc: Services, item: MarketplaceItemRef, scope: Scope) {
 
 function removeSkill(svc: Services, item: MarketplaceItemRef, scope: Scope) {
   return Effect.gen(function* () {
-    const entries = yield* svc.skills.all()
+    // Marketplace skills are installed into <skillsDir>/<item.id> and that whole
+    // directory is installer-owned. Resolve by id (as installSkill does) and remove
+    // the directory, not just SKILL.md — leaving the directory behind blocks reinstall
+    // while detection reports the skill as absent. Keying on the registry name would
+    // silently no-op when the frontmatter name differs from the install id.
+    if (!isSafeId(item.id)) return { success: false, slug: item.id, error: "Invalid skill id" }
     const base = Paths.skillsDir(scope, svc.directory)
-    const skill = entries.find((entry) => entry.name === item.id && contains(base, entry.location))
-    if (!skill) return { success: true, slug: item.id }
+    const dir = path.join(base, item.id)
+    if (!contains(base, dir)) return { success: false, slug: item.id, error: "Invalid skill id" }
+
+    const present = yield* Effect.promise(() => exists(dir))
+    if (!present) return { success: true, slug: item.id }
+
     return yield* Effect.tryPromise({
-      try: () => KiloSkill.remove(skill.location, entries),
+      try: () => rm(dir, { recursive: true, force: true }),
       catch: (err) => err,
     }).pipe(
       Effect.as({ success: true, slug: item.id }),
-      Effect.catch((err) => Effect.succeed({ success: false, slug: item.id, error: err instanceof Error ? err.message : String(err) })),
+      Effect.catch((err) =>
+        Effect.succeed({ success: false, slug: item.id, error: err instanceof Error ? err.message : String(err) }),
+      ),
     )
   })
 }

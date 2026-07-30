@@ -1,9 +1,12 @@
 import path from "path"
 import { readdir } from "fs/promises"
 import { parse as parseJsonc } from "jsonc-parser"
+import * as Log from "@opencode-ai/core/util/log"
 import type { Skill } from "@/skill"
 import type { MarketplaceInstalledMetadata, Scope } from "./schema"
 import * as Paths from "./paths"
+
+const log = Log.create({ service: "marketplace" })
 
 type Entry = [string, { type: string }]
 
@@ -35,25 +38,34 @@ async function agentFiles(scope: Scope, directory: string): Promise<Entry[]> {
     const files = await readdir(dir)
     return files.filter((file) => file.endsWith(".md")).map((file) => entry(path.basename(file, ".md"), "agent"))
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err
+    // A missing directory is expected. Any other error (EACCES, ENOTDIR, ...) should
+    // degrade this one source to empty rather than fail the whole catalog endpoint.
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") log.warn("agent detection failed", { scope, dir, err })
     return []
   }
 }
 
 async function configEntries(scope: Scope, directory: string, worktree?: string): Promise<Entry[]> {
   const file = await Paths.configPath(scope, directory, worktree)
-  const cfg = Bun.file(file)
-  if (!(await cfg.exists())) return []
+  try {
+    const cfg = Bun.file(file)
+    if (!(await cfg.exists())) return []
 
-  const parsed = parseJsonc(await cfg.text())
-  const out: Entry[] = []
-  if (parsed?.mcp && typeof parsed.mcp === "object") {
-    for (const key of Object.keys(parsed.mcp)) out.push(entry(key, "mcp"))
+    const parsed = parseJsonc(await cfg.text())
+    const out: Entry[] = []
+    if (parsed?.mcp && typeof parsed.mcp === "object") {
+      for (const key of Object.keys(parsed.mcp)) out.push(entry(key, "mcp"))
+    }
+    if (parsed?.agent && typeof parsed.agent === "object") {
+      for (const key of Object.keys(parsed.agent)) out.push(entry(key, "agent"))
+    }
+    return out
+  } catch (err) {
+    // Degrade an unreadable/malformed config to empty so detection still returns
+    // partial installed metadata instead of turning the listing into a 500.
+    log.warn("config detection failed", { scope, file, err })
+    return []
   }
-  if (parsed?.agent && typeof parsed.agent === "object") {
-    for (const key of Object.keys(parsed.agent)) out.push(entry(key, "agent"))
-  }
-  return out
 }
 
 async function detectScope(scope: Scope, input: DetectInput): Promise<Record<string, { type: string }>> {

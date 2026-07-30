@@ -55,13 +55,10 @@ export class MarketplaceService {
       { directory: dir, item, target: options.target, parameters: options.parameters },
       { throwOnError: true },
     )
-    const result = data as InstallResult
-
-    if (result.success) {
-      vscode.window.showInformationMessage(`Successfully installed ${item.name}`)
-    }
-
-    return result
+    // Success notifications are owned by the caller driving the user-facing flow
+    // (the marketplace panel). The all-scopes sidebar cleanup path calls remove()
+    // twice, so notifying here would produce duplicate toasts for one removal.
+    return data as InstallResult
   }
 
   async remove(
@@ -74,13 +71,8 @@ export class MarketplaceService {
       { directory: dir, item: { id: item.id, type: item.type }, scope },
       { throwOnError: true },
     )
-    const result = data as RemoveResult
-
-    if (result.success) {
-      vscode.window.showInformationMessage(`Successfully removed ${item.id}`)
-    }
-
-    return result
+    // Notifications are owned by the caller (see install() above).
+    return data as RemoveResult
   }
 
   dispose(): void {
