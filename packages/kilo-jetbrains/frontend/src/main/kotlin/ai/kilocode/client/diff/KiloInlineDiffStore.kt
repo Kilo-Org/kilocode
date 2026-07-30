@@ -13,4 +13,6 @@ class KiloInlineDiffStore {
     }
 
     fun get(token: String): List<DiffFileDto>? = items[token]
+
+    fun pop(token: String): List<DiffFileDto>? = items.remove(token)
 }

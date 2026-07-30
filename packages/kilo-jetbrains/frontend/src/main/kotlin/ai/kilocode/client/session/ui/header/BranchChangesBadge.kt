@@ -1,0 +1,93 @@
+package ai.kilocode.client.session.ui.header
+
+import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.ui.style.SessionEditorStyle
+import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.rpc.dto.DiffFileDto
+import com.intellij.ui.components.JBLabel
+import com.intellij.util.ui.JBUI
+import java.awt.Cursor
+import java.awt.FlowLayout
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import javax.swing.JPanel
+
+internal class BranchChangesBadge(
+    private val open: () -> Unit,
+) : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
+    private val count = JBLabel()
+    private val stat = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT)
+    private var files = emptyList<DiffFileDto>()
+    private var additions = 0
+    private var deletions = 0
+    private var over = false
+
+    init {
+        isOpaque = false
+        isVisible = false
+        cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
+        toolTipText = KiloBundle.message("diff.editor.branch.tooltip")
+        getAccessibleContext().accessibleName = KiloBundle.message("diff.editor.branch.tooltip")
+        border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
+        add(Stack.horizontal(gap = UiStyle.Gap.sm()).next(count).next(stat))
+        addMouseListener(object : MouseAdapter() {
+            override fun mouseEntered(event: MouseEvent) = hover(true)
+            override fun mouseExited(event: MouseEvent) = hover(false)
+            override fun mouseClicked(event: MouseEvent) = open()
+        })
+    }
+
+    fun applyStyle(style: SessionEditorStyle) {
+        count.font = style.smallFont
+        count.foreground = UiStyle.Colors.weak()
+    }
+
+    fun update(next: List<DiffFileDto>): Boolean {
+        if (files == next) return false
+        files = next
+        additions = files.sumOf { it.additions }
+        deletions = files.sumOf { it.deletions }
+        val text = KiloBundle.message(
+            if (files.size == 1) "session.changes.count.one" else "session.changes.count.other",
+            files.size,
+        )
+        count.text = text
+        stat.update(additions, deletions)
+        isVisible = files.isNotEmpty()
+        revalidate()
+        repaint()
+        return true
+    }
+
+    override fun paintComponent(g: Graphics) {
+        if (over && isEnabled) paintHover(g)
+        super.paintComponent(g)
+    }
+
+    internal fun countText() = count.text
+
+    internal fun stats() = additions to deletions
+
+    private fun hover(value: Boolean) {
+        if (over == value) return
+        over = value
+        repaint()
+    }
+
+    private fun paintHover(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        try {
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g2.color = UiStyle.Colors.actionHoverBackground()
+            val arc = JBUI.scale(JBUI.getInt("Button.arc", 6))
+            g2.fillRoundRect(0, 0, width, height, arc, arc)
+        } finally {
+            g2.dispose()
+        }
+    }
+}

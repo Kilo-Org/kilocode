@@ -89,6 +89,8 @@ import com.intellij.util.concurrency.annotations.RequiresEdt
 import java.util.function.Predicate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.awt.BorderLayout
@@ -207,6 +209,9 @@ class SessionUi(
     }
     private var editorTheme = style.editorScheme
     private var colorTheme = UIManager.getLookAndFeel()
+    private var wasBusy = false
+    private var branchStarted = false
+    private var branchJob: Job? = null
     private var disposed = false
 
     init {
@@ -219,6 +224,7 @@ class SessionUi(
         bindStyle()
         bindMigration()
         onStateChanged(controller.model.state)
+        computeInitialBranchChanges()
         loaded?.let(::finishOpen)
     }
 
@@ -378,21 +384,7 @@ class SessionUi(
             it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
-        header = SessionHeaderPanel(controller, this) {
-            ensureDiffEditorKind()
-            cs.launch {
-                val branch = workspaces.branchName(workspace.directory)
-                val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
-                    ?: KiloBundle.message("diff.editor.branch.title")
-                withContext(Dispatchers.Main) {
-                    project.service<KiloVfsManager>().open(
-                        KiloDiffEditorKind.ID,
-                        diffParams("branch", workspace.directory, null, title, branch),
-                    )
-                    Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
-                }
-            }
-        }
+        header = SessionHeaderPanel(controller, this) { computeBranchChanges(open = true) }
 
         scroll = SessionScroll(root, sessionContent, messageBody, blankBody)
         scroll.onScroll = {
@@ -570,7 +562,8 @@ class SessionUi(
                 is SessionModelEvent.TurnUpdated,
                 is SessionModelEvent.ContentAdded,
                 is SessionModelEvent.ContentDelta,
-                is SessionModelEvent.HistoryLoaded,
+                is SessionModelEvent.HistoryLoaded -> computeInitialBranchChanges()
+
                 is SessionModelEvent.TurnRemoved,
                 is SessionModelEvent.MessageAdded,
                 is SessionModelEvent.MessageUpdated,
@@ -736,6 +729,7 @@ class SessionUi(
 
     @RequiresEdt
     private fun onRevertChanged(revert: SessionRevertDto?) {
+        computeBranchChanges(open = false)
         syncPromptRevert()
         val rollback = pendingRollback
         if (rollback != null) {
@@ -840,6 +834,43 @@ class SessionUi(
         }
     }
 
+    private fun computeBranchChanges(open: Boolean) {
+        val prev = branchJob
+        prev?.cancel()
+        branchJob = cs.launch {
+            if (open) prev?.cancelAndJoin()
+            val dir = workspace.directory
+            val files = workspaces.branchDiff(dir)
+            val branch = if (open) workspaces.branchName(dir) else null
+            withContext(Dispatchers.Main) {
+                if (disposed || project.isDisposed) return@withContext
+                header.setBranchChanges(files)
+                if (open) openBranchDiff(files, branch)
+            }
+        }
+    }
+
+    private fun computeInitialBranchChanges() {
+        if (branchStarted) return
+        branchStarted = true
+        computeBranchChanges(open = false)
+    }
+
+    @RequiresEdt
+    private fun openBranchDiff(files: List<DiffFileDto>, branch: String?) {
+        ensureDiffEditorKind()
+        val dir = workspace.directory
+        val token = "branch:$dir"
+        val title = branch?.let { KiloBundle.message("diff.editor.branch.title.named", it) }
+            ?: KiloBundle.message("diff.editor.branch.title")
+        project.service<KiloInlineDiffStore>().put(token, files)
+        project.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams("branch", dir, null, title, branch, token = token),
+        )
+        Telemetry.send("Diff Editor Opened", mapOf("source" to "branch"))
+    }
+
     private fun openAttachment(messageId: String, item: FileAttachment) {
         val url = item.url.takeIf { it.isNotBlank() } ?: run {
             LOG.info("kind=attachment-open skipped=true reason=blank-url message=$messageId part=${item.id} name=${attachmentName(item)} mime=${item.mime}")
@@ -890,12 +921,15 @@ class SessionUi(
 
     private fun onStateChanged(state: SessionState) {
         if (disposed) return
+        val busy = state.isBusy()
+        if (wasBusy && state is SessionState.Idle) computeBranchChanges(open = false)
+        wasBusy = busy
         if (state is SessionState.Reverting) overlay.clear()
         if (state is SessionState.Error) {
             pendingRollback = null
             pendingRedo = null
         }
-        prompt.setBusy(state.isBusy())
+        prompt.setBusy(busy)
         load.setState(state)
         scroll.setQuestionPending(questionPending(state))
         scroll.show(body(state))
@@ -963,6 +997,7 @@ class SessionUi(
 
     override fun dispose() {
         disposed = true
+        branchJob?.cancel()
         hide.stop()
         popup.hideAll()
         modalFocus = null

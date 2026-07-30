@@ -36,6 +36,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
     var search: ((String) -> FileSearchResultDto)? = null
     var gitChanges: String? = null
     val branchDiffs = mutableListOf<DiffFileDto>()
+    val branchDiffCalls = CopyOnWriteArrayList<String>()
     var branchName: String? = null
     var openResult = true
     var localConfigPath = "/test/.kilo/kilo.jsonc"
@@ -99,6 +100,7 @@ class FakeWorkspaceRpcApi : KiloWorkspaceRpcApi {
 
     override suspend fun branchDiff(directory: String): List<DiffFileDto> {
         assertNotEdt("branchDiff")
+        branchDiffCalls.add(directory)
         return branchDiffs.toList()
     }
 

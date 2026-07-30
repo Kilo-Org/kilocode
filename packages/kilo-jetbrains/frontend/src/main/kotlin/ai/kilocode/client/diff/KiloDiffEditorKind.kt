@@ -143,12 +143,13 @@ internal class KiloDiffEditorService(
 
     private fun alive(disposed: AtomicBoolean): Boolean = !project.isDisposed && !disposed.get()
 
-    private suspend fun fetch(params: Map<String, String>): DiffEditorData {
+    internal suspend fun fetch(params: Map<String, String>): DiffEditorData {
         val dir = params["directory"].takeIfPresent() ?: return DiffEditorData.Empty
         val workspace = service<KiloWorkspaceService>()
+        val store = project.service<KiloInlineDiffStore>()
         val files = when (params["source"]) {
-            "branch" -> workspace.branchDiff(dir)
-            "inline" -> project.service<KiloInlineDiffStore>().get(params["token"].orEmpty()).orEmpty()
+            "branch" -> store.pop(params["token"].orEmpty()).orEmpty().ifEmpty { workspace.branchDiff(dir) }
+            "inline" -> store.get(params["token"].orEmpty()).orEmpty()
             else -> project.service<KiloSessionService>().diff(params["sessionId"].orEmpty(), dir)
         }
         if (files.isEmpty()) return DiffEditorData.Empty
