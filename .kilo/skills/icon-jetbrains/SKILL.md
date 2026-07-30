@@ -18,7 +18,7 @@ Icons follow IntelliJ New UI conventions: a fixed canvas per role, a strict ligh
 4. **No raster, no gradients, no filters, no embedded fonts.** Path geometry only (`<path>`, `<rect>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`). Text must be converted to outlines.
 5. **Use `fill="none"` on the root `<svg>`** and set `fill` / `stroke` explicitly per shape — never rely on CSS or `currentColor`.
 6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`.
-7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering.
+7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering. SVGs are resolution-independent — do not create `@2x` raster variants. Getting the base grid right is what keeps the icon crisp at 1× and at integer HiDPI scales (2×/Retina); fractional scales (125%/150%) are snapped by the IntelliJ renderer, so keep geometry simple and grid-aligned rather than chasing sub-pixel detail.
 8. **File names use kebab-case and stay ASCII-only** (e.g. `arrow-down-to-line.svg`, `book-open-check.svg`, `tool-window-chat.svg`), matching every existing icon in `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
 
 ## Icon roles
