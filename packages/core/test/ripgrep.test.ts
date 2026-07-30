@@ -61,4 +61,18 @@ describe("Ripgrep", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  // kilocode_change start - surfaced error keeps the underlying reason
+  it.live("includes the underlying reason in execution failures", () =>
+    Effect.gen(function* () {
+      const ripgrep = yield* Ripgrep.Service
+      const controller = new AbortController()
+      controller.abort()
+      const error = yield* ripgrep
+        .find({ cwd: process.cwd(), pattern: "*", limit: 1, signal: controller.signal })
+        .pipe(Effect.flip)
+      expect(error.message).toMatch(/^ripgrep execution failed: .+/)
+    }),
+  )
+  // kilocode_change end
 })
