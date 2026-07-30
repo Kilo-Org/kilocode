@@ -3776,10 +3776,11 @@ describe("RemoteSender slash commands", () => {
   })
 
   test("create_session production default forwards agent, model, metadata into Session.Service.create", async () => {
-    // Omits options.session.create so the production default path runs:
-    // AppRuntime.runPromise(Session.Service.use((svc) => svc.create(input))).
-    // Spy both seams: AppRuntime (unit suite has no full runtime) and
-    // Session.Service.use so we observe the exact input the default forwards.
+    // Omits options.session.create so the production default path runs
+    // (global runtime + Session.Service.use → svc.create(input)).
+    // Stub Session.Service.use so create yields a requirement-free Effect;
+    // the real global runtime then executes it without spying the runtime
+    // (that would trip the promise-facades allowlist).
     const { conn, sent } = fakeConn()
     const createCalls: unknown[] = []
     const org = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
@@ -3794,9 +3795,6 @@ describe("RemoteSender slash commands", () => {
       time: { created: 0, updated: 0 },
     } satisfies Session.Info
 
-    const { AppRuntime } = await import("../../../src/effect/app-runtime")
-    const runSpy = spyOn(AppRuntime, "runPromise").mockImplementation(((effect: Effect.Effect<unknown>) =>
-      Effect.runPromise(effect as Effect.Effect<unknown, never>)) as typeof AppRuntime.runPromise)
     const useSpy = spyOn(Session.Service, "use").mockImplementation(((fn: (svc: Session.Interface) => unknown) =>
       fn({
         create: (input?: Parameters<Session.Interface["create"]>[0]) => {
@@ -3855,7 +3853,6 @@ describe("RemoteSender slash commands", () => {
       ])
     } finally {
       useSpy.mockRestore()
-      runSpy.mockRestore()
     }
   })
 
