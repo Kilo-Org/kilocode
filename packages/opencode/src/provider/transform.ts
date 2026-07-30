@@ -7,6 +7,7 @@ import { iife } from "@/util/iife"
 import { kiloProviderOptions } from "@/kilocode/provider-options"
 import { isLing } from "@/kilocode/model-match" // kilocode_change
 import { reasoningSummary } from "@/kilocode/provider/reasoning-summary" // kilocode_change
+import { KiloToolInput } from "@/kilocode/provider/tool-input" // kilocode_change
 
 type Modality = NonNullable<ModelsDev.Model["modalities"]>["input"][number]
 
@@ -72,6 +73,8 @@ function normalizeMessages(
   model: Provider.Model,
   _options: Record<string, unknown>,
 ): ModelMessage[] {
+  msgs = KiloToolInput.normalizeMessages(msgs) // kilocode_change - recover malformed tool-call history with missing input
+
   const sanitizeToolResultOutput = (content: ToolResultPart) => {
     if (content.output.type === "text" || content.output.type === "error-text") {
       content.output.value = sanitizeSurrogates(content.output.value)
