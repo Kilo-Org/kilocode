@@ -9,7 +9,7 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.JBUI
 import java.awt.Cursor
-import java.awt.FlowLayout
+import java.awt.Dimension
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -19,9 +19,10 @@ import javax.swing.JPanel
 
 internal class BranchChangesBadge(
     private val open: () -> Unit,
-) : JPanel(FlowLayout(FlowLayout.LEFT, 0, 0)) {
+) : JPanel(null) {
     private val count = JBLabel()
     private val stat = DiffStatBadge(0, 0, DiffStatBadge.Variant.COMPACT)
+    private val row = Stack.horizontal(gap = UiStyle.Gap.sm()).next(count).next(stat)
     private var files = emptyList<DiffFileDto>()
     private var additions = 0
     private var deletions = 0
@@ -34,7 +35,7 @@ internal class BranchChangesBadge(
         toolTipText = KiloBundle.message("diff.editor.branch.tooltip")
         getAccessibleContext().accessibleName = KiloBundle.message("diff.editor.branch.tooltip")
         border = JBUI.Borders.empty(0, UiStyle.Gap.sm())
-        add(Stack.horizontal(gap = UiStyle.Gap.sm()).next(count).next(stat))
+        add(row)
         addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(event: MouseEvent) = hover(true)
             override fun mouseExited(event: MouseEvent) = hover(false)
@@ -45,6 +46,26 @@ internal class BranchChangesBadge(
     fun applyStyle(style: SessionEditorStyle) {
         count.font = style.smallFont
         count.foreground = UiStyle.Colors.weak()
+    }
+
+    override fun getPreferredSize(): Dimension {
+        val ins = insets
+        val size = row.preferredSize
+        return Dimension(size.width + ins.left + ins.right, JBUI.scale(24))
+    }
+
+    override fun getMinimumSize(): Dimension = preferredSize
+
+    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
+
+    override fun doLayout() {
+        val ins = insets
+        val w = maxOf(0, width - ins.left - ins.right)
+        val h = maxOf(0, height - ins.top - ins.bottom)
+        val size = row.preferredSize
+        val rowW = minOf(size.width, w)
+        val rowH = minOf(size.height, h)
+        row.setBounds(ins.left, ins.top + (h - rowH) / 2, rowW, rowH)
     }
 
     fun update(next: List<DiffFileDto>): Boolean {
