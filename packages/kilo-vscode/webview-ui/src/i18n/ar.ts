@@ -309,7 +309,6 @@ export const dict = {
 
   "session.tab.review": "مراجعة",
   "session.review.filesChanged": "تم تغيير {{count}} ملفات",
-  "session.review.change.other": "تغييرات",
   "session.review.loadingChanges": "جارٍ تحميل التغييرات...",
   "session.review.noChanges": "لا توجد تغييرات",
   "session.messages.loadingEarlier": "جارٍ تحميل الرسائل السابقة...",
@@ -725,6 +724,9 @@ export const dict = {
   "session.prompts.tick": "المطالبة {{index}} من {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "لا توجد استجابة بعد",
   "session.prompts.queued": "في قائمة الانتظار",
+  "session.prompts.first": "أول مطالبة",
+  "session.prompts.latest": "أحدث مطالبة",
+  "session.prompts.overflow": "{{count}} مطالبات سابقة",
   "session.status.writingResponse": "...جارٍ كتابة الرد",
   "session.status.retry": "جارٍ إعادة المحاولة…",
   "session.status.working": "...جارٍ العمل",

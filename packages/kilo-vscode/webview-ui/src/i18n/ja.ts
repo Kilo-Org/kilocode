@@ -316,7 +316,6 @@ export const dict = {
 
   "session.tab.review": "レビュー",
   "session.review.filesChanged": "{{count}} ファイル変更",
-  "session.review.change.other": "変更",
   "session.review.loadingChanges": "変更を読み込み中...",
   "session.review.noChanges": "変更なし",
   "session.messages.loadingEarlier": "以前のメッセージを読み込み中...",
@@ -735,6 +734,9 @@ export const dict = {
   "session.prompts.tick": "プロンプト {{index}}/{{total}}: {{prompt}}",
   "session.prompts.noAnswer": "まだ応答がありません",
   "session.prompts.queued": "キューに追加済み",
+  "session.prompts.first": "最初のプロンプト",
+  "session.prompts.latest": "最新のプロンプト",
+  "session.prompts.overflow": "{{count}} 件前のプロンプト",
   "session.status.writingResponse": "応答を作成中…",
   "session.status.retry": "再試行中…",
   "session.status.working": "作業中…",

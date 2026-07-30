@@ -2,7 +2,13 @@ import { describe, expect, it } from "bun:test"
 import { messageTurns } from "../../webview-ui/src/context/session-queue"
 import { transcriptRows } from "../../webview-ui/src/context/transcript-rows"
 import type { Message, Part, TextPart } from "../../webview-ui/src/types/messages"
-import { capacity, previewText, promptItems, railItems } from "../../webview-ui/src/components/chat/prompt-rail"
+import {
+  capacity,
+  historyAction,
+  previewText,
+  promptItems,
+  railEntries,
+} from "../../webview-ui/src/components/chat/prompt-rail"
 
 const base = {
   sessionID: "session",
@@ -157,18 +163,38 @@ describe("promptItems", () => {
 })
 
 describe("capacity", () => {
-  it("counts how many worst-case rows fit the transcript height", () => {
-    expect(capacity(24 + 76 * 5)).toBe(5)
-    expect(capacity(100)).toBe(1)
+  it("counts how many ticks fit the transcript height", () => {
+    expect(capacity(24 + 7 * 5)).toBe(5)
+    expect(capacity(31)).toBe(1)
+  })
+
+  it("fits far more ticks than the navigator lists rows", () => {
+    // A tick is a hairline, so a sidebar-height transcript holds a whole
+    // session's prompts rather than the handful of card rows that fit.
+    expect(capacity(724)).toBe(100)
   })
 
   it("returns nothing usable for unmeasured or tiny transcripts", () => {
     expect(capacity(0)).toBeLessThan(1)
-    expect(capacity(99)).toBeLessThan(1)
+    expect(capacity(30)).toBeLessThan(1)
   })
 })
 
-describe("railItems", () => {
+describe("historyAction", () => {
+  it("loads the next page only after the previous page made progress", () => {
+    expect(historyAction(80, 160, true)).toBe("load")
+  })
+
+  it("jumps after the final page", () => {
+    expect(historyAction(160, 200, false)).toBe("jump")
+  })
+
+  it("stops instead of retrying a page that made no progress", () => {
+    expect(historyAction(160, 160, true)).toBe("stop")
+  })
+})
+
+describe("railEntries", () => {
   const items = Array.from({ length: 5 }, (_, i) => ({
     key: `k${i}`,
     turn: `t${i}`,
@@ -178,15 +204,36 @@ describe("railItems", () => {
   }))
 
   it("passes through when everything fits", () => {
-    expect(railItems(items, 5)).toEqual(items)
-    expect(railItems(items, 10)).toEqual(items)
+    expect(railEntries(items, 5)).toEqual(items.map((item, index) => ({ type: "prompt", item, index })))
+    expect(railEntries(items, 10)).toEqual(items.map((item, index) => ({ type: "prompt", item, index })))
   })
 
-  it("keeps the newest items when capacity is smaller", () => {
-    expect(railItems(items, 2)).toEqual(items.slice(-2))
+  it("keeps the first and latest prompts at minimal capacity", () => {
+    expect(railEntries(items, 2)).toEqual([
+      { type: "prompt", item: items[0], index: 0 },
+      { type: "prompt", item: items[4], index: 4 },
+    ])
+  })
+
+  it("summarizes hidden loaded prompts between the first and recent prompts", () => {
+    expect(railEntries(items, 4)).toEqual([
+      { type: "prompt", item: items[0], index: 0 },
+      { type: "overflow", count: 2, index: 1 },
+      { type: "prompt", item: items[3], index: 3 },
+      { type: "prompt", item: items[4], index: 4 },
+    ])
+  })
+
+  it("reserves the first entry for unloaded history", () => {
+    expect(railEntries(items, 4, true)).toEqual([
+      { type: "history" },
+      { type: "overflow", count: 3, index: 0 },
+      { type: "prompt", item: items[3], index: 3 },
+      { type: "prompt", item: items[4], index: 4 },
+    ])
   })
 
   it("returns nothing at zero capacity", () => {
-    expect(railItems(items, 0)).toEqual([])
+    expect(railEntries(items, 0)).toEqual([])
   })
 })

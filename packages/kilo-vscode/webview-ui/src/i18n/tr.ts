@@ -315,7 +315,6 @@ export const dict = {
 
   "session.tab.review": "İnceleme",
   "session.review.filesChanged": "{{count}} Dosya Değişti",
-  "session.review.change.other": "Değişiklik",
   "session.review.loadingChanges": "Değişiklikler yükleniyor...",
   "session.review.noChanges": "Değişiklik yok",
 
@@ -724,6 +723,9 @@ export const dict = {
   "session.prompts.tick": "Komut {{index}} / {{total}}: {{prompt}}",
   "session.prompts.noAnswer": "Henüz yanıt yok",
   "session.prompts.queued": "Sırada",
+  "session.prompts.first": "İlk istem",
+  "session.prompts.latest": "En son istem",
+  "session.prompts.overflow": "{{count}} önceki istem",
   "session.status.writingResponse": "Yanıt yazılıyor...",
   "session.status.retry": "Yeniden deneniyor…",
   "session.status.working": "Çalışıyor...",
