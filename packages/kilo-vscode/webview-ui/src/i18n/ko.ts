@@ -564,7 +564,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "프로젝트 디렉터리 외부의 파일에 액세스",
   "settings.permissions.tool.doom_loop.title": "무한 반복",
   "settings.permissions.tool.doom_loop.description": "동일한 입력으로 반복되는 도구 호출 감지",
-
   "session.delete.title": "세션 삭제",
   "session.delete.confirm": '"{{name}}" 세션을 삭제하시겠습니까?',
   "session.delete.button": "세션 삭제",

@@ -557,7 +557,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Proje dizini dışındaki dosyalara eriş",
   "settings.permissions.tool.doom_loop.title": "Sonsuz Döngü",
   "settings.permissions.tool.doom_loop.description": "Aynı girdiyle tekrarlanan araç çağrılarını algıla",
-
   "session.delete.title": "Oturumu sil",
   "session.delete.confirm": '"{{name}}" oturumu silinsin mi?',
   "session.delete.button": "Oturumu sil",

@@ -607,7 +607,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Доступ к файлам вне директории проекта",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Обнаружение повторных вызовов инструментов с одинаковым вводом",
-
   "session.delete.title": "Удалить сессию",
   "session.delete.confirm": 'Удалить сессию "{{name}}"?',
   "session.delete.button": "Удалить сессию",

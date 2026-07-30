@@ -4,6 +4,7 @@ import { Icon } from "@kilocode/kilo-ui/icon"
 import type { PermissionRequest } from "../../types/messages"
 import { isEnterKeyCommitNotIme } from "../../utils/ime-enter"
 import { MODE_SWITCH_TRANSITION_ICON, type ModeSwitchDetails } from "./mode-switch-ui"
+import { dict as enDict } from "../../i18n/en"
 
 const focusPrompt = () => requestAnimationFrame(() => window.dispatchEvent(new Event("focusPrompt")))
 
@@ -83,6 +84,12 @@ export const ModeSwitchPermissionCard: Component<{
       </div>
       <Transition details={props.details} />
       <p data-slot="mode-switch-reassurance">Your task, files, and conversation continue unchanged.</p>
+      <span class="sr-only" data-slot="mode-switch-aria-prompt">
+        {enDict["ui.permission.modeSwitch.prompt"]
+          .replace("{{source}}", props.details.source)
+          .replace("{{target}}", props.details.target)
+          .replace("{{reason}}", props.details.reason)}
+      </span>
       <div data-slot="mode-switch-actions">
         <Button variant="primary" size="small" disabled={pending()} onClick={() => decide("switch")}>
           <Show when={pending() && choice() !== "stay"} fallback={`Switch to ${props.details.target}`}>

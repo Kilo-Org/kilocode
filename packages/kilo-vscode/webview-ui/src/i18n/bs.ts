@@ -612,7 +612,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Pristup datotekama izvan direktorija projekta",
   "settings.permissions.tool.doom_loop.title": "Beskonačna petlja",
   "settings.permissions.tool.doom_loop.description": "Otkriva ponovljene pozive alata sa identičnim unosom",
-
   "session.delete.title": "Izbriši sesiju",
   "session.delete.confirm": 'Izbriši sesiju "{{name}}"?',
   "session.delete.button": "Izbriši sesiju",

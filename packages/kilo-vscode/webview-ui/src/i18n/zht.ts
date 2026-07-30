@@ -546,7 +546,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "存取專案目錄之外的檔案",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "偵測具有相同輸入的重複工具呼叫",
-
   "session.delete.title": "刪除工作階段",
   "session.delete.confirm": '刪除工作階段 "{{name}}"?',
   "session.delete.button": "刪除工作階段",

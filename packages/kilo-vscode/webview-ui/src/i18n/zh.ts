@@ -586,7 +586,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "访问项目目录之外的文件",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "检测具有相同输入的重复工具调用",
-
   "session.delete.title": "删除会话",
   "session.delete.confirm": '删除会话 "{{name}}"？',
   "session.delete.button": "删除会话",

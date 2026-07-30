@@ -602,7 +602,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "เข้าถึงไฟล์นอกไดเรกทอรีโปรเจกต์",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "ตรวจจับการเรียกเครื่องมือซ้ำด้วยข้อมูลนำเข้าเหมือนกัน",
-
   "session.delete.title": "ลบเซสชัน",
   "session.delete.confirm": 'ลบเซสชัน "{{name}}" หรือไม่?',
   "session.delete.button": "ลบเซสชัน",

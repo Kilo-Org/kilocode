@@ -572,7 +572,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Få tilgang til filer utenfor prosjektmappen",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Oppdager gjentatte verktøykall med identisk input",
-
   "session.delete.title": "Slett sesjon",
   "session.delete.confirm": 'Slette sesjonen "{{name}}"?',
   "session.delete.button": "Slett sesjon",

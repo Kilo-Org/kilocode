@@ -621,7 +621,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Zugriff auf Dateien außerhalb des Projektverzeichnisses",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Wiederholte Tool-Aufrufe mit identischer Eingabe erkennen",
-
   "session.delete.title": "Sitzung löschen",
   "session.delete.confirm": 'Sitzung "{{name}}" löschen?',
   "session.delete.button": "Sitzung löschen",

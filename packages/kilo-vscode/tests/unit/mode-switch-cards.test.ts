@@ -22,6 +22,17 @@ describe("mode switch cards", () => {
         ctx.onResolve({ filter: /^solid-js(\/web|\/store)?$/ }, (args) => ({ path: aliases[args.path] }))
       },
     }
+    // Stub out web-worker imports (e.g. markdown-shiki.worker) so esbuild's
+    // node-platform bundle doesn't try to resolve ?worker&url queries that
+    // only work in browser builds.
+    const stubWorkers = {
+      name: "stub-workers",
+      setup(ctx: Parameters<NonNullable<Parameters<typeof build>[0]["plugins"]>[number]["setup"]>[0]) {
+        ctx.onResolve({ filter: /\?worker&url$/ }, () => ({
+          path: path.join(ROOT, "tests/fixtures/empty-stub.ts"),
+        }))
+      },
+    }
     const result = await build({
       entryPoints: [FIXTURE],
       bundle: true,
@@ -31,7 +42,7 @@ describe("mode switch cards", () => {
       loader: { ".svg": "dataurl" },
       logLevel: "silent",
       platform: "node",
-      plugins: [dedupe, solidPlugin()],
+      plugins: [dedupe, stubWorkers, solidPlugin()],
       target: "es2022",
       write: false,
     })

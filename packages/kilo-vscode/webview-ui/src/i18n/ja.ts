@@ -603,7 +603,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "プロジェクトディレクトリ外のファイルへのアクセス",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "同一入力による繰り返しのツール呼び出しを検出",
-
   "session.delete.title": "セッションの削除",
   "session.delete.confirm": 'セッション "{{name}}" を削除しますか？',
   "session.delete.button": "セッションを削除",

@@ -562,7 +562,6 @@ export const dict = {
   "settings.permissions.tool.doom_loop.title": "Нескінченний цикл",
   "settings.permissions.tool.doom_loop.description":
     "Виявляти повторювані виклики інструментів з однаковими вхідними даними",
-
   "session.delete.title": "Видалити сесію",
   "session.delete.confirm": 'Видалити сесію "{{name}}"?',
   "session.delete.button": "Видалити сесію",

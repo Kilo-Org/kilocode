@@ -563,7 +563,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "Krijg toegang tot bestanden buiten de projectmap",
   "settings.permissions.tool.doom_loop.title": "Doom Loop",
   "settings.permissions.tool.doom_loop.description": "Detecteer herhaalde tool calls met identieke invoer",
-
   "session.delete.title": "Verwijder sessie",
   "session.delete.confirm": 'Sessie "{{name}}" verwijderen?',
   "session.delete.button": "Verwijder sessie",

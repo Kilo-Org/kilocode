@@ -556,7 +556,6 @@ export const dict = {
   "settings.permissions.tool.external_directory.description": "الوصول إلى الملفات خارج دليل المشروع",
   "settings.permissions.tool.doom_loop.title": "حلقة الموت",
   "settings.permissions.tool.doom_loop.description": "اكتشاف استدعاءات الأدوات المتكررة بمدخلات متطابقة",
-
   "session.delete.title": "حذف الجلسة",
   "session.delete.confirm": 'حذف الجلسة "{{name}}"؟',
   "session.delete.button": "حذف الجلسة",
