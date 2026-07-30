@@ -210,13 +210,19 @@ export const layer = Layer.effect(
       if (snapshot) return snapshot
       if (Flag.KILO_DISABLE_MODELS_FETCH) return {}
       // Flock is cross-process: concurrent opencode CLIs can race on this cache file.
-      const text = yield* Effect.scoped(
+      return yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Flock.effect(lockKey)
-          return yield* fetchAndWrite()
+          // kilocode_change start - re-read under the lock: a concurrent refresh
+          // may already have recovered the corrupted cache while we waited, and
+          // fetching again here would duplicate the network call.
+          const rechecked = yield* loadFromDisk
+          if (rechecked) return rechecked
+          // kilocode_change end
+          const text = yield* fetchAndWrite()
+          return JSON.parse(text) as Record<string, Provider>
         }),
       )
-      return JSON.parse(text) as Record<string, Provider>
     }).pipe(Effect.withSpan("ModelsDev.populate"), Effect.orDie)
 
     const [cachedGet, invalidate] = yield* Effect.cachedInvalidateWithTTL(populate, Duration.infinity)

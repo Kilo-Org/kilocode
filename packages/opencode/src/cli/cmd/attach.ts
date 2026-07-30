@@ -1,10 +1,12 @@
 import { cmd } from "./cmd"
 import { UI } from "@/cli/ui"
-import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
-import { importCloudSession, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
 import { errorMessage } from "@opencode-ai/tui/util/error"
 import { validateSession } from "../tui/validate-session"
 import { ServerAuth } from "@/server/auth"
+// kilocode_change start - Kilo implementations (sdk client, cloud-session) are
+// dynamically imported inside the handler so other CLI commands don't pay their
+// module cost at startup.
+// kilocode_change end
 
 export const AttachCommand = cmd({
   command: "attach <url>",
@@ -57,6 +59,7 @@ export const AttachCommand = cmd({
     }
 
     // kilocode_change start
+    const { importCloudSession, validateCloudFork } = await import("@/kilocode/cloud-session")
     const cloudForkError = validateCloudFork(args)
     if (cloudForkError) {
       UI.error(cloudForkError)
@@ -79,6 +82,7 @@ export const AttachCommand = cmd({
     // kilocode_change start - import cloud session before TUI renders
     if (args.cloudFork && args.session) {
       UI.println("Importing session from cloud...")
+      const { createKiloClient } = await import("@kilocode/sdk/v2")
       const sdk = createKiloClient({
         baseUrl: args.url,
         directory,

@@ -77,9 +77,11 @@ export function createPermissionBodyState(requestID: string): PermissionBodyStat
   }
 }
 
-export function permissionOptions(stage: PermissionStage): PermissionOption[] {
+export function permissionOptions(stage: PermissionStage, skillShell?: boolean): PermissionOption[] { // kilocode_change - skillShell param
   if (stage === "permission") {
-    return ["once", "always", "reject"]
+    // kilocode_change start - skill-shell batches are never persisted, so no "Allow always"
+    return skillShell ? ["once", "reject"] : ["once", "always", "reject"]
+    // kilocode_change end
   }
 
   if (stage === "always") {
@@ -146,12 +148,13 @@ export function permissionReply(requestID: string, reply: PermissionReply["reply
   return {
     requestID,
     reply,
+    interactive: true, // kilocode_change - footer replies are human-driven; the server refuses non-interactive skill-shell approvals
     ...(message && message.trim() ? { message: message.trim() } : {}),
   }
 }
 
-export function permissionShift(state: PermissionBodyState, dir: -1 | 1): PermissionBodyState {
-  const list = permissionOptions(state.stage)
+export function permissionShift(state: PermissionBodyState, dir: -1 | 1, skillShell?: boolean): PermissionBodyState { // kilocode_change - skillShell param
+  const list = permissionOptions(state.stage, skillShell) // kilocode_change - skillShell-aware options
   if (list.length === 0) {
     return state
   }

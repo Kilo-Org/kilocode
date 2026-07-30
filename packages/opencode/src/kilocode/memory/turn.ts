@@ -78,7 +78,9 @@ export namespace MemoryLifecycle {
           if (!enabled) return
           yield* MemoryTurn.close({
             sessionID: evt.properties.sessionID,
-            reason: evt.properties.reason,
+            // A superseded turn handed off to a queued follow-up after draining
+            // its step; for digest purposes it was cut short like an interrupt.
+            reason: evt.properties.reason === "superseded" ? "interrupted" : evt.properties.reason,
             sessions: input.sessions,
             summary: input.summary,
             provider: input.provider,

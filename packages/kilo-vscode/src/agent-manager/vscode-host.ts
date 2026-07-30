@@ -6,7 +6,9 @@
  */
 
 import * as vscode from "vscode"
-import type { Host, PanelContext, OutputHandle, SessionProvider } from "./host"
+import type { Session } from "@kilocode/sdk/v2/client"
+import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
+import { ProjectRouteService } from "./project/route"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"
@@ -20,6 +22,12 @@ import type { RemoteStatusService } from "../services/RemoteStatusService"
 export class VscodeHost implements Host {
   private diffVirtual: DiffVirtualProvider | undefined
   private autoApprove: AutoApproveController | undefined
+  /**
+   * Shared project route registry for every Agent Manager panel opened by
+   * this host. One service keeps raw session id ambiguity consistent across
+   * panels, so two panels never disagree about whether an id is ambiguous.
+   */
+  private readonly routes = new ProjectRouteService()
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -59,6 +67,8 @@ export class VscodeHost implements Host {
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
       worktreeDirectories?: () => string[]
+      workspaceRoot?: () => string | undefined
+      projectId?: () => string | undefined
     },
   ): PanelContext {
     return this.wirePanel(panel, opts)
@@ -69,6 +79,8 @@ export class VscodeHost implements Host {
     opts: {
       onBeforeMessage: (msg: Record<string, unknown>) => Promise<Record<string, unknown> | null>
       worktreeDirectories?: () => string[]
+      workspaceRoot?: () => string | undefined
+      projectId?: () => string | undefined
     },
   ): PanelContext {
     panel.webview.options = {
@@ -96,7 +108,13 @@ export class VscodeHost implements Host {
       snapshotInitialization: SNAPSHOT_INITIALIZATION,
       slimEditMetadata: true,
       worktreeDirectories: () => opts.worktreeDirectories?.() ?? [],
+      rootDirectory: opts.workspaceRoot,
       disableViewedRegistration: true,
+      routeService: this.routes,
+      projectQualifier: () => {
+        const projectId = opts.projectId?.()
+        return projectId ? { projectId } : undefined
+      },
     })
     if (this.diffVirtual) {
       provider.setDiffVirtualProvider(this.diffVirtual)
@@ -116,6 +134,7 @@ export class VscodeHost implements Host {
       clearSessionDirectory: (id) => provider.clearSessionDirectory(id),
       getSessionDirectories: () => provider.getSessionDirectories(),
       getSessionInfo: (id) => provider.getSessionInfo(id),
+      listSessions: (dir) => this.listProjectSessions(dir),
       trackSession: (id) => provider.trackSession(id),
       refreshSessions: () => provider.refreshSessions(),
       registerSession: (s) => provider.registerSession(s),
@@ -125,6 +144,13 @@ export class VscodeHost implements Host {
       abortSessions: (ids) => provider.abortSessions(ids),
       showMemory: (id) => provider.showMemory(id),
       toggleMemory: (id) => provider.toggleMemory(id),
+      registerProjectRoute: (ref, root, generation) => provider.registerProjectRoute(ref, root, generation),
+      unregisterProjectRoute: (projectId) => provider.unregisterProjectRoute(projectId),
+      registerWorktreeRoute: (ref, directory, generation) => provider.registerWorktreeRoute(ref, directory, generation),
+      registerSessionRoute: (ref, directory, generation) => provider.registerSessionRoute(ref, directory, generation),
+      unregisterSessionRoute: (ref) => provider.unregisterSessionRoute(ref),
+      isSessionRouteAmbiguous: (sessionId) => provider.isSessionRouteAmbiguous(sessionId),
+      routeSessionDirectoryFor: (ref) => provider.routeSessionDirectoryFor(ref),
       dispose: () => provider.dispose(),
     }
 
@@ -169,8 +195,68 @@ export class VscodeHost implements Host {
     }
   }
 
+  /**
+   * List root sessions for one project directory via the shared CLI backend.
+   * Used by per-project session discovery so multi-project Agent Manager lists
+   * real Local/history sessions by their exact directory instead of only the
+   * persisted managed records. Returns [] when the backend is not connected or
+   * the listing fails, so one directory's failure cannot erase another's
+   * results.
+   */
+  private async listProjectSessions(dir: string): Promise<Session[]> {
+    try {
+      const client = await this.connectionService.getClientAsync(dir)
+      const res = await client.session.list({ directory: dir, roots: true }, { throwOnError: true })
+      return res.data
+    } catch (err) {
+      console.warn(`[Kilo New] Agent Manager: failed to list project sessions for ${dir}:`, err)
+      return []
+    }
+  }
+
   workspacePath(): string | undefined {
     return getWorkspaceRoot()
+  }
+
+  async pickFolder(): Promise<string | undefined> {
+    const uris = await vscode.window.showOpenDialog({
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: "Add Project",
+      title: "Add Project to Agent Manager",
+    })
+    return uris?.[0]?.fsPath
+  }
+
+  multiProject(): boolean {
+    return vscode.workspace.getConfiguration("kilo-code.new.experimental").get("multiProject", false)
+  }
+
+  readProjects(): unknown {
+    return this.context.globalState.get("agentManager.projects")
+  }
+
+  async writeProjects(value: unknown): Promise<void> {
+    await this.context.globalState.update("agentManager.projects", value)
+  }
+
+  unregisterProjectRoutes(projectId: string): void {
+    this.routes.unregisterProject(projectId)
+  }
+
+  onDidChangeWorkspaceFolders(cb: () => void): Disposable {
+    return vscode.workspace.onDidChangeWorkspaceFolders(() => cb())
+  }
+
+  onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable {
+    return vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("kilo-code.new.experimental.multiProject")) cb(this.multiProject())
+    })
+  }
+
+  isTrusted(): boolean {
+    return vscode.workspace.isTrusted
   }
 
   autoBranchNaming(): { enabled: boolean; prefix: string } {

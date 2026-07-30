@@ -725,7 +725,10 @@ class SessionController(
         LOG.debug { "${ChatLogSummary.sid(sid ?: ref?.key ?: "pending")} kind=permission-auto rid=$id" }
         cs.launch {
             try {
-                if (!autoApprove) {
+                // Skill-shell batches must be answered by a human: the server refuses
+                // non-interactive approvals, so auto-approve must show the card (whose
+                // manual reply sets interactive=true) rather than send a machine reply.
+                if (!autoApprove || restore().meta.raw["skillShell"] == "true") {
                     edt {
                         if (disposed) return@edt
                         model.setState(SessionState.AwaitingPermission(restore()))
@@ -762,9 +765,16 @@ class SessionController(
             try {
                 val permissions = sessions.pendingPermissions(directory).filter { it.sessionID in ids && it.id !in skip }
                 val count = replyAll(permissions)
-                if (count == 0) return@launch
+                // Skill-shell requests are skipped by replyAll; surface one as a card so it
+                // isn't stranded (never machine-approved, never shown).
+                val card = skillShellCard(permissions)?.let { toPermission(it) }
+                if (count == 0 && card == null) return@launch
                 runEdt {
                     if (disposed) return@runEdt
+                    if (card != null) {
+                        updateModel { model.setState(SessionState.AwaitingPermission(card)) }
+                        return@runEdt
+                    }
                     val current = model.state
                     if (current is SessionState.AwaitingPermission && current.permission.sessionId in ids) {
                         model.setState(SessionState.Busy(KiloBundle.message("session.status.considering")))
@@ -780,12 +790,19 @@ class SessionController(
         var count = 0
         for (request in permissions) {
             if (!autoApprove) return count
+            // Skill-shell batches need a human; skip them here (callers surface the card).
+            if (request.metadata["skillShell"] == "true") continue
             sessions.replyPermission(request.id, directory, PermissionReplyDto("once"))
             capture("Permission Auto Approved", sessionProps(request.sessionID) + mapOf("tool" to request.permission, "source" to "drain"))
             count++
         }
         return count
     }
+
+    // A skill-shell request is never machine-approved (the server refuses non-interactive
+    // approvals); after draining, callers must surface one as a card so a human can answer.
+    private fun skillShellCard(permissions: List<PermissionRequestDto>): PermissionRequestDto? =
+        permissions.lastOrNull { it.metadata["skillShell"] == "true" }
 
     private fun updatePermission(id: String, state: PermissionRequestState, message: String? = null) {
         assertEdt()
@@ -1169,11 +1186,16 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == child }
             if (permissions.isEmpty()) return
             LOG.debug { "${ChatLogSummary.sid(sid ?: "pending")} kind=child-recovery child=$child permissions=${permissions.size}" }
-            if (autoApprove) {
+            // Under auto-approve, replyAll approves the ordinary permissions and skips skill-shell
+            // ones (they need a human); queue only those. Otherwise queue every pending permission.
+            val queue = if (autoApprove) {
                 replyAll(permissions)
-                return
+                permissions.filter { it.metadata["skillShell"] == "true" }
+            } else {
+                permissions
             }
-            val items = permissions.map(::toPermission)
+            if (queue.isEmpty()) return
+            val items = queue.map(::toPermission)
             runEdt {
                 if (disposed) return@runEdt
                 if (child !in childIds) return@runEdt
@@ -1215,9 +1237,12 @@ class SessionController(
             val permissions = sessions.pendingPermissions(directory).filter { it.sessionID == id }
             val questions = sessions.pendingQuestions(directory).filter { it.sessionID == id }
             val status = sessions.statuses.value[id]
+            // replyAll auto-approves the ordinary permissions and skips skill-shell ones. A
+            // skill-shell request must then fall through to a human card rather than go Busy.
+            val skillCard = skillShellCard(permissions)
             if (permissions.isNotEmpty() && autoApprove) {
                 val count = replyAll(permissions)
-                if (count > 0) {
+                if (count > 0 && skillCard == null) {
                     runEdt {
                         if (disposed) return@runEdt
                         if (sid != id) return@runEdt
@@ -1226,6 +1251,9 @@ class SessionController(
                     return
                 }
             }
+            // After auto-approve only skill-shell permissions still need a human card; queue those.
+            // Otherwise queue the whole pending set so each request is resolved in turn.
+            val queue = if (autoApprove) permissions.filter { it.metadata["skillShell"] == "true" } else permissions
             val branch = when {
                 permissions.isNotEmpty() -> "permission"
                 questions.isNotEmpty() -> "question"
@@ -1240,8 +1268,8 @@ class SessionController(
                 if (sid != id) return@runEdt
                 updateModel {
                     pending.entries.removeIf { it.value.sessionId == id }
-                    if (permissions.isNotEmpty()) {
-                        permissions.map(::toPermission).forEach(::enqueue)
+                    if (queue.isNotEmpty()) {
+                        queue.map(::toPermission).forEach(::enqueue)
                         promote()
                     } else if (questions.isNotEmpty()) {
                         model.setState(SessionState.AwaitingQuestion(toQuestion(questions.last())))

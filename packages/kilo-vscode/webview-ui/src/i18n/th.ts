@@ -301,7 +301,6 @@ export const dict = {
 
   "session.tab.review": "ตรวจสอบ",
   "session.review.filesChanged": "{{count}} ไฟล์ที่เปลี่ยนแปลง",
-  "session.review.change.other": "การเปลี่ยนแปลง",
   "session.review.loadingChanges": "กำลังโหลดการเปลี่ยนแปลง...",
   "session.review.noChanges": "ไม่มีการเปลี่ยนแปลง",
 
@@ -695,7 +694,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "พฤติกรรมของเอเจนต์",
   "settings.autoApprove.title": "อนุมัติอัตโนมัติ",
-  "settings.browser.title": "เบราว์เซอร์",
+  "settings.webTools.title": "เครื่องมือเว็บ",
+  "settings.webTools.description": "กำหนดค่าการค้นหาเว็บและระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.webSearch.enable": "เปิดใช้สำหรับผู้ให้บริการทั้งหมด",
+  "settings.webTools.browserAutomation": "ระบบอัตโนมัติของเบราว์เซอร์",
+  "settings.webTools.webSearch.title": "ค้นหาเว็บ",
+  "settings.webTools.webSearch.description": "ทำให้โมเดลจากผู้ให้บริการทั้งหมดใช้การค้นหาเว็บได้",
   "settings.checkpoints.title": "จุดตรวจสอบ",
   "settings.display.title": "การแสดงผล",
   "settings.autocomplete.title": "เติมข้อความอัตโนมัติ",
@@ -712,6 +716,13 @@ export const dict = {
   "session.messages.scrollToBottom": "เลื่อนไปด้านล่าง",
   "session.messages.initializing": "กำลังเริ่มต้น...",
   "session.messages.taskStarting": "กำลังเริ่มทำงาน...",
+  "session.prompts.navLabel": "ตัวนำทางพรอมต์",
+  "session.prompts.tick": "พรอมต์ {{index}} จาก {{total}}: {{prompt}}",
+  "session.prompts.noAnswer": "ยังไม่มีการตอบกลับ",
+  "session.prompts.queued": "อยู่ในคิว",
+  "session.prompts.first": "พรอมต์แรก",
+  "session.prompts.latest": "พรอมต์ล่าสุด",
+  "session.prompts.overflow": "พรอมต์ก่อนหน้า {{count}} รายการ",
   "session.status.writingResponse": "กำลังเขียนคำตอบ...",
   "session.status.retry": "กำลังลองใหม่…",
   "session.status.working": "กำลังทำงาน...",
@@ -739,7 +750,7 @@ export const dict = {
 
   "prompt.placeholder.connecting": "กำลังเชื่อมต่อกับเซิร์ฟเวอร์...",
   "prompt.placeholder.error": "การเชื่อมต่อล้มเหลว ตรวจสอบแผงเอาต์พุตหรือรีสตาร์ทส่วนขยาย",
-  "prompt.placeholder.default": "พิมพ์ข้อความ... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
+  "prompt.placeholder.default": "พิมพ์ข้อความ, @ เพื่ออ้างถึงไฟล์... (Enter เพื่อส่ง, Shift+Enter เพื่อขึ้นบรรทัดใหม่)",
 
   "context.usage.sessionCost": "ค่าใช้จ่ายเซสชัน",
   "context.usage.olderSessions": "{{count}} เซสชันก่อนหน้า",
@@ -868,6 +879,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "โมเดล SWE-Pruner",
   "settings.experimental.swePrunerModel.description":
     "โมเดลที่ใช้ตัดทอนผลลัพธ์ของเครื่องมือ ค่าเริ่มต้นคือโมเดลขนาดเล็กที่กำหนดไว้",
+  "settings.experimental.multiProject.title": "Agent Manager หลายโปรเจกต์",
+  "settings.experimental.multiProject.description":
+    "เปิดใช้งานการจัดการเซสชันและเวิร์กทรีข้ามหลาย Repository ใน Agent Manager Repository ของ workspace ปัจจุบันเป็นโปรเจกต์เริ่มต้นเสมอ",
   "settings.experimental.mcpTimeout.title": "หมดเวลา MCP (มิลลิวินาที)",
   "settings.experimental.mcpTimeout.description": "หมดเวลาสำหรับคำขอเซิร์ฟเวอร์ MCP เป็นมิลลิวินาที",
   "settings.experimental.remote.title": "การควบคุม Remote",
