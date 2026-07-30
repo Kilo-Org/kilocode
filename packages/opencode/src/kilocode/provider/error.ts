@@ -1,32 +1,50 @@
 import type { APICallError } from "ai"
 import { ProviderV2 } from "@opencode-ai/core/provider"
 import { isRecord } from "@/util/record"
+import { z } from "zod"
 
 export type Frame = {
   type?: unknown
   error?: Record<string, unknown>
 } & Record<string, unknown>
 
+const payload = z.looseObject({
+  code: z.union([z.string(), z.number()]).optional(),
+  message: z.string().optional(),
+})
+
+// OpenAI Responses API terminal frame forwarded by @ai-sdk/openai >= 3.0.82
+const terminal = z.looseObject({
+  type: z.literal("response.failed"),
+  response: z.looseObject({ error: payload }),
+})
+
+// Envelope-less chat-completions wrapper
+const wrapper = z.looseObject({
+  type: z.undefined().optional(),
+  error: payload,
+})
+
+// Bare error object; a nested `error` record wins over bare top-level
+// fields so gateway wrappers keep the specific inner code
+const bare = z.looseObject({
+  type: z.undefined().optional(),
+  code: z.union([z.string(), z.number()]),
+  message: z.string(),
+})
+
 /**
  * Normalize provider stream error frames that arrive without the
- * `{ type: "error" }` envelope expected by ProviderError.parseStreamError:
- * OpenAI Responses API terminal frames forwarded by @ai-sdk/openai >= 3.0.82
- * (`{ type: "response.failed", response: { error } }`), envelope-less
- * chat-completions wrappers (`{ error: { code, message } }`), and bare
- * error objects (`{ code, message }`). A nested `error` record wins over
- * bare top-level fields so gateway wrappers keep the specific inner code.
+ * `{ type: "error" }` envelope expected by ProviderError.parseStreamError.
  */
 export function frame(body: unknown): Frame {
+  const failed = terminal.safeParse(body)
+  if (failed.success) return { type: "error", error: failed.data.response.error }
+  const wrapped = wrapper.safeParse(body)
+  if (wrapped.success) return { ...wrapped.data, type: "error" }
+  const direct = bare.safeParse(body)
+  if (direct.success) return { ...direct.data, type: "error", error: direct.data }
   if (!isRecord(body)) return {}
-  if (body.type === "response.failed" && isRecord(body.response) && isRecord(body.response.error)) {
-    return { type: "error", error: body.response.error }
-  }
-  if (body.type === undefined && isRecord(body.error)) {
-    return { ...body, type: "error" }
-  }
-  if (body.type === undefined && typeof body.message === "string" && body.code !== undefined) {
-    return { ...body, type: "error", error: body }
-  }
   return { ...body, error: isRecord(body.error) ? body.error : undefined }
 }
 
