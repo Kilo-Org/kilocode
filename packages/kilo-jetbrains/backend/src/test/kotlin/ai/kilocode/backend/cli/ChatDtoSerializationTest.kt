@@ -240,7 +240,7 @@ class ChatDtoSerializationTest {
     fun `MessageDto summary diffs are preserved in round-trip`() {
         val msg = msg("msg_1").copy(
             summary = MessageSummaryDto(
-                diffs = listOf(DiffFileDto("src/A.kt", 2, 1, "@@ patch")),
+                diffs = listOf(DiffFileDto("src/A.kt", 2, 1, "@@ patch", "modified")),
             ),
         )
 
@@ -252,6 +252,7 @@ class ChatDtoSerializationTest {
         val diff = decoded.summary?.diffs?.single()
         assertEquals("src/A.kt", diff?.file)
         assertEquals("@@ patch", diff?.patch)
+        assertEquals("modified", diff?.status)
     }
 
     @Test

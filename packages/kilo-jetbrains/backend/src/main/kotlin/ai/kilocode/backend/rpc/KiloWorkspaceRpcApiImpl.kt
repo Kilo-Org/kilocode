@@ -259,13 +259,14 @@ class KiloWorkspaceRpcApiImpl internal constructor(
         val ref = defaultBranch(base)
         val anc = ref?.let { git(base, "merge-base", it, "HEAD").trim().ifBlank { null } } ?: "HEAD"
         val numstat = git(base, "-c", "core.quotepath=false", "diff", "--numstat", "--no-color", "--no-renames", anc)
+        val names = git(base, "-c", "core.quotepath=false", "diff", "--name-status", "--no-color", "--no-renames", anc)
         val patch = git(base, "-c", "core.quotepath=false", "diff", "--no-color", "--no-ext-diff", "--no-renames", "--unified=2147483647", anc)
         val untracked = git(base, "-c", "core.quotepath=false", "ls-files", "--others", "--exclude-standard")
             .lineSequence()
             .filter { it.isNotBlank() }
             .map { untracked(base, it) }
             .toList()
-        buildBranchDiff(numstat, patch, untracked, DIFF_CAP)
+        buildBranchDiff(numstat, patch, untracked, parseNameStatus(names), DIFF_CAP)
     }
 
     override suspend fun branchName(directory: String): String? = withContext(Dispatchers.IO) {
@@ -403,15 +404,15 @@ class KiloWorkspaceRpcApiImpl internal constructor(
     private fun untracked(base: Path, rel: String): DiffFileDto {
         return runCatching {
             val path = base.resolve(rel).normalize()
-            if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > LARGE_FILE) return@runCatching DiffFileDto(rel, 0, 0, "")
+            if (!path.startsWith(base) || !path.isRegularFile() || path.fileSize() > LARGE_FILE) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
             val bytes = path.readBytes()
-            if (bytes.any { it == 0.toByte() }) return@runCatching DiffFileDto(rel, 0, 0, "")
+            if (bytes.any { it == 0.toByte() }) return@runCatching DiffFileDto(rel, 0, 0, "", "untracked")
             val text = bytes.toString(StandardCharsets.UTF_8)
             val additions = lines(text).size
-            DiffFileDto(rel, additions, 0, untrackedPatch(rel, text, additions))
+            DiffFileDto(rel, additions, 0, untrackedPatch(rel, text, additions), "untracked")
         }.getOrElse { err ->
             LOG.debug { "Failed to read untracked file for branch diff: $rel (${err.message})" }
-            DiffFileDto(rel, 0, 0, "")
+            DiffFileDto(rel, 0, 0, "", "untracked")
         }
     }
 
@@ -478,6 +479,7 @@ internal fun buildBranchDiff(
     numstat: String,
     patch: String,
     untracked: List<DiffFileDto> = emptyList(),
+    status: Map<String, String> = emptyMap(),
     cap: Int = 200_000,
 ): List<DiffFileDto> {
     val stats = parseNumstat(numstat)
@@ -497,6 +499,7 @@ internal fun buildBranchDiff(
             additions = stat.additions,
             deletions = stat.deletions,
             patch = next,
+            status = status[stat.path] ?: "modified",
         )
     }
     return tracked + untracked.map { file ->
@@ -527,6 +530,21 @@ private fun lines(text: String): List<String> {
 }
 
 private data class DiffStat(val path: String, val additions: Int, val deletions: Int)
+
+internal fun parseNameStatus(text: String): Map<String, String> = text.lineSequence()
+    .mapNotNull { line ->
+        val parts = line.split('\t')
+        if (parts.size < 2) return@mapNotNull null
+        val path = parts.drop(1).joinToString("\t").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+        val status = when (parts[0].firstOrNull()) {
+            'A' -> "added"
+            'D' -> "deleted"
+            'M' -> "modified"
+            else -> null
+        } ?: return@mapNotNull null
+        path to status
+    }
+    .toMap()
 
 private fun parseNumstat(text: String): List<DiffStat> = text.lineSequence()
     .mapNotNull { line ->

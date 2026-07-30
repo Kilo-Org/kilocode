@@ -6,8 +6,11 @@ import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vcs.FileStatus
+import com.intellij.ui.SimpleColoredComponent
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.ui.EditorNotificationPanel
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.JBUI
@@ -37,6 +40,28 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test tree toolbar shows changed file count`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(files(), parent)
+
+            assertTrue(components(view).filterIsInstance<JBLabel>().any { it.text == "2 files" })
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test tree toolbar shows singular changed file count`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val view = view(listOf(file("src/App.kt", 2, 1)), parent)
+
+            assertTrue(components(view).filterIsInstance<JBLabel>().any { it.text == "1 file" })
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
     fun `test tree renderer shows compact row change badge`() {
         val parent = Disposer.newDisposable()
         try {
@@ -49,6 +74,34 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         } finally {
             Disposer.dispose(parent)
         }
+    }
+
+    fun `test tree renderer uses file status color`() {
+        val parent = Disposer.newDisposable()
+        try {
+            val color = FileStatus.ADDED.color ?: return
+            val view = view(listOf(file("src/App.kt", 2, 0, status = "added")), parent)
+            val tree = components(view).filterIsInstance<Tree>().single()
+            val row = renderer(tree, leaf(tree))
+            val text = components(row).filterIsInstance<SimpleColoredComponent>().single()
+            val iter = text.iterator()
+
+            assertTrue(iter.hasNext())
+            iter.next()
+            assertEquals(color, iter.textAttributes.fgColor)
+        } finally {
+            Disposer.dispose(parent)
+        }
+    }
+
+    fun `test explicit and patch-derived file statuses`() {
+        assertEquals(FileStatus.ADDED, fileStatus(file("src/New.kt", 1, 0, status = "added")))
+        assertEquals(FileStatus.MODIFIED, fileStatus(file("src/App.kt", 1, 1, status = "modified")))
+        assertEquals(FileStatus.DELETED, fileStatus(file("src/Old.kt", 0, 1, status = "deleted")))
+        assertEquals(FileStatus.UNKNOWN, fileStatus(file("src/Unknown.kt", 1, 0, status = "untracked")))
+        assertEquals(FileStatus.ADDED, fileStatus(file("src/New.kt", 1, 0, patch = "--- /dev/null\n+++ b/src/New.kt")))
+        assertEquals(FileStatus.DELETED, fileStatus(file("src/Old.kt", 0, 1, patch = "--- a/src/Old.kt\n+++ /dev/null")))
+        assertEquals(FileStatus.MODIFIED, fileStatus(file("src/App.kt", 1, 1, patch = "@@ -1 +1 @@\n-old\n+new")))
     }
 
     fun `test row renderer places badge east of filename`() {
@@ -251,6 +304,18 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test reverse sync skips active requested path`() {
+        assertNull(reverseSyncTarget("src/App.kt", "src/App.kt", "test/AppTest.kt"))
+    }
+
+    fun `test reverse sync waits while requested path is pending`() {
+        assertNull(reverseSyncTarget("src/App.kt", "test/AppTest.kt", "src/App.kt"))
+    }
+
+    fun `test reverse sync returns active path for diff-driven navigation`() {
+        assertEquals("test/AppTest.kt", reverseSyncTarget("test/AppTest.kt", null, "src/App.kt"))
+    }
+
     private fun renderer(tree: Tree, node: DefaultMutableTreeNode): Component =
         tree.cellRenderer.getTreeCellRendererComponent(
             tree,
@@ -310,10 +375,17 @@ class KiloDiffEditorContentTest : BasePlatformTestCase() {
         file("test/AppTest.kt", 3, 3),
     )
 
-    private fun file(path: String, additions: Int, deletions: Int) = DiffFileDto(
+    private fun file(
+        path: String,
+        additions: Int,
+        deletions: Int,
+        patch: String? = "@@ -1 +1 @@\n-old\n+new",
+        status: String? = null,
+    ) = DiffFileDto(
         file = path,
         additions = additions,
         deletions = deletions,
-        patch = "@@ -1 +1 @@\n-old\n+new",
+        patch = patch,
+        status = status,
     )
 }

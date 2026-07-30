@@ -25,7 +25,7 @@ class BranchDiffBuildTest {
             +two
         """.trimIndent()
 
-        val diff = buildBranchDiff(numstat, patch)
+        val diff = buildBranchDiff(numstat, patch, status = mapOf("src/A.kt" to "modified", "src/B.kt" to "added"))
 
         assertEquals(listOf("src/A.kt", "src/B.kt"), diff.map { it.file })
         assertEquals(1, diff[0].additions)
@@ -34,6 +34,22 @@ class BranchDiffBuildTest {
         assertEquals(0, diff[1].deletions)
         assertEquals(true, diff[0].patch?.startsWith("diff --git a/src/A.kt") == true)
         assertEquals(true, diff[1].patch?.startsWith("diff --git a/src/B.kt") == true)
+        assertEquals("modified", diff[0].status)
+        assertEquals("added", diff[1].status)
+    }
+
+    @Test
+    fun `parses git name status output`() {
+        val status = parseNameStatus("M\tsrc/A.kt\nA\tsrc/B.kt\nD\tsrc/Old.kt\n??\tsrc/Skip.kt\n")
+
+        assertEquals(
+            mapOf(
+                "src/A.kt" to "modified",
+                "src/B.kt" to "added",
+                "src/Old.kt" to "deleted",
+            ),
+            status,
+        )
     }
 
     @Test
@@ -71,12 +87,13 @@ class BranchDiffBuildTest {
                 -old
                 +new
             """.trimIndent(),
-            untracked = listOf(DiffFileDto("src/New.kt", 2, 0, "patch")),
+            untracked = listOf(DiffFileDto("src/New.kt", 2, 0, "patch", "untracked")),
         )
 
         assertEquals(listOf("src/A.kt", "src/New.kt"), diff.map { it.file })
         assertEquals(2, diff[1].additions)
         assertEquals("patch", diff[1].patch)
+        assertEquals("untracked", diff[1].status)
     }
 
     @Test
@@ -84,10 +101,11 @@ class BranchDiffBuildTest {
         val diff = buildBranchDiff(
             numstat = "",
             patch = "",
-            untracked = listOf(DiffFileDto("src/New.kt", 1, 0, "diff --git a/src/New.kt b/src/New.kt")),
+            untracked = listOf(DiffFileDto("src/New.kt", 1, 0, "diff --git a/src/New.kt b/src/New.kt", "untracked")),
             cap = 5,
         )
 
         assertEquals("", diff.single().patch)
+        assertEquals("untracked", diff.single().status)
     }
 }

@@ -1071,6 +1071,7 @@ object KiloCliDataParser {
                 additions = item.long("additions")?.safeInt() ?: 0,
                 deletions = item.long("deletions")?.safeInt() ?: 0,
                 patch = item.str("patch"),
+                status = item.str("status"),
             )
         }
     }

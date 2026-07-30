@@ -1,8 +1,10 @@
 package ai.kilocode.client.diff
 
+import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.DiffStatBadge
 import ai.kilocode.client.ui.UiStyle
+import ai.kilocode.client.ui.layout.Stack
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.diff.chains.DiffRequestProducer
 import com.intellij.diff.chains.SimpleDiffRequestChain
@@ -14,11 +16,13 @@ import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionPlaces
 import com.intellij.openapi.actionSystem.ActionUpdateThread
 import com.intellij.openapi.actionSystem.AnActionEvent
+import com.intellij.openapi.actionSystem.CommonShortcuts
 import com.intellij.openapi.actionSystem.DefaultActionGroup
 import com.intellij.openapi.actionSystem.IdeActions
 import com.intellij.openapi.actionSystem.Separator
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ModalityState
+import com.intellij.openapi.components.service
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.editor.event.DocumentEvent
 import com.intellij.openapi.editor.event.DocumentListener
@@ -29,15 +33,19 @@ import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.Key
 import com.intellij.openapi.util.UserDataHolder
+import com.intellij.openapi.vcs.FileStatus
 import com.intellij.openapi.vfs.AsyncFileListener
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
 import com.intellij.ui.IdeBorderFactory
 import com.intellij.ui.EditorNotificationPanel
 import com.intellij.ui.OnePixelSplitter
+import com.intellij.ui.PopupHandler
 import com.intellij.ui.SideBorder
 import com.intellij.ui.SimpleColoredComponent
+import com.intellij.ui.SimpleTextAttributes
 import com.intellij.ui.TreeSpeedSearch
+import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.concurrency.annotations.RequiresEdt
@@ -87,7 +95,7 @@ internal class DiffEditorView(
     initial: List<DiffFileDto>,
     private val parent: Disposable,
     branch: String?,
-    scope: CoroutineScope,
+    private val scope: CoroutineScope,
     private val load: ((DiffEditorData) -> Unit) -> Job,
     private val replace: (DiffEditorData) -> Unit,
 ) : Disposable {
@@ -110,7 +118,26 @@ internal class DiffEditorView(
     private var files = initial
     private var branch = branch
     private var syncing = false
+    private var requested: String? = initial.firstOrNull()?.file
     private var processor = processor(initial, selected(initial.firstOrNull()?.file))
+    private val openFileAction = object : DumbAwareAction(
+        KiloBundle.message("diff.editor.openFile"),
+        KiloBundle.message("diff.editor.openFile"),
+        AllIcons.Actions.EditSource,
+    ) {
+        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+
+        override fun update(e: AnActionEvent) {
+            val file = selectedFile()
+            e.presentation.isEnabled = file != null && fileStatus(file) != FileStatus.DELETED && path(file) != null
+        }
+
+        override fun actionPerformed(e: AnActionEvent) {
+            val file = selectedFile() ?: return
+            val path = path(file) ?: return
+            scope.launch { service<KiloWorkspaceService>().openFile(path) }
+        }
+    }
     val component: JComponent = root
 
     init {
@@ -122,6 +149,8 @@ internal class DiffEditorView(
             val index = files.indexOfFirst { it.file == file.file }
             if (index >= 0) select.request(index)
         }
+        openFileAction.registerCustomShortcutSet(CommonShortcuts.getEditSource(), tree)
+        installMenu()
         processor.addListener(DiffRequestProcessorListener { syncTree() }, parent)
         splitter.firstComponent = buildTreePanel(tree, initial, badge, processor.component, ::refresh)
         splitter.secondComponent = processor.component
@@ -143,6 +172,7 @@ internal class DiffEditorView(
         val old = processor
         files = next
         branch = nextBranch
+        requested = next.getOrNull(index)?.file
         tree.model = buildFileModel(next)
         expandAll(tree)
         processor = processor(next, index)
@@ -185,7 +215,22 @@ internal class DiffEditorView(
 
     private fun show(index: Int) {
         if (disposed.get() || project.isDisposed || index !in files.indices) return
+        val path = files[index].file
+        if (activePath() == path) {
+            requested = null
+            return
+        }
+        requested = path
         processor.setCurrentRequest(index)
+    }
+
+    private fun installMenu() {
+        val group = DefaultActionGroup(
+            openFileAction,
+            Separator.getInstance(),
+            TreeAction(KiloBundle.message("diff.editor.refresh"), AllIcons.Actions.Refresh, ::refresh),
+        )
+        PopupHandler.installPopupMenu(tree, group, ActionPlaces.POPUP)
     }
 
     @RequiresEdt
@@ -251,8 +296,22 @@ internal class DiffEditorView(
     private fun syncTree() {
         if (disposed.get()) return
         val path = activePath() ?: return
-        if (selectedFile()?.file == path) return
-        select(path)
+        val target = reverseSyncTarget(path, requested, selectedFile()?.file)
+        if (path == requested) requested = null
+        if (target == null) return
+        select(target)
+    }
+
+    private fun path(file: DiffFileDto): String? {
+        if (fileStatus(file) == FileStatus.DELETED) return null
+        val dir = params["directory"] ?: return null
+        return try {
+            val raw = Path.of(file.file)
+            val path = if (raw.isAbsolute) raw else Path.of(dir).resolve(raw)
+            path.normalize().toString()
+        } catch (_: InvalidPathException) {
+            null
+        }
     }
 
     private fun select(path: String?) {
@@ -296,6 +355,13 @@ internal class DiffEditorView(
     } catch (_: InvalidPathException) {
         false
     }
+}
+
+internal fun reverseSyncTarget(active: String?, requested: String?, selected: String?): String? {
+    if (active == null) return null
+    if (requested != null) return null
+    if (active == selected) return null
+    return active
 }
 
 private class Debouncer<T>(
@@ -369,7 +435,14 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStat
         border = IdeBorderFactory.createBorder(SideBorder.BOTTOM)
         add(toolbar.component, BorderLayout.WEST)
         badge.update(files.sumOf { it.additions }, files.sumOf { it.deletions })
-        add(badge, BorderLayout.EAST)
+        add(
+            Stack.horizontal(gap = UiStyle.Gap.sm()).apply {
+                border = JBUI.Borders.empty(0, 0, 0, UiStyle.Gap.pad())
+                next(JBLabel(fileCount(files.size)).apply { foreground = UiStyle.Colors.weak() })
+                next(badge)
+            },
+            BorderLayout.EAST,
+        )
     }
     return object : JPanel(BorderLayout()) {
         override fun getBackground(): Color = JBUI.CurrentTheme.ToolWindow.background()
@@ -385,6 +458,11 @@ private fun buildTreePanel(tree: Tree, files: List<DiffFileDto>, badge: DiffStat
         )
     }
 }
+
+private fun fileCount(count: Int): String = KiloBundle.message(
+    if (count == 1) "session.changes.count.one" else "session.changes.count.other",
+    count,
+)
 
 private fun expandAll(tree: Tree) {
     var i = 0
@@ -484,7 +562,9 @@ private class Renderer : JPanel(BorderLayout()), TreeCellRenderer {
         val item = node?.userObject as? Node
         text.clear()
         text.icon = if (item?.dir == true) AllIcons.Nodes.Folder else AllIcons.FileTypes.Text
-        text.append(item?.name?.ifBlank { item.path }.orEmpty())
+        val name = item?.name?.ifBlank { item.path }.orEmpty()
+        val color = item?.file?.let(::fileStatus)?.color
+        if (color == null) text.append(name) else text.append(name, SimpleTextAttributes(SimpleTextAttributes.STYLE_PLAIN, color))
         val changed = item != null && (item.additions != 0 || item.deletions != 0)
         badge.isVisible = changed
         if (changed) badge.update(item.additions, item.deletions)
