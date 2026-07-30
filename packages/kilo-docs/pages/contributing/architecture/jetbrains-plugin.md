@@ -126,8 +126,6 @@ Split mode changes path and UI assumptions:
 
 JetBrains Kotlin toolchain is Java 21. Gradle commands report missing or incompatible Java clearly; check Java only when diagnosing that failure mode.
 
-For plugin icon creation, modification, or review, use the `icon-jetbrains` skill at `.kilo/skills/icon-jetbrains/SKILL.md` together with `packages/kilo-jetbrains/AGENTS.md`. The skill covers IntelliJ New UI SVG roles, sizing, palette, dark variants, and icon validation guidance.
-
 | Check | Command from `packages/kilo-jetbrains/` |
 |---|---|
 | Typecheck | `./gradlew typecheck` |
@@ -139,6 +137,10 @@ For plugin icon creation, modification, or review, use the `icon-jetbrains` skil
 | Monolithic sandbox IDE | `./gradlew runIde` |
 
 Run `Plugin DevKit | Code | Frontend and Backend API Usage` inspection when moving code across split boundary.
+
+## Icon skill
+
+For plugin icon creation, modification, or review, use the `icon-jetbrains` skill at `.kilo/skills/icon-jetbrains/SKILL.md` together with `packages/kilo-jetbrains/AGENTS.md`. The skill covers IntelliJ New UI SVG roles, sizing, palette, dark variants, and icon validation guidance.
 
 ## Source map
 
