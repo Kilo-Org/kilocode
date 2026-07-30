@@ -19,14 +19,15 @@ const terminal = z.looseObject({
   response: z.looseObject({ error: payload }),
 })
 
-// Envelope-less chat-completions wrapper
+// Envelope-less chat-completions wrapper; checked before `bare` so a
+// nested `error` record wins over bare top-level fields and gateway
+// wrappers keep the specific inner code
 const wrapper = z.looseObject({
   type: z.undefined().optional(),
   error: payload,
 })
 
-// Bare error object; a nested `error` record wins over bare top-level
-// fields so gateway wrappers keep the specific inner code
+// Bare error object
 const bare = z.looseObject({
   type: z.undefined().optional(),
   code: z.union([z.string(), z.number(), z.null()]),
@@ -49,8 +50,9 @@ export function frame(body: unknown): Frame {
 }
 
 const RETRYABLE = /rate.?limit|too.?many.?requests|rate increased too quickly|exhausted|overload|server|unavailable|timeout/i
-// Session.retryable only matched these phrases against free-form message
-// text; the wider pattern above is for structured code/type fields only
+// Keep free-form message matching narrow: Session.retryable only applied
+// rate-limit phrases to prose; the wider pattern above is for structured
+// code/type fields only
 const RETRYABLE_TEXT = /rate increased too quickly|rate.?limit|too.?many.?requests/i
 
 // Must stay at least as permissive as the Session.retryable heuristics that
