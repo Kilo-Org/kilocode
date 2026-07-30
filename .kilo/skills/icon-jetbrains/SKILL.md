@@ -5,66 +5,44 @@ description: Create or review IntelliJ New UI SVG icons, theme variants, sizes, 
 
 # IntelliJ Platform New UI Icons
 
-Guidance for authoring SVG icons for the New UI. This skill is the single source of truth for icon sizing, palette, dark variants, composition rules, and placement. Other docs (including `packages/kilo-jetbrains/AGENTS.md`) defer here for SVG authoring details.
+Guidance for authoring SVG icons for the JetBrains plugin. This skill is the single source of truth for icon sizing, palette, dark variants, composition rules, and placement. Other docs (including `packages/kilo-jetbrains/AGENTS.md`) defer here for SVG authoring details.
 
-Background: the IDE maintains Classic UI and New UI in parallel. Code branches with `ExperimentalUI.isNewUI()`; icons follow the same split. In upstream IntelliJ Community sources, old icons stay in their original resource folders for Classic-UI compatibility and New-UI icons live under `expui/` folders, substituted for the old ones at runtime by icon mappers. **In this repo there is no `expui/` tree or `*IconMappings.json` file** — see [Where the SVGs live](#where-the-svgs-live) for where icons actually go.
+Icons follow IntelliJ New UI conventions: a fixed canvas per role, a strict light/dark palette, and explicit per-shape colors (the IntelliJ SVG loader recolors by matching literal hex values, so `currentColor` and CSS do not work). The plugin loads icons directly from a flat resource folder — see [Where the SVGs live](#where-the-svgs-live).
 
 ## Golden rules
 
-1. **Always ship two SVGs** — one for the light theme (e.g. `addFile.svg`) and one for the dark theme with the `_dark` suffix (`addFile_dark.svg`). Geometry must be identical between them; only the palette swaps.
-   - **Tool-window icons ship as a quartet, not a pair.** When a tool window has both a 16×16 base (`name.svg` / `name_dark.svg`) and a 20×20 New-UI stripe variant (`name@20x20.svg` / `name@20x20_dark.svg`), they must share the same metaphor. The stripe is only one surface — the 16×16 base also appears in **Search Everywhere**, **Find Action**, context menus, the Services tool window, recent locations, and the View ▸ Tool Windows menu. Changing only the @20x20 leaves users seeing two different icons for the same tool window depending on where they encounter it. Always update all four files together (and the same applies to plugin-local icons like `tool-window-chat.svg` + `tool-window-chat@20x20.svg`).
+1. **Always ship two SVGs** — one for the light theme (e.g. `add-file.svg`) and one for the dark theme with the `_dark` suffix (`add-file_dark.svg`). Geometry must be identical between them; only the palette swaps.
+   - **Tool-window icons ship as a quartet, not a pair.** When a tool window has both a 16×16 base (`name.svg` / `name_dark.svg`) and a 20×20 stripe variant (`name@20x20.svg` / `name@20x20_dark.svg`), they must share the same metaphor. The stripe is only one surface — the 16×16 base also appears in **Search Everywhere**, **Find Action**, context menus, the Services tool window, recent locations, and the View ▸ Tool Windows menu. Changing only the @20x20 leaves users seeing two different icons for the same tool window depending on where they encounter it. Always update all four files together (e.g. `tool-window-chat.svg` + `tool-window-chat@20x20.svg`).
 2. **Only use colors from the canonical palette.** See [palette.md](./palette.md). Picking a one-off color breaks theming and contrast.
 3. **One canvas size per icon role.** See [Icon roles](#icon-roles). Do not invent new sizes or pad with empty space — IntelliJ scales the canvas as a single unit.
 4. **No raster, no gradients, no filters, no embedded fonts.** Path geometry only (`<path>`, `<rect>`, `<circle>`, `<line>`, `<polyline>`, `<polygon>`). Text must be converted to outlines.
 5. **Use `fill="none"` on the root `<svg>`** and set `fill` / `stroke` explicitly per shape — never rely on CSS or `currentColor`.
 6. **Strokes use `stroke-width="1"`, `stroke-linecap="round"`, `stroke-linejoin="round"`** (or `stroke-miterlimit="10"` for hard joins). Heavier strokes are reserved for hero glyphs inside a circle badge (e.g. status checkmarks) and use `stroke-width="1.5"` or `"2"`.
 7. **Pixel-grid align**: keep stroke axes on half-pixel centers (`x.5`) and fills on whole pixels so the icon stays crisp at 1× rendering.
-8. **File names match the naming convention of sibling icons in the target folder and stay ASCII-only.** Plugin-local Kilo icons in `packages/kilo-jetbrains/frontend/src/main/resources/icons/` use kebab-case (e.g. `arrow-down-to-line.svg`, `book-open-check.svg`, `tool-window-chat.svg`), matching every existing icon there. Upstream IntelliJ Platform icons use camelCase; when copying one from `$INTELLIJ_REPO`, keep its original name.
+8. **File names use kebab-case and stay ASCII-only** (e.g. `arrow-down-to-line.svg`, `book-open-check.svg`, `tool-window-chat.svg`), matching every existing icon in `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
 
 ## Icon roles
 
-All roles land in this repo's `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (with a `views/` subfolder for in-view icons — see [Where the SVGs live](#where-the-svgs-live)). The "Upstream reference dir" column below is where the same role lives in the IntelliJ Community sources (`$INTELLIJ_REPO`), useful when you need to look up an existing icon's conventions or geometry — it is not a path in this repo.
+Pick the canvas size from the role, not the other way around. All icons land in this repo's `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (with a `views/` subfolder for in-view icons — see [Where the SVGs live](#where-the-svgs-live)).
 
-| Role | Canvas | Filename pattern | Upstream reference dir (`$INTELLIJ_REPO`) |
-|---|---|---|---|
-| Action icons (menus, popups, toolbars) | **16×16** | `name.svg` + `name_dark.svg` | `expui/actions/`, `expui/general/` |
-| Tree node icons (PSI, structure view) | **16×16** | `name.svg` + `name_dark.svg` | `expui/nodes/` |
-| Tool-window stripe icons (legacy/16) | **16×16** | `name.svg` + `name_dark.svg` | `expui/toolwindows/` |
-| Tool-window stripe icons (New UI) | **20×20** | `name@20x20.svg` + `name@20x20_dark.svg` | `expui/toolwindows/` |
-| Main toolbar (New UI) | **20×20** | `name@20x20.svg` + `name@20x20_dark.svg` | `expui/general/`, `expui/run/`, `expui/toolbar/` |
-| Editor gutter icons | **14×14** (small marks **12×12**, **9×9**) | `name.svg` + `name_dark.svg` | `expui/gutter/` |
-| Status bar / inline status | **16×16** | `name.svg` + `name_dark.svg` | `expui/status/`, `expui/inline/` |
-| Breakpoint marks | **14×14** (12×12 for sub-marks) | `name.svg` + `name_dark.svg` | `expui/breakpoints/` |
-| Run-config tags & disclosure chevrons | **16×16** (`chevron*.svg` may be 9×9 to 16×16) | `name.svg` + `name_dark.svg` | `expui/run/`, `expui/general/` |
-| Welcome/onboarding & logos (system) | **16, 20, 28, 48** (per surface) | `name.svg` + `name_dark.svg` | `expui/ide/`, `expui/welcome/` |
+| Role | Canvas | Filename pattern |
+|---|---|---|
+| Action icons (menus, popups, toolbars) | **16×16** | `name.svg` + `name_dark.svg` |
+| Tree node icons (PSI, structure view) | **16×16** | `name.svg` + `name_dark.svg` |
+| Tool-window stripe icons (compact/16) | **16×16** | `name.svg` + `name_dark.svg` |
+| Tool-window stripe icons (New UI) | **20×20** | `name@20x20.svg` + `name@20x20_dark.svg` |
+| Main toolbar (New UI) | **20×20** | `name@20x20.svg` + `name@20x20_dark.svg` |
+| Editor gutter icons | **14×14** (small marks **12×12**, **9×9**) | `name.svg` + `name_dark.svg` |
+| Status bar / inline status | **16×16** | `name.svg` + `name_dark.svg` |
+| Breakpoint marks | **14×14** (12×12 for sub-marks) | `name.svg` + `name_dark.svg` |
+| Run-config tags & disclosure chevrons | **16×16** (`chevron*.svg` may be 9×9 to 16×16) | `name.svg` + `name_dark.svg` |
+| Welcome/onboarding & logos | **16, 20, 28, 48** (per surface) | `name.svg` + `name_dark.svg` |
 
-When in doubt, find a sibling icon of the same role in this repo's flat icons folder (or, if none exists, the upstream reference dir via `$INTELLIJ_REPO`) and copy its `width` / `height` / `viewBox`.
+When in doubt, find a sibling icon of the same role already in the icons folder and copy its `width` / `height` / `viewBox`.
 
 ## Where the SVGs live
 
-**In this repo**, plugin icons go into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (action icons, tool-window icons) or the `icons/views/` subfolder (in-view icons used by the chat/session UI). There is no `expui/` subfolder structure and no `*IconMappings.json` file here; the plugin loads icons directly via `IconLoader`. Place both the light SVG and its `_dark` sibling there and reference them from the plugin's icon-holder class.
-
-The rest of this section describes how the **upstream IntelliJ Community** sources (reachable via `$INTELLIJ_REPO` — see `packages/kilo-jetbrains/AGENTS.md`) organize the same icons. That structure is useful when consulting or copying conventions from an existing platform icon, but it is not a path that exists in this repo.
-
-Upstream, two placements exist and both are valid — chosen based on whether a Classic-UI icon already exists:
-
-- **Only New UI needed** → the SVG (and its `_dark` sibling) sits under an `expui/<role>/` resource root. Callers reference it directly through the plugin's generated `<Plugin>Icons` class.
-- **Replacing an existing Classic-UI icon** → the Classic file stays at its old path, the New UI SVG sits under the matching `expui/<role>/` path, and a mapping entry is added to the nearest `*IconMappings.json`. At runtime, when `ExperimentalUI.isNewUI()` is true, the mapper substitutes the New UI file for the Classic one so no caller has to change its icon reference.
-
-Upstream mapping-file shape (for reference only — no equivalent file exists in this repo):
-
-```json
-{
-  "expui": {
-    "actions": {
-      "addFile.svg": "actions/addFile.svg",
-      "checked.svg": ["actions/checked.svg", "actions/setDefault.svg"]
-    }
-  }
-}
-```
-
-Key = path relative to the `expui/` root (the New UI file). Value = the Classic path(s) that should resolve to it. A single New UI icon may back multiple Classic paths.
+Plugin icons go into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (action icons, tool-window icons) or the `icons/views/` subfolder (in-view icons used by the chat/session UI). Icons are loaded directly via `IconLoader` — there is no role-based subfolder structure and no mapping file. Place both the light SVG and its `_dark` sibling in the folder and reference them from the plugin's icon-holder class.
 
 ## SVG skeleton
 
@@ -81,15 +59,15 @@ The dark variant is the same file with light-palette colors swapped for their da
 - **One semantic meaning per icon.** A status badge, an accent dot, or a "+" overlay is fine; two unrelated glyphs in one icon is not.
 - **Optical centering, not geometric.** Plus/arrow/refresh glyphs sit slightly above center; round badges (class, method, status) are centered on `(cx=8, cy=8)` for 16×16 and `(cx=10, cy=10)` for 20×20.
 - **Outer keep-out**: leave at least **1 px** of empty padding on each side of a 16×16 icon (so meaningful geometry lives within `1..15`). For 20×20 use **2 px** of padding. Stripe icons must stay visually balanced inside their 20×20 cell.
-- **Stroke + fill pairing for node-style icons** (e.g. `nodes/class.svg`): a light-tinted fill at radius 6.5 with a stroke in the accent color, plus a glyph filled with the same accent.
+- **Stroke + fill pairing for node-style icons** (class/method nodes): a light-tinted fill at radius 6.5 with a stroke in the accent color, plus a glyph filled with the same accent.
   - Light: `<circle cx="8" cy="8" r="6.5" fill="<accent-bg-light>" stroke="<accent-light>"/>` then glyph `fill="<accent-light>"`.
   - Dark: same circle with `fill="<accent-bg-dark>" stroke="<accent-dark>"` and glyph filled with `<accent-dark>`.
 - **Stroke-only icons** (chevrons, refresh, edit pencil): a single-color path using the neutral stroke (`#6C707E` light / `#CED0D6` dark) at `stroke-width="1"`. Use `#818594` (light) / `#6F737A` (dark) for "secondary" stroke glyphs like dropdown chevrons.
 - **Status badges** (error/warning/success/info) follow this template:
   - Light: filled circle/triangle in the *accent* color, glyph painted in `white`.
   - Dark: filled circle/triangle in the *dark accent* color, glyph painted in the matching *muted dark fill* (e.g. `#5E4D33` inside `#F2C55C` warning) — never plain white.
-- **Two-tone action icons** (e.g. `actions/addFile.svg`): the base glyph uses the neutral gray, and the small "modifier" (`+`, ✕, ↻, gear) uses the primary blue accent. Light gray + blue accent → dark gray + blue accent in the dark variant.
-- **Disabled / stroke-only variants** (e.g. `*_stroke.svg`): outline-only, same neutral stroke color, no fills.
+- **Two-tone action icons** (a base glyph plus a small modifier): the base glyph uses the neutral gray, and the small modifier (`+`, ✕, ↻, gear) uses the primary blue accent. Light gray + blue accent → dark gray + blue accent in the dark variant.
+- **Disabled / stroke-only variants** (e.g. `*-stroke.svg`): outline-only, same neutral stroke color, no fills.
 
 ## Palette quick reference
 
@@ -120,12 +98,12 @@ Do not use plain `#000000` or off-the-palette grays.
 
 ## Generation workflow
 
-1. **Pick the role and canvas size** from the table above. For source lookup — including the upstream `expui/<role>/` reference dirs — follow the `$INTELLIJ_REPO` guidance in `packages/kilo-jetbrains/AGENTS.md`; use that AGENTS file alongside this skill when generating or reviewing plugin icons. Find at least two visually similar sibling icons (in this repo's flat icons folder, or upstream via `$INTELLIJ_REPO`) and mirror their stroke/fill mix.
+1. **Pick the role and canvas size** from the table above. Find at least two visually similar sibling icons already in the icons folder and mirror their stroke/fill mix.
 2. **Lay out geometry on the pixel grid** (whole-pixel fills, half-pixel stroke centers). Optical-center the glyph.
 3. **Apply the canonical light palette** from [palette.md](./palette.md). Never invent colors.
 4. **Save the light SVG** with `width`/`height`/`viewBox` matching the role and `fill="none"` on `<svg>`.
 5. **Duplicate to the `_dark` filename** and swap each color for its dark-theme partner from the palette mapping. Keep paths byte-identical otherwise.
-6. **Place and wire the file** → drop both files into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (action icons, tool-window icons) or `icons/views/` (in-view chat/session icons). There is no `expui/` or role subfolder — this repo has no such structure and no `*IconMappings.json`. Reference the icon from the plugin's icon-holder class. The upstream `expui/<role>/` placement and `*IconMappings.json` mapping described in [Where the SVGs live](#where-the-svgs-live) apply only to the IntelliJ Community sources under `$INTELLIJ_REPO`, not to this repo.
+6. **Place and wire the file** → drop both files into `packages/kilo-jetbrains/frontend/src/main/resources/icons/` (action icons, tool-window icons) or `icons/views/` (in-view chat/session icons), then reference the icon from the plugin's icon-holder class.
 7. **Verify visually** in both themes via the image preview in the IDE, or run the IDE and toggle *View ▸ Appearance ▸ New UI* to compare. Check selection states for stripe icons.
 
 ## Common mistakes
@@ -136,12 +114,10 @@ Do not use plain `#000000` or off-the-palette grays.
 - Using `currentColor`, CSS, or `<style>` blocks. The IntelliJ icon loader requires explicit colors on every shape so it can do palette-based recoloring.
 - Forgetting the `_dark` variant. The icon will look fine in Light theme then turn invisible in Dark.
 - Pure-black (`#000`) or pure-white (`#FFF`) fills outside the status-badge glyph pattern. They break under accent recoloring.
-- (Upstream IntelliJ Community sources only — not applicable in this repo) Adding a New UI SVG without a `*IconMappings.json` entry when replacing a Classic icon — the Classic icon will keep showing in New UI mode.
 
 ## References
 
 - [palette.md](./palette.md) — full color palette with light↔dark mapping.
-- [examples.md](./examples.md) — annotated SVG snippets for each icon role, copied from the live icon set.
-- `packages/kilo-jetbrains/AGENTS.md` — repository-specific JetBrains plugin constraints, including how to set up `$INTELLIJ_REPO` for consulting upstream IntelliJ Community sources (used above for the `expui/<role>/` reference dirs); use it together with this skill for icon work.
-- Repo-level `Icons guidelines.svg` is a design sheet (visual reference only; not machine-readable). When it disagrees with the folder, trust the folder.
-- `packages/kilo-jetbrains/frontend/src/main/resources/icons/` — the actual flat resource folder in this repo where plugin icons live; this is the ground truth for placement, not any `expui/` path.
+- [examples.md](./examples.md) — annotated SVG snippets for each icon role.
+- `packages/kilo-jetbrains/AGENTS.md` — repository-specific JetBrains plugin constraints; use it together with this skill for icon work.
+- `packages/kilo-jetbrains/frontend/src/main/resources/icons/` — the flat resource folder where plugin icons live; this is the ground truth for placement.

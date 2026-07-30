@@ -1,14 +1,12 @@
 # Annotated New UI Icon Examples
 
-Each example below is paired with a dark variant and a short note on the pattern it represents. Use these as templates when generating new icons.
-
-The `expui/<role>/...` names below are the upstream IntelliJ Community source paths the examples were copied from (consult via `$INTELLIJ_REPO`, see `packages/kilo-jetbrains/AGENTS.md`) — they are not paths in this repo. In this repo, place generated icons flat into `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
+Each example below is paired with a dark variant and a short note on the pattern it represents. Use these as templates when generating new icons. Place generated icons flat into `packages/kilo-jetbrains/frontend/src/main/resources/icons/`.
 
 ---
 
 ## 1. Single-color action (16×16) — primary gray stroke + filled glyph
 
-`expui/general/add.svg` — the most common action icon shape.
+Plus / add action — the most common action icon shape.
 
 **Light:**
 ```svg
@@ -25,7 +23,7 @@ Why it works: one filled path, primary gray. Drop in any glyph and you have a co
 
 ## 2. Two-tone action (16×16) — neutral base + blue accent modifier
 
-`expui/actions/addFile.svg` — base glyph in neutral gray, "+" sticker in primary blue.
+Add-file action — base glyph in neutral gray, "+" sticker in primary blue.
 
 **Light:**
 ```svg
@@ -43,7 +41,7 @@ Pattern: stick the small modifier glyph in the bottom-right of the canvas (`(9..
 
 ## 3. Stroke-only action (16×16) — chevrons, refresh, edit
 
-`expui/general/refresh.svg` — multiple stroked sub-paths sharing one color.
+Refresh action — multiple stroked sub-paths sharing one color.
 
 **Light:**
 ```svg
@@ -63,7 +61,7 @@ For secondary glyphs (chevrons in popups, dropdown arrows) use `#818594` light /
 
 ## 4. Node icon (16×16) — tinted circle with stroke + glyph
 
-`expui/nodes/class.svg` and `expui/nodes/method.svg` — the canonical PSI-node shape.
+Class / method nodes — the canonical PSI-node shape.
 
 **Light (class — blue):**
 ```svg
@@ -90,7 +88,7 @@ Rules:
 
 ## 5. Status badge (16×16) — circle/triangle with white glyph
 
-`expui/status/error.svg`:
+Error badge:
 ```svg
 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
 <circle cx="8" cy="8" r="7" fill="#E55765"/>
@@ -99,15 +97,15 @@ Rules:
 </svg>
 ```
 
-`expui/status/warning.svg` is the same idea but with a rounded triangle filled `#FFAF0F` (light) / `#F2C55C` (dark). In the dark theme, the glyph inside the warning triangle uses `#5E4D33` instead of `white` (white on warm yellow is unreadable).
+The warning badge is the same idea but with a rounded triangle filled `#FFAF0F` (light) / `#F2C55C` (dark). In the dark theme, the glyph inside the warning triangle uses `#5E4D33` instead of `white` (white on warm yellow is unreadable).
 
-`expui/status/success.svg` uses a 2-px stroked checkmark inside a `#55A76A` (light) / `#57965C` (dark) circle — `stroke="white"` and `stroke-width="2"`.
+The success badge uses a 2-px stroked checkmark inside a `#55A76A` (light) / `#57965C` (dark) circle — `stroke="white"` and `stroke-width="2"`.
 
 ---
 
 ## 6. Tool window stripe (20×20) — single-tone glyph on a larger canvas
 
-`expui/toolwindows/build@20x20.svg` (excerpt):
+Build tool-window stripe:
 ```svg
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M4.25 1C4.44891 1 4.63962 1.07907 4.78027 1.21973L5.56055 2H6.43945L7.21973 1.21973L7.33398 1.12598C7.45628 1.04445 7.60085 1 7.75 1H13.125C14.9473 1 16.4277 1.87993 17.4346 3.08105C18.4322 4.27143 19 5.81492 19 7.25C19 7.51735 18.8572 7.76425 18.626 7.89844C18.3948 8.03247 18.11 8.0339 17.8779 7.90137L15.4258 6.5H14.0605L13 7.56055V18.25C13 18.6642 12.6642 19 12.25 19H7.75C7.33579 19 7 18.6642 7 18.25V7.56055L6.43945 7H5.56055L4.78027 7.78027C4.63962 7.92093 4.44891 8 4.25 8H1.75C1.33579 8 1 7.66421 1 7.25V1.75C1 1.33579 1.33579 1 1.75 1H4.25ZM8.5 17.5H11.5V8H8.5V17.5ZM2.5 6.5H3.93945L4.71973 5.71973L4.83398 5.62598C4.95628 5.54445 5.10085 5.5 5.25 5.5H6.75C6.94891 5.5 7.13962 5.57907 7.28027 5.71973L8.06055 6.5H11.9395L13.2197 5.21973L13.334 5.12598C13.4563 5.04445 13.6008 5 13.75 5H15.625C15.7555 5 15.8838 5.03392 15.9971 5.09863L17.2637 5.82227C17.0602 5.19249 16.7287 4.57423 16.2842 4.04395C15.5098 3.12029 14.4276 2.5 13.125 2.5H8.06055L7.28027 3.28027C7.13962 3.42093 6.94891 3.5 6.75 3.5H5.25C5.05109 3.5 4.86038 3.42093 4.71973 3.28027L3.93945 2.5H2.5V6.5Z" fill="#6C707E"/>
@@ -117,13 +115,13 @@ Rules:
 Notes:
 - 20×20 canvas with **at least 2 px** breathing room on each edge (geometry lives in `2..18`).
 - Re-balance vs. a 16×16 sibling — do not just paste a 16×16 path into a 20×20 viewBox.
-- For the 16×16 stripe (legacy / compact mode), keep a sibling `build.svg`; New UI uses the `@20x20` variant by default.
+- Keep a 16×16 sibling (`name.svg`) for compact mode; the `@20x20` variant is used by default.
 
 ---
 
 ## 7. Main toolbar action (20×20) — same template as tool window
 
-`expui/general/add@20x20.svg`:
+Add action (20×20):
 ```svg
 <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M9.75586 17.25C9.34165 17.25 9.00586 16.9142 9.00586 16.5V10.5059H3C2.58594 10.5059 2.25025 10.1699 2.25 9.75586C2.25 9.34165 2.58579 9.00586 3 9.00586H9.00586V3C9.00607 2.58597 9.34178 2.25 9.75586 2.25C10.1699 2.25 10.5056 2.58597 10.5059 3V9.00586H16.5C16.9142 9.00586 17.25 9.34165 17.25 9.75586C17.2498 10.1699 16.9141 10.5059 16.5 10.5059H10.5059V16.5C10.5059 16.9142 10.1701 17.25 9.75586 17.25Z" fill="#6C707E"/>
@@ -136,7 +134,7 @@ Main-toolbar icons reuse the 20×20 conventions of tool window stripes — the c
 
 ## 8. Gutter icon (14×14) — thin stroke, no padding
 
-`expui/gutter/javadocEdit.svg`:
+Edit-doc gutter mark:
 ```svg
 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path d="M10.5973 6.65471L12.6882 4.56049C13.1053 4.15406 13.1003 3.49602 12.6948 3.08627L11.0267 1.3136L11.0224 1.30932C10.6123 0.900035 9.94199 0.893268 9.53311 1.31079L7.3867 3.44406M10.5973 6.65471L7.3867 3.44406M10.5973 6.65471L4.74041 12.5H1.50036L1.5 9.32001L7.3867 3.44406" stroke="#6C707E" stroke-miterlimit="10"/>
@@ -152,7 +150,7 @@ Gutter icons:
 
 ## 9. Breakpoint mark (14×14) — solid filled circle
 
-`expui/breakpoints/breakpoint.svg`:
+Breakpoint mark:
 ```svg
 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
 <path fill-rule="evenodd" clip-rule="evenodd" d="M7 13C10.3137 13 13 10.3137 13 7C13 3.68629 10.3137 1 7 1C3.68629 1 1 3.68629 1 7C1 10.3137 3.68629 13 7 13Z" fill="#E55765"/>
@@ -165,7 +163,7 @@ Breakpoint marks read at a glance — a single solid fill in the status-error re
 
 ## 10. Dark-variant gotcha — white-on-warm vs. muted-dark
 
-`expui/status/warning_dark.svg` shows the only common case where a literal find-and-replace from the light SVG would produce a broken icon:
+The warning badge dark variant shows the only common case where a literal find-and-replace from the light SVG would produce a broken icon:
 
 ```svg
 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -177,4 +175,4 @@ Breakpoint marks read at a glance — a single solid fill in the status-error re
 
 `white` → `#5E4D33` inside the warning triangle. Apply the same swap whenever a light icon paints a glyph as `white` over a warm fill (`#FFAF0F`, `#E66D17`, etc.). For cool fills (`#3574F0`, `#208A3C`, `#DB3B4B`), the dark-theme glyph stays `white` because contrast is still sufficient.
 
-Note: the exclamation glyph here (the vertical bar + dot paths) is shared verbatim with the error badge in section 5 — upstream `warning.svg` / `warning_dark.svg` reuse the same optically centered `!` glyph, so between the light and dark warning variants only the fill color changes. This is the one case where reusing a sibling glyph unchanged is correct; the general rule still stands that a glyph must be re-balanced when its container centers it differently.
+Note: the exclamation glyph here (the vertical bar + dot paths) is the same optically centered `!` used by the error badge in section 5, so between the light and dark warning variants only the fill color changes. This is the one case where reusing a sibling glyph unchanged is correct; the general rule still stands that a glyph must be re-balanced when its container centers it differently.
