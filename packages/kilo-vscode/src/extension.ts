@@ -203,6 +203,8 @@ export function activate(context: vscode.ExtensionContext) {
         const ctx = agentManagerHost.wrapExistingPanel(panel, {
           onBeforeMessage: (msg) => agentManagerProvider.handleMessage(msg),
           worktreeDirectories: () => agentManagerProvider.getWorktreeDirectories(),
+          workspaceRoot: () => agentManagerProvider.workspaceRoot(),
+          projectId: () => agentManagerProvider.projectId(),
         })
         agentManagerProvider.deserializePanel(ctx)
         return Promise.resolve()

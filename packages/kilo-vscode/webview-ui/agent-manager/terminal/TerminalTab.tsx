@@ -20,7 +20,7 @@ import "@xterm/xterm/css/xterm.css"
 import { useVSCode } from "../../src/context/vscode"
 import { useLanguage } from "../../src/context/language"
 import { formatReviewCommentsMarkdown } from "../../src/utils/review-comment-markdown"
-import type { TerminalFont } from "./state"
+import type { ScriptTerminalStatus, TerminalFont } from "./state"
 
 interface Props {
   terminalId: string
@@ -51,6 +51,9 @@ interface Props {
    *  command, oh-my-zsh to user@host:cwd, vim to the file name. The
    *  state layer mirrors it into the tab label. */
   onTitleChange?: (title: string) => void
+  /** Provider-owned script status (Run/Setup), used to annotate the
+   *  output when a script ends in failure. */
+  status?: () => ScriptTerminalStatus | undefined
 }
 
 /** How long the ResizeObserver waits after the last size change before
@@ -219,10 +222,35 @@ export const TerminalTab: Component<Props> = (props) => {
     const ws = new WebSocket(props.wsUrl)
     ws.binaryType = "arraybuffer"
     let closed = false
+    let streamed = false
+    // The failure line must not depend on event ordering: the stream can
+    // close before the exited snapshot lands (fast failures), or stay open
+    // when a background child outlives the script. Write it exactly once,
+    // from whichever signal arrives first.
+    let failureWritten = false
+    const noteFailure = () => {
+      if (failureWritten || (!streamed && !closed)) return
+      const status = props.status?.()
+      if (status?.kind !== "setup") return
+      if (status.state === "failed") {
+        failureWritten = true
+        term.writeln(`\r\n\x1b[31m[${t("agentManager.terminal.setupFailed")}]\x1b[0m`)
+        return
+      }
+      if (status.state === "exited" && status.exitCode !== 0) {
+        failureWritten = true
+        term.writeln(`\r\n\x1b[31m[${t("agentManager.terminal.setupFailedCode")} ${status.exitCode ?? "?"}]\x1b[0m`)
+      }
+    }
+    createEffect(() => {
+      props.status?.()
+      noteFailure()
+    })
     const disposeData = term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) ws.send(data)
     })
     ws.onmessage = (event) => {
+      streamed = true
       // Text frames carry PTY output; binary frames starting with 0x00
       // are control metadata (cursor position). See pty/index.ts:46.
       if (typeof event.data === "string") {
@@ -242,6 +270,7 @@ export const TerminalTab: Component<Props> = (props) => {
     ws.onclose = () => {
       if (closed) return
       closed = true
+      noteFailure()
       term.writeln(`\r\n\x1b[90m[${t("agentManager.terminal.ended")}]\x1b[0m`)
     }
 

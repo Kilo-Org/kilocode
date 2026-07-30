@@ -54,6 +54,7 @@ export namespace KilocodeBootstrap {
         yield* bus.subscribeCallback(MemoryEvents.Updated, (evt) =>
           KiloToolRegistry.invalidateMemoryEnabled(evt.properties.directory),
         )
+        // Session export bootstrap.
         yield* Effect.gen(function* () {
           if (!SessionExport.enabled) return
           const anon = yield* EffectBridge.fromPromise(() =>
@@ -78,14 +79,16 @@ export namespace KilocodeBootstrap {
             Effect.sync(() => log.warn("session export bootstrap failed", { err: Cause.squash(cause) })),
           ),
         )
-        yield* EffectBridge.fromPromise(() =>
-          import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
-        ).pipe(
-          Effect.catchCause((cause) =>
-            Effect.sync(() => log.warn("indexing bootstrap failed", { err: Cause.squash(cause) })),
-          ),
-          Effect.forkDetach,
-        )
+        if (process.env["KILO_PLATFORM"] !== "vscode") {
+          yield* EffectBridge.fromPromise(() =>
+            import("@/kilocode/indexing").then((mod) => mod.KiloIndexing.init()),
+          ).pipe(
+            Effect.catchCause((cause) =>
+              Effect.sync(() => log.warn("indexing bootstrap failed", { err: Cause.squash(cause) })),
+            ),
+            Effect.forkDetach,
+          )
+        }
       })
 
       return Service.of({ init })

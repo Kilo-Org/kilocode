@@ -894,6 +894,9 @@ export const dict = {
   "settings.experimental.swePrunerModel.title": "SWE-Pruner model",
   "settings.experimental.swePrunerModel.description":
     "Model koji se koristi za orezivanje izlaza alata; podrazumijevano konfigurisani mali model",
+  "settings.experimental.multiProject.title": "Višeprojektni Agent Manager",
+  "settings.experimental.multiProject.description":
+    "Omogući upravljanje sesijama i worktree-ima kroz više repozitorija u Agent Manager-u. Trenutni workspace repozitorij je uvijek zadani projekat.",
   "settings.experimental.mcpTimeout.title": "MCP istek vremena (ms)",
   "settings.experimental.mcpTimeout.description": "Istek vremena za MCP server zahtjeve u milisekundama",
   "settings.experimental.remote.title": "Remote kontrola",

@@ -21,6 +21,8 @@ const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigat
 
 interface WorktreeItemProps {
   worktree: WorktreeState
+  /** Stable composite ID used by multi-project sidebar bodies. */
+  sidebarId?: string
   /** Display label (resolved from label, first session title, or branch). */
   label: string
   /** Branch name shown as subtitle when it differs from the label. */
@@ -201,7 +203,7 @@ export const WorktreeItem: Component<WorktreeItemProps> = (props) => {
                   "am-wt-grouped": props.grouped,
                   "am-wt-group-end": props.groupEnd,
                 }}
-                data-sidebar-id={props.worktree.id}
+                data-sidebar-id={props.sidebarId ?? props.worktree.id}
                 onClick={() => props.onClick()}
               >
                 <div class="am-wt-icon">

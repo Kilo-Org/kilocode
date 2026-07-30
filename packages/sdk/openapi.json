@@ -11555,11 +11555,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Effective configuration after patch",
+            "description": "Resolved config overlay after patch",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Config"
+                  "$ref": "#/components/schemas/ConfigOverlayResponse"
                 }
               }
             }
@@ -11570,6 +11570,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConfigOverlayConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigOverlayConflictError"
                 }
               }
             }
@@ -11585,8 +11595,7 @@
                 "properties": {
                   "scope": {
                     "type": "string",
-                    "enum": ["global", "project"],
-                    "default": "project"
+                    "enum": ["global", "project"]
                   },
                   "set": {
                     "type": "object"
@@ -11599,8 +11608,22 @@
                         "type": "string"
                       }
                     }
+                  },
+                  "expected": {
+                    "type": "object",
+                    "properties": {
+                      "path": {
+                        "type": "string"
+                      },
+                      "revision": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["path", "revision"],
+                    "additionalProperties": false
                   }
                 },
+                "required": ["scope"],
                 "additionalProperties": false
               }
             }
@@ -12555,6 +12578,76 @@
           {
             "lang": "js",
             "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.models({\n  ...\n})"
+          }
+        ]
+      }
+    },
+    "/indexing/consent": {
+      "put": {
+        "tags": ["indexing"],
+        "operationId": "indexing.consent",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indexing status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IndexingStatus"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BadRequestError"
+                }
+              }
+            }
+          }
+        },
+        "description": "Set machine-local code indexing consent for the active project.",
+        "summary": "Set indexing consent",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["enabled"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createKiloClient } from \"@kilocode/sdk\"\n\nconst client = createKiloClient()\nawait client.indexing.consent({\n  ...\n})"
           }
         ]
       }
@@ -33443,15 +33536,85 @@
             "type": "object",
             "properties": {
               "global": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "exists": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  },
+                  "raw": {
+                    "type": "object"
+                  }
+                },
+                "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+                "additionalProperties": false
               },
               "project": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "exists": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  },
+                  "raw": {
+                    "type": "object"
+                  }
+                },
+                "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+                "additionalProperties": false
               },
               "active": {
-                "type": "string"
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": ["global", "project"]
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "exists": {
+                    "type": "boolean"
+                  },
+                  "writable": {
+                    "type": "boolean"
+                  },
+                  "raw": {
+                    "type": "object"
+                  }
+                },
+                "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+                "additionalProperties": false
               }
             },
+            "required": ["global", "project", "active"],
             "additionalProperties": false
           },
           "fields": {
@@ -33599,6 +33762,46 @@
           }
         },
         "required": ["sources"],
+        "additionalProperties": false
+      },
+      "ConfigOverlayConflictError": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": ["target-changed", "revision-conflict"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "target": {
+            "type": "object",
+            "properties": {
+              "scope": {
+                "type": "string",
+                "enum": ["global", "project"]
+              },
+              "path": {
+                "type": "string"
+              },
+              "revision": {
+                "type": "string"
+              },
+              "exists": {
+                "type": "boolean"
+              },
+              "writable": {
+                "type": "boolean"
+              },
+              "raw": {
+                "type": "object"
+              }
+            },
+            "required": ["scope", "path", "revision", "exists", "writable", "raw"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["code", "message", "target"],
         "additionalProperties": false
       },
       "ConfigRulesResponse": {

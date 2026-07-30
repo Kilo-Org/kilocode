@@ -45,7 +45,10 @@ export interface TerminalRoutingDeps {
 /** True iff the message belongs to the terminal-tab subsystem. */
 function isTerminalMessage(
   m: AgentManagerInMessage,
-): m is Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }> {
+): m is Exclude<
+  Extract<AgentManagerInMessage, { type: `agentManager.terminal.${string}` }>,
+  { type: "agentManager.terminal.stop" | "agentManager.terminal.destinationSelected" }
+> {
   return (
     m.type === "agentManager.terminal.create" ||
     m.type === "agentManager.terminal.close" ||
