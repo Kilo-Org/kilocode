@@ -242,6 +242,30 @@ describe("Agent Manager terminal state", () => {
     })
   })
 
+  it("keeps only the target side terminal on close others", () => {
+    createRoot((dispose) => {
+      const item = scene()
+      item.state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://one", font, placement: "side" })
+      item.state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://two", font, placement: "side" })
+      item.state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://three", font, placement: "side" })
+      // Another context must survive untouched: "others" is per context.
+      item.state.add("wt-1", { id: "terminal:other", title: "Other", wsUrl: "ws://other", font, placement: "side" })
+      item.state.setSideActive(LOCAL, "terminal:one")
+
+      item.handlers.closeSideOthers("terminal:two")
+      expect(item.state.sidesForContext(LOCAL).map((term) => term.id)).toEqual(["terminal:two"])
+      expect(item.state.sidesForContext("wt-1").map((term) => term.id)).toEqual(["terminal:other"])
+      // The survivor becomes visible and focused, like selecting its tab.
+      expect(item.state.sideActiveFor(LOCAL)).toBe("terminal:two")
+      expect(item.state.focusRequest()?.id).toBe("terminal:two")
+      expect(item.posted).toEqual([
+        { type: "agentManager.terminal.close", terminalId: "terminal:one" },
+        { type: "agentManager.terminal.close", terminalId: "terminal:three" },
+      ])
+      dispose()
+    })
+  })
+
   it("waits for Run closure confirmation while user terminal closes stay optimistic", () => {
     createRoot((dispose) => {
       const item = scene()

@@ -2855,6 +2855,7 @@ const AgentManagerContent: Component = () => {
                       visible={() => sidePanel() === "terminal"}
                       onSelect={(id) => termHandlers.selectSide(id)}
                       onClose={(id) => termHandlers.closeSide(id)}
+                      onCloseOthers={(id) => termHandlers.closeSideOthers(id)}
                       onStart={() => termHandlers.addSide()}
                     />
                   </div>
