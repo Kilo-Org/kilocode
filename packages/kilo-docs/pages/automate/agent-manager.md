@@ -35,6 +35,30 @@ The panel opens as an editor tab and stays active across focus changes.
 - Use a git repository for worktree features
 - Open the main repository, not an existing worktree checkout, when creating new worktrees
 
+## Multiple Projects (Experimental)
+
+By default, Agent Manager operates on a single repository: the current workspace. Multi-project mode lets you manage sessions and worktrees across several repositories from one Agent Manager sidebar.
+
+Enable it under **Kilo Settings** > **Experimental** > **Multi-Project Agent Manager**, or set `kilo-code.new.experimental.multiProject` to `true` in your VS Code settings. When the experiment is off, Agent Manager behavior is unchanged.
+
+With multi-project mode enabled, the sidebar shows a **Projects** list:
+
+- The workspace repository is always the default project. It is pinned and cannot be removed.
+- Click the **+** button in the Projects header to add another repository. The folder you pick must be inside a Git repository. Added projects persist across restarts.
+- Click the chevron on a project row to expand or collapse it. Each expanded project shows its own worktrees, sections, sessions, git stats, and PR badges, all kept up to date by background polling.
+- Click a project name to make it the active project. Each project remembers the worktree or session you last had open and restores it when you switch back.
+- Sessions created anywhere — the sidebar, another VS Code window, or the CLI — appear in the owning project's list immediately.
+
+### Trusting Projects
+
+An added project must be trusted before Agent Manager loads its state or runs that repository's setup and run scripts. Click **Trust** on the project row to trust it. Trust is granted per project; the workspace project is always trusted.
+
+If a registered repository no longer exists on disk, its project row shows a warning icon with a "Repository not found" tooltip.
+
+### Removing a Project
+
+Click the **X** button on a project row (**Remove from Agent Manager**) to unregister it. The repository, its branches, and any worktree directories on disk are left untouched.
+
 ## Providers and Authentication
 
 Agent Manager uses the same sign-in, provider settings, models, BYOK keys, custom providers, MCP servers, and permission rules as the extension sidebar. Configure them from extension Settings and they apply to Agent Manager as well.
@@ -217,11 +241,39 @@ Press `Cmd+D` (macOS) / `Ctrl+D` (Windows/Linux) to toggle the diff panel. It sh
 - Markdown files include an eye/code toggle in the file header to switch between rendered Markdown and the raw diff
 - **Drag file headers into chat** — drag a file header from the diff panel into the chat input to insert an `@file` mention, giving the agent context about specific changed files
 
+### Diff Scope
+
+A scope selector in the diff toolbar (both in the side panel and the full-screen review) chooses which changes the diff shows:
+
+- **Branch** (default) — the full worktree diff against its parent branch, matching the review behavior above
+- **Staged** — staged changes in the selected worktree
+- **Unstaged** — unstaged changes in the selected worktree
+- **Session** — changes from the selected session
+
+The Branch scope also has a base-branch picker next to it for overriding the comparison branch. **Apply to local** works only on the Branch scope — switch back to Branch to apply.
+
 See [Agent Manager Workflows](/docs/automate/agent-manager-workflows#merging-worktree-and-parent-branch) for the full integration story, including when to apply locally vs. merge directly vs. open a pull request.
 
 ## Terminals
 
-Each session has a dedicated integrated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+Each session has a dedicated terminal rooted in the session's worktree directory. Press `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) to focus the terminal for the active session.
+
+### Choosing the Terminal Destination
+
+The toolbar's terminal button is a split button: click it to open a terminal, or use its dropdown to choose where terminals open:
+
+- **VS Code terminal** (default) — opens or focuses the VS Code integrated terminal at the bottom of the window
+- **Agent Manager panel** — opens an embedded terminal in the side panel that also hosts the diff view, so the shell stays inside the Agent Manager layout
+
+The dropdown choice is remembered per panel and becomes the default for new panels. You can also set the default directly with the `kilo-code.new.agentManager.terminalButtonDestination` setting (`vscode` or `agentManager`). The `Cmd+/` (macOS) / `Ctrl+/` (Windows/Linux) shortcut follows the same destination.
+
+With the **Agent Manager panel** destination, the terminal works like the diff panel: press `Cmd+/` to reveal it and press again to hide it. Hiding never stops the terminal — scrollback and running processes continue in the background, and focus returns to the chat input. A terminal stops only when you close its tab in the panel.
+
+### Multiple Terminals
+
+The side panel hosts multiple terminals per context (the local workspace or a worktree). The panel header is a tab strip: click a tab to switch, click **+** to open another terminal, and click **X** (or middle-click) to close a single terminal. Drag tabs to reorder them. Closing a terminal no longer hides the panel — closing the last one lands on the empty state. Pressing `Cmd+W` (macOS) / `Ctrl+W` (Windows/Linux) with a focused side terminal closes exactly that terminal.
+
+New terminals are named "Terminal N" using the lowest free number, and tabs pick up the live title from the shell or running program, so a dev server or editor names its own tab.
 
 ### Switching Between Terminal and Agent Manager
 
