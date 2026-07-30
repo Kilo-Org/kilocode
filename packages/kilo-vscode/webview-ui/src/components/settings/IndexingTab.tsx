@@ -279,7 +279,11 @@ const IndexingTab: Component = () => {
         return
       }
       if (message.model) {
-        updateIndexing({ model: message.model.id, dimension: message.model.dimension })
+        updateIndexing({
+          model: message.model.id,
+          dimension: message.model.dimension,
+          ...(cfg().embeddingBatchSize ? {} : { embeddingBatchSize: message.model.batchSize }),
+        })
         setModels((items) =>
           items.map((item) => (item.id === message.model?.id ? { ...item, ...message.model } : item)),
         )

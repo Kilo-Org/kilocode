@@ -7,6 +7,8 @@ export type EmbeddingModel = {
   name: string
   embedding: "supported" | "unsupported" | "unknown"
   dimension?: number
+  maxTokens?: number
+  batchSize?: number
 }
 
 type Options = {
@@ -24,6 +26,14 @@ type OllamaTag = {
 type OllamaShow = {
   capabilities?: string[]
   model_info?: Record<string, unknown>
+}
+
+type LmModel = {
+  id?: string
+  key?: string
+  display_name?: string
+  type?: string
+  max_context_length?: number
 }
 
 class RequestError extends Error {
@@ -60,6 +70,12 @@ function dimension(info: Record<string, unknown> | undefined) {
   return entry ? Number(entry[1]) : undefined
 }
 
+function context(info: Record<string, unknown> | undefined) {
+  if (!info) return undefined
+  const entry = Object.entries(info).find(([key, value]) => key.endsWith(".context_length") && Number(value) > 0)
+  return entry ? Number(entry[1]) : undefined
+}
+
 async function discoverOllama(baseURL: string): Promise<EmbeddingModel[]> {
   const base = baseURL.replace(/\/+$/, "")
   const response = await request(`${base}/api/tags`)
@@ -83,11 +99,13 @@ async function discoverOllama(baseURL: string): Promise<EmbeddingModel[]> {
           ? ("unsupported" as const)
           : ("unknown" as const)
       const size = embedding === "unsupported" ? undefined : dimension(show.model_info)
+      const max = embedding === "unsupported" ? undefined : context(show.model_info)
       return {
         id,
         name: id,
         embedding,
         ...(size ? { dimension: size } : {}),
+        ...(max ? { maxTokens: max } : {}),
       }
     }),
   )
@@ -95,26 +113,51 @@ async function discoverOllama(baseURL: string): Promise<EmbeddingModel[]> {
 }
 
 async function discoverOpenAI(baseURL: string, apiKey?: string): Promise<EmbeddingModel[]> {
+  const root = baseURL.replace(/\/+$/, "").replace(/\/v1$/, "")
+  const endpoints = [`${root}/api/v1/models`, `${root}/api/v0/models`]
+  const native = async (remaining: string[]): Promise<LmModel[] | undefined> => {
+    const url = remaining[0]
+    if (!url) return undefined
+    const response = await request(url, { headers: headers(apiKey) }).catch(() => undefined)
+    if (!response) return native(remaining.slice(1))
+    const body = (await response.json()) as { data?: LmModel[]; models?: LmModel[] }
+    return Array.isArray(body.models) ? body.models : body.data
+  }
+  const local = await native(endpoints)
+  if (local) {
+    return local
+      .filter((model) => (model.type === "embedding" || model.type === "embeddings") && (model.key || model.id))
+      .map((model) => {
+        const id = model.key || model.id!
+        return {
+          id,
+          name: model.display_name || id,
+          embedding: "supported" as const,
+          ...(model.max_context_length ? { maxTokens: model.max_context_length } : {}),
+        }
+      })
+      .sort((a, b) => a.id.localeCompare(b.id))
+  }
   const models = await fetchOpenAIModels({ baseURL, apiKey })
   return models.map((model) => ({ ...model, embedding: "unknown" }))
 }
 
-async function probeOllama(baseURL: string, model: string) {
+async function probeOllama(baseURL: string, model: string, input: string[]) {
   const base = baseURL.replace(/\/+$/, "")
   const response = await request(
     `${base}/api/embed`,
     {
       method: "POST",
       headers: headers(),
-      body: JSON.stringify({ model, input: "test" }),
+      body: JSON.stringify({ model, input }),
     },
     120_000,
   )
   const body = (await response.json()) as { embeddings?: number[][] }
-  return body.embeddings?.[0]
+  return body.embeddings
 }
 
-async function probeOpenAI(baseURL: string, apiKey: string | undefined, model: string) {
+async function probeOpenAI(baseURL: string, apiKey: string | undefined, model: string, input: string[]) {
   const base = baseURL.replace(/\/+$/, "")
   const run = (encoding: boolean) =>
     request(
@@ -122,7 +165,7 @@ async function probeOpenAI(baseURL: string, apiKey: string | undefined, model: s
       {
         method: "POST",
         headers: headers(apiKey),
-        body: JSON.stringify({ model, input: "test", ...(encoding ? { encoding_format: "float" } : {}) }),
+        body: JSON.stringify({ model, input, ...(encoding ? { encoding_format: "float" } : {}) }),
       },
       120_000,
     )
@@ -131,8 +174,11 @@ async function probeOpenAI(baseURL: string, apiKey: string | undefined, model: s
     throw err
   })
   const response = first ?? (await run(false))
-  const body = (await response.json()) as { data?: Array<{ embedding?: number[] }> }
-  return body.data?.[0]?.embedding
+  const body = (await response.json()) as { data?: Array<{ embedding?: number[]; index?: number }> }
+  return body.data
+    ?.slice()
+    .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
+    .map((item) => item.embedding)
 }
 
 export async function discoverEmbeddingModels(options: Options) {
@@ -142,17 +188,45 @@ export async function discoverEmbeddingModels(options: Options) {
 
 export async function probeEmbeddingModel(options: Options): Promise<EmbeddingModel> {
   if (!options.model) throw new Error("Model is required")
-  const vector =
-    options.runtime === "ollama"
-      ? await probeOllama(options.baseURL, options.model)
-      : await probeOpenAI(options.baseURL, options.apiKey, options.model)
-  if (!Array.isArray(vector) || vector.length === 0 || vector.some((value) => !Number.isFinite(value))) {
-    throw new Error(`Model "${options.model}" did not return a valid embedding`)
+  const sizes = [8, 4, 2, 1]
+  const sample = "export function searchIndex(query: string) { return query.trim() }"
+  const attempt = async (size: number) => {
+    const input = Array.from({ length: size }, (_, index) => `${sample} // ${index}`)
+    const vectors =
+      options.runtime === "ollama"
+        ? await probeOllama(options.baseURL, options.model!, input)
+        : await probeOpenAI(options.baseURL, options.apiKey, options.model!, input)
+    if (!vectors || vectors.length !== size) {
+      throw new Error(`expected ${size} embeddings, got ${vectors?.length ?? 0}`)
+    }
+    const dimension = vectors[0]?.length ?? 0
+    if (
+      dimension === 0 ||
+      vectors.some(
+        (vector) =>
+          !Array.isArray(vector) || vector.length !== dimension || vector.some((value) => !Number.isFinite(value)),
+      )
+    ) {
+      throw new Error("returned invalid or inconsistent embedding vectors")
+    }
+    return dimension
+  }
+  const check = async (remaining: number[]): Promise<{ size: number; dimension: number } | undefined> => {
+    const size = remaining[0]
+    if (!size) return undefined
+    const dimension = await attempt(size).catch(() => undefined)
+    if (dimension) return { size, dimension }
+    return check(remaining.slice(1))
+  }
+  const profile = await check(sizes)
+  if (!profile?.dimension) {
+    throw new Error(`Model "${options.model}" did not pass the embedding compatibility check`)
   }
   return {
     id: options.model,
     name: options.model,
     embedding: "supported",
-    dimension: vector.length,
+    dimension: profile.dimension,
+    batchSize: profile.size,
   }
 }

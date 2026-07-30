@@ -42,9 +42,12 @@ describe("embedding model discovery", () => {
       if (path === "/v1/models") {
         return Response.json({ data: [{ id: "embed", name: "Embedding model" }] })
       }
-      const body = (await request.json()) as { model: string }
+      if (path === "/api/v1/models" || path === "/api/v0/models") return new Response(null, { status: 404 })
+      const body = (await request.json()) as { model: string; input: string[] }
       expect(body.model).toBe("embed")
-      return Response.json({ data: [{ embedding: [0.1, 0.2, 0.3] }] })
+      return Response.json({
+        data: body.input.map((_, index) => ({ embedding: [0.1, 0.2, 0.3], index })),
+      })
     })
 
     expect(await discoverEmbeddingModels({ runtime: "openai-compatible", baseURL: `${url}/v1` })).toEqual([
@@ -55,6 +58,41 @@ describe("embedding model discovery", () => {
       name: "embed",
       embedding: "supported",
       dimension: 3,
+      batchSize: 8,
+    })
+  })
+
+  it("discovers LM Studio embedding metadata", async () => {
+    const url = serve((request) => {
+      if (new URL(request.url).pathname !== "/api/v1/models") return new Response(null, { status: 404 })
+      return Response.json({
+        models: [
+          { id: "chat", type: "llm", max_context_length: 4096 },
+          {
+            key: "qwen",
+            display_name: "Qwen Embedding",
+            type: "embedding",
+            max_context_length: 32768,
+          },
+        ],
+      })
+    })
+
+    expect(await discoverEmbeddingModels({ runtime: "openai-compatible", baseURL: `${url}/v1` })).toEqual([
+      { id: "qwen", name: "Qwen Embedding", embedding: "supported", maxTokens: 32768 },
+    ])
+  })
+
+  it("falls back to a safe batch size", async () => {
+    const url = serve(async (request) => {
+      const body = (await request.json()) as { input: string[] }
+      if (body.input.length > 2) return Response.json({ error: "out of memory" }, { status: 500 })
+      return Response.json({ embeddings: body.input.map(() => [0.1, 0.2]) })
+    })
+
+    expect(await probeEmbeddingModel({ runtime: "ollama", baseURL: url, model: "qwen" })).toMatchObject({
+      dimension: 2,
+      batchSize: 2,
     })
   })
 })
