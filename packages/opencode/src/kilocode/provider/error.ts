@@ -11,18 +11,42 @@ export type Frame = {
  * Normalize provider stream error frames that arrive without the
  * `{ type: "error" }` envelope expected by ProviderError.parseStreamError:
  * OpenAI Responses API terminal frames forwarded by @ai-sdk/openai >= 3.0.82
- * (`{ type: "response.failed", response: { error } }`) and bare
- * chat-completions error objects (`{ code, message }`).
+ * (`{ type: "response.failed", response: { error } }`), envelope-less
+ * chat-completions wrappers (`{ error: { code, message } }`), and bare
+ * error objects (`{ code, message }`). A nested `error` record wins over
+ * bare top-level fields so gateway wrappers keep the specific inner code.
  */
 export function frame(body: unknown): Frame {
   if (!isRecord(body)) return {}
   if (body.type === "response.failed" && isRecord(body.response) && isRecord(body.response.error)) {
     return { type: "error", error: body.response.error }
   }
+  if (body.type === undefined && isRecord(body.error)) {
+    return { ...body, type: "error" }
+  }
   if (body.type === undefined && typeof body.message === "string" && body.code !== undefined) {
     return { ...body, type: "error", error: body }
   }
   return { ...body, error: isRecord(body.error) ? body.error : undefined }
+}
+
+const RETRYABLE = /rate.?limit|overload|server|unavailable|timeout/i
+
+/**
+ * Terminal handler for normalized frames whose error code is not listed in
+ * ProviderError.parseStreamError: surface the provider message instead of
+ * falling back to a raw JSON dump. Retryable only for rate-limit and
+ * 5xx-style codes.
+ */
+export function fallback(body: Frame, responseBody: string) {
+  const message = body.error?.message
+  if (typeof message !== "string" || !message.trim()) return
+  const code = body.error?.code
+  const retryable =
+    typeof code === "number"
+      ? code === 429 || (code >= 500 && code < 600)
+      : typeof code === "string" && RETRYABLE.test(code)
+  return { type: "api_error" as const, message, isRetryable: retryable, responseBody }
 }
 
 const AUTH_ERROR =

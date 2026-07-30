@@ -112,6 +112,53 @@ describe("responses api terminal frames", () => {
     expect(result.data.isRetryable).toBe(true)
   })
 
+  test("unwraps envelope-less error wrappers", () => {
+    const payload = { error: { code: "rate_limit_exceeded", message: "Try again in 30 seconds.", type: "tokens" } }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe(payload.error.message)
+    expect(result.data.isRetryable).toBe(true)
+  })
+
+  test("prefers a nested error record over bare top-level fields", () => {
+    const payload = {
+      code: 429,
+      message: "gateway wrapper",
+      error: { code: "rate_limit_exceeded", message: "inner provider detail" },
+    }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe(payload.error.message)
+    expect(result.data.isRetryable).toBe(true)
+  })
+
+  test("surfaces messages for unlisted error codes", () => {
+    const payload = {
+      type: "response.failed",
+      response: { error: { code: "model_not_found", message: "no such model" }, incomplete_details: null },
+    }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe("no such model")
+    expect(result.data.isRetryable).toBe(false)
+  })
+
+  test("marks numeric 429 and 5xx error codes retryable", () => {
+    const payload = { code: 429, message: "too many requests" }
+    const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
+
+    expect(MessageV2.APIError.isInstance(result)).toBe(true)
+    if (!MessageV2.APIError.isInstance(result)) throw new Error("expected APIError")
+    expect(result.data.message).toBe("too many requests")
+    expect(result.data.isRetryable).toBe(true)
+  })
+
   test("ignores response.failed frames without an error payload", () => {
     const payload = { type: "response.failed", response: { error: null, incomplete_details: null } }
     const result = MessageV2.fromError(payload, { providerID: ProviderV2.ID.make("openai") })
