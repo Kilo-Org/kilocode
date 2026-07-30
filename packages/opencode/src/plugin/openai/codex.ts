@@ -29,7 +29,7 @@ const ALLOWED_MODELS = new Set([
   // kilocode_change end
 ])
 // kilocode_change start
-const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
+const DISALLOWED_MODELS = new Set(["gpt-5.5-pro", "gpt-5.6"])
 // kilocode_change end
 
 interface PkceCodes {

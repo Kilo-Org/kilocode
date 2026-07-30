@@ -11,11 +11,8 @@ import { withNetworkOptions, resolveNetworkOptionsNoConfig } from "@/cli/network
 import { Filesystem } from "@/util/filesystem"
 import type { GlobalEvent } from "@kilocode/sdk/v2"
 import type { EventSource } from "@opencode-ai/tui/context/sdk"
-import { importCloudSession, localSessionID, validateCloudFork } from "@/kilocode/cloud-session" // kilocode_change
-import { createKiloClient } from "@kilocode/sdk/v2" // kilocode_change
 import { writeHeapSnapshot } from "v8"
-import { KiloTuiThreadDaemon, type StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change
-import { preload } from "@/kilocode/cli/cmd/tui" // kilocode_change
+import type { StartInput } from "@/kilocode/cli/cmd/tui/thread" // kilocode_change - runtime imports deferred into handlers
 import { win32InstallCtrlCGuard } from "@opencode-ai/tui/terminal-win32"
 import { validateSession } from "../tui/validate-session"
 // kilocode_change start - correlate the TUI worker with its parent process
@@ -26,7 +23,7 @@ import {
   sanitizedProcessEnv,
 } from "@opencode-ai/core/util/opencode-process"
 // kilocode_change end
-import { createParentRemoteExitBridge, type RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change
+import type { RemoteExitBridgeClient } from "@/kilocode/cli/cmd/tui/remote-exit-bridge" // kilocode_change - runtime import deferred
 import type { Exit } from "@opencode-ai/tui/context/exit" // kilocode_change
 
 declare global {
@@ -46,6 +43,7 @@ export async function runEmbeddedRemoteExitBridge(input: {
   done: Promise<unknown>
   timeoutMs?: number
 }) {
+  const { createParentRemoteExitBridge } = await import("@/kilocode/cli/cmd/tui/remote-exit-bridge")
   const timeoutMs = input.timeoutMs ?? 5_000
   const bridge = createParentRemoteExitBridge(input.client, input.exit)
   let ready = false
@@ -179,6 +177,12 @@ export const TuiThreadCommand = cmd({
         describe: "agent to use",
       }),
   handler: async (args) => {
+    // kilocode_change start - lazy Kilo implementations so other CLI commands
+    // don't pay their module cost at startup
+    const { importCloudSession, localSessionID, validateCloudFork } = await import("@/kilocode/cloud-session")
+    const { KiloTuiThreadDaemon } = await import("@/kilocode/cli/cmd/tui/thread")
+    const { preload } = await import("@/kilocode/cli/cmd/tui")
+    // kilocode_change end
     const unguard = win32InstallCtrlCGuard()
     const shutdown = {
       pending: undefined as Promise<void> | undefined,
@@ -205,9 +209,8 @@ export const TuiThreadCommand = cmd({
       const next = resolveThreadDirectory(args.project)
       const file = await target()
       // kilocode_change start
-      const preloads = preload(
-        typeof KILO_WORKER_PATH !== "undefined",
-        () => import.meta.resolve("@opentui/solid/preload"),
+      const preloads = preload(typeof KILO_WORKER_PATH !== "undefined", () =>
+        import.meta.resolve("@opentui/solid/preload"),
       )
       // kilocode_change end
       try {
@@ -354,6 +357,7 @@ export const TuiThreadCommand = cmd({
         // kilocode_change start - import cloud session before TUI renders
         if (args.cloudFork && args.session) {
           UI.println("Importing session from cloud...")
+          const { createKiloClient } = await import("@kilocode/sdk/v2")
           const sdk = createKiloClient({
             baseUrl: transport.url,
             fetch: transport.fetch,

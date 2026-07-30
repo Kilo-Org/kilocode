@@ -877,8 +877,3 @@ export function handleVisualKey(doc: VimDoc, state: VimState, input: VimKey): Vi
   state.countDigits = ""
   return { handled: true }
 }
-
-export function enterInsert(state: VimState) {
-  state.mode = "insert"
-  resetPending(state)
-}

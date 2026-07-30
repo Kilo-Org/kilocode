@@ -5,7 +5,7 @@
  */
 
 import type { Meta, StoryObj } from "storybook-solidjs-vite"
-import { StoryProviders, defaultMockData, mockSessionValue } from "./StoryProviders"
+import { StoryProviders, defaultMockData, mockSessionValue, t } from "./StoryProviders"
 import { FileTree } from "../../diff-viewer/FileTree"
 import { DiffPanel } from "../../agent-manager/DiffPanel"
 import { FullScreenDiffView } from "../../diff-viewer/FullScreenDiffView"
@@ -933,9 +933,9 @@ export const TabBarSingleTab: Story = {
 }
 
 // Side terminal panel inside the real inspector host chain, empty state —
-// no live PTY, so the start affordance renders. The header reuses the
-// .am-diff-header metrics so the a11y/screenshot baseline also guards the
-// alignment against the diff panel chrome.
+// no live PTY, so the start affordance renders. The tab strip header keeps
+// the .am-diff-header height so the a11y/screenshot baseline also guards
+// the alignment against the diff panel chrome.
 export const SideTerminalPanelEmpty: Story = {
   name: "Side terminal panel — empty",
   render: () => {
@@ -953,8 +953,53 @@ export const SideTerminalPanelEmpty: Story = {
                   state={state}
                   contextKey={() => LOCAL}
                   visible={() => true}
+                  onSelect={() => undefined}
                   onClose={() => undefined}
+                  onCloseOthers={() => undefined}
                   onStart={() => undefined}
+                  onStop={() => undefined}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// Tab strip with several side terminals: the active one shows the X close
+// button, the others reveal it on hover. Terminals point at a dead port —
+// xterm renders its connection-error notice inside the panel, which keeps
+// the story self-contained without a live PTY.
+export const SideTerminalPanelTabs: Story = {
+  name: "Side terminal panel — tabs",
+  render: () => {
+    const state = createTerminalState(() => LOCAL)
+    const font = { fontFamily: "monospace", fontSize: 12 }
+    state.add(null, { id: "terminal:one", title: "Terminal 1", wsUrl: "ws://127.0.0.1:1/a", font, placement: "side" })
+    state.add(null, { id: "terminal:two", title: "Terminal 2", wsUrl: "ws://127.0.0.1:1/b", font, placement: "side" })
+    state.add(null, { id: "terminal:three", title: "Terminal 3", wsUrl: "ws://127.0.0.1:1/c", font, placement: "side" })
+    state.setSideActive(LOCAL, "terminal:two")
+    state.setTitle("terminal:two", "npm run dev")
+    return (
+      <StoryProviders noPadding>
+        <div class="am-detail-stack" style={{ height: "420px" }}>
+          <div class="am-detail-content am-detail-split">
+            <div class="am-main-pane" style={{ padding: "24px", color: "var(--text-weak)" }}>
+              Agent session stays visible beside the terminal.
+            </div>
+            <div class="am-diff-resize" style={{ width: "360px" }}>
+              <div class="am-diff-panel-wrapper">
+                <SideTerminalPanel
+                  state={state}
+                  contextKey={() => LOCAL}
+                  visible={() => true}
+                  onSelect={(id) => state.setSideActive(LOCAL, id)}
+                  onClose={() => undefined}
+                  onCloseOthers={() => undefined}
+                  onStart={() => undefined}
+                  onStop={() => undefined}
                 />
               </div>
             </div>
@@ -1141,6 +1186,153 @@ export const SidebarSearchOpen: Story = {
             {selected()}
           </output>
           <textarea ref={prompt} class="sr-only" aria-label="Story prompt" />
+        </div>
+      </StoryProviders>
+    )
+  },
+}
+
+// ---------------------------------------------------------------------------
+// Multi-project sidebar
+// ---------------------------------------------------------------------------
+
+import { ProjectList } from "../../agent-manager/ProjectList"
+import type {
+  AgentManagerStateMessage,
+  AgentProjectSnapshot,
+  LocalGitStats,
+  ProjectSessionInfo,
+} from "../types/messages"
+
+const projectA: AgentProjectSnapshot = {
+  id: "prj-aaaa1111aaaa",
+  root: "/repos/kilocode",
+  label: "kilocode",
+  pinned: true,
+  active: true,
+  expanded: true,
+  initialized: true,
+  trusted: true,
+  missing: false,
+}
+const projectB: AgentProjectSnapshot = {
+  id: "prj-bbbb2222bbbb",
+  root: "/repos/kilo-gateway",
+  label: "kilo-gateway",
+  pinned: false,
+  active: false,
+  expanded: true,
+  initialized: true,
+  trusted: true,
+  missing: false,
+}
+
+const wt = (id: string, branch: string, label?: string): WorktreeState => ({
+  id,
+  branch,
+  path: `/repos/x/.kilo/worktrees/${id}`,
+  parentBranch: "main",
+  createdAt: "2026-07-20T10:00:00Z",
+  label,
+})
+
+const projectState = (
+  projectId: string,
+  worktrees: WorktreeState[],
+  sessions: { id: string; worktreeId: string | null }[],
+  sections: NonNullable<AgentManagerStateMessage["sections"]> = [],
+  baseBranch = "main",
+): AgentManagerStateMessage => ({
+  type: "agentManager.state",
+  projectId,
+  worktrees,
+  sessions: sessions.map((s) => ({ id: s.id, worktreeId: s.worktreeId, createdAt: "2026-07-20T10:00:00Z" })),
+  sections,
+  staleWorktreeIds: [],
+  isGitRepo: true,
+  defaultBaseBranch: baseBranch,
+  sessionsCollapsed: false,
+})
+
+const projectSession = (
+  id: string,
+  worktreeId: string | null,
+  title: string,
+  updatedAt: string,
+): ProjectSessionInfo => ({
+  id,
+  worktreeId,
+  title,
+  createdAt: "2026-07-19T09:00:00Z",
+  updatedAt,
+})
+
+const storyStats = (worktreeId: string, additions: number, deletions: number, ahead = 0): WorktreeGitStats => ({
+  worktreeId,
+  files: 3,
+  additions,
+  deletions,
+  ahead,
+  behind: 0,
+})
+
+const storyLocal = (branch: string, additions: number, deletions: number, ahead = 0, behind = 0): LocalGitStats => ({
+  branch,
+  files: 2,
+  additions,
+  deletions,
+  ahead,
+  behind,
+})
+
+export const MultiProjectSidebar: Story = {
+  name: "Project List — two expanded projects with restored controls",
+  render: () => {
+    return (
+      <StoryProviders noPadding>
+        <div style={{ display: "flex", "flex-direction": "column", "max-height": "720px", overflow: "auto" }}>
+          <ProjectList
+            projects={[projectA, projectB]}
+            states={{
+              [projectA.id]: projectState(
+                projectA.id,
+                [wt("wt-a1", "feature/project-list", "Project list UI"), wt("wt-a2", "fix/session-routing")],
+                [
+                  { id: "ses-a1", worktreeId: null },
+                  { id: "ses-a2", worktreeId: "wt-a1" },
+                ],
+              ),
+              [projectB.id]: projectState(
+                projectB.id,
+                [wt("wt-b1", "feat/gateway-routing", "Gateway routing")],
+                [{ id: "ses-b1", worktreeId: null }],
+                [{ id: "sec-b1", name: "In progress", color: null, order: 0, collapsed: false }],
+                "master",
+              ),
+            }}
+            stats={{
+              [projectA.id]: { "wt-a1": storyStats("wt-a1", 342, 87, 2), "wt-a2": storyStats("wt-a2", 18, 4) },
+              [projectB.id]: { "wt-b1": storyStats("wt-b1", 96, 12, 1) },
+            }}
+            local={{
+              [projectA.id]: storyLocal("main", 124, 33, 1),
+              [projectB.id]: storyLocal("master", 0, 0, 0, 2),
+            }}
+            prs={{ [projectA.id]: {}, [projectB.id]: {} }}
+            sessions={{
+              [projectA.id]: [
+                projectSession("ses-a1", null, "Refine project accordion layout", "2026-07-24T08:30:00Z"),
+                projectSession("ses-a2", "wt-a1", "Add per-project actions", "2026-07-23T16:10:00Z"),
+              ],
+              [projectB.id]: [projectSession("ses-b1", null, "Route stats per project", "2026-07-24T07:45:00Z")],
+            }}
+            selectedProject={projectA.id}
+            selection="local"
+            bindings={{ search: "⌘F", showShortcuts: "⌘⇧/", newWorktree: "⌘N", quickWorktree: "⌘⇧N" }}
+            t={t}
+            onSearchRef={() => {}}
+            onShortcuts={() => {}}
+          />
         </div>
       </StoryProviders>
     )

@@ -7,6 +7,7 @@ import { errorLayer } from "@/server/routes/instance/httpapi/middleware/error"
 import { fenceLayer } from "@/server/routes/instance/httpapi/middleware/fence"
 import * as AnacondaDesktop from "@/kilocode/anaconda-desktop/service"
 import { BackgroundJob } from "@/background/job"
+import { EffectFlock } from "@opencode-ai/core/util/effect-flock"
 
 import { KiloViewers } from "@/kilocode/presence/service" // kilocode_change
 import { agentBuilderHandlers } from "./handlers/agent-builder"
@@ -66,6 +67,7 @@ export function provideListener(opts?: CorsOptions) {
     fenceLayer,
     cors,
     KiloViewers.defaultLayer, // kilocode_change
+    EffectFlock.defaultLayer,
     FetchHttpClient.layer,
     HttpServer.layerServices,
     Layer.succeed(CorsConfig)(opts),

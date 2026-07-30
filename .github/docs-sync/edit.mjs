@@ -82,8 +82,13 @@ Batch specifics for this run: the PRs to handle are in the attached ${batchFile}
       break
     }
 
+    // Headless `kilo run` auto-rejects every permission ask; without --auto the
+    // agent cannot run shell commands. SECURITY: --auto grants unrestricted bash
+    // to an agent steered by external PR content. Hardening deferred: a scoped
+    // permission.bash map via KILO_CONFIG_CONTENT should replace --auto once the
+    // required shell patterns are stable (see PR #12605 review thread).
     const result = runKilo({
-      args: ["run", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
+      args: ["run", "--auto", prompt, "-m", model, "--variant", "high", "--dir", process.cwd(), "-f", batchFile, "-f", triageFile],
       timeoutMs: Math.min(BATCH_TIMEOUT_MS, left),
       streamStdout: true,
       label: `edit batch ${index} attempt ${attempt}`,
