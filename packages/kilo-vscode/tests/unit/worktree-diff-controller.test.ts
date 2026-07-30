@@ -9,14 +9,16 @@ import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeState
 // Records every PanelContext handed to catalog.build so tests can assert which
 // base branch the active source was (re)built with. The controller, scope
 // resolution, and SourceController lifecycle under test are all real.
-function make() {
+function make(onFetch?: (n: number) => Promise<void>) {
   const builds: { id: string; ctx: PanelContext }[] = []
+  let fetches = 0
   const catalog = {
     build: (id: string, ctx: PanelContext): DiffSource => {
       builds.push({ id, ctx })
       return {
         descriptor: { id, type: "workspace", group: "Git", capabilities: { revert: true, comments: true } },
         async fetch() {
+          await onFetch?.(++fetches)
           return { diffs: [] }
         },
       }
@@ -83,6 +85,34 @@ describe("WorktreeDiffController.setBase", () => {
     controller.start("s1#branch")
     await waitFor(() => builds.length === 1)
     expect(builds[0]!.ctx.baseBranch).toBe("feature-x")
+
+    controller.stop()
+  })
+
+  it("keeps watching when the base changes during the initial fetch", async () => {
+    // Hold the first activation's fetch in flight, simulating a slow worktree
+    // diff. isPolling is still false in this window, but the watch intent must
+    // survive the base change rather than downgrading the panel to one-shot.
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const { controller, builds } = make(async (n) => {
+      if (n === 1) await gate
+    })
+
+    controller.start("s1#branch")
+    await waitFor(() => builds.length === 1)
+
+    const change = controller.setBase("s1#branch", "feature-x")
+    release()
+    await change
+    expect(builds.length).toBe(2)
+    expect(builds[1]!.ctx.baseBranch).toBe("feature-x")
+
+    // Polling survives: start() early-returns for an id that is already
+    // watched. A downgraded one-shot panel would re-activate and rebuild here.
+    controller.start("s1#branch")
+    await tick()
+    expect(builds.length).toBe(2)
 
     controller.stop()
   })
