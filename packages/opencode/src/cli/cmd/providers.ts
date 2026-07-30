@@ -18,6 +18,7 @@ import { errorMessage } from "@/util/error"
 import { text } from "node:stream/consumers"
 import { Effect, Option } from "effect"
 import { remove as removeAuth } from "@/kilocode/auth/remove" // kilocode_change
+import { TokenCommand } from "@/kilocode/cli/cmd/auth-token" // kilocode_change
 
 type PluginAuth = NonNullable<Hooks["auth"]>
 
@@ -244,7 +245,14 @@ export const ProvidersCommand = cmd({
   // kilocode_change end
   describe: "manage AI providers and credentials",
   builder: (yargs) =>
-    yargs.command(ProvidersListCommand).command(ProvidersLoginCommand).command(ProvidersLogoutCommand).demandCommand(),
+    // kilocode_change start - TokenCommand prints the active provider token to stdout for scripting
+    yargs
+      .command(ProvidersListCommand)
+      .command(ProvidersLoginCommand)
+      .command(ProvidersLogoutCommand)
+      .command(TokenCommand)
+      .demandCommand(),
+  // kilocode_change end
   async handler() {},
 })
 
