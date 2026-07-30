@@ -61,6 +61,8 @@ const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptR
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
 const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
+const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
+const RUN_DESTINATION_FILE = path.join(ROOT, "src/agent-manager/run/destination.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -467,7 +469,23 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("client.v2.pty.update")
     expect(text).toContain("client.v2.pty.remove")
     expect(text).not.toContain("vscode")
-    expect(provider()).not.toContain("startVscodeRunTask")
+  })
+
+  it("selects the Run adapter through the destination setting", () => {
+    const text = provider()
+    expect(text).toContain("pickRunStart")
+    expect(text).toContain("readRunTerminalDestination")
+    expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("start(config, done)"))
+  })
+
+  it("keeps the legacy integrated Run adapter isolated and removable", () => {
+    const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
+    expect(task).toContain("vscode.tasks.executeTask")
+    expect(task).toContain("Remove this file")
+    const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
+    expect(dest).not.toContain('from "vscode"')
+    expect(dest).toContain("pickRunStart")
+    expect(dest).toContain("resolveRunTerminalDestination")
   })
 
   it("clears retained Run terminals before removing worktree state", () => {

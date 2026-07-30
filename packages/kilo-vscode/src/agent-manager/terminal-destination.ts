@@ -8,6 +8,7 @@
  */
 
 import * as vscode from "vscode"
+import { resolveRunTerminalDestination, type RunTerminalDestination } from "./run/destination"
 
 export type TerminalDestination = "vscode" | "agentManager"
 
@@ -26,6 +27,13 @@ export function readTerminalDestination(): TerminalDestination {
 
 export function affectsTerminalDestination(e: vscode.ConfigurationChangeEvent): boolean {
   return e.affectsConfiguration(KEY)
+}
+
+/** Where the Run button executes. Read at start time; an active run stays
+ *  in the terminal it was launched in. */
+export function readRunTerminalDestination(): RunTerminalDestination {
+  const config = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
+  return resolveRunTerminalDestination(config.get("runTerminalDestination"))
 }
 
 /** Subscribe to destination changes. Returns a cleanup function. */

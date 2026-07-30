@@ -24,6 +24,8 @@ import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
+import { startVscodeRunTask } from "./run/task"
+import { pickRunStart } from "./run/destination"
 import { ScriptTerminalManager } from "./ScriptTerminalManager"
 import { buildScriptTerminalWsUrl } from "./script-terminal-url"
 import { forkSession } from "./fork-session"
@@ -47,7 +49,7 @@ import { pruneSubagents } from "./prune-subagents"
 
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
-import { readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
+import { readRunTerminalDestination, readTerminalDestination, watchTerminalDestination } from "./terminal-destination"
 import { buildKeybindingMap } from "./format-keybinding"
 import { resolveVersionModels, buildInitialMessages, type CreatedVersion } from "./multi-version"
 import { ensureSandbox } from "./sandbox-bootstrap"
@@ -148,7 +150,12 @@ export class AgentManagerProvider implements Disposable {
       open: (file) => this.host.openDocument(file),
       start: async (config, done) => {
         if (!this.host.isTrusted()) throw new Error("Trust the workspace before running scripts")
-        return this.scripts.start("run", config, done)
+        const start = pickRunStart(
+          readRunTerminalDestination(),
+          (cfg, cb) => this.scripts.start("run", cfg, cb),
+          startVscodeRunTask,
+        )
+        return start(config, done)
       },
       post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
       error: (message) => this.postToWebview({ type: "error", message }),

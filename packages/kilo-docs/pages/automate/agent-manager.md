@@ -343,6 +343,8 @@ Two extra variables are injected into the script's environment:
 - **Stop:** Click the stop button (same position) or press `Cmd+E` again while running.
 - **Configure:** Click the dropdown arrow next to the run button and select "Configure run script" to open the script in your editor.
 
+The `kilo-code.new.agentManager.runTerminalDestination` setting controls where the script runs: `agentManager` (default) uses the embedded side terminal, while `vscode` runs it as a VS Code task in the integrated terminal. The integrated terminal option is kept for comparison and will be removed in a future release.
+
 ## Session State and Persistence
 
 Agent Manager state is persisted in `.kilo/agent-manager.json`. It stores worktrees, sections, session tabs, ordering, collapsed state, diff preferences, and cached PR metadata. Git branches and worktree directories remain on disk separately.
