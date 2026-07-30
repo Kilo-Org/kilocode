@@ -1,5 +1,7 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.diff.DiffLineNumbers
+import ai.kilocode.client.diff.installDiffGutter
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
@@ -31,6 +33,7 @@ class ToolMarkdownBody(
     private val opts: MdCodeBlockOptions,
     private val selection: SessionSelection?,
     private val render: (Tool) -> String,
+    private val gutter: ((Tool) -> List<DiffLineNumbers.Row>?)? = null,
     private val font: (SessionEditorStyle) -> Font = SessionEditorStyle::editorFont,
     private val chrome: (MdView) -> Unit = {},
 ) : EditBody {
@@ -47,6 +50,7 @@ class ToolMarkdownBody(
         view = md
         applyStyle(SessionEditorStyle.current())
         update(tool)
+        syncGutter(tool)
         return md.component
     }
 
@@ -66,6 +70,7 @@ class ToolMarkdownBody(
         if (md.markdown() == value) return false
         md.set(value)
         chrome(md)
+        syncGutter(tool)
         return true
     }
 
@@ -82,6 +87,12 @@ class ToolMarkdownBody(
         md.component.border = JBUI.Borders.empty()
         chrome(md)
         return before != md.font
+    }
+
+    @RequiresEdt
+    private fun syncGutter(tool: Tool) {
+        val rows = gutter?.invoke(tool) ?: return
+        codeEditors().forEach { installDiffGutter(it, rows) }
     }
 
     @RequiresEdt

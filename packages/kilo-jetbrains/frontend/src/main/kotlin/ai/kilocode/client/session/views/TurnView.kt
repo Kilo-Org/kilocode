@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.FileAttachment
 import ai.kilocode.client.session.model.Message
@@ -44,6 +45,8 @@ class TurnView(
     private val messages = LinkedHashMap<String, MessageView>()
     private var modified: ModifiedFilesView? = null
     private var settled = true
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
 
     override val sessionViewKind = SessionView.Kind.Default
 
@@ -52,6 +55,13 @@ class TurnView(
 
     init {
         isOpaque = false
+    }
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        modified?.setDiffOpener(openDiff, sessionId, id)
+        messages.values.forEach { it.setDiffOpener(openDiff, sessionId) }
     }
 
     @RequiresEdt
@@ -67,7 +77,9 @@ class TurnView(
 
     /** Add a new [MessageView] for [msg] at the end of this turn. */
     fun addMessage(msg: Message): MessageView {
-        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert)
+        val view = MessageView(msg, openFile, style, openUrl, selection, openAttachment, resize, repo, hover, revert).also {
+            it.setDiffOpener(openDiff, sessionId)
+        }
         messages[msg.info.id] = view
         val idx = modified?.let { components.indexOf(it) } ?: componentCount
         add(view, idx)
@@ -79,6 +91,7 @@ class TurnView(
     @RequiresEdt
     fun setDiffs(diffs: List<DiffFileDto>) {
         val card = modified ?: if (diffs.isEmpty()) null else ModifiedFilesView(openFile, selection).also {
+            it.setDiffOpener(openDiff, sessionId, id)
             it.resize = resize
             it.hover = hover
             it.applyStyle(style)

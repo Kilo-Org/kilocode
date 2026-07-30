@@ -861,7 +861,7 @@ internal fun pureDiff(diff: String): String = diff.lineSequence()
     .joinToString("\n")
     .trim('\n')
 
-private fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
+internal fun diffMeta(line: String): Boolean = line.startsWith("Index:") ||
     line.startsWith("====") ||
     line.startsWith("diff --git ") ||
     line.startsWith("@@") ||

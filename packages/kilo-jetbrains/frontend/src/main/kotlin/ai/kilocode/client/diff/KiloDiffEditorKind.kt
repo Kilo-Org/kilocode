@@ -51,6 +51,7 @@ internal object KiloDiffEditorKind : KiloEditorKind {
         val dir = params["directory"].takeIfPresent() ?: return false
         if (dir.isBlank()) return false
         if (params["source"] == "branch") return true
+        if (params["source"] == "inline") return params["token"].takeIfPresent() != null
         return params["sessionId"].takeIfPresent() != null
     }
 
@@ -147,6 +148,7 @@ internal class KiloDiffEditorService(
         val workspace = service<KiloWorkspaceService>()
         val files = when (params["source"]) {
             "branch" -> workspace.branchDiff(dir)
+            "inline" -> project.service<KiloInlineDiffStore>().get(params["token"].orEmpty()).orEmpty()
             else -> project.service<KiloSessionService>().diff(params["sessionId"].orEmpty(), dir)
         }
         if (files.isEmpty()) return DiffEditorData.Empty
@@ -167,7 +169,7 @@ internal sealed interface DiffEditorData {
     data class Files(val files: List<DiffFileDto>, val branch: String? = null) : DiffEditorData
 }
 
-internal fun diffParams(source: String, directory: String, sessionId: String?, title: String, branch: String? = null): Map<String, String> =
+internal fun diffParams(source: String, directory: String, sessionId: String?, title: String, branch: String? = null, token: String? = null): Map<String, String> =
     linkedMapOf(
         "source" to source,
         "directory" to directory,
@@ -175,6 +177,7 @@ internal fun diffParams(source: String, directory: String, sessionId: String?, t
     ).apply {
         if (!sessionId.isNullOrBlank()) put("sessionId", sessionId)
         if (!branch.isNullOrBlank()) put("branch", branch)
+        if (!token.isNullOrBlank()) put("token", token)
     }
 
 fun ensureDiffEditorKind() {

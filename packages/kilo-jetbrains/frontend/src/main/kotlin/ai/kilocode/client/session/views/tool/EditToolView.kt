@@ -1,6 +1,8 @@
 package ai.kilocode.client.session.views.tool
 
+import ai.kilocode.client.diff.DiffLineNumbers
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.model.Tool
@@ -10,12 +12,16 @@ import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.SessionViewIcons
 import ai.kilocode.client.session.views.base.SecondarySessionPartView
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffStatBadge
+import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.md.MdCodeBlockBorder
 import ai.kilocode.client.ui.md.MdCodeBlockOptions
+import ai.kilocode.client.ui.toolbarButton
+import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.actionSystem.DataSink
 import com.intellij.openapi.actionSystem.UiDataProvider
 import com.intellij.openapi.util.Disposer
@@ -45,7 +51,12 @@ class EditToolView(
     private var item = tool
     private var style = SessionEditorStyle.current()
     private var multi = editFiles(tool).size > 1
+    private var opener: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
     private val badge = DiffStatBadge(0, 0)
+    private val diff = toolbarButton(
+        ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff"), ::openDiffViewer),
+    ).apply { isVisible = false }
     private val filesTag = JBLabel().apply {
         foreground = UiStyle.Colors.weak()
         font = JBFont.small()
@@ -55,11 +66,24 @@ class EditToolView(
 
     init {
         body.parent = this
+        parts.slot.add(diff)
         parts.controls.add(filesTag)
         parts.controls.add(badge)
-        bindHeader(parts.glyph, parts.title, parts.sub, parts.state, parts.center, parts.controls, parts.slot, filesTag, badge)
+        bindHeader(parts.glyph, parts.title, parts.sub, parts.link, parts.state, parts.center, parts.controls, parts.slot, filesTag, badge)
+        unbindHeader(diff)
         applyStyle(style)
         sync()
+    }
+
+    constructor(
+        tool: Tool,
+        openFile: SessionFileOpener,
+        selection: SessionSelection?,
+        openDiff: SessionDiffOpener,
+        sessionId: String?,
+    ) : this(tool, openFile, selection) {
+        opener = openDiff
+        this.sessionId = sessionId
     }
 
     override fun uiDataSnapshot(sink: DataSink) {
@@ -184,9 +208,16 @@ class EditToolView(
         changed = setForeground(parts.link, UiStyle.Colors.fg()) || changed
         changed = setText(parts.state, stateText(item)) || changed
         changed = setForeground(parts.state, color(item)) || changed
+        changed = setVisible(diff, editDiff(item).isNotBlank()) || changed
         changed = syncFilesTag(count) || changed
         changed = syncBadge() || changed
         return changed
+    }
+
+    private fun openDiffViewer() {
+        val files = toDiffFiles(item)
+        if (files.isEmpty()) return
+        opener(files, diffTitle(files), "tool:${sessionId ?: "pending"}:${item.id}")
     }
 
     private fun syncFilesTag(count: Int): Boolean {
@@ -224,6 +255,20 @@ class EditToolView(
     }
 }
 
+private fun toDiffFiles(tool: Tool): List<DiffFileDto> {
+    val files = editFiles(tool).map { DiffFileDto(it.path, it.additions, it.deletions, it.patch, it.type.ifBlank { null }) }
+    if (files.isNotEmpty()) return files
+    val patch = editDiff(tool)
+    if (patch.isBlank()) return emptyList()
+    val stat = diffStat(tool)
+    return listOf(DiffFileDto(editPath(tool), stat.first, stat.second, patch))
+}
+
+private fun diffTitle(files: List<DiffFileDto>): String {
+    if (files.size == 1) return tail(files.single().file)
+    return KiloBundle.message("diff.editor.inline.title")
+}
+
 /** Picks the multi-file patch body for apply_patch spanning several files, else the single diff. */
 private fun editBody(tool: Tool, selection: SessionSelection?, openFile: SessionFileOpener): EditBody =
     if (editFiles(tool).size > 1) PatchBody(selection, openFile) else diffBody(selection)
@@ -240,12 +285,14 @@ private fun diffBody(selection: SessionSelection?) = ToolMarkdownBody(
     ),
     selection,
     render = ::diffMarkdown,
+    gutter = { editDiff(it).takeIf { patch -> patch.isNotBlank() }?.let(DiffLineNumbers::rows) },
 )
 
 private fun popupDiffBody(selection: SessionSelection?) = ToolMarkdownBody(
     POPUP_OPTS,
     selection,
     render = ::diffMarkdown,
+    gutter = { editDiff(it).takeIf { patch -> patch.isNotBlank() }?.let(DiffLineNumbers::rows) },
 )
 
 internal val POPUP_OPTS = MdCodeBlockOptions(

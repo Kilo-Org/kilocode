@@ -1,6 +1,7 @@
 package ai.kilocode.client.session.ui
 
 import ai.kilocode.client.plugin.KiloBundle
+import ai.kilocode.client.session.SessionDiffOpener
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
@@ -18,8 +19,10 @@ import ai.kilocode.client.session.views.tool.setForeground
 import ai.kilocode.client.session.views.tool.setIcon
 import ai.kilocode.client.telemetry.Telemetry
 import ai.kilocode.client.ui.DiffBars
+import ai.kilocode.client.ui.ToolbarButtonAction
 import ai.kilocode.client.ui.UiStyle
 import ai.kilocode.client.ui.layout.Stack
+import ai.kilocode.client.ui.toolbarButton
 import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
@@ -40,6 +43,10 @@ class ModifiedFilesView private constructor(
 
     private var style = SessionEditorStyle.current()
     private var files = emptyList<EditFileChange>()
+    private var diffs = emptyList<DiffFileDto>()
+    private var openDiff: SessionDiffOpener = { _, _, _ -> }
+    private var sessionId: String? = null
+    private var turnId: String = CONTENT_ID
 
     constructor(
         openFile: SessionFileOpener,
@@ -48,16 +55,26 @@ class ModifiedFilesView private constructor(
 
     init {
         body.parent = this
+        parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
-        bindHeader(parts.glyph, parts.title, parts.count, parts.center, parts.controls)
+        bindHeader(parts.glyph, parts.title, parts.count, parts.center, parts.controls, parts.bars)
+        unbindHeader(parts.diff)
         applyStyle(style)
+    }
+
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?, turnId: String) {
+        this.openDiff = openDiff
+        this.sessionId = sessionId
+        this.turnId = turnId
     }
 
     @RequiresEdt
     fun setDiffs(diffs: List<DiffFileDto>) {
         val next = diffs.map(::file)
+        this.diffs = diffs
         if (files == next) {
             val visible = next.isNotEmpty()
+            parts.diff.isVisible = visible
             if (isVisible == visible) return
             isVisible = visible
             revalidate()
@@ -71,6 +88,7 @@ class ModifiedFilesView private constructor(
         if (isVisible != visible) isVisible = visible
         if (!visible) collapse()
         parts.update(files.size, additions, deletions)
+        parts.diff.isVisible = visible
         if (isExpanded()) body.updateFiles(files)
         revalidate()
         repaint()
@@ -118,6 +136,11 @@ class ModifiedFilesView private constructor(
     @RequiresEdt
     internal fun countText() = parts.count.text
 
+    private fun openDiffViewer() {
+        if (diffs.isEmpty()) return
+        openDiff(diffs, KiloBundle.message("diff.editor.inline.title"), "turn:${sessionId ?: "pending"}:$turnId")
+    }
+
     @RequiresEdt
     private fun buildPopup(files: List<EditFileChange>): HeaderPopupBody {
         val owner = Disposer.newDisposable("Modified files popup body")
@@ -131,11 +154,15 @@ class ModifiedFilesView private constructor(
         val glyph = JBLabel()
         val title = JBLabel(KiloBundle.message("session.changes.modified"))
         val count = JBLabel()
-        private val bars = DiffBars(0, 0)
+        val diff = toolbarButton(
+            ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {},
+        ).apply { isVisible = false }
+        val bars = DiffBars(0, 0)
+        private val titleRow = Stack.horizontal(UiStyle.Gap.sm()).next(title).next(count).next(diff)
         val center = JPanel(BorderLayout(UiStyle.Gap.md(), 0)).apply {
             isOpaque = false
             minimumSize = Dimension(0, minimumSize.height)
-            add(Stack.horizontal(UiStyle.Gap.sm()).next(title).next(count), BorderLayout.WEST)
+            add(titleRow, BorderLayout.WEST)
         }
         val controls: JComponent = Stack.horizontal().next(bars)
         // Match edit/patch cards: glyph on the left, text in the center, and stats in the control slot.

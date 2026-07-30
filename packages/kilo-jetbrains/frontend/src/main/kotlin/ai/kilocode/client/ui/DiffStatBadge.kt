@@ -67,8 +67,10 @@ internal class DiffStatBadge(
     }
 
     fun update(additions: Int, deletions: Int) {
-        removed.text = "-$deletions"
-        added.text = "+$additions"
+        removed.isVisible = deletions > 0
+        added.isVisible = additions > 0
+        if (removed.isVisible) removed.text = "-$deletions"
+        if (added.isVisible) added.text = "+$additions"
     }
 
     override fun paintComponent(g: Graphics) {

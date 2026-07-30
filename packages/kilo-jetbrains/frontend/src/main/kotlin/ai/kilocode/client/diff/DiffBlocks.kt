@@ -9,7 +9,12 @@ import com.intellij.diff.util.DiffUserDataKeys
 import com.intellij.openapi.fileTypes.FileTypeManager
 import com.intellij.openapi.project.Project
 
-internal fun diffRequest(project: Project, dto: DiffFileDto, branch: String? = null): DiffRequest {
+internal fun diffRequest(
+    project: Project,
+    dto: DiffFileDto,
+    branch: String? = null,
+    labels: Pair<String, String> = KiloBundle.message("diff.editor.side.base") to KiloBundle.message("diff.editor.side.current"),
+): DiffRequest {
     val sides = DiffPatchReconstruct.sides(dto)
     val type = FileTypeManager.getInstance().getFileTypeByFileName(dto.file)
     val factory = DiffContentFactory.getInstance()
@@ -23,7 +28,7 @@ internal fun diffRequest(project: Project, dto: DiffFileDto, branch: String? = n
         sides.renderable -> factory.create(project, sides.after, type)
         else -> factory.create(project, dto.patch ?: "diff unavailable", type)
     }
-    return SimpleDiffRequest(diffTitle(dto.file, branch), left, right, "Base", "Current").also {
+    return SimpleDiffRequest(diffTitle(dto.file, branch), left, right, labels.first, labels.second).also {
         it.putUserData(DiffUserDataKeys.FORCE_READ_ONLY, true)
     }
 }

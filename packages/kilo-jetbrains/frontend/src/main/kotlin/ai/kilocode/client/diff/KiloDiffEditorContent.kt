@@ -288,9 +288,16 @@ internal class DiffEditorView(
     private fun producer(file: DiffFileDto): DiffRequestProducer = object : DiffRequestProducer {
         override fun getName(): String = file.file
 
-        override fun process(context: UserDataHolder, indicator: ProgressIndicator) = diffRequest(project, file, branch).also {
+        override fun process(context: UserDataHolder, indicator: ProgressIndicator) = diffRequest(project, file, branch, labels()).also {
             it.putUserData(DIFF_FILE_KEY, file.file)
         }
+    }
+
+    private fun labels(): Pair<String, String> {
+        if (params["source"] == "branch") {
+            return KiloBundle.message("diff.editor.side.base") to KiloBundle.message("diff.editor.side.current")
+        }
+        return KiloBundle.message("diff.editor.side.original") to KiloBundle.message("diff.editor.side.modified")
     }
 
     private fun syncTree() {

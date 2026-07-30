@@ -124,6 +124,10 @@ abstract class AbstractSessionPartView(
         items.forEach { bind(it) }
     }
 
+    protected fun unbindHeader(vararg items: Component) {
+        items.forEach { unbind(it) }
+    }
+
     protected fun refresh() {
         revalidate()
         repaint()
@@ -149,6 +153,13 @@ abstract class AbstractSessionPartView(
         bound.add(component)
         component.addMouseListener(click)
         component.addMouseListener(mouse)
+    }
+
+    private fun unbind(component: Component) {
+        if (!bound.remove(component)) return
+        component.removeMouseListener(click)
+        component.removeMouseListener(mouse)
+        component.cursor = Cursor.getDefaultCursor()
     }
 
     private fun body(): JComponent {

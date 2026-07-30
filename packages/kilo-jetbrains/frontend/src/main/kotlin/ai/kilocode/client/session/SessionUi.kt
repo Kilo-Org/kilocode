@@ -5,6 +5,7 @@ import ai.kilocode.client.app.KiloSessionService
 import ai.kilocode.client.app.KiloWorkspaceService
 import ai.kilocode.client.app.Workspace
 import ai.kilocode.client.diff.KiloDiffEditorKind
+import ai.kilocode.client.diff.KiloInlineDiffStore
 import ai.kilocode.client.diff.diffParams
 import ai.kilocode.client.diff.ensureDiffEditorKind
 import ai.kilocode.client.migration.KiloMigrationService
@@ -58,6 +59,7 @@ import ai.kilocode.client.util.UiTimers
 import ai.kilocode.client.vfs.KiloVfsManager
 import ai.kilocode.log.ChatLogSummary
 import ai.kilocode.rpc.dto.ModelLimitDto
+import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.PromptDto
 import ai.kilocode.rpc.dto.PromptPartDto
 import ai.kilocode.rpc.dto.SessionRevertDto
@@ -373,6 +375,7 @@ class SessionUi(
             deleteQueued = { id -> controller.deleteQueuedMessage(id) },
             banner = RevertBanner(controller.model, ::redo, controller::redoAll, ::cancelRevert, focus),
         ).also {
+            it.setDiffOpener(::openInlineDiff, controller.id)
             it.onHover = { view, on -> if (on) popup.show(view) else popup.notifyExit(view) }
         }
         header = SessionHeaderPanel(controller, this) {
@@ -819,6 +822,16 @@ class SessionUi(
 
     private fun openUrl(url: String) {
         BrowserUtil.browse(url)
+    }
+
+    private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
+        ensureDiffEditorKind()
+        project.service<KiloInlineDiffStore>().put(key, files)
+        project.service<KiloVfsManager>().open(
+            KiloDiffEditorKind.ID,
+            diffParams("inline", workspace.directory, controller.id, title, token = key),
+        )
+        Telemetry.send("Diff Editor Opened", mapOf("source" to "inline"))
     }
 
     private fun openAttachment(messageId: String, item: FileAttachment) {
