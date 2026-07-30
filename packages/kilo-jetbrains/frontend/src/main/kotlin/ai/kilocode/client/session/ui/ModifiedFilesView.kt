@@ -6,7 +6,9 @@ import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Content
 import ai.kilocode.client.session.ui.popup.HeaderPopupBody
 import ai.kilocode.client.session.ui.popup.HeaderPopupRequest
+import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
+import ai.kilocode.client.session.ui.selection.hoverPlaceholder
 import ai.kilocode.client.session.ui.style.SessionEditorStyle
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.session.views.SessionViewIcons
@@ -27,13 +29,14 @@ import ai.kilocode.rpc.dto.DiffFileDto
 import com.intellij.openapi.util.Disposer
 import com.intellij.ui.components.JBLabel
 import com.intellij.util.concurrency.annotations.RequiresEdt
+import javax.swing.JComponent
 
 class ModifiedFilesView private constructor(
     private val openFile: SessionFileOpener,
     private val selection: SessionSelection? = null,
     private val parts: Header = Header(),
     private val body: PatchBody = PatchBody(selection, openFile),
-) : SecondarySessionPartView(parts.panel, { body.mountFiles(emptyList()) }) {
+) : SecondarySessionPartView(parts.panel, { body.mountFiles(emptyList()) }), SessionCopyTarget {
     override val contentId = CONTENT_ID
 
     private var style = SessionEditorStyle.current()
@@ -52,10 +55,13 @@ class ModifiedFilesView private constructor(
         body.parent = this
         parts.diff.addActionListener { openDiffViewer() }
         isVisible = false
-        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.bars)
-        unbindHeader(parts.diff)
+        bindHeader(parts.glyph, parts.title, parts.count, parts.panel.left, parts.bars, parts.anchor)
         applyStyle(style)
     }
+
+    override val copyEligible: Boolean get() = diffs.isNotEmpty()
+    override val copyAnchor: JComponent get() = parts.anchor
+    override val copyToolbar: JComponent get() = parts.diff
 
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?, turnId: String) {
         this.openDiff = openDiff
@@ -69,7 +75,7 @@ class ModifiedFilesView private constructor(
         this.diffs = diffs
         if (files == next) {
             val visible = next.isNotEmpty()
-            parts.diff.isVisible = visible
+            parts.diff.isEnabled = visible
             if (isVisible == visible) return
             isVisible = visible
             revalidate()
@@ -83,7 +89,7 @@ class ModifiedFilesView private constructor(
         if (isVisible != visible) isVisible = visible
         if (!visible) collapse()
         parts.update(files.size, additions, deletions)
-        parts.diff.isVisible = visible
+        parts.diff.isEnabled = visible
         if (isExpanded()) body.updateFiles(files)
         revalidate()
         repaint()
@@ -100,6 +106,8 @@ class ModifiedFilesView private constructor(
 
     @RequiresEdt
     override fun update(content: Content) = Unit
+
+    override fun copyText(): String? = null
 
     @RequiresEdt
     override fun headerPopup(): HeaderPopupRequest? {
@@ -133,7 +141,7 @@ class ModifiedFilesView private constructor(
 
     private fun openDiffViewer() {
         if (diffs.isEmpty()) return
-        openDiff(diffs, KiloBundle.message("diff.editor.inline.title"), "turn:${sessionId ?: "pending"}:$turnId")
+        openDiff(diffs, KiloBundle.message("diff.editor.changedFiles.title"), "turn:${sessionId ?: "pending"}:$turnId")
     }
 
     @RequiresEdt
@@ -151,14 +159,15 @@ class ModifiedFilesView private constructor(
         val count = JBLabel()
         val diff = toolbarButton(
             ToolbarButtonAction(SessionViewIcons.openDiff, KiloBundle.message("session.part.tool.openDiff")) {},
-        ).apply { isVisible = false }
+        ).apply { isEnabled = false }
+        val anchor = hoverPlaceholder(diff)
         val bars = DiffBars(0, 0)
         // Left-aligned header: icon, title, file count, sticks change badge, open-in-diff.
         val panel = PartHeader().apply {
             leading(glyph)
             left(title)
             titleGap()
-            left(count, PartHeader.centered(bars), PartHeader.centered(diff))
+            left(count, PartHeader.centered(bars), PartHeader.centered(anchor))
         }
 
         @RequiresEdt

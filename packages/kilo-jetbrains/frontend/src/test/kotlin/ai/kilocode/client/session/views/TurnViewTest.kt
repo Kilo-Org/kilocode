@@ -1,6 +1,5 @@
 package ai.kilocode.client.session.views
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
@@ -10,6 +9,7 @@ import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
 import ai.kilocode.client.session.ui.ModifiedFilesView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
+import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.rpc.dto.DiffFileDto
 import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
@@ -17,7 +17,6 @@ import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import java.awt.Container
 import java.awt.image.BufferedImage
 import javax.swing.AbstractButton
 import javax.swing.JComponent
@@ -405,13 +404,8 @@ class TurnViewTest : BasePlatformTestCase() {
         }.toString())
     }
 
-    private fun openDiffButton(root: Container): AbstractButton =
-        buttons(root).first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
-
-    private fun buttons(root: Container): List<AbstractButton> = root.components.flatMap { child ->
-        val nested = if (child is Container) buttons(child) else emptyList()
-        if (child is AbstractButton) nested + child else nested
-    }
+    private fun openDiffButton(view: MessageView): AbstractButton =
+        (view.part("t1") as EditToolView).copyToolbar as AbstractButton
 
     private fun reasoning(id: String, content: String) = Reasoning(id).also {
         it.done = false

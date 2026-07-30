@@ -827,7 +827,7 @@ class SessionUi(
     private fun openInlineDiff(files: List<DiffFileDto>, title: String, key: String) {
         cs.launch {
             val branch = workspaces.branchName(workspace.directory)
-            val label = branch?.let { KiloBundle.message("diff.editor.session.title.named", it) } ?: title
+            val label = branch?.let { KiloBundle.message("diff.editor.inline.title.named", title, it) } ?: title
             withContext(Dispatchers.Main) {
                 ensureDiffEditorKind()
                 project.service<KiloInlineDiffStore>().put(key, files)

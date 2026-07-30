@@ -1,6 +1,5 @@
 package ai.kilocode.client.session.views
 
-import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.model.Tool
 import ai.kilocode.client.session.model.ToolExecState
 import ai.kilocode.client.session.model.toolKind
@@ -135,11 +134,16 @@ class EditToolViewTest : BasePlatformTestCase() {
 
     fun `test open in diff action fires for edit and patch`() {
         val edit = mutableListOf<List<DiffFileDto>>()
-        val editView = track(EditToolView(tool(), { _, _ -> }, null, { files, _, _ -> edit.add(files) }, "ses"))
+        val titles = mutableListOf<String>()
+        val editView = track(EditToolView(tool(), { _, _ -> }, null, { files, title, _ ->
+            edit.add(files)
+            titles.add(title)
+        }, "ses"))
         val editButton = openDiffButton(editView)
-        assertTrue(editButton.isVisible)
+        assertTrue(editButton.isEnabled)
         editButton.doClick()
         assertEquals(1, edit.single().size)
+        assertEquals("Edit", titles.single())
 
         val patch = mutableListOf<List<DiffFileDto>>()
         val patchView = track(EditToolView(tool().also {
@@ -148,11 +152,15 @@ class EditToolViewTest : BasePlatformTestCase() {
                 FileChange("src/A.kt", 2, 0, ADD_HUNK),
                 FileChange("src/B.kt", 1, 1, UPDATE_HUNK),
             ))
-        }, { _, _ -> }, null, { files, _, _ -> patch.add(files) }, "ses"))
+        }, { _, _ -> }, null, { files, title, _ ->
+            patch.add(files)
+            titles.add(title)
+        }, "ses"))
         val patchButton = openDiffButton(patchView)
-        assertTrue(patchButton.isVisible)
+        assertTrue(patchButton.isEnabled)
         patchButton.doClick()
         assertEquals(2, patch.single().size)
+        assertEquals("Patch", titles.last())
     }
 
     fun `test open in diff uses a late-bound opener`() {
@@ -161,7 +169,7 @@ class EditToolViewTest : BasePlatformTestCase() {
         val fired = mutableListOf<List<DiffFileDto>>()
         val view = track(EditToolView(tool()))
         val button = openDiffButton(view)
-        assertTrue(button.isVisible)
+        assertTrue(button.isEnabled)
 
         button.doClick()
         assertTrue(fired.isEmpty())
@@ -440,12 +448,7 @@ class EditToolViewTest : BasePlatformTestCase() {
     }
 
     private fun openDiffButton(view: EditToolView): AbstractButton =
-        buttons(view).first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
-
-    private fun buttons(root: Container): List<AbstractButton> = root.components.flatMap { child ->
-        val nested = if (child is Container) buttons(child) else emptyList()
-        if (child is AbstractButton) nested + child else nested
-    }
+        view.copyToolbar as AbstractButton
 
     private fun tool() = Tool("p1", "edit", toolKind("edit")).also {
         it.state = ToolExecState.COMPLETED

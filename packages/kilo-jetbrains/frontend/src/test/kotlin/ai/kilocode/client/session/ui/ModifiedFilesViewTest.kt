@@ -10,6 +10,7 @@ import com.intellij.ui.components.JBLabel
 import com.intellij.util.ui.UIUtil
 import java.awt.Component
 import java.awt.Container
+import javax.swing.AbstractButton
 
 class ModifiedFilesViewTest : BasePlatformTestCase() {
     private lateinit var view: ModifiedFilesView
@@ -75,6 +76,16 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         assertNull(view.headerPopup())
     }
 
+    fun `test open in diff uses changed files title`() {
+        val titles = mutableListOf<String>()
+        view.setDiffOpener({ _, title, _ -> titles.add(title) }, "ses", "turn")
+        view.setDiffs(listOf(file("src/A.kt", 2, 1, PATCH)))
+
+        openDiffButton().doClick()
+
+        assertEquals("Changed files", titles.single())
+    }
+
     fun `test dispose releases created editors`() {
         val base = EditorFactory.getInstance().allEditors.size
         view.setDiffs(listOf(file("src/A.kt", 2, 1, PATCH)))
@@ -100,6 +111,8 @@ class ModifiedFilesViewTest : BasePlatformTestCase() {
         visit(root)
         return out
     }
+
+    private fun openDiffButton(): AbstractButton = view.copyToolbar as AbstractButton
 
     private fun file(path: String, additions: Int, deletions: Int, patch: String) = DiffFileDto(
         file = path,
