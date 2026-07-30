@@ -5,7 +5,7 @@ description: "Run open models like GLM and Qwen on Mixlayer's OpenAI-compatible 
 
 # Using Mixlayer With Kilo Code
 
-Mixlayer is an inference platform for open models such as GLM and Qwen, with a serving stack built from scratch by core contributors to Candle. It exposes an OpenAI-compatible API, so you can use it in Kilo Code through the **OpenAI Compatible** provider.
+Mixlayer is an inference platform for open models such as GLM and Qwen, with a serving stack built from scratch by core contributors to Candle. It exposes an OpenAI-compatible API and is available as a built-in provider in Kilo Code.
 
 **Website:** [https://mixlayer.com/](https://mixlayer.com/)
 
