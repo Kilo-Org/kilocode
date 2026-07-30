@@ -46,7 +46,7 @@ Two placements exist and both are valid — pick based on whether a Classic-UI i
 - **Only New UI needed** → put the SVG (and its `_dark` sibling) under an `expui/<role>/` resource root. Callers reference it directly through the plugin's generated `<Plugin>Icons` class.
 - **Replacing an existing Classic-UI icon** → keep the Classic file at its old path, put the New UI SVG under the matching `expui/<role>/` path, and add a mapping entry to the nearest `*IconMappings.json`. At runtime, when `ExperimentalUI.isNewUI()` is true, the mapper substitutes the New UI file for the Classic one so no caller has to change its icon reference.
 
-Mapping-file shape (excerpt from `community/platform/icons/src/PlatformIconMappings.json`):
+Mapping-file shape:
 
 ```json
 {
@@ -115,7 +115,7 @@ Do not use plain `#000000` or off-the-palette grays.
 
 ## Generation workflow
 
-1. **Pick the role and canvas size** from the table above. Find at least two visually similar siblings under `community/platform/icons/src/expui/<role>/` and read their SVG sources. Mirror their stroke/fill mix.
+1. **Pick the role and canvas size** from the table above. For source lookup, follow the IntelliJ repository guidance in `packages/kilo-jetbrains/AGENTS.md`; use that AGENTS file alongside this skill when generating or reviewing plugin icons. Find at least two visually similar sibling icons and mirror their stroke/fill mix.
 2. **Lay out geometry on the pixel grid** (whole-pixel fills, half-pixel stroke centers). Optical-center the glyph.
 3. **Apply the canonical light palette** from [palette.md](./palette.md). Never invent colors.
 4. **Save the light SVG** with the Apache 2.0 header, `width`/`height`/`viewBox` matching the role, and `fill="none"` on `<svg>`.
@@ -139,5 +139,5 @@ Do not use plain `#000000` or off-the-palette grays.
 
 - [palette.md](./palette.md) — full color palette with light↔dark mapping.
 - [examples.md](./examples.md) — annotated SVG snippets for each icon role, copied from the live icon set.
-- Canonical example tree: `community/platform/icons/src/expui/` — when reviewing, diff your new icon against a sibling there.
+- `packages/kilo-jetbrains/AGENTS.md` — repository-specific JetBrains plugin constraints; use it together with this skill for icon work.
 - Repo-level `Icons guidelines.svg` is a design sheet (visual reference only; not machine-readable). When it disagrees with the folder, trust the folder.

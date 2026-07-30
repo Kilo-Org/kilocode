@@ -574,6 +574,8 @@ child.align(HAlign.TRACK, VAlign.TRACK)   // fill all available space
 
 ### Icons and SVG Assets
 
+When creating, modifying, or reviewing JetBrains plugin icon assets, load and follow the `icon-jetbrains` skill in `.kilo/skills/icon-jetbrains/SKILL.md` for New UI SVG roles, sizing, palette, dark variants, and validation guidance.
+
 Official references:
 - [IntelliJ Platform UI Guidelines](https://jetbrains.design/intellij/)
 - [User Interface Components](https://plugins.jetbrains.com/docs/intellij/user-interface-components.html)

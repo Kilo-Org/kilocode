@@ -1,6 +1,6 @@
 # Annotated New UI Icon Examples
 
-Each example below is copied from `community/platform/icons/src/expui/`, paired with the dark variant and a short note on the pattern it represents. Use these as templates when generating new icons.
+Each example below is paired with a dark variant and a short note on the pattern it represents. Use these as templates when generating new icons.
 
 ---
 

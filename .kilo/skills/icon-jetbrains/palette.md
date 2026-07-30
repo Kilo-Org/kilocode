@@ -1,6 +1,6 @@
 # New UI Icon Palette
 
-Canonical color palette used by New UI icons. Empirically derived from a full scan of `community/platform/icons/src/expui/` (~2000 light + ~2000 dark SVGs). When picking colors, always pull from this table; the IntelliJ icon engine recolors by exact-string match, so a one-off hue will fail to theme.
+Canonical color palette used by New UI icons. When picking colors, always pull from this table; the IntelliJ icon engine recolors by exact-string match, so a one-off hue will fail to theme.
 
 ## How to read the mapping
 
