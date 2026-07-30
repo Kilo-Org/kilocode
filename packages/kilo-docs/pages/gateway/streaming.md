@@ -20,7 +20,7 @@ Set `stream: true` in your request body to enable streaming:
 ```
 
 {% callout type="info" %}
-The gateway automatically injects `stream_options.include_usage = true` on all streaming requests, so you always receive token usage information in the final chunk.
+The gateway automatically injects `stream_options.include_usage = true` on all streaming requests, so you receive token usage information in the final chunk when the upstream provider returns it. Usage information for MiniMax Coding Plan requests is unavailable until MiniMax exposes a usage API.
 {% /callout %}
 
 ## Streaming with the Vercel AI SDK
