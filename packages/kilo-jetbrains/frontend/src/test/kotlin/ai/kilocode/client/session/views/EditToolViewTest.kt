@@ -155,6 +155,23 @@ class EditToolViewTest : BasePlatformTestCase() {
         assertEquals(2, patch.single().size)
     }
 
+    fun `test open in diff uses a late-bound opener`() {
+        // Mirrors the real wiring: the view is built before the session-level opener is known, then
+        // MessageView rebinds it. Without late binding the button click is a no-op.
+        val fired = mutableListOf<List<DiffFileDto>>()
+        val view = track(EditToolView(tool()))
+        val button = openDiffButton(view)
+        assertTrue(button.isVisible)
+
+        button.doClick()
+        assertTrue(fired.isEmpty())
+
+        view.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+        button.doClick()
+
+        assertEquals(1, fired.single().size)
+    }
+
     fun `test single file apply_patch keeps link and hides count tag`() {
         val view = track(EditToolView(tool().also {
             it.input = emptyMap()

@@ -19,6 +19,7 @@ import ai.kilocode.client.session.ui.selection.SessionCopyTarget
 import ai.kilocode.client.session.ui.selection.SessionSelection
 import ai.kilocode.client.session.ui.style.SessionEditorStyleTarget
 import ai.kilocode.client.session.views.base.PartView
+import ai.kilocode.client.session.views.tool.EditToolView
 import ai.kilocode.client.session.ui.style.SessionUiStyle
 import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.ui.ToolbarButtonAction
@@ -112,6 +113,9 @@ class MessageView(
     fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
         this.openDiff = openDiff
         this.sessionId = sessionId
+        // Rebind parts created before the opener was wired (e.g. history load), matching the
+        // late-binding TurnView already does for its ModifiedFilesView card.
+        for (view in parts.values) if (view is EditToolView) view.setDiffOpener(openDiff, sessionId)
     }
 
     /**

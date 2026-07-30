@@ -87,6 +87,16 @@ class EditToolView(
         this.sessionId = sessionId
     }
 
+    /**
+     * Late-bind the diff opener. The transcript builds this view before the session-level opener is
+     * known, so [ai.kilocode.client.session.views.MessageView] rebinds it once the opener is wired.
+     */
+    @RequiresEdt
+    fun setDiffOpener(openDiff: SessionDiffOpener, sessionId: String?) {
+        opener = openDiff
+        this.sessionId = sessionId
+    }
+
     override fun uiDataSnapshot(sink: DataSink) {
         selection?.provideCopy(sink) { body.markdown() ?: diffMarkdown(item) }
     }

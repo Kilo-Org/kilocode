@@ -1,5 +1,6 @@
 package ai.kilocode.client.session.views
 
+import ai.kilocode.client.plugin.KiloBundle
 import ai.kilocode.client.session.SessionFileOpener
 import ai.kilocode.client.session.model.Message
 import ai.kilocode.client.session.model.Reasoning
@@ -14,7 +15,11 @@ import ai.kilocode.rpc.dto.MessageDto
 import ai.kilocode.rpc.dto.MessageTimeDto
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import com.intellij.util.ui.JBUI
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import java.awt.Container
 import java.awt.image.BufferedImage
+import javax.swing.AbstractButton
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.RepaintManager
@@ -322,6 +327,20 @@ class TurnViewTest : BasePlatformTestCase() {
         }
     }
 
+    fun `test setDiffOpener rebinds edit tool parts built before wiring`() {
+        // The transcript builds the MessageView (and its EditToolView) before the session-level
+        // opener is known, exactly like history load. Rebinding must reach the existing part.
+        val message = msg("a1", "assistant").also { it.parts["t1"] = editTool() }
+        val mv = MessageView(message, openFile)
+
+        val fired = mutableListOf<List<DiffFileDto>>()
+        mv.setDiffOpener({ files, _, _ -> fired.add(files) }, "ses")
+
+        openDiffButton(mv).doClick()
+
+        assertEquals(1, fired.single().size)
+    }
+
     fun `test MessageView pre-populates parts from Message on creation`() {
         val message = msg("a1", "assistant")
         val text = ai.kilocode.client.session.model.Text("p1").also { it.content.append("preloaded") }
@@ -373,6 +392,26 @@ class TurnViewTest : BasePlatformTestCase() {
         Message(MessageDto(id = id, sessionID = "ses", role = role, time = MessageTimeDto(0.0)))
 
     private fun diff(path: String) = DiffFileDto(path, additions = 2, deletions = 1, patch = PATCH)
+
+    private fun editTool() = Tool("t1", "edit", toolKind("edit")).also {
+        it.state = ToolExecState.COMPLETED
+        it.title = "src/App.kt"
+        it.input = mapOf("filePath" to "/repo/src/App.kt")
+        it.metadata = mapOf("filediff" to buildJsonObject {
+            put("file", "src/App.kt")
+            put("additions", 2)
+            put("deletions", 1)
+            put("patch", PATCH)
+        }.toString())
+    }
+
+    private fun openDiffButton(root: Container): AbstractButton =
+        buttons(root).first { it.toolTipText == KiloBundle.message("session.part.tool.openDiff") }
+
+    private fun buttons(root: Container): List<AbstractButton> = root.components.flatMap { child ->
+        val nested = if (child is Container) buttons(child) else emptyList()
+        if (child is AbstractButton) nested + child else nested
+    }
 
     private fun reasoning(id: String, content: String) = Reasoning(id).also {
         it.done = false
