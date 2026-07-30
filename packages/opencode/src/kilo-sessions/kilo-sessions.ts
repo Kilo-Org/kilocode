@@ -29,6 +29,7 @@ import { RemoteSender } from "@/kilo-sessions/remote-sender"
 import { RemoteProtocol } from "@/kilo-sessions/remote-protocol"
 import { buildInstanceAdvertisement } from "@/kilo-sessions/instance-advertisement"
 import { AttachedState } from "@/kilo-sessions/attached-state"
+import { consumeAutoTitle, consumeRenameAdoption } from "@/kilo-sessions/rename-adoptions"
 import { SessionStatus } from "@/session/status"
 import { Telemetry } from "@kilocode/kilo-telemetry"
 import { Question } from "@/question"
@@ -59,6 +60,11 @@ export namespace KiloSessions {
     readonly sendAgentNotification: (
       sessionID: string,
       input: { id: string; message: string },
+    ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
+    readonly reportSessionTitle: (
+      sessionID: string,
+      title: string,
+      opts: { generated: boolean },
     ) => Effect.Effect<{ ok: true } | { ok: false; reason: string }, never>
   }
 
@@ -332,8 +338,21 @@ export namespace KiloSessions {
             handlers.set(def.type, fn)
           }
 
+          // Last-known title per session so we only POST on actual title changes.
+          // Seed on Created and from existing rows at bootstrap so the first real
+          // rename (rename-before-prompt, or first rename after process restart)
+          // is not treated as a seed-only sighting and dropped (Decision 8).
+          const knownTitles = new Map<string, string>()
+          yield* sessions.list().pipe(
+            Effect.map((list) => {
+              for (const s of list) knownTitles.set(s.id, s.title)
+            }),
+            Effect.orElseSucceed(() => undefined),
+          )
           watch(Session.Event.Created, (evt) => {
-            const sessionID = evt.properties.info.id
+            const info = evt.properties.info
+            const sessionID = info.id
+            if (typeof info.title === "string") knownTitles.set(sessionID, info.title)
             return create(sessionID).catch((error) => log.error("share init create failed", { sessionID, error }))
           })
           watch(Session.Event.Updated, async (evt) => {
@@ -341,9 +360,24 @@ export namespace KiloSessions {
             const session = await Effect.runPromise(sessions.get(sessionID).pipe(Effect.orElseSucceed(() => null)))
             if (!session) return
             await ingest.sync(sessionID, [
-              { type: "kilo_meta", data: await meta(sessionID) },
+              { type: "kilo_meta", data: await meta(sessionID, session) },
               { type: "session", data: transport(session) },
             ])
+            const prev = knownTitles.get(sessionID)
+            knownTitles.set(sessionID, session.title)
+            // Same-title Updated (setTitle no-op / double session.renamed): still
+            // consume a matching rename adoption so the mark cannot stick and
+            // swallow a later real local rename (Decision 8 last-write-wins).
+            if (prev === session.title) {
+              consumeRenameAdoption(sessionID, session.title)
+              return
+            }
+            // Unseeded first sight (race before Created): record only, do not POST.
+            // After Created/list seed, any title change is a real change and POSTs.
+            if (prev === undefined) return
+            if (consumeRenameAdoption(sessionID, session.title)) return
+            const generated = consumeAutoTitle(sessionID, session.title)
+            await reportTitleChange(sessionID, session.title, generated)
           })
           watch(MessageV2.Event.Updated, async (evt) => {
             await ingest.sync(evt.properties.info.sessionID, [{ type: "message", data: evt.properties.info }])
@@ -471,7 +505,15 @@ export namespace KiloSessions {
         )
       })
 
-      return Service.of({ init, sendAgentNotification })
+      const reportSessionTitle = Effect.fn("KiloSessions.reportSessionTitle")(function* (
+        sessionID: string,
+        title: string,
+        opts: { generated: boolean },
+      ) {
+        return yield* Effect.promise(() => reportTitleChange(sessionID, title, opts.generated))
+      })
+
+      return Service.of({ init, sendAgentNotification, reportSessionTitle })
     }),
   )
 
@@ -487,6 +529,7 @@ export namespace KiloSessions {
   export const testLayer = Layer.succeed(Service, {
     init: () => Effect.void,
     sendAgentNotification: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
+    reportSessionTitle: () => Effect.succeed({ ok: false, reason: "not_connected" } as const),
   })
 
   export const node = LayerNode.suspend(() => LayerNode.make(layer, [Bus.node, Config.node, Session.node]))
@@ -1031,6 +1074,51 @@ export namespace KiloSessions {
     }
   }
 
+  async function reportTitleChange(
+    sessionID: string,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    if (ingestDisabled) {
+      return { ok: false, reason: "not_connected" }
+    }
+    const readiness = await withTimeout(
+      resolveReadiness(sessionID),
+      agentNotificationTimeoutMs(),
+      "session title readiness timed out",
+    ).catch(() => ({ ok: false, reason: "not_connected" }) as const)
+    if (!readiness.ok) {
+      log.warn("report session title skipped", { sessionID, reason: readiness.reason })
+      return readiness
+    }
+    return postSessionTitle(sessionID, readiness.client, title, generated)
+  }
+
+  async function postSessionTitle(
+    sessionID: string,
+    client: Client,
+    title: string,
+    generated: boolean,
+  ): Promise<{ ok: true } | { ok: false; reason: string }> {
+    try {
+      const response = await client.fetch(`${client.url}/api/session/${encodeURIComponent(sessionID)}/title`, {
+        method: "POST",
+        body: JSON.stringify({ title, generated }),
+      })
+      if (response.ok) {
+        log.info("session title reported", { sessionID, generated })
+        return { ok: true }
+      }
+      const reason = `http_${response.status}`
+      log.error("session title report failed", { sessionID, status: response.status })
+      return { ok: false, reason }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error)
+      log.error("session title report failed", { sessionID, error: reason })
+      return { ok: false, reason }
+    }
+  }
+
   export async function remove(sessionId: string) {
     const client = await getClient()
     if (!client) return
@@ -1160,10 +1248,10 @@ export namespace KiloSessions {
     return AppRuntime.runPromise(Vcs.Service.use((svc) => svc.branch()))
   }
 
-  async function meta(sessionId?: string) {
+  async function meta(sessionId?: string, info?: Session.Info | null) {
     const override = sessionId ? KiloSession.resolvePlatform(sessionId) : undefined
     const platform = override || process.env["KILO_PLATFORM"] || "cli"
-    const orgId = await getOrgId()
+    const orgId = await getOrgId(sessionId, info)
     const gitBranch = await branch().catch(() => undefined)
     const gitUrl = await getGitUrl().catch(() => undefined)
 
@@ -1175,7 +1263,16 @@ export namespace KiloSessions {
     }
   }
 
-  async function getOrgId(): Promise<Uuid | undefined> {
+  /** Test seam: exercise meta()/getOrgId without a preloaded Session.Info (get-failure fallback). */
+  export async function _metaForTests(sessionId?: string, info?: Session.Info | null) {
+    return meta(sessionId, info)
+  }
+
+  async function getOrgId(sessionId?: string, info?: Session.Info | null): Promise<Uuid | undefined> {
+    // Per-session org from metadata (remote create_session) wins over process-global env/auth.
+    const fromMeta = await resolveSessionOrg(sessionId, info)
+    if (fromMeta) return fromMeta
+
     const env = process.env["KILO_ORG_ID"]
     if (isUuid(env)) return env
 
@@ -1184,6 +1281,25 @@ export namespace KiloSessions {
       if (auth?.type === "oauth" && isUuid(auth.accountId)) return auth.accountId
       return undefined
     })
+  }
+
+  async function resolveSessionOrg(
+    sessionId?: string,
+    info?: Session.Info | null,
+  ): Promise<Uuid | undefined> {
+    if (!sessionId) return undefined
+    const resolved =
+      info !== undefined
+        ? info
+        : await (async () => {
+            const { AppRuntime } = await import("@/effect/app-runtime")
+            return AppRuntime.runPromise(
+              Session.Service.use((svc) => svc.get(SessionID.make(sessionId))),
+            ).catch(() => null)
+          })()
+    if (!resolved) return undefined
+    const raw = resolved.metadata?.orgId
+    return typeof raw === "string" && isUuid(raw) ? raw : undefined
   }
 
   function isUuid(value: string | undefined): value is Uuid {
