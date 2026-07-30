@@ -872,7 +872,7 @@ const AgentBehaviourTab: Component = () => {
             "border-bottom": skillPaths().length > 0 ? "1px solid var(--border-weak-base)" : "none",
           }}
         >
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, "min-width": 0 }}>
             <TextField
               value={newSkillPath()}
               placeholder="e.g. ./skills"
@@ -899,9 +899,15 @@ const AgentBehaviourTab: Component = () => {
             >
               <span
                 style={{
+                  flex: 1,
+                  "min-width": 0,
                   "font-family": "var(--vscode-editor-font-family, monospace)",
                   "font-size": "var(--kilo-font-size-12)",
+                  overflow: "hidden",
+                  "text-overflow": "ellipsis",
+                  "white-space": "nowrap",
                 }}
+                title={path}
               >
                 {path}
               </span>
@@ -923,7 +929,7 @@ const AgentBehaviourTab: Component = () => {
             "border-bottom": skillUrls().length > 0 ? "1px solid var(--border-weak-base)" : "none",
           }}
         >
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, "min-width": 0 }}>
             <TextField
               value={newSkillUrl()}
               placeholder="e.g. https://example.com/skills"
@@ -950,9 +956,15 @@ const AgentBehaviourTab: Component = () => {
             >
               <span
                 style={{
+                  flex: 1,
+                  "min-width": 0,
                   "font-family": "var(--vscode-editor-font-family, monospace)",
                   "font-size": "var(--kilo-font-size-12)",
+                  overflow: "hidden",
+                  "text-overflow": "ellipsis",
+                  "white-space": "nowrap",
                 }}
+                title={url}
               >
                 {url}
               </span>
