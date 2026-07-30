@@ -11,6 +11,7 @@ import { describe, it, expect } from "bun:test"
 import fs from "node:fs"
 import path from "node:path"
 import { Project, SyntaxKind } from "ts-morph"
+import { WorktreeImporter } from "../../src/agent-manager/worktree-importer"
 
 const ROOT = path.resolve(import.meta.dir, "../..")
 const KILO_PROVIDER_FILE = path.join(ROOT, "src/KiloProvider.ts")
@@ -60,6 +61,10 @@ const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
+const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
+const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
+const RUN_DESTINATION_FILE = path.join(ROOT, "src/agent-manager/run/destination.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -454,6 +459,52 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).not.toContain("agentManager.requestState")
   })
 
+  it("routes script terminal close and resize messages before user terminals", () => {
+    const text = body("onMessage")
+    expect(text.indexOf("this.scripts.manager.intercept(m)")).toBeLessThan(
+      text.indexOf("this.terminalRouter.handle(m)"),
+    )
+  })
+
+  it("runs scripts through the vscode-free canonical PTY manager", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_FILE, "utf-8")
+    expect(text).toMatch(/client\.v2\.pty\s*\.create/)
+    expect(text).toContain("client.v2.pty.get")
+    expect(text).toContain("client.v2.pty.update")
+    expect(text).toContain("client.v2.pty.remove")
+    expect(text).not.toContain("vscode")
+  })
+
+  it("selects the Run adapter from the panel dropdown message", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_RUNTIME_FILE, "utf-8")
+    expect(text).toContain("pickRunStart")
+    expect(text).toContain("config.destination")
+    expect(text).not.toContain("readRunTerminalDestination")
+    expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("config.destination"))
+  })
+
+  it("keeps the legacy integrated Run adapter isolated and removable", () => {
+    const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
+    expect(task).toContain("vscode.tasks.executeTask")
+    expect(task).toContain("Remove this")
+    const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
+    expect(dest).not.toContain('from "vscode"')
+    expect(dest).toContain("pickRunStart")
+    expect(dest).not.toContain("getConfiguration")
+  })
+
+  it("clears retained Run terminals before removing worktree state", () => {
+    for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
+      const text = body(name)
+      expect(text).toContain('this.scripts.manager.clear("run", worktreeId)')
+      expect(text.indexOf('this.scripts.manager.clear("run", worktreeId)')).toBeLessThan(
+        text.indexOf("state.removeWorktree"),
+      )
+    }
+    const deleted = body("onDeleteWorktree")
+    expect(deleted.indexOf("statsPoller.skipWorktree")).toBeLessThan(deleted.indexOf("this.run.remove"))
+  })
+
   // -- onDeleteWorktree invariants -------------------------------------------
 
   /**
@@ -571,18 +622,70 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).toContain("class WorktreeDiffController")
     expect(text).toContain("buildWorktreePatch")
     expect(text).toContain("revertFile")
-    expect(text).toContain("diffSummary")
+    // Summary/detail diff data comes from the shared DiffSourceCatalog sources
+    // (workspace/staged/unstaged/session), not a bespoke in-controller pipeline.
+    expect(text).toContain("catalog.build")
     expect(text).toContain("shouldStopDiffPolling")
     expect(providerText).toContain("this.diffs")
   })
 
   it("worktree import behavior lives in the cohesive importer", () => {
     const text = importer()
-    const providerText = body("onImportMessage")
-    expect(text).toContain("class WorktreeImporter")
-    expect(text).toContain("createFromPR")
-    expect(text).toContain("createWorktree")
-    expect(providerText).toContain("this.importer")
+    for (const value of ["createFromPR", "createWorktree", "this.busy()"]) expect(text).toContain(value)
+    expect(body("onImportMessage")).toContain("this.importer")
+  })
+
+  it("preserves branch and PR import ordering and rollback", async () => {
+    const run = async (kind: "branch" | "pr", fail?: "setup" | "duplicate") => {
+      const events: string[] = []
+      const create = async () => {
+        events.push("create")
+        if (fail === "duplicate") throw new Error("already checked out")
+        return { branch: "topic", path: "/repo/topic", parentBranch: "main" }
+      }
+      const importer = new WorktreeImporter({
+        manager: () =>
+          ({ createWorktree: create, createFromPR: create, removeWorktree: async () => events.push("disk") }) as never,
+        state: () =>
+          ({
+            addWorktree: (input: { branchOwned: boolean }) => ({
+              id: events.push(`add:${input.branchOwned}`) ? "worktree" : "",
+            }),
+            addSession: () => events.push("state-session"),
+            removeWorktree: () => events.push("state-remove"),
+          }) as never,
+        post: (msg) => events.push("message" in msg ? String(msg.message) : msg.type),
+        push: () => events.push("push"),
+        setup: async () => {
+          events.push("setup")
+          if (fail === "setup") throw new Error("setup failed")
+        },
+        session: async () => (events.push("session"), { id: "session" }) as never,
+        register: () => events.push("register"),
+        ready: () => events.push("ready"),
+        log: () => events.push("log"),
+      })
+      const action = () => (kind === "branch" ? importer.branch("topic") : importer.pr("https://example.test/pull/1"))
+      await action()
+      if (fail === "setup") await action()
+      return events.join("|")
+    }
+    for (const kind of ["branch", "pr"] as const) {
+      const branch = kind === "branch"
+      const creating = branch ? "Creating worktree from branch..." : "Resolving PR..."
+      const setup = branch ? "Running setup script..." : "Setting up worktree..."
+      const success = branch ? "Opened branch topic" : "Opened PR branch topic"
+      expect(await run(kind)).toBe(
+        `${creating}|create|add:false|push|${setup}|setup|session|state-session|register|ready|${success}|log`,
+      )
+      expect(await run(kind, "setup")).toBe(
+        `${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed|${creating}|create|add:false|push|${setup}|setup|state-remove|disk|push|setup failed|setup failed`,
+      )
+      const duplicate = branch
+        ? 'Branch "topic" is already checked out in another worktree'
+        : "This PR's branch is already checked out in another worktree"
+      expect(await run(kind, "duplicate")).toBe(`${creating}|create|${duplicate}|${duplicate}`)
+    }
   })
 })
 
@@ -791,9 +894,6 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
   },
-  "run/task.ts": {
-    note: "vscode adapter for Agent Manager run scripts",
-  },
   // Reads terminal.integrated.* and editor.font* config for xterm font settings
   "terminal-font.ts": {
     note: "vscode config reader for integrated terminal font settings",
@@ -892,70 +992,73 @@ describe("Agent Manager — VS Code import boundary", () => {
   })
 })
 
-// ---------------------------------------------------------------------------
-// Provider chain parity — sidebar App.tsx vs AgentManagerApp.tsx
-//
-// The agent manager reuses ChatView (and therefore MessageList, etc.) from the
-// sidebar. Any context provider that ChatView's tree may call useXxx() on must
-// also be present in the agent manager's provider chain. A missing provider
-// crashes the entire SolidJS component tree silently.
-//
-// Regression: PR #7473 moved KiloNotifications into MessageList. It calls
-// useNotifications(), but NotificationsProvider was only in App.tsx — the agent
-// manager rendered a blank screen.
-// ---------------------------------------------------------------------------
-
 const APP_FILE = path.join(ROOT, "webview-ui/src/App.tsx")
 const AGENT_MANAGER_APP_FILE = path.join(ROOT, "webview-ui/agent-manager/AgentManagerApp.tsx")
+const PROVIDER_SHELL_FILE = path.join(ROOT, "webview-ui/src/context/provider-shell.tsx")
 
-describe("Agent Manager — provider chain parity with sidebar", () => {
-  /**
-   * Extract provider component names used as JSX elements in a file.
-   * Matches `<FooProvider` and `<FooProvider>` patterns, returning the names.
-   */
-  function extractProviders(content: string): string[] {
-    const matches = [...content.matchAll(/<(\w+Provider)\b/g)]
-    return [...new Set(matches.map((m) => m[1]!))]
+describe("Shared webview provider shell", () => {
+  function ordered(source: string, names: string[]) {
+    const positions = names.map((name) => source.indexOf(`<${name}`))
+    expect(
+      positions.every((position) => position >= 0),
+      `Missing provider from ${names.join(" -> ")}`,
+    ).toBe(true)
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
   }
 
-  /**
-   * Providers that the agent manager intentionally omits because it does not
-   * use the components that depend on them. If a shared component (ChatView,
-   * MessageList, etc.) starts using one of these, the test will fail and
-   * force the developer to add the provider to AgentManagerApp.tsx.
-   */
-  const KNOWN_EXCLUSIONS: string[] = [
-    // These are wrapped by LanguageBridge and DataBridge respectively,
-    // which the agent manager already includes in its provider chain.
-    "LanguageProvider",
-    "DataProvider",
-    // Agent Manager owns its local session tabs and ChatView only reads this
-    // optional context in the standard sidebar/editor webview.
-    "LocalTabsProvider",
-    // Work-style onboarding is injected only into the sidebar empty state.
-    "WorkStyleProvider",
-  ]
+  it("owns the common provider order and bridges", () => {
+    const source = fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")
+    ordered(source, [
+      "ThemeProvider",
+      "DialogProvider",
+      "VSCodeProvider",
+      "MermaidDownloadBridge",
+      "ServerProvider",
+      "LanguageBridge",
+      "MarkedProvider",
+      "DiffComponentProvider",
+      "CodeComponentProvider",
+      "FileComponentProvider",
+      "ProviderProvider",
+      "ConfigProvider",
+      "SpeechToTextPrewarm",
+      "DisplayProvider",
+      "IndexingProvider",
+      "KiloEmbeddingModelsProvider",
+      "ImageModelsProvider",
+      "NotificationsProvider",
+      "SessionProvider",
+      "AgentRequirementsProvider",
+      "MemoryProvider",
+      "FeedbackProvider",
+    ])
+    expect(source.indexOf("<Toast.Region")).toBeGreaterThan(source.indexOf("</VSCodeProvider>"))
+  })
 
-  it("agent manager includes all context providers from sidebar App.tsx", () => {
-    const sidebar = fs.readFileSync(APP_FILE, "utf-8")
-    const agent = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+  it("keeps sidebar-only providers in the sidebar root", () => {
+    const source = fs.readFileSync(APP_FILE, "utf-8")
+    ordered(source, [
+      "ProviderShell.Root",
+      "WorkStyleProvider",
+      "ProviderShell.Session",
+      "LocalTabsProvider",
+      "ProviderShell.Chat",
+      "DataBridge",
+      "AppContent",
+    ])
+    expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toMatch(/WorkStyleProvider|LocalTabsProvider/)
+  })
 
-    const sidebarProviders = extractProviders(sidebar)
-    const agentProviders = extractProviders(agent)
-    const agentSet = new Set(agentProviders)
-    const excluded = new Set(KNOWN_EXCLUSIONS)
-
-    const missing = sidebarProviders.filter((p) => !agentSet.has(p) && !excluded.has(p))
-
-    expect(
-      missing,
-      `These providers are in App.tsx but missing from AgentManagerApp.tsx.\n` +
-        `The agent manager reuses ChatView — any provider that ChatView's component\n` +
-        `tree depends on must be present in both provider chains.\n\n` +
-        `Missing providers:\n` +
-        missing.map((p) => `  - ${p}`).join("\n") +
-        `\n\nFix: add the missing <${missing[0]}> to AgentManagerApp.tsx's provider chain,\n` +
-        `or add it to KNOWN_EXCLUSIONS with a justification if it's truly unused.`,
-    ).toEqual([])
+  it("keeps worktree mode in the Agent Manager root", () => {
+    const source = fs.readFileSync(AGENT_MANAGER_APP_FILE, "utf-8")
+    ordered(source, [
+      "ProviderShell.Root",
+      "ProviderShell.Session",
+      "ProviderShell.Chat",
+      "WorktreeModeProvider",
+      "DataBridge",
+      "AgentManagerContent",
+    ])
+    expect(fs.readFileSync(PROVIDER_SHELL_FILE, "utf-8")).not.toContain("WorktreeModeProvider")
   })
 })
