@@ -762,7 +762,7 @@ export const RunCommand = effectCmd({
         const sessionID = sess.id
         // kilocode_change start - track Task children; plain headless runs deny subagent asks instead of hanging (#11903)
         const tracked = KiloRunAuto.create(sessionID) // kilocode_change - named to avoid shadowing the `auto` flag
-        if (!args.attach && !args.auto && !args["dangerously-skip-permissions"]) KiloHeadless.mark(sessionID)
+        if (!args.attach && !args.auto && !skipPermissions) KiloHeadless.mark(sessionID) // kilocode_change - --yolo skips too
         // kilocode_change end
 
         function emit(type: string, data: Record<string, unknown>) {
@@ -929,7 +929,7 @@ export const RunCommand = effectCmd({
               // process and the in-process KiloHeadless deny cannot apply.
               if (permission.sessionID !== sessionID) {
                 if (!KiloRunAuto.allowed(tracked, permission.sessionID)) continue
-                if (args["dangerously-skip-permissions"]) {
+                if (skipPermissions) {
                   await client.permission.reply({
                     requestID: permission.id,
                     reply: "once",
