@@ -12,6 +12,18 @@ function api(input: { message: string; statusCode?: number; responseBody?: strin
   }).toObject()
 }
 
+function signal(input: { error: string; message?: string; statusCode?: number; responseBody?: string }) {
+  return {
+    error: api({
+      message: input.error,
+      statusCode: input.statusCode,
+      responseBody: input.responseBody,
+    }),
+    message: input.message ?? input.error,
+    next: 0,
+  }
+}
+
 describe("KiloCompactionThrottle", () => {
   it.effect("starts concurrently then serializes requests after provider pressure", () =>
     Effect.gen(function* () {
@@ -35,10 +47,7 @@ describe("KiloCompactionThrottle", () => {
       yield* Deferred.succeed(release, undefined)
       yield* Fiber.join(first)
 
-      yield* throttle.retry({
-        error: api({ message: "Too many requests", statusCode: 429 }),
-        next: 0,
-      })
+      yield* throttle.retry(signal({ error: "Too many requests", statusCode: 429 }))
 
       const order = yield* Ref.make(0)
       const signals = yield* Effect.forEach([0, 1, 2], () => Deferred.make<void>())
@@ -71,10 +80,7 @@ describe("KiloCompactionThrottle", () => {
       const throttle = yield* KiloCompactionThrottle.make()
       const done = yield* Deferred.make<void>()
       const now = yield* Clock.currentTimeMillis
-      yield* throttle.retry({
-        error: api({ message: "Rate limit exceeded", statusCode: 429 }),
-        next: now + 1_000,
-      })
+      yield* throttle.retry({ ...signal({ error: "Rate limit exceeded", statusCode: 429 }), next: now + 1_000 })
 
       const fiber = yield* throttle.gate(Deferred.succeed(done, undefined)).pipe(Effect.forkChild)
       yield* Effect.yieldNow
@@ -93,13 +99,13 @@ describe("KiloCompactionThrottle", () => {
       const throttle = yield* KiloCompactionThrottle.make()
       const done = yield* Deferred.make<void>()
       const now = yield* Clock.currentTimeMillis
-      const error = api({ message: "Rate limit exceeded", statusCode: 429 })
-      yield* throttle.retry({ error, next: now + 1_000 })
+      const error = signal({ error: "Rate limit exceeded", statusCode: 429 })
+      yield* throttle.retry({ ...error, next: now + 1_000 })
 
       const fiber = yield* throttle.gate(Deferred.succeed(done, undefined)).pipe(Effect.forkChild)
       yield* Effect.yieldNow
       yield* TestClock.adjust("500 millis")
-      yield* throttle.retry({ error, next: now + 2_000 })
+      yield* throttle.retry({ ...error, next: now + 2_000 })
 
       yield* TestClock.adjust("500 millis")
       expect(yield* Deferred.isDone(done)).toBe(false)
@@ -113,21 +119,34 @@ describe("KiloCompactionThrottle", () => {
 
   it.effect("only treats explicit provider pressure as a throttle signal", () =>
     Effect.sync(() => {
-      expect(KiloCompactionThrottle.pressure(api({ message: "busy", statusCode: 429 }))).toBe(true)
+      expect(KiloCompactionThrottle.pressure(signal({ error: "busy", statusCode: 429 }))).toBe(true)
       expect(
         KiloCompactionThrottle.pressure(
-          api({
-            message: "request failed",
+          signal({
+            error: "request failed",
             responseBody: '{"error":{"code":"RESOURCE_EXHAUSTED"}}',
           }),
         ),
       ).toBe(true)
       expect(
-        KiloCompactionThrottle.pressure(api({ message: '{"type":"error","error":{"type":"too_many_requests"}}' })),
+        KiloCompactionThrottle.pressure(
+          signal({ error: '{"type":"error","error":{"type":"too_many_requests"}}' }),
+        ),
       ).toBe(true)
-      expect(KiloCompactionThrottle.pressure(api({ message: "Provider is overloaded" }))).toBe(true)
-      expect(KiloCompactionThrottle.pressure(api({ message: "Service unavailable", statusCode: 503 }))).toBe(false)
-      expect(KiloCompactionThrottle.pressure(api({ message: "Network connection reset" }))).toBe(false)
+      expect(
+        KiloCompactionThrottle.pressure(
+          signal({ error: "Overloaded", message: "Provider is overloaded" }),
+        ),
+      ).toBe(true)
+      expect(
+        KiloCompactionThrottle.pressure(
+          signal({ error: "request failed", message: "The overloaded field was invalid" }),
+        ),
+      ).toBe(false)
+      expect(
+        KiloCompactionThrottle.pressure(signal({ error: "Service unavailable", statusCode: 503 })),
+      ).toBe(false)
+      expect(KiloCompactionThrottle.pressure(signal({ error: "Network connection reset" }))).toBe(false)
     }),
   )
 })

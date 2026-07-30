@@ -25,6 +25,12 @@ export type ReviewTelemetry = {
 export namespace KiloSessionProcessor {
   const log = Log.create({ service: "session.processor.kilo" })
   export type Gate = <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>
+  export type Retry = {
+    error?: SessionRetry.Err
+    message: string
+    next: number
+  }
+  export type RetryHook = (input: Retry) => Effect.Effect<void>
   export const INCOMPLETE_RESPONSE_RETRIES = 2
   export const INCOMPLETE_RESPONSE_MESSAGE =
     "The provider repeatedly ended the response before returning usable output."
@@ -50,6 +56,14 @@ export namespace KiloSessionProcessor {
 
   export function gated(gate: Gate | undefined) {
     return <A, E, R>(effect: Effect.Effect<A, E, R>) => (gate ? gate(effect) : effect)
+  }
+
+  export function retry(hook: RetryHook | undefined, input: Retry) {
+    return Effect.suspend(() => hook?.(input) ?? Effect.void).pipe(
+      Effect.catchDefect((err) =>
+        Effect.sync(() => log.error("retry hook failed; continuing provider retry", { err })),
+      ),
+    )
   }
 
   export function reviewTelemetry(command: string | undefined): ReviewTelemetry | undefined {

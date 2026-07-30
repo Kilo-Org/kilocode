@@ -12,14 +12,9 @@ type State = {
 }
 
 export namespace KiloCompactionThrottle {
-  export type Retry = {
-    error?: SessionRetry.Err
-    next: number
-  }
-
   export type Control = {
     gate: KiloSessionProcessor.Gate
-    retry: (input: Retry) => Effect.Effect<void>
+    retry: KiloSessionProcessor.RetryHook
   }
 
   function text(error: SessionRetry.Err, key: string) {
@@ -28,16 +23,18 @@ export namespace KiloCompactionThrottle {
     return typeof value === "string" ? value : ""
   }
 
-  export function pressure(error: SessionRetry.Err) {
+  export function pressure(input: Pick<KiloSessionProcessor.Retry, "error" | "message">) {
+    const error = input.error
+    if (!error) return false
     if (!isRecord(error.data)) return false
     if (error.data.statusCode === 429) return true
 
-    const message = text(error, "message").toLowerCase()
+    const message = input.message.toLowerCase()
     if (
       message.includes("rate increased too quickly") ||
       message.includes("rate limit") ||
       message.includes("too many requests") ||
-      message.includes("overloaded")
+      message === "provider is overloaded"
     )
       return true
 
@@ -48,8 +45,9 @@ export namespace KiloCompactionThrottle {
 
   /**
    * Keep the normal three-request fan-out until the provider reports pressure.
-   * Already-running attempts may finish; every later attempt and retry re-enters
-   * the shared serial gate for the remainder of this compaction.
+   * Attempts admitted while pressure is false are considered in flight and may
+   * finish; every later attempt and retry re-enters the shared serial gate for
+   * the remainder of this compaction.
    */
   export const make = Effect.fn("KiloCompactionThrottle.make")(function* () {
     const state = yield* Ref.make<State>({ slow: false, next: 0 })
@@ -74,8 +72,8 @@ export namespace KiloCompactionThrottle {
         }),
       )
 
-    const retry = (input: Retry) => {
-      if (!input.error || !pressure(input.error)) return Effect.void
+    const retry: KiloSessionProcessor.RetryHook = (input) => {
+      if (!input.error || !pressure(input)) return Effect.void
       const error = input.error
       return Effect.gen(function* () {
         yield* Ref.update(state, (current) => ({

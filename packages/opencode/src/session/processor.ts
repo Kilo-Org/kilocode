@@ -76,7 +76,7 @@ type Input = {
   telemetry?: ReviewTelemetry
   snapshotInitialization?: "wait"
   gate?: KiloSessionProcessor.Gate
-  retry?: (input: { error?: SessionRetry.Err; next: number }) => Effect.Effect<void>
+  retry?: KiloSessionProcessor.RetryHook
   // kilocode_change end
 }
 
@@ -1330,7 +1330,7 @@ export const layer = Layer.effect(
                   }),
                   set: (info) => {
                     if (info.attempt > 0) retries.provider += 1
-                    return (input.retry?.(info) ?? Effect.void).pipe(Effect.andThen(setRetry(info)))
+                    return KiloSessionProcessor.retry(input.retry, info).pipe(Effect.andThen(setRetry(info)))
                   },
                 }),
               ),
