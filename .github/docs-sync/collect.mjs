@@ -171,4 +171,10 @@ if (unannotated.missed.length > 0 || unannotated.unparsed.length > 0) {
     summaryLines.push(`- ${url} (no parseable targets)`)
   }
 }
+if (unannotated.chains.length > 0) {
+  summaryLines.push("", "**revert chains (not annotated):**")
+  for (const c of unannotated.chains) {
+    summaryLines.push(`- ${c.url}${c.targets.length > 0 ? ` (targets: ${c.targets.join(", ")})` : ""}`)
+  }
+}
 appendSummary(summaryLines.join("\n"))

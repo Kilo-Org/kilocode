@@ -99,15 +99,20 @@ export function applyRevertAnnotations(digest, revertSignals) {
  * Reports intercepted reverts whose targets received no digest annotation, for the
  * step summary. `signals` is the same shape as computeRevertAnnotations takes;
  * `appliedPairs` is applyRevertAnnotations' return ([targetUrl, reverterUrl]).
- * Returns { missed: [{ url, targets: [targetUrl, ...] }], unparsed: [url, ...] }:
- * - missed: one entry per signal with at least one unannotated target, listing exactly
- *   the targets that missed (a partially-covered revert still surfaces its uncovered
- *   targets).
- * - unparsed: urls of signals with zero targets (they already warn at intercept time).
- * Excluded by design: signals whose own url is a target of another signal
- * (revert-of-revert cancellation — annotating nothing is correct), and target urls
- * that are themselves intercepted reverts (re-land chain links — the target was never
- * digest-eligible). All url comparisons are case-insensitive.
+ * Returns { missed, unparsed, chains }:
+ * - missed: [{ url, targets: [targetUrl, ...] }] — one entry per signal with at least
+ *   one unannotated target, listing exactly the targets that missed (a partially-covered
+ *   revert still surfaces its uncovered targets).
+ * - unparsed: [url, ...] — urls of signals with zero targets (they already warn at
+ *   intercept time).
+ * - chains: [{ url, targets: [targetUrl, ...] }] — signals involved in a revert chain,
+ *   reported for human visibility only; the pipeline never resolves a chain's net effect.
+ *   A signal lands here when EITHER its own url is a target of another signal (cancelled
+ *   by computeRevertAnnotations), OR at least one of its targets is itself an intercepted
+ *   revert (re-land chain link).
+ * A signal in chains never also lands in missed/unparsed. Targets that are themselves
+ * intercepted reverts still never appear in missed (unchanged). All url comparisons are
+ * case-insensitive.
  */
 export function unannotatedRevertSignals(signals, appliedPairs) {
   const list = Array.isArray(signals) ? signals : []
@@ -121,18 +126,23 @@ export function unannotatedRevertSignals(signals, appliedPairs) {
   }
   const missed = []
   const unparsed = []
+  const chains = []
   for (const s of list) {
     const url = s?.url
-    if (!url || cancelledUrls.has(url.toLowerCase())) continue
-    const targets = s.targets ?? []
+    if (!url) continue
+    const targets = (s.targets ?? []).map((t) => t?.url).filter(Boolean)
+    const cancelled = cancelledUrls.has(url.toLowerCase())
+    const chainTargets = targets.filter((u) => signalUrls.has(u.toLowerCase()))
+    if (cancelled || chainTargets.length > 0) {
+      chains.push({ url, targets })
+      continue
+    }
     if (targets.length === 0) {
       unparsed.push(url)
       continue
     }
-    const missing = targets
-      .map((t) => t?.url)
-      .filter((u) => u && !annotated.has(u.toLowerCase()) && !signalUrls.has(u.toLowerCase()))
+    const missing = targets.filter((u) => !annotated.has(u.toLowerCase()))
     if (missing.length > 0) missed.push({ url, targets: missing })
   }
-  return { missed, unparsed }
+  return { missed, unparsed, chains }
 }
