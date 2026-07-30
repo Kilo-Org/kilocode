@@ -626,7 +626,13 @@ export const ShellTool = Tool.define(
           const timeout = Effect.sleep(`${CommandTimeout.duration(input.timeout)} millis`) // kilocode_change
 
           const exit = yield* Effect.raceAll([
-            handle.exitCode.pipe(Effect.map((code) => ({ kind: "exit" as const, code }))),
+            // kilocode_change start - signal termination has no numeric exit code; settle it as failure
+            // instead of leaving raceAll waiting for the abort or timeout branches.
+            handle.exitCode.pipe(
+              Effect.catch(() => Effect.succeed(1)),
+              Effect.map((code) => ({ kind: "exit" as const, code })),
+            ),
+            // kilocode_change end
             abort.pipe(Effect.map(() => ({ kind: "abort" as const, code: null }))),
             timeout.pipe(Effect.map(() => ({ kind: "timeout" as const, code: null }))),
           ])

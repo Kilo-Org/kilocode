@@ -190,6 +190,25 @@ describe("tool.shell", () => {
     ),
   )
 
+  // kilocode_change start
+  if (process.platform !== "win32") {
+    it.live("settles when the shell exits from a signal", () =>
+      runIn(
+        projectRoot,
+        Effect.gen(function* () {
+          const result = yield* run({
+            command: "kill -SEGV $$",
+            description: "Terminate the shell with SIGSEGV",
+            timeout: 60_000,
+          }).pipe(Effect.timeout("5 seconds"))
+          expect(result.metadata.exit).toBeGreaterThan(0)
+          expect(result.output).not.toContain("exceeding timeout")
+        }),
+      ),
+    )
+  }
+  // kilocode_change end
+
   it.live("falls back from terminal-only configured shell", () =>
     Effect.gen(function* () {
       const tmp = yield* tmpdirScoped({ config: { shell: "fish" } })
