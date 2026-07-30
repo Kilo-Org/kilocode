@@ -3557,7 +3557,7 @@ export type EventSessionTurnClose = {
   properties: {
     sessionID: string
     parentID?: string
-    reason: "completed" | "error" | "interrupted"
+    reason: "completed" | "error" | "interrupted" | "superseded"
   }
 }
 

@@ -13,11 +13,33 @@ type Ctx = {
   dir: string
   post: (msg: unknown) => void
   exportTranscript: (sessionID: string) => Promise<void>
+  copy: (text: string) => PromiseLike<void>
   openSessions: (ids: string[]) => void
   updateConfig: (partial: Partial<Config>, unset?: string[][]) => Promise<void>
 }
 
-export async function routeEarlyMessage(message: { type: string }, ctx: Ctx): Promise<boolean> {
+export async function routeEarlyMessage(
+  message: { type: string; id?: unknown; text?: unknown },
+  ctx: Ctx,
+): Promise<boolean> {
+  if (message.type === "copyToClipboard") {
+    if (typeof message.id !== "string") return true
+    if (typeof message.text !== "string") {
+      ctx.post({ type: "clipboardWriteResult", id: message.id, ok: false, error: "Invalid clipboard text" })
+      return true
+    }
+    await ctx.copy(message.text).then(
+      () => ctx.post({ type: "clipboardWriteResult", id: message.id, ok: true }),
+      (err) =>
+        ctx.post({
+          type: "clipboardWriteResult",
+          id: message.id,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+    )
+    return true
+  }
   await routeSuggestionWebviewMessage(ctx.question, message)
   if (await ModelState.handleMessage(message.type, message, ctx.client, ctx.post)) return true
   if (await routeModelRoutingMessage(message, { client: ctx.client, post: ctx.post, updateConfig: ctx.updateConfig }))

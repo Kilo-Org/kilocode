@@ -1435,7 +1435,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <ThinkingSelector sessionID={sid} />
           <RoutingSelector sessionID={sid} />
           <Show when={session.hasModelOverride(sid())}>
-            <Tooltip value={language.t("prompt.action.resetModel")} placement="top">
+            <Tooltip value={language.t("prompt.action.resetModel")} placement="top" openDelay={0}>
               <Button
                 variant="ghost"
                 size="small"
@@ -1451,7 +1451,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
         </div>
         <div class="prompt-input-hint-actions">
           <Show when={showIndexing()}>
-            <Tooltip value={indexing.status().message || indexing.label()} placement="top">
+            <Tooltip value={indexing.status().message || indexing.label()} placement="top" openDelay={0}>
               <Button
                 variant="ghost"
                 size="small"
@@ -1483,6 +1483,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
                 : language.t("prompt.action.autoApprove.disabled")
             }
             placement="top"
+            openDelay={0}
           >
             <Button
               variant="ghost"
@@ -1510,7 +1511,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               onToggle={toggleSandbox}
             />
           </Show>
-          <Tooltip value={language.t("prompt.action.enhance")} placement="top">
+          <Tooltip value={language.t("prompt.action.enhance")} placement="top" openDelay={0}>
             <Button
               variant="ghost"
               size="small"
@@ -1527,7 +1528,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
           <Show
             when={showStop()}
             fallback={
-              <Tooltip value={sendLabel()} placement="top">
+              <Tooltip value={sendLabel()} placement="top" openDelay={0}>
                 <Button
                   variant="ghost"
                   size="small"
@@ -1543,7 +1544,7 @@ export const PromptInput: Component<PromptInputProps> = (props) => {
               </Tooltip>
             }
           >
-            <Tooltip value={language.t("prompt.action.stop")} placement="top">
+            <Tooltip value={language.t("prompt.action.stop")} placement="top" openDelay={0}>
               <Button
                 variant="ghost"
                 size="small"
