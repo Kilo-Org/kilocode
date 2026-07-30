@@ -61,6 +61,10 @@ const IMPORTER_FILE = path.join(ROOT, "src/agent-manager/worktree-importer.ts")
 const SETUP_SCRIPT_RUNNER_FILE = path.join(ROOT, "src/agent-manager/SetupScriptRunner.ts")
 const RUN_MESSAGE_FILE = path.join(ROOT, "src/agent-manager/run/message.ts")
 const TERMINAL_ROUTING_FILE = path.join(ROOT, "src/agent-manager/terminal-routing.ts")
+const SCRIPT_TERMINAL_FILE = path.join(ROOT, "src/agent-manager/ScriptTerminalManager.ts")
+const SCRIPT_TERMINAL_RUNTIME_FILE = path.join(ROOT, "src/agent-manager/script-terminal-runtime.ts")
+const RUN_TASK_FILE = path.join(ROOT, "src/agent-manager/run/task.ts")
+const RUN_DESTINATION_FILE = path.join(ROOT, "src/agent-manager/run/destination.ts")
 
 function readAllCss(): string {
   return CSS_FILES.map((f) => fs.readFileSync(f, "utf-8")).join("\n")
@@ -455,6 +459,52 @@ describe("Agent Manager Provider — onMessage routing", () => {
     expect(text).not.toContain("agentManager.requestState")
   })
 
+  it("routes script terminal close and resize messages before user terminals", () => {
+    const text = body("onMessage")
+    expect(text.indexOf("this.scripts.manager.intercept(m)")).toBeLessThan(
+      text.indexOf("this.terminalRouter.handle(m)"),
+    )
+  })
+
+  it("runs scripts through the vscode-free canonical PTY manager", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_FILE, "utf-8")
+    expect(text).toMatch(/client\.v2\.pty\s*\.create/)
+    expect(text).toContain("client.v2.pty.get")
+    expect(text).toContain("client.v2.pty.update")
+    expect(text).toContain("client.v2.pty.remove")
+    expect(text).not.toContain("vscode")
+  })
+
+  it("selects the Run adapter from the panel dropdown message", () => {
+    const text = fs.readFileSync(SCRIPT_TERMINAL_RUNTIME_FILE, "utf-8")
+    expect(text).toContain("pickRunStart")
+    expect(text).toContain("config.destination")
+    expect(text).not.toContain("readRunTerminalDestination")
+    expect(text.indexOf("pickRunStart")).toBeLessThan(text.indexOf("config.destination"))
+  })
+
+  it("keeps the legacy integrated Run adapter isolated and removable", () => {
+    const task = fs.readFileSync(RUN_TASK_FILE, "utf-8")
+    expect(task).toContain("vscode.tasks.executeTask")
+    expect(task).toContain("Remove this")
+    const dest = fs.readFileSync(RUN_DESTINATION_FILE, "utf-8")
+    expect(dest).not.toContain('from "vscode"')
+    expect(dest).toContain("pickRunStart")
+    expect(dest).not.toContain("getConfiguration")
+  })
+
+  it("clears retained Run terminals before removing worktree state", () => {
+    for (const name of ["onDeleteWorktree", "onRemoveStaleWorktree"]) {
+      const text = body(name)
+      expect(text).toContain('this.scripts.manager.clear("run", worktreeId)')
+      expect(text.indexOf('this.scripts.manager.clear("run", worktreeId)')).toBeLessThan(
+        text.indexOf("state.removeWorktree"),
+      )
+    }
+    const deleted = body("onDeleteWorktree")
+    expect(deleted.indexOf("statsPoller.skipWorktree")).toBeLessThan(deleted.indexOf("this.run.remove"))
+  })
+
   // -- onDeleteWorktree invariants -------------------------------------------
 
   /**
@@ -843,9 +893,6 @@ const VSCODE_ALLOWED: Record<string, { note: string }> = {
   // Thin adapter: wraps vscode.tasks API behind RunTask callback
   "task-runner.ts": {
     note: "vscode adapter for SetupScriptRunner",
-  },
-  "run/task.ts": {
-    note: "vscode adapter for Agent Manager run scripts",
   },
   // Reads terminal.integrated.* and editor.font* config for xterm font settings
   "terminal-font.ts": {

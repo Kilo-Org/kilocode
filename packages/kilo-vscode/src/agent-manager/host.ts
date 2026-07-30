@@ -104,6 +104,9 @@ export interface Host {
   /** Get the workspace/project root path. */
   workspacePath(): string | undefined
 
+  /** Whether the workspace permits executing configured scripts. */
+  isTrusted(): boolean
+
   /** Read the user's automatic branch naming preferences. */
   autoBranchNaming(): { enabled: boolean; prefix: string }
 

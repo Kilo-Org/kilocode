@@ -16,6 +16,7 @@ import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
 import type { TerminalDestination } from "./terminal-destination"
+import type { ScriptTerminalView } from "./ScriptTerminalManager"
 
 export type { TerminalFont }
 
@@ -175,6 +176,11 @@ interface TerminalDestinationChangedMessage {
 interface TerminalFontChangedMessage {
   type: "agentManager.terminal.fontChanged"
   font: TerminalFont
+}
+
+interface ScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
 }
 
 interface ErrorOutMessage {
@@ -345,6 +351,7 @@ export type AgentManagerOutMessage =
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
+  | ScriptTerminalsMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -411,6 +418,7 @@ interface ConfigureRunScriptIn {
 interface RunScriptIn {
   type: "agentManager.runScript"
   worktreeId: string
+  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {

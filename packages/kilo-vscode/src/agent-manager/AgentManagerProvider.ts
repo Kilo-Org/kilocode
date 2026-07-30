@@ -24,9 +24,9 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
-import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
+import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
@@ -66,6 +66,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
+  private scripts: ReturnType<typeof createScriptTerminalRuntime>
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -114,19 +115,25 @@ export class AgentManagerProvider implements Disposable {
       post: (msg) => this.postToWebview(msg),
       getTerminalFont: () => readTerminalFont(),
     })
+    this.scripts = createScriptTerminalRuntime({
+      connection: this.connectionService,
+      output: this.outputChannel,
+      post: (message) => this.postToWebview(message),
+    })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+      this.scripts.manager.snapshot()
     })
     this.unsubDestination = watchTerminalDestination((destination) => {
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
-    this.run = new RunController({
+    this.run = createRunController({
+      manager: this.scripts.manager,
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
       open: (file) => this.host.openDocument(file),
-      start: startVscodeRunTask,
-      post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
-      error: (message) => this.postToWebview({ type: "error", message }),
+      trusted: () => this.host.isTrusted(),
+      post: (message) => this.postToWebview(message),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
       refresh: () => this.pushState(),
     })
@@ -416,6 +423,7 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
+    if (this.scripts.manager.intercept(m)) return null
     if (this.terminalRouter.handle(m)) return null
 
     return msg
@@ -765,6 +773,7 @@ export class AgentManagerProvider implements Disposable {
     // the panel itself is disposed. In-flight creates from the dying
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
+    this.scripts.manager.snapshot()
     void this.stateReady
       ?.then(() => {
         // When the folder is not a git repo (or has no folder open),
@@ -1056,11 +1065,16 @@ export class AgentManagerProvider implements Disposable {
       this.log(`Worktree ${worktreeId} not found in state`)
       return null
     }
+    this.statsPoller.skipWorktree(worktreeId)
+    await this.run.remove(worktreeId)
+    if (!(await this.scripts.manager.clear("run", worktreeId))) {
+      this.statsPoller.unskipWorktree(worktreeId)
+      this.postToWebview({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
+      return null
+    }
     // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
     // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
-    this.statsPoller.skipWorktree(worktreeId)
     this.prBridge.remove(worktreeId)
-    this.run.remove(worktreeId)
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
@@ -1095,6 +1109,11 @@ export class AgentManagerProvider implements Disposable {
       return null
     }
 
+    await this.run.remove(worktreeId)
+    if (!(await this.scripts.manager.clear("run", worktreeId))) {
+      this.postToWebview({ type: "error", message: "Failed to stop the Run script before removing the worktree" })
+      return null
+    }
     this.naming.forget(worktreeId)
     const orphaned = state.removeWorktree(worktreeId)
     if (this.diffs.shouldStopForWorktree(worktree.path, orphaned)) {
@@ -1957,6 +1976,7 @@ export class AgentManagerProvider implements Disposable {
     this.unsubStatus?.()
     this.unsubFont?.()
     this.unsubDestination?.()
+    await this.scripts.dispose()
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()

@@ -36,6 +36,11 @@ export type VscodeTerminalRequest =
   | { type: "agentManager.showWorktreeTerminal"; worktreeId: string }
   | { type: "agentManager.showLocalTerminal" }
 
+/** Carry the panel-local dropdown choice with every Run click. */
+export function resolveRunScriptRequest(worktreeId: string, destination: TerminalDestination) {
+  return { type: "agentManager.runScript" as const, worktreeId, destination }
+}
+
 /**
  * Pick the message the terminal button / Focus Terminal shortcut sends
  * when the destination is the VS Code integrated terminal. The fallback

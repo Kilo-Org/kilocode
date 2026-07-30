@@ -39,6 +39,7 @@ import type {
   SessionInfo,
   SessionCreatedMessage,
   BranchInfo,
+  TerminalDestination,
 } from "../src/types/messages"
 import {
   DragDropProvider,
@@ -106,6 +107,7 @@ import {
   createTerminalMessageHandler,
   createSideTerminal,
   readSavedDestination,
+  resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -402,20 +404,20 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel })
   }
 
-  const runWorktree = (id: string) => {
+  const runWorktree = (id: string, destination: TerminalDestination) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
       vscode.postMessage({ type: "agentManager.stopRunScript", worktreeId: id })
       return
     }
-    vscode.postMessage({ type: "agentManager.runScript", worktreeId: id })
+    vscode.postMessage(resolveRunScriptRequest(id, destination))
   }
 
   const configureRunScript = () => vscode.postMessage({ type: "agentManager.configureRunScript" })
 
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel)
+    if (sel) runWorktree(sel, sideCtl.destination())
   }
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
@@ -1091,6 +1093,12 @@ const AgentManagerContent: Component = () => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
         if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
+      },
+      onScriptRunning: (contextKey, terminalId) => {
+        if (terms.sideKey() !== contextKey) return
+        showSideTerminal()
+        terms.setSideActive(contextKey, terminalId)
+        terms.requestFocus(terminalId)
       },
       onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
@@ -2541,7 +2549,7 @@ const AgentManagerContent: Component = () => {
                                   onClick={metrics.click(
                                     "run_script",
                                     "tab_toolbar",
-                                    () => runWorktree(rid()),
+                                    () => runWorktree(rid(), sideCtl.destination()),
                                     () => ({
                                       action: active() ? "stop" : configured() ? "run" : "configure",
                                     }),

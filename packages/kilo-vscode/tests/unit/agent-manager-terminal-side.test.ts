@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 import {
   createSideTerminal,
   readSavedDestination,
+  resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "../../webview-ui/agent-manager/terminal/side"
 
@@ -144,6 +145,21 @@ describe("readSavedDestination", () => {
     expect(readSavedDestination({ terminalDestination: "bogus" })).toBeUndefined()
     expect(readSavedDestination({})).toBeUndefined()
     expect(readSavedDestination(undefined)).toBeUndefined()
+  })
+})
+
+describe("resolveRunScriptRequest", () => {
+  it("carries the current panel dropdown destination with every Run request", () => {
+    expect(resolveRunScriptRequest("wt-1", "agentManager")).toEqual({
+      type: "agentManager.runScript",
+      worktreeId: "wt-1",
+      destination: "agentManager",
+    })
+    expect(resolveRunScriptRequest("local", "vscode")).toEqual({
+      type: "agentManager.runScript",
+      worktreeId: "local",
+      destination: "vscode",
+    })
   })
 })
 

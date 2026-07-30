@@ -104,6 +104,7 @@ export const SideTerminalPanel: Component<Props> = (props) => {
                     <TerminalTabChrome
                       label={props.state.title(term.id) ?? term.title}
                       tooltip={props.state.title(term.id) ?? term.title}
+                      status={props.state.scriptStatus(term.id)}
                       active={props.state.sideActiveFor(props.contextKey()) === term.id}
                       role="tab"
                       selected={props.state.sideActiveFor(props.contextKey()) === term.id}

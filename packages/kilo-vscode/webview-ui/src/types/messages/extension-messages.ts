@@ -742,6 +742,24 @@ export interface AgentManagerTerminalDestinationChangedMessage {
   destination: TerminalDestination
 }
 
+/** Provider-owned Run script terminal. Full snapshots replace only this terminal kind. */
+export interface ScriptTerminalView {
+  terminalId: string
+  /** null for LOCAL, worktree id otherwise */
+  worktreeId: string | null
+  kind: "run"
+  title: "Run"
+  wsUrl: string
+  state: "running" | "stopping" | "exited" | "failed"
+  exitCode?: number
+  font: TerminalFont
+}
+
+export interface AgentManagerScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
+}
+
 export interface AgentManagerRunStatusMessage extends RunStatus {
   type: "agentManager.runStatus"
 }
@@ -1267,6 +1285,7 @@ export type ExtensionMessage =
   | AgentManagerTerminalClosedMessage
   | AgentManagerTerminalErrorMessage
   | AgentManagerTerminalDestinationChangedMessage
+  | AgentManagerScriptTerminalsMessage
   // legacy-migration start
   | MigrationStateMessage
   | MigrationDataMessage
