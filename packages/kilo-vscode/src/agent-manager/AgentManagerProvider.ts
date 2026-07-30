@@ -55,7 +55,6 @@ import { parseToolRequest, startFromTool, type ToolRequest } from "./tool-start"
 import { sandboxSessionMetadata } from "../shared/sandbox-session"
 import { AgentManagerOrchestrationBridge } from "./orchestration-bridge"
 import { pruneSubagents } from "./prune-subagents"
-
 import { startSession } from "./mcp-warmup"
 import { readTerminalFont, watchTerminalFont } from "./terminal-font"
 import { DestinationState, handleDestination, watchTerminalDestination } from "./terminal-destination"
