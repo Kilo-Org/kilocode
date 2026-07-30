@@ -8,6 +8,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
 import com.intellij.ui.CollectionListModel
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import java.util.Collections
 
@@ -48,8 +49,9 @@ class WorktreeController(
 
     fun reload() {
         cs.launch {
-            val result = service.list(directory)
+            val listing = async { service.list(directory) }
             val branchInfo = service.listBranches(directory)
+            val result = listing.await()
             edt {
                 val main = result.worktrees.firstOrNull { it.main }
                 val extra = result.worktrees.filter { !it.main }
@@ -118,6 +120,7 @@ class WorktreeController(
                 edt {
                     deleting.remove(dto.id)
                     model.remove(dto)
+                    cache().remove(dto.path)
                     onRemoveSuccess?.invoke(dto)
                     onSuccess()
                     telemetry("Worktree Deleted", mapOf("branch" to dto.branch, "force" to force.toString()))

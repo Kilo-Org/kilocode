@@ -75,7 +75,6 @@ class WorktreeSessionEditorPanel(
             if (id == DELETE_CELL) confirmDelete(listOf(key), DELETE_CELL)
         },
         onOpen = { row, focus -> open(row, focus) },
-        onSelect = { updateActions() },
     )
     private var started = false
 
@@ -102,7 +101,6 @@ class WorktreeSessionEditorPanel(
             if (isShowing) start()
         }
         sync()
-        updateActions()
     }
 
     override fun getBackground(): Color = activeListToolWindowBackground()
@@ -210,7 +208,6 @@ class WorktreeSessionEditorPanel(
             .map { SessionRow(it.session, kinds[it.id], deleting = it.id in deleting) }
         list.update(rows, ActiveListSelection.PreserveNoScroll)
         select(if (pending) SessionHost.NEW else key)
-        updateActions()
     }
 
     @RequiresEdt
@@ -233,10 +230,6 @@ class WorktreeSessionEditorPanel(
 
     @RequiresEdt
     private fun selectedKeys(): List<String> = list.selectedKeys().filter { it != SessionHost.NEW && it !in manager.deleting() }
-
-    @RequiresEdt
-    private fun updateActions() {
-    }
 
     private fun bindModel() {
         val listener = object : ListDataListener {
@@ -264,7 +257,10 @@ class WorktreeSessionEditorPanel(
         sink[SessionManager.WORKSPACE_KEY] = worktree
     }
 
-    override fun dispose() {}
+    override fun dispose() {
+        manager.onPresent = null
+        manager.onListChanged = null
+    }
 
     private inner class NewAction : AnAction(
         KiloBundle.message("worktree.session.new.action"),

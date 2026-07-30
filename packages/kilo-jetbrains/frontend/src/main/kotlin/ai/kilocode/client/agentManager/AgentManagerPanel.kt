@@ -260,7 +260,11 @@ class AgentManagerPanel(
             .firstOrNull { it.id == key }
     }
 
-    override fun dispose() {}
+    override fun dispose() {
+        controller.onSelect = null
+        controller.onCreateFailure = null
+        controller.onRemoveSuccess = null
+    }
 
     override fun uiDataSnapshot(sink: DataSink) {
         sink[PlatformDataKeys.DELETE_ELEMENT_PROVIDER] = provider

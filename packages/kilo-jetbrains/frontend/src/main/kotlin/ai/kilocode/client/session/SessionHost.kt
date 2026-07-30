@@ -120,8 +120,7 @@ abstract class SessionHost(
     @RequiresEdt
     protected fun forceSession(id: String) {
         val ui = opened[id] ?: return
-        if (currentUi() === ui) disposeUi(ui)
-        else disposeUi(ui)
+        disposeUi(ui)
     }
 
     @RequiresEdt
