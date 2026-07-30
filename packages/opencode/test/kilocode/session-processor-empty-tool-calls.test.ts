@@ -491,6 +491,28 @@ describe("session processor empty tool-calls", () => {
     ),
   )
 
+  it.live("normalizes missing tool input at the shared processor boundary", () =>
+    provideTmpdirProject(
+      (dir) =>
+        Effect.gen(function* () {
+          const state = yield* setup(dir)
+          yield* state.test.reply(
+            LLMEvent.stepStart({ index: 0 }),
+            LLMEvent.toolCall({ id: "call_1", name: "test_tool", input: undefined }),
+            LLMEvent.stepFinish({ index: 0, reason: "tool-calls", usage: usage() }),
+            LLMEvent.finish({ reason: "tool-calls", usage: usage() }),
+          )
+
+          yield* state.handle.process(state.input)
+          const parts = yield* MessageV2.parts(state.handle.message.id)
+          const tool = parts.find((part) => part.type === "tool")
+
+          expect(tool?.state.input).toEqual({})
+        }),
+      { git: true },
+    ),
+  )
+
   it.live("preserves tool-calls finish when tool parts exist", () =>
     provideTmpdirProject(
       (dir) =>

@@ -595,7 +595,7 @@ export const layer = Layer.effect(
             }
             ctx.step.tool = true // kilocode_change
             const toolCall = yield* ensureToolCall(value)
-            const input = isRecord(value.input) ? value.input : { value: value.input }
+            const input = isRecord(value.input) ? value.input : value.input == null ? {} : { value: value.input } // kilocode_change
             if (!toolCall.call.inputEnded) {
               // TODO(v2): Temporary dual-write while migrating session messages to v2 events.
               if (mirrorAssistant) {

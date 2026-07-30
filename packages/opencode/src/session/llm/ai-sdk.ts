@@ -4,7 +4,6 @@ import { type streamText } from "ai"
 import { errorMessage } from "@/util/error"
 import { KiloRoutedModel } from "@/kilocode/session/routed-model" // kilocode_change
 import { KiloResponseMetadata } from "@/kilocode/session/response-metadata" // kilocode_change
-import { KiloToolInput } from "@/kilocode/provider/tool-input" // kilocode_change
 
 type Result = Awaited<ReturnType<typeof streamText>>
 type AISDKEvent = Result["fullStream"] extends AsyncIterable<infer T> ? T : never
@@ -234,7 +233,7 @@ export function toLLMEvents(
           LLMEvent.toolCall({
             id: event.toolCallId,
             name: event.toolName,
-            input: KiloToolInput.normalize(event.input), // kilocode_change - providers may omit tool arguments
+            input: event.input,
             providerExecuted: "providerExecuted" in event ? event.providerExecuted : undefined,
             providerMetadata: providerMetadata(event.providerMetadata),
           }),
