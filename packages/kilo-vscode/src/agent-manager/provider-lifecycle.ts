@@ -32,8 +32,11 @@ export interface LifecycleHost {
   push: () => void
   register: (sessionId: string, dir: string) => void
   skipStats: (worktreeId: string) => void
+  unskipStats: (worktreeId: string) => void
   removePR: (worktreeId: string) => void
-  removeRun: (worktreeId: string) => void
+  removeRun: (worktreeId: string) => Promise<void>
+  /** Stop the run script's terminal; false aborts the worktree removal. */
+  clearRun: (worktreeId: string) => Promise<boolean>
   forgetName: (worktreeId: string) => void
   stopDiffs: (path: string, orphaned: ManagedSession[]) => void
   capture: (event: string, props: Record<string, unknown>) => void
@@ -100,8 +103,13 @@ export async function deleteLifecycleWorktree(
   // Remove from state BEFORE disk removal so pollers immediately stop targeting this worktree.
   // Pre-emptive skip covers any in-flight poll that already captured getWorktrees().
   host.skipStats(worktreeId)
+  await host.removeRun(worktreeId)
+  if (!(await host.clearRun(worktreeId))) {
+    host.unskipStats(worktreeId)
+    host.post({ type: "error", message: "Failed to stop the Run script before deleting the worktree" })
+    return null
+  }
   host.removePR(worktreeId)
-  host.removeRun(worktreeId)
   host.forgetName(worktreeId)
   const orphaned = state.removeWorktree(worktreeId)
   host.stopDiffs(worktree.path, orphaned)
@@ -138,6 +146,11 @@ export async function removeStaleLifecycleWorktree(
     return null
   }
 
+  await host.removeRun(worktreeId)
+  if (!(await host.clearRun(worktreeId))) {
+    host.post({ type: "error", message: "Failed to stop the Run script before removing the worktree" })
+    return null
+  }
   host.forgetName(worktreeId)
   const orphaned = state.removeWorktree(worktreeId)
   host.stopDiffs(worktree.path, orphaned)

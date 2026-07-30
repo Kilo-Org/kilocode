@@ -163,6 +163,7 @@ export interface Config {
   compaction?: CompactionConfig
   commit_message?: CommitMessageConfig
   tools?: Record<string, boolean>
+  web_search?: boolean
   auto_collapse_reasoning?: boolean
   experimental?: ExperimentalConfig
   sandbox?: SandboxConfig

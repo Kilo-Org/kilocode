@@ -255,6 +255,10 @@ export class VscodeHost implements Host {
     })
   }
 
+  isTrusted(): boolean {
+    return vscode.workspace.isTrusted
+  }
+
   autoBranchNaming(): { enabled: boolean; prefix: string } {
     const cfg = vscode.workspace.getConfiguration("kilo-code.new.agentManager")
     return {

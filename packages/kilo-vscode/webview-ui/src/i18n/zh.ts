@@ -678,7 +678,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "智能体行为",
   "settings.autoApprove.title": "自动审批",
-  "settings.browser.title": "浏览器",
+  "settings.webTools.title": "网络工具",
+  "settings.webTools.description": "配置网页搜索和浏览器自动化。",
+  "settings.webTools.webSearch.enable": "为所有提供商启用",
+  "settings.webTools.browserAutomation": "浏览器自动化",
+  "settings.webTools.webSearch.title": "网页搜索",
+  "settings.webTools.webSearch.description": "让所有提供商的模型都可使用网页搜索。",
   "settings.checkpoints.title": "检查点",
   "settings.display.title": "显示",
   "settings.autocomplete.title": "自动补全",

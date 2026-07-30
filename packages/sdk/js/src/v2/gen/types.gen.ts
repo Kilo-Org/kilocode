@@ -1698,6 +1698,7 @@ export type Config = {
   tools?: {
     [key: string]: boolean
   }
+  web_search?: boolean
   attachment?: AttachmentConfig
   enterprise?: {
     url?: string

@@ -10,6 +10,7 @@ import { LocationQuery, locationQueryOpenApi, LocationMiddleware } from "./locat
 export const PTY_CONNECT_TICKET_QUERY = "ticket"
 export const PTY_CONNECT_TOKEN_HEADER = "x-kilo-ticket"
 export const PTY_CONNECT_TOKEN_HEADER_VALUE = "1"
+export const PTY_REPLAY_EXITED_QUERY = "replayExited"
 
 const PTY_CONNECT_PATH = /^\/api\/pty\/[^/]+\/connect$/
 
@@ -130,7 +131,13 @@ export const PtyGroup = HttpApiGroup.make("server.pty")
           ...operation,
           parameters: [
             ...(operation.parameters ?? []),
-            ...["location[directory]", "location[workspace]", "cursor", PTY_CONNECT_TICKET_QUERY].map((name) => ({
+            ...[
+              "location[directory]",
+              "location[workspace]",
+              "cursor",
+              PTY_CONNECT_TICKET_QUERY,
+              PTY_REPLAY_EXITED_QUERY,
+            ].map((name) => ({
               in: "query",
               name,
               schema: { type: "string" },

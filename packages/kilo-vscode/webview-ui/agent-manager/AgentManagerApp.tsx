@@ -43,6 +43,7 @@ import type {
   SessionInfo,
   SessionCreatedMessage,
   BranchInfo,
+  TerminalDestination,
 } from "../src/types/messages"
 import { IndexingProvider } from "../src/context/indexing"
 import {} from "@thisbeyond/solid-dnd"
@@ -128,6 +129,7 @@ import {
   createTerminalMessageHandler,
   createSideTerminal,
   readSavedDestination,
+  resolveRunScriptRequest,
   resolveVscodeTerminalRequest,
 } from "./terminal"
 import { focusCurrentTab, renderTab, renderTerminalLayer, renderNewTabButton } from "./tab-rendering"
@@ -453,20 +455,20 @@ const AgentManagerContent: Component = () => {
     vscode.postMessage({ type: "agentManager.openPR", worktreeId: sel })
   }
 
-  const runWorktree = (id: string) => {
+  const runWorktree = (id: string, destination: TerminalDestination) => {
     const state = runStatuses()[id]?.state ?? "idle"
     if (state === "running" || state === "stopping") {
       vscode.postMessage({ type: "agentManager.stopRunScript", worktreeId: id })
       return
     }
-    vscode.postMessage({ type: "agentManager.runScript", worktreeId: id })
+    vscode.postMessage(resolveRunScriptRequest(id, destination))
   }
 
   const configureRunScript = () => vscode.postMessage({ type: "agentManager.configureRunScript" })
 
   const runSelected = () => {
     const sel = selection()
-    if (sel) runWorktree(sel)
+    if (sel) runWorktree(sel, sideCtl.destination())
   }
 
   const isPending = (id: string) => id.startsWith(PENDING_PREFIX)
@@ -1066,7 +1068,7 @@ const AgentManagerContent: Component = () => {
           requestAnimationFrame(() => sidebarSearchMenu?.open())
         }
       } else if (msg.action === "showTerminal") {
-        sideCtl.openPreferred("keyboard_shortcut")
+        if (!sideCtl.echo()) sideCtl.openPreferred("keyboard_shortcut")
       } else if (msg.action === "toggleDiff") {
         if (reviewActive()) {
           closeReviewTab()
@@ -1123,6 +1125,13 @@ const AgentManagerContent: Component = () => {
       }
     }
     window.addEventListener("keydown", preventDefaults, true)
+
+    // Cmd/Ctrl+/ toggles the terminal even when VS Code's webview keybinding
+    // forwarding drops the key before it reaches the workbench (reported with
+    // the prompt input focused). When forwarding does work, the extension
+    // echoes the shortcut back as an action message and sideCtl dedupes it.
+    const shortcut = (e: KeyboardEvent) => sideCtl.press(e)
+    window.addEventListener("keydown", shortcut, true)
 
     // Delete/Backspace on a selected worktree triggers inline delete confirmation.
     // Pressing the key twice in a row (within the 2500ms window) confirms the delete.
@@ -1225,6 +1234,12 @@ const AgentManagerContent: Component = () => {
         // Focus only when the user is still looking at this panel —
         // a slow create landing after a mode switch must not steal it.
         if (sidePanel() === "terminal" && terms.sideKey() === contextKey) terms.requestFocus(terminalId)
+      },
+      onScriptRunning: (contextKey, terminalId) => {
+        if (terms.sideKey() !== contextKey) return
+        showSideTerminal()
+        terms.setSideActive(contextKey, terminalId)
+        terms.requestFocus(terminalId)
       },
       onDestinationChanged: (destination) => sideCtl.syncDefault(destination),
     })
@@ -1423,6 +1438,7 @@ const AgentManagerContent: Component = () => {
     onCleanup(() => {
       window.removeEventListener("message", handler)
       window.removeEventListener("keydown", preventDefaults, true)
+      window.removeEventListener("keydown", shortcut, true)
       window.removeEventListener("keydown", deleteKeyHandler)
       window.removeEventListener("keydown", modTrack, true)
       window.removeEventListener("keyup", modTrack, true)
@@ -2283,7 +2299,7 @@ const AgentManagerContent: Component = () => {
           onApply={openApplyDialog}
           runStatuses={runStatuses}
           runConfigured={runScriptConfigured}
-          onRun={runWorktree}
+          onRun={(id) => runWorktree(id, sideCtl.destination())}
           onConfigureRun={configureRunScript}
           diffOpen={diffOpen}
           reviewActive={reviewActive}

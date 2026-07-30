@@ -696,7 +696,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "エージェントの動作",
   "settings.autoApprove.title": "自動承認",
-  "settings.browser.title": "ブラウザ",
+  "settings.webTools.title": "ウェブツール",
+  "settings.webTools.description": "ウェブ検索とブラウザ自動化を設定します。",
+  "settings.webTools.webSearch.enable": "すべてのプロバイダーで有効化",
+  "settings.webTools.browserAutomation": "ブラウザ自動化",
+  "settings.webTools.webSearch.title": "ウェブ検索",
+  "settings.webTools.webSearch.description": "すべてのプロバイダーのモデルでウェブ検索を利用できるようにします。",
   "settings.checkpoints.title": "チェックポイント",
   "settings.display.title": "表示",
   "settings.autocomplete.title": "オートコンプリート",

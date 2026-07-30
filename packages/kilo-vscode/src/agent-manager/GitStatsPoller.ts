@@ -103,6 +103,10 @@ export class GitStatsPoller {
     this.skipWorktreeIds.add(id)
   }
 
+  unskipWorktree(id: string): void {
+    this.skipWorktreeIds.delete(id)
+  }
+
   setEnabled(enabled: boolean): void {
     if (enabled) {
       if (this.active) return

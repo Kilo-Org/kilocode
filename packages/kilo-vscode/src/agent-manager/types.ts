@@ -18,6 +18,7 @@ import type { TerminalFont } from "./terminal-font"
 import type { ProjectSnapshot } from "./project/contexts"
 import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
+import type { ScriptTerminalView } from "./ScriptTerminalManager"
 
 export type { TerminalFont }
 export type { ProjectSnapshot }
@@ -216,6 +217,11 @@ interface TerminalFontChangedMessage {
   font: TerminalFont
 }
 
+interface ScriptTerminalsMessage {
+  type: "agentManager.scriptTerminals"
+  terminals: ScriptTerminalView[]
+}
+
 interface ErrorOutMessage {
   type: "error"
   message: string
@@ -390,6 +396,7 @@ export type AgentManagerOutMessage =
   | TerminalErrorMessage
   | TerminalDestinationChangedMessage
   | TerminalFontChangedMessage
+  | ScriptTerminalsMessage
 
 // ---------------------------------------------------------------------------
 // Webview → Extension messages (onMessage)
@@ -514,6 +521,7 @@ interface RunScriptIn {
   type: "agentManager.runScript"
   projectId?: string
   worktreeId: string
+  destination: TerminalDestination
 }
 
 interface StopRunScriptIn {

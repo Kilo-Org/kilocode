@@ -678,7 +678,7 @@
         "command": "kilo-code.new.agentManager.showTerminal",
         "key": "ctrl+/",
         "mac": "cmd+/",
-        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'"
+        "when": "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.sidebarFocused"
       },
       {
         "command": "kilo-code.new.agentManager.runScript",

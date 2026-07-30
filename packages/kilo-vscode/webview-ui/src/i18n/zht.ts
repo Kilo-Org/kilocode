@@ -638,7 +638,12 @@ export const dict = {
 
   "settings.agentBehaviour.title": "Agent 行為",
   "settings.autoApprove.title": "自動核准",
-  "settings.browser.title": "瀏覽器",
+  "settings.webTools.title": "網路工具",
+  "settings.webTools.description": "設定網頁搜尋和瀏覽器自動化。",
+  "settings.webTools.webSearch.enable": "為所有供應商啟用",
+  "settings.webTools.browserAutomation": "瀏覽器自動化",
+  "settings.webTools.webSearch.title": "網頁搜尋",
+  "settings.webTools.webSearch.description": "讓所有供應商的模型都可使用網頁搜尋。",
   "settings.checkpoints.title": "檢查點",
   "settings.display.title": "顯示",
   "settings.autocomplete.title": "自動完成",

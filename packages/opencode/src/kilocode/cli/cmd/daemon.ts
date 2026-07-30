@@ -1,10 +1,12 @@
 import type { Argv } from "yargs"
+import type { Daemon } from "@/kilocode/daemon/daemon"
+import type { resolveNetworkOptions } from "@/cli/network"
 import { cmd } from "@/cli/cmd/cmd"
-import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
-import { AppRuntime } from "@/effect/app-runtime"
-import { Daemon } from "@/kilocode/daemon/daemon"
-import { warnPort } from "@/kilocode/cli/port-warning"
+import { explicitNetworkOptions, withNetworkOptions } from "@/cli/network"
 
+// Keep the top-level import graph light: this module is registered eagerly at CLI
+// startup, so implementation dependencies are imported inside handlers (same
+// deferral pattern as upstream opencode#30453).
 function withJson<T>(yargs: Argv<T>) {
   return yargs.option("json", {
     describe: "print daemon details as JSON",
@@ -75,11 +77,17 @@ async function hold(enabled: boolean, json: boolean, run: (signal?: AbortSignal)
     await run()
     return
   }
+  const { Daemon } = await import("@/kilocode/daemon/daemon")
   await Daemon.foreground(async (signal) => {
     const state = await run(signal)
     if (!signal.aborted && !json) console.log("Press Ctrl+C to stop the Kilo daemon.")
     return state
   })
+}
+
+async function network(args: { [key: string]: unknown }) {
+  const { warnedNetworkOptions } = await import("@/kilocode/cli/port-warning")
+  return warnedNetworkOptions(args as Parameters<typeof resolveNetworkOptions>[0])
 }
 
 function start(command: string) {
@@ -89,8 +97,8 @@ function start(command: string) {
     builder: (yargs) => withForeground(withJson(withNetworkOptions(yargs))),
     handler: async (args) => {
       await hold(Boolean(args.foreground), Boolean(args.json), async (signal) => {
-        const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
-        warnPort(opts.port)
+        const opts = await network(args)
+        const { Daemon } = await import("@/kilocode/daemon/daemon")
         const daemon = await Daemon.ensure(opts, explicitNetworkOptions())
         const result = daemon.result
         const state = result.state
@@ -121,6 +129,7 @@ const StatusCommand = cmd({
   describe: "show local kilo daemon status",
   builder: (yargs) => withJson(yargs),
   handler: async (args) => {
+    const { Daemon } = await import("@/kilocode/daemon/daemon")
     print(await Daemon.status(), Boolean(args.json))
   },
 })
@@ -130,6 +139,7 @@ export const StopCommand = cmd({
   describe: "stop the local kilo daemon",
   builder: (yargs) => withJson(yargs),
   handler: async (args) => {
+    const { Daemon } = await import("@/kilocode/daemon/daemon")
     const result = await Daemon.stop()
     if (args.json) {
       print(result, true)
@@ -145,8 +155,8 @@ const RestartCommand = cmd({
   builder: (yargs) => withForeground(withJson(withNetworkOptions(yargs))),
   handler: async (args) => {
     await hold(Boolean(args.foreground), Boolean(args.json), async (signal) => {
-      const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
-      warnPort(opts.port)
+      const opts = await network(args)
+      const { Daemon } = await import("@/kilocode/daemon/daemon")
       const result = await Daemon.restart(opts)
       const state = result.state
       if (!state) throw new Error("Kilo daemon did not provide process state")

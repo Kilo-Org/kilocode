@@ -29545,6 +29545,9 @@
               "type": "boolean"
             }
           },
+          "web_search": {
+            "type": "boolean"
+          },
           "attachment": {
             "$ref": "#/components/schemas/AttachmentConfig"
           },

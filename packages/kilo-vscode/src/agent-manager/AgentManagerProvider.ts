@@ -36,9 +36,9 @@ import { SessionTerminalManager } from "./SessionTerminalManager"
 import { createTerminalHost } from "./terminal-host"
 import { TerminalRouter } from "./terminal-routing"
 import { executeVscodeTask } from "./task-runner"
-import { startVscodeRunTask } from "./run/task"
 import { RunController } from "./run/controller"
 import { handleRunMessage } from "./run/message"
+import { createRunController, createScriptTerminalRuntime } from "./script-terminal-runtime"
 import { forkSession } from "./fork-session"
 import { AgentManagerVisiblePresence } from "./am-visible-presence"
 import { continueInWorktree } from "./continue-in-worktree"
@@ -85,6 +85,7 @@ export class AgentManagerProvider implements Disposable {
   private importer: WorktreeImporter
   private terminalManager: SessionTerminalManager
   private terminalRouter: TerminalRouter
+  private scripts: ReturnType<typeof createScriptTerminalRuntime>
   private run: RunController
   private stateReady: Promise<void> | undefined
   private statsPoller: GitStatsPoller
@@ -137,19 +138,25 @@ export class AgentManagerProvider implements Disposable {
       post: (msg) => this.postToWebview(msg),
       getTerminalFont: () => readTerminalFont(),
     })
+    this.scripts = createScriptTerminalRuntime({
+      connection: this.connectionService,
+      output: this.outputChannel,
+      post: (message) => this.postToWebview(message),
+    })
     this.unsubFont = watchTerminalFont((font) => {
       this.postToWebview({ type: "agentManager.terminal.fontChanged", font })
+      this.scripts.manager.snapshot()
     })
     this.unsubDestination = watchTerminalDestination((destination) => {
       this.postToWebview({ type: "agentManager.terminal.destinationChanged", destination })
     })
-    this.run = new RunController({
+    this.run = createRunController({
+      manager: this.scripts.manager,
       root: () => this.getRoot(),
       state: () => this.getStateManager(),
       open: (file) => this.host.openDocument(file),
-      start: startVscodeRunTask,
-      post: (status) => this.postToWebview({ type: "agentManager.runStatus", ...status }),
-      error: (message) => this.postToWebview({ type: "error", message }),
+      trusted: () => this.host.isTrusted(),
+      post: (message) => this.postToWebview(message),
       log: (msg) => this.outputChannel.appendLine(`[RunScript] ${msg}`),
       refresh: () => this.pushState(),
     })
@@ -493,6 +500,7 @@ export class AgentManagerProvider implements Disposable {
     if (diff !== undefined) return diff
     const bridge = this.onBridgeMessage(m)
     if (bridge !== undefined) return bridge
+    if (this.scripts.manager.intercept(m)) return null
     if (this.terminalRouter.handle(m)) return null
 
     return msg
@@ -846,6 +854,7 @@ export class AgentManagerProvider implements Disposable {
     // the panel itself is disposed. In-flight creates from the dying
     // instance are reaped by the router's generation guard.
     void this.terminalRouter.dispose()
+    this.scripts.manager.snapshot()
     this.log(
       `onRequestState: stateReady=${this.stateReady ? "pending" : "missing"}, state=${this.state ? "ok" : "missing"}`,
     )
@@ -1408,8 +1417,10 @@ export class AgentManagerProvider implements Disposable {
       push: () => this.pushState(),
       register: (sid, dir) => this.registerWorktreeSession(sid, dir),
       skipStats: (id) => this.statsPoller.skipWorktree(id),
+      unskipStats: (id) => this.statsPoller.unskipWorktree(id),
       removePR: (id) => this.prBridge.remove(id),
       removeRun: (id) => this.run.remove(id),
+      clearRun: (id) => this.scripts.manager.clear("run", id),
       forgetName: (id) => this.naming.forget(id),
       stopDiffs: (path, orphaned) => {
         if (this.diffs.shouldStopForWorktree(path, orphaned)) this.diffs.stop()
@@ -1743,6 +1754,7 @@ export class AgentManagerProvider implements Disposable {
     this.unsubFont?.()
     this.unsubProjects?.()
     this.unsubDestination?.()
+    await this.scripts.dispose()
     this.orchestration.dispose()
     this.visiblePresence.clear()
     this.diffs.stop()

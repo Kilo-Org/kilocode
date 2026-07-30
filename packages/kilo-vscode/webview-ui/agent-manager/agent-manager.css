@@ -1445,6 +1445,19 @@ button.am-section-toggle:hover .am-section-label {
   color: currentColor;
 }
 
+.am-tab-icon[data-run-status="success"] {
+  color: var(--vscode-testing-iconPassed, #34d399);
+}
+
+.am-tab-icon[data-run-status="failure"] {
+  color: var(--vscode-testing-iconFailed, #f87171);
+}
+
+.am-terminal-tab-spinner {
+  width: 12px;
+  height: 12px;
+}
+
 .am-tab-label {
   flex: 1;
   min-width: 0;

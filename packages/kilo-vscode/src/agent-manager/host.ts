@@ -143,6 +143,8 @@ export interface Host {
 
   /** Subscribe to multi-project flag changes. */
   onDidChangeMultiProject(cb: (enabled: boolean) => void): Disposable
+  /** Whether the workspace permits executing configured scripts. */
+  isTrusted(): boolean
 
   /** Read the user's automatic branch naming preferences. */
   autoBranchNaming(): { enabled: boolean; prefix: string }

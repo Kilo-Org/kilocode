@@ -127,7 +127,7 @@ describe("Extension — package.json command sync", () => {
     expect(terminal).toMatchObject({
       key: "ctrl+/",
       mac: "cmd+/",
-      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.sidebarFocused",
     })
     expect(create).toMatchObject({
       key: "ctrl+shift+t",
