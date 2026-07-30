@@ -7,14 +7,14 @@
  * land before the persisted state file is read.
  */
 
-import { restoreWorktrees } from "./state-recovery"
-import type { ProjectContext, ProjectInitResult } from "./project-context"
+import { restoreWorktrees } from "../state-recovery"
+import type { ProjectContext, ProjectInitResult } from "./context"
 import type { Session } from "@kilocode/sdk/v2/client"
-import type { ProjectRef, SessionRef, WorktreeRef } from "./project-route"
-import { sessionToWebview } from "../kilo-provider-utils"
+import type { ProjectRef, SessionRef, WorktreeRef } from "./route"
+import { sessionToWebview } from "../../kilo-provider-utils"
 
-export type { ProjectSessionView } from "./project-session-view"
-import type { ProjectSessionView } from "./project-session-view"
+export type { ProjectSessionView } from "./session-view"
+import type { ProjectSessionView } from "./session-view"
 
 /**
  * Subset of {@link SessionProvider} needed to discover and register live

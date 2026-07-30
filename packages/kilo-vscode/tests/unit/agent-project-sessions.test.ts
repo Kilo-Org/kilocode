@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
 import type { Session } from "@kilocode/sdk/v2/client"
-import { ProjectContext, type ProjectContextDeps } from "../../src/agent-manager/project-context"
+import { ProjectContext, type ProjectContextDeps } from "../../src/agent-manager/project/context"
 import type { Worktree, ManagedSession, WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 import {
   collectProjectSessions,
@@ -9,8 +9,8 @@ import {
   registerProjectSessions,
   unregisterProjectRoutes,
   type ProjectSessionListing,
-} from "../../src/agent-manager/project-init"
-import { ProjectRouteService, type SessionRef, type WorktreeRef } from "../../src/agent-manager/project-route"
+} from "../../src/agent-manager/project/init"
+import { ProjectRouteService, type SessionRef, type WorktreeRef } from "../../src/agent-manager/project/route"
 
 const ROOT = "/repo/main"
 const WT_PATH = "/repo/main/.kilo/worktrees/fix"

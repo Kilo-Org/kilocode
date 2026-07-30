@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test"
-import { ProjectRouteService } from "../../src/agent-manager/project-route"
+import { ProjectRouteService } from "../../src/agent-manager/project/route"
 
 // vscode mock is provided by the shared preload (tests/setup/vscode-mock.ts)
 const { KiloProvider } = await import("../../src/KiloProvider")

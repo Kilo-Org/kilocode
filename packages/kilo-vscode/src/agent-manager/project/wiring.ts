@@ -6,11 +6,12 @@
  * interface abstracts all platform capabilities.
  */
 
-import type { Host, Disposable } from "./host"
-import type { GitOps } from "./GitOps"
-import { ProjectRegistry } from "./project-registry"
-import { ProjectContexts, type ProjectContext, type ProjectInitResult, type ProjectSnapshot } from "./project-context"
-import type { ProjectMessageDeps } from "./project-messages"
+import type { Host, Disposable } from "../host"
+import type { GitOps } from "../GitOps"
+import { ProjectRegistry } from "./registry"
+import type { ProjectContext, ProjectInitResult } from "./context"
+import { ProjectContexts, type ProjectSnapshot } from "./contexts"
+import type { ProjectMessageDeps } from "./messages"
 
 export interface ProjectWiring {
   registry: ProjectRegistry
@@ -39,7 +40,7 @@ export function createProjectWiring(opts: {
   /** Re-push worktree state (e.g. after the flag toggles). */
   refresh: () => void
   /** Acknowledge an atomically validated sidebar selection. */
-  selected: (target: import("./project-route").SidebarTarget) => void
+  selected: (target: import("./route").SidebarTarget) => void
 }): ProjectWiring {
   const registry = new ProjectRegistry(
     { read: () => opts.host.readProjects(), write: (value) => opts.host.writeProjects(value) },

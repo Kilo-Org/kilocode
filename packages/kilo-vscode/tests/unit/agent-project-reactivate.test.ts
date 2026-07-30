@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test"
-import { ProjectContext, type ProjectContextDeps } from "../../src/agent-manager/project-context"
-import { reactivateProject } from "../../src/agent-manager/project-init"
+import { ProjectContext, type ProjectContextDeps } from "../../src/agent-manager/project/context"
+import { reactivateProject } from "../../src/agent-manager/project/init"
 import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
 const ROOT = "/repo/main"

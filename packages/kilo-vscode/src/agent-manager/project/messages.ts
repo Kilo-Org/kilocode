@@ -7,11 +7,12 @@
  */
 
 import simpleGit from "simple-git"
-import type { AgentManagerInMessage } from "./types"
-import type { ProjectRegistry } from "./project-registry"
-import type { ProjectContext, ProjectContexts, ProjectInitResult } from "./project-context"
-import { projectIdFor, resolveProjectRoot, samePath } from "./project-paths"
-import type { SidebarTarget } from "./project-route"
+import type { AgentManagerInMessage } from "../types"
+import type { ProjectRegistry } from "./registry"
+import type { ProjectContext, ProjectInitResult } from "./context"
+import type { ProjectContexts } from "./contexts"
+import { projectIdFor, resolveProjectRoot, samePath } from "./paths"
+import type { SidebarTarget } from "./route"
 
 export interface ProjectMessageDeps {
   registry: ProjectRegistry

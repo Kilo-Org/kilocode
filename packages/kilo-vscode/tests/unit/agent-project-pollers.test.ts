@@ -1,8 +1,8 @@
 import { describe, it, expect } from "bun:test"
-import { ProjectPollers, type PollerPair, type StatsOutMessage } from "../../src/agent-manager/project-pollers"
-import { ProjectContexts } from "../../src/agent-manager/project-context"
-import type { StoredProject } from "../../src/agent-manager/project-registry"
-import { projectIdFor } from "../../src/agent-manager/project-paths"
+import { ProjectPollers, type PollerPair, type StatsOutMessage } from "../../src/agent-manager/project/pollers"
+import { ProjectContexts } from "../../src/agent-manager/project/contexts"
+import type { StoredProject } from "../../src/agent-manager/project/registry"
+import { projectIdFor } from "../../src/agent-manager/project/paths"
 import type { GitOps } from "../../src/agent-manager/GitOps"
 import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 

@@ -11,15 +11,16 @@
  * injectable.
  */
 
-import type { GitOps } from "./GitOps"
-import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "./GitStatsPoller"
-import { diffSummary } from "./local-diff"
-import { PRStatusBridge } from "./pr-status-bridge"
-import type { PRStatus } from "./types"
-import type { ProjectContext, ProjectContexts } from "./project-context"
-import type { Semaphore } from "./semaphore"
-import type { AgentManagerOutMessage, WorktreeDiffEntry } from "./types"
-import type { WorktreeStateManager } from "./WorktreeStateManager"
+import type { GitOps } from "../GitOps"
+import { GitStatsPoller, type LocalStats, type WorktreePresenceResult, type WorktreeStats } from "../GitStatsPoller"
+import { diffSummary } from "../local-diff"
+import { PRStatusBridge } from "../pr-status-bridge"
+import type { PRStatus } from "../types"
+import type { ProjectContext } from "./context"
+import type { ProjectContexts } from "./contexts"
+import type { Semaphore } from "../semaphore"
+import type { AgentManagerOutMessage, WorktreeDiffEntry } from "../types"
+import type { WorktreeStateManager } from "../WorktreeStateManager"
 
 export interface PollerPair {
   stats: { setEnabled(enabled: boolean): void; setVisible(visible: boolean): void; stop(): void }

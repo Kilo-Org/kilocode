@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { ProjectRouteError, ProjectRouteService } from "../../src/agent-manager/project-route"
+import { ProjectRouteError, ProjectRouteService } from "../../src/agent-manager/project/route"
 
 describe("ProjectRouteService", () => {
   it("resolves explicit local, worktree, and session routes", () => {

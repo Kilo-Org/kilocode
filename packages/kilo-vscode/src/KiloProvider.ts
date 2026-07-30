@@ -165,7 +165,7 @@ import { configFeatures } from "./features"
 import { fetchSnapshot } from "./kilo-provider/config-snapshot"
 import { createAutoApproveBridge } from "./kilo-provider/auto-approve"
 import type { KiloProviderOptions } from "./kilo-provider/options"
-import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/project-route"
+import type { ProjectRef, SessionRef, WorktreeRef } from "./agent-manager/project/route"
 import { indexingConsentStore, registeredProjects } from "./indexing-consent"
 import { fetchKiloEmbeddingModelCatalog } from "@kilocode/kilo-gateway"
 import { fetchImageModels } from "./image-generation/models"
@@ -182,7 +182,7 @@ import {
   type ConfigProject,
   type ConfigTarget,
 } from "./kilo-provider/config-bindings"
-import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project-paths"
+import { canonicalizePath, projectIdFor, samePath } from "./agent-manager/project/paths"
 import { validChatSetting, watchChatConfig } from "./kilo-provider/chat-settings"
 import { buildThroughputSettingMessage, watchThroughputConfig } from "./kilo-provider/throughput-settings"
 

@@ -9,7 +9,7 @@
  */
 
 import type { Session } from "@kilocode/sdk/v2/client"
-import type { ProjectRef, SessionRef, WorktreeRef } from "./project-route"
+import type { ProjectRef, SessionRef, WorktreeRef } from "./project/route"
 
 // ---------------------------------------------------------------------------
 // Primitives

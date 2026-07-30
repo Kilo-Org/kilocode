@@ -15,8 +15,8 @@ import type { ApplyConflict } from "./GitOps"
 import type { BranchListItem, WorktreeSetupErrorCode } from "./git-import"
 import type { RunStatus } from "./run/manager"
 import type { TerminalFont } from "./terminal-font"
-import type { ProjectSnapshot } from "./project-context"
-import type { SidebarTarget } from "./project-route"
+import type { ProjectSnapshot } from "./project/contexts"
+import type { SidebarTarget } from "./project/route"
 import type { TerminalDestination } from "./terminal-destination"
 
 export type { TerminalFont }

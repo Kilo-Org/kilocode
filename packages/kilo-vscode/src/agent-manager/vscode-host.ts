@@ -8,7 +8,7 @@
 import * as vscode from "vscode"
 import type { Session } from "@kilocode/sdk/v2/client"
 import type { Host, PanelContext, OutputHandle, SessionProvider, Disposable } from "./host"
-import { ProjectRouteService } from "./project-route"
+import { ProjectRouteService } from "./project/route"
 import type { KiloConnectionService } from "../services/cli-backend"
 import { KiloProvider } from "../KiloProvider"
 import { PLATFORM, SNAPSHOT_INITIALIZATION } from "./constants"

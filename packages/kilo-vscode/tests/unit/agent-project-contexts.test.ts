@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test"
-import { ProjectContexts } from "../../src/agent-manager/project-context"
-import { ProjectRegistry, type StoredProject } from "../../src/agent-manager/project-registry"
-import { projectIdFor } from "../../src/agent-manager/project-paths"
+import { ProjectContexts } from "../../src/agent-manager/project/contexts"
+import { ProjectRegistry, type StoredProject } from "../../src/agent-manager/project/registry"
+import { projectIdFor } from "../../src/agent-manager/project/paths"
 import type { WorktreeStateManager } from "../../src/agent-manager/WorktreeStateManager"
 
 const WORKSPACE = "/repo/main"

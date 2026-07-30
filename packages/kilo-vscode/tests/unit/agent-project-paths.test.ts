@@ -7,7 +7,7 @@ import {
   findTrackedBranch,
   resolveProjectRoot,
   samePath,
-} from "../../src/agent-manager/project-paths"
+} from "../../src/agent-manager/project/paths"
 
 describe("project-paths", () => {
   it("canonicalizePath resolves a symlink alias to its realpath", () => {

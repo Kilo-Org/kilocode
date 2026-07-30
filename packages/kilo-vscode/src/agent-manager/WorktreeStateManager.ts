@@ -12,7 +12,7 @@
 import * as path from "path"
 import * as fs from "fs"
 import { normalizePath } from "./git-import"
-import type { SidebarTarget } from "./project-route"
+import type { SidebarTarget } from "./project/route"
 
 /** Accept a persisted sidebar target only when its shape matches a known kind. */
 function validTarget(value: unknown): SidebarTarget | undefined {

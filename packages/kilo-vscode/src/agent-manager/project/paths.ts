@@ -9,7 +9,7 @@
 import * as fs from "fs"
 import * as path from "path"
 import { createHash } from "crypto"
-import { normalizePath } from "./git-import"
+import { normalizePath } from "../git-import"
 
 /** Resolve symlinks and normalize separators. Falls back to lexical resolution when the path does not exist. */
 export function canonicalizePath(dir: string): string {

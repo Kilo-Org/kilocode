@@ -3,7 +3,7 @@ import * as path from "path"
 import { remoteRef, type Worktree } from "./WorktreeStateManager"
 import type { GitOps } from "./GitOps"
 import type { Semaphore } from "./semaphore"
-import { findTrackedBranch } from "./project-paths"
+import { findTrackedBranch } from "./project/paths"
 import type { WorktreeDiffEntry } from "./types"
 
 export interface WorktreeStats {

@@ -1,4 +1,4 @@
-import type { ProjectRouteService } from "../agent-manager/project-route"
+import type { ProjectRouteService } from "../agent-manager/project/route"
 
 export type KiloProviderOptions = {
   /** Context key updated from focus events reported by this provider's webview. */

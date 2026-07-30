@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "async_hooks"
-import type { ProjectContext } from "./project-context"
+import type { ProjectContext } from "./context"
 
 /** Pins dynamic provider getters to the project that started an async operation. */
 export class ProjectScope {

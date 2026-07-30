@@ -226,7 +226,7 @@ describe("Agent Manager Provider Messages", () => {
   })
 
   it("state-mutating messages wait for state initialization", () => {
-    const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/state-gate.ts"), "utf-8")
+    const body = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/state-gate.ts"), "utf-8")
     const messages = [
       "agentManager.setTabOrder",
       "agentManager.setWorktreeOrder",
@@ -246,7 +246,7 @@ describe("Agent Manager Provider Messages", () => {
   })
 
   it("context state init updates local git exclude before loading persisted state", () => {
-    const text = fs.readFileSync(path.join(ROOT, "src/agent-manager/project-init.ts"), "utf-8")
+    const text = fs.readFileSync(path.join(ROOT, "src/agent-manager/project/init.ts"), "utf-8")
     const exclude = text.indexOf("ensureGitExclude(")
     const load = text.indexOf("state.load()")
 
