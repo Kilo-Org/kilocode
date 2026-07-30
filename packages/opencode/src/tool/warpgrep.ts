@@ -1,3 +1,4 @@
+import path from "path"
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { WarpGrepClient } from "@morphllm/morphsdk/tools/warp-grep/client" // kilocode_change
@@ -11,12 +12,59 @@ import DESCRIPTION from "./warpgrep.txt"
 // fallback below. After the free period ends, require MORPH_API_KEY and
 // return an error when it is missing.
 const KILO_WARPGREP_PROXY_URL = "https://api.kilo.ai/api/gateway"
+const CODEBASE_SEARCH_TIMEOUT = "5 minutes"
+
+export type WarpGrepContext = {
+  file: string
+  content: string
+  lines?: Array<[number, number]> | "*"
+}
+
+export type WarpGrepResult = {
+  success: boolean
+  contexts?: WarpGrepContext[]
+  error?: string
+}
 
 const Parameters = Schema.Struct({
   query: Schema.String.annotate({
     description: "Search query describing what code you are looking for. Be specific and descriptive for best results.", // kilocode_change
   }),
 })
+
+export function isWorkspaceRoot(dir: string) {
+  return path.parse(dir).root === dir
+}
+
+export function codebaseSearchTimeoutMessage(repoRoot: string) {
+  return `Codebase search stopped after 5 minutes: the index for this workspace is not ready.\nWorkspace root: ${repoRoot}. Open the concrete project folder or rebuild the index, then retry.`
+}
+
+export function runWarpGrep(
+  query: string,
+  repoRoot: string,
+  execute: (input: { searchTerm: string; repoRoot: string }) => Promise<WarpGrepResult>,
+) {
+  if (isWorkspaceRoot(repoRoot)) {
+    return Effect.succeed<WarpGrepResult>({
+      success: false,
+      error: codebaseSearchTimeoutMessage(repoRoot),
+      contexts: [],
+    })
+  }
+
+  return Effect.promise(() => execute({ searchTerm: query, repoRoot })).pipe(
+    Effect.timeoutOrElse({
+      duration: CODEBASE_SEARCH_TIMEOUT,
+      orElse: () =>
+        Effect.succeed<WarpGrepResult>({
+          success: false,
+          error: codebaseSearchTimeoutMessage(repoRoot),
+          contexts: [],
+        }),
+    }),
+  )
+}
 
 export const CodebaseSearchTool = Tool.define(
   "codebase_search",
@@ -45,12 +93,7 @@ export const CodebaseSearchTool = Tool.define(
             timeout: 60_000,
           })
 
-          const result = yield* Effect.promise(() =>
-            client.execute({
-              searchTerm: params.query,
-              repoRoot: Instance.directory,
-            }),
-          )
+          const result = yield* runWarpGrep(params.query, Instance.directory, (input) => client.execute(input))
 
           if (!result.success || !result.contexts?.length) {
             // FREE_PERIOD_TODO: When the proxy stops serving free requests, errors
