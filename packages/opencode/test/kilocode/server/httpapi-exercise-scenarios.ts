@@ -782,6 +782,7 @@ export const kiloScenarios: Scenario[] = [
     .json(200, (body) => check(body === true, "telemetry enabled update should return true")),
   http.protected
     .post("/instance/reload", "instance.reload")
+    .skipValidAuthProbe()
     .mutating()
     .seeded((ctx) => ctx.session({ title: "Reload" }))
     .at((ctx) => ({

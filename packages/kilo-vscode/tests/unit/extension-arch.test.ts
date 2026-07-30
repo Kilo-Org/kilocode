@@ -117,6 +117,36 @@ describe("Extension — package.json command sync", () => {
     })
   })
 
+  it("keeps Agent Manager terminal shortcuts distinct", () => {
+    const terminal = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.showTerminal",
+    )
+    const create = pkg.contributes?.keybindings?.find(
+      (item: { command: string }) => item.command === "kilo-code.new.agentManager.newTerminal",
+    )
+    expect(terminal).toMatchObject({
+      key: "ctrl+/",
+      mac: "cmd+/",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' && !kilo-code.new.sidebarFocused",
+    })
+    expect(create).toMatchObject({
+      key: "ctrl+shift+t",
+      mac: "cmd+shift+t",
+      when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
+    })
+  })
+
+  it("declares the Agent Manager terminal destination setting", () => {
+    const setting = pkg.contributes?.configuration?.properties?.["kilo-code.new.agentManager.terminalButtonDestination"]
+    expect(setting).toMatchObject({
+      type: "string",
+      scope: "application",
+      default: "vscode",
+      enum: ["vscode", "agentManager"],
+    })
+    expect(setting.enumDescriptions).toHaveLength(setting.enum.length)
+  })
+
   it("scopes the open PR shortcut to Agent Manager", () => {
     const binding = pkg.contributes?.keybindings?.find(
       (item: { command: string }) => item.command === "kilo-code.new.agentManager.openPR",
@@ -126,6 +156,23 @@ describe("Extension — package.json command sync", () => {
       mac: "cmd+shift+r",
       when: "activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel'",
     })
+  })
+
+  it("scopes agent mode shortcuts to focused Kilo webviews", () => {
+    const bindings = pkg.contributes?.keybindings?.filter(
+      (item: { command: string }) =>
+        item.command === "kilo-code.new.cycleAgentMode" || item.command === "kilo-code.new.cyclePreviousAgentMode",
+    )
+    const when =
+      "kilo-code.new.sidebarFocused || activeWebviewPanelId == 'kilo-code.new.AgentManagerPanel' || activeWebviewPanelId == 'kilo-code.new.TabPanel'"
+
+    expect(bindings).toHaveLength(2)
+    expect(bindings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ command: "kilo-code.new.cycleAgentMode", when }),
+        expect.objectContaining({ command: "kilo-code.new.cyclePreviousAgentMode", when }),
+      ]),
+    )
   })
 })
 

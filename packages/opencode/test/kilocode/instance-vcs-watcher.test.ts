@@ -1,10 +1,11 @@
-import { afterAll, beforeAll, expect } from "bun:test"
+import { afterAll, beforeAll, describe, expect, test } from "bun:test"
 import { CrossSpawnSpawner } from "@opencode-ai/core/cross-spawn-spawner"
 import { Deferred, Effect, Fiber, Layer } from "effect"
 import { GlobalBus, type GlobalEvent } from "../../src/bus/global"
 import { Git } from "../../src/git"
 import { InstanceLayer } from "../../src/project/instance-layer"
 import { InstanceStore } from "../../src/project/instance-store"
+import { KilocodeWatcher } from "../../src/kilocode/watcher"
 import { tmpdirScoped } from "../fixture/fixture"
 import { awaitWithTimeout, testEffect } from "../lib/effect"
 
@@ -22,6 +23,17 @@ afterAll(() => {
 
 // The watcher is unreliable on Windows CI, so this test only runs on unix.
 const live = process.platform === "win32" ? it.live.skip : it.live
+
+describe("KilocodeWatcher.eager", () => {
+  test("skips eager location watchers for VS Code", () => {
+    expect(KilocodeWatcher.eager("vscode")).toBe(false)
+  })
+
+  test("keeps eager location watchers for the standalone CLI", () => {
+    expect(KilocodeWatcher.eager("cli")).toBe(true)
+    expect(KilocodeWatcher.eager(undefined)).toBe(true)
+  })
+})
 
 live("instances publish branch updates after git switch", () =>
   Effect.gen(function* () {

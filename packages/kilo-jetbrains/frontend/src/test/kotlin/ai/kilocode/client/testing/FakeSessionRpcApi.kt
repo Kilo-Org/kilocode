@@ -96,6 +96,8 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     val aborts = mutableListOf<Pair<String, String>>()
     val compacts = mutableListOf<Triple<String, String, ModelSelectionDto>>()
     val reverts = mutableListOf<RevertCall>()
+    val messageDeletes = mutableListOf<MessageDeleteCall>()
+    var messageDeleteResult = true
     val unreverts = mutableListOf<Pair<String, String>>()
     val configs = mutableListOf<Pair<String, ConfigUpdateDto>>()
     val permissionReplies = mutableListOf<Triple<String, String, PermissionReplyDto>>()
@@ -117,6 +119,7 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
     data class AttachmentCall(val id: String, val directory: String, val messageId: String, val partId: String, val attachmentKey: String?)
     data class CommandCall(val id: String, val directory: String, val command: String, val arguments: String, val prompt: PromptDto)
     data class RevertCall(val id: String, val directory: String, val message: String, val part: String?)
+    data class MessageDeleteCall(val id: String, val directory: String, val message: String)
 
     // --- Implementation ---
 
@@ -227,6 +230,12 @@ class FakeSessionRpcApi : KiloSessionRpcApi {
         revertGate?.await()
         revertThrows?.let { throw it }
         reverts.add(RevertCall(id, directory, messageID, partID))
+    }
+
+    override suspend fun deleteMessage(id: String, directory: String, messageID: String): Boolean {
+        assertNotEdt("deleteMessage")
+        messageDeletes.add(MessageDeleteCall(id, directory, messageID))
+        return messageDeleteResult
     }
 
     override suspend fun unrevert(id: String, directory: String) {

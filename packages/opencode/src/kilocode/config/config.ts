@@ -37,34 +37,18 @@ export namespace KilocodeConfig {
 
   // ── Config file constants ────────────────────────────────────────────
 
-  /** Kilo-specific config file names (highest-to-lowest precedence within kilo). */
-  export const KILO_CONFIG_FILES = ["kilo.jsonc", "kilo.json"] as const
-
   /** All config file names in precedence order (kilo + opencode). */
   export const ALL_CONFIG_FILES = ["kilo.jsonc", "kilo.json", "opencode.jsonc", "opencode.json"] as const
 
   /** Config directory suffixes in update-target preference order. */
   export const KILO_DIR_SUFFIXES = [".kilo", ".kilocode"] as const
 
-  /** Path patterns for resolving kilo agent names from file paths. */
-  export const AGENT_PATTERNS = ["/.kilo/agent/", "/.kilo/agents/", "/.kilocode/agent/", "/.kilocode/agents/"] as const
-
-  /** Path patterns for resolving kilo command names from file paths. */
-  export const COMMAND_PATTERNS = [
-    "/.kilo/command/",
-    "/.kilo/commands/",
-    "/.kilocode/command/",
-    "/.kilocode/commands/",
-  ] as const
-
   /**
-   * Choose the project config file that Config.update should patch.
-   *
-   * This mirrors the Kilo project-config load chain: prefer existing config files
-   * in ancestor config directories, then existing root config files, and create
-   * `.kilo/kilo.jsonc` when no project config exists yet.
+   * List every project config file the read chain can merge: config files in
+   * ancestor config directories, then root config files, in update-target
+   * preference order.
    */
-  export const projectConfigUpdateTarget = Effect.fn("KilocodeConfig.projectConfigUpdateTarget")(function* (input: {
+  export const projectConfigFiles = Effect.fn("KilocodeConfig.projectConfigFiles")(function* (input: {
     fs: FSUtil.Interface
     directory: string
     worktree?: string
@@ -75,8 +59,7 @@ export namespace KilocodeConfig {
     const roots = yield* input.fs
       .up({ targets: [...ALL_CONFIG_FILES], start: input.directory, stop: input.worktree })
       .pipe(Effect.orDie)
-    const files = [...dirs.flatMap((dir) => ALL_CONFIG_FILES.map((file) => path.join(dir, file))), ...roots]
-    return files.find((file) => existsSync(file)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
+    return [...dirs.flatMap((dir) => ALL_CONFIG_FILES.map((file) => path.join(dir, file))), ...roots]
   })
 
   export const updateProjectConfig = Effect.fn("KilocodeConfig.updateProjectConfig")(function* (input: {
@@ -89,22 +72,108 @@ export namespace KilocodeConfig {
     patch: (input: string, config: Config.Info) => string
     writable: (config: Config.Info) => Config.Info
   }) {
-    const file = yield* projectConfigUpdateTarget(input)
+    const files = yield* projectConfigFiles(input)
+    const file = files.find((item) => existsSync(item)) ?? path.join(input.directory, ".kilo", "kilo.jsonc")
     const source = yield* input.read(file)
     const before = source ?? "{}"
     const patch = input.writable(input.config)
 
     if (file.endsWith(".jsonc")) {
-      if (source === undefined && Object.keys(mergeConfig({}, patch)).length === 0) return
-      const updated = input.patch(before, patch)
-      yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
-      return
+      if (!(source === undefined && Object.keys(mergeConfig({}, patch)).length === 0)) {
+        const updated = input.patch(before, patch)
+        yield* input.fs.writeWithDirs(file, updated).pipe(Effect.orDie)
+      }
+    } else {
+      const existing = input.parse(before, file)
+      const merged = mergeConfig(input.writable(existing), patch)
+      if (!(source === undefined && Object.keys(merged).length === 0)) {
+        yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+      }
     }
 
-    const existing = input.parse(before, file)
-    const merged = mergeConfig(input.writable(existing), patch)
-    if (source === undefined && Object.keys(merged).length === 0) return
-    yield* input.fs.writeWithDirs(file, JSON.stringify(merged, null, 2)).pipe(Effect.orDie)
+    // Reads merge every project config file, so a delete sentinel applied only
+    // to the update target leaves lower-precedence copies of the key visible.
+    yield* propagateUnset({ fs: input.fs, files, exclude: file, patch })
+  })
+
+  /** Collect the leaf paths of null delete sentinels in a config patch. */
+  export function unsetPaths(patch: unknown, prefix: string[] = []): string[][] {
+    if (!isRecord(patch)) return []
+    return Object.entries(patch).flatMap(([key, value]) => {
+      const parts = [...prefix, key]
+      if (value === null) return [parts]
+      return unsetPaths(value, parts)
+    })
+  }
+
+  const blocked = new Set(["__proto__", "constructor", "prototype"])
+
+  function sentinel(out: Record<string, unknown>, parts: string[]) {
+    const [head, ...tail] = parts
+    if (!head || blocked.has(head)) return
+    if (tail.length === 0) {
+      out[head] = null
+      return
+    }
+    const next = isRecord(out[head]) ? out[head] : {}
+    out[head] = next
+    sentinel(next, tail)
+  }
+
+  function has(input: unknown, parts: string[]) {
+    let cur = input
+    for (const part of parts) {
+      if (!isRecord(cur) || !(part in cur)) return false
+      cur = cur[part]
+    }
+    return true
+  }
+
+  /**
+   * Remove null delete-sentinel keys from every layered config file that still
+   * contains them. Reads merge all candidate files, so deleting a key from only
+   * the primary write target leaves lower-precedence copies of it visible and
+   * the "unset" appears to have no effect. Returns true when a file changed.
+   */
+  export const propagateUnset = Effect.fn("KilocodeConfig.propagateUnset")(function* (input: {
+    fs: FSUtil.Interface
+    files: readonly string[]
+    exclude: string
+    patch: Config.Info
+  }) {
+    const paths = unsetPaths(input.patch)
+    if (paths.length === 0) return false
+    let changed = false
+    for (const file of input.files) {
+      if (file === input.exclude || !existsSync(file)) continue
+      const text = yield* input.fs.readFileStringSafe(file).pipe(Effect.orDie)
+      if (!text) continue
+      const parsed = parseJsonc(text)
+      const hits = paths.filter((parts) => has(parsed, parts))
+      if (hits.length === 0) continue
+      if (file.endsWith(".jsonc")) {
+        const updated = hits.reduce(
+          (acc, parts) =>
+            applyEdits(acc, modify(acc, parts, undefined, { formattingOptions: { insertSpaces: true, tabSize: 2 } })),
+          text,
+        )
+        if (updated === text) continue
+        yield* input.fs.writeFileString(file, updated).pipe(Effect.orDie)
+        changed = true
+        continue
+      }
+      const patch = hits.reduce(
+        (acc, parts) => {
+          sentinel(acc, parts)
+          return acc
+        },
+        {} as Record<string, unknown>,
+      )
+      const next = mergeConfig(parsed as Config.Info, patch as Config.Info)
+      yield* input.fs.writeFileString(file, JSON.stringify(next, null, 2)).pipe(Effect.orDie)
+      changed = true
+    }
+    return changed
   })
 
   export function scopeIndexing(info: Config.Info, scope: "global" | "local"): Config.Info {
@@ -333,7 +402,8 @@ export namespace KilocodeConfig {
 
   // ── Bash permission migration ────────────────────────────────────────
 
-  const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
+  /** Global config file names in read-merge order (lowest-to-highest precedence). */
+  export const GLOBAL_CONFIG_FILES = ["config.json", "kilo.json", "kilo.jsonc", "opencode.json", "opencode.jsonc"]
 
   /**
    * Migrate bash permission for existing users before config is consumed.

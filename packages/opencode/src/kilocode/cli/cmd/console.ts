@@ -1,22 +1,23 @@
-import open from "open"
 import type { Argv } from "yargs"
+import type { Daemon } from "@/kilocode/daemon/daemon"
 import { cmd } from "@/cli/cmd/cmd"
-import { explicitNetworkOptions, withNetworkOptions, resolveNetworkOptions } from "@/cli/network"
+import { explicitNetworkOptions, withNetworkOptions } from "@/cli/network"
 import { serverUrls } from "@/kilocode/cli/server-urls"
-import { AppRuntime } from "@/effect/app-runtime"
-import { Daemon } from "@/kilocode/daemon/daemon"
-import { warnPort } from "@/kilocode/cli/port-warning"
 import { hasDisplay } from "@/kilocode/cli/cmd/tui/util/display"
 import { StopCommand } from "@/kilocode/cli/cmd/daemon"
 
-function browserUrl(state: Daemon.State) {
-  const url = new URL("/console", state.url)
+// Keep the top-level import graph light: this module is registered eagerly at CLI
+// startup, so implementation dependencies are imported inside handlers (same
+// deferral pattern as upstream opencode#30453).
+function withCredentials(base: string, state: Daemon.State) {
+  const url = new URL("/console", base)
   url.username = state.username
   url.password = state.password
   return url.toString()
 }
 
 async function launch(url: string) {
+  const { default: open } = await import("open")
   const child = await open(url)
   await new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, 500)
@@ -46,9 +47,10 @@ const OpenCommand = cmd({
       type: "boolean",
     }),
   handler: async (args) => {
+    const { Daemon } = await import("@/kilocode/daemon/daemon")
+    const { warnedNetworkOptions } = await import("@/kilocode/cli/port-warning")
     const run = async (signal?: AbortSignal) => {
-      const opts = await AppRuntime.runPromise(resolveNetworkOptions(args))
-      warnPort(opts.port)
+      const opts = await warnedNetworkOptions(args)
       const daemon = await Daemon.ensure(opts, explicitNetworkOptions())
       const state = daemon.result.state
       if (!state) throw new Error("Kilo daemon did not provide connection state")
@@ -56,11 +58,11 @@ const OpenCommand = cmd({
       if (daemon.restarted) console.warn("Restarted the Kilo daemon to apply the requested network options")
 
       const urls = state.urls ?? serverUrls(state.hostname, state.port)
-      const consoleLocal = `${urls.local}/console`
-      const consoleNetwork = urls.network ? `${urls.network}/console` : undefined
+      const consoleLocal = withCredentials(urls.local, state)
+      const consoleNetwork = urls.network ? withCredentials(urls.network, state) : undefined
 
       if (hasDisplay()) {
-        await launch(browserUrl(state)).catch((err) => {
+        await launch(consoleLocal).catch((err) => {
           console.warn(`Could not open browser automatically: ${err instanceof Error ? err.message : String(err)}`)
         })
       } else {

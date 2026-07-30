@@ -516,3 +516,10 @@ html[data-theme="kilo-vscode"] [data-component="tool-part-wrapper"][data-part-ty
     font-family: var(--font-family-mono);
   }
 }
+
+/* Subagent card: the line renders inside the trigger's info row (an align-baseline flex),
+   so force it onto its own full-width line directly under the title/description. */
+[data-slot="basic-tool-tool-info-main"] > [data-slot="tool-approval-line"] {
+  flex-basis: 100%;
+  padding: 2px 0 0;
+}
