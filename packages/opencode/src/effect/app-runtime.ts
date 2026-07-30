@@ -61,6 +61,9 @@ import { EventV2Bridge } from "@/event-v2-bridge"
 import { LayerNode } from "@opencode-ai/core/effect/layer-node"
 import { AppNodeBuilderV1 } from "./app-node-builder-v1"
 import { SessionProjector } from "@opencode-ai/core/session/projector"
+import { EventV2 } from "@opencode-ai/core/event" // kilocode_change
+import { ProjectV2 } from "@opencode-ai/core/project" // kilocode_change
+import { ProjectCopy } from "@opencode-ai/core/project/copy" // kilocode_change
 import { MoveSession } from "@opencode-ai/core/control-plane/move-session" // kilocode_change
 import { PtyTicket } from "@opencode-ai/core/pty/ticket" // kilocode_change
 
@@ -120,8 +123,11 @@ export const AppLayer = AppNodeBuilderV1.build(
     Installation.node,
     ShareNext.node,
     SessionShare.node,
-    // kilocode_change start - the app runtime must provide these; the control-plane handler and
-    // pty ticket resolve them outside the server's own layer list
+    // kilocode_change start - the app runtime must provide these; the v2 handlers resolve them
+    // when their layer is built, outside the server's own layer list
+    EventV2.node,
+    ProjectV2.node,
+    ProjectCopy.node,
     MoveSession.node,
     PtyTicket.node,
     // kilocode_change end

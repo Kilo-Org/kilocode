@@ -369,7 +369,6 @@ export function createListenerRoutes(corsOptions?: CorsOptions) {
     ),
     Layer.provide(AppNodeBuilderV1.build(MoveSession.node, [[LocationServiceMap.node, locationServiceMapV2]])),
     Layer.provide(locationServiceMapV2),
-    Layer.provide(AppNodeBuilderV1.build(app)),
   )
 }
 // kilocode_change end

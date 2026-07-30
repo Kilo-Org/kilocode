@@ -437,15 +437,12 @@ const layer = Layer.effect(
             yield* ensureToolCall(value)
             return
 
-          // kilocode_change start - late input must not resurrect a settled call as a pending part
+          // kilocode_change start - upstream calls ensureToolCall here, which creates a part when none
+          // exists and so resurrects a settled call as pending. Nothing else is needed from these two:
+          // tool-call carries the full input, and the v2 runner publishes the input events.
           case "tool-input-delta":
-            yield* readToolCall(value.id)
+          case "tool-input-end":
             return
-
-          case "tool-input-end": {
-            yield* readToolCall(value.id)
-            return
-          }
           // kilocode_change end
 
           case "tool-call": {
